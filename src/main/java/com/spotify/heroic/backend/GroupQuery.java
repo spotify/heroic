@@ -55,11 +55,11 @@ public class GroupQuery<T> {
     private void check() {
         int value = countdown.decrementAndGet();
 
-        if (value != 0) {
-            log.info(value + " errors:" + errors.size() + " results:"
-                    + results.size() + " cancelled:" + cancelled.get());
+        log.info("{} errors:{} results:{} cancelled:{}", value, errors.size(),
+                results.size(), cancelled.get());
+
+        if (value != 0)
             return;
-        }
 
         synchronized (this) {
             for (Handle<T> handle : handlers) {

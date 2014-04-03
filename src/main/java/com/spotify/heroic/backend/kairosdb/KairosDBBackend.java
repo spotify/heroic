@@ -14,13 +14,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
@@ -39,6 +37,7 @@ import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.Query;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.backend.QueryRunnable;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -90,7 +89,7 @@ public class KairosDBBackend implements MetricBackend {
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(
                                 "HeroicConnectionPool").setPort(9160)
-                                .setMaxConnsPerHost(1).setSeeds(seeds))
+                                .setMaxConnsPerHost(20).setSeeds(seeds))
                 .forKeyspace(keyspace).withAstyanaxConfiguration(config)
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
@@ -140,59 +139,31 @@ public class KairosDBBackend implements MetricBackend {
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
-        final ListenableFuture<OperationResult<ColumnList<Integer>>> listenable;
-
-        try {
-            listenable = dataQuery.executeAsync();
-        } catch (ConnectionException e) {
-            throw new QueryException("Failed to setup query for: " + rowKey, e);
-        }
-
         final Query<DataPointsResult> handle = new Query<DataPointsResult>();
 
-        handle.cancelled(new Query.Cancelled() {
+        executor.execute(new QueryRunnable<DataPointsResult>(handle) {
             @Override
-            public void cancel() throws Exception {
-                listenable.cancel(true);
-            }
-        });
+            public DataPointsResult execute() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = buildDataPoints(rowKey,
+                        result);
 
-        listenable.addListener(new Runnable() {
-            @Override
-            public void run() {
-                final OperationResult<ColumnList<Integer>> result;
-
-                try {
-                    result = listenable.get();
-                } catch (Exception e) {
-                    handle.fail(e);
-                    return;
-                }
-
-                final List<DataPoint> datapoints;
-
-                try {
-                    datapoints = buildDataPoints(rowKey, result);
-                } catch (Throwable t) {
-                    handle.fail(t);
-                    return;
-                }
-
-                handle.finish(new DataPointsResult(datapoints, rowKey));
+                return new DataPointsResult(datapoints, rowKey);
             }
 
             private List<DataPoint> buildDataPoints(
                     final DataPointsRowKey rowKey,
                     final OperationResult<ColumnList<Integer>> result) {
-                final List<DataPoint> dp = new ArrayList<DataPoint>();
+                final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
                 for (final Column<Integer> column : result.getResult()) {
-                    dp.add(DataPoint.fromColumn(rowKey, column));
+                    datapoints.add(DataPoint.fromColumn(rowKey, column));
                 }
 
-                return dp;
+                return datapoints;
             }
-        }, executor);
+        });
 
         return handle;
     }
@@ -215,27 +186,13 @@ public class KairosDBBackend implements MetricBackend {
                                         DataPointsRowKey.Serializer.get())
                                 .build());
 
-        final ListenableFuture<OperationResult<ColumnList<DataPointsRowKey>>> listenable;
-
-        try {
-            listenable = rowQuery.executeAsync();
-        } catch (ConnectionException e) {
-            throw new QueryException("Failed to execute request", e);
-        }
-
         final Query<FindRowsResult> handle = new Query<FindRowsResult>();
 
-        listenable.addListener(new Runnable() {
+        executor.execute(new QueryRunnable<FindRowsResult>(handle) {
             @Override
-            public void run() {
-                final OperationResult<ColumnList<DataPointsRowKey>> result;
-
-                try {
-                    result = listenable.get();
-                } catch (Exception e) {
-                    handle.fail(e);
-                    return;
-                }
+            public FindRowsResult execute() throws Exception {
+                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
+                        .execute();
 
                 final List<DataPointsRowKey> rowKeys = new ArrayList<DataPointsRowKey>();
 
@@ -251,15 +208,7 @@ public class KairosDBBackend implements MetricBackend {
                     rowKeys.add(rowKey);
                 }
 
-                handle.finish(new FindRowsResult(rowKeys, KairosDBBackend.this));
-            }
-        }, executor);
-
-        handle.cancelled(new Query.Cancelled() {
-            @Override
-            public void cancel() {
-                if (!listenable.isCancelled() && !listenable.isDone())
-                    listenable.cancel(true);
+                return new FindRowsResult(rowKeys, KairosDBBackend.this);
             }
         });
 
@@ -268,23 +217,17 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public Query<FindTagsResult> findTags(final Map<String, String> filter,
-            final Set<String> namesFilter) throws QueryException {
+            final Set<String> namesFilter) {
         final Query<FindTagsResult> query = new Query<FindTagsResult>();
 
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
                 .prepareQuery(rowKeyIndex).getAllRows();
 
-        executor.execute(new Runnable() {
+        executor.execute(new QueryRunnable<FindTagsResult>(query) {
             @Override
-            public void run() {
-                OperationResult<Rows<String, DataPointsRowKey>> result;
-
-                try {
-                    result = rowQuery.execute();
-                } catch (ConnectionException e) {
-                    query.fail(e);
-                    return;
-                }
+            public FindTagsResult execute() throws Exception {
+                final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
+                        .execute();
 
                 final Rows<String, DataPointsRowKey> rows = result.getResult();
 
@@ -325,7 +268,7 @@ public class KairosDBBackend implements MetricBackend {
                         metrics.add(row.getKey());
                 }
 
-                query.finish(new FindTagsResult(tags, metrics));
+                return new FindTagsResult(tags, metrics);
             }
         });
 

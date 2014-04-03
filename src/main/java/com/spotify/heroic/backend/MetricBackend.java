@@ -25,6 +25,20 @@ public interface MetricBackend extends Backend {
         }
     }
 
+    /**
+     * Query for data points that is part of the specified list of rows and
+     * range.
+     * 
+     * @param rows
+     *            Query metrics for the specified rows.
+     * @param range
+     *            Filter on the specified date range.
+     * @return A list of asynchronous data handlers for the resulting data
+     *         points. This is suitable to use with GroupQuery. There will be
+     *         one query per row.
+     * 
+     * @throws QueryException
+     */
     public List<Query<DataPointsResult>> query(List<DataPointsRowKey> rows,
             DateRange range) throws QueryException;
 
@@ -45,6 +59,18 @@ public interface MetricBackend extends Backend {
         }
     }
 
+    /**
+     * Find the data point rows matching the specified criteria.
+     * 
+     * @param key
+     *            Only return rows matching this key.
+     * @param range
+     *            Filter on the specified date range.
+     * @param filter
+     *            Filter on the specified tags.
+     * @return An asynchronous handler resulting in a FindRowsResult.
+     * @throws QueryException
+     */
     public Query<FindRowsResult> findRows(String key, DateRange range,
             final Map<String, String> filter) throws QueryException;
 
@@ -62,6 +88,20 @@ public interface MetricBackend extends Backend {
         }
     }
 
+    /**
+     * Find the tags matching the specified query.
+     * 
+     * WARNING! This is slow since it's not optimized in the schema.
+     * 
+     * @param filter
+     *            Only return tags matching the specified filter of key and
+     *            value combinations.
+     * @param namesFilter
+     *            Only return results which has these specified tags present.
+     * @return An asynchronous handler resulting in a FindTagsResult.
+     * @throws QueryException
+     *             If unable to setup the specified query.
+     */
     public Query<FindTagsResult> findTags(Map<String, String> filter,
             Set<String> namesFilter) throws QueryException;
 }
