@@ -1,5 +1,6 @@
 package com.spotify.heroic.query;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -13,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @ToString(of = { "key", "attributes", "range" })
 public class MetricsQuery {
     private static final DateRange DEFAULT_DATE_RANGE = new RelativeDateRange(
-            TimeUnit.DAYS, 14);
+            TimeUnit.DAYS, 7);
 
     @Getter
     @Setter
@@ -22,6 +23,14 @@ public class MetricsQuery {
     @Getter
     @Setter
     private Map<String, String> attributes;
+
+    @Getter
+    @Setter
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = SumAggregator.class, name = "sum"),
+            @JsonSubTypes.Type(value = AverageAggregator.class, name = "average") })
+    private List<Aggregator> aggregators;
 
     @Getter
     @Setter

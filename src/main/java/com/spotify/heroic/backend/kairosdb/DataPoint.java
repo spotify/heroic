@@ -14,7 +14,7 @@ public class DataPoint implements Comparable<DataPoint> {
         private static final int FLOAT_FLAG = 0x1;
 
         public static long toTimeStamp(long base, int name) {
-            long offset = (0xffffffff & name) >> 1;
+            long offset = name >>> 1;
             return base + offset;
         }
 

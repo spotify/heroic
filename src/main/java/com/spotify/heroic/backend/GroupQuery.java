@@ -33,43 +33,40 @@ public class GroupQuery<T> {
                 @Override
                 public void error(Throwable e) throws Exception {
                     errors.add(e);
-
-                    if (countdown.decrementAndGet() == 0) {
-                        GroupQuery.this.finish();
-                    }
+                    GroupQuery.this.check();
                 }
 
                 @Override
                 public void finish(T result) throws Exception {
                     results.add(result);
-
-                    int value = countdown.decrementAndGet();
-
-                    if (value == 0) {
-                        GroupQuery.this.finish();
-                    }
-
-                    log.info("Count: " + value);
+                    GroupQuery.this.check();
                 }
 
                 @Override
                 public void cancel() throws Exception {
                     cancelled.incrementAndGet();
-
-                    if (countdown.decrementAndGet() == 0) {
-                        GroupQuery.this.finish();
-                    }
+                    GroupQuery.this.check();
                 }
             });
         }
     }
 
-    private synchronized void finish() {
-        for (Handle<T> handle : handlers) {
-            try {
-                handle.done(results, errors, cancelled.get());
-            } catch (Exception e) {
-                log.error("Failed to call handler", e);
+    private void check() {
+        int value = countdown.decrementAndGet();
+
+        if (value != 0) {
+            log.info(value + " errors:" + errors.size() + " results:"
+                    + results.size() + " cancelled:" + cancelled.get());
+            return;
+        }
+
+        synchronized (this) {
+            for (Handle<T> handle : handlers) {
+                try {
+                    handle.done(results, errors, cancelled.get());
+                } catch (Exception e) {
+                    log.error("Failed to call handler", e);
+                }
             }
         }
     }

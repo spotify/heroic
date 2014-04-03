@@ -18,7 +18,6 @@ import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 
 public class HeroicConfig {
     public static final long DEFAULT_TIMEOUT = 10000;
-    public static final int DEFAULT_THREAD_POOL_SIZE = 100;
 
     @Getter
     private final BackendManager backendManager;
@@ -40,8 +39,7 @@ public class HeroicConfig {
 
     public static HeroicConfig buildDefault() {
         final BackendManager backendManager = new ListBackendManager(
-                new ArrayList<Backend>(), DEFAULT_TIMEOUT,
-                DEFAULT_THREAD_POOL_SIZE);
+                new ArrayList<Backend>(), DEFAULT_TIMEOUT);
         return new HeroicConfig(backendManager);
     }
 

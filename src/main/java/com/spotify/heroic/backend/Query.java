@@ -11,15 +11,18 @@ public class Query<T> {
         INITIALIZED, FAILED, FINISHED, CANCELLED
     }
 
-    public static interface Handle<T> {
-        void error(Throwable e) throws Exception;
-
-        void finish(T result) throws Exception;
-
+    public static interface Cancelled {
         void cancel() throws Exception;
     }
 
+    public static interface Handle<T> extends Cancelled {
+        void error(Throwable e) throws Exception;
+
+        void finish(T result) throws Exception;
+    }
+
     private final List<Query.Handle<T>> handlers = new LinkedList<Query.Handle<T>>();
+    private final List<Query.Cancelled> cancelled = new LinkedList<Query.Cancelled>();
 
     private State state = Query.State.INITIALIZED;
     private Throwable error;
@@ -63,9 +66,9 @@ public class Query<T> {
 
         this.state = Query.State.CANCELLED;
 
-        for (Handle<T> handle : handlers) {
+        for (Cancelled cancel : cancelled) {
             try {
-                handle.cancel();
+                cancel.cancel();
             } catch (Exception e) {
                 log.error("Failed to invoke cancel callback", e);
             }
@@ -85,7 +88,7 @@ public class Query<T> {
             try {
                 handle.cancel();
             } catch (Exception e) {
-                log.error("Failed to invoke finish callback", e);
+                log.error("Failed to invoke cancel callback", e);
             }
             return;
         case FAILED:
@@ -100,5 +103,22 @@ public class Query<T> {
         }
 
         handlers.add(handle);
+        cancelled.add(handle);
+    }
+
+    public synchronized void cancelled(Cancelled handle) {
+        switch (state) {
+        case CANCELLED:
+            try {
+                handle.cancel();
+            } catch (Exception e) {
+                log.error("Failed to invoke cancel callback", e);
+            }
+            return;
+        default:
+            break;
+        }
+
+        cancelled.add(handle);
     }
 }

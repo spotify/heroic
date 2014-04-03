@@ -1,12 +1,13 @@
 package com.spotify.heroic.backend;
 
 import java.util.List;
+import java.util.Map;
 
 import lombok.Getter;
 
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.query.MetricsQuery;
+import com.spotify.heroic.query.DateRange;
 
 public interface MetricBackend extends Backend {
     public static class DataPointsResult {
@@ -23,20 +24,26 @@ public interface MetricBackend extends Backend {
         }
     }
 
-    public static interface DataPointsQuery {
-        public GroupQuery<DataPointsResult> query(MetricsQuery query)
-                throws QueryException;
+    public List<Query<DataPointsResult>> query(List<DataPointsRowKey> rows,
+            DateRange range) throws QueryException;
 
-        /**
-         * Check if this engine is empty.
-         * 
-         * I.e. It will never give any results at all.
-         * 
-         * @return boolean indicating if this engine is empty or not.
-         */
-        public boolean isEmpty();
+    public static class FindRowsResult {
+        @Getter
+        private final List<DataPointsRowKey> rows;
+
+        @Getter
+        private final MetricBackend backend;
+
+        public FindRowsResult(List<DataPointsRowKey> rows, MetricBackend backend) {
+            this.rows = rows;
+            this.backend = backend;
+        }
+
+        public boolean isEmpty() {
+            return rows.isEmpty();
+        }
     }
 
-    public Query<DataPointsQuery> query(MetricsQuery query)
-            throws QueryException;
+    public Query<FindRowsResult> findRows(String key, DateRange range,
+            final Map<String, String> filter) throws QueryException;
 }

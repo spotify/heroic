@@ -19,10 +19,6 @@ public class HeroicConfigYAML {
     @Setter
     private long backendTimeout = HeroicConfig.DEFAULT_TIMEOUT;
 
-    @Getter
-    @Setter
-    private int threadPoolSize = HeroicConfig.DEFAULT_THREAD_POOL_SIZE;
-
     private List<Backend> setupBackends(String context)
             throws ValidationException {
         List<Backend> backends = new ArrayList<Backend>();
@@ -39,7 +35,7 @@ public class HeroicConfigYAML {
     public HeroicConfig build() throws ValidationException {
         final List<Backend> backends = setupBackends("backends");
         final BackendManager backendManager = new ListBackendManager(backends,
-                backendTimeout, threadPoolSize);
+                backendTimeout);
         return new HeroicConfig(backendManager);
     }
 }

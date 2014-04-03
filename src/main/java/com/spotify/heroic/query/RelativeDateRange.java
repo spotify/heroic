@@ -11,11 +11,11 @@ public class RelativeDateRange implements DateRange {
 
     @Getter
     @Setter
-    private TimeUnit unit;
+    private TimeUnit unit = TimeUnit.DAYS;
 
     @Getter
     @Setter
-    private long value;
+    private long value = 1;
 
     @Override
     public Date start() {
