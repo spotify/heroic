@@ -1,12 +1,16 @@
 # vim: sw=2 tabstop=2
 
 backends:
+#  - !kairosdb-backend
+#    attributes:
+#      site: sto
+#    seeds: sto3-kairosdbcassandra-a1:9160,sto3-kairosdbcassandra-a2:9160,sto3-kairosdbcassandra-a3:9160
+#  - !kairosdb-backend
+#    attributes:
+#      site: lon
+#    seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
   - !kairosdb-backend
     attributes:
-      site: sto
-    seeds: sto3-kairosdbcassandra-a1:9160,sto3-kairosdbcassandra-a2:9160,sto3-kairosdbcassandra-a3:9160
-  - !kairosdb-backend
-    attributes:
-      site: lon
-    seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160, lon3-kairosdbcassandra-a4:9160
+      site: ash
+    seeds: ash2-kairosdbcassandra-a1:9160,ash2-kairosdbcassandra-a2:9160,ash2-kairosdbcassandra-a3:9160
 

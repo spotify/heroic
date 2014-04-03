@@ -244,8 +244,7 @@ public class KairosDBBackend implements MetricBackend {
                 for (Column<DataPointsRowKey> column : columns) {
                     final DataPointsRowKey rowKey = column.getName();
 
-                    if (!matchingTags(rowKey.getTags(), attributes, filter,
-                            null)) {
+                    if (!matchingTags(rowKey.getTags(), attributes, filter)) {
                         continue;
                     }
 
@@ -269,13 +268,11 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public Query<FindTagsResult> findTags(final Map<String, String> filter,
-            final Set<String> only) throws QueryException {
+            final Set<String> namesFilter) throws QueryException {
         final Query<FindTagsResult> query = new Query<FindTagsResult>();
 
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
                 .prepareQuery(rowKeyIndex).getAllRows();
-
-        final ListenableFuture<OperationResult<Rows<String, DataPointsRowKey>>> listenable;
 
         executor.execute(new Runnable() {
             @Override
@@ -300,17 +297,18 @@ public class KairosDBBackend implements MetricBackend {
                     for (Column<DataPointsRowKey> column : row.getColumns()) {
                         final DataPointsRowKey rowKey = column.getName();
 
-                        if (!matchingTags(rowKey.getTags(), attributes, filter,
-                                only)) {
+                        if (!matchingTags(rowKey.getTags(), attributes, filter)) {
                             continue;
                         }
 
-                        anyMatch = true;
-
                         for (Map.Entry<String, String> entry : rowKey.getTags()
                                 .entrySet()) {
-                            if (only != null && !only.contains(entry.getKey()))
+                            if (namesFilter != null
+                                    && !namesFilter.contains(entry.getKey())) {
                                 continue;
+                            }
+
+                            anyMatch = true;
 
                             Set<String> values = tags.get(entry.getKey());
 
@@ -335,8 +333,7 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     private static boolean matchingTags(Map<String, String> tags,
-            Map<String, String> backendTags, Map<String, String> queryTags,
-            Set<String> required) {
+            Map<String, String> backendTags, Map<String, String> queryTags) {
         // query not specified.
         if (queryTags != null) {
             // match the row tags with the query tags.
@@ -354,15 +351,6 @@ public class KairosDBBackend implements MetricBackend {
                 // check built-in attribute for this backend.
                 if (attributeValue != null
                         && !attributeValue.equals(entry.getValue())) {
-                    return false;
-                }
-            }
-        }
-
-        // check that the set of required tags are present.
-        if (required != null) {
-            for (String require : required) {
-                if (!tags.containsKey(require)) {
                     return false;
                 }
             }

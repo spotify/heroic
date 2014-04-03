@@ -63,5 +63,5 @@ public interface MetricBackend extends Backend {
     }
 
     public Query<FindTagsResult> findTags(Map<String, String> filter,
-            Set<String> only) throws QueryException;
+            Set<String> namesFilter) throws QueryException;
 }

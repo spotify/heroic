@@ -227,11 +227,11 @@ public class ListBackendManager implements BackendManager {
         final List<Query<FindTagsResult>> queries = new ArrayList<Query<FindTagsResult>>();
 
         final Map<String, String> filter = query.getTags();
-        final Set<String> only = query.getOnly();
+        final Set<String> namesFilter = query.getOnly();
 
         for (MetricBackend backend : metricBackends) {
             try {
-                queries.add(backend.findTags(filter, only));
+                queries.add(backend.findTags(filter, namesFilter));
             } catch (Exception e) {
                 log.error("Failed to query backend", e);
             }
