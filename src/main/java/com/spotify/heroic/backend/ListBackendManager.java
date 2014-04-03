@@ -105,7 +105,6 @@ public class ListBackendManager implements BackendManager {
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-
                 queries.addAll(backend.query(result.getRows(), range));
             }
 
@@ -129,6 +128,9 @@ public class ListBackendManager implements BackendManager {
         @Override
         public void done(Collection<DataPointsResult> results,
                 Collection<Throwable> errors, int cancelled) throws Exception {
+            log.info("Query Result: results:{} errors:{} cancelled:{}", results.size(),
+                    errors.size(), cancelled);
+
             for (Throwable error : errors) {
                 log.error("Failed: " + errors.size(), error);
             }

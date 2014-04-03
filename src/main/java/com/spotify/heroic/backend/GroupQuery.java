@@ -19,37 +19,42 @@ public class GroupQuery<T> {
     private final AtomicInteger countdown;
     private final List<Query<T>> queries;
     private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
+    private volatile boolean done = false;
 
     private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
     private final AtomicInteger cancelled = new AtomicInteger();
 
+    private final Query.Handle<T> listener = new Query.Handle<T>() {
+        @Override
+        public void error(Throwable e) throws Exception {
+            errors.add(e);
+            GroupQuery.this.check();
+        }
+
+        @Override
+        public void finish(T result) throws Exception {
+            results.add(result);
+            GroupQuery.this.check();
+        }
+
+        @Override
+        public void cancel() throws Exception {
+            cancelled.incrementAndGet();
+            GroupQuery.this.check();
+        }
+    };
+
     public GroupQuery(List<Query<T>> queries) {
         this.countdown = new AtomicInteger(queries.size());
         this.queries = queries;
+        this.done = false;
 
-        for (Query<T> query : queries) {
-            query.listen(new Query.Handle<T>() {
-                @Override
-                public void error(Throwable e) throws Exception {
-                    errors.add(e);
-                    log.error("Error in query", e);
-                    GroupQuery.this.check();
-                }
+        for (Query<T> query : queries)
+            query.listen(listener);
 
-                @Override
-                public void finish(T result) throws Exception {
-                    results.add(result);
-                    GroupQuery.this.check();
-                }
-
-                @Override
-                public void cancel() throws Exception {
-                    cancelled.incrementAndGet();
-                    GroupQuery.this.check();
-                }
-            });
-        }
+        if (queries.isEmpty())
+            end();
     }
 
     private void check() {
@@ -61,18 +66,35 @@ public class GroupQuery<T> {
         if (value != 0)
             return;
 
-        synchronized (this) {
-            for (Handle<T> handle : handlers) {
-                try {
-                    handle.done(results, errors, cancelled.get());
-                } catch (Exception e) {
-                    log.error("Failed to call handler", e);
-                }
-            }
+        end();
+    }
+
+    private synchronized void end() {
+        if (done)
+            return;
+
+        for (Handle<T> handle : handlers) {
+            trigger(handle);
+        }
+
+        done = true;
+        handlers.clear();
+    }
+
+    private void trigger(Handle<T> handle) {
+        try {
+            handle.done(results, errors, cancelled.get());
+        } catch (Exception e) {
+            log.error("Failed to call handler", e);
         }
     }
 
     public synchronized void listen(Handle<T> handle) {
+        if (done) {
+            trigger(handle);
+            return;
+        }
+
         handlers.add(handle);
     }
 
