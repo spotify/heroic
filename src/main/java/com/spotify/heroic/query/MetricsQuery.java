@@ -11,7 +11,7 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@ToString(of = { "key", "attributes", "range" })
+@ToString(of = { "key", "tags", "range", "aggregators" })
 public class MetricsQuery {
     private static final DateRange DEFAULT_DATE_RANGE = new RelativeDateRange(
             TimeUnit.DAYS, 7);
@@ -22,15 +22,7 @@ public class MetricsQuery {
 
     @Getter
     @Setter
-    private Map<String, String> attributes;
-
-    @Getter
-    @Setter
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-    @JsonSubTypes({
-            @JsonSubTypes.Type(value = SumAggregator.class, name = "sum"),
-            @JsonSubTypes.Type(value = AverageAggregator.class, name = "average") })
-    private List<Aggregator> aggregators;
+    private Map<String, String> tags;
 
     @Getter
     @Setter
@@ -39,4 +31,12 @@ public class MetricsQuery {
             @JsonSubTypes.Type(value = AbsoluteDateRange.class, name = "absolute"),
             @JsonSubTypes.Type(value = RelativeDateRange.class, name = "relative") })
     private DateRange range = DEFAULT_DATE_RANGE;
+
+    @Getter
+    @Setter
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = SumAggregator.class, name = "sum"),
+            @JsonSubTypes.Type(value = AverageAggregator.class, name = "average") })
+    private List<Aggregator> aggregators;
 }

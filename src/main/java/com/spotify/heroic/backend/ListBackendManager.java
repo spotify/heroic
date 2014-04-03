@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Response;
@@ -16,11 +19,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
+import com.spotify.heroic.backend.MetricBackend.FindTagsResult;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.Aggregator;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.MetricsResponse;
+import com.spotify.heroic.query.TagsQuery;
+import com.spotify.heroic.query.TagsResponse;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
@@ -156,7 +162,7 @@ public class ListBackendManager implements BackendManager {
 
         final String key = query.getKey();
         final DateRange range = query.getRange();
-        final Map<String, String> filter = query.getAttributes();
+        final Map<String, String> filter = query.getTags();
 
         for (MetricBackend backend : metricBackends) {
             try {
@@ -170,5 +176,69 @@ public class ListBackendManager implements BackendManager {
                 queries);
 
         group.listen(new HandleFindRowsResult(query, range, response));
+    }
+
+    /**
+     * Handle the result from a FindTags query.
+     * 
+     * Flattens the result from all backends.
+     * 
+     * @author udoprog
+     */
+    private final class HandleFindTagsResult implements
+            GroupQuery.Handle<FindTagsResult> {
+        private final AsyncResponse response;
+
+        private HandleFindTagsResult(AsyncResponse response) {
+            this.response = response;
+        }
+
+        @Override
+        public void done(Collection<FindTagsResult> results,
+                Collection<Throwable> errors, int cancelled) throws Exception {
+            final Map<String, Set<String>> tags = new HashMap<String, Set<String>>();
+            final Set<String> metrics = new HashSet<String>();
+
+            for (final FindTagsResult result : results) {
+                final Map<String, Set<String>> partial = result.getTags();
+
+                for (Map.Entry<String, Set<String>> entry : partial.entrySet()) {
+                    Set<String> values = tags.get(entry.getKey());
+
+                    if (values == null) {
+                        values = new HashSet<String>();
+                        tags.put(entry.getKey(), values);
+                    }
+
+                    values.addAll(entry.getValue());
+                }
+
+                metrics.addAll(result.getMetrics());
+            }
+
+            final TagsResponse tagsResponse = new TagsResponse(tags, metrics);
+            response.resume(Response.status(Response.Status.OK)
+                    .entity(tagsResponse).build());
+        }
+    }
+
+    @Override
+    public void queryTags(TagsQuery query, AsyncResponse response) {
+        final List<Query<FindTagsResult>> queries = new ArrayList<Query<FindTagsResult>>();
+
+        final Map<String, String> filter = query.getTags();
+        final Set<String> only = query.getOnly();
+
+        for (MetricBackend backend : metricBackends) {
+            try {
+                queries.add(backend.findTags(filter, only));
+            } catch (Exception e) {
+                log.error("Failed to query backend", e);
+            }
+        }
+
+        final GroupQuery<FindTagsResult> group = new GroupQuery<FindTagsResult>(
+                queries);
+        group.listen(new HandleFindTagsResult(response));
     }
 }

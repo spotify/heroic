@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.query.MetricsQuery;
+import com.spotify.heroic.query.TagsQuery;
 
 @Slf4j
 @Path("/")
@@ -45,5 +46,12 @@ public class HeroicResource {
     public void metrics(@Suspended AsyncResponse response, MetricsQuery query) {
         log.info("Query: " + query);
         backendManager.queryMetrics(query, response);
+    }
+
+    @POST
+    @Path("/tags")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void tags(@Suspended AsyncResponse response, TagsQuery query) {
+        backendManager.queryTags(query, response);
     }
 }

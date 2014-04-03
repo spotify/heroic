@@ -2,8 +2,11 @@ package com.spotify.heroic.backend.kairosdb;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -24,6 +27,9 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -238,7 +244,8 @@ public class KairosDBBackend implements MetricBackend {
                 for (Column<DataPointsRowKey> column : columns) {
                     final DataPointsRowKey rowKey = column.getName();
 
-                    if (!matchingTags(rowKey.getTags(), attributes, filter)) {
+                    if (!matchingTags(rowKey.getTags(), attributes, filter,
+                            null)) {
                         continue;
                     }
 
@@ -260,28 +267,104 @@ public class KairosDBBackend implements MetricBackend {
         return handle;
     }
 
-    private static boolean matchingTags(Map<String, String> tags,
-            Map<String, String> backendTags, Map<String, String> queryTags) {
-        // query not specified.
-        if (queryTags == null || queryTags.isEmpty())
-            return true;
+    @Override
+    public Query<FindTagsResult> findTags(final Map<String, String> filter,
+            final Set<String> only) throws QueryException {
+        final Query<FindTagsResult> query = new Query<FindTagsResult>();
 
-        // match the row tags with the query tags.
-        for (Map.Entry<String, String> entry : queryTags.entrySet()) {
-            // check tags for the actual row.
-            final String tagValue = tags.get(entry.getKey());
+        final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
+                .prepareQuery(rowKeyIndex).getAllRows();
 
-            if (tagValue == null || !tagValue.equals(entry.getValue())) {
-                return false;
+        final ListenableFuture<OperationResult<Rows<String, DataPointsRowKey>>> listenable;
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                OperationResult<Rows<String, DataPointsRowKey>> result;
+
+                try {
+                    result = rowQuery.execute();
+                } catch (ConnectionException e) {
+                    query.fail(e);
+                    return;
+                }
+
+                final Rows<String, DataPointsRowKey> rows = result.getResult();
+
+                final Map<String, Set<String>> tags = new HashMap<String, Set<String>>();
+                final List<String> metrics = new ArrayList<String>();
+
+                for (Row<String, DataPointsRowKey> row : rows) {
+                    boolean anyMatch = false;
+
+                    for (Column<DataPointsRowKey> column : row.getColumns()) {
+                        final DataPointsRowKey rowKey = column.getName();
+
+                        if (!matchingTags(rowKey.getTags(), attributes, filter,
+                                only)) {
+                            continue;
+                        }
+
+                        anyMatch = true;
+
+                        for (Map.Entry<String, String> entry : rowKey.getTags()
+                                .entrySet()) {
+                            if (only != null && !only.contains(entry.getKey()))
+                                continue;
+
+                            Set<String> values = tags.get(entry.getKey());
+
+                            if (values == null) {
+                                values = new HashSet<String>();
+                                tags.put(entry.getKey(), values);
+                            }
+
+                            values.add(entry.getValue());
+                        }
+                    }
+
+                    if (anyMatch)
+                        metrics.add(row.getKey());
+                }
+
+                query.finish(new FindTagsResult(tags, metrics));
             }
+        });
 
-            // check built-in attributes for this datasource.
-            final String attributeValue = backendTags.get(entry.getKey());
+        return query;
+    }
 
-            // check built-in attribute for this backend.
-            if (attributeValue != null
-                    && !attributeValue.equals(entry.getValue())) {
-                return false;
+    private static boolean matchingTags(Map<String, String> tags,
+            Map<String, String> backendTags, Map<String, String> queryTags,
+            Set<String> required) {
+        // query not specified.
+        if (queryTags != null) {
+            // match the row tags with the query tags.
+            for (Map.Entry<String, String> entry : queryTags.entrySet()) {
+                // check tags for the actual row.
+                final String tagValue = tags.get(entry.getKey());
+
+                if (tagValue == null || !tagValue.equals(entry.getValue())) {
+                    return false;
+                }
+
+                // check built-in attributes for this datasource.
+                final String attributeValue = backendTags.get(entry.getKey());
+
+                // check built-in attribute for this backend.
+                if (attributeValue != null
+                        && !attributeValue.equals(entry.getValue())) {
+                    return false;
+                }
+            }
+        }
+
+        // check that the set of required tags are present.
+        if (required != null) {
+            for (String require : required) {
+                if (!tags.containsKey(require)) {
+                    return false;
+                }
             }
         }
 

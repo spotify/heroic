@@ -33,6 +33,7 @@ public class GroupQuery<T> {
                 @Override
                 public void error(Throwable e) throws Exception {
                     errors.add(e);
+                    log.error("Error in query", e);
                     GroupQuery.this.check();
                 }
 
