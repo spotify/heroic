@@ -9,7 +9,11 @@ public class TagsResponse {
     @Getter
     private final Map<String, Set<String>> result;
 
-    public TagsResponse(final Map<String, Set<String>> result) {
+    @Getter
+    private final int sampleSize;
+
+    public TagsResponse(final Map<String, Set<String>> result, int sampleSize) {
         this.result = result;
+        this.sampleSize = sampleSize;
     }
 }

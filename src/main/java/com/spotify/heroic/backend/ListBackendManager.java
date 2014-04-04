@@ -201,7 +201,7 @@ public class ListBackendManager implements BackendManager {
         public GetAllTimeSeriesResult execute(
                 Collection<MetricBackend.GetAllRowsResult> results,
                 Collection<Throwable> errors, int cancelled) throws Exception {
-            final Set<TimeSeries> result = new HashSet<TimeSeries>();
+            final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
             for (final MetricBackend.GetAllRowsResult backendResult : results) {
                 final Map<String, List<DataPointsRowKey>> rows = backendResult
@@ -210,7 +210,7 @@ public class ListBackendManager implements BackendManager {
                 for (final Map.Entry<String, List<DataPointsRowKey>> entry : rows
                         .entrySet()) {
                     for (final DataPointsRowKey rowKey : entry.getValue()) {
-                        result.add(new TimeSeries(rowKey.getMetricName(),
+                        result.add(new TimeSerie(rowKey.getMetricName(),
                                 rowKey.getTags()));
                     }
                 }

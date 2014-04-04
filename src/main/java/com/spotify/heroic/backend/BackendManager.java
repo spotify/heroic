@@ -19,9 +19,9 @@ public interface BackendManager {
     @ToString(of = { "timeSeries" })
     public static class GetAllTimeSeriesResult {
         @Getter
-        private final Set<TimeSeries> timeSeries;
+        private final Set<TimeSerie> timeSeries;
 
-        public GetAllTimeSeriesResult(Set<TimeSeries> timeSeries) {
+        public GetAllTimeSeriesResult(Set<TimeSerie> timeSeries) {
             this.timeSeries = timeSeries;
         }
     }

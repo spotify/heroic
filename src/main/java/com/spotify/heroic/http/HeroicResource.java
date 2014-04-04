@@ -64,9 +64,10 @@ public class HeroicResource {
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response tags(TagsQuery query) {
-        final FindTagsResult result = timeSeriesCacheManager.findTags(query.getKey(),
-                query.getTags(), query.getOnly());
-        final TagsResponse response = new TagsResponse(result.getTags());
+        final FindTagsResult result = timeSeriesCacheManager.findTags(
+                query.getKey(), query.getTags(), query.getOnly());
+        final TagsResponse response = new TagsResponse(result.getTags(),
+                result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
@@ -74,9 +75,10 @@ public class HeroicResource {
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response tags(KeysQuery query) {
-        final FindKeysResult result = timeSeriesCacheManager.findKeys(query.getKey(),
-                query.getTags(), query.getOnly());
-        final KeysResponse response = new KeysResponse(result.getKeys());
+        final FindKeysResult result = timeSeriesCacheManager.findKeys(
+                query.getKey(), query.getTags(), query.getOnly());
+        final KeysResponse response = new KeysResponse(result.getKeys(),
+                result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
@@ -84,10 +86,11 @@ public class HeroicResource {
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response keys(TimeSeriesQuery query) {
-        final FindTimeSeriesResult result = timeSeriesCacheManager.findTimeSeries(
-                query.getKey(), query.getTags(), query.getOnly());
+        final FindTimeSeriesResult result = timeSeriesCacheManager
+                .findTimeSeries(query.getKey(), query.getTags(),
+                        query.getOnly());
         final TimeSeriesResponse response = new TimeSeriesResponse(
-                result.getTimeSeries());
+                result.getTimeSeries(), result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();
     }
 }

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.backend.TimeSeries;
+import com.spotify.heroic.backend.TimeSerie;
 
 public class TimeSeriesResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
@@ -23,9 +23,9 @@ public class TimeSeriesResponse {
 
             gen.writeStartArray();
 
-            final List<TimeSeries> timeseries = (List<TimeSeries>) value;
+            final List<TimeSerie> timeseries = (List<TimeSerie>) value;
 
-            for (final TimeSeries t : timeseries) {
+            for (final TimeSerie t : timeseries) {
                 gen.writeStartObject();
                 gen.writeFieldName("key");
                 gen.writeString(t.getKey());
@@ -49,9 +49,13 @@ public class TimeSeriesResponse {
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)
-    private final List<TimeSeries> result;
+    private final List<TimeSerie> result;
 
-    public TimeSeriesResponse(final List<TimeSeries> result) {
+    @Getter
+    private final int sampleSize;
+
+    public TimeSeriesResponse(final List<TimeSerie> result, int sampleSize) {
         this.result = result;
+        this.sampleSize = sampleSize;
     }
 }

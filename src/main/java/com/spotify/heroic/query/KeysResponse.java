@@ -8,7 +8,11 @@ public class KeysResponse {
     @Getter
     private final Set<String> result;
 
-    public KeysResponse(final Set<String> result) {
+    @Getter
+    private final int sampleSize;
+
+    public KeysResponse(final Set<String> result, int sampleSize) {
         this.result = result;
+        this.sampleSize = sampleSize;
     }
 }
