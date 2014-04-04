@@ -76,6 +76,7 @@ public class TimeSeriesCacheManager {
         callback.register(new Callback.Ended() {
             @Override
             public void ended() {
+                log.info("Refresh ended");
                 inProgress.set(false);
             }
         });

@@ -56,7 +56,12 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeFailed(handle);
         }
 
+        for (Ended ended : this.ended) {
+            invokeEnded(ended);
+        }
+
         handlers.clear();
+        ended.clear();
     }
 
     @Override
@@ -71,7 +76,12 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeFinished(handle);
         }
 
+        for (Ended ended : this.ended) {
+            invokeEnded(ended);
+        }
+
         handlers.clear();
+        ended.clear();
     }
 
     @Override
@@ -85,7 +95,12 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeCancelled(cancel);
         }
 
+        for (Ended ended : this.ended) {
+            invokeEnded(ended);
+        }
+
         cancelled.clear();
+        ended.clear();
     }
 
     @Override
