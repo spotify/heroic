@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.TagsCacheManager;
 import com.spotify.heroic.backend.TagsCacheManager.FindTagsResult;
+import com.spotify.heroic.query.KeysQuery;
+import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.TagsQuery;
 import com.spotify.heroic.query.TagsResponse;
@@ -60,8 +62,17 @@ public class HeroicResource {
     public Response tags(TagsQuery query) {
         final FindTagsResult result = tagsCacheManager.findTags(
                 query.getTags(), query.getOnly());
-        final TagsResponse response = new TagsResponse(result.getTags(),
-                result.getMetrics());
+        final TagsResponse response = new TagsResponse(result.getTags());
+        return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    @POST
+    @Path("/keys")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response keys(KeysQuery query) {
+        final FindTagsResult result = tagsCacheManager.findTags(
+                query.getTags(), query.getOnly());
+        final KeysResponse response = new KeysResponse(result.getMetrics());
         return Response.status(Response.Status.OK).entity(response).build();
     }
 }
