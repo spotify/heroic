@@ -89,23 +89,6 @@ public interface MetricBackend extends Backend {
         }
     }
 
-    /**
-     * Find the tags matching the specified query.
-     * 
-     * WARNING! This is slow since it's not optimized in the schema.
-     * 
-     * @param filter
-     *            Only return tags matching the specified filter of key and
-     *            value combinations.
-     * @param namesFilter
-     *            Only return results which has these specified tags present.
-     * @return An asynchronous handler resulting in a FindTagsResult.
-     * @throws QueryException
-     *             If unable to setup the specified query.
-     */
-    public Callback<FindTagsResult> findTags(Map<String, String> filter,
-            Set<String> namesFilter) throws QueryException;
-
     @ToString(of = { "rows" })
     public static class GetAllRowsResult {
         @Getter
