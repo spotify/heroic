@@ -7,9 +7,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-@ToString(of = { "tags", "only" })
+@ToString(of = { "key", "tags", "includes" })
 public class TimeSeriesQuery {
     @Getter
+    @Setter
     private String key;
 
     @Getter
@@ -18,5 +19,5 @@ public class TimeSeriesQuery {
 
     @Getter
     @Setter
-    private Set<String> only;
+    private Set<String> includes;
 }

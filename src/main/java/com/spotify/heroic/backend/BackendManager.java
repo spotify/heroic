@@ -9,12 +9,12 @@ import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.query.MetricsQuery;
-import com.spotify.heroic.query.TagsQuery;
+import com.spotify.heroic.query.TimeSeriesQuery;
 
 public interface BackendManager {
     public void queryMetrics(MetricsQuery query, AsyncResponse response);
 
-    public void queryTags(TagsQuery query, AsyncResponse response);
+    public void queryTags(TimeSeriesQuery query, AsyncResponse response);
 
     @ToString(of = { "timeSeries" })
     public static class GetAllTimeSeriesResult {

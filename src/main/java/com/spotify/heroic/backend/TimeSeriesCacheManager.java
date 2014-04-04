@@ -3,10 +3,13 @@ package com.spotify.heroic.backend;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
@@ -91,35 +94,27 @@ public class TimeSeriesCacheManager {
         }
     }
 
-    public FindTagsResult findTags(String key, Map<String, String> filter,
-            Set<String> namesFilter) {
-        final Map<String, Set<String>> tags = new HashMap<String, Set<String>>();
+    public FindTagsResult findTags(String key, Map<String, String> tags,
+            Set<String> includes) {
+        final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(key, filter);
+        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
 
-        for (final TimeSerie timeSerie : timeSeries) {
-            if (!matchingTags(timeSerie.getTags(), filter)) {
-                continue;
-            }
-
-            if (key != null && !timeSerie.getKey().equals(key)) {
-                continue;
-            }
-
+        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
             for (Map.Entry<String, String> entry : timeSerie.getTags()
                     .entrySet()) {
-                Set<String> current = tags.get(entry.getKey());
+                Set<String> current = result.get(entry.getKey());
 
                 if (current == null) {
                     current = new HashSet<String>();
-                    tags.put(entry.getKey(), current);
+                    result.put(entry.getKey(), current);
                 }
 
                 current.add(entry.getValue());
             }
         }
 
-        return new FindTagsResult(tags, timeSeries.size());
+        return new FindTagsResult(result, timeSeries.size());
     }
 
     public static class FindTimeSeriesResult {
@@ -136,19 +131,11 @@ public class TimeSeriesCacheManager {
     }
 
     public FindTimeSeriesResult findTimeSeries(String key,
-            Map<String, String> filter, Set<String> namesFilter) {
-        final List<TimeSerie> timeSeries = findBestMatch(key, filter);
+            Map<String, String> tags, Set<String> includes) {
+        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
         final List<TimeSerie> result = new LinkedList<TimeSerie>();
 
-        for (final TimeSerie timeSerie : timeSeries) {
-            if (!matchingTags(timeSerie.getTags(), filter)) {
-                continue;
-            }
-
-            if (key != null && !timeSerie.getKey().equals(key)) {
-                continue;
-            }
-
+        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
             result.add(timeSerie);
         }
 
@@ -168,43 +155,29 @@ public class TimeSeriesCacheManager {
         }
     }
 
-    public FindKeysResult findKeys(String key, Map<String, String> filter,
-            Set<String> namesFilter) {
-        final Set<String> result = new HashSet<String>();
+    public FindKeysResult findKeys(String key, Map<String, String> tags,
+            Set<String> includes) {
+        final SortedSet<String> result = new TreeSet<String>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(key, filter);
+        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
 
-        for (final TimeSerie timeSerie : timeSeries) {
-            if (!matchingTags(timeSerie.getTags(), filter)) {
-                continue;
-            }
-
-            if (key != null && !timeSerie.getKey().equals(key)) {
-                continue;
-            }
-
+        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
             result.add(timeSerie.getKey());
         }
 
         return new FindKeysResult(result, timeSeries.size());
     }
 
-    private static boolean matchingTags(Map<String, String> tags,
-            Map<String, String> queryTags) {
-        // query not specified.
-        if (queryTags != null) {
-            // match the row tags with the query tags.
-            for (final Map.Entry<String, String> entry : queryTags.entrySet()) {
-                // check tags for the actual row.
-                final String tagValue = tags.get(entry.getKey());
-
-                if (tagValue == null || !tagValue.equals(entry.getValue())) {
-                    return false;
-                }
+    private static Iterable<TimeSerie> filter(final List<TimeSerie> series,
+            final String key, final Map<String, String> filter,
+            final Set<String> includes) {
+        return new Iterable<TimeSerie>() {
+            @Override
+            public Iterator<TimeSerie> iterator() {
+                return new FilteringTimeSerieIterator(series.iterator(), key,
+                        filter, includes);
             }
-        }
-
-        return true;
+        };
     }
 
     /**

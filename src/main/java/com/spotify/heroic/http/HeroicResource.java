@@ -18,10 +18,8 @@ import com.spotify.heroic.backend.TimeSeriesCacheManager;
 import com.spotify.heroic.backend.TimeSeriesCacheManager.FindKeysResult;
 import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTagsResult;
 import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTimeSeriesResult;
-import com.spotify.heroic.query.KeysQuery;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
-import com.spotify.heroic.query.TagsQuery;
 import com.spotify.heroic.query.TagsResponse;
 import com.spotify.heroic.query.TimeSeriesQuery;
 import com.spotify.heroic.query.TimeSeriesResponse;
@@ -63,9 +61,9 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response tags(TagsQuery query) {
+    public Response tags(TimeSeriesQuery query) {
         final FindTagsResult result = timeSeriesCacheManager.findTags(
-                query.getKey(), query.getTags(), query.getOnly());
+                query.getKey(), query.getTags(), query.getIncludes());
         final TagsResponse response = new TagsResponse(result.getTags(),
                 result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();
@@ -74,9 +72,9 @@ public class HeroicResource {
     @POST
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response tags(KeysQuery query) {
+    public Response keys(TimeSeriesQuery query) {
         final FindKeysResult result = timeSeriesCacheManager.findKeys(
-                query.getKey(), query.getTags(), query.getOnly());
+                query.getKey(), query.getTags(), query.getIncludes());
         final KeysResponse response = new KeysResponse(result.getKeys(),
                 result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();
@@ -85,10 +83,10 @@ public class HeroicResource {
     @POST
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response keys(TimeSeriesQuery query) {
+    public Response timeseries(TimeSeriesQuery query) {
         final FindTimeSeriesResult result = timeSeriesCacheManager
                 .findTimeSeries(query.getKey(), query.getTags(),
-                        query.getOnly());
+                        query.getIncludes());
         final TimeSeriesResponse response = new TimeSeriesResponse(
                 result.getTimeSeries(), result.getSize());
         return Response.status(Response.Status.OK).entity(response).build();

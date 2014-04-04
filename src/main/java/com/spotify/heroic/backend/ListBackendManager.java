@@ -28,7 +28,7 @@ import com.spotify.heroic.query.Aggregator;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.MetricsResponse;
-import com.spotify.heroic.query.TagsQuery;
+import com.spotify.heroic.query.TimeSeriesQuery;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
@@ -221,7 +221,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public void queryTags(TagsQuery query, AsyncResponse response) {
+    public void queryTags(TimeSeriesQuery query, AsyncResponse response) {
 
     }
 
