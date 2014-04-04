@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import lombok.Getter;
+import lombok.ToString;
 
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
@@ -39,7 +40,7 @@ public interface MetricBackend extends Backend {
      * 
      * @throws QueryException
      */
-    public List<Query<DataPointsResult>> query(List<DataPointsRowKey> rows,
+    public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
             DateRange range) throws QueryException;
 
     public static class FindRowsResult {
@@ -71,7 +72,7 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Query<FindRowsResult> findRows(String key, DateRange range,
+    public Callback<FindRowsResult> findRows(String key, DateRange range,
             final Map<String, String> filter) throws QueryException;
 
     public static class FindTagsResult {
@@ -102,6 +103,23 @@ public interface MetricBackend extends Backend {
      * @throws QueryException
      *             If unable to setup the specified query.
      */
-    public Query<FindTagsResult> findTags(Map<String, String> filter,
+    public Callback<FindTagsResult> findTags(Map<String, String> filter,
             Set<String> namesFilter) throws QueryException;
+
+    @ToString(of = { "rows" })
+    public static class GetAllRowsResult {
+        @Getter
+        private final Map<String, List<DataPointsRowKey>> rows;
+
+        public GetAllRowsResult(Map<String, List<DataPointsRowKey>> rows) {
+            this.rows = rows;
+        }
+    }
+
+    /**
+     * Gets all available rows
+     * 
+     * @return An asynchronous handler resulting in a {@link GetAllRowsResult}
+     */
+    public Callback<GetAllRowsResult> getAllRows();
 }

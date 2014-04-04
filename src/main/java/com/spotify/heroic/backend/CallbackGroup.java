@@ -10,14 +10,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class GroupQuery<T> {
+public class CallbackGroup<T> {
     public static interface Handle<T> {
         void done(Collection<T> results, Collection<Throwable> errors,
                 int cancelled) throws Exception;
     }
 
     private final AtomicInteger countdown;
-    private final List<Query<T>> queries;
+    private final List<Callback<T>> callbacks;
     private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private volatile boolean done = false;
 
@@ -25,35 +25,35 @@ public class GroupQuery<T> {
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
     private final AtomicInteger cancelled = new AtomicInteger();
 
-    private final Query.Handle<T> listener = new Query.Handle<T>() {
+    private final Callback.Handle<T> listener = new Callback.Handle<T>() {
         @Override
         public void error(Throwable e) throws Exception {
             errors.add(e);
-            GroupQuery.this.check();
+            CallbackGroup.this.check();
         }
 
         @Override
         public void finish(T result) throws Exception {
             results.add(result);
-            GroupQuery.this.check();
+            CallbackGroup.this.check();
         }
 
         @Override
         public void cancel() throws Exception {
             cancelled.incrementAndGet();
-            GroupQuery.this.check();
+            CallbackGroup.this.check();
         }
     };
 
-    public GroupQuery(List<Query<T>> queries) {
-        this.countdown = new AtomicInteger(queries.size());
-        this.queries = queries;
+    public CallbackGroup(List<Callback<T>> callbacks) {
+        this.countdown = new AtomicInteger(callbacks.size());
+        this.callbacks = callbacks;
         this.done = false;
 
-        for (Query<T> query : queries)
-            query.listen(listener);
+        for (Callback<T> callback : callbacks)
+            callback.listen(listener);
 
-        if (queries.isEmpty())
+        if (callbacks.isEmpty())
             end();
     }
 
@@ -100,8 +100,8 @@ public class GroupQuery<T> {
 
     /* cancel all queries in this group */
     public void cancel() {
-        for (Query<T> query : queries) {
-            query.cancel();
+        for (Callback<T> callback : callbacks) {
+            callback.cancel();
         }
     }
 }

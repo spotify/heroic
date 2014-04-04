@@ -9,11 +9,11 @@ package com.spotify.heroic.backend;
  *            The type expected to be returned by the implemented execute
  *            function and realized for the specified query.
  */
-public abstract class QueryRunnable<T> implements Runnable {
-    private final Query<T> query;
+public abstract class CallbackRunnable<T> implements Runnable {
+    private final Callback<T> callback;
 
-    public QueryRunnable(Query<T> query) {
-        this.query = query;
+    public CallbackRunnable(Callback<T> callback) {
+        this.callback = callback;
     }
 
     @Override
@@ -22,12 +22,12 @@ public abstract class QueryRunnable<T> implements Runnable {
 
         try {
             result = execute();
-        } catch (Throwable t) {
-            query.fail(t);
+        } catch (final Throwable t) {
+            callback.fail(t);
             return;
         }
 
-        query.finish(result);
+        callback.finish(result);
     }
 
     public abstract T execute() throws Exception;

@@ -40,8 +40,6 @@ public class Main extends GuiceServletContextListener {
 
         final List<Module> modules = new ArrayList<Module>();
 
-        final SchedulerModule.Config schedulerConfig = new SchedulerModule.Config();
-
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
@@ -49,7 +47,7 @@ public class Main extends GuiceServletContextListener {
                         config.getBackendManager());
             }
         });
-        modules.add(new SchedulerModule(schedulerConfig));
+        modules.add(new SchedulerModule());
 
         return Guice.createInjector(modules);
     }
@@ -89,32 +87,40 @@ public class Main extends GuiceServletContextListener {
 
         try {
             server = grizzlyServer.start(baseUri);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             log.error("Failed to start grizzly server", e);
+            System.exit(1);
+            return;
+        }
+
+        final Scheduler scheduler = injector.getInstance(Scheduler.class);
+
+        try {
+            scheduler.triggerJob(SchedulerModule.REFRESH_TAGS);
+        } catch (final SchedulerException e) {
+            log.error("Failed to schedule initial tags refresh", e);
             System.exit(1);
             return;
         }
 
         try {
             System.in.read();
-        } catch (IOException e) {
+        } catch (final IOException e) {
             log.error("Failed to read", e);
         }
-
-        final Scheduler scheduler = injector.getInstance(Scheduler.class);
 
         log.warn("Shutting down scheduler");
 
         try {
             scheduler.shutdown(true);
-        } catch (SchedulerException e) {
+        } catch (final SchedulerException e) {
             log.error("Scheduler shutdown failed", e);
         }
 
         try {
             log.warn("Waiting for server to shutdown");
             server.shutdown().get(30, TimeUnit.SECONDS);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Server shutdown failed", e);
         }
 

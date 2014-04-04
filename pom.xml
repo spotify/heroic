@@ -141,6 +141,11 @@
       <version>1.4.7</version>
     </dependency>
     <!-- Jersey auto-initializes this for some reason. -->
+    <dependency>
+      <groupId>org.apache.onami</groupId>
+      <artifactId>org.apache.onami.scheduler</artifactId>
+      <version>1.4.0</version>
+    </dependency>
   </dependencies>
 
   <build>

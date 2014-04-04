@@ -1,5 +1,6 @@
 package com.spotify.heroic.query;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -10,10 +11,10 @@ public class TagsResponse {
     private final Map<String, Set<String>> result;
 
     @Getter
-    private final Set<String> metrics;
+    private final List<String> metrics;
 
     public TagsResponse(final Map<String, Set<String>> result,
-            final Set<String> metrics) {
+            final List<String> metrics) {
         this.result = result;
         this.metrics = metrics;
     }

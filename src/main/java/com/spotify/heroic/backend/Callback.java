@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class Query<T> {
+public class Callback<T> {
     public static enum State {
         INITIALIZED, FAILED, FINISHED, CANCELLED
     }
@@ -21,18 +21,18 @@ public class Query<T> {
         void finish(T result) throws Exception;
     }
 
-    private final List<Query.Handle<T>> handlers = new LinkedList<Query.Handle<T>>();
-    private final List<Query.Cancelled> cancelled = new LinkedList<Query.Cancelled>();
+    private final List<Callback.Handle<T>> handlers = new LinkedList<Callback.Handle<T>>();
+    private final List<Callback.Cancelled> cancelled = new LinkedList<Callback.Cancelled>();
 
-    private State state = Query.State.INITIALIZED;
+    private State state = Callback.State.INITIALIZED;
     private Throwable error;
     private T result;
 
     public synchronized void fail(Throwable error) {
-        if (state != Query.State.INITIALIZED)
+        if (state != Callback.State.INITIALIZED)
             return;
 
-        this.state = Query.State.FAILED;
+        this.state = Callback.State.FAILED;
         this.error = error;
 
         for (Handle<T> handle : handlers) {
@@ -45,10 +45,10 @@ public class Query<T> {
     }
 
     public synchronized void finish(T result) {
-        if (state != Query.State.INITIALIZED)
+        if (state != Callback.State.INITIALIZED)
             return;
 
-        this.state = Query.State.FINISHED;
+        this.state = Callback.State.FINISHED;
         this.result = result;
 
         for (Handle<T> handle : handlers) {
@@ -61,10 +61,10 @@ public class Query<T> {
     }
 
     public synchronized void cancel() {
-        if (state != Query.State.INITIALIZED)
+        if (state != Callback.State.INITIALIZED)
             return;
 
-        this.state = Query.State.CANCELLED;
+        this.state = Callback.State.CANCELLED;
 
         for (Cancelled cancel : cancelled) {
             try {
