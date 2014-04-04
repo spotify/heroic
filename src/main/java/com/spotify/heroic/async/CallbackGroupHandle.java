@@ -2,6 +2,15 @@ package com.spotify.heroic.async;
 
 import java.util.Collection;
 
+/**
+ * A helper class that will act as a CallbackGroup.Handle reporting it's result
+ * to a Callback.Handle.
+ * 
+ * @author udoprog
+ * 
+ * @param <T>
+ * @param <R>
+ */
 public abstract class CallbackGroupHandle<T, R> implements
         CallbackGroup.Handle<R> {
     private final Callback<T> callback;
@@ -12,7 +21,7 @@ public abstract class CallbackGroupHandle<T, R> implements
 
     @Override
     public void done(Collection<R> results, Collection<Throwable> errors,
-            int cancelled) throws Exception {
+            int cancelled) {
         final T result;
 
         try {
