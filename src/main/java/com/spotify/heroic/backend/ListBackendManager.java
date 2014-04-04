@@ -15,6 +15,10 @@ import javax.ws.rs.core.Response;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CallbackGroup;
+import com.spotify.heroic.async.CallbackGroupHandle;
+import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
@@ -184,7 +188,8 @@ public class ListBackendManager implements BackendManager {
      * 
      * @author udoprog
      */
-    private final class HandleGetAllRowsResult extends
+    private final class HandleGetAllRowsResult
+            extends
             CallbackGroupHandle<GetAllRowsResult, MetricBackend.GetAllRowsResult> {
 
         public HandleGetAllRowsResult(Callback<GetAllRowsResult> query) {
@@ -229,7 +234,7 @@ public class ListBackendManager implements BackendManager {
     @Override
     public Callback<GetAllRowsResult> getAllRows() {
         final List<Callback<MetricBackend.GetAllRowsResult>> queries = new ArrayList<Callback<MetricBackend.GetAllRowsResult>>();
-        final Callback<GetAllRowsResult> handle = new Callback<GetAllRowsResult>();
+        final Callback<GetAllRowsResult> handle = new ConcurrentCallback<GetAllRowsResult>();
 
         for (final MetricBackend backend : metricBackends) {
             queries.add(backend.getAllRows());

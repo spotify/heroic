@@ -30,9 +30,10 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.RangeBuilder;
+import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CallbackRunnable;
+import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.Backend;
-import com.spotify.heroic.backend.Callback;
-import com.spotify.heroic.backend.CallbackRunnable;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.query.DateRange;
@@ -197,7 +198,7 @@ public class KairosDBBackend implements MetricBackend {
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
-        final Callback<DataPointsResult> handle = new Callback<DataPointsResult>();
+        final Callback<DataPointsResult> handle = new ConcurrentCallback<DataPointsResult>();
 
         executor.execute(new CallbackRunnable<DataPointsResult>(handle) {
             @Override
@@ -244,7 +245,7 @@ public class KairosDBBackend implements MetricBackend {
                                         DataPointsRowKey.Serializer.get())
                                 .build());
 
-        final Callback<FindRowsResult> handle = new Callback<FindRowsResult>();
+        final Callback<FindRowsResult> handle = new ConcurrentCallback<FindRowsResult>();
 
         executor.execute(new CallbackRunnable<FindRowsResult>(handle) {
             @Override
@@ -275,7 +276,7 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public Callback<GetAllRowsResult> getAllRows() {
-        final Callback<GetAllRowsResult> callback = new Callback<GetAllRowsResult>();
+        final Callback<GetAllRowsResult> callback = new ConcurrentCallback<GetAllRowsResult>();
 
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
                 .prepareQuery(rowKeyIndex).getAllRows();

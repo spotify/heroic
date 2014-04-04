@@ -1,5 +1,6 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.async;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,13 +46,13 @@ public class CallbackGroup<T> {
         }
     };
 
-    public CallbackGroup(List<Callback<T>> callbacks) {
+    public CallbackGroup(Collection<Callback<T>> callbacks) {
         this.countdown = new AtomicInteger(callbacks.size());
-        this.callbacks = callbacks;
+        this.callbacks = new ArrayList<Callback<T>>(callbacks);
         this.done = false;
 
         for (Callback<T> callback : callbacks)
-            callback.listen(listener);
+            callback.register(listener);
 
         if (callbacks.isEmpty())
             end();

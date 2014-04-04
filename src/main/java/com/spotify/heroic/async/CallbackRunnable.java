@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.async;
 
 /**
  * Helper class that allows for safer Runnable implementations meant to wrap

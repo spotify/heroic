@@ -8,6 +8,7 @@ import javax.ws.rs.container.AsyncResponse;
 import lombok.Getter;
 import lombok.ToString;
 
+import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.TagsQuery;

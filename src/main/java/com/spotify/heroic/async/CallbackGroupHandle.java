@@ -1,8 +1,9 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.async;
 
 import java.util.Collection;
 
-public abstract class CallbackGroupHandle<T, R> implements CallbackGroup.Handle<R> {
+public abstract class CallbackGroupHandle<T, R> implements
+        CallbackGroup.Handle<R> {
     private final Callback<T> callback;
 
     public CallbackGroupHandle(Callback<T> callback) {

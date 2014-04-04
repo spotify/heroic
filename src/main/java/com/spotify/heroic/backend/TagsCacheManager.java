@@ -14,6 +14,7 @@ import javax.inject.Singleton;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.BackendManager.GetAllRowsResult;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 
@@ -34,24 +35,32 @@ public class TagsCacheManager {
         log.info("Refreshing tags cache");
 
         final Callback<GetAllRowsResult> callback = backendManager.getAllRows();
-        callback.listen(new Callback.Handle<BackendManager.GetAllRowsResult>() {
+
+        callback.register(new Callback.Handle<BackendManager.GetAllRowsResult>() {
             @Override
             public void cancel() throws Exception {
-                log.warn("request for tags cache refresh was cancelled.");
-                inProgress.set(false);
+                log.warn("Request for tags cache refresh was cancelled");
             }
 
             @Override
             public void error(Throwable e) throws Exception {
                 log.error("Failed to refresh tags cache", e);
-                inProgress.set(false);
             }
 
             @Override
             public void finish(GetAllRowsResult result) throws Exception {
+                log.info("Successfully refreshed with {} row(s)", result
+                        .getRows().size());
+
                 synchronized (TagsCacheManager.this) {
                     TagsCacheManager.this.rows = result.getRows();
                 }
+            }
+        });
+
+        callback.register(new Callback.Ended() {
+            @Override
+            public void ended() {
                 inProgress.set(false);
             }
         });

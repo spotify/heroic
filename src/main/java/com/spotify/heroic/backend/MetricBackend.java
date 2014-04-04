@@ -7,6 +7,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.ToString;
 
+import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.query.DateRange;
