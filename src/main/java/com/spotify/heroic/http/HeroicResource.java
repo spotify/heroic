@@ -14,13 +14,17 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.TagsCacheManager;
-import com.spotify.heroic.backend.TagsCacheManager.FindTagsResult;
+import com.spotify.heroic.backend.TimeSeriesCacheManager;
+import com.spotify.heroic.backend.TimeSeriesCacheManager.FindKeysResult;
+import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTagsResult;
+import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTimeSeriesResult;
 import com.spotify.heroic.query.KeysQuery;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.TagsQuery;
 import com.spotify.heroic.query.TagsResponse;
+import com.spotify.heroic.query.TimeSeriesQuery;
+import com.spotify.heroic.query.TimeSeriesResponse;
 
 @Slf4j
 @Path("/")
@@ -30,7 +34,7 @@ public class HeroicResource {
     private BackendManager backendManager;
 
     @Inject
-    private TagsCacheManager tagsCacheManager;
+    private TimeSeriesCacheManager timeSeriesCacheManager;
 
     public static final class Message {
         @Getter
@@ -60,7 +64,7 @@ public class HeroicResource {
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response tags(TagsQuery query) {
-        final FindTagsResult result = tagsCacheManager.findTags(
+        final FindTagsResult result = timeSeriesCacheManager.findTags(query.getKey(),
                 query.getTags(), query.getOnly());
         final TagsResponse response = new TagsResponse(result.getTags());
         return Response.status(Response.Status.OK).entity(response).build();
@@ -69,10 +73,21 @@ public class HeroicResource {
     @POST
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response keys(KeysQuery query) {
-        final FindTagsResult result = tagsCacheManager.findTags(
+    public Response tags(KeysQuery query) {
+        final FindKeysResult result = timeSeriesCacheManager.findKeys(query.getKey(),
                 query.getTags(), query.getOnly());
-        final KeysResponse response = new KeysResponse(result.getMetrics());
+        final KeysResponse response = new KeysResponse(result.getKeys());
+        return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    @POST
+    @Path("/timeseries")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response keys(TimeSeriesQuery query) {
+        final FindTimeSeriesResult result = timeSeriesCacheManager.findTimeSeries(
+                query.getKey(), query.getTags(), query.getOnly());
+        final TimeSeriesResponse response = new TimeSeriesResponse(
+                result.getTimeSeries());
         return Response.status(Response.Status.OK).entity(response).build();
     }
 }

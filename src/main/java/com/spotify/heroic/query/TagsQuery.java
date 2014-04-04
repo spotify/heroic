@@ -11,6 +11,10 @@ import lombok.ToString;
 public class TagsQuery {
     @Getter
     @Setter
+    private String key;
+
+    @Getter
+    @Setter
     private Map<String, String> tags;
 
     @Getter

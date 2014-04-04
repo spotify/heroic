@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Response;
@@ -188,41 +189,34 @@ public class ListBackendManager implements BackendManager {
      * 
      * @author udoprog
      */
-    private final class HandleGetAllRowsResult
+    private final class HandleGetAllTimeSeries
             extends
-            CallbackGroupHandle<GetAllRowsResult, MetricBackend.GetAllRowsResult> {
+            CallbackGroupHandle<GetAllTimeSeriesResult, MetricBackend.GetAllRowsResult> {
 
-        public HandleGetAllRowsResult(Callback<GetAllRowsResult> query) {
+        public HandleGetAllTimeSeries(Callback<GetAllTimeSeriesResult> query) {
             super(query);
         }
 
         @Override
-        public GetAllRowsResult execute(
+        public GetAllTimeSeriesResult execute(
                 Collection<MetricBackend.GetAllRowsResult> results,
                 Collection<Throwable> errors, int cancelled) throws Exception {
-            final Map<String, List<DataPointsRowKey>> allResults = new HashMap<String, List<DataPointsRowKey>>();
+            final Set<TimeSeries> result = new HashSet<TimeSeries>();
 
-            for (final MetricBackend.GetAllRowsResult result : results) {
-                final Map<String, List<DataPointsRowKey>> rows = result
+            for (final MetricBackend.GetAllRowsResult backendResult : results) {
+                final Map<String, List<DataPointsRowKey>> rows = backendResult
                         .getRows();
 
                 for (final Map.Entry<String, List<DataPointsRowKey>> entry : rows
                         .entrySet()) {
-                    final List<DataPointsRowKey> columns = allResults.get(entry
-                            .getKey());
-
-                    if (columns == null) {
-                        allResults.put(
-                                entry.getKey(),
-                                new ArrayList<DataPointsRowKey>(entry
-                                        .getValue()));
-                    } else {
-                        columns.addAll(entry.getValue());
+                    for (final DataPointsRowKey rowKey : entry.getValue()) {
+                        result.add(new TimeSeries(rowKey.getMetricName(),
+                                rowKey.getTags()));
                     }
                 }
             }
 
-            return new GetAllRowsResult(allResults);
+            return new GetAllTimeSeriesResult(result);
         }
     }
 
@@ -232,9 +226,9 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public Callback<GetAllRowsResult> getAllRows() {
+    public Callback<GetAllTimeSeriesResult> getAllRows() {
         final List<Callback<MetricBackend.GetAllRowsResult>> queries = new ArrayList<Callback<MetricBackend.GetAllRowsResult>>();
-        final Callback<GetAllRowsResult> handle = new ConcurrentCallback<GetAllRowsResult>();
+        final Callback<GetAllTimeSeriesResult> handle = new ConcurrentCallback<GetAllTimeSeriesResult>();
 
         for (final MetricBackend backend : metricBackends) {
             queries.add(backend.getAllRows());
@@ -242,7 +236,7 @@ public class ListBackendManager implements BackendManager {
 
         final CallbackGroup<MetricBackend.GetAllRowsResult> group = new CallbackGroup<MetricBackend.GetAllRowsResult>(
                 queries);
-        group.listen(new HandleGetAllRowsResult(handle));
+        group.listen(new HandleGetAllTimeSeries(handle));
         return handle;
     }
 }

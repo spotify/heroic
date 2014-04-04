@@ -1,7 +1,6 @@
 package com.spotify.heroic.backend;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.container.AsyncResponse;
 
@@ -9,7 +8,6 @@ import lombok.Getter;
 import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.TagsQuery;
 
@@ -18,15 +16,15 @@ public interface BackendManager {
 
     public void queryTags(TagsQuery query, AsyncResponse response);
 
-    @ToString(of = { "rows" })
-    public static class GetAllRowsResult {
+    @ToString(of = { "timeSeries" })
+    public static class GetAllTimeSeriesResult {
         @Getter
-        private final Map<String, List<DataPointsRowKey>> rows;
+        private final Set<TimeSeries> timeSeries;
 
-        public GetAllRowsResult(Map<String, List<DataPointsRowKey>> rows) {
-            this.rows = rows;
+        public GetAllTimeSeriesResult(Set<TimeSeries> timeSeries) {
+            this.timeSeries = timeSeries;
         }
     }
 
-    public Callback<GetAllRowsResult> getAllRows();
+    public Callback<GetAllTimeSeriesResult> getAllRows();
 }

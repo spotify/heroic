@@ -8,9 +8,8 @@ import lombok.Setter;
 import lombok.ToString;
 
 @ToString(of = { "tags", "only" })
-public class KeysQuery {
+public class TimeSeriesQuery {
     @Getter
-    @Setter
     private String key;
 
     @Getter
