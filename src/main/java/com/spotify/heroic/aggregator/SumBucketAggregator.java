@@ -4,16 +4,15 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.Resolution;
 
-@Slf4j
 public abstract class SumBucketAggregator implements Aggregator {
     public static abstract class JSON implements Aggregator.JSON {
         @Getter
@@ -46,6 +45,9 @@ public abstract class SumBucketAggregator implements Aggregator {
     private final long count;
     private final long width;
     private final long offset;
+
+    private final AtomicLong sampleSize = new AtomicLong(0);
+    private final AtomicLong outOfBounds = new AtomicLong(0);
     private final List<Bucket> buckets;
 
     public SumBucketAggregator(Date start, Date end, Resolution resolution) {
@@ -65,23 +67,14 @@ public abstract class SumBucketAggregator implements Aggregator {
     }
 
     @Override
-    public boolean isStreamable() {
-        return true;
-    }
-
-    @Override
-    public List<DataPoint> aggregate(Iterable<DataPoint> datapoints) {
-        stream(datapoints);
-        return result();
-    }
-
-    @Override
     public void stream(Iterable<DataPoint> datapoints) {
         long oob = 0;
+        long size = 0;
 
         for (final DataPoint datapoint : datapoints) {
             final long timestamp = datapoint.getTimestamp();
             final int index = (int) ((timestamp - offset) / width);
+            size += 1;
 
             if (index < 0 || index >= buckets.size()) {
                 oob += 1;
@@ -94,13 +87,12 @@ public abstract class SumBucketAggregator implements Aggregator {
             bucket.count.incrementAndGet();
         }
 
-        if (oob > 0) {
-            log.warn("datapoints out-of-bounds: " + oob);
-        }
+        this.outOfBounds.addAndGet(oob);
+        this.sampleSize.addAndGet(size);
     }
 
     @Override
-    public List<DataPoint> result() {
+    public Result result() {
         final List<DataPoint> result = new ArrayList<DataPoint>((int) count);
 
         for (final Bucket bucket : buckets) {
@@ -112,7 +104,7 @@ public abstract class SumBucketAggregator implements Aggregator {
             result.add(d);
         }
 
-        return result;
+        return new Result(result, sampleSize.get(), outOfBounds.get());
     }
 
     private List<Bucket> initializeBuckets(long offset, long width, long count) {

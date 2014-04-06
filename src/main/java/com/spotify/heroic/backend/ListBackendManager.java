@@ -8,7 +8,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.core.Response;
@@ -21,6 +23,7 @@ import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
 import com.spotify.heroic.async.CallbackGroupHandle;
+import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
@@ -98,52 +101,101 @@ public class ListBackendManager implements BackendManager {
                 queries.addAll(backend.query(result.getRows(), range));
             }
 
-            final CallbackGroup<DataPointsResult> group = new CallbackGroup<DataPointsResult>(
-                    queries);
-            group.listen(new HandleDataPointsResult(query, response,
-                    aggregators));
+            if (aggregators.isEmpty()) {
+                log.warn("Returning raw results, this will most probably kill your machine!");
+                new CallbackStream<DataPointsResult>(queries,
+                        new HandleDataPointsAll(response));
+            } else {
+                new CallbackStream<DataPointsResult>(queries,
+                        new HandleDataPointsStream(response, aggregators));
+            }
         }
     }
 
-    private final class HandleDataPointsResult implements
-            CallbackGroup.Handle<DataPointsResult> {
-        private final MetricsQuery query;
+    private final class HandleDataPointsAll implements
+            CallbackStream.Handle<DataPointsResult> {
         private final AsyncResponse response;
-        private final AggregatorGroup aggregators;
+        private final Queue<DataPointsResult> results = new ConcurrentLinkedQueue<DataPointsResult>();
 
-        private HandleDataPointsResult(MetricsQuery query,
-                AsyncResponse response, AggregatorGroup aggregators) {
-            this.query = query;
+        private HandleDataPointsAll(AsyncResponse response) {
             this.response = response;
-            this.aggregators = aggregators;
         }
 
         @Override
-        public void done(Collection<DataPointsResult> results,
-                Collection<Throwable> errors, int cancelled) throws Exception {
-            log.info("Query Result: results:{} errors:{} cancelled:{}",
-                    results.size(), errors.size(), cancelled);
+        public void finish(Callback<DataPointsResult> callback,
+                DataPointsResult result) throws Exception {
+            results.add(result);
+        }
 
-            for (final Throwable error : errors) {
-                log.error("Failed: " + errors.size(), error);
-            }
+        @Override
+        public void error(Callback<DataPointsResult> callback, Throwable error)
+                throws Exception {
+            log.error("Result failed: " + error, error);
+        }
 
-            List<DataPoint> datapoints = new ArrayList<DataPoint>();
+        @Override
+        public void cancel(Callback<DataPointsResult> callback)
+                throws Exception {
+        }
+
+        @Override
+        public void done() throws Exception {
+            final List<DataPoint> datapoints = joinRawResults();
+
+            final MetricsResponse metricsResponse = new MetricsResponse(
+                    datapoints, datapoints.size(), 0);
+
+            response.resume(Response.status(Response.Status.OK)
+                    .entity(metricsResponse).build());
+        }
+
+        private List<DataPoint> joinRawResults() {
+            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
             for (final DataPointsResult result : results) {
                 datapoints.addAll(result.getDatapoints());
             }
 
             Collections.sort(datapoints);
+            return datapoints;
+        }
+    }
 
-            final int sampleSize = datapoints.size();
+    private final class HandleDataPointsStream implements
+            CallbackStream.Handle<DataPointsResult> {
+        private final AsyncResponse response;
+        private final AggregatorGroup aggregators;
 
-            if (!aggregators.isEmpty()) {
-                datapoints = aggregators.aggregate(datapoints);
-            }
+        private HandleDataPointsStream(
+                AsyncResponse response, AggregatorGroup aggregators) {
+            this.response = response;
+            this.aggregators = aggregators;
+        }
+
+        @Override
+        public void finish(Callback<DataPointsResult> callback,
+                DataPointsResult result) throws Exception {
+            aggregators.stream(result.getDatapoints());
+        }
+
+        @Override
+        public void error(Callback<DataPointsResult> callback, Throwable error)
+                throws Exception {
+            log.error("Result failed: " + error, error);
+        }
+
+        @Override
+        public void cancel(Callback<DataPointsResult> callback)
+                throws Exception {
+        }
+
+        @Override
+        public void done() throws Exception {
+            final Aggregator.Result result = aggregators.result();
 
             final MetricsResponse metricsResponse = new MetricsResponse(
-                    datapoints, sampleSize);
+                    result.getResult(), result.getSampleSize(),
+                    result.getOutOfBounds());
 
             response.resume(Response.status(Response.Status.OK)
                     .entity(metricsResponse).build());

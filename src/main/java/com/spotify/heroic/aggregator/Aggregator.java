@@ -3,29 +3,29 @@ package com.spotify.heroic.aggregator;
 import java.util.Date;
 import java.util.List;
 
+import lombok.Getter;
+
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 
 public interface Aggregator {
+    public static class Result {
+        @Getter
+        private final List<DataPoint> result;
+        @Getter
+        private final long sampleSize;
+        @Getter
+        private final long outOfBounds;
+
+        public Result(List<DataPoint> result, long sampleSize, long outOfBounds) {
+            this.result = result;
+            this.sampleSize = sampleSize;
+            this.outOfBounds = outOfBounds;
+        }
+    }
+
     public static interface JSON {
         public Aggregator build(Date start, Date end);
     }
-
-    /**
-     * Calculate result of all datapoints for this aggregator.
-     * 
-     * Must not be thread safe.
-     * 
-     * @param datapoints
-     * @return
-     */
-    List<DataPoint> aggregate(Iterable<DataPoint> datapoints);
-
-    /**
-     * Indicate weither this aggregator can be updated on-the-fly or not.
-     * 
-     * @return
-     */
-    public boolean isStreamable();
 
     /**
      * Stream datapoints into this aggregator.
@@ -39,7 +39,7 @@ public interface Aggregator {
     /**
      * Get the result of this aggregator.
      */
-    public List<DataPoint> result();
+    public Result result();
 
     /**
      * Get a hint of how large the interval is that this aggregator will

@@ -42,8 +42,13 @@ public class MetricsResponse {
     @Getter
     private final long sampleSize;
 
-    public MetricsResponse(final List<DataPoint> result, final long sampleSize) {
+    @Getter
+    private final long outOfBounds;
+
+    public MetricsResponse(final List<DataPoint> result, final long sampleSize,
+            final long outOfBounds) {
         this.result = result;
         this.sampleSize = sampleSize;
+        this.outOfBounds = outOfBounds;
     }
 }
