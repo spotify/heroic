@@ -23,12 +23,14 @@ import com.spotify.heroic.backend.BackendManager.GetAllTimeSeriesResult;
 
 @Singleton
 @Slf4j
-public class TimeSeriesCacheManager {
+public class TimeSeriesCache {
     @Inject
     private BackendManager backendManager;
+
     private Map<Map.Entry<String, String>, List<TimeSerie>> byTag;
     private Map<String, List<TimeSerie>> byKey;
     private List<TimeSerie> all;
+    private boolean ready = false;
 
     private final AtomicBoolean inProgress = new AtomicBoolean(false);
 
@@ -65,10 +67,11 @@ public class TimeSeriesCacheManager {
                 final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = calculateByTag(timeSeries);
                 final Map<String, List<TimeSerie>> byKey = calculateByKey(timeSeries);
 
-                synchronized (TimeSeriesCacheManager.this) {
-                    TimeSeriesCacheManager.this.byTag = byTag;
-                    TimeSeriesCacheManager.this.byKey = byKey;
-                    TimeSeriesCacheManager.this.all = timeSeries;
+                synchronized (TimeSeriesCache.this) {
+                    TimeSeriesCache.this.byTag = byTag;
+                    TimeSeriesCache.this.byKey = byKey;
+                    TimeSeriesCache.this.all = timeSeries;
+                    TimeSeriesCache.this.ready = true;
                 }
             }
         });
@@ -95,15 +98,22 @@ public class TimeSeriesCacheManager {
         }
     }
 
-    public FindTagsResult findTags(String key, Map<String, String> tags,
-            Set<String> includes) {
+    public FindTagsResult findTags(TimeSerieMatcher matcher,
+            Set<String> include, Set<String> exclude) {
         final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
+                matcher.indexTags());
 
-        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
+        for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             for (Map.Entry<String, String> entry : timeSerie.getTags()
                     .entrySet()) {
+                if (include != null && !include.contains(entry.getKey()))
+                    continue;
+
+                if (exclude != null && exclude.contains(entry.getKey()))
+                    continue;
+
                 Set<String> current = result.get(entry.getKey());
 
                 if (current == null) {
@@ -131,12 +141,13 @@ public class TimeSeriesCacheManager {
         }
     }
 
-    public FindTimeSeriesResult findTimeSeries(String key,
-            Map<String, String> tags, Set<String> includes) {
-        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
+    public FindTimeSeriesResult findTimeSeries(TimeSerieMatcher matcher) {
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
+                matcher.indexTags());
+
         final List<TimeSerie> result = new LinkedList<TimeSerie>();
 
-        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
+        for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie);
         }
 
@@ -156,13 +167,13 @@ public class TimeSeriesCacheManager {
         }
     }
 
-    public FindKeysResult findKeys(String key, Map<String, String> tags,
-            Set<String> includes) {
+    public FindKeysResult findKeys(TimeSerieMatcher matcher) {
         final SortedSet<String> result = new TreeSet<String>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(key, tags);
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
+                matcher.indexTags());
 
-        for (final TimeSerie timeSerie : filter(timeSeries, key, tags, includes)) {
+        for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie.getKey());
         }
 
@@ -170,13 +181,12 @@ public class TimeSeriesCacheManager {
     }
 
     private static Iterable<TimeSerie> filter(final List<TimeSerie> series,
-            final String key, final Map<String, String> filter,
-            final Set<String> includes) {
+            final TimeSerieMatcher matcher) {
         return new Iterable<TimeSerie>() {
             @Override
             public Iterator<TimeSerie> iterator() {
-                return new FilteringTimeSerieIterator(series.iterator(), key,
-                        filter, includes);
+                return new FilteringTimeSerieIterator(series.iterator(),
+                        matcher);
             }
         };
     }
@@ -300,5 +310,9 @@ public class TimeSeriesCacheManager {
 
     private synchronized List<TimeSerie> getAll() {
         return all;
+    }
+
+    public synchronized boolean isReady() {
+        return ready;
     }
 }

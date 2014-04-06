@@ -36,4 +36,11 @@ public class RelativeDateRange implements DateRange {
         this.unit = unit;
         this.value = value;
     }
+
+    @Override
+    public DateRange roundToInterval(long hint) {
+        final AbsoluteDateRange range = new AbsoluteDateRange(
+                start().getTime(), end().getTime());
+        return range.roundToInterval(hint);
+    }
 }

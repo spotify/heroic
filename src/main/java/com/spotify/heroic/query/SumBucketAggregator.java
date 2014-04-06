@@ -16,6 +16,11 @@ public abstract class SumBucketAggregator implements Aggregator {
     @Setter
     private Resolution sampling = Resolution.DEFAULT_RESOLUTION;
 
+    @Override
+    public long getIntervalHint() {
+        return sampling.getWidth();
+    }
+
     public static final class SumBucket {
         @Getter
         private final long timestamp;
@@ -35,18 +40,19 @@ public abstract class SumBucketAggregator implements Aggregator {
         final long width = sampling.getWidth();
         final long diff = end.getTime() - start.getTime();
         final long count = diff / width;
-        final long first = start.getTime() - (start.getTime() % width);
+        final long offset = start.getTime() - (start.getTime() % width);
 
-        final List<SumBucket> buckets = initializeBuckets(first, width, count);
-        calculateBuckets(datapoints, first, width, buckets);
+        final List<SumBucket> buckets = initializeBuckets(offset, width, count);
+        calculateBuckets(datapoints, offset, width, buckets);
         return buildResult(count, buckets);
     }
 
-    private List<SumBucket> initializeBuckets(long first, long width, long count) {
+    private List<SumBucket> initializeBuckets(long offset, long width, long count) {
         final List<SumBucket> buckets = new ArrayList<SumBucket>((int) count);
 
         for (int i = 0; i < count; i++) {
-            buckets.add(new SumBucket(first + width * i));
+            long timestamp = offset + width * i + width;
+            buckets.add(new SumBucket(timestamp));
         }
         return buckets;
     }

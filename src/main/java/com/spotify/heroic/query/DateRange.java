@@ -7,4 +7,6 @@ public interface DateRange {
 
     Date end();
 
+    DateRange roundToInterval(long hint);
+
 }

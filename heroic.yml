@@ -4,11 +4,11 @@ backends:
   - !kairosdb-backend
     attributes:
       site: sto
-    seeds: sto3-kairosdbcassandra-a1:9160,sto3-kairosdbcassandra-a2:9160,sto3-kairosdbcassandra-a3:9160
+    seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
   - !kairosdb-backend
     attributes:
       site: lon
-    seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
+    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
 #  - !kairosdb-backend
 #    attributes:
 #      site: ash

@@ -8,9 +8,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-@ToString(of = { "matchKey", "matchTags", "hasTags" })
-@EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags" })
-public class TimeSeriesQuery {
+@ToString(of = { "matchKey", "matchTags", "hasTags", "include", "exclude" })
+@EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags", "include",
+        "exclude" })
+public class TagsQuery {
     /**
      * Only include time series which match the exact key.
      */
@@ -31,4 +32,18 @@ public class TimeSeriesQuery {
     @Getter
     @Setter
     private Set<String> hasTags;
+
+    /**
+     * Only include the specified tags in the result.
+     */
+    @Getter
+    @Setter
+    private Set<String> include;
+
+    /**
+     * Exclude the specified tags in the result.
+     */
+    @Getter
+    @Setter
+    private Set<String> exclude;
 }

@@ -14,6 +14,11 @@ public class AbsoluteDateRange implements DateRange {
     @Setter
     private long end;
 
+    public AbsoluteDateRange(long start, long end) {
+        this.start = start;
+        this.end = end;
+    }
+
     @Override
     public Date start() {
         return new Date(start);
@@ -22,5 +27,11 @@ public class AbsoluteDateRange implements DateRange {
     @Override
     public Date end() {
         return new Date(end);
+    }
+
+    @Override
+    public DateRange roundToInterval(long hint) {
+        return new AbsoluteDateRange(start - (start % hint), end
+                + (hint - (end % hint)));
     }
 }

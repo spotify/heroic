@@ -39,4 +39,22 @@ public class MetricsQuery {
             @JsonSubTypes.Type(value = SumAggregator.class, name = "sum"),
             @JsonSubTypes.Type(value = AverageAggregator.class, name = "average") })
     private List<Aggregator> aggregators;
+
+    public long getIntervalHint() {
+        if (aggregators == null) {
+            return 0;
+        }
+
+        long max = 0;
+
+        for (final Aggregator aggregator : aggregators) {
+            long hint = aggregator.getIntervalHint();
+
+            if (hint > max) {
+                max = hint;
+            }
+        }
+
+        return max;
+    }
 }

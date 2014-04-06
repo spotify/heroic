@@ -21,6 +21,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.http.HeroicResourceCache;
 import com.spotify.heroic.yaml.HeroicConfig;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -45,6 +46,7 @@ public class Main extends GuiceServletContextListener {
             protected void configure() {
                 bind(BackendManager.class).toInstance(
                         config.getBackendManager());
+                bind(HeroicResourceCache.class);
             }
         });
         modules.add(new SchedulerModule());

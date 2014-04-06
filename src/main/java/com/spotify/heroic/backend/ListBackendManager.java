@@ -165,7 +165,9 @@ public class ListBackendManager implements BackendManager {
         final List<Callback<FindRowsResult>> queries = new ArrayList<Callback<FindRowsResult>>();
 
         final String key = query.getKey();
-        final DateRange range = query.getRange();
+
+        final DateRange range = calculateDateRange(query);
+
         final Map<String, String> filter = query.getTags();
 
         for (final MetricBackend backend : metricBackends) {
@@ -180,6 +182,24 @@ public class ListBackendManager implements BackendManager {
                 queries);
 
         group.listen(new HandleFindRowsResult(query, range, response));
+    }
+
+    /**
+     * Check if the query wants to hint at a specific interval. If that is the
+     * case, round the provided date to the specified interval.
+     * 
+     * @param query
+     * @return
+     */
+    private DateRange calculateDateRange(final MetricsQuery query) {
+        final DateRange range = query.getRange();
+        final long hint = query.getIntervalHint();
+
+        if (hint > 0) {
+            return range.roundToInterval(hint);
+        } else {
+            return range;
+        }
     }
 
     /**

@@ -14,12 +14,10 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.TimeSeriesCacheManager;
-import com.spotify.heroic.backend.TimeSeriesCacheManager.FindKeysResult;
-import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTagsResult;
-import com.spotify.heroic.backend.TimeSeriesCacheManager.FindTimeSeriesResult;
+import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
+import com.spotify.heroic.query.TagsQuery;
 import com.spotify.heroic.query.TagsResponse;
 import com.spotify.heroic.query.TimeSeriesQuery;
 import com.spotify.heroic.query.TimeSeriesResponse;
@@ -32,7 +30,10 @@ public class HeroicResource {
     private BackendManager backendManager;
 
     @Inject
-    private TimeSeriesCacheManager timeSeriesCacheManager;
+    private TimeSeriesCache timeSeriesCache;
+    
+    @Inject
+    private HeroicResourceCache cache;
 
     public static final class Message {
         @Getter
@@ -61,11 +62,13 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response tags(TimeSeriesQuery query) {
-        final FindTagsResult result = timeSeriesCacheManager.findTags(
-                query.getKey(), query.getTags(), query.getIncludes());
-        final TagsResponse response = new TagsResponse(result.getTags(),
-                result.getSize());
+    public Response tags(TagsQuery query) {
+        if (!cache.isReady()) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build();
+        }
+
+        final TagsResponse response = cache.tags(query);
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
@@ -73,10 +76,12 @@ public class HeroicResource {
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response keys(TimeSeriesQuery query) {
-        final FindKeysResult result = timeSeriesCacheManager.findKeys(
-                query.getKey(), query.getTags(), query.getIncludes());
-        final KeysResponse response = new KeysResponse(result.getKeys(),
-                result.getSize());
+        if (!cache.isReady()) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build();
+        }
+
+        final KeysResponse response = cache.keys(query);
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
@@ -84,11 +89,12 @@ public class HeroicResource {
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response timeseries(TimeSeriesQuery query) {
-        final FindTimeSeriesResult result = timeSeriesCacheManager
-                .findTimeSeries(query.getKey(), query.getTags(),
-                        query.getIncludes());
-        final TimeSeriesResponse response = new TimeSeriesResponse(
-                result.getTimeSeries(), result.getSize());
+        if (!timeSeriesCache.isReady()) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build();
+        }
+
+        final TimeSeriesResponse response = cache.timeseries(query);
         return Response.status(Response.Status.OK).entity(response).build();
     }
 }
