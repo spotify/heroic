@@ -10,6 +10,9 @@ import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.spotify.heroic.aggregator.Aggregator;
+import com.spotify.heroic.aggregator.AverageAggregator;
+import com.spotify.heroic.aggregator.SumAggregator;
 
 @ToString(of = { "key", "tags", "range", "aggregators" })
 public class MetricsQuery {
@@ -36,25 +39,7 @@ public class MetricsQuery {
     @Setter
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
     @JsonSubTypes({
-            @JsonSubTypes.Type(value = SumAggregator.class, name = "sum"),
-            @JsonSubTypes.Type(value = AverageAggregator.class, name = "average") })
-    private List<Aggregator> aggregators;
-
-    public long getIntervalHint() {
-        if (aggregators == null) {
-            return 0;
-        }
-
-        long max = 0;
-
-        for (final Aggregator aggregator : aggregators) {
-            long hint = aggregator.getIntervalHint();
-
-            if (hint > max) {
-                max = hint;
-            }
-        }
-
-        return max;
-    }
+            @JsonSubTypes.Type(value = SumAggregator.JSON.class, name = "sum"),
+            @JsonSubTypes.Type(value = AverageAggregator.JSON.class, name = "average") })
+    private List<Aggregator.JSON> aggregators;
 }
