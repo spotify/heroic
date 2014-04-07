@@ -2,6 +2,8 @@ package com.spotify.heroic.async;
 
 import java.util.Collection;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * A helper class that will act as a CallbackGroup.Handle reporting it's result
  * to a Callback.Handle.
@@ -11,6 +13,7 @@ import java.util.Collection;
  * @param <T>
  * @param <R>
  */
+@Slf4j
 public abstract class CallbackGroupHandle<T, R> implements
         CallbackGroup.Handle<R> {
     private final Callback<T> callback;
@@ -22,6 +25,10 @@ public abstract class CallbackGroupHandle<T, R> implements
     @Override
     public void done(Collection<R> results, Collection<Throwable> errors,
             int cancelled) {
+        if (!callback.isInitialized()) {
+            return;
+        }
+
         final T result;
 
         try {

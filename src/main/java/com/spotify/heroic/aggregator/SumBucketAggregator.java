@@ -1,7 +1,6 @@
 package com.spotify.heroic.aggregator;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,7 +19,7 @@ public abstract class SumBucketAggregator implements Aggregator {
         private Resolution sampling = Resolution.DEFAULT_RESOLUTION;
 
         @Override
-        public abstract SumBucketAggregator build(Date start, Date end);
+        public abstract SumBucketAggregator build(long start, long end);
     }
 
     public static final class Bucket {
@@ -98,14 +97,16 @@ public abstract class SumBucketAggregator implements Aggregator {
     private final long width;
     private final long offset;
 
-    public SumBucketAggregator(Date start, Date end, Resolution resolution) {
+    public SumBucketAggregator(long start, long end, Resolution resolution) {
+        assert start >= end;
+
         final long width = resolution.getWidth();
-        final long diff = end.getTime() - start.getTime();
+        final long diff = end - start;
         final long count = diff / width;
 
         this.count = count;
         this.width = width;
-        this.offset = start.getTime() - (start.getTime() % width);
+        this.offset = start - (start % width);
     }
 
     @Override

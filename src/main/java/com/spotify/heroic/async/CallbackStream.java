@@ -16,11 +16,14 @@ public class CallbackStream<T> {
 
         void cancel(Callback<T> callback) throws Exception;
 
-        void done() throws Exception;
+        void done(int successful, int failed, int cancelled) throws Exception;
     }
 
     private final AtomicInteger countdown;
     private final List<Callback<T>> callbacks;
+    private final AtomicInteger successful = new AtomicInteger();
+    private final AtomicInteger failed = new AtomicInteger();
+    private final AtomicInteger cancelled = new AtomicInteger();
 
     public CallbackStream(Collection<Callback<T>> callbacks,
             final Handle<T> handle) throws Exception {
@@ -31,18 +34,21 @@ public class CallbackStream<T> {
             callback.register(new Callback.Handle<T>() {
                 @Override
                 public void error(Throwable e) throws Exception {
+                    failed.incrementAndGet();
                     handleError(handle, callback, e);
                     CallbackStream.this.check(handle);
                 }
 
                 @Override
                 public void finish(T result) throws Exception {
+                    successful.incrementAndGet();
                     handleFinish(handle, callback, result);
                     CallbackStream.this.check(handle);
                 }
 
                 @Override
                 public void cancel() throws Exception {
+                    cancelled.incrementAndGet();
                     handleCancel(handle, callback);
                     CallbackStream.this.check(handle);
                 }
@@ -55,6 +61,8 @@ public class CallbackStream<T> {
 
     /* cancel all queries in this group */
     public void cancel() {
+        log.warn("Cancelling");
+
         for (Callback<T> callback : callbacks) {
             callback.cancel();
         }
@@ -87,7 +95,7 @@ public class CallbackStream<T> {
 
     private void handleDone(Handle<T> handle) {
         try {
-            handle.done();
+            handle.done(successful.get(), failed.get(), cancelled.get());
         } catch (Throwable t) {
             log.error("Failed to call done on handle", t);
         }
@@ -96,11 +104,9 @@ public class CallbackStream<T> {
     private void check(Handle<T> handle) throws Exception {
         int value = countdown.decrementAndGet();
 
-        log.info("Countdown: {}", value);
-
         if (value != 0)
             return;
 
-        handle.done();
+        handleDone(handle);
     }
 }

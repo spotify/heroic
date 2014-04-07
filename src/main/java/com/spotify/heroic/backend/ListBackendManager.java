@@ -12,9 +12,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.core.Response;
-
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,8 +28,6 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
-import com.spotify.heroic.query.MetricsResponse;
-import com.spotify.heroic.query.TimeSeriesQuery;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
@@ -76,13 +71,14 @@ public class ListBackendManager implements BackendManager {
     private final class HandleFindRowsResult implements
             CallbackGroup.Handle<FindRowsResult> {
         private final DateRange range;
-        private final AsyncResponse response;
+        private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
 
         private HandleFindRowsResult(DateRange range,
-                AsyncResponse response, AggregatorGroup aggregators) {
+                Callback<QueryMetricsResult> callback,
+                AggregatorGroup aggregators) {
             this.range = range;
-            this.response = response;
+            this.callback = callback;
             this.aggregators = aggregators;
         }
 
@@ -101,24 +97,33 @@ public class ListBackendManager implements BackendManager {
 
             final Aggregator.Session session = aggregators.session();
 
+            final CallbackStream<DataPointsResult> callbackStream;
+
             if (session == null) {
                 log.warn("Returning raw results, this will most probably kill your machine!");
-                new CallbackStream<DataPointsResult>(queries,
-                        new HandleDataPointsAll(response));
+                callbackStream = new CallbackStream<DataPointsResult>(queries,
+                        new HandleDataPointsAll(callback));
             } else {
-                new CallbackStream<DataPointsResult>(queries,
-                        new HandleDataPointsStream(response, session));
+                callbackStream = new CallbackStream<DataPointsResult>(queries,
+                        new HandleDataPoints(callback, session));
             }
+
+            callback.register(new Callback.Cancelled() {
+                @Override
+                public void cancel() throws Exception {
+                    callbackStream.cancel();
+                }
+            });
         }
     }
 
     private final class HandleDataPointsAll implements
             CallbackStream.Handle<DataPointsResult> {
-        private final AsyncResponse response;
+        private final Callback<QueryMetricsResult> callback;
         private final Queue<DataPointsResult> results = new ConcurrentLinkedQueue<DataPointsResult>();
 
-        private HandleDataPointsAll(AsyncResponse response) {
-            this.response = response;
+        private HandleDataPointsAll(Callback<QueryMetricsResult> callback) {
+            this.callback = callback;
         }
 
         @Override
@@ -139,14 +144,15 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void done() throws Exception {
+        public void done(int successful, int failed, int cancelled)
+                throws Exception {
             final List<DataPoint> datapoints = joinRawResults();
 
-            final MetricsResponse metricsResponse = new MetricsResponse(
-                    datapoints, datapoints.size(), 0);
+            final RowStatistics rowStatistics = new RowStatistics(successful,
+                    failed, cancelled);
 
-            response.resume(Response.status(Response.Status.OK)
-                    .entity(metricsResponse).build());
+            callback.finish(new QueryMetricsResult(datapoints, datapoints
+                    .size(), 0, rowStatistics));
         }
 
         private List<DataPoint> joinRawResults() {
@@ -161,14 +167,14 @@ public class ListBackendManager implements BackendManager {
         }
     }
 
-    private final class HandleDataPointsStream implements
+    private final class HandleDataPoints implements
             CallbackStream.Handle<DataPointsResult> {
-        private final AsyncResponse response;
+        private final Callback<QueryMetricsResult> callback;
         private final Aggregator.Session session;
 
-        private HandleDataPointsStream(AsyncResponse response,
+        private HandleDataPoints(Callback<QueryMetricsResult> callback,
                 Aggregator.Session session) {
-            this.response = response;
+            this.callback = callback;
             this.session = session;
         }
 
@@ -190,29 +196,35 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void done() throws Exception {
+        public void done(int successful, int failed, int cancelled)
+                throws Exception {
             final Aggregator.Result result = session.result();
-
-            final MetricsResponse metricsResponse = new MetricsResponse(
-                    result.getResult(), result.getSampleSize(),
-                    result.getOutOfBounds());
-
-            response.resume(Response.status(Response.Status.OK)
-                    .entity(metricsResponse).build());
+            final RowStatistics rowStatistics = new RowStatistics(successful,
+                    failed, cancelled);
+            callback.finish(new QueryMetricsResult(result.getResult(), result
+                    .getSampleSize(), result.getOutOfBounds(), rowStatistics));
         }
     }
 
     @Override
-    public void queryMetrics(final MetricsQuery query,
-            final AsyncResponse response) {
+    public Callback<QueryMetricsResult> queryMetrics(final MetricsQuery query)
+            throws QueryException {
         final List<Callback<FindRowsResult>> queries = new ArrayList<Callback<FindRowsResult>>();
 
+        final List<Aggregator.Definition> definitions = query.getAggregators();
         final String key = query.getKey();
+        final DateRange queryRange = query.getRange();
+        final Date start = queryRange.start();
+        final Date end = queryRange.end();
+
+        if (!end.after(start)) {
+            throw new QueryException("End time must come after start");
+        }
 
         final AggregatorGroup aggregators = new AggregatorGroup(
-                buildAggregators(query));
+                buildAggregators(definitions, start, end));
 
-        final DateRange range = calculateDateRange(aggregators, query);
+        final DateRange range = calculateDateRange(aggregators, queryRange);
 
         final Map<String, String> filter = query.getTags();
 
@@ -224,26 +236,32 @@ public class ListBackendManager implements BackendManager {
             }
         }
 
-        final CallbackGroup<FindRowsResult> group = new CallbackGroup<FindRowsResult>(
-                queries);
+        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
-        group.listen(new HandleFindRowsResult(range, response,
-                aggregators));
+        final CallbackGroup<FindRowsResult> callbackGroup = new CallbackGroup<FindRowsResult>(
+                queries, new HandleFindRowsResult(
+                range, callback, aggregators));
+        
+        callback.register(new Callback.Cancelled() {
+            @Override
+            public void cancel() throws Exception {
+                callbackGroup.cancel();
+            }
+        });
+
+        return callback;
     }
 
-    private List<Aggregator> buildAggregators(MetricsQuery query) {
+    private List<Aggregator> buildAggregators(
+            List<Aggregator.Definition> definitions, Date start, Date end) {
         final List<Aggregator> aggregators = new ArrayList<Aggregator>();
 
-        if (query.getAggregators() == null) {
+        if (definitions == null) {
             return aggregators;
         }
 
-        final DateRange range = query.getRange();
-        final Date start = range.start();
-        final Date end = range.end();
-
-        for (Aggregator.Definition definition : query.getAggregators()) {
-            aggregators.add(definition.build(start, end));
+        for (Aggregator.Definition definition : definitions) {
+            aggregators.add(definition.build(start.getTime(), end.getTime()));
         }
 
         return aggregators;
@@ -257,8 +275,7 @@ public class ListBackendManager implements BackendManager {
      * @return
      */
     private DateRange calculateDateRange(AggregatorGroup aggregators,
-            final MetricsQuery query) {
-        final DateRange range = query.getRange();
+            DateRange range) {
         final long hint = aggregators.getIntervalHint();
 
         if (hint > 0) {
@@ -307,11 +324,6 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public void queryTags(TimeSeriesQuery query, AsyncResponse response) {
-
-    }
-
-    @Override
     public Callback<GetAllTimeSeriesResult> getAllRows() {
         final List<Callback<MetricBackend.GetAllRowsResult>> queries = new ArrayList<Callback<MetricBackend.GetAllRowsResult>>();
         final Callback<GetAllTimeSeriesResult> handle = new ConcurrentCallback<GetAllTimeSeriesResult>();
@@ -320,9 +332,8 @@ public class ListBackendManager implements BackendManager {
             queries.add(backend.getAllRows());
         }
 
-        final CallbackGroup<MetricBackend.GetAllRowsResult> group = new CallbackGroup<MetricBackend.GetAllRowsResult>(
-                queries);
-        group.listen(new HandleGetAllTimeSeries(handle));
+        new CallbackGroup<MetricBackend.GetAllRowsResult>(queries,
+                new HandleGetAllTimeSeries(handle));
         return handle;
     }
 }

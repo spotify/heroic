@@ -28,15 +28,17 @@ public interface Callback<T> {
         void finish(T result) throws Exception;
     }
 
-    public void fail(Throwable error);
+    public Callback<T> fail(Throwable error);
 
-    public void finish(T result);
+    public Callback<T> finish(T result);
 
-    public void cancel();
+    public Callback<T> cancel();
 
-    public void register(Handle<T> handle);
+    public Callback<T> register(Handle<T> handle);
 
-    public void register(Ended ended);
+    public Callback<T> register(Ended ended);
 
-    public void register(Cancelled cancelled);
+    public Callback<T> register(Cancelled cancelled);
+
+    public boolean isInitialized();
 }

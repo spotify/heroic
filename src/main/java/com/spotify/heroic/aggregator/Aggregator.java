@@ -1,6 +1,5 @@
 package com.spotify.heroic.aggregator;
 
-import java.util.Date;
 import java.util.List;
 
 import lombok.Getter;
@@ -23,6 +22,10 @@ public interface Aggregator {
         }
     }
 
+    public static interface Definition {
+        public Aggregator build(long start, long end);
+    }
+
     public interface Session {
         /**
          * Stream datapoints into this aggregator.
@@ -37,10 +40,6 @@ public interface Aggregator {
          * Get the result of this aggregator.
          */
         public Result result();
-    }
-
-    public static interface Definition {
-        public Aggregator build(Date start, Date end);
     }
 
     /**

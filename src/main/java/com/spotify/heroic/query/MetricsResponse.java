@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 
 public class MetricsResponse {
@@ -45,10 +46,14 @@ public class MetricsResponse {
     @Getter
     private final long outOfBounds;
 
+    @Getter
+    private final RowStatistics rowStatistics;
+
     public MetricsResponse(final List<DataPoint> result, final long sampleSize,
-            final long outOfBounds) {
+            final long outOfBounds, final RowStatistics rowStatistics) {
         this.result = result;
         this.sampleSize = sampleSize;
         this.outOfBounds = outOfBounds;
+        this.rowStatistics = rowStatistics;
     }
 }

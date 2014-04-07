@@ -1,5 +1,7 @@
 package com.spotify.heroic.async;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * Helper class that allows for safer Runnable implementations meant to wrap
  * Query<T>
@@ -9,6 +11,7 @@ package com.spotify.heroic.async;
  *            The type expected to be returned by the implemented execute
  *            function and realized for the specified query.
  */
+@Slf4j
 public abstract class CallbackRunnable<T> implements Runnable {
     private final Callback<T> callback;
 
@@ -18,6 +21,10 @@ public abstract class CallbackRunnable<T> implements Runnable {
 
     @Override
     public void run() {
+        if (!callback.isInitialized()) {
+            return;
+        }
+
         final T result;
 
         try {

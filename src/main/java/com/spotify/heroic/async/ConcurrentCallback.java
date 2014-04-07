@@ -45,9 +45,9 @@ public class ConcurrentCallback<T> implements Callback<T> {
     private T result;
 
     @Override
-    public synchronized void fail(Throwable error) {
+    public synchronized Callback<T> fail(Throwable error) {
         if (state != State.INITIALIZED)
-            return;
+            return this;
 
         this.state = State.FAILED;
         this.error = error;
@@ -60,14 +60,14 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeEnded(ended);
         }
 
-        handlers.clear();
-        ended.clear();
+        clearAll();
+        return this;
     }
 
     @Override
-    public synchronized void finish(T result) {
+    public synchronized Callback<T> finish(T result) {
         if (state != State.INITIALIZED)
-            return;
+            return this;
 
         this.state = State.FINISHED;
         this.result = result;
@@ -80,14 +80,14 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeEnded(ended);
         }
 
-        handlers.clear();
-        ended.clear();
+        clearAll();
+        return this;
     }
 
     @Override
-    public synchronized void cancel() {
+    public synchronized Callback<T> cancel() {
         if (state != State.INITIALIZED)
-            return;
+            return this;
 
         this.state = ConcurrentCallback.State.CANCELLED;
 
@@ -99,23 +99,41 @@ public class ConcurrentCallback<T> implements Callback<T> {
             invokeEnded(ended);
         }
 
+        clearAll();
+        return this;
+    }
+
+    @Override
+    public Callback<T> register(Handle<T> handle) {
+        registerHandle(handle);
+        return this;
+    }
+
+    @Override
+    public Callback<T> register(Ended ended) {
+        registerEnded(ended);
+        return this;
+    }
+
+    @Override
+    public Callback<T> register(Cancelled cancelled) {
+        registerCancelled(cancelled);
+        return this;
+    }
+
+    @Override
+    public synchronized boolean isInitialized() {
+        return state == State.INITIALIZED;
+    }
+
+    /**
+     * Make a point to clear all handles to make sure their memory can be freed
+     * if necessary.
+     */
+    private void clearAll() {
+        handlers.clear();
         cancelled.clear();
         ended.clear();
-    }
-
-    @Override
-    public void register(Handle<T> handle) {
-        registerHandle(handle);
-    }
-
-    @Override
-    public void register(Ended ended) {
-        registerEnded(ended);
-    }
-
-    @Override
-    public void register(Cancelled cancelled) {
-        registerCancelled(cancelled);
     }
 
     private synchronized void registerHandle(Handle<T> handle) {

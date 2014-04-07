@@ -2,7 +2,6 @@ package com.spotify.heroic.async;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -19,7 +18,7 @@ public class CallbackGroup<T> {
 
     private final AtomicInteger countdown;
     private final List<Callback<T>> callbacks;
-    private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
+    private final Handle<T> handle;
     private volatile boolean done = false;
 
     private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
@@ -46,9 +45,10 @@ public class CallbackGroup<T> {
         }
     };
 
-    public CallbackGroup(Collection<Callback<T>> callbacks) {
+    public CallbackGroup(Collection<Callback<T>> callbacks, Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
         this.callbacks = new ArrayList<Callback<T>>(callbacks);
+        this.handle = handle;
         this.done = false;
 
         for (Callback<T> callback : callbacks)
@@ -61,9 +61,6 @@ public class CallbackGroup<T> {
     private void check() {
         int value = countdown.decrementAndGet();
 
-        log.info("{} errors:{} results:{} cancelled:{}", value, errors.size(),
-                results.size(), cancelled.get());
-
         if (value != 0)
             return;
 
@@ -74,12 +71,9 @@ public class CallbackGroup<T> {
         if (done)
             return;
 
-        for (Handle<T> handle : handlers) {
-            trigger(handle);
-        }
+        trigger(handle);
 
         done = true;
-        handlers.clear();
     }
 
     private void trigger(Handle<T> handle) {
@@ -90,17 +84,10 @@ public class CallbackGroup<T> {
         }
     }
 
-    public synchronized void listen(Handle<T> handle) {
-        if (done) {
-            trigger(handle);
-            return;
-        }
-
-        handlers.add(handle);
-    }
-
     /* cancel all queries in this group */
     public void cancel() {
+        log.warn("Cancelling");
+
         for (Callback<T> callback : callbacks) {
             callback.cancel();
         }

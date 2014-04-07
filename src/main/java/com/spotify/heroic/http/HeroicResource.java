@@ -1,22 +1,31 @@
 package com.spotify.heroic.http;
 
+import java.util.concurrent.TimeUnit;
+
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.CompletionCallback;
+import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.Suspended;
+import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
+import com.spotify.heroic.query.MetricsResponse;
 import com.spotify.heroic.query.TagsQuery;
 import com.spotify.heroic.query.TagsResponse;
 import com.spotify.heroic.query.TimeSeriesQuery;
@@ -54,9 +63,66 @@ public class HeroicResource {
     @POST
     @Path("/metrics")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void metrics(@Suspended AsyncResponse response, MetricsQuery query) {
+    public void metrics(@Suspended final AsyncResponse response,
+            MetricsQuery query) throws QueryException {
         log.info("Query: " + query);
-        backendManager.queryMetrics(query, response);
+
+        final Callback<QueryMetricsResult> callback = backendManager
+                .queryMetrics(query).register(
+                new Callback.Handle<QueryMetricsResult>() {
+                    @Override
+                    public void cancel() throws Exception {
+                        response.resume(Response
+                                .status(Response.Status.GATEWAY_TIMEOUT)
+                                .entity(new ErrorMessage("Request cancelled"))
+                                .build());
+                    }
+
+                    @Override
+                    public void error(Throwable e) throws Exception {
+                        response.resume(Response
+                                .status(Response.Status.INTERNAL_SERVER_ERROR)
+                                .entity(e).build());
+                    }
+
+                    @Override
+                    public void finish(QueryMetricsResult result)
+                            throws Exception {
+                        final MetricsResponse entity = new MetricsResponse(
+                                result.getDatapoints(), result.getSampleSize(),
+                                result.getOutOfBounds(), result
+                                        .getRowStatistics());
+
+                        response.resume(Response.status(Response.Status.OK)
+                                .entity(entity).build());
+                    }
+                });
+
+        response.setTimeout(300, TimeUnit.SECONDS);
+
+        response.setTimeoutHandler(new TimeoutHandler() {
+            @Override
+            public void handleTimeout(AsyncResponse asyncResponse) {
+                log.info("Request timed out");
+                callback.cancel();
+            }
+        });
+
+        response.register(new CompletionCallback() {
+            @Override
+            public void onComplete(Throwable throwable) {
+                log.info("Client completed");
+                callback.cancel();
+            }
+        });
+
+        response.register(new ConnectionCallback() {
+            @Override
+            public void onDisconnect(AsyncResponse disconnected) {
+                log.info("Client disconnected");
+                callback.cancel();
+            }
+        });
     }
 
     @POST
