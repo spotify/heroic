@@ -61,6 +61,21 @@ public interface MetricBackend extends Backend {
         }
     }
 
+    public static class FindRows {
+        @Getter
+        private final String key;
+        @Getter
+        private final DateRange range;
+        @Getter
+        private final Map<String, String> filter;
+
+        public FindRows(String key, DateRange range, Map<String, String> filter) {
+            this.key = key;
+            this.range = range;
+            this.filter = filter;
+        }
+    }
+
     /**
      * Find the data point rows matching the specified criteria.
      * 
@@ -73,8 +88,8 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowsResult> findRows(String key, DateRange range,
-            Map<String, String> filter) throws QueryException;
+    public Callback<FindRowsResult> findRows(FindRows query)
+            throws QueryException;
 
     public static class FindRowGroupsResult {
         @Getter
@@ -88,6 +103,26 @@ public interface MetricBackend extends Backend {
                 MetricBackend backend) {
             this.rowGroups = rowGroups;
             this.backend = backend;
+        }
+    }
+
+    @ToString(of = { "key", "range", "filter", "groupBy" })
+    public static class FindRowGroups {
+        @Getter
+        private final String key;
+        @Getter
+        private final DateRange range;
+        @Getter
+        private final Map<String, String> filter;
+        @Getter
+        private final List<String> groupBy;
+
+        public FindRowGroups(String key, DateRange range,
+                Map<String, String> filter, List<String> groupBy) {
+            this.key = key;
+            this.range = range;
+            this.filter = filter;
+            this.groupBy = groupBy;
         }
     }
 
@@ -106,8 +141,7 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowGroupsResult> findRowGroups(String key,
-            DateRange range, Map<String, String> filter, List<String> groupBy)
+    public Callback<FindRowGroupsResult> findRowGroups(FindRowGroups query)
             throws QueryException;
 
     public static class FindTagsResult {

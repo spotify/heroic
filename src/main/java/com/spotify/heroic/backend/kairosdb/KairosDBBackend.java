@@ -230,12 +230,16 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     @Override
-    public Callback<FindRowsResult> findRows(String key, DateRange range,
-            final Map<String, String> filter) throws QueryException {
+    public Callback<FindRowsResult> findRows(final FindRows query)
+            throws QueryException {
+        final String key = query.getKey();
+        final DateRange range = query.getRange();
+        final Map<String, String> filter = query.getFilter();
+
         final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
         final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
 
-        final RowQuery<String, DataPointsRowKey> rowQuery = keyspace
+        final RowQuery<String, DataPointsRowKey> dbQuery = keyspace
                 .prepareQuery(rowKeyIndex)
                 .getRow(key)
                 .autoPaginate(true)
@@ -252,8 +256,15 @@ public class KairosDBBackend implements MetricBackend {
         executor.execute(new CallbackRunnable<FindRowsResult>(handle) {
             @Override
             public FindRowsResult execute() throws Exception {
-                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
+                final Date then = new Date();
+                log.info("{} : {}", attributes, query);
+
+                final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
                         .execute();
+
+                final Date now = new Date();
+                final long diff = now.getTime() - then.getTime();
+                log.info("{} : {} (took {}ms)", attributes, query, diff);
 
                 final List<DataPointsRowKey> rowKeys = new ArrayList<DataPointsRowKey>();
 
@@ -277,13 +288,17 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     @Override
-    public Callback<FindRowGroupsResult> findRowGroups(String key,
-            DateRange range, final Map<String, String> filter,
-            final List<String> groupBy) throws QueryException {
+    public Callback<FindRowGroupsResult> findRowGroups(final FindRowGroups query)
+            throws QueryException {
+        final String key = query.getKey();
+        final DateRange range = query.getRange();
+        final Map<String, String> filter = query.getFilter();
+        final List<String> groupBy = query.getGroupBy();
+
         final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
         final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
 
-        final RowQuery<String, DataPointsRowKey> rowQuery = keyspace
+        final RowQuery<String, DataPointsRowKey> dbQuery = keyspace
                 .prepareQuery(rowKeyIndex)
                 .getRow(key)
                 .autoPaginate(true)
@@ -300,8 +315,15 @@ public class KairosDBBackend implements MetricBackend {
         executor.execute(new CallbackRunnable<FindRowGroupsResult>(handle) {
             @Override
             public FindRowGroupsResult execute() throws Exception {
-                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
+                final Date then = new Date();
+                log.info("{} : {}", attributes, query);
+
+                final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
                         .execute();
+
+                final Date now = new Date();
+                final long diff = now.getTime() - then.getTime();
+                log.info("{} : {} (took {}ms)", attributes, query, diff);
 
                 final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups = new HashMap<Map<String, String>, List<DataPointsRowKey>>();
 
@@ -345,7 +367,19 @@ public class KairosDBBackend implements MetricBackend {
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
                 .prepareQuery(rowKeyIndex).getAllRows();
 
+        final Date then = new Date();
+        log.info("{} : Get all rows", attributes);
+
         executor.execute(new GetAllRowsResultHandle(callback, rowQuery));
+
+        callback.register(new Callback.Ended() {
+            @Override
+            public void ended() throws Exception {
+                final Date now = new Date();
+                long diff = now.getTime() - then.getTime();
+                log.info("{} : Get all rows (took {}ms)", attributes, diff);
+            }
+        });
 
         return callback;
     }

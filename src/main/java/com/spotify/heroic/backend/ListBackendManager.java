@@ -389,9 +389,12 @@ public class ListBackendManager implements BackendManager {
 
         final List<Callback<FindRowGroupsResult>> queries = new ArrayList<Callback<FindRowGroupsResult>>();
 
+        final MetricBackend.FindRowGroups query = new MetricBackend.FindRowGroups(
+                key, range, filter, groupBy);
+
         for (final MetricBackend backend : metricBackends) {
             try {
-                queries.add(backend.findRowGroups(key, range, filter, groupBy));
+                queries.add(backend.findRowGroups(query));
             } catch (final Exception e) {
                 log.error("Failed to query backend", e);
             }
@@ -418,9 +421,12 @@ public class ListBackendManager implements BackendManager {
             final Map<String, String> filter) {
         final List<Callback<FindRowsResult>> queries = new ArrayList<Callback<FindRowsResult>>();
 
+        final MetricBackend.FindRows query = new MetricBackend.FindRows(key,
+                range, filter);
+
         for (final MetricBackend backend : metricBackends) {
             try {
-                queries.add(backend.findRows(key, range, filter));
+                queries.add(backend.findRows(query));
             } catch (final Exception e) {
                 log.error("Failed to query backend", e);
             }
