@@ -2,6 +2,7 @@ package com.spotify.heroic.async;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -17,6 +18,7 @@ public class CallbackGroupHandleTest {
     public void testFinish() throws Exception {
         final Object reference = new Object();
         Callback<Object> callback = mock(Callback.class);
+        when(callback.isInitialized()).thenReturn(true);
 
         CallbackGroupHandle<Object, Void> group = new CallbackGroupHandle<Object, Void>(
                 callback) {
@@ -37,6 +39,7 @@ public class CallbackGroupHandleTest {
     public void testThrows() throws Exception {
         final Exception reference = new Exception();
         Callback<Object> callback = mock(Callback.class);
+        when(callback.isInitialized()).thenReturn(true);
 
         CallbackGroupHandle<Object, Void> group = new CallbackGroupHandle<Object, Void>(
                 callback) {
