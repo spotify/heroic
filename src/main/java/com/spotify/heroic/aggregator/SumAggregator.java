@@ -6,7 +6,7 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.Resolution;
 
 public class SumAggregator extends SumBucketAggregator {
-    public static class JSON extends SumBucketAggregator.JSON {
+    public static class Definition extends SumBucketAggregator.Definition {
         @Override
         public SumBucketAggregator build(Date start, Date end) {
             return new SumAggregator(start, end, getSampling());

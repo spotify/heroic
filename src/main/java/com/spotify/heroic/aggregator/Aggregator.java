@@ -23,23 +23,32 @@ public interface Aggregator {
         }
     }
 
-    public static interface JSON {
+    public interface Session {
+        /**
+         * Stream datapoints into this aggregator.
+         * 
+         * Must be thread-safe.
+         * 
+         * @param datapoints
+         */
+        public void stream(Iterable<DataPoint> datapoints);
+
+        /**
+         * Get the result of this aggregator.
+         */
+        public Result result();
+    }
+
+    public static interface Definition {
         public Aggregator build(Date start, Date end);
     }
 
     /**
-     * Stream datapoints into this aggregator.
+     * Create an aggregation session.
      * 
-     * Must be thread-safe.
-     * 
-     * @param datapoints
+     * @return
      */
-    public void stream(Iterable<DataPoint> datapoints);
-    
-    /**
-     * Get the result of this aggregator.
-     */
-    public Result result();
+    public Session session();
 
     /**
      * Get a hint of how large the interval is that this aggregator will

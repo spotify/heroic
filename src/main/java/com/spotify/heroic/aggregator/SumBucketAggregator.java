@@ -14,7 +14,7 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.Resolution;
 
 public abstract class SumBucketAggregator implements Aggregator {
-    public static abstract class JSON implements Aggregator.JSON {
+    public static abstract class Definition implements Aggregator.Definition {
         @Getter
         @Setter
         private Resolution sampling = Resolution.DEFAULT_RESOLUTION;
@@ -42,13 +42,61 @@ public abstract class SumBucketAggregator implements Aggregator {
         }
     }
 
+    private class Session implements Aggregator.Session {
+        private final AtomicLong sampleSize = new AtomicLong(0);
+        private final AtomicLong outOfBounds = new AtomicLong(0);
+
+        private final List<Bucket> buckets;
+
+        public Session(List<Bucket> buckets) {
+            this.buckets = buckets;
+        }
+
+        @Override
+        public void stream(Iterable<DataPoint> datapoints) {
+            long oob = 0;
+            long size = 0;
+
+            for (final DataPoint datapoint : datapoints) {
+                final long timestamp = datapoint.getTimestamp();
+                final int index = (int) ((timestamp - offset) / width);
+                size += 1;
+
+                if (index < 0 || index >= buckets.size()) {
+                    oob += 1;
+                    continue;
+                }
+
+                final Bucket bucket = buckets.get(index);
+
+                bucket.value.addAndGet(datapoint.getValue());
+                bucket.count.incrementAndGet();
+            }
+
+            this.outOfBounds.addAndGet(oob);
+            this.sampleSize.addAndGet(size);
+        }
+
+        @Override
+        public Result result() {
+            final List<DataPoint> result = new ArrayList<DataPoint>((int) count);
+
+            for (final Bucket bucket : buckets) {
+                final DataPoint d = buildDataPoint(bucket);
+
+                if (d == null)
+                    continue;
+
+                result.add(d);
+            }
+
+            return new Result(result, sampleSize.get(), outOfBounds.get());
+        }
+    }
+
     private final long count;
     private final long width;
     private final long offset;
-
-    private final AtomicLong sampleSize = new AtomicLong(0);
-    private final AtomicLong outOfBounds = new AtomicLong(0);
-    private final List<Bucket> buckets;
 
     public SumBucketAggregator(Date start, Date end, Resolution resolution) {
         final long width = resolution.getWidth();
@@ -58,7 +106,12 @@ public abstract class SumBucketAggregator implements Aggregator {
         this.count = count;
         this.width = width;
         this.offset = start.getTime() - (start.getTime() % width);
-        this.buckets = initializeBuckets(offset, width, count);
+    }
+
+    @Override
+    public Aggregator.Session session() {
+        final List<Bucket> buckets = initializeBuckets();
+        return new Session(buckets);
     }
 
     @Override
@@ -66,48 +119,7 @@ public abstract class SumBucketAggregator implements Aggregator {
         return width;
     }
 
-    @Override
-    public void stream(Iterable<DataPoint> datapoints) {
-        long oob = 0;
-        long size = 0;
-
-        for (final DataPoint datapoint : datapoints) {
-            final long timestamp = datapoint.getTimestamp();
-            final int index = (int) ((timestamp - offset) / width);
-            size += 1;
-
-            if (index < 0 || index >= buckets.size()) {
-                oob += 1;
-                continue;
-            }
-
-            final Bucket bucket = buckets.get(index);
-
-            bucket.value.addAndGet(datapoint.getValue());
-            bucket.count.incrementAndGet();
-        }
-
-        this.outOfBounds.addAndGet(oob);
-        this.sampleSize.addAndGet(size);
-    }
-
-    @Override
-    public Result result() {
-        final List<DataPoint> result = new ArrayList<DataPoint>((int) count);
-
-        for (final Bucket bucket : buckets) {
-            final DataPoint d = buildDataPoint(bucket);
-
-            if (d == null)
-                continue;
-
-            result.add(d);
-        }
-
-        return new Result(result, sampleSize.get(), outOfBounds.get());
-    }
-
-    private List<Bucket> initializeBuckets(long offset, long width, long count) {
+    private List<Bucket> initializeBuckets() {
         final List<Bucket> buckets = new ArrayList<Bucket>((int) count);
 
         for (int i = 0; i < count; i++) {

@@ -75,14 +75,12 @@ public class ListBackendManager implements BackendManager {
 
     private final class HandleFindRowsResult implements
             CallbackGroup.Handle<FindRowsResult> {
-        private final MetricsQuery query;
         private final DateRange range;
         private final AsyncResponse response;
         private final AggregatorGroup aggregators;
 
-        private HandleFindRowsResult(MetricsQuery query, DateRange range,
+        private HandleFindRowsResult(DateRange range,
                 AsyncResponse response, AggregatorGroup aggregators) {
-            this.query = query;
             this.range = range;
             this.response = response;
             this.aggregators = aggregators;
@@ -101,13 +99,15 @@ public class ListBackendManager implements BackendManager {
                 queries.addAll(backend.query(result.getRows(), range));
             }
 
-            if (aggregators.isEmpty()) {
+            final Aggregator.Session session = aggregators.session();
+
+            if (session == null) {
                 log.warn("Returning raw results, this will most probably kill your machine!");
                 new CallbackStream<DataPointsResult>(queries,
                         new HandleDataPointsAll(response));
             } else {
                 new CallbackStream<DataPointsResult>(queries,
-                        new HandleDataPointsStream(response, aggregators));
+                        new HandleDataPointsStream(response, session));
             }
         }
     }
@@ -164,18 +164,18 @@ public class ListBackendManager implements BackendManager {
     private final class HandleDataPointsStream implements
             CallbackStream.Handle<DataPointsResult> {
         private final AsyncResponse response;
-        private final AggregatorGroup aggregators;
+        private final Aggregator.Session session;
 
-        private HandleDataPointsStream(
-                AsyncResponse response, AggregatorGroup aggregators) {
+        private HandleDataPointsStream(AsyncResponse response,
+                Aggregator.Session session) {
             this.response = response;
-            this.aggregators = aggregators;
+            this.session = session;
         }
 
         @Override
         public void finish(Callback<DataPointsResult> callback,
                 DataPointsResult result) throws Exception {
-            aggregators.stream(result.getDatapoints());
+            session.stream(result.getDatapoints());
         }
 
         @Override
@@ -191,7 +191,7 @@ public class ListBackendManager implements BackendManager {
 
         @Override
         public void done() throws Exception {
-            final Aggregator.Result result = aggregators.result();
+            final Aggregator.Result result = session.result();
 
             final MetricsResponse metricsResponse = new MetricsResponse(
                     result.getResult(), result.getSampleSize(),
@@ -227,7 +227,7 @@ public class ListBackendManager implements BackendManager {
         final CallbackGroup<FindRowsResult> group = new CallbackGroup<FindRowsResult>(
                 queries);
 
-        group.listen(new HandleFindRowsResult(query, range, response,
+        group.listen(new HandleFindRowsResult(range, response,
                 aggregators));
     }
 
@@ -242,8 +242,8 @@ public class ListBackendManager implements BackendManager {
         final Date start = range.start();
         final Date end = range.end();
 
-        for (Aggregator.JSON factory : query.getAggregators()) {
-            aggregators.add(factory.build(start, end));
+        for (Aggregator.Definition definition : query.getAggregators()) {
+            aggregators.add(definition.build(start, end));
         }
 
         return aggregators;
