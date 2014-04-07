@@ -14,6 +14,9 @@ public class AbsoluteDateRange implements DateRange {
     @Setter
     private long end;
 
+    public AbsoluteDateRange() {
+    }
+
     public AbsoluteDateRange(long start, long end) {
         this.start = start;
         this.end = end;
