@@ -1,0 +1,20 @@
+#!/bin/bash
+
+SHARE="/usr/share/heroic"
+JAR=$(echo $SHARE/heroic-*.jar)
+JVMARGS="/etc/heroic/heroic.jvmargs"
+
+
+if [[ ! -f $JAR ]]; then
+    echo "Missing heroic jar: $JAR"
+    exit 1
+fi
+
+if [[ ! -f $JVMARGS ]]; then
+    echo "Missing jvmargs: $JVMARGS"
+    exit 1
+fi
+
+JAVA_OPTS=$(grep -v '^\s*#' $JVMARGS)
+
+exec env CLASSPATH="$JAR" java $JAVA_OPTS com.spotify.heroic.Main "$@"

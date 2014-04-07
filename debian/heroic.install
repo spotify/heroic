@@ -1,0 +1,2 @@
+src/deb/bin/heroic usr/bin
+target/*.jar usr/share/heroic
