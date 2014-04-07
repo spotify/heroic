@@ -84,7 +84,7 @@ public class Main extends GuiceServletContextListener {
         final GrizzlyServer grizzlyServer = new GrizzlyServer();
         final HttpServer server;
 
-        final URI baseUri = UriBuilder.fromUri("http://127.0.0.1/").port(8080)
+        final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/").port(8080)
                 .build();
 
         try {
