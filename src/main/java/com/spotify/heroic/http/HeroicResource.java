@@ -1,5 +1,8 @@
 package com.spotify.heroic.http;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -20,9 +23,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
+import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.MetricsResponse;
@@ -40,7 +45,7 @@ public class HeroicResource {
 
     @Inject
     private TimeSeriesCache timeSeriesCache;
-    
+
     @Inject
     private HeroicResourceCache cache;
 
@@ -67,36 +72,46 @@ public class HeroicResource {
             MetricsQuery query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<QueryMetricsResult> callback = backendManager
-                .queryMetrics(query).register(
-                new Callback.Handle<QueryMetricsResult>() {
-                    @Override
-                    public void cancel() throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.GATEWAY_TIMEOUT)
-                                .entity(new ErrorMessage("Request cancelled"))
-                                .build());
-                    }
+        final Callback<QueryMetricsResult> callback = backendManager.queryMetrics(
+                query).register(new Callback.Handle<QueryMetricsResult>() {
+            @Override
+            public void cancel() throws Exception {
+                response.resume(Response
+                        .status(Response.Status.GATEWAY_TIMEOUT)
+                        .entity(new ErrorMessage("Request cancelled")).build());
+            }
 
-                    @Override
-                    public void error(Throwable e) throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                                .entity(e).build());
-                    }
+            @Override
+            public void error(Throwable e) throws Exception {
+                response.resume(Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(e).build());
+            }
 
-                    @Override
-                    public void finish(QueryMetricsResult result)
-                            throws Exception {
-                        final MetricsResponse entity = new MetricsResponse(
-                                result.getDatapoints(), result.getSampleSize(),
-                                result.getOutOfBounds(), result
-                                        .getRowStatistics());
+            @Override
+            public void finish(QueryMetricsResult result) throws Exception {
+                Map<Map<String, String>, List<DataPoint>> data = makeData(result
+                        .getGroups());
 
-                        response.resume(Response.status(Response.Status.OK)
-                                .entity(entity).build());
-                    }
-                });
+                final MetricsResponse entity = new MetricsResponse(data, result
+                        .getSampleSize(), result.getOutOfBounds(), result
+                        .getRowStatistics());
+
+                response.resume(Response.status(Response.Status.OK)
+                        .entity(entity).build());
+            }
+
+            private Map<Map<String, String>, List<DataPoint>> makeData(
+                    List<DataPointGroup> groups) {
+                Map<Map<String, String>, List<DataPoint>> data = new HashMap<Map<String, String>, List<DataPoint>>();
+
+                for (DataPointGroup group : groups) {
+                    data.put(group.getTags(), group.getDatapoints());
+                }
+
+                return data;
+            }
+        });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 

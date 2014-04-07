@@ -7,12 +7,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.Resolution;
 
 public abstract class SumBucketAggregator implements Aggregator {
+    @ToString(of = { "sampling" })
     public static abstract class Definition implements Aggregator.Definition {
         @Getter
         @Setter

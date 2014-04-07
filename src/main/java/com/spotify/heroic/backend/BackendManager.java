@@ -1,6 +1,7 @@
 package com.spotify.heroic.backend;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.Getter;
@@ -11,9 +12,23 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.query.MetricsQuery;
 
 public interface BackendManager {
-    public static final class QueryMetricsResult {
+    public static final class DataPointGroup {
+        @Getter
+        private final Map<String, String> tags;
+
         @Getter
         private final List<DataPoint> datapoints;
+
+        public DataPointGroup(Map<String, String> tags,
+                List<DataPoint> datapoints) {
+            this.tags = tags;
+            this.datapoints = datapoints;
+        }
+    }
+
+    public static final class QueryMetricsResult {
+        @Getter
+        private final List<DataPointGroup> groups;
         @Getter
         private final long sampleSize;
         @Getter
@@ -21,9 +36,9 @@ public interface BackendManager {
         @Getter
         private final RowStatistics rowStatistics;
 
-        public QueryMetricsResult(List<DataPoint> datapoints, long sampleSize,
+        public QueryMetricsResult(List<DataPointGroup> groups, long sampleSize,
                 long outOfBounds, final RowStatistics rowStatistics) {
-            this.datapoints = datapoints;
+            this.groups = groups;
             this.sampleSize = sampleSize;
             this.outOfBounds = outOfBounds;
             this.rowStatistics = rowStatistics;

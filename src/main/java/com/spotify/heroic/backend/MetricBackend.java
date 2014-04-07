@@ -74,7 +74,41 @@ public interface MetricBackend extends Backend {
      * @throws QueryException
      */
     public Callback<FindRowsResult> findRows(String key, DateRange range,
-            final Map<String, String> filter) throws QueryException;
+            Map<String, String> filter) throws QueryException;
+
+    public static class FindRowGroupsResult {
+        @Getter
+        private final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups;
+
+        @Getter
+        private final MetricBackend backend;
+
+        public FindRowGroupsResult(
+                Map<Map<String, String>, List<DataPointsRowKey>> rowGroups,
+                MetricBackend backend) {
+            this.rowGroups = rowGroups;
+            this.backend = backend;
+        }
+    }
+
+    /**
+     * Find a rows by a group specification.
+     * 
+     * @param key
+     *            Only return rows matching this key.
+     * @param range
+     *            Filter on the specified date range.
+     * @param filter
+     *            Filter on the specified tags.
+     * @param groupBy
+     *            Tags to group by, the order specified will result in the way
+     *            the groups are returned.
+     * @return An asynchronous handler resulting in a FindRowsResult.
+     * @throws QueryException
+     */
+    public Callback<FindRowGroupsResult> findRowGroups(String key,
+            DateRange range, Map<String, String> filter, List<String> groupBy)
+            throws QueryException;
 
     public static class FindTagsResult {
         @Getter

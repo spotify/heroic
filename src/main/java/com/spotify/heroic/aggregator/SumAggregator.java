@@ -18,7 +18,7 @@ public class SumAggregator extends SumBucketAggregator {
     @Override
     protected DataPoint buildDataPoint(Bucket bucket) {
         if (bucket.getCount() == 0)
-            return null;
+            return new DataPoint(bucket.getTimestamp(), 0);
 
         return new DataPoint(bucket.getTimestamp(), bucket.getValue());
     }

@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
@@ -40,6 +41,7 @@ import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
+@Slf4j
 public class KairosDBBackend implements MetricBackend {
     private final class GetAllRowsResultHandle extends
             CallbackRunnable<GetAllRowsResult> {
@@ -268,6 +270,68 @@ public class KairosDBBackend implements MetricBackend {
                 }
 
                 return new FindRowsResult(rowKeys, KairosDBBackend.this);
+            }
+        });
+
+        return handle;
+    }
+
+    @Override
+    public Callback<FindRowGroupsResult> findRowGroups(String key,
+            DateRange range, final Map<String, String> filter,
+            final List<String> groupBy) throws QueryException {
+        final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
+        final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+
+        final RowQuery<String, DataPointsRowKey> rowQuery = keyspace
+                .prepareQuery(rowKeyIndex)
+                .getRow(key)
+                .autoPaginate(true)
+                .withColumnRange(
+                        new RangeBuilder()
+                                .setStart(startKey,
+                                        DataPointsRowKey.Serializer.get())
+                                .setEnd(endKey,
+                                        DataPointsRowKey.Serializer.get())
+                                .build());
+
+        final Callback<FindRowGroupsResult> handle = new ConcurrentCallback<FindRowGroupsResult>();
+
+        executor.execute(new CallbackRunnable<FindRowGroupsResult>(handle) {
+            @Override
+            public FindRowGroupsResult execute() throws Exception {
+                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
+                        .execute();
+
+                final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups = new HashMap<Map<String, String>, List<DataPointsRowKey>>();
+
+                final ColumnList<DataPointsRowKey> columns = result.getResult();
+
+                for (final Column<DataPointsRowKey> column : columns) {
+                    final DataPointsRowKey rowKey = column.getName();
+                    final Map<String, String> tags = rowKey.getTags();
+
+                    if (!matchingTags(tags, attributes, filter)) {
+                        continue;
+                    }
+
+                    final Map<String, String> key = new HashMap<String, String>();
+
+                    for (final String group : groupBy) {
+                        key.put(group, tags.get(group));
+                    }
+
+                    List<DataPointsRowKey> rows = rowGroups.get(key);
+
+                    if (rows == null) {
+                        rows = new ArrayList<DataPointsRowKey>();
+                        rowGroups.put(key, rows);
+                    }
+
+                    rows.add(rowKey);
+                }
+
+                return new FindRowGroupsResult(rowGroups, KairosDBBackend.this);
             }
         });
 

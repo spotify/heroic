@@ -12,10 +12,10 @@ public class RowStatistics {
     @Getter
     private final int cancelled;
 
-    public RowStatistics(int failed, int successful, int cancelled) {
+    public RowStatistics(int successful, int failed, int cancelled) {
         this.total = failed + successful + cancelled;
-        this.failed = failed;
         this.successful = successful;
+        this.failed = failed;
         this.cancelled = cancelled;
     }
 }

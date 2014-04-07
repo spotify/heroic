@@ -2,6 +2,7 @@ package com.spotify.heroic.query;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import lombok.Getter;
 
@@ -21,15 +22,30 @@ public class MetricsResponse {
                 SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
+            final Map<Map<String, String>, List<DataPoint>> result = (Map<Map<String, String>, List<DataPoint>>) value;
+
             jgen.writeStartArray();
 
-            final List<DataPoint> datapoints = (List<DataPoint>) value;
+            for (Map.Entry<Map<String, String>, List<DataPoint>> entry : result
+                    .entrySet()) {
+                final List<DataPoint> datapoints = entry.getValue();
 
-            for (final DataPoint d : datapoints) {
+                jgen.writeStartObject();
+                jgen.writeFieldName("tags");
+                jgen.writeObject(entry.getKey());
+
+                jgen.writeFieldName("values");
                 jgen.writeStartArray();
-                jgen.writeNumber(d.getTimestamp());
-                jgen.writeNumber(d.getValue());
+
+                for (final DataPoint d : datapoints) {
+                    jgen.writeStartArray();
+                    jgen.writeNumber(d.getTimestamp());
+                    jgen.writeNumber(d.getValue());
+                    jgen.writeEndArray();
+                }
+
                 jgen.writeEndArray();
+                jgen.writeEndObject();
             }
 
             jgen.writeEndArray();
@@ -38,7 +54,7 @@ public class MetricsResponse {
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)
-    private final List<DataPoint> result;
+    private final Map<Map<String, String>, List<DataPoint>> result;
 
     @Getter
     private final long sampleSize;
@@ -49,8 +65,10 @@ public class MetricsResponse {
     @Getter
     private final RowStatistics rowStatistics;
 
-    public MetricsResponse(final List<DataPoint> result, final long sampleSize,
-            final long outOfBounds, final RowStatistics rowStatistics) {
+    public MetricsResponse(
+            final Map<Map<String, String>, List<DataPoint>> result,
+            final long sampleSize, final long outOfBounds,
+            final RowStatistics rowStatistics) {
         this.result = result;
         this.sampleSize = sampleSize;
         this.outOfBounds = outOfBounds;

@@ -107,6 +107,7 @@ public class CallbackStream<T> {
         if (value != 0)
             return;
 
+        log.info("Done");
         handleDone(handle);
     }
 }

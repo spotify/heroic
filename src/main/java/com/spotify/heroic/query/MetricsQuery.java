@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -20,23 +19,22 @@ public class MetricsQuery {
             TimeUnit.DAYS, 7);
 
     @Getter
-    @Setter
     private String key;
 
     @Getter
-    @Setter
     private Map<String, String> tags;
 
     @Getter
-    @Setter
+    private List<String> groupBy;
+
+    @Getter
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
     @JsonSubTypes({
             @JsonSubTypes.Type(value = AbsoluteDateRange.class, name = "absolute"),
             @JsonSubTypes.Type(value = RelativeDateRange.class, name = "relative") })
-    private DateRange range = DEFAULT_DATE_RANGE;
+    private final DateRange range = DEFAULT_DATE_RANGE;
 
     @Getter
-    @Setter
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
     @JsonSubTypes({
             @JsonSubTypes.Type(value = SumAggregator.Definition.class, name = "sum"),
