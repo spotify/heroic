@@ -31,6 +31,8 @@ public class Main extends GuiceServletContextListener {
 
     public static Injector injector;
 
+    private final static Object shutdownGuard = new Object();
+
     @Override
     protected Injector getInjector() {
         return injector;
@@ -52,6 +54,19 @@ public class Main extends GuiceServletContextListener {
         modules.add(new SchedulerModule());
 
         return Guice.createInjector(modules);
+    }
+
+    /**
+     * Simple technique to prevent the main thread from existing until we are
+     * done
+     */
+    private static void waitForShutdown() {
+        try {
+            synchronized (shutdownGuard) {
+                shutdownGuard.wait();
+            }
+        } catch (final InterruptedException ignore) {
+        }
     }
 
     public static void main(String[] args) {
@@ -105,28 +120,35 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        try {
-            System.in.read();
-        } catch (final IOException e) {
-            log.error("Failed to read", e);
-        }
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    log.warn("Shutting down scheduler");
 
-        log.warn("Shutting down scheduler");
+                    try {
+                        scheduler.shutdown(true);
+                    } catch (final SchedulerException e) {
+                        log.error("Scheduler shutdown failed", e);
+                    }
 
-        try {
-            scheduler.shutdown(true);
-        } catch (final SchedulerException e) {
-            log.error("Scheduler shutdown failed", e);
-        }
+                    try {
+                        log.warn("Waiting for server to shutdown");
+                        server.shutdown().get(30, TimeUnit.SECONDS);
+                    } catch (final Exception e) {
+                        log.error("Server shutdown failed", e);
+                    }
 
-        try {
-            log.warn("Waiting for server to shutdown");
-            server.shutdown().get(30, TimeUnit.SECONDS);
-        } catch (final Exception e) {
-            log.error("Server shutdown failed", e);
-        }
+                    log.warn("Bye Bye!");
+                    synchronized (shutdownGuard) {
+                        shutdownGuard.notify();
+                    }
+                } catch (final Exception e) {
+                    log.error("Shutdown exception:", e);
+                }
+            }
+        }));
 
-        log.warn("Bye Bye!");
-        System.exit(0);
+        waitForShutdown();
     }
 }
