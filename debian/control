@@ -12,8 +12,5 @@ Package: heroic
 Architecture: all
 Depends: java-runtime
 Description: Time series database
- KairosDB is a time series database that stores numeric values along
- with key/value tags to a nosql data store.  Currently supported
- backends are Cassandra and HBase.  An H2 implementation is provided
- for development work.
- KairosDB is a rewrite of OpenTSDB to support modular interfaces.
+ Heroic is a time series database that stores numeric values along
+ with key/value tags to Cassandra data store.
