@@ -22,6 +22,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
 import com.spotify.heroic.async.CallbackGroupHandle;
 import com.spotify.heroic.async.CallbackStream;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowGroupsResult;
@@ -33,6 +34,8 @@ import com.spotify.heroic.query.MetricsQuery;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
+    private static final long MAX_AGGREGATION_MAGNITUDE = 300000;
+
     @Getter
     private final List<MetricBackend> metricBackends;
 
@@ -112,8 +115,8 @@ public class ListBackendManager implements BackendManager {
 
             callback.register(new Callback.Cancelled() {
                 @Override
-                public void cancel() throws Exception {
-                    callbackStream.cancel();
+                public void cancel(CancelReason reason) throws Exception {
+                    callbackStream.cancel(reason);
                 }
             });
         }
@@ -144,8 +147,8 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void cancel(Callback<DataPointsResult> callback)
-                throws Exception {
+        public void cancel(Callback<DataPointsResult> callback,
+                CancelReason reason) throws Exception {
         }
 
         @Override
@@ -202,8 +205,8 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void cancel(Callback<DataPointsResult> callback)
-                throws Exception {
+        public void cancel(Callback<DataPointsResult> callback,
+                CancelReason reason) throws Exception {
         }
 
         @Override
@@ -237,6 +240,15 @@ public class ListBackendManager implements BackendManager {
 
         final AggregatorGroup aggregators = new AggregatorGroup(
                 buildAggregators(definitions, start, end));
+
+        final long memoryMagnitude = aggregators
+                .getCalculationMemoryMagnitude();
+        if (memoryMagnitude > MAX_AGGREGATION_MAGNITUDE) {
+            final Callback<QueryMetricsResult> failedCallback = new ConcurrentCallback<QueryMetricsResult>();
+            failedCallback.cancel(new CancelReason(
+                    "This query would result in too many datapoints"));
+            return failedCallback;
+        }
 
         final DateRange range = calculateDateRange(aggregators, queryRange);
 
@@ -309,8 +321,8 @@ public class ListBackendManager implements BackendManager {
 
             callback.register(new Callback.Cancelled() {
                 @Override
-                public void cancel() throws Exception {
-                    group.cancel();
+                public void cancel(CancelReason reason) throws Exception {
+                    group.cancel(reason);
                 }
             });
         }
@@ -343,8 +355,8 @@ public class ListBackendManager implements BackendManager {
 
                 partial.register(new Callback.Cancelled() {
                     @Override
-                    public void cancel() throws Exception {
-                        callbackStream.cancel();
+                    public void cancel(CancelReason reason) throws Exception {
+                        callbackStream.cancel(reason);
                     }
                 });
 
@@ -408,8 +420,8 @@ public class ListBackendManager implements BackendManager {
 
         callback.register(new Callback.Cancelled() {
             @Override
-            public void cancel() throws Exception {
-                callbackGroup.cancel();
+            public void cancel(CancelReason reason) throws Exception {
+                callbackGroup.cancel(reason);
             }
         });
 
@@ -439,8 +451,8 @@ public class ListBackendManager implements BackendManager {
 
         callback.register(new Callback.Cancelled() {
             @Override
-            public void cancel() throws Exception {
-                callbackGroup.cancel();
+            public void cancel(CancelReason reason) throws Exception {
+                callbackGroup.cancel(reason);
             }
         });
 
@@ -455,7 +467,7 @@ public class ListBackendManager implements BackendManager {
             return aggregators;
         }
 
-        for (Aggregator.Definition definition : definitions) {
+        for (final Aggregator.Definition definition : definitions) {
             aggregators.add(definition.build(start.getTime(), end.getTime()));
         }
 

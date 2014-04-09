@@ -39,7 +39,7 @@ public class CallbackGroup<T> {
         }
 
         @Override
-        public void cancel() throws Exception {
+        public void cancel(CancelReason reason) throws Exception {
             cancelled.incrementAndGet();
             CallbackGroup.this.check();
         }
@@ -51,7 +51,7 @@ public class CallbackGroup<T> {
         this.handle = handle;
         this.done = false;
 
-        for (Callback<T> callback : callbacks)
+        for (final Callback<T> callback : callbacks)
             callback.register(listener);
 
         if (callbacks.isEmpty())
@@ -59,7 +59,7 @@ public class CallbackGroup<T> {
     }
 
     private void check() {
-        int value = countdown.decrementAndGet();
+        final int value = countdown.decrementAndGet();
 
         if (value != 0)
             return;
@@ -79,17 +79,17 @@ public class CallbackGroup<T> {
     private void trigger(Handle<T> handle) {
         try {
             handle.done(results, errors, cancelled.get());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to call handler", e);
         }
     }
 
     /* cancel all queries in this group */
-    public void cancel() {
+    public void cancel(CancelReason reason) {
         log.warn("Cancelling");
 
-        for (Callback<T> callback : callbacks) {
-            callback.cancel();
+        for (final Callback<T> callback : callbacks) {
+            callback.cancel(reason);
         }
     }
 }

@@ -14,7 +14,7 @@ public class CallbackStream<T> {
 
         void error(Callback<T> callback, Throwable error) throws Exception;
 
-        void cancel(Callback<T> callback) throws Exception;
+        void cancel(Callback<T> callback, CancelReason reason) throws Exception;
 
         void done(int successful, int failed, int cancelled) throws Exception;
     }
@@ -47,9 +47,9 @@ public class CallbackStream<T> {
                 }
 
                 @Override
-                public void cancel() throws Exception {
+                public void cancel(CancelReason reason) throws Exception {
                     cancelled.incrementAndGet();
-                    handleCancel(handle, callback);
+                    handleCancel(handle, callback, reason);
                     CallbackStream.this.check(handle);
                 }
             });
@@ -60,11 +60,11 @@ public class CallbackStream<T> {
     }
 
     /* cancel all queries in this group */
-    public void cancel() {
+    public void cancel(CancelReason reason) {
         log.warn("Cancelling");
 
-        for (Callback<T> callback : callbacks) {
-            callback.cancel();
+        for (final Callback<T> callback : callbacks) {
+            callback.cancel(reason);
         }
     }
 
@@ -72,7 +72,7 @@ public class CallbackStream<T> {
             Throwable error) {
         try {
             handle.error(callback, error);
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             log.error("Failed to call error on handle", t);
         }
     }
@@ -80,15 +80,16 @@ public class CallbackStream<T> {
     private void handleFinish(Handle<T> handle, Callback<T> callback, T result) {
         try {
             handle.finish(callback, result);
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             log.error("Failed to call finish on handle", t);
         }
     }
 
-    private void handleCancel(Handle<T> handle, Callback<T> callback) {
+    private void handleCancel(Handle<T> handle, Callback<T> callback,
+            CancelReason reason) {
         try {
-            handle.cancel(callback);
-        } catch (Throwable t) {
+            handle.cancel(callback, reason);
+        } catch (final Throwable t) {
             log.error("Failed to call cancel on handle", t);
         }
     }
@@ -96,13 +97,13 @@ public class CallbackStream<T> {
     private void handleDone(Handle<T> handle) {
         try {
             handle.done(successful.get(), failed.get(), cancelled.get());
-        } catch (Throwable t) {
+        } catch (final Throwable t) {
             log.error("Failed to call done on handle", t);
         }
     }
 
     private void check(Handle<T> handle) throws Exception {
-        int value = countdown.decrementAndGet();
+        final int value = countdown.decrementAndGet();
 
         if (value != 0)
             return;

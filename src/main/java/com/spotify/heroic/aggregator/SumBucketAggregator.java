@@ -41,6 +41,11 @@ public abstract class SumBucketAggregator implements Aggregator {
         public double getValue() {
             return value.get();
         }
+
+        public static int getApproximateMemoryUse() {
+            // Long + AtomicInteger + AtomicDouble
+            return 8 + 10 + 10;
+        }
     }
 
     private class Session implements Aggregator.Session {
@@ -122,11 +127,17 @@ public abstract class SumBucketAggregator implements Aggregator {
         return width;
     }
 
+    @Override
+    public long getCalculationMemoryMagnitude() {
+        final int bucketSize = Bucket.getApproximateMemoryUse();
+        return count * bucketSize;
+    }
+
     private List<Bucket> initializeBuckets() {
         final List<Bucket> buckets = new ArrayList<Bucket>((int) count);
 
         for (int i = 0; i < count; i++) {
-            long timestamp = offset + width * i + width;
+            final long timestamp = offset + width * i + width;
             buckets.add(new Bucket(timestamp));
         }
         return buckets;

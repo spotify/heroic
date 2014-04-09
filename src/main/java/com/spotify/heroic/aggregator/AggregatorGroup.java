@@ -9,8 +9,7 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 public class AggregatorGroup {
     private final List<Aggregator> aggregators;
 
-    private static final class Session implements
-            Aggregator.Session {
+    private static final class Session implements Aggregator.Session {
         private final Aggregator.Session first;
         private final Iterable<Aggregator.Session> rest;
 
@@ -27,10 +26,10 @@ public class AggregatorGroup {
 
         @Override
         public Result result() {
-            Result partial = first.result();
+            final Result partial = first.result();
             List<DataPoint> datapoints = partial.getResult();
-            long sampleSize = partial.getSampleSize();
-            long outOfBounds = partial.getOutOfBounds();
+            final long sampleSize = partial.getSampleSize();
+            final long outOfBounds = partial.getOutOfBounds();
 
             for (final Aggregator.Session session : rest) {
                 session.stream(datapoints);
@@ -49,7 +48,7 @@ public class AggregatorGroup {
     public long getIntervalHint() {
         long max = 0;
 
-        for (Aggregator aggregator : aggregators) {
+        for (final Aggregator aggregator : aggregators) {
             final long hint = aggregator.getIntervalHint();
 
             if (hint > max) {
@@ -64,14 +63,30 @@ public class AggregatorGroup {
         if (aggregators.isEmpty()) {
             return null;
         }
-        
+
         final Aggregator.Session first = aggregators.get(0).session();
         final List<Aggregator.Session> rest = new ArrayList<Aggregator.Session>();
-        
-        for (Aggregator aggregator : aggregators.subList(1, aggregators.size())) {
+
+        for (final Aggregator aggregator : aggregators.subList(1,
+                aggregators.size())) {
             rest.add(aggregator.session());
         }
-        
+
         return new Session(first, rest);
+    }
+
+    /**
+     * Get a guesstimate of how big of a memory all aggregations would need.
+     * This is for the invoker to make the decision whether or not to execute
+     * the aggregation.
+     * 
+     * @return
+     */
+    public long getCalculationMemoryMagnitude() {
+        long sum = 0;
+        for (final Aggregator aggregator : aggregators) {
+            sum += aggregator.getCalculationMemoryMagnitude();
+        }
+        return sum;
     }
 }

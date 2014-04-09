@@ -22,6 +22,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
@@ -72,46 +73,54 @@ public class HeroicResource {
             MetricsQuery query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<QueryMetricsResult> callback = backendManager.queryMetrics(
-                query).register(new Callback.Handle<QueryMetricsResult>() {
-            @Override
-            public void cancel() throws Exception {
-                response.resume(Response
-                        .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new ErrorMessage("Request cancelled")).build());
-            }
+        final Callback<QueryMetricsResult> callback = backendManager
+                .queryMetrics(query).register(
+                        new Callback.Handle<QueryMetricsResult>() {
+                            @Override
+                            public void cancel(CancelReason reason)
+                                    throws Exception {
+                                response.resume(Response
+                                        .status(Response.Status.GATEWAY_TIMEOUT)
+                                        .entity(new ErrorMessage(
+                                                "Request cancelled: " + reason))
+                                        .build());
+                            }
 
-            @Override
-            public void error(Throwable e) throws Exception {
-                response.resume(Response
-                        .status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(e).build());
-            }
+                            @Override
+                            public void error(Throwable e) throws Exception {
+                                response.resume(Response
+                                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                                        .entity(e).build());
+                            }
 
-            @Override
-            public void finish(QueryMetricsResult result) throws Exception {
-                Map<Map<String, String>, List<DataPoint>> data = makeData(result
-                        .getGroups());
+                            @Override
+                            public void finish(QueryMetricsResult result)
+                                    throws Exception {
+                                final Map<Map<String, String>, List<DataPoint>> data = makeData(result
+                                        .getGroups());
 
-                final MetricsResponse entity = new MetricsResponse(data, result
-                        .getSampleSize(), result.getOutOfBounds(), result
-                        .getRowStatistics());
+                                final MetricsResponse entity = new MetricsResponse(
+                                        data, result.getSampleSize(), result
+                                                .getOutOfBounds(), result
+                                                .getRowStatistics());
 
-                response.resume(Response.status(Response.Status.OK)
-                        .entity(entity).build());
-            }
+                                response.resume(Response
+                                        .status(Response.Status.OK)
+                                        .entity(entity).build());
+                            }
 
-            private Map<Map<String, String>, List<DataPoint>> makeData(
-                    List<DataPointGroup> groups) {
-                Map<Map<String, String>, List<DataPoint>> data = new HashMap<Map<String, String>, List<DataPoint>>();
+                            private Map<Map<String, String>, List<DataPoint>> makeData(
+                                    List<DataPointGroup> groups) {
+                                final Map<Map<String, String>, List<DataPoint>> data = new HashMap<Map<String, String>, List<DataPoint>>();
 
-                for (DataPointGroup group : groups) {
-                    data.put(group.getTags(), group.getDatapoints());
-                }
+                                for (final DataPointGroup group : groups) {
+                                    data.put(group.getTags(),
+                                            group.getDatapoints());
+                                }
 
-                return data;
-            }
-        });
+                                return data;
+                            }
+                        });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
@@ -119,7 +128,7 @@ public class HeroicResource {
             @Override
             public void handleTimeout(AsyncResponse asyncResponse) {
                 log.info("Request timed out");
-                callback.cancel();
+                callback.cancel(new CancelReason("Request timed out"));
             }
         });
 
@@ -127,7 +136,7 @@ public class HeroicResource {
             @Override
             public void onComplete(Throwable throwable) {
                 log.info("Client completed");
-                callback.cancel();
+                callback.cancel(new CancelReason("Client completed"));
             }
         });
 
@@ -135,7 +144,7 @@ public class HeroicResource {
             @Override
             public void onDisconnect(AsyncResponse disconnected) {
                 log.info("Client disconnected");
-                callback.cancel();
+                callback.cancel(new CancelReason("Client disconnected"));
             }
         });
     }

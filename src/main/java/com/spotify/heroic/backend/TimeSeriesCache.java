@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.GetAllTimeSeriesResult;
 
 @Singleton
@@ -47,8 +48,9 @@ public class TimeSeriesCache {
 
         callback.register(new Callback.Handle<BackendManager.GetAllTimeSeriesResult>() {
             @Override
-            public void cancel() throws Exception {
-                log.warn("Request for tags cache refresh was cancelled");
+            public void cancel(CancelReason reason) throws Exception {
+                log.warn("Request for tags cache refresh was cancelled: "
+                        + reason);
             }
 
             @Override
@@ -61,8 +63,8 @@ public class TimeSeriesCache {
                 log.info("Successfully refreshed with {} timeserie(s)", result
                         .getTimeSeries().size());
 
-                List<TimeSerie> timeSeries = new ArrayList<TimeSerie>(result
-                        .getTimeSeries());
+                final List<TimeSerie> timeSeries = new ArrayList<TimeSerie>(
+                        result.getTimeSeries());
 
                 final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = calculateByTag(timeSeries);
                 final Map<String, List<TimeSerie>> byKey = calculateByKey(timeSeries);
@@ -106,7 +108,7 @@ public class TimeSeriesCache {
                 matcher.indexTags());
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
-            for (Map.Entry<String, String> entry : timeSerie.getTags()
+            for (final Map.Entry<String, String> entry : timeSerie.getTags()
                     .entrySet()) {
                 if (include != null && !include.contains(entry.getKey()))
                     continue;
@@ -201,8 +203,8 @@ public class TimeSeriesCache {
             List<TimeSerie> timeSeries) {
         final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = new HashMap<Map.Entry<String, String>, List<TimeSerie>>();
 
-        for (TimeSerie timeSerie : timeSeries) {
-            for (Map.Entry<String, String> entry : timeSerie.getTags()
+        for (final TimeSerie timeSerie : timeSeries) {
+            for (final Map.Entry<String, String> entry : timeSerie.getTags()
                     .entrySet()) {
                 List<TimeSerie> series = byTag.get(entry);
 
@@ -228,7 +230,7 @@ public class TimeSeriesCache {
             List<TimeSerie> timeseries) {
         final Map<String, List<TimeSerie>> byTag = new HashMap<String, List<TimeSerie>>();
 
-        for (TimeSerie t : timeseries) {
+        for (final TimeSerie t : timeseries) {
             List<TimeSerie> series = byTag.get(t.getKey());
 
             if (series == null) {
@@ -260,7 +262,7 @@ public class TimeSeriesCache {
         if (filter != null) {
             final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = getByTag();
 
-            for (Map.Entry<String, String> entry : filter.entrySet()) {
+            for (final Map.Entry<String, String> entry : filter.entrySet()) {
                 final List<TimeSerie> candidate = byTag.get(entry);
 
                 if (candidate == null) {

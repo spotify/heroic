@@ -42,6 +42,7 @@ public class ConcurrentCallback<T> implements Callback<T> {
 
     private State state = State.INITIALIZED;
     private Throwable error;
+    private CancelReason cancelReason;
     private T result;
 
     @Override
@@ -52,11 +53,11 @@ public class ConcurrentCallback<T> implements Callback<T> {
         this.state = State.FAILED;
         this.error = error;
 
-        for (Handle<T> handle : handlers) {
+        for (final Handle<T> handle : handlers) {
             invokeFailed(handle);
         }
 
-        for (Ended ended : this.ended) {
+        for (final Ended ended : this.ended) {
             invokeEnded(ended);
         }
 
@@ -72,11 +73,11 @@ public class ConcurrentCallback<T> implements Callback<T> {
         this.state = State.FINISHED;
         this.result = result;
 
-        for (Handle<T> handle : handlers) {
+        for (final Handle<T> handle : handlers) {
             invokeFinished(handle);
         }
 
-        for (Ended ended : this.ended) {
+        for (final Ended ended : this.ended) {
             invokeEnded(ended);
         }
 
@@ -85,17 +86,18 @@ public class ConcurrentCallback<T> implements Callback<T> {
     }
 
     @Override
-    public synchronized Callback<T> cancel() {
+    public synchronized Callback<T> cancel(CancelReason reason) {
         if (state != State.INITIALIZED)
             return this;
 
         this.state = ConcurrentCallback.State.CANCELLED;
+        this.cancelReason = reason;
 
-        for (Cancelled cancel : cancelled) {
+        for (final Cancelled cancel : cancelled) {
             invokeCancelled(cancel);
         }
 
-        for (Ended ended : this.ended) {
+        for (final Ended ended : this.ended) {
             invokeEnded(ended);
         }
 
@@ -184,7 +186,7 @@ public class ConcurrentCallback<T> implements Callback<T> {
     private void invokeFinished(Handle<T> handle) {
         try {
             handle.finish(result);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to invoke finish callback", e);
         }
     }
@@ -192,31 +194,23 @@ public class ConcurrentCallback<T> implements Callback<T> {
     private void invokeFailed(Handle<T> handle) {
         try {
             handle.error(error);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to invoke error callback", e);
-        }
-    }
-
-    private void invokeCancelled(Handle<T> handle) {
-        try {
-            handle.cancel();
-        } catch (Exception e) {
-            log.error("Failed to invoke cancel callback", e);
         }
     }
 
     private void invokeEnded(Ended ended) {
         try {
             ended.ended();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to invoke ended callback", e);
         }
     }
 
     private void invokeCancelled(Cancelled handle) {
         try {
-            handle.cancel();
-        } catch (Exception e) {
+            handle.cancel(cancelReason);
+        } catch (final Exception e) {
             log.error("Failed to invoke cancel callback", e);
         }
     }

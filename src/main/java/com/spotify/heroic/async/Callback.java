@@ -15,7 +15,7 @@ public interface Callback<T> {
     }
 
     public static interface Cancelled {
-        void cancel() throws Exception;
+        void cancel(CancelReason reason) throws Exception;
     }
 
     public static interface Ended {
@@ -32,7 +32,7 @@ public interface Callback<T> {
 
     public Callback<T> finish(T result);
 
-    public Callback<T> cancel();
+    public Callback<T> cancel(CancelReason reason);
 
     public Callback<T> register(Handle<T> handle);
 
