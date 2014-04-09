@@ -1,5 +1,6 @@
 # vim: sw=2 tabstop=2
 
+maxAggregationMagnitude: 400000
 backends:
   - !kairosdb-backend
     attributes:

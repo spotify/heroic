@@ -19,6 +19,10 @@ public class HeroicConfigYAML {
     @Getter
     @Setter
     private long backendTimeout = HeroicConfig.DEFAULT_TIMEOUT;
+    
+    @Getter
+    @Setter
+    private long maxAggregationMagnitude = HeroicConfig.MAX_AGGREGATION_MAGNITUDE;
 
     private List<Backend> setupBackends(String context, MetricRegistry registry)
             throws ValidationException {
@@ -37,7 +41,7 @@ public class HeroicConfigYAML {
             throws ValidationException {
         final List<Backend> backends = setupBackends("backends", registry);
         final BackendManager backendManager = new ListBackendManager(backends,
-                registry, backendTimeout);
+                registry, backendTimeout, maxAggregationMagnitude);
         return new HeroicConfig(backendManager);
     }
 }

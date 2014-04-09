@@ -36,8 +36,6 @@ import com.spotify.heroic.query.MetricsQuery;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
-    private static final long MAX_AGGREGATION_MAGNITUDE = 300000;
-
     @Getter
     private final List<MetricBackend> metricBackends;
 
@@ -47,11 +45,14 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long timeout;
 
+    @Getter
+    private final long maxAggregationMagnitude;
+
     private final Timer queryMetricsGroupsTimer;
     private final Timer queryMetricsSingleTimer;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long timeout) {
+            long timeout, long maxAggregationMagnitude) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.timeout = timeout;
@@ -59,6 +60,7 @@ public class ListBackendManager implements BackendManager {
                 "heroic", "query-metrics", "group"));
         this.queryMetricsSingleTimer = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
+        this.maxAggregationMagnitude = maxAggregationMagnitude;
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -253,7 +255,7 @@ public class ListBackendManager implements BackendManager {
 
         final long memoryMagnitude = aggregators
                 .getCalculationMemoryMagnitude();
-        if (memoryMagnitude > MAX_AGGREGATION_MAGNITUDE) {
+        if (memoryMagnitude > maxAggregationMagnitude) {
             final Callback<QueryMetricsResult> failedCallback = new ConcurrentCallback<QueryMetricsResult>();
             failedCallback.cancel(new CancelReason(
                     "This query would result in too many datapoints"));
