@@ -4,7 +4,9 @@ import java.util.Date;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
+@ToString(of = { "start", "end" })
 public class AbsoluteDateRange implements DateRange {
     @Getter
     @Setter
