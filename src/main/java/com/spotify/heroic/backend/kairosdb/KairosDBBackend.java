@@ -12,6 +12,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -43,39 +45,6 @@ import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 public class KairosDBBackend implements MetricBackend {
-    private final class GetAllRowsResultHandle extends
-            CallbackRunnable<GetAllRowsResult> {
-        private final AllRowsQuery<String, DataPointsRowKey> rowQuery;
-
-        private GetAllRowsResultHandle(Callback<GetAllRowsResult> callback,
-                AllRowsQuery<String, DataPointsRowKey> rowQuery) {
-            super(callback);
-            this.rowQuery = rowQuery;
-        }
-
-        @Override
-        public GetAllRowsResult execute() throws Exception {
-            final Map<String, List<DataPointsRowKey>> queryResult = new HashMap<String, List<DataPointsRowKey>>();
-            final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
-                    .execute();
-
-            final Rows<String, DataPointsRowKey> rows = result.getResult();
-
-            for (final Row<String, DataPointsRowKey> row : rows) {
-                final List<DataPointsRowKey> columns = new ArrayList<DataPointsRowKey>(
-                        row.getColumns().size());
-
-                for (final Column<DataPointsRowKey> column : row.getColumns()) {
-                    final DataPointsRowKey name = column.getName();
-                    columns.add(name);
-                }
-
-                queryResult.put(row.getKey(), columns);
-            }
-
-            return new GetAllRowsResult(queryResult);
-        }
-    }
 
     public static class YAML implements Backend.YAML {
         public static final String TYPE = "!kairosdb-backend";
@@ -116,28 +85,35 @@ public class KairosDBBackend implements MetricBackend {
         private int threads = 20;
 
         @Override
-        public Backend build(String context) throws ValidationException {
+        public Backend build(String context, MetricRegistry registry)
+                throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Map<String, String> attributes = Utils.toMap(context,
                     this.attributes);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new KairosDBBackend(executor, keyspace, seeds,
+            return new KairosDBBackend(registry, executor, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
 
     private final Executor executor;
-    private final Map<String, String> attributes;
+    private final Map<String, String> backendTags;
     private final Keyspace keyspace;
     private final ColumnFamily<DataPointsRowKey, Integer> dataPoints;
     private final ColumnFamily<String, DataPointsRowKey> rowKeyIndex;
 
+    private final Timer queryTimer;
+    private final Timer findRowsTimer;
+    private final Timer findRowGroupsTimer;
+    private final Timer getAllRowsTimer;
+
     private static final String CF_DATA_POINTS_NAME = "data_points";
     private static final String CF_ROW_KEY_INDEX = "row_key_index";
 
-    public KairosDBBackend(Executor executor, String keyspace, String seeds,
-            int maxConnectionsPerHost, Map<String, String> attributes) {
+    public KairosDBBackend(MetricRegistry registry, Executor executor,
+            String keyspace, String seeds, int maxConnectionsPerHost,
+            Map<String, String> backendTags) {
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
                 .setDiscoveryType(NodeDiscoveryType.RING_DESCRIBE)
@@ -155,6 +131,7 @@ public class KairosDBBackend implements MetricBackend {
         ctx.start();
 
         this.executor = executor;
+
         this.dataPoints = new ColumnFamily<DataPointsRowKey, Integer>(
                 CF_DATA_POINTS_NAME, DataPointsRowKey.Serializer.get(),
                 IntegerSerializer.get());
@@ -163,7 +140,18 @@ public class KairosDBBackend implements MetricBackend {
                 StringSerializer.get(), DataPointsRowKey.Serializer.get());
 
         this.keyspace = ctx.getClient();
-        this.attributes = attributes;
+
+        this.backendTags = backendTags;
+
+        /* setup metric timers */
+        this.queryTimer = registry.timer(MetricRegistry.name("heroic",
+                "kairosdb", "query", backendTags.toString()));
+        this.findRowGroupsTimer = registry.timer(MetricRegistry.name("heroic",
+                "kairosdb", "find-row-groups", backendTags.toString()));
+        this.findRowsTimer = registry.timer(MetricRegistry.name("heroic",
+                "kairosdb", "find-rows", backendTags.toString()));
+        this.getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
+                "kairosdb", "get-all-rows", backendTags.toString()));
     }
 
     @Override
@@ -175,10 +163,56 @@ public class KairosDBBackend implements MetricBackend {
         final List<Callback<DataPointsResult>> queries = new ArrayList<Callback<DataPointsResult>>();
 
         for (final DataPointsRowKey rowKey : rows) {
-            queries.add(buildQuery(rowKey, start, end));
+            final Callback<DataPointsResult> callback = buildQuery(rowKey,
+                    start, end);
+
+            final Timer.Context context = queryTimer.time();
+
+            callback.register(new Callback.Ended() {
+                @Override
+                public void ended() throws Exception {
+                    context.stop();
+                }
+            });
+
+            queries.add(callback);
         }
 
         return queries;
+    }
+
+    private final class QueryCallbackRunnable extends
+            CallbackRunnable<DataPointsResult> {
+        private final RowQuery<DataPointsRowKey, Integer> dataQuery;
+        private final DataPointsRowKey rowKey;
+
+        private QueryCallbackRunnable(Callback<DataPointsResult> callback,
+                Timer timer, RowQuery<DataPointsRowKey, Integer> dataQuery,
+                DataPointsRowKey rowKey) {
+            super(callback, timer);
+            this.dataQuery = dataQuery;
+            this.rowKey = rowKey;
+        }
+
+        @Override
+        public DataPointsResult execute() throws Exception {
+            final OperationResult<ColumnList<Integer>> result = dataQuery
+                    .execute();
+            final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
+
+            return new DataPointsResult(datapoints, rowKey);
+        }
+
+        private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
+                final OperationResult<ColumnList<Integer>> result) {
+            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+            for (final Column<Integer> column : result.getResult()) {
+                datapoints.add(DataPoint.fromColumn(rowKey, column));
+            }
+
+            return datapoints;
+        }
     }
 
     private Callback<DataPointsResult> buildQuery(
@@ -202,31 +236,55 @@ public class KairosDBBackend implements MetricBackend {
 
         final Callback<DataPointsResult> handle = new ConcurrentCallback<DataPointsResult>();
 
-        executor.execute(new CallbackRunnable<DataPointsResult>(handle) {
-            @Override
-            public DataPointsResult execute() throws Exception {
-                final OperationResult<ColumnList<Integer>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = buildDataPoints(rowKey,
-                        result);
-
-                return new DataPointsResult(datapoints, rowKey);
-            }
-
-            private List<DataPoint> buildDataPoints(
-                    final DataPointsRowKey rowKey,
-                    final OperationResult<ColumnList<Integer>> result) {
-                final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-                for (final Column<Integer> column : result.getResult()) {
-                    datapoints.add(DataPoint.fromColumn(rowKey, column));
-                }
-
-                return datapoints;
-            }
-        });
+        executor.execute(new QueryCallbackRunnable(handle, queryTimer,
+                dataQuery, rowKey));
 
         return handle;
+    }
+
+    private final class FindRowsCallbackRunnable extends
+            CallbackRunnable<FindRowsResult> {
+        private final FindRows query;
+        private final Map<String, String> filter;
+        private final RowQuery<String, DataPointsRowKey> dbQuery;
+
+        private FindRowsCallbackRunnable(Callback<FindRowsResult> callback,
+                Timer timer, FindRows query, Map<String, String> filter,
+                RowQuery<String, DataPointsRowKey> dbQuery) {
+            super(callback, timer);
+            this.query = query;
+            this.filter = filter;
+            this.dbQuery = dbQuery;
+        }
+
+        @Override
+        public FindRowsResult execute() throws Exception {
+            final Date then = new Date();
+            log.info("{} : {}", backendTags, query);
+
+            final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
+                    .execute();
+
+            final Date now = new Date();
+            final long diff = now.getTime() - then.getTime();
+            log.info("{} : {} (took {}ms)", backendTags, query, diff);
+
+            final List<DataPointsRowKey> rowKeys = new ArrayList<DataPointsRowKey>();
+
+            final ColumnList<DataPointsRowKey> columns = result.getResult();
+
+            for (final Column<DataPointsRowKey> column : columns) {
+                final DataPointsRowKey rowKey = column.getName();
+
+                if (!matchingTags(rowKey.getTags(), backendTags, filter)) {
+                    continue;
+                }
+
+                rowKeys.add(rowKey);
+            }
+
+            return new FindRowsResult(rowKeys, KairosDBBackend.this);
+        }
     }
 
     @Override
@@ -253,38 +311,68 @@ public class KairosDBBackend implements MetricBackend {
 
         final Callback<FindRowsResult> handle = new ConcurrentCallback<FindRowsResult>();
 
-        executor.execute(new CallbackRunnable<FindRowsResult>(handle) {
-            @Override
-            public FindRowsResult execute() throws Exception {
-                final Date then = new Date();
-                log.info("{} : {}", attributes, query);
-
-                final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
-                        .execute();
-
-                final Date now = new Date();
-                final long diff = now.getTime() - then.getTime();
-                log.info("{} : {} (took {}ms)", attributes, query, diff);
-
-                final List<DataPointsRowKey> rowKeys = new ArrayList<DataPointsRowKey>();
-
-                final ColumnList<DataPointsRowKey> columns = result.getResult();
-
-                for (final Column<DataPointsRowKey> column : columns) {
-                    final DataPointsRowKey rowKey = column.getName();
-
-                    if (!matchingTags(rowKey.getTags(), attributes, filter)) {
-                        continue;
-                    }
-
-                    rowKeys.add(rowKey);
-                }
-
-                return new FindRowsResult(rowKeys, KairosDBBackend.this);
-            }
-        });
+        executor.execute(new FindRowsCallbackRunnable(handle, findRowsTimer,
+                query, filter, dbQuery));
 
         return handle;
+    }
+
+    /**
+     * The scheduled runnable that executed the given query.
+     * 
+     * @author udoprog
+     */
+    private final class FindRowGroupsCallbackRunnable extends
+            CallbackRunnable<FindRowGroupsResult> {
+        private final RowQuery<String, DataPointsRowKey> dbQuery;
+        private final Map<String, String> filter;
+        private final List<String> groupBy;
+
+        private FindRowGroupsCallbackRunnable(
+                Callback<FindRowGroupsResult> callback, Timer timer,
+                RowQuery<String, DataPointsRowKey> dbQuery,
+                Map<String, String> filter, List<String> groupBy) {
+            super(callback, timer);
+            this.dbQuery = dbQuery;
+            this.filter = filter;
+            this.groupBy = groupBy;
+        }
+
+        @Override
+        public FindRowGroupsResult execute() throws Exception {
+            final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
+                    .execute();
+
+            final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups = new HashMap<Map<String, String>, List<DataPointsRowKey>>();
+
+            final ColumnList<DataPointsRowKey> columns = result.getResult();
+
+            for (final Column<DataPointsRowKey> column : columns) {
+                final DataPointsRowKey rowKey = column.getName();
+                final Map<String, String> tags = rowKey.getTags();
+
+                if (!matchingTags(tags, backendTags, filter)) {
+                    continue;
+                }
+
+                final Map<String, String> key = new HashMap<String, String>();
+
+                for (final String group : groupBy) {
+                    key.put(group, tags.get(group));
+                }
+
+                List<DataPointsRowKey> rows = rowGroups.get(key);
+
+                if (rows == null) {
+                    rows = new ArrayList<DataPointsRowKey>();
+                    rowGroups.put(key, rows);
+                }
+
+                rows.add(rowKey);
+            }
+
+            return new FindRowGroupsResult(rowGroups, KairosDBBackend.this);
+        }
     }
 
     @Override
@@ -312,52 +400,44 @@ public class KairosDBBackend implements MetricBackend {
 
         final Callback<FindRowGroupsResult> handle = new ConcurrentCallback<FindRowGroupsResult>();
 
-        executor.execute(new CallbackRunnable<FindRowGroupsResult>(handle) {
-            @Override
-            public FindRowGroupsResult execute() throws Exception {
-                final Date then = new Date();
-                log.info("{} : {}", attributes, query);
-
-                final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
-                        .execute();
-
-                final Date now = new Date();
-                final long diff = now.getTime() - then.getTime();
-                log.info("{} : {} (took {}ms)", attributes, query, diff);
-
-                final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups = new HashMap<Map<String, String>, List<DataPointsRowKey>>();
-
-                final ColumnList<DataPointsRowKey> columns = result.getResult();
-
-                for (final Column<DataPointsRowKey> column : columns) {
-                    final DataPointsRowKey rowKey = column.getName();
-                    final Map<String, String> tags = rowKey.getTags();
-
-                    if (!matchingTags(tags, attributes, filter)) {
-                        continue;
-                    }
-
-                    final Map<String, String> key = new HashMap<String, String>();
-
-                    for (final String group : groupBy) {
-                        key.put(group, tags.get(group));
-                    }
-
-                    List<DataPointsRowKey> rows = rowGroups.get(key);
-
-                    if (rows == null) {
-                        rows = new ArrayList<DataPointsRowKey>();
-                        rowGroups.put(key, rows);
-                    }
-
-                    rows.add(rowKey);
-                }
-
-                return new FindRowGroupsResult(rowGroups, KairosDBBackend.this);
-            }
-        });
+        executor.execute(new FindRowGroupsCallbackRunnable(handle,
+                findRowGroupsTimer, dbQuery, filter, groupBy));
 
         return handle;
+    }
+
+    private final class GetAllRowsCallbackRunnable extends
+            CallbackRunnable<GetAllRowsResult> {
+        private final AllRowsQuery<String, DataPointsRowKey> rowQuery;
+
+        private GetAllRowsCallbackRunnable(Callback<GetAllRowsResult> callback,
+                AllRowsQuery<String, DataPointsRowKey> rowQuery, Timer timer) {
+            super(callback, timer);
+            this.rowQuery = rowQuery;
+        }
+
+        @Override
+        public GetAllRowsResult execute() throws Exception {
+            final Map<String, List<DataPointsRowKey>> queryResult = new HashMap<String, List<DataPointsRowKey>>();
+            final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
+                    .execute();
+
+            final Rows<String, DataPointsRowKey> rows = result.getResult();
+
+            for (final Row<String, DataPointsRowKey> row : rows) {
+                final List<DataPointsRowKey> columns = new ArrayList<DataPointsRowKey>(
+                        row.getColumns().size());
+
+                for (final Column<DataPointsRowKey> column : row.getColumns()) {
+                    final DataPointsRowKey name = column.getName();
+                    columns.add(name);
+                }
+
+                queryResult.put(row.getKey(), columns);
+            }
+
+            return new GetAllRowsResult(queryResult);
+        }
     }
 
     @Override
@@ -367,17 +447,12 @@ public class KairosDBBackend implements MetricBackend {
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
                 .prepareQuery(rowKeyIndex).getAllRows();
 
-        final Date then = new Date();
-        log.info("{} : Get all rows", attributes);
-
-        executor.execute(new GetAllRowsResultHandle(callback, rowQuery));
+        executor.execute(new GetAllRowsCallbackRunnable(callback, rowQuery,
+                getAllRowsTimer));
 
         callback.register(new Callback.Ended() {
             @Override
             public void ended() throws Exception {
-                final Date now = new Date();
-                long diff = now.getTime() - then.getTime();
-                log.info("{} : Get all rows (took {}ms)", attributes, diff);
             }
         });
 

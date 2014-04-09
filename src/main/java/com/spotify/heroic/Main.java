@@ -15,6 +15,8 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
+import com.codahale.metrics.ConsoleReporter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -38,7 +40,8 @@ public class Main extends GuiceServletContextListener {
         return injector;
     }
 
-    public static Injector setupInjector(final HeroicConfig config) {
+    public static Injector setupInjector(final HeroicConfig config,
+            final MetricRegistry registry) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -49,6 +52,7 @@ public class Main extends GuiceServletContextListener {
                 bind(BackendManager.class).toInstance(
                         config.getBackendManager());
                 bind(HeroicResourceCache.class);
+                bind(MetricRegistry.class).toInstance(registry);
             }
         });
         modules.add(new SchedulerModule());
@@ -80,13 +84,20 @@ public class Main extends GuiceServletContextListener {
 
         final HeroicConfig config;
 
+        final MetricRegistry registry = new MetricRegistry();
+
         try {
-            config = HeroicConfig.parse(Paths.get(configPath));
+            config = HeroicConfig.parse(Paths.get(configPath), registry);
         } catch (ValidationException | IOException e) {
             log.error("Invalid configuration file: " + configPath);
             System.exit(1);
             return;
         }
+
+        final ConsoleReporter reporter = ConsoleReporter.forRegistry(registry)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.MILLISECONDS).build();
+        reporter.start(1, TimeUnit.MINUTES);
 
         if (config == null) {
             log.error("No configuration, shutting down");
@@ -94,7 +105,7 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        injector = setupInjector(config);
+        injector = setupInjector(config, registry);
 
         final GrizzlyServer grizzlyServer = new GrizzlyServer();
         final HttpServer server;

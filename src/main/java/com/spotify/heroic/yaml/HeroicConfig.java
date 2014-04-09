@@ -11,6 +11,7 @@ import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
+import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.ListBackendManager;
@@ -37,23 +38,23 @@ public class HeroicConfig {
         }
     }
 
-    public static HeroicConfig buildDefault() {
+    public static HeroicConfig buildDefault(MetricRegistry registry) {
         final BackendManager backendManager = new ListBackendManager(
-                new ArrayList<Backend>(), DEFAULT_TIMEOUT);
+                new ArrayList<Backend>(), registry, DEFAULT_TIMEOUT);
         return new HeroicConfig(backendManager);
     }
 
-    public static HeroicConfig parse(Path path) throws ValidationException,
-            IOException {
+    public static HeroicConfig parse(Path path, MetricRegistry registry)
+            throws ValidationException, IOException {
         final Yaml yaml = new Yaml(new CustomConstructor());
 
         final HeroicConfigYAML configYaml = yaml.loadAs(
                 Files.newInputStream(path), HeroicConfigYAML.class);
 
         if (configYaml == null) {
-            return HeroicConfig.buildDefault();
+            return HeroicConfig.buildDefault(registry);
         }
 
-        return configYaml.build();
+        return configYaml.build(registry);
     }
 }

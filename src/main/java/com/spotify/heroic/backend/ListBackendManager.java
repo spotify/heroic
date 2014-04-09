@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
@@ -45,10 +47,18 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long timeout;
 
-    public ListBackendManager(List<Backend> backends, long timeout) {
+    private final Timer queryMetricsGroupsTimer;
+    private final Timer queryMetricsSingleTimer;
+
+    public ListBackendManager(List<Backend> backends, MetricRegistry registry,
+            long timeout) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.timeout = timeout;
+        this.queryMetricsGroupsTimer = registry.timer(MetricRegistry.name(
+                "heroic", "query-metrics", "group"));
+        this.queryMetricsSingleTimer = registry.timer(MetricRegistry.name(
+                "heroic", "query-metrics", "single"));
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -254,11 +264,25 @@ public class ListBackendManager implements BackendManager {
 
         final Map<String, String> filter = query.getTags();
 
+        final Callback<QueryMetricsResult> callback;
+        final Timer.Context context;
+
         if (groupBy != null && !groupBy.isEmpty()) {
-            return queryGroups(key, aggregators, range, filter, groupBy);
+            callback = queryGroups(key, aggregators, range, filter, groupBy);
+            context = queryMetricsGroupsTimer.time();
+        } else {
+            callback = querySingle(key, aggregators, range, filter);
+            context = queryMetricsSingleTimer.time();
         }
 
-        return querySingle(key, aggregators, range, filter);
+        callback.register(new Callback.Ended() {
+            @Override
+            public void ended() throws Exception {
+                context.stop();
+            }
+        });
+
+        return callback;
     }
 
     private final class HandleFindRowGroupsResult implements
