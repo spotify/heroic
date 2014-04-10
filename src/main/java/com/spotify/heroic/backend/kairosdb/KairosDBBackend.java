@@ -45,7 +45,6 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -169,15 +168,15 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            DateRange range) {
-        final long start = range.start().getTime();
-        final long end = range.end().getTime();
+            Date start, Date end) throws QueryException {
+        final long startTime = start.getTime();
+        final long endTime = end.getTime();
 
         final List<Callback<DataPointsResult>> queries = new ArrayList<Callback<DataPointsResult>>();
 
         for (final DataPointsRowKey rowKey : rows) {
             final Callback<DataPointsResult> callback = buildQuery(rowKey,
-                    start, end);
+                    startTime, endTime);
 
             final Timer.Context context = queryTimer.time();
 
@@ -353,12 +352,13 @@ public class KairosDBBackend implements MetricBackend {
         RowQuery<String, DataPointsRowKey> query = keyspace
                 .prepareQuery(rowKeyIndex).getRow(key).autoPaginate(true);
 
-        final DateRange range = criteria.getRange();
+        final Date start = criteria.getStart();
+        final Date end = criteria.getEnd();
 
         // if range specified, filter columns.
-        if (range != null) {
-            final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
-            final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+        if (start != null && end != null) {
+            final DataPointsRowKey startKey = rowKeyStart(start, key);
+            final DataPointsRowKey endKey = rowKeyEnd(end, key);
             query = query.withColumnRange(new RangeBuilder()
                     .setStart(startKey, DataPointsRowKey.Serializer.get())
                     .setEnd(endKey, DataPointsRowKey.Serializer.get()).build());
@@ -434,12 +434,13 @@ public class KairosDBBackend implements MetricBackend {
     public Callback<FindRowGroupsResult> findRowGroups(final FindRowGroups query)
             throws QueryException {
         final String key = query.getKey();
-        final DateRange range = query.getRange();
+        final Date start = query.getStart();
+        final Date end = query.getEnd();
         final Map<String, String> filter = query.getFilter();
         final List<String> groupBy = query.getGroupBy();
 
-        final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
-        final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+        final DataPointsRowKey startKey = rowKeyStart(start, key);
+        final DataPointsRowKey endKey = rowKeyEnd(end, key);
 
         final RowQuery<String, DataPointsRowKey> dbQuery = keyspace
                 .prepareQuery(rowKeyIndex)

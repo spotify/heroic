@@ -22,7 +22,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendManager.GetAllTimeSeriesResult;
+import com.spotify.heroic.backend.BackendManager.GetAllRowsResult;
 
 @Singleton
 @Slf4j
@@ -54,10 +54,10 @@ public class TimeSeriesCache {
         final Timer timer = registry.timer(HEROIC_REFRESH);
         final Timer.Context context = timer.time();
 
-        final Callback<GetAllTimeSeriesResult> callback = backendManager
+        final Callback<GetAllRowsResult> callback = backendManager
                 .getAllRows();
 
-        callback.register(new Callback.Handle<BackendManager.GetAllTimeSeriesResult>() {
+        callback.register(new Callback.Handle<BackendManager.GetAllRowsResult>() {
             @Override
             public void cancel(CancelReason reason) throws Exception {
                 log.warn("Request for tags cache refresh was cancelled: "
@@ -70,7 +70,7 @@ public class TimeSeriesCache {
             }
 
             @Override
-            public void finish(GetAllTimeSeriesResult result) throws Exception {
+            public void finish(GetAllRowsResult result) throws Exception {
                 log.info("Successfully refreshed with {} timeserie(s)", result
                         .getTimeSeries().size());
 

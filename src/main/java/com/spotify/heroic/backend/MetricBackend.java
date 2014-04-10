@@ -1,5 +1,6 @@
 package com.spotify.heroic.backend;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -10,7 +11,6 @@ import lombok.ToString;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.query.DateRange;
 
 public interface MetricBackend extends Backend {
     public static class DataPointsResult {
@@ -42,7 +42,7 @@ public interface MetricBackend extends Backend {
      * @throws QueryException
      */
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            DateRange range);
+            Date start, Date end) throws QueryException;
 
     public static class FindRowsResult {
         @Getter
@@ -65,14 +65,18 @@ public interface MetricBackend extends Backend {
         @Getter
         private final String key;
         @Getter
-        private final Map<String, String> filter;
+        private final Date start;
         @Getter
-        private final DateRange range;
+        private final Date end;
+        @Getter
+        private final Map<String, String> filter;
 
-        public FindRows(String key, Map<String, String> filter, DateRange range) {
+        public FindRows(String key, Date start, Date end,
+                Map<String, String> filter) {
             this.key = key;
+            this.start = start;
+            this.end = end;
             this.filter = filter;
-            this.range = range;
         }
     }
 
@@ -105,21 +109,24 @@ public interface MetricBackend extends Backend {
         }
     }
 
-    @ToString(of = { "key", "range", "filter", "groupBy" })
+    @ToString(of = { "key", "filter", "groupBy" })
     public static class FindRowGroups {
         @Getter
         private final String key;
         @Getter
-        private final DateRange range;
+        private final Date start;
+        @Getter
+        private final Date end;
         @Getter
         private final Map<String, String> filter;
         @Getter
         private final List<String> groupBy;
 
-        public FindRowGroups(String key, DateRange range,
+        public FindRowGroups(String key, Date start, Date end,
                 Map<String, String> filter, List<String> groupBy) {
             this.key = key;
-            this.range = range;
+            this.start = start;
+            this.end = end;
             this.filter = filter;
             this.groupBy = groupBy;
         }

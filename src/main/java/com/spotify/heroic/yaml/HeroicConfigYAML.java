@@ -18,10 +18,6 @@ public class HeroicConfigYAML {
 
     @Getter
     @Setter
-    private long backendTimeout = HeroicConfig.DEFAULT_TIMEOUT;
-    
-    @Getter
-    @Setter
     private long maxAggregationMagnitude = HeroicConfig.MAX_AGGREGATION_MAGNITUDE;
     
     @Getter

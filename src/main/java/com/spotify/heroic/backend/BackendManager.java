@@ -49,14 +49,14 @@ public interface BackendManager {
             throws QueryException;
 
     @ToString(of = { "timeSeries" })
-    public static class GetAllTimeSeriesResult {
+    public static class GetAllRowsResult {
         @Getter
         private final Set<TimeSerie> timeSeries;
 
-        public GetAllTimeSeriesResult(Set<TimeSerie> timeSeries) {
+        public GetAllRowsResult(Set<TimeSerie> timeSeries) {
             this.timeSeries = timeSeries;
         }
     }
 
-    public Callback<GetAllTimeSeriesResult> getAllRows();
+    public Callback<GetAllRowsResult> getAllRows();
 }
