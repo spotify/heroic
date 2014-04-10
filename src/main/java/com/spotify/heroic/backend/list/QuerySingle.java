@@ -51,6 +51,32 @@ public class QuerySingle {
                 throws Exception {
             final List<Callback<MetricBackend.DataPointsResult>> queries = new LinkedList<Callback<MetricBackend.DataPointsResult>>();
 
+            long totalCount = 0;
+
+            /* check number of results */
+            for (final MetricBackend.FindRowsResult result : results) {
+                if (result.isEmpty())
+                    continue;
+
+                final MetricBackend backend = result.getBackend();
+                final Long columnCount = backend.getColumnCount(
+                        result.getRows(), start, end, 100000l);
+
+                if (columnCount == null) {
+                    callback.cancel(new CancelReason(
+                            "Trying to fetch too many columns"));
+                    return;
+                }
+
+                totalCount += columnCount;
+            }
+
+            if (totalCount > 100000l) {
+                callback.cancel(new CancelReason(
+                        "Trying to fetch too many columns"));
+                return;
+            }
+
             for (final MetricBackend.FindRowsResult result : results) {
                 if (result.isEmpty())
                     continue;
