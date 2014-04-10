@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +26,6 @@ import com.spotify.heroic.async.CallbackGroupHandle;
 import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
-import com.spotify.heroic.backend.MetricBackend.FindRowGroupsResult;
-import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.query.DateRange;
@@ -49,15 +45,11 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
-    @Getter
-    private final long maxQueriableDataPoints;
-
     private final Timer queryMetricsGroupsTimer;
     private final Timer queryMetricsSingleTimer;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long timeout, long maxAggregationMagnitude,
-            long maxQueriableDataPoints) {
+            long timeout, long maxAggregationMagnitude) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.timeout = timeout;
@@ -66,7 +58,6 @@ public class ListBackendManager implements BackendManager {
         this.queryMetricsSingleTimer = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
         this.maxAggregationMagnitude = maxAggregationMagnitude;
-        this.maxQueriableDataPoints = maxQueriableDataPoints;
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -91,143 +82,63 @@ public class ListBackendManager implements BackendManager {
         return metricBackends;
     }
 
-    private static final class ColumnCountCallbackStreamHandle implements
-            CallbackStream.Handle<Long> {
-        private final AtomicLong totalColumnCount = new AtomicLong(0);
-        private final Runnable runnable;
-        private final long maxQueriableDataPoints;
-        private final Callback<QueryMetricsResult> callback;
-
-        private ColumnCountCallbackStreamHandle(Runnable runnable,
-                long maxQueriableDataPoints,
-                Callback<QueryMetricsResult> callback) {
-            this.runnable = runnable;
-            this.maxQueriableDataPoints = maxQueriableDataPoints;
-            this.callback = callback;
-        }
-
-        @Override
-        public void finish(Callback<Long> currentCallback, Long result)
-                throws Exception {
-            final long currentValue = totalColumnCount.addAndGet(result);
-            if (currentValue > maxQueriableDataPoints) {
-                callback.cancel(new CancelReason("Too many datapoints"));
-            }
-        }
-
-        @Override
-        public void error(Callback<Long> callback, Throwable error)
-                throws Exception {
-            // log.error(
-            // "An error occurred during counting columns.",
-            // error);
-        }
-
-        @Override
-        public void cancel(Callback<Long> callback, CancelReason reason)
-                throws Exception {
-        }
-
-        @Override
-        public void done(int successful, int failed, int cancelled)
-                throws Exception {
-            runnable.run();
-        }
-    }
-
-    private static final class HandleFindRowsResult implements
-            CallbackGroup.Handle<FindRowsResult> {
-
+    private final class HandleFindRowsResult implements
+            CallbackGroup.Handle<MetricBackend.FindRowsResult> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
-        private final long maxQueriableDataPoints;
 
         private HandleFindRowsResult(DateRange range,
                 Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators, long maxQueriableDataPoints) {
+                AggregatorGroup aggregators) {
             this.range = range;
             this.callback = callback;
             this.aggregators = aggregators;
-            this.maxQueriableDataPoints = maxQueriableDataPoints;
         }
 
         @Override
-        public void done(final Collection<FindRowsResult> results,
-                Collection<Throwable> errors, int cancelled) throws Exception {
-            final List<Callback<Long>> columnCountCallbacks = new LinkedList<Callback<Long>>();
+        public void done(Collection<MetricBackend.FindRowsResult> results,
+                Collection<Throwable> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            final List<Callback<MetricBackend.DataPointsResult>> queries = new LinkedList<Callback<MetricBackend.DataPointsResult>>();
+
+            for (final MetricBackend.FindRowsResult result : results) {
+                if (result.isEmpty())
+                    continue;
+
+                final MetricBackend backend = result.getBackend();
+                final long start = System.currentTimeMillis();
+                final Long columnCount = backend.getColumnCount(
+                        result.getRows(), range, 100000l);
+                final long end = System.currentTimeMillis();
+                log.warn("We are about to retrieve " + columnCount
+                        + " data points from " + backend.toString()
+                        + " And it took " + (end - start) + " ms.");
+                // queries.addAll(backend.query(result.getRows(), range));
+            }
+
+            final CallbackStream<MetricBackend.DataPointsResult> stream;
+
             final Aggregator.Session session = aggregators.session();
-
-            for (final FindRowsResult result : results) {
-                if (result.isEmpty())
-                    continue;
-
-                final MetricBackend backend = result.getBackend();
-                if (session == null) {
-                    // We check the number of data points only if no aggregation
-                    // is requested
-                    columnCountCallbacks.addAll(backend.getColumnCount(
-                            result.getRows(), range));
-                }
-            }
-
-            if (!columnCountCallbacks.isEmpty()) {
-                final CallbackStream<Long> stream = new CallbackStream<Long>(
-                        columnCountCallbacks,
-                        new ColumnCountCallbackStreamHandle(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                processDataPoints(results, session);
-                            }
-                        }, maxQueriableDataPoints, callback));
-                callback.register(new Callback.Cancelled() {
-
-                    @Override
-                    public void cancel(CancelReason reason) throws Exception {
-                        stream.cancel(reason);
-                    }
-                });
-            } else {
-                processDataPoints(results, session);
-            }
-        }
-
-        private void processDataPoints(Collection<FindRowsResult> results,
-                final Aggregator.Session session) {
-            final List<Callback<DataPointsResult>> queries = new LinkedList<Callback<DataPointsResult>>();
-            for (final FindRowsResult result : results) {
-                if (result.isEmpty())
-                    continue;
-
-                final MetricBackend backend = result.getBackend();
-                queries.addAll(backend.query(result.getRows(), range));
-            }
-            final CallbackStream<DataPointsResult> callbackStream;
 
             if (session == null) {
                 log.warn("Returning raw results, this will most probably kill your machine!");
-                callbackStream = new CallbackStream<DataPointsResult>(queries,
-                        new HandleDataPointsAll(null, callback));
+                stream = new CallbackStream<MetricBackend.DataPointsResult>(
+                        queries, new HandleDataPointsAll(null, callback));
             } else {
-                callbackStream = new CallbackStream<DataPointsResult>(queries,
-                        new HandleDataPoints(null, callback, session));
+                stream = new CallbackStream<MetricBackend.DataPointsResult>(
+                        queries, new HandleDataPoints(null, callback, session));
             }
 
-            callback.register(new Callback.Cancelled() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                    callbackStream.cancel(reason);
-                }
-            });
+            callback.register(stream);
         }
     }
 
-    private static final class HandleDataPointsAll implements
-            CallbackStream.Handle<DataPointsResult> {
+    private final class HandleDataPointsAll implements
+            CallbackStream.Handle<MetricBackend.DataPointsResult> {
         private final Map<String, String> tags;
         private final Callback<QueryMetricsResult> callback;
-        private final Queue<DataPointsResult> results = new ConcurrentLinkedQueue<DataPointsResult>();
+        private final Queue<MetricBackend.DataPointsResult> results = new ConcurrentLinkedQueue<MetricBackend.DataPointsResult>();
 
         private HandleDataPointsAll(Map<String, String> tags,
                 Callback<QueryMetricsResult> callback) {
@@ -236,19 +147,19 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void finish(Callback<DataPointsResult> callback,
-                DataPointsResult result) throws Exception {
+        public void finish(Callback<MetricBackend.DataPointsResult> callback,
+                MetricBackend.DataPointsResult result) throws Exception {
             results.add(result);
         }
 
         @Override
-        public void error(Callback<DataPointsResult> callback, Throwable error)
-                throws Exception {
+        public void error(Callback<MetricBackend.DataPointsResult> callback,
+                Throwable error) throws Exception {
             log.error("Result failed: " + error, error);
         }
 
         @Override
-        public void cancel(Callback<DataPointsResult> callback,
+        public void cancel(Callback<MetricBackend.DataPointsResult> callback,
                 CancelReason reason) throws Exception {
         }
 
@@ -270,7 +181,7 @@ public class ListBackendManager implements BackendManager {
         private List<DataPoint> joinRawResults() {
             final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-            for (final DataPointsResult result : results) {
+            for (final MetricBackend.DataPointsResult result : results) {
                 datapoints.addAll(result.getDatapoints());
             }
 
@@ -279,8 +190,8 @@ public class ListBackendManager implements BackendManager {
         }
     }
 
-    private static final class HandleDataPoints implements
-            CallbackStream.Handle<DataPointsResult> {
+    private final class HandleDataPoints implements
+            CallbackStream.Handle<MetricBackend.DataPointsResult> {
         private final Map<String, String> tags;
         private final Callback<QueryMetricsResult> callback;
         private final Aggregator.Session session;
@@ -294,19 +205,19 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void finish(Callback<DataPointsResult> callback,
-                DataPointsResult result) throws Exception {
+        public void finish(Callback<MetricBackend.DataPointsResult> callback,
+                MetricBackend.DataPointsResult result) throws Exception {
             session.stream(result.getDatapoints());
         }
 
         @Override
-        public void error(Callback<DataPointsResult> callback, Throwable error)
-                throws Exception {
+        public void error(Callback<MetricBackend.DataPointsResult> callback,
+                Throwable error) throws Exception {
             log.error("Result failed: " + error, error);
         }
 
         @Override
-        public void cancel(Callback<DataPointsResult> callback,
+        public void cancel(Callback<MetricBackend.DataPointsResult> callback,
                 CancelReason reason) throws Exception {
         }
 
@@ -366,18 +277,16 @@ public class ListBackendManager implements BackendManager {
             context = queryMetricsSingleTimer.time();
         }
 
-        callback.register(new Callback.Ended() {
+        return callback.register(new Callback.Ended() {
             @Override
             public void ended() throws Exception {
                 context.stop();
             }
         });
-
-        return callback;
     }
 
     private final class HandleFindRowGroupsResult implements
-            CallbackGroup.Handle<FindRowGroupsResult> {
+            CallbackGroup.Handle<MetricBackend.FindRowGroupsResult> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
@@ -391,9 +300,10 @@ public class ListBackendManager implements BackendManager {
         }
 
         @Override
-        public void done(Collection<FindRowGroupsResult> results,
-                Collection<Throwable> errors, int cancelled) throws Exception {
-            final Map<Map<String, String>, List<Callback<DataPointsResult>>> mappedQueries = prepareGroups(results);
+        public void done(Collection<MetricBackend.FindRowGroupsResult> results,
+                Collection<Throwable> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries = prepareGroups(results);
 
             final List<Callback<QueryMetricsResult>> queries = prepareQueries(mappedQueries);
 
@@ -402,7 +312,8 @@ public class ListBackendManager implements BackendManager {
                         @Override
                         public void done(
                                 Collection<QueryMetricsResult> results,
-                                Collection<Throwable> errors, int cancelled)
+                                Collection<Throwable> errors,
+                                Collection<CancelReason> cancelled)
                                 throws Exception {
                             final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();
 
@@ -434,36 +345,31 @@ public class ListBackendManager implements BackendManager {
                         }
                     });
 
-            callback.register(new Callback.Cancelled() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                    group.cancel(reason);
-                }
-            });
+            callback.register(group);
         }
 
         private List<Callback<QueryMetricsResult>> prepareQueries(
-                final Map<Map<String, String>, List<Callback<DataPointsResult>>> mappedQueries)
+                final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries)
                 throws Exception {
             final List<Callback<QueryMetricsResult>> queries = new ArrayList<Callback<QueryMetricsResult>>();
 
-            for (final Map.Entry<Map<String, String>, List<Callback<DataPointsResult>>> entry : mappedQueries
+            for (final Map.Entry<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> entry : mappedQueries
                     .entrySet()) {
                 final Map<String, String> tags = entry.getKey();
-                final List<Callback<DataPointsResult>> callbacks = entry
+                final List<Callback<MetricBackend.DataPointsResult>> callbacks = entry
                         .getValue();
 
                 final Aggregator.Session session = aggregators.session();
 
-                final CallbackStream<DataPointsResult> callbackStream;
+                final CallbackStream<MetricBackend.DataPointsResult> callbackStream;
 
                 final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
 
                 if (session == null) {
-                    callbackStream = new CallbackStream<DataPointsResult>(
+                    callbackStream = new CallbackStream<MetricBackend.DataPointsResult>(
                             callbacks, new HandleDataPointsAll(tags, partial));
                 } else {
-                    callbackStream = new CallbackStream<DataPointsResult>(
+                    callbackStream = new CallbackStream<MetricBackend.DataPointsResult>(
                             callbacks, new HandleDataPoints(tags, partial,
                                     session));
                 }
@@ -481,12 +387,13 @@ public class ListBackendManager implements BackendManager {
             return queries;
         }
 
-        private final Map<Map<String, String>, List<Callback<DataPointsResult>>> prepareGroups(
-                Collection<FindRowGroupsResult> results) throws QueryException {
+        private final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> prepareGroups(
+                Collection<MetricBackend.FindRowGroupsResult> results)
+                throws QueryException {
 
-            final Map<Map<String, String>, List<Callback<DataPointsResult>>> mappedQueries = new HashMap<Map<String, String>, List<Callback<DataPointsResult>>>();
+            final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries = new HashMap<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>>();
 
-            for (final FindRowGroupsResult result : results) {
+            for (final MetricBackend.FindRowGroupsResult result : results) {
                 final MetricBackend backend = result.getBackend();
 
                 for (final Map.Entry<Map<String, String>, List<DataPointsRowKey>> entry : result
@@ -494,11 +401,11 @@ public class ListBackendManager implements BackendManager {
                     final Map<String, String> tags = entry.getKey();
                     final List<DataPointsRowKey> rows = entry.getValue();
 
-                    List<Callback<DataPointsResult>> callbacks = mappedQueries
+                    List<Callback<MetricBackend.DataPointsResult>> callbacks = mappedQueries
                             .get(tags);
 
                     if (callbacks == null) {
-                        callbacks = new ArrayList<Callback<DataPointsResult>>();
+                        callbacks = new ArrayList<Callback<MetricBackend.DataPointsResult>>();
                         mappedQueries.put(tags, callbacks);
                     }
 
@@ -514,7 +421,7 @@ public class ListBackendManager implements BackendManager {
             final AggregatorGroup aggregators, final DateRange range,
             final Map<String, String> filter, List<String> groupBy) {
 
-        final List<Callback<FindRowGroupsResult>> queries = new ArrayList<Callback<FindRowGroupsResult>>();
+        final List<Callback<MetricBackend.FindRowGroupsResult>> queries = new ArrayList<Callback<MetricBackend.FindRowGroupsResult>>();
 
         final MetricBackend.FindRowGroups query = new MetricBackend.FindRowGroups(
                 key, range, filter, groupBy);
@@ -529,27 +436,20 @@ public class ListBackendManager implements BackendManager {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
-        final CallbackGroup<FindRowGroupsResult> callbackGroup = new CallbackGroup<FindRowGroupsResult>(
+        final CallbackGroup<MetricBackend.FindRowGroupsResult> group = new CallbackGroup<MetricBackend.FindRowGroupsResult>(
                 queries, new HandleFindRowGroupsResult(range, callback,
                         aggregators));
 
-        callback.register(new Callback.Cancelled() {
-            @Override
-            public void cancel(CancelReason reason) throws Exception {
-                callbackGroup.cancel(reason);
-            }
-        });
-
-        return callback;
+        return callback.register(group);
     }
 
     private Callback<QueryMetricsResult> querySingle(final String key,
             final AggregatorGroup aggregators, final DateRange range,
             final Map<String, String> filter) {
-        final List<Callback<FindRowsResult>> queries = new ArrayList<Callback<FindRowsResult>>();
+        final List<Callback<MetricBackend.FindRowsResult>> queries = new ArrayList<Callback<MetricBackend.FindRowsResult>>();
 
         final MetricBackend.FindRows query = new MetricBackend.FindRows(key,
-                range, filter);
+                filter, range);
 
         for (final MetricBackend backend : metricBackends) {
             try {
@@ -561,18 +461,10 @@ public class ListBackendManager implements BackendManager {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
-        final CallbackGroup<FindRowsResult> callbackGroup = new CallbackGroup<FindRowsResult>(
-                queries, new HandleFindRowsResult(range, callback, aggregators,
-                        maxQueriableDataPoints));
-
-        callback.register(new Callback.Cancelled() {
-            @Override
-            public void cancel(CancelReason reason) throws Exception {
-                callbackGroup.cancel(reason);
-            }
-        });
-
-        return callback;
+        return callback
+                .register(new CallbackGroup<MetricBackend.FindRowsResult>(
+                        queries, new HandleFindRowsResult(range, callback,
+                                aggregators)));
     }
 
     private List<Aggregator> buildAggregators(
@@ -626,7 +518,8 @@ public class ListBackendManager implements BackendManager {
         @Override
         public GetAllTimeSeriesResult execute(
                 Collection<MetricBackend.GetAllRowsResult> results,
-                Collection<Throwable> errors, int cancelled) throws Exception {
+                Collection<Throwable> errors, Collection<CancelReason> cancelled)
+                throws Exception {
             final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
             for (final MetricBackend.GetAllRowsResult backendResult : results) {
@@ -636,8 +529,8 @@ public class ListBackendManager implements BackendManager {
                 for (final Map.Entry<String, List<DataPointsRowKey>> entry : rows
                         .entrySet()) {
                     for (final DataPointsRowKey rowKey : entry.getValue()) {
-                        result.add(new TimeSerie(rowKey.getMetricName(), rowKey
-                                .getTags()));
+                        result.add(new TimeSerie(rowKey,
+                                rowKey.getMetricName(), rowKey.getTags()));
                     }
                 }
             }
@@ -655,8 +548,11 @@ public class ListBackendManager implements BackendManager {
             queries.add(backend.getAllRows());
         }
 
-        new CallbackGroup<MetricBackend.GetAllRowsResult>(queries,
-                new HandleGetAllTimeSeries(handle));
+        final CallbackGroup<MetricBackend.GetAllRowsResult> group = new CallbackGroup<MetricBackend.GetAllRowsResult>(
+                queries, new HandleGetAllTimeSeries(handle));
+
+        handle.register(group);
+
         return handle;
     }
 }

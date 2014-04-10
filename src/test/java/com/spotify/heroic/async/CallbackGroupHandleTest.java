@@ -13,6 +13,7 @@ import org.junit.Test;
 public class CallbackGroupHandleTest {
     final List<Void> results = new LinkedList<Void>();
     final List<Throwable> exceptions = new LinkedList<Throwable>();
+    final List<CancelReason> reasons = new LinkedList<CancelReason>();
 
     @Test
     public void testFinish() throws Exception {
@@ -25,13 +26,13 @@ public class CallbackGroupHandleTest {
 
             @Override
             public Object execute(Collection<Void> results,
-                    Collection<Throwable> errors, int cancelled)
-                    throws Exception {
+                    Collection<Throwable> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
                 return reference;
             }
         };
 
-        group.done(results, exceptions, 0);
+        group.done(results, exceptions, reasons);
         verify(callback).finish(reference);
     }
 
@@ -46,13 +47,13 @@ public class CallbackGroupHandleTest {
 
             @Override
             public Object execute(Collection<Void> results,
-                    Collection<Throwable> errors, int cancelled)
-                    throws Exception {
+                    Collection<Throwable> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
                 throw reference;
             }
         };
 
-        group.done(results, exceptions, 0);
+        group.done(results, exceptions, reasons);
         verify(callback).fail(reference);
     }
 }

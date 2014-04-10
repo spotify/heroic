@@ -31,7 +31,7 @@ import com.spotify.heroic.yaml.ValidationException;
 public class Main extends GuiceServletContextListener {
     public static final String DEFAULT_CONFIG = "heroic.yml";
 
-    public static Injector injector;
+    static Injector injector;
 
     private final static Object shutdownGuard = new Object();
 

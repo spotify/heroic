@@ -24,7 +24,7 @@ public abstract class CallbackGroupHandle<T, R> implements
 
     @Override
     public void done(Collection<R> results, Collection<Throwable> errors,
-            int cancelled) {
+            Collection<CancelReason> cancelled) {
         if (!callback.isInitialized()) {
             return;
         }
@@ -43,5 +43,6 @@ public abstract class CallbackGroupHandle<T, R> implements
     }
 
     public abstract T execute(Collection<R> results,
-            Collection<Throwable> errors, int cancelled) throws Exception;
+            Collection<Throwable> errors, Collection<CancelReason> cancelled)
+            throws Exception;
 }

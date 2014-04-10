@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CallbackStream<T> {
+public class CallbackStream<T> implements Callback.Cancelled {
     public static interface Handle<T> {
         void finish(Callback<T> callback, T result) throws Exception;
 
@@ -60,6 +60,7 @@ public class CallbackStream<T> {
     }
 
     /* cancel all queries in this group */
+    @Override
     public void cancel(CancelReason reason) {
         log.warn("Cancelling");
 

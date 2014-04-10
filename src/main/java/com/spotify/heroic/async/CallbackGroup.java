@@ -10,10 +10,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CallbackGroup<T> {
+public class CallbackGroup<T> implements Callback.Cancelled {
     public static interface Handle<T> {
         void done(Collection<T> results, Collection<Throwable> errors,
-                int cancelled) throws Exception;
+                Collection<CancelReason> cancelled) throws Exception;
     }
 
     private final AtomicInteger countdown;
@@ -23,7 +23,7 @@ public class CallbackGroup<T> {
 
     private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
-    private final AtomicInteger cancelled = new AtomicInteger();
+    private final Queue<CancelReason> cancelled = new ConcurrentLinkedQueue();
 
     private final Callback.Handle<T> listener = new Callback.Handle<T>() {
         @Override
@@ -40,7 +40,7 @@ public class CallbackGroup<T> {
 
         @Override
         public void cancel(CancelReason reason) throws Exception {
-            cancelled.incrementAndGet();
+            cancelled.add(reason);
             CallbackGroup.this.check();
         }
     };
@@ -78,13 +78,14 @@ public class CallbackGroup<T> {
 
     private void trigger(Handle<T> handle) {
         try {
-            handle.done(results, errors, cancelled.get());
+            handle.done(results, errors, cancelled);
         } catch (final Exception e) {
             log.error("Failed to call handler", e);
         }
     }
 
     /* cancel all queries in this group */
+    @Override
     public void cancel(CancelReason reason) {
         log.warn("Cancelling");
 

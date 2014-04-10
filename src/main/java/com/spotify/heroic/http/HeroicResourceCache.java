@@ -20,7 +20,7 @@ import com.spotify.heroic.query.TimeSeriesResponse;
 @Singleton
 public class HeroicResourceCache {
     @Inject
-    TimeSeriesCache timeSeriesCache;
+    private TimeSeriesCache timeSeriesCache;
 
     public boolean isReady() {
         return timeSeriesCache.isReady();
@@ -82,5 +82,9 @@ public class HeroicResourceCache {
 
     public TimeSeriesResponse timeseries(TimeSeriesQuery query) {
         return timeseriesHandle.run(query);
+    }
+
+    public void refresh() {
+        timeSeriesCache.refresh();
     }
 }

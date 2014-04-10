@@ -65,14 +65,14 @@ public interface MetricBackend extends Backend {
         @Getter
         private final String key;
         @Getter
-        private final DateRange range;
-        @Getter
         private final Map<String, String> filter;
+        @Getter
+        private final DateRange range;
 
-        public FindRows(String key, DateRange range, Map<String, String> filter) {
+        public FindRows(String key, Map<String, String> filter, DateRange range) {
             this.key = key;
-            this.range = range;
             this.filter = filter;
+            this.range = range;
         }
     }
 
@@ -88,8 +88,7 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowsResult> findRows(FindRows query)
-            throws QueryException;
+    public Callback<FindRowsResult> findRows(FindRows query);
 
     public static class FindRowGroupsResult {
         @Getter

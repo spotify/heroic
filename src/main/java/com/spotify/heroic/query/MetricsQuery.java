@@ -28,10 +28,6 @@ public class MetricsQuery {
     private List<String> groupBy;
 
     @Getter
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-    @JsonSubTypes({
-            @JsonSubTypes.Type(value = AbsoluteDateRange.class, name = "absolute"),
-            @JsonSubTypes.Type(value = RelativeDateRange.class, name = "relative") })
     private final DateRange range = DEFAULT_DATE_RANGE;
 
     @Getter

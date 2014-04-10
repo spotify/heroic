@@ -21,8 +21,7 @@ public class FilteringTimeSerieMatcher implements TimeSerieMatcher {
             return false;
         }
 
-        if (matchTags != null
-                && !matchingTags(timeserie.getTags(), matchTags, hasTags)) {
+        if (!matchingTags(timeserie.getTags(), matchTags, hasTags)) {
             return false;
         }
 

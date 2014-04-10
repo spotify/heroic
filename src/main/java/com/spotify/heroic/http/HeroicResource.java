@@ -178,7 +178,7 @@ public class HeroicResource {
     @POST
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response timeseries(TimeSeriesQuery query) {
+    public Response getTimeSeries(TimeSeriesQuery query) {
         if (!timeSeriesCache.isReady()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build();

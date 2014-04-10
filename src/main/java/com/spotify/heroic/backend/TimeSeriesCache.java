@@ -18,6 +18,8 @@ import javax.inject.Singleton;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.GetAllTimeSeriesResult;
@@ -25,8 +27,14 @@ import com.spotify.heroic.backend.BackendManager.GetAllTimeSeriesResult;
 @Singleton
 @Slf4j
 public class TimeSeriesCache {
+    private static final String HEROIC_REFRESH = MetricRegistry.name("heroic",
+            "cache-request");
+
     @Inject
     private BackendManager backendManager;
+
+    @Inject
+    private MetricRegistry registry;
 
     private Map<Map.Entry<String, String>, List<TimeSerie>> byTag;
     private Map<String, List<TimeSerie>> byKey;
@@ -42,6 +50,9 @@ public class TimeSeriesCache {
         }
 
         log.info("Refreshing tags cache");
+
+        final Timer timer = registry.timer(HEROIC_REFRESH);
+        final Timer.Context context = timer.time();
 
         final Callback<GetAllTimeSeriesResult> callback = backendManager
                 .getAllRows();
@@ -82,6 +93,7 @@ public class TimeSeriesCache {
             @Override
             public void ended() {
                 log.info("Refresh ended");
+                context.stop();
                 inProgress.set(false);
             }
         });

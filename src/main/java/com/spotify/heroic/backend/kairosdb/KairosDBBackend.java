@@ -51,7 +51,6 @@ import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 public class KairosDBBackend implements MetricBackend {
-
     public static class YAML implements Backend.YAML {
         public static final String TYPE = "!kairosdb-backend";
 
@@ -347,31 +346,28 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     @Override
-    public Callback<FindRowsResult> findRows(final FindRows query)
-            throws QueryException {
-        final String key = query.getKey();
-        final DateRange range = query.getRange();
-        final Map<String, String> filter = query.getFilter();
+    public Callback<FindRowsResult> findRows(final FindRows criteria) {
+        final String key = criteria.getKey();
+        final Map<String, String> filter = criteria.getFilter();
 
-        final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
-        final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+        RowQuery<String, DataPointsRowKey> query = keyspace
+                .prepareQuery(rowKeyIndex).getRow(key).autoPaginate(true);
 
-        final RowQuery<String, DataPointsRowKey> dbQuery = keyspace
-                .prepareQuery(rowKeyIndex)
-                .getRow(key)
-                .autoPaginate(true)
-                .withColumnRange(
-                        new RangeBuilder()
-                                .setStart(startKey,
-                                        DataPointsRowKey.Serializer.get())
-                                .setEnd(endKey,
-                                        DataPointsRowKey.Serializer.get())
-                                .build());
+        final DateRange range = criteria.getRange();
+
+        // if range specified, filter columns.
+        if (range != null) {
+            final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
+            final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+            query = query.withColumnRange(new RangeBuilder()
+                    .setStart(startKey, DataPointsRowKey.Serializer.get())
+                    .setEnd(endKey, DataPointsRowKey.Serializer.get()).build());
+        }
 
         final Callback<FindRowsResult> handle = new ConcurrentCallback<FindRowsResult>();
 
         executor.execute(new FindRowsCallbackRunnable(handle, findRowsTimer,
-                query, filter, dbQuery));
+                criteria, filter, query));
 
         return handle;
     }
@@ -508,12 +504,6 @@ public class KairosDBBackend implements MetricBackend {
 
         executor.execute(new GetAllRowsCallbackRunnable(callback, rowQuery,
                 getAllRowsTimer));
-
-        callback.register(new Callback.Ended() {
-            @Override
-            public void ended() throws Exception {
-            }
-        });
 
         return callback;
     }
