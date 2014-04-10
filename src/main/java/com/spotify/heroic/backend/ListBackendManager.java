@@ -109,7 +109,14 @@ public class ListBackendManager implements BackendManager {
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-                queries.addAll(backend.query(result.getRows(), range));
+                final long start = System.currentTimeMillis();
+                final Long columnCount = backend.getColumnCount(
+                        result.getRows(), range, 100000l);
+                final long end = System.currentTimeMillis();
+                log.warn("We are about to retrieve " + columnCount
+                        + " data points from " + backend.toString()
+                        + " And it took " + (end - start) + " ms.");
+                // queries.addAll(backend.query(result.getRows(), range));
             }
 
             final Aggregator.Session session = aggregators.session();

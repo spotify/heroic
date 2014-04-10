@@ -3,6 +3,7 @@ package com.spotify.heroic.backend.kairosdb;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -14,6 +15,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Cluster.Builder;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.Session;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -103,6 +109,9 @@ public class KairosDBBackend implements MetricBackend {
     private final ColumnFamily<DataPointsRowKey, Integer> dataPoints;
     private final ColumnFamily<String, DataPointsRowKey> rowKeyIndex;
 
+    private Session cqlSession;
+    private PreparedStatement countStatement;
+
     private final Timer queryTimer;
     private final Timer findRowsTimer;
     private final Timer findRowGroupsTimer;
@@ -135,6 +144,8 @@ public class KairosDBBackend implements MetricBackend {
         this.dataPoints = new ColumnFamily<DataPointsRowKey, Integer>(
                 CF_DATA_POINTS_NAME, DataPointsRowKey.Serializer.get(),
                 IntegerSerializer.get());
+
+        initializeCqlSession(seeds, keyspace);
 
         this.rowKeyIndex = new ColumnFamily<>(CF_ROW_KEY_INDEX,
                 StringSerializer.get(), DataPointsRowKey.Serializer.get());
@@ -240,6 +251,46 @@ public class KairosDBBackend implements MetricBackend {
                 dataQuery, rowKey));
 
         return handle;
+    }
+
+    @Override
+    public Long getColumnCount(List<DataPointsRowKey> rows, DateRange range,
+            Long max) {
+        final long start = range.start().getTime();
+        final long end = range.end().getTime();
+        Long totalCount = 0l;
+        for (final DataPointsRowKey row : rows) {
+            totalCount += getColumnCount(row, start, end);
+            if (max != null && totalCount > max) {
+                return null;
+            }
+        }
+        return totalCount;
+    }
+
+    private Long getColumnCount(final DataPointsRowKey rowKey, long start,
+            long end) {
+        final long timestamp = rowKey.getTimestamp();
+        final long startTime = DataPoint.Name
+                .toStartTimeStamp(start, timestamp);
+        final long endTime = DataPoint.Name.toEndTimeStamp(end, timestamp);
+
+        Long columnCount = null;
+
+        BoundStatement query = new BoundStatement(countStatement);
+        query = query.bind(
+                DataPointsRowKey.Serializer.get().toByteBuffer(rowKey),
+                IntegerSerializer.get().toByteBuffer((int) startTime),
+                IntegerSerializer.get().toByteBuffer((int) endTime));
+
+        final Iterator<com.datastax.driver.core.Row> iterator = cqlSession
+                .execute(query).iterator();
+        if (iterator.hasNext()) {
+            final com.datastax.driver.core.Row row = iterator.next();
+            columnCount = row.getLong("\"count\"");
+        }
+
+        return columnCount;
     }
 
     private final class FindRowsCallbackRunnable extends
@@ -494,5 +545,26 @@ public class KairosDBBackend implements MetricBackend {
     private DataPointsRowKey rowKeyEnd(Date end, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(end);
         return new DataPointsRowKey(key, timeBucket + 1);
+    }
+
+    private String[] getHosts(String seed) {
+        final List<String> hosts = new ArrayList<String>();
+        final String[] hostPorts = seed.split(",");
+        for (final String hp : hostPorts) {
+            final String[] split = hp.split(":");
+            hosts.add(split[0]);
+        }
+        return hosts.toArray(new String[hosts.size()]);
+    }
+
+    private void initializeCqlSession(String seeds, String keyspace) {
+        Builder builder = Cluster.builder();
+        builder = builder.addContactPoints(getHosts(seeds));
+        final Cluster cluster = builder.build();
+        cqlSession = cluster.connect(keyspace);
+        final String queryStr = "SELECT count(*) FROM " + dataPoints.getName()
+                + " WHERE key = ? AND column1 > ? AND column1 < ?";
+
+        countStatement = cqlSession.prepare(queryStr);
     }
 }

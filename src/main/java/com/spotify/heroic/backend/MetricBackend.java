@@ -174,4 +174,13 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a {@link GetAllRowsResult}
      */
     public Callback<GetAllRowsResult> getAllRows();
+
+    /**
+     * Gets the total number of columns that are in the given rows
+     * 
+     * @param rows
+     * @return
+     */
+    public Long getColumnCount(List<DataPointsRowKey> rows, DateRange range,
+            Long max);
 }
