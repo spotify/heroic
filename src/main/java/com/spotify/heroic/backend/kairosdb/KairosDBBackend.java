@@ -116,6 +116,7 @@ public class KairosDBBackend implements MetricBackend {
     private final Timer findRowsTimer;
     private final Timer findRowGroupsTimer;
     private final Timer getAllRowsTimer;
+    private final Timer getColumnCountTimer;
 
     private static final String CF_DATA_POINTS_NAME = "data_points";
     private static final String CF_ROW_KEY_INDEX = "row_key_index";
@@ -163,11 +164,13 @@ public class KairosDBBackend implements MetricBackend {
                 "kairosdb", "find-rows", backendTags.toString()));
         this.getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
                 "kairosdb", "get-all-rows", backendTags.toString()));
+        this.getColumnCountTimer = registry.timer(MetricRegistry.name("heroic",
+                "kairosdb", "get-column-count", backendTags.toString()));
     }
 
     @Override
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            DateRange range) throws QueryException {
+            DateRange range) {
         final long start = range.start().getTime();
         final long end = range.end().getTime();
 
@@ -227,8 +230,7 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     private Callback<DataPointsResult> buildQuery(
-            final DataPointsRowKey rowKey, long start, long end)
-            throws QueryException {
+            final DataPointsRowKey rowKey, long start, long end) {
         final long timestamp = rowKey.getTimestamp();
         final long startTime = DataPoint.Name
                 .toStartTimeStamp(start, timestamp);
@@ -254,18 +256,24 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     @Override
-    public Long getColumnCount(List<DataPointsRowKey> rows, DateRange range,
-            Long max) {
+    public List<Callback<Long>> getColumnCount(List<DataPointsRowKey> rows,
+            DateRange range) {
+        final List<Callback<Long>> callbacks = new ArrayList<Callback<Long>>(
+                rows.size());
         final long start = range.start().getTime();
         final long end = range.end().getTime();
-        Long totalCount = 0l;
         for (final DataPointsRowKey row : rows) {
-            totalCount += getColumnCount(row, start, end);
-            if (max != null && totalCount > max) {
-                return null;
-            }
+            final Callback<Long> callback = new ConcurrentCallback<Long>();
+            executor.execute(new CallbackRunnable<Long>(callback,
+                    getColumnCountTimer) {
+                @Override
+                public Long execute() throws Exception {
+                    return getColumnCount(row, start, end);
+                }
+            });
+            callbacks.add(callback);
         }
-        return totalCount;
+        return callbacks;
     }
 
     private Long getColumnCount(final DataPointsRowKey rowKey, long start,

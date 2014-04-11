@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -48,11 +49,15 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
+    @Getter
+    private final long maxQueriableDataPoints;
+
     private final Timer queryMetricsGroupsTimer;
     private final Timer queryMetricsSingleTimer;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long timeout, long maxAggregationMagnitude) {
+            long timeout, long maxAggregationMagnitude,
+            long maxQueriableDataPoints) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.timeout = timeout;
@@ -61,6 +66,7 @@ public class ListBackendManager implements BackendManager {
         this.queryMetricsSingleTimer = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
         this.maxAggregationMagnitude = maxAggregationMagnitude;
+        this.maxQueriableDataPoints = maxQueriableDataPoints;
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -85,42 +91,118 @@ public class ListBackendManager implements BackendManager {
         return metricBackends;
     }
 
-    private final class HandleFindRowsResult implements
-            CallbackGroup.Handle<FindRowsResult> {
-        private final DateRange range;
+    private static final class ColumnCountCallbackStreamHandle implements
+            CallbackStream.Handle<Long> {
+        private final AtomicLong totalColumnCount = new AtomicLong(0);
+        private final Runnable runnable;
+        private final long maxQueriableDataPoints;
         private final Callback<QueryMetricsResult> callback;
-        private final AggregatorGroup aggregators;
 
-        private HandleFindRowsResult(DateRange range,
-                Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators) {
-            this.range = range;
+        private ColumnCountCallbackStreamHandle(Runnable runnable,
+                long maxQueriableDataPoints,
+                Callback<QueryMetricsResult> callback) {
+            this.runnable = runnable;
+            this.maxQueriableDataPoints = maxQueriableDataPoints;
             this.callback = callback;
-            this.aggregators = aggregators;
         }
 
         @Override
-        public void done(Collection<FindRowsResult> results,
+        public void finish(Callback<Long> currentCallback, Long result)
+                throws Exception {
+            final long currentValue = totalColumnCount.addAndGet(result);
+            if (currentValue > maxQueriableDataPoints) {
+                callback.cancel(new CancelReason("Too many datapoints"));
+            }
+        }
+
+        @Override
+        public void error(Callback<Long> callback, Throwable error)
+                throws Exception {
+            // log.error(
+            // "An error occurred during counting columns.",
+            // error);
+        }
+
+        @Override
+        public void cancel(Callback<Long> callback, CancelReason reason)
+                throws Exception {
+        }
+
+        @Override
+        public void done(int successful, int failed, int cancelled)
+                throws Exception {
+            runnable.run();
+        }
+    }
+
+    private static final class HandleFindRowsResult implements
+            CallbackGroup.Handle<FindRowsResult> {
+
+        private final DateRange range;
+        private final Callback<QueryMetricsResult> callback;
+        private final AggregatorGroup aggregators;
+        private final long maxQueriableDataPoints;
+
+        private HandleFindRowsResult(DateRange range,
+                Callback<QueryMetricsResult> callback,
+                AggregatorGroup aggregators, long maxQueriableDataPoints) {
+            this.range = range;
+            this.callback = callback;
+            this.aggregators = aggregators;
+            this.maxQueriableDataPoints = maxQueriableDataPoints;
+        }
+
+        @Override
+        public void done(final Collection<FindRowsResult> results,
                 Collection<Throwable> errors, int cancelled) throws Exception {
-            final List<Callback<DataPointsResult>> queries = new LinkedList<Callback<DataPointsResult>>();
+            final List<Callback<Long>> columnCountCallbacks = new LinkedList<Callback<Long>>();
+            final Aggregator.Session session = aggregators.session();
 
             for (final FindRowsResult result : results) {
                 if (result.isEmpty())
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-                final long start = System.currentTimeMillis();
-                final Long columnCount = backend.getColumnCount(
-                        result.getRows(), range, 100000l);
-                final long end = System.currentTimeMillis();
-                log.warn("We are about to retrieve " + columnCount
-                        + " data points from " + backend.toString()
-                        + " And it took " + (end - start) + " ms.");
-                // queries.addAll(backend.query(result.getRows(), range));
+                if (session == null) {
+                    // We check the number of data points only if no aggregation
+                    // is requested
+                    columnCountCallbacks.addAll(backend.getColumnCount(
+                            result.getRows(), range));
+                }
             }
 
-            final Aggregator.Session session = aggregators.session();
+            if (!columnCountCallbacks.isEmpty()) {
+                final CallbackStream<Long> stream = new CallbackStream<Long>(
+                        columnCountCallbacks,
+                        new ColumnCountCallbackStreamHandle(new Runnable() {
 
+                            @Override
+                            public void run() {
+                                processDataPoints(results, session);
+                            }
+                        }, maxQueriableDataPoints, callback));
+                callback.register(new Callback.Cancelled() {
+
+                    @Override
+                    public void cancel(CancelReason reason) throws Exception {
+                        stream.cancel(reason);
+                    }
+                });
+            } else {
+                processDataPoints(results, session);
+            }
+        }
+
+        private void processDataPoints(Collection<FindRowsResult> results,
+                final Aggregator.Session session) {
+            final List<Callback<DataPointsResult>> queries = new LinkedList<Callback<DataPointsResult>>();
+            for (final FindRowsResult result : results) {
+                if (result.isEmpty())
+                    continue;
+
+                final MetricBackend backend = result.getBackend();
+                queries.addAll(backend.query(result.getRows(), range));
+            }
             final CallbackStream<DataPointsResult> callbackStream;
 
             if (session == null) {
@@ -141,7 +223,7 @@ public class ListBackendManager implements BackendManager {
         }
     }
 
-    private final class HandleDataPointsAll implements
+    private static final class HandleDataPointsAll implements
             CallbackStream.Handle<DataPointsResult> {
         private final Map<String, String> tags;
         private final Callback<QueryMetricsResult> callback;
@@ -197,7 +279,7 @@ public class ListBackendManager implements BackendManager {
         }
     }
 
-    private final class HandleDataPoints implements
+    private static final class HandleDataPoints implements
             CallbackStream.Handle<DataPointsResult> {
         private final Map<String, String> tags;
         private final Callback<QueryMetricsResult> callback;
@@ -480,7 +562,8 @@ public class ListBackendManager implements BackendManager {
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
         final CallbackGroup<FindRowsResult> callbackGroup = new CallbackGroup<FindRowsResult>(
-                queries, new HandleFindRowsResult(range, callback, aggregators));
+                queries, new HandleFindRowsResult(range, callback, aggregators,
+                        maxQueriableDataPoints));
 
         callback.register(new Callback.Cancelled() {
             @Override

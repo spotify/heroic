@@ -20,6 +20,7 @@ import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 public class HeroicConfig {
     public static final long DEFAULT_TIMEOUT = 10000;
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
+    public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
 
     @Getter
     private final BackendManager backendManager;
@@ -42,7 +43,7 @@ public class HeroicConfig {
     public static HeroicConfig buildDefault(MetricRegistry registry) {
         final BackendManager backendManager = new ListBackendManager(
                 new ArrayList<Backend>(), registry, DEFAULT_TIMEOUT,
-                MAX_AGGREGATION_MAGNITUDE);
+                MAX_AGGREGATION_MAGNITUDE, MAX_QUERIABLE_DATA_POINTS);
         return new HeroicConfig(backendManager);
     }
 

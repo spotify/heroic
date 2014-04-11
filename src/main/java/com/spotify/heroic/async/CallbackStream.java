@@ -26,7 +26,7 @@ public class CallbackStream<T> {
     private final AtomicInteger cancelled = new AtomicInteger();
 
     public CallbackStream(Collection<Callback<T>> callbacks,
-            final Handle<T> handle) throws Exception {
+            final Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
         this.callbacks = new ArrayList<Callback<T>>(callbacks);
 
