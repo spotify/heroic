@@ -19,7 +19,7 @@ public class HeroicConfigYAML {
     @Getter
     @Setter
     private long maxAggregationMagnitude = HeroicConfig.MAX_AGGREGATION_MAGNITUDE;
-    
+
     @Getter
     @Setter
     private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
@@ -41,7 +41,7 @@ public class HeroicConfigYAML {
             throws ValidationException {
         final List<Backend> backends = setupBackends("backends", registry);
         final BackendManager backendManager = new ListBackendManager(backends,
-                registry, backendTimeout, maxAggregationMagnitude, maxQueriableDataPoints);
+                registry, maxAggregationMagnitude, maxQueriableDataPoints);
         return new HeroicConfig(backendManager);
     }
 }

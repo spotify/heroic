@@ -168,7 +168,7 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            Date start, Date end) throws QueryException {
+            Date start, Date end) {
         final long startTime = start.getTime();
         final long endTime = end.getTime();
 
@@ -255,22 +255,24 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public List<Callback<Long>> getColumnCount(List<DataPointsRowKey> rows,
-            DateRange range) {
+            Date start, Date end) {
         final List<Callback<Long>> callbacks = new ArrayList<Callback<Long>>(
                 rows.size());
-        final long start = range.start().getTime();
-        final long end = range.end().getTime();
+        final long startTime = start.getTime();
+        final long endTime = end.getTime();
+
         for (final DataPointsRowKey row : rows) {
             final Callback<Long> callback = new ConcurrentCallback<Long>();
             executor.execute(new CallbackRunnable<Long>(callback,
                     getColumnCountTimer) {
                 @Override
                 public Long execute() throws Exception {
-                    return getColumnCount(row, start, end);
+                    return getColumnCount(row, startTime, endTime);
                 }
             });
             callbacks.add(callback);
         }
+
         return callbacks;
     }
 

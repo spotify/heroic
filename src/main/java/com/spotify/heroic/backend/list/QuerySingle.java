@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,15 +19,64 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
+import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
+import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
 
 @Slf4j
 public class QuerySingle {
     private final List<MetricBackend> backends;
     private final Timer timer;
+    private final long maxQueriableDataPoints;
 
-    public QuerySingle(List<MetricBackend> backends, Timer timer) {
+    public QuerySingle(List<MetricBackend> backends, Timer timer,
+            long maxQueriableDataPoints) {
         this.backends = backends;
         this.timer = timer;
+        this.maxQueriableDataPoints = maxQueriableDataPoints;
+    }
+
+    private static final class ColumnCountCallbackStreamHandle implements
+            CallbackStream.Handle<Long> {
+        private final Runnable runnable;
+        private final long maxQueriableDataPoints;
+        private final Callback<QueryMetricsResult> callback;
+
+        private final AtomicLong totalColumnCount = new AtomicLong(0);
+
+        private ColumnCountCallbackStreamHandle(Runnable runnable,
+                long maxQueriableDataPoints,
+                Callback<QueryMetricsResult> callback) {
+            this.runnable = runnable;
+            this.maxQueriableDataPoints = maxQueriableDataPoints;
+            this.callback = callback;
+        }
+
+        @Override
+        public void finish(Callback<Long> currentCallback, Long result)
+                throws Exception {
+            final long currentValue = totalColumnCount.addAndGet(result);
+
+            if (currentValue > maxQueriableDataPoints) {
+                callback.cancel(new CancelReason("Too many datapoints"));
+            }
+        }
+
+        @Override
+        public void error(Callback<Long> callback, Throwable error)
+                throws Exception {
+            log.error("An error occurred during counting columns.", error);
+        }
+
+        @Override
+        public void cancel(Callback<Long> callback, CancelReason reason)
+                throws Exception {
+        }
+
+        @Override
+        public void done(int successful, int failed, int cancelled)
+                throws Exception {
+            runnable.run();
+        }
     }
 
     private final class HandleFindRowsResult implements
@@ -46,48 +96,54 @@ public class QuerySingle {
         }
 
         @Override
-        public void done(Collection<MetricBackend.FindRowsResult> results,
+        public void done(
+                final Collection<MetricBackend.FindRowsResult> results,
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
-            final List<Callback<MetricBackend.DataPointsResult>> queries = new LinkedList<Callback<MetricBackend.DataPointsResult>>();
+            final List<Callback<Long>> columnCountCallbacks = new LinkedList<Callback<Long>>();
+            final Aggregator.Session session = aggregators.session();
 
-            long totalCount = 0;
-
-            /* check number of results */
-            for (final MetricBackend.FindRowsResult result : results) {
+            for (final FindRowsResult result : results) {
                 if (result.isEmpty())
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-                final Long columnCount = backend.getColumnCount(
-                        result.getRows(), start, end, 100000l);
-
-                if (columnCount == null) {
-                    callback.cancel(new CancelReason(
-                            "Trying to fetch too many columns"));
-                    return;
+                if (session == null) {
+                    // We check the number of data points only if no aggregation
+                    // is requested
+                    columnCountCallbacks.addAll(backend.getColumnCount(
+                            result.getRows(), start, end));
                 }
-
-                totalCount += columnCount;
             }
 
-            if (totalCount > 100000l) {
-                callback.cancel(new CancelReason(
-                        "Trying to fetch too many columns"));
-                return;
-            }
+            if (!columnCountCallbacks.isEmpty()) {
+                final CallbackStream<Long> stream = new CallbackStream<Long>(
+                        columnCountCallbacks,
+                        new ColumnCountCallbackStreamHandle(new Runnable() {
 
-            for (final MetricBackend.FindRowsResult result : results) {
+                            @Override
+                            public void run() {
+                                processDataPoints(results, session);
+                            }
+                        }, maxQueriableDataPoints, callback));
+
+                callback.register(stream);
+            } else {
+                processDataPoints(results, session);
+            }
+        }
+
+        private void processDataPoints(Collection<FindRowsResult> results,
+                final Aggregator.Session session) {
+            final List<Callback<DataPointsResult>> queries = new LinkedList<Callback<DataPointsResult>>();
+            for (final FindRowsResult result : results) {
                 if (result.isEmpty())
                     continue;
 
                 final MetricBackend backend = result.getBackend();
                 queries.addAll(backend.query(result.getRows(), start, end));
             }
-
-            final CallbackStream<MetricBackend.DataPointsResult> stream;
-
-            final Aggregator.Session session = aggregators.session();
+            final CallbackStream<DataPointsResult> stream;
 
             if (session == null) {
                 log.warn("Returning raw results, this will most probably kill your machine!");
@@ -99,7 +155,12 @@ public class QuerySingle {
                                 callback));
             }
 
-            callback.register(stream);
+            callback.register(new Callback.Cancelled() {
+                @Override
+                public void cancel(CancelReason reason) throws Exception {
+                    stream.cancel(reason);
+                }
+            });
         }
     }
 

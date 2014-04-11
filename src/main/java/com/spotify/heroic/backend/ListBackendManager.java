@@ -28,15 +28,18 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
+    private final long maxQueriableDataPoints;
+
     private final GetAllRows getAllRows;
     private final QuerySingle querySingle;
     private final QueryGroup queryGroup;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long maxAggregationMagnitude) {
+            long maxAggregationMagnitude, long maxQueriableDataPoints) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
+        this.maxQueriableDataPoints = maxQueriableDataPoints;
 
         final Timer getAllRowsTimer = registry.timer(MetricRegistry.name(
                 "heroic", "get-all-rows"));
@@ -44,7 +47,8 @@ public class ListBackendManager implements BackendManager {
 
         final Timer queryMetricsSingle = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
-        this.querySingle = new QuerySingle(metricBackends, queryMetricsSingle);
+        this.querySingle = new QuerySingle(metricBackends, queryMetricsSingle,
+                maxQueriableDataPoints);
         final Timer queryMetricsGroup = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "group"));
         this.queryGroup = new QueryGroup(metricBackends, queryMetricsGroup);
@@ -144,8 +148,7 @@ public class ListBackendManager implements BackendManager {
      * @param query
      * @return
      */
-    private DateRange roundRange(AggregatorGroup aggregators,
-            DateRange range) {
+    private DateRange roundRange(AggregatorGroup aggregators, DateRange range) {
         final long hint = aggregators.getIntervalHint();
 
         if (hint > 0) {

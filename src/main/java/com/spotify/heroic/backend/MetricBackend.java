@@ -42,7 +42,7 @@ public interface MetricBackend extends Backend {
      * @throws QueryException
      */
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            Date start, Date end) throws QueryException;
+            Date start, Date end);
 
     public static class FindRowsResult {
         @Getter
@@ -188,5 +188,5 @@ public interface MetricBackend extends Backend {
      * @return
      */
     public List<Callback<Long>> getColumnCount(List<DataPointsRowKey> rows,
-            DateRange range);
+            Date start, Date end);
 }
