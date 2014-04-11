@@ -1,7 +1,6 @@
 package com.spotify.heroic.backend;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -84,29 +83,25 @@ public class ListBackendManager implements BackendManager {
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange();
-        final Date start = range.start();
-        final Date end = range.end();
 
-        if (!end.after(start)) {
-            throw new QueryException("End time must come after start");
-        }
+        if (range == null)
+            throw new QueryException("Range must be specified");
 
-        final AggregatorGroup aggregators = buildAggregators(definitions,
-                start, end);
+        if (!(range.start() < range.end()))
+            throw new QueryException("Range start must come before its end");
 
-        final DateRange roundedRange = roundRange(aggregators, range);
+        final AggregatorGroup aggregators = buildAggregators(definitions, range);
 
-        final Date roundedStart = roundedRange.start();
-        final Date roundedEnd = roundedRange.end();
+        final DateRange rounded = roundRange(aggregators, range);
 
         if (groupBy != null && !groupBy.isEmpty()) {
-            MetricBackend.FindRowGroups criteria = new MetricBackend.FindRowGroups(
-                    key, roundedStart, roundedEnd, tags, groupBy);
+            final MetricBackend.FindRowGroups criteria = new MetricBackend.FindRowGroups(
+                    key, rounded, tags, groupBy);
             return queryGroup.execute(criteria, aggregators);
         }
 
         final MetricBackend.FindRows criteria = new MetricBackend.FindRows(key,
-                roundedStart, roundedEnd, tags);
+                rounded, tags);
         return querySingle.execute(criteria, aggregators);
     }
 
@@ -116,7 +111,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     private AggregatorGroup buildAggregators(
-            List<Aggregator.Definition> definitions, Date start, Date end)
+            List<Aggregator.Definition> definitions, DateRange range)
             throws QueryException {
         final List<Aggregator> instances = new ArrayList<Aggregator>();
 
@@ -125,7 +120,7 @@ public class ListBackendManager implements BackendManager {
         }
 
         for (final Aggregator.Definition definition : definitions) {
-            instances.add(definition.build(start.getTime(), end.getTime()));
+            instances.add(definition.build(range));
         }
 
         final AggregatorGroup aggregators = new AggregatorGroup(instances);

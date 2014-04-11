@@ -1,18 +1,19 @@
 package com.spotify.heroic.aggregator;
 
 import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.Resolution;
 
 public class SumAggregator extends SumBucketAggregator {
     public static class Definition extends SumBucketAggregator.Definition {
         @Override
-        public SumBucketAggregator build(long start, long end) {
-            return new SumAggregator(start, end, getSampling());
+        public SumBucketAggregator build(DateRange range) {
+            return new SumAggregator(range, getSampling());
         }
     }
 
-    public SumAggregator(long start, long end, Resolution resolution) {
-        super(start, end, resolution);
+    public SumAggregator(DateRange range, Resolution resolution) {
+        super(range, resolution);
     }
 
     @Override

@@ -35,7 +35,7 @@ public class CachedHandle<Q, R> {
         final Cached<R> entry = cache.get(query);
 
         if (entry != null && !entry.isOutdated(maxAge)) {
-            log.debug("Cache hit (from {}): {}", entry.getAdded(), query);
+            log.debug("Cache hit (from {}): {}", entry, query);
             return entry.getItem();
         }
 

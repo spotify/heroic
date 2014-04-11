@@ -1,7 +1,5 @@
 package com.spotify.heroic.query;
 
-import java.util.Date;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -25,13 +23,18 @@ public class AbsoluteDateRange implements DateRange {
     }
 
     @Override
-    public Date start() {
-        return new Date(start);
+    public long start() {
+        return start;
     }
 
     @Override
-    public Date end() {
-        return new Date(end);
+    public long end() {
+        return end;
+    }
+
+    @Override
+    public long diff() {
+        return end - start;
     }
 
     @Override

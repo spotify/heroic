@@ -1,6 +1,5 @@
 package com.spotify.heroic.backend;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +10,7 @@ import lombok.ToString;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.query.DateRange;
 
 public interface MetricBackend extends Backend {
     @ToString(of = { "datapoints", "rowKey" })
@@ -43,7 +43,7 @@ public interface MetricBackend extends Backend {
      * @throws QueryException
      */
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            Date start, Date end);
+            DateRange range);
 
     @ToString(of = { "rows", "backend" })
     public static class FindRowsResult {
@@ -63,22 +63,19 @@ public interface MetricBackend extends Backend {
         }
     }
 
-    @ToString(of = { "key", "start", "end", "filter" })
+    @ToString(of = { "key", "range", "filter" })
     public static class FindRows {
         @Getter
         private final String key;
         @Getter
-        private final Date start;
-        @Getter
-        private final Date end;
+        private final DateRange range;
         @Getter
         private final Map<String, String> filter;
 
-        public FindRows(String key, Date start, Date end,
+        public FindRows(String key, DateRange range,
                 Map<String, String> filter) {
             this.key = key;
-            this.start = start;
-            this.end = end;
+            this.range = range;
             this.filter = filter;
         }
     }
@@ -118,19 +115,16 @@ public interface MetricBackend extends Backend {
         @Getter
         private final String key;
         @Getter
-        private final Date start;
-        @Getter
-        private final Date end;
+        private final DateRange range;
         @Getter
         private final Map<String, String> filter;
         @Getter
         private final List<String> groupBy;
 
-        public FindRowGroups(String key, Date start, Date end,
+        public FindRowGroups(String key, DateRange range,
                 Map<String, String> filter, List<String> groupBy) {
             this.key = key;
-            this.start = start;
-            this.end = end;
+            this.range = range;
             this.filter = filter;
             this.groupBy = groupBy;
         }
@@ -193,5 +187,5 @@ public interface MetricBackend extends Backend {
      * @return
      */
     public Callback<Long> getColumnCount(final DataPointsRowKey row,
-            Date start, Date end);
+            DateRange range);
 }

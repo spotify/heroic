@@ -1,7 +1,5 @@
 package com.spotify.heroic.query;
 
-import java.util.Date;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -10,10 +8,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = AbsoluteDateRange.class, name = "absolute"),
         @JsonSubTypes.Type(value = RelativeDateRange.class, name = "relative") })
 public interface DateRange {
-    Date start();
+    long start();
 
-    Date end();
+    long end();
+
+    long diff();
 
     DateRange roundToInterval(long hint);
-
 }

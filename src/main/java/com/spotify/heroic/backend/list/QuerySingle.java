@@ -2,7 +2,6 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -20,6 +19,7 @@ import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.query.DateRange;
 
 @Slf4j
 public class QuerySingle {
@@ -36,16 +36,14 @@ public class QuerySingle {
 
     private final class HandleFindRowsResult implements
             CallbackGroup.Handle<MetricBackend.FindRowsResult> {
-        private final Date start;
-        private final Date end;
+        private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
 
-        private HandleFindRowsResult(Date start, Date end,
+        private HandleFindRowsResult(DateRange range,
                 Callback<QueryMetricsResult> callback,
                 AggregatorGroup aggregators) {
-            this.start = start;
-            this.end = end;
+            this.range = range;
             this.callback = callback;
             this.aggregators = aggregators;
         }
@@ -115,7 +113,7 @@ public class QuerySingle {
                 final MetricBackend backend = result.getBackend();
 
                 for (DataPointsRowKey row : result.getRows()) {
-                    counters.add(backend.getColumnCount(row, start, end));
+                    counters.add(backend.getColumnCount(row, range));
                 }
             }
             return counters;
@@ -129,7 +127,7 @@ public class QuerySingle {
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-                queries.addAll(backend.query(result.getRows(), start, end));
+                queries.addAll(backend.query(result.getRows(), range));
             }
 
             final Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> reducer;
@@ -158,11 +156,10 @@ public class QuerySingle {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
-        final Date start = criteria.getStart();
-        final Date end = criteria.getEnd();
+        final DateRange range = criteria.getRange();
 
         final CallbackGroup<MetricBackend.FindRowsResult> group = new CallbackGroup<MetricBackend.FindRowsResult>(
-                queries, new HandleFindRowsResult(start, end, callback,
+                queries, new HandleFindRowsResult(range, callback,
                         aggregators));
 
         final Timer.Context context = timer.time();

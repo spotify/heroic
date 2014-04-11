@@ -2,12 +2,14 @@ package com.spotify.heroic.backend.kairosdb;
 
 import java.nio.ByteBuffer;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
 import com.netflix.astyanax.model.Column;
 
 @ToString(of = { "timestamp", "value" })
+@EqualsAndHashCode(of = { "timestamp", "value" })
 public class DataPoint implements Comparable<DataPoint> {
     public static class Name {
         private static final int LONG_FLAG = 0x0;
@@ -48,9 +50,9 @@ public class DataPoint implements Comparable<DataPoint> {
             }
 
             if (isInteger) {
-                return (offset << 1) | LONG_FLAG;
+                return offset << 1 + LONG_FLAG;
             } else {
-                return (offset << 1) | FLOAT_FLAG;
+                return offset << 1 + FLOAT_FLAG;
             }
         }
     }

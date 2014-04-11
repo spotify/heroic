@@ -20,15 +20,19 @@ public class RelativeDateRange implements DateRange {
     private long value = 1;
 
     @Override
-    public Date start() {
-        final long start = now.getTime()
+    public long start() {
+        return now.getTime()
                 - TimeUnit.MILLISECONDS.convert(value, unit);
-        return new Date(start);
     }
 
     @Override
-    public Date end() {
-        return now;
+    public long end() {
+        return now.getTime();
+    }
+
+    @Override
+    public long diff() {
+        return end() - start();
     }
 
     public RelativeDateRange() {
@@ -41,8 +45,7 @@ public class RelativeDateRange implements DateRange {
 
     @Override
     public DateRange roundToInterval(long hint) {
-        final AbsoluteDateRange range = new AbsoluteDateRange(
-                start().getTime(), end().getTime());
+        final AbsoluteDateRange range = new AbsoluteDateRange(start(), end());
         return range.roundToInterval(hint);
     }
 }

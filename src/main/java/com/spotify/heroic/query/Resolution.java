@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class Resolution {
-    public static Resolution DEFAULT_RESOLUTION = new Resolution(
+    public static final Resolution DEFAULT_RESOLUTION = new Resolution(
             TimeUnit.MINUTES, 5);
 
     @Getter

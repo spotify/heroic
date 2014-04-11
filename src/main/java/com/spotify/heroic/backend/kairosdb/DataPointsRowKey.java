@@ -2,7 +2,6 @@ package com.spotify.heroic.backend.kairosdb;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Date;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -144,8 +143,7 @@ public class DataPointsRowKey {
      * @param date
      * @return The bucket for the specified date.
      */
-    public static long getTimeBucket(Date date) {
-        long timestamp = date.getTime();
-        return timestamp - (timestamp % MAX_WIDTH);
+    public static long getTimeBucket(long date) {
+        return date - (date % MAX_WIDTH);
     }
 }

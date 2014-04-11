@@ -2,7 +2,6 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +19,7 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.query.DateRange;
 
 @Slf4j
 public class QueryGroup {
@@ -33,16 +33,14 @@ public class QueryGroup {
 
     private final class FindRowGroupsHandle implements
             CallbackGroup.Handle<MetricBackend.FindRowGroupsResult> {
-        private final Date start;
-        private final Date end;
+        private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
 
-        private FindRowGroupsHandle(Date start, Date end,
+        private FindRowGroupsHandle(DateRange range,
                 Callback<QueryMetricsResult> callback,
                 AggregatorGroup aggregators) {
-            this.start = start;
-            this.end = end;
+            this.range = range;
             this.callback = callback;
             this.aggregators = aggregators;
         }
@@ -109,7 +107,7 @@ public class QueryGroup {
                         mappedQueries.put(tags, callbacks);
                     }
 
-                    callbacks.addAll(backend.query(rows, start, end));
+                    callbacks.addAll(backend.query(rows, range));
                 }
             }
 
@@ -133,10 +131,10 @@ public class QueryGroup {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
-        final Date start = criteria.getStart();
-        final Date end = criteria.getEnd();
+        final DateRange range = criteria.getRange();
+
         final CallbackGroup<MetricBackend.FindRowGroupsResult> group = new CallbackGroup<MetricBackend.FindRowGroupsResult>(
-                queries, new FindRowGroupsHandle(start, end, callback,
+                queries, new FindRowGroupsHandle(range, callback,
                         aggregators));
 
         final Timer.Context context = timer.time();

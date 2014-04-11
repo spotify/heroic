@@ -1,5 +1,7 @@
 package com.spotify.heroic.query;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -19,13 +21,13 @@ public class MetricsQuery {
             TimeUnit.DAYS, 7);
 
     @Getter
-    private String key;
+    private final String key = null;
 
     @Getter
-    private Map<String, String> tags;
+    private final Map<String, String> tags = new HashMap<String, String>();
 
     @Getter
-    private List<String> groupBy;
+    private final List<String> groupBy = new ArrayList<String>();
 
     @Getter
     private final DateRange range = DEFAULT_DATE_RANGE;

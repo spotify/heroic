@@ -11,6 +11,7 @@ import lombok.ToString;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.Resolution;
 
 public abstract class SumBucketAggregator implements Aggregator {
@@ -21,7 +22,7 @@ public abstract class SumBucketAggregator implements Aggregator {
         private Resolution sampling = Resolution.DEFAULT_RESOLUTION;
 
         @Override
-        public abstract SumBucketAggregator build(long start, long end);
+        public abstract SumBucketAggregator build(DateRange range);
     }
 
     public static final class Bucket {
@@ -104,11 +105,10 @@ public abstract class SumBucketAggregator implements Aggregator {
     private final long width;
     private final long offset;
 
-    public SumBucketAggregator(long start, long end, Resolution resolution) {
-        assert start >= end;
-
+    public SumBucketAggregator(DateRange range, Resolution resolution) {
         final long width = resolution.getWidth();
-        final long diff = end - start;
+        final long diff = range.diff();
+        final long start = range.start();
         final long count = diff / width;
 
         this.count = count;

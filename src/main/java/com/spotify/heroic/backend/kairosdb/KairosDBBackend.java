@@ -1,7 +1,6 @@
 package com.spotify.heroic.backend.kairosdb;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -44,6 +43,7 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -53,40 +53,6 @@ public class KairosDBBackend implements MetricBackend {
     private static final String GET_ALL_ROWS = "get-all-rows";
     private static final String FIND_ROWS = "find-rows";
     private static final String FIND_ROW_GROUPS = "find-row-groups";
-
-    private final class QueryRunnable extends
-            CallbackRunnable<DataPointsResult> {
-        private final RowQuery<DataPointsRowKey, Integer> dataQuery;
-        private final DataPointsRowKey rowKey;
-
-        private QueryRunnable(Timer timer, Callback<DataPointsResult> callback,
-                RowQuery<DataPointsRowKey, Integer> dataQuery,
-                DataPointsRowKey rowKey) {
-            super(QUERY, timer, callback);
-            this.dataQuery = dataQuery;
-            this.rowKey = rowKey;
-        }
-
-        @Override
-        public DataPointsResult execute() throws Exception {
-            final OperationResult<ColumnList<Integer>> result = dataQuery
-                    .execute();
-            final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
-
-            return new DataPointsResult(datapoints, rowKey);
-        }
-
-        private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
-                final OperationResult<ColumnList<Integer>> result) {
-            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-            for (final Column<Integer> column : result.getResult()) {
-                datapoints.add(DataPoint.fromColumn(rowKey, column));
-            }
-
-            return datapoints;
-        }
-    }
 
     public static class YAML implements Backend.YAML {
         public static final String TYPE = "!kairosdb-backend";
@@ -206,15 +172,12 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            Date start, Date end) {
-        final long startTime = start.getTime();
-        final long endTime = end.getTime();
-
+            DateRange range) {
         final List<Callback<DataPointsResult>> queries = new ArrayList<Callback<DataPointsResult>>();
 
         for (final DataPointsRowKey rowKey : rows) {
             final Callback<DataPointsResult> callback = buildQuery(rowKey,
-                    startTime, endTime);
+                    range);
 
             final Timer.Context context = queryTimer.time();
 
@@ -231,12 +194,47 @@ public class KairosDBBackend implements MetricBackend {
         return queries;
     }
 
+    private static final class QueryRunnable extends
+            CallbackRunnable<DataPointsResult> {
+        private final RowQuery<DataPointsRowKey, Integer> dataQuery;
+        private final DataPointsRowKey rowKey;
+
+        private QueryRunnable(Timer timer, Callback<DataPointsResult> callback,
+                RowQuery<DataPointsRowKey, Integer> dataQuery,
+                DataPointsRowKey rowKey) {
+            super(QUERY, timer, callback);
+            this.dataQuery = dataQuery;
+            this.rowKey = rowKey;
+        }
+
+        @Override
+        public DataPointsResult execute() throws Exception {
+            final OperationResult<ColumnList<Integer>> result = dataQuery
+                    .execute();
+            final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
+
+            return new DataPointsResult(datapoints, rowKey);
+        }
+
+        private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
+                final OperationResult<ColumnList<Integer>> result) {
+            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+            for (final Column<Integer> column : result.getResult()) {
+                datapoints.add(DataPoint.fromColumn(rowKey, column));
+            }
+
+            return datapoints;
+        }
+    }
+
     private Callback<DataPointsResult> buildQuery(
-            final DataPointsRowKey rowKey, long start, long end) {
+            final DataPointsRowKey rowKey, DateRange range) {
         final long timestamp = rowKey.getTimestamp();
-        final long startTime = DataPoint.Name
-                .toStartTimeStamp(start, timestamp);
-        final long endTime = DataPoint.Name.toEndTimeStamp(end, timestamp);
+        final long startTime = DataPoint.Name.toStartTimeStamp(range.start(),
+                timestamp);
+        final long endTime = DataPoint.Name.toEndTimeStamp(range.end(),
+                timestamp);
 
         final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(dataPoints)
@@ -258,24 +256,22 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     private final class GetColumnCountRunnable extends CallbackRunnable<Long> {
-        private final long endTime;
-        private final long startTime;
+        private final DateRange range;
         private final DataPointsRowKey row;
 
         private GetColumnCountRunnable(Timer timer, Callback<Long> callback,
-                long endTime, long startTime, DataPointsRowKey row) {
+                DateRange range, DataPointsRowKey row) {
             super(GET_COLUMN_COUNT, timer, callback);
-            this.endTime = endTime;
-            this.startTime = startTime;
+            this.range = range;
             this.row = row;
         }
 
         @Override
         public Long execute() throws Exception {
             final long timestamp = row.getTimestamp();
-            final long startColumn = DataPoint.Name.toStartTimeStamp(startTime,
+            final long start = DataPoint.Name.toStartTimeStamp(range.start(),
                     timestamp);
-            final long endColumn = DataPoint.Name.toEndTimeStamp(endTime,
+            final long end = DataPoint.Name.toEndTimeStamp(range.end(),
                     timestamp);
 
             Long columnCount = null;
@@ -283,8 +279,8 @@ public class KairosDBBackend implements MetricBackend {
             BoundStatement query = new BoundStatement(countStatement);
             query = query.bind(
                     DataPointsRowKey.Serializer.get().toByteBuffer(row),
-                    IntegerSerializer.get().toByteBuffer((int) startColumn),
-                    IntegerSerializer.get().toByteBuffer((int) endColumn));
+                    IntegerSerializer.get().toByteBuffer((int) start),
+                    IntegerSerializer.get().toByteBuffer((int) end));
 
             final Iterator<com.datastax.driver.core.Row> iterator = cqlSession
                     .execute(query).iterator();
@@ -300,14 +296,11 @@ public class KairosDBBackend implements MetricBackend {
 
     @Override
     public Callback<Long> getColumnCount(final DataPointsRowKey row,
-            Date start, Date end) {
-        final long startTime = start.getTime();
-        final long endTime = end.getTime();
-
+            DateRange range) {
         final Callback<Long> callback = new ConcurrentCallback<Long>();
 
         executor.execute(new GetColumnCountRunnable(getColumnCountTimer,
-                callback, endTime, startTime, row));
+                callback, range, row));
 
         return callback;
     }
@@ -357,13 +350,12 @@ public class KairosDBBackend implements MetricBackend {
         RowQuery<String, DataPointsRowKey> query = keyspace
                 .prepareQuery(rowKeyIndex).getRow(key).autoPaginate(true);
 
-        final Date start = criteria.getStart();
-        final Date end = criteria.getEnd();
+        final DateRange range = criteria.getRange();
 
         // if range specified, filter columns.
-        if (start != null && end != null) {
-            final DataPointsRowKey startKey = rowKeyStart(start, key);
-            final DataPointsRowKey endKey = rowKeyEnd(end, key);
+        if (range != null) {
+            final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
+            final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
             query = query.withColumnRange(new RangeBuilder()
                     .setStart(startKey, DataPointsRowKey.Serializer.get())
                     .setEnd(endKey, DataPointsRowKey.Serializer.get()).build());
@@ -439,13 +431,12 @@ public class KairosDBBackend implements MetricBackend {
     public Callback<FindRowGroupsResult> findRowGroups(final FindRowGroups query)
             throws QueryException {
         final String key = query.getKey();
-        final Date start = query.getStart();
-        final Date end = query.getEnd();
+        final DateRange range = query.getRange();
         final Map<String, String> filter = query.getFilter();
         final List<String> groupBy = query.getGroupBy();
 
-        final DataPointsRowKey startKey = rowKeyStart(start, key);
-        final DataPointsRowKey endKey = rowKeyEnd(end, key);
+        final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
+        final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
 
         final RowQuery<String, DataPointsRowKey> dbQuery = keyspace
                 .prepareQuery(rowKeyIndex)
@@ -467,7 +458,7 @@ public class KairosDBBackend implements MetricBackend {
         return handle;
     }
 
-    private final class GetAllRowsCallbackRunnable extends
+    private static final class GetAllRowsCallbackRunnable extends
             CallbackRunnable<GetAllRowsResult> {
         private final AllRowsQuery<String, DataPointsRowKey> rowQuery;
 
@@ -541,12 +532,12 @@ public class KairosDBBackend implements MetricBackend {
         return true;
     }
 
-    private DataPointsRowKey rowKeyStart(Date start, String key) {
+    private DataPointsRowKey rowKeyStart(long start, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(start);
         return new DataPointsRowKey(key, timeBucket);
     }
 
-    private DataPointsRowKey rowKeyEnd(Date end, String key) {
+    private DataPointsRowKey rowKeyEnd(long end, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(end);
         return new DataPointsRowKey(key, timeBucket + 1);
     }
