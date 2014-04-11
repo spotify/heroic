@@ -9,8 +9,6 @@ import java.util.Set;
 
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CallbackGroup;
-import com.spotify.heroic.async.CallbackGroupHandle;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendManager.GetAllRowsResult;
@@ -35,10 +33,9 @@ public class GetAllRows {
             queries.add(backend.getAllRows());
         }
 
-        final CallbackGroupHandle<GetAllRowsResult, MetricBackend.GetAllRowsResult> groupHandle = new CallbackGroupHandle<GetAllRowsResult, MetricBackend.GetAllRowsResult>(
-                handle, timer) {
+        final Callback.Reducer<MetricBackend.GetAllRowsResult, GetAllRowsResult> groupHandle = new Callback.Reducer<MetricBackend.GetAllRowsResult, GetAllRowsResult>() {
             @Override
-            public GetAllRowsResult execute(
+            public GetAllRowsResult done(
                     Collection<MetricBackend.GetAllRowsResult> results,
                     Collection<Throwable> errors,
                     Collection<CancelReason> cancelled) throws Exception {
@@ -61,11 +58,6 @@ public class GetAllRows {
             }
         };
 
-        final CallbackGroup<MetricBackend.GetAllRowsResult> group = new CallbackGroup<MetricBackend.GetAllRowsResult>(
-                queries, groupHandle);
-
-        handle.register(group);
-
-        return handle;
+        return handle.reduce(queries, timer, groupHandle);
     }
 }

@@ -20,16 +20,13 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 
 @Slf4j
 public final class SimpleCallbackStream implements
-        CallbackStream.Handle<MetricBackend.DataPointsResult> {
+        Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> {
     private final Map<String, String> tags;
-    private final Callback<QueryMetricsResult> callback;
 
     private final Queue<MetricBackend.DataPointsResult> results = new ConcurrentLinkedQueue<MetricBackend.DataPointsResult>();
 
-    SimpleCallbackStream(Map<String, String> tags,
-            Callback<QueryMetricsResult> callback) {
+    SimpleCallbackStream(Map<String, String> tags) {
         this.tags = tags;
-        this.callback = callback;
     }
 
     @Override
@@ -53,7 +50,7 @@ public final class SimpleCallbackStream implements
     }
 
     @Override
-    public void done(int successful, int failed, int cancelled)
+    public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
         final List<DataPoint> datapoints = joinRawResults();
 
@@ -63,8 +60,8 @@ public final class SimpleCallbackStream implements
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
         groups.add(new DataPointGroup(tags, datapoints));
 
-        callback.finish(new QueryMetricsResult(groups, datapoints.size(), 0,
-                rowStatistics));
+        return new QueryMetricsResult(groups, datapoints.size(), 0,
+                rowStatistics);
     }
 
     private List<DataPoint> joinRawResults() {

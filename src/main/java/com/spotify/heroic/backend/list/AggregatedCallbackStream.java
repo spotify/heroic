@@ -17,16 +17,14 @@ import com.spotify.heroic.backend.RowStatistics;
 
 @Slf4j
 public class AggregatedCallbackStream implements
-        CallbackStream.Handle<MetricBackend.DataPointsResult> {
+        Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> {
     private final Map<String, String> tags;
     private final Aggregator.Session session;
-    private final Callback<QueryMetricsResult> callback;
 
     AggregatedCallbackStream(Map<String, String> tags,
-            Aggregator.Session session, Callback<QueryMetricsResult> callback) {
+            Aggregator.Session session) {
         this.tags = tags;
         this.session = session;
-        this.callback = callback;
     }
 
     @Override
@@ -51,7 +49,7 @@ public class AggregatedCallbackStream implements
     }
 
     @Override
-    public void done(int successful, int failed, int cancelled)
+    public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
         final Aggregator.Result result = session.result();
         final RowStatistics rowStatistics = new RowStatistics(successful,
@@ -60,7 +58,7 @@ public class AggregatedCallbackStream implements
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
         groups.add(new DataPointGroup(tags, result.getResult()));
 
-        callback.finish(new QueryMetricsResult(groups, result.getSampleSize(),
-                result.getOutOfBounds(), rowStatistics));
+        return new QueryMetricsResult(groups, result.getSampleSize(),
+                result.getOutOfBounds(), rowStatistics);
     }
 }

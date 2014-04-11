@@ -1,7 +1,5 @@
 package com.spotify.heroic.async;
 
-import java.util.Collection;
-
 import com.codahale.metrics.Timer;
 
 /**
@@ -13,19 +11,18 @@ import com.codahale.metrics.Timer;
  * @param <T>
  * @param <R>
  */
-public abstract class CallbackGroupHandle<T, R> implements
-        CallbackGroup.Handle<R> {
+public abstract class CallbackStreamHandle<T, R> implements
+        CallbackStream.Handle<R> {
     private final Callback<T> callback;
     private final Timer timer;
 
-    public CallbackGroupHandle(Callback<T> callback, Timer timer) {
+    public CallbackStreamHandle(Callback<T> callback, Timer timer) {
         this.callback = callback;
         this.timer = timer;
     }
 
     @Override
-    public void done(Collection<R> results, Collection<Throwable> errors,
-            Collection<CancelReason> cancelled) {
+    public void done(int successful, int failed, int cancelled) {
         if (!callback.isInitialized())
             return;
 
@@ -33,7 +30,7 @@ public abstract class CallbackGroupHandle<T, R> implements
         final Timer.Context context = timer.time();
 
         try {
-            result = execute(results, errors, cancelled);
+            result = execute(successful, failed, cancelled);
         } catch (final Throwable t) {
             callback.fail(t);
             return;
@@ -44,7 +41,6 @@ public abstract class CallbackGroupHandle<T, R> implements
         callback.finish(result);
     }
 
-    public abstract T execute(Collection<R> results,
-            Collection<Throwable> errors, Collection<CancelReason> cancelled)
+    public abstract T execute(int successful, int failed, int cancelled)
             throws Exception;
 }

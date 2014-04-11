@@ -37,7 +37,8 @@ import lombok.extern.slf4j.Slf4j;
  *            The type being deferred.
  */
 @Slf4j
-public class ConcurrentCallback<T> implements Callback<T> {
+public class ConcurrentCallback<T> extends AbstractCallback<T> implements
+        Callback<T> {
     private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private final List<Cancelled> cancelled = new LinkedList<Cancelled>();
     private final List<Ended> ended = new LinkedList<Ended>();

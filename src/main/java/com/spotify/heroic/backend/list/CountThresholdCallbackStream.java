@@ -3,8 +3,6 @@ package com.spotify.heroic.backend.list;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
@@ -15,8 +13,8 @@ import com.spotify.heroic.async.CancelReason;
  * 
  * @author udoprog
  */
-@Slf4j
-final class CountThresholdCallbackStream implements CallbackStream.Handle<Long> {
+final class CountThresholdCallbackStream implements
+        Callback.StreamReducer<Long, Void> {
     private final long threshold;
     private final Callback<Void> callback;
 
@@ -55,13 +53,12 @@ final class CountThresholdCallbackStream implements CallbackStream.Handle<Long> 
     }
 
     @Override
-    public void done(int successful, int failed, int cancelled)
+    public Void done(int successful, int failed, int cancelled)
             throws Exception {
         if (this.cancelled.get()) {
-            log.warn("Request cancelled");
-            return;
+            throw new Exception("Request cancelled");
         }
 
-        this.callback.finish(null);
+        return null;
     }
 }

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,14 +14,11 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
-import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 
 @Slf4j
@@ -58,46 +54,9 @@ public class QueryGroup {
             final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries = prepareGroups(results);
 
             final List<Callback<QueryMetricsResult>> queries = prepareQueries(mappedQueries);
+            final JoinQueryMetricsResult join = new JoinQueryMetricsResult();
 
-            final CallbackGroup<QueryMetricsResult> group = new CallbackGroup<QueryMetricsResult>(
-                    queries, new CallbackGroup.Handle<QueryMetricsResult>() {
-                        @Override
-                        public void done(
-                                Collection<QueryMetricsResult> results,
-                                Collection<Throwable> errors,
-                                Collection<CancelReason> cancelled)
-                                throws Exception {
-                            final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();
-
-                            long sampleSize = 0;
-                            long outOfBounds = 0;
-                            int rowSuccessful = 0;
-                            int rowFailed = 0;
-                            int rowCancelled = 0;
-
-                            for (final QueryMetricsResult result : results) {
-                                sampleSize += result.getSampleSize();
-                                outOfBounds += result.getOutOfBounds();
-
-                                final RowStatistics rowStatistics = result
-                                        .getRowStatistics();
-
-                                rowSuccessful += rowStatistics.getSuccessful();
-                                rowFailed += rowStatistics.getFailed();
-                                rowCancelled += rowStatistics.getCancelled();
-
-                                groups.addAll(result.getGroups());
-                            }
-
-                            final RowStatistics rowStatistics = new RowStatistics(
-                                    rowSuccessful, rowFailed, rowCancelled);
-
-                            callback.finish(new QueryMetricsResult(groups,
-                                    sampleSize, outOfBounds, rowStatistics));
-                        }
-                    });
-
-            callback.register(group);
+            callback.reduce(queries, timer, join);
         }
 
         private List<Callback<QueryMetricsResult>> prepareQueries(
@@ -113,28 +72,16 @@ public class QueryGroup {
 
                 final Aggregator.Session session = aggregators.session();
 
-                final CallbackStream<MetricBackend.DataPointsResult> callbackStream;
-
                 final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
+                final Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> reducer;
 
                 if (session == null) {
-                    callbackStream = new CallbackStream<MetricBackend.DataPointsResult>(
-                            callbacks, new SimpleCallbackStream(tags,
-                                    partial));
+                    reducer = new SimpleCallbackStream(tags);
                 } else {
-                    callbackStream = new CallbackStream<MetricBackend.DataPointsResult>(
-                            callbacks, new AggregatedCallbackStream(tags,
-                                    session, partial));
+                    reducer = new AggregatedCallbackStream(tags, session);
                 }
 
-                partial.register(new Callback.Cancelled() {
-                    @Override
-                    public void cancel(CancelReason reason) throws Exception {
-                        callbackStream.cancel(reason);
-                    }
-                });
-
-                queries.add(partial);
+                queries.add(partial.reduce(callbacks, timer, reducer));
             }
 
             return queries;

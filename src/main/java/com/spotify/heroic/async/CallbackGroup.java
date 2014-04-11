@@ -23,7 +23,7 @@ public class CallbackGroup<T> implements Callback.Cancelled {
 
     private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
-    private final Queue<CancelReason> cancelled = new ConcurrentLinkedQueue();
+    private final Queue<CancelReason> cancelled = new ConcurrentLinkedQueue<CancelReason>();
 
     private final Callback.Handle<T> listener = new Callback.Handle<T>() {
         @Override

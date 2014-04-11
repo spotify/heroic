@@ -13,7 +13,6 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
-import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
@@ -56,8 +55,58 @@ public class QuerySingle {
                 final Collection<MetricBackend.FindRowsResult> results,
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
-            final List<Callback<Long>> columnCountCallbacks = new LinkedList<Callback<Long>>();
             final Aggregator.Session session = aggregators.session();
+
+            if (session == null) {
+                countTheProcessDataPoints(results);
+                return;
+            }
+
+            processDataPoints(results, session);
+        }
+
+        /**
+         * Performs processDataPoints only if the amount of data points selected
+         * does not exceed {@link #maxQueriableDataPoints}
+         * 
+         * @param results
+         */
+        private void countTheProcessDataPoints(
+                final Collection<MetricBackend.FindRowsResult> results) {
+            final List<Callback<Long>> counters = buildCountRequests(results);
+
+            final Callback<Void> check = new ConcurrentCallback<Void>();
+
+            check.reduce(counters, timer, new CountThresholdCallbackStream(
+                    maxQueriableDataPoints, check));
+
+            check.register(new Callback.Handle<Void>() {
+                @Override
+                public void cancel(CancelReason reason) throws Exception {
+                    callback.cancel(reason);
+                }
+
+                @Override
+                public void error(Throwable e) throws Exception {
+                    callback.fail(e);
+                }
+
+                @Override
+                public void finish(Void result) throws Exception {
+                    processDataPoints(results, null);
+                }
+            });
+        }
+
+        /**
+         * Sets up count requests for all the collected results.
+         * 
+         * @param results
+         * @return
+         */
+        private List<Callback<Long>> buildCountRequests(
+                final Collection<MetricBackend.FindRowsResult> results) {
+            final List<Callback<Long>> counters = new LinkedList<Callback<Long>>();
 
             for (final FindRowsResult result : results) {
                 if (result.isEmpty())
@@ -65,44 +114,11 @@ public class QuerySingle {
 
                 final MetricBackend backend = result.getBackend();
 
-                if (session == null) {
-                    for (DataPointsRowKey row : result.getRows()) {
-                        columnCountCallbacks.add(backend.getColumnCount(row,
-                                start, end));
-                    }
+                for (DataPointsRowKey row : result.getRows()) {
+                    counters.add(backend.getColumnCount(row, start, end));
                 }
             }
-
-            if (!columnCountCallbacks.isEmpty()) {
-                final Callback<Void> streamCallback = new ConcurrentCallback<Void>();
-
-                final CallbackStream<Long> stream = new CallbackStream<Long>(
-                        columnCountCallbacks, new CountThresholdCallbackStream(
-                                maxQueriableDataPoints, streamCallback));
-
-                this.callback.register(stream);
-                // TODO: why doesn't this work?
-                // streamCallback.register(stream);
-
-                streamCallback.register(new Callback.Handle<Void>() {
-                    @Override
-                    public void cancel(CancelReason reason) throws Exception {
-                        callback.cancel(reason);
-                    }
-
-                    @Override
-                    public void error(Throwable e) throws Exception {
-                        callback.fail(e);
-                    }
-
-                    @Override
-                    public void finish(Void result) throws Exception {
-                        processDataPoints(results, session);
-                    }
-                });
-            } else {
-                processDataPoints(results, session);
-            }
+            return counters;
         }
 
         private void processDataPoints(Collection<FindRowsResult> results,
@@ -115,24 +131,16 @@ public class QuerySingle {
                 final MetricBackend backend = result.getBackend();
                 queries.addAll(backend.query(result.getRows(), start, end));
             }
-            final CallbackStream<DataPointsResult> stream;
+
+            final Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> reducer;
 
             if (session == null) {
-                log.warn("Returning raw results, this will most probably kill your machine!");
-                stream = new CallbackStream<MetricBackend.DataPointsResult>(
-                        queries, new SimpleCallbackStream(null, callback));
+                reducer = new SimpleCallbackStream(null);
             } else {
-                stream = new CallbackStream<MetricBackend.DataPointsResult>(
-                        queries, new AggregatedCallbackStream(null, session,
-                                callback));
+                reducer = new AggregatedCallbackStream(null, session);
             }
 
-            callback.register(new Callback.Cancelled() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                    stream.cancel(reason);
-                }
-            });
+            callback.reduce(queries, timer, reducer);
         }
     }
 
