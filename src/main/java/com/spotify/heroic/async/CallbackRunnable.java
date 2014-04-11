@@ -1,5 +1,7 @@
 package com.spotify.heroic.async;
 
+import java.util.concurrent.TimeUnit;
+
 import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.Timer;
@@ -15,12 +17,14 @@ import com.codahale.metrics.Timer;
  */
 @Slf4j
 public abstract class CallbackRunnable<T> implements Runnable {
+    private final String task;
     private final Callback<T> callback;
     private final Timer timer;
 
-    public CallbackRunnable(Callback<T> callback, Timer timer) {
-        this.callback = callback;
+    public CallbackRunnable(String task, Timer timer, Callback<T> callback) {
+        this.task = task;
         this.timer = timer;
+        this.callback = callback;
     }
 
     @Override
@@ -30,6 +34,7 @@ public abstract class CallbackRunnable<T> implements Runnable {
 
         final T result;
         final Timer.Context context = timer.time();
+        log.debug("{} (id {})", task, hashCode());
 
         try {
             result = execute();
@@ -37,7 +42,10 @@ public abstract class CallbackRunnable<T> implements Runnable {
             callback.fail(t);
             return;
         } finally {
-            context.stop();
+            final long time = context.stop();
+            final long ms = TimeUnit.MILLISECONDS.convert(time,
+                    TimeUnit.NANOSECONDS);
+            // log.debug("{} (id {}, took {}ms)", task, hashCode(), ms);
         }
 
         callback.finish(result);

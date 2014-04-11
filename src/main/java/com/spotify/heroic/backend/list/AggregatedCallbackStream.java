@@ -30,19 +30,22 @@ public class AggregatedCallbackStream implements
     }
 
     @Override
-    public void finish(Callback<MetricBackend.DataPointsResult> callback,
+    public void finish(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback,
             MetricBackend.DataPointsResult result) throws Exception {
         session.stream(result.getDatapoints());
     }
 
     @Override
-    public void error(Callback<MetricBackend.DataPointsResult> callback,
-            Throwable error) throws Exception {
+    public void error(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback, Throwable error)
+            throws Exception {
         log.error("Result failed: " + error, error);
     }
 
     @Override
-    public void cancel(Callback<MetricBackend.DataPointsResult> callback,
+    public void cancel(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback,
             CancelReason reason) throws Exception {
         log.error("Result cancelled: " + reason);
     }

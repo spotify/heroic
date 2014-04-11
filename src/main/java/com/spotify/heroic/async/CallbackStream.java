@@ -10,11 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CallbackStream<T> implements Callback.Cancelled {
     public static interface Handle<T> {
-        void finish(Callback<T> callback, T result) throws Exception;
+        void finish(CallbackStream<T> stream, Callback<T> callback, T result)
+                throws Exception;
 
-        void error(Callback<T> callback, Throwable error) throws Exception;
+        void error(CallbackStream<T> stream, Callback<T> callback,
+                Throwable error) throws Exception;
 
-        void cancel(Callback<T> callback, CancelReason reason) throws Exception;
+        void cancel(CallbackStream<T> stream, Callback<T> callback,
+                CancelReason reason) throws Exception;
 
         void done(int successful, int failed, int cancelled) throws Exception;
     }
@@ -59,20 +62,10 @@ public class CallbackStream<T> implements Callback.Cancelled {
             handleDone(handle);
     }
 
-    /* cancel all queries in this group */
-    @Override
-    public void cancel(CancelReason reason) {
-        log.warn("Cancelling");
-
-        for (final Callback<T> callback : callbacks) {
-            callback.cancel(reason);
-        }
-    }
-
     private void handleError(Handle<T> handle, Callback<T> callback,
             Throwable error) {
         try {
-            handle.error(callback, error);
+            handle.error(this, callback, error);
         } catch (final Throwable t) {
             log.error("Failed to call error on handle", t);
         }
@@ -80,7 +73,7 @@ public class CallbackStream<T> implements Callback.Cancelled {
 
     private void handleFinish(Handle<T> handle, Callback<T> callback, T result) {
         try {
-            handle.finish(callback, result);
+            handle.finish(this, callback, result);
         } catch (final Throwable t) {
             log.error("Failed to call finish on handle", t);
         }
@@ -89,7 +82,7 @@ public class CallbackStream<T> implements Callback.Cancelled {
     private void handleCancel(Handle<T> handle, Callback<T> callback,
             CancelReason reason) {
         try {
-            handle.cancel(callback, reason);
+            handle.cancel(this, callback, reason);
         } catch (final Throwable t) {
             log.error("Failed to call cancel on handle", t);
         }
@@ -111,5 +104,15 @@ public class CallbackStream<T> implements Callback.Cancelled {
 
         log.info("Done");
         handleDone(handle);
+    }
+
+    /* cancel all queries in this group */
+    @Override
+    public void cancel(CancelReason reason) {
+        log.warn("Cancelling all callbacks");
+
+        for (final Callback<T> callback : callbacks) {
+            callback.cancel(reason);
+        }
     }
 }

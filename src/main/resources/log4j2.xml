@@ -6,7 +6,10 @@
     </Console>
   </Appenders> 
   <Loggers>
-    <Root level="INFO">
+    <Logger name="com.spotify.heroic" level="DEBUG" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Root level="WARN">
       <AppenderRef ref="primary" />
     </Root>
   </Loggers>

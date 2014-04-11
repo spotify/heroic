@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +20,7 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
 import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
+import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 
 @Slf4j
 public class QuerySingle {
@@ -33,50 +33,6 @@ public class QuerySingle {
         this.backends = backends;
         this.timer = timer;
         this.maxQueriableDataPoints = maxQueriableDataPoints;
-    }
-
-    private static final class ColumnCountCallbackStreamHandle implements
-            CallbackStream.Handle<Long> {
-        private final Runnable runnable;
-        private final long maxQueriableDataPoints;
-        private final Callback<QueryMetricsResult> callback;
-
-        private final AtomicLong totalColumnCount = new AtomicLong(0);
-
-        private ColumnCountCallbackStreamHandle(Runnable runnable,
-                long maxQueriableDataPoints,
-                Callback<QueryMetricsResult> callback) {
-            this.runnable = runnable;
-            this.maxQueriableDataPoints = maxQueriableDataPoints;
-            this.callback = callback;
-        }
-
-        @Override
-        public void finish(Callback<Long> currentCallback, Long result)
-                throws Exception {
-            final long currentValue = totalColumnCount.addAndGet(result);
-
-            if (currentValue > maxQueriableDataPoints) {
-                callback.cancel(new CancelReason("Too many datapoints"));
-            }
-        }
-
-        @Override
-        public void error(Callback<Long> callback, Throwable error)
-                throws Exception {
-            log.error("An error occurred during counting columns.", error);
-        }
-
-        @Override
-        public void cancel(Callback<Long> callback, CancelReason reason)
-                throws Exception {
-        }
-
-        @Override
-        public void done(int successful, int failed, int cancelled)
-                throws Exception {
-            runnable.run();
-        }
     }
 
     private final class HandleFindRowsResult implements
@@ -108,26 +64,42 @@ public class QuerySingle {
                     continue;
 
                 final MetricBackend backend = result.getBackend();
+
                 if (session == null) {
-                    // We check the number of data points only if no aggregation
-                    // is requested
-                    columnCountCallbacks.addAll(backend.getColumnCount(
-                            result.getRows(), start, end));
+                    for (DataPointsRowKey row : result.getRows()) {
+                        columnCountCallbacks.add(backend.getColumnCount(row,
+                                start, end));
+                    }
                 }
             }
 
             if (!columnCountCallbacks.isEmpty()) {
+                final Callback<Void> streamCallback = new ConcurrentCallback<Void>();
+
                 final CallbackStream<Long> stream = new CallbackStream<Long>(
-                        columnCountCallbacks,
-                        new ColumnCountCallbackStreamHandle(new Runnable() {
+                        columnCountCallbacks, new CountThresholdCallbackStream(
+                                maxQueriableDataPoints, streamCallback));
 
-                            @Override
-                            public void run() {
-                                processDataPoints(results, session);
-                            }
-                        }, maxQueriableDataPoints, callback));
+                this.callback.register(stream);
+                // TODO: why doesn't this work?
+                // streamCallback.register(stream);
 
-                callback.register(stream);
+                streamCallback.register(new Callback.Handle<Void>() {
+                    @Override
+                    public void cancel(CancelReason reason) throws Exception {
+                        callback.cancel(reason);
+                    }
+
+                    @Override
+                    public void error(Throwable e) throws Exception {
+                        callback.fail(e);
+                    }
+
+                    @Override
+                    public void finish(Void result) throws Exception {
+                        processDataPoints(results, session);
+                    }
+                });
             } else {
                 processDataPoints(results, session);
             }

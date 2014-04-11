@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -48,8 +47,47 @@ import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
-@Slf4j
 public class KairosDBBackend implements MetricBackend {
+    public static final String QUERY = "query";
+    public static final String GET_COLUMN_COUNT = "get-column-count";
+    private static final String GET_ALL_ROWS = "get-all-rows";
+    private static final String FIND_ROWS = "find-rows";
+    private static final String FIND_ROW_GROUPS = "find-row-groups";
+
+    private final class QueryRunnable extends
+            CallbackRunnable<DataPointsResult> {
+        private final RowQuery<DataPointsRowKey, Integer> dataQuery;
+        private final DataPointsRowKey rowKey;
+
+        private QueryRunnable(Timer timer, Callback<DataPointsResult> callback,
+                RowQuery<DataPointsRowKey, Integer> dataQuery,
+                DataPointsRowKey rowKey) {
+            super(QUERY, timer, callback);
+            this.dataQuery = dataQuery;
+            this.rowKey = rowKey;
+        }
+
+        @Override
+        public DataPointsResult execute() throws Exception {
+            final OperationResult<ColumnList<Integer>> result = dataQuery
+                    .execute();
+            final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
+
+            return new DataPointsResult(datapoints, rowKey);
+        }
+
+        private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
+                final OperationResult<ColumnList<Integer>> result) {
+            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+            for (final Column<Integer> column : result.getResult()) {
+                datapoints.add(DataPoint.fromColumn(rowKey, column));
+            }
+
+            return datapoints;
+        }
+    }
+
     public static class YAML implements Backend.YAML {
         public static final String TYPE = "!kairosdb-backend";
 
@@ -155,15 +193,15 @@ public class KairosDBBackend implements MetricBackend {
 
         /* setup metric timers */
         this.queryTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", "query", backendTags.toString()));
+                "kairosdb", QUERY, backendTags.toString()));
         this.findRowGroupsTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", "find-row-groups", backendTags.toString()));
+                "kairosdb", FIND_ROW_GROUPS, backendTags.toString()));
         this.findRowsTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", "find-rows", backendTags.toString()));
+                "kairosdb", FIND_ROWS, backendTags.toString()));
         this.getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", "get-all-rows", backendTags.toString()));
+                "kairosdb", GET_ALL_ROWS, backendTags.toString()));
         this.getColumnCountTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", "get-column-count", backendTags.toString()));
+                "kairosdb", GET_COLUMN_COUNT, backendTags.toString()));
     }
 
     @Override
@@ -193,40 +231,6 @@ public class KairosDBBackend implements MetricBackend {
         return queries;
     }
 
-    private final class QueryCallbackRunnable extends
-            CallbackRunnable<DataPointsResult> {
-        private final RowQuery<DataPointsRowKey, Integer> dataQuery;
-        private final DataPointsRowKey rowKey;
-
-        private QueryCallbackRunnable(Callback<DataPointsResult> callback,
-                Timer timer, RowQuery<DataPointsRowKey, Integer> dataQuery,
-                DataPointsRowKey rowKey) {
-            super(callback, timer);
-            this.dataQuery = dataQuery;
-            this.rowKey = rowKey;
-        }
-
-        @Override
-        public DataPointsResult execute() throws Exception {
-            final OperationResult<ColumnList<Integer>> result = dataQuery
-                    .execute();
-            final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
-
-            return new DataPointsResult(datapoints, rowKey);
-        }
-
-        private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
-                final OperationResult<ColumnList<Integer>> result) {
-            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-            for (final Column<Integer> column : result.getResult()) {
-                datapoints.add(DataPoint.fromColumn(rowKey, column));
-            }
-
-            return datapoints;
-        }
-    }
-
     private Callback<DataPointsResult> buildQuery(
             final DataPointsRowKey rowKey, long start, long end) {
         final long timestamp = rowKey.getTimestamp();
@@ -245,88 +249,87 @@ public class KairosDBBackend implements MetricBackend {
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
-        final Callback<DataPointsResult> handle = new ConcurrentCallback<DataPointsResult>();
+        final Callback<DataPointsResult> callback = new ConcurrentCallback<DataPointsResult>();
 
-        executor.execute(new QueryCallbackRunnable(handle, queryTimer,
-                dataQuery, rowKey));
+        executor.execute(new QueryRunnable(queryTimer, callback, dataQuery,
+                rowKey));
 
-        return handle;
+        return callback;
+    }
+
+    private final class GetColumnCountRunnable extends CallbackRunnable<Long> {
+        private final long endTime;
+        private final long startTime;
+        private final DataPointsRowKey row;
+
+        private GetColumnCountRunnable(Timer timer, Callback<Long> callback,
+                long endTime, long startTime, DataPointsRowKey row) {
+            super(GET_COLUMN_COUNT, timer, callback);
+            this.endTime = endTime;
+            this.startTime = startTime;
+            this.row = row;
+        }
+
+        @Override
+        public Long execute() throws Exception {
+            final long timestamp = row.getTimestamp();
+            final long startColumn = DataPoint.Name.toStartTimeStamp(startTime,
+                    timestamp);
+            final long endColumn = DataPoint.Name.toEndTimeStamp(endTime,
+                    timestamp);
+
+            Long columnCount = null;
+
+            BoundStatement query = new BoundStatement(countStatement);
+            query = query.bind(
+                    DataPointsRowKey.Serializer.get().toByteBuffer(row),
+                    IntegerSerializer.get().toByteBuffer((int) startColumn),
+                    IntegerSerializer.get().toByteBuffer((int) endColumn));
+
+            final Iterator<com.datastax.driver.core.Row> iterator = cqlSession
+                    .execute(query).iterator();
+
+            if (iterator.hasNext()) {
+                final com.datastax.driver.core.Row row = iterator.next();
+                columnCount = row.getLong("\"count\"");
+            }
+
+            return columnCount;
+        }
     }
 
     @Override
-    public List<Callback<Long>> getColumnCount(List<DataPointsRowKey> rows,
+    public Callback<Long> getColumnCount(final DataPointsRowKey row,
             Date start, Date end) {
-        final List<Callback<Long>> callbacks = new ArrayList<Callback<Long>>(
-                rows.size());
         final long startTime = start.getTime();
         final long endTime = end.getTime();
 
-        for (final DataPointsRowKey row : rows) {
-            final Callback<Long> callback = new ConcurrentCallback<Long>();
-            executor.execute(new CallbackRunnable<Long>(callback,
-                    getColumnCountTimer) {
-                @Override
-                public Long execute() throws Exception {
-                    return getColumnCount(row, startTime, endTime);
-                }
-            });
-            callbacks.add(callback);
-        }
+        final Callback<Long> callback = new ConcurrentCallback<Long>();
 
-        return callbacks;
+        executor.execute(new GetColumnCountRunnable(getColumnCountTimer,
+                callback, endTime, startTime, row));
+
+        return callback;
     }
 
-    private Long getColumnCount(final DataPointsRowKey rowKey, long start,
-            long end) {
-        final long timestamp = rowKey.getTimestamp();
-        final long startTime = DataPoint.Name
-                .toStartTimeStamp(start, timestamp);
-        final long endTime = DataPoint.Name.toEndTimeStamp(end, timestamp);
-
-        Long columnCount = null;
-
-        BoundStatement query = new BoundStatement(countStatement);
-        query = query.bind(
-                DataPointsRowKey.Serializer.get().toByteBuffer(rowKey),
-                IntegerSerializer.get().toByteBuffer((int) startTime),
-                IntegerSerializer.get().toByteBuffer((int) endTime));
-
-        final Iterator<com.datastax.driver.core.Row> iterator = cqlSession
-                .execute(query).iterator();
-        if (iterator.hasNext()) {
-            final com.datastax.driver.core.Row row = iterator.next();
-            columnCount = row.getLong("\"count\"");
-        }
-
-        return columnCount;
-    }
-
-    private final class FindRowsCallbackRunnable extends
+    private final class FindRowsRunnable extends
             CallbackRunnable<FindRowsResult> {
-        private final FindRows query;
+        private final RowQuery<String, DataPointsRowKey> query;
         private final Map<String, String> filter;
-        private final RowQuery<String, DataPointsRowKey> dbQuery;
 
-        private FindRowsCallbackRunnable(Callback<FindRowsResult> callback,
-                Timer timer, FindRows query, Map<String, String> filter,
-                RowQuery<String, DataPointsRowKey> dbQuery) {
-            super(callback, timer);
-            this.query = query;
+        private FindRowsRunnable(Timer timer,
+                Callback<FindRowsResult> callback,
+                RowQuery<String, DataPointsRowKey> dbQuery,
+                Map<String, String> filter) {
+            super(FIND_ROWS, timer, callback);
+            this.query = dbQuery;
             this.filter = filter;
-            this.dbQuery = dbQuery;
         }
 
         @Override
         public FindRowsResult execute() throws Exception {
-            final Date then = new Date();
-            log.info("{} : {}", backendTags, query);
-
-            final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
+            final OperationResult<ColumnList<DataPointsRowKey>> result = query
                     .execute();
-
-            final Date now = new Date();
-            final long diff = now.getTime() - then.getTime();
-            log.info("{} : {} (took {}ms)", backendTags, query, diff);
 
             final List<DataPointsRowKey> rowKeys = new ArrayList<DataPointsRowKey>();
 
@@ -366,12 +369,12 @@ public class KairosDBBackend implements MetricBackend {
                     .setEnd(endKey, DataPointsRowKey.Serializer.get()).build());
         }
 
-        final Callback<FindRowsResult> handle = new ConcurrentCallback<FindRowsResult>();
+        final Callback<FindRowsResult> callback = new ConcurrentCallback<FindRowsResult>();
 
-        executor.execute(new FindRowsCallbackRunnable(handle, findRowsTimer,
-                criteria, filter, query));
+        executor.execute(new FindRowsRunnable(findRowsTimer, callback, query,
+                filter));
 
-        return handle;
+        return callback;
     }
 
     /**
@@ -389,7 +392,7 @@ public class KairosDBBackend implements MetricBackend {
                 Callback<FindRowGroupsResult> callback, Timer timer,
                 RowQuery<String, DataPointsRowKey> dbQuery,
                 Map<String, String> filter, List<String> groupBy) {
-            super(callback, timer);
+            super(FIND_ROW_GROUPS, timer, callback);
             this.dbQuery = dbQuery;
             this.filter = filter;
             this.groupBy = groupBy;
@@ -470,7 +473,7 @@ public class KairosDBBackend implements MetricBackend {
 
         private GetAllRowsCallbackRunnable(Callback<GetAllRowsResult> callback,
                 AllRowsQuery<String, DataPointsRowKey> rowQuery, Timer timer) {
-            super(callback, timer);
+            super(GET_ALL_ROWS, timer, callback);
             this.rowQuery = rowQuery;
         }
 

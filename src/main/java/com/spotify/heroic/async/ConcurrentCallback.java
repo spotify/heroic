@@ -1,5 +1,7 @@
 package com.spotify.heroic.async;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -39,69 +41,39 @@ public class ConcurrentCallback<T> implements Callback<T> {
     private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private final List<Cancelled> cancelled = new LinkedList<Cancelled>();
     private final List<Ended> ended = new LinkedList<Ended>();
-
     private State state = State.INITIALIZED;
+
     private Throwable error;
     private CancelReason cancelReason;
     private T result;
 
     @Override
-    public synchronized Callback<T> fail(Throwable error) {
-        if (state != State.INITIALIZED)
-            return this;
+    public Callback<T> fail(Throwable error) {
+        final Runnable runnable = synhronizedFail(error);
 
-        this.state = State.FAILED;
-        this.error = error;
+        if (runnable != null)
+            runnable.run();
 
-        for (final Handle<T> handle : handlers) {
-            invokeFailed(handle);
-        }
-
-        for (final Ended ended : this.ended) {
-            invokeEnded(ended);
-        }
-
-        clearAll();
         return this;
     }
 
     @Override
-    public synchronized Callback<T> finish(T result) {
-        if (state != State.INITIALIZED)
-            return this;
+    public Callback<T> finish(T result) {
+        final Runnable runnable = synchronizedFinish(result);
 
-        this.state = State.FINISHED;
-        this.result = result;
+        if (runnable != null)
+            runnable.run();
 
-        for (final Handle<T> handle : handlers) {
-            invokeFinished(handle);
-        }
-
-        for (final Ended ended : this.ended) {
-            invokeEnded(ended);
-        }
-
-        clearAll();
         return this;
     }
 
     @Override
-    public synchronized Callback<T> cancel(CancelReason reason) {
-        if (state != State.INITIALIZED)
-            return this;
+    public Callback<T> cancel(CancelReason reason) {
+        final Runnable runnable = synchronizedCancel(reason);
 
-        this.state = ConcurrentCallback.State.CANCELLED;
-        this.cancelReason = reason;
+        if (runnable != null)
+            runnable.run();
 
-        for (final Cancelled cancel : cancelled) {
-            invokeCancelled(cancel);
-        }
-
-        for (final Ended ended : this.ended) {
-            invokeEnded(ended);
-        }
-
-        clearAll();
         return this;
     }
 
@@ -138,49 +110,48 @@ public class ConcurrentCallback<T> implements Callback<T> {
         ended.clear();
     }
 
-    private synchronized void registerHandle(Handle<T> handle) {
-        switch (state) {
+    private boolean registerHandle(Handle<T> handle) {
+        final State s = addHandler(handle);
+
+        switch (s) {
         case FINISHED:
             invokeFinished(handle);
-            return;
+            return true;
         case CANCELLED:
             invokeCancelled(handle);
-            return;
+            return true;
         case FAILED:
             invokeFailed(handle);
-            return;
+            return true;
         default:
-            break;
+            return false;
         }
-
-        handlers.add(handle);
-        cancelled.add(handle);
     }
 
-    private synchronized void registerCancelled(Cancelled cancelled) {
-        switch (state) {
+    private boolean registerCancelled(Cancelled handle) {
+        final State s = addCancelled(handle);
+
+        switch (s) {
         case CANCELLED:
-            invokeCancelled(cancelled);
-            return;
+            invokeCancelled(handle);
+            return true;
         default:
-            break;
+            return false;
         }
-
-        this.cancelled.add(cancelled);
     }
 
-    private synchronized void registerEnded(Ended ended) {
-        switch (state) {
+    private boolean registerEnded(Ended ended) {
+        final State s = addEnded(ended);
+
+        switch (s) {
         case FINISHED:
         case CANCELLED:
         case FAILED:
             invokeEnded(ended);
-            return;
+            return true;
         default:
-            break;
+            return false;
         }
-
-        this.ended.add(ended);
     }
 
     private void invokeFinished(Handle<T> handle) {
@@ -213,5 +184,127 @@ public class ConcurrentCallback<T> implements Callback<T> {
         } catch (final Exception e) {
             log.error("Failed to invoke cancel callback", e);
         }
+    }
+
+    /**
+     * Synchronized functions.
+     * 
+     * rule a) The following fields must only be accessed in a synchronized
+     * block.
+     * 
+     * state, handlers, cancelled, ended
+     * 
+     * rule b) No callback must be invoked in a synchronized block since that
+     * will result in deadlocks.
+     */
+
+    private synchronized State addHandler(Handle<T> handle) {
+        if (state == State.INITIALIZED) {
+            handlers.add(handle);
+            cancelled.add(handle);
+        }
+
+        return state;
+    }
+
+    private synchronized State addCancelled(Cancelled handle) {
+        if (state == State.INITIALIZED) {
+            cancelled.add(handle);
+        }
+
+        return state;
+    }
+
+    private synchronized State addEnded(Ended handle) {
+        if (state == State.INITIALIZED) {
+            ended.add(handle);
+        }
+
+        return state;
+    }
+
+    private synchronized Runnable synhronizedFail(Throwable error) {
+        if (state != State.INITIALIZED)
+            return null;
+
+        this.state = State.FAILED;
+        this.error = error;
+
+        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
+                this.handlers);
+        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+
+        clearAll();
+
+        // defer the actual callbacking until we are out of the synchronized
+        // block.
+        return new Runnable() {
+            @Override
+            public void run() {
+                for (final Handle<T> handle : handlers) {
+                    invokeFailed(handle);
+                }
+
+                for (final Ended handle : ended) {
+                    invokeEnded(handle);
+                }
+            };
+        };
+    }
+
+    private synchronized Runnable synchronizedFinish(T result) {
+        if (state != State.INITIALIZED)
+            return null;
+
+        this.state = State.FINISHED;
+        this.result = result;
+
+        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
+                this.handlers);
+        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+
+        clearAll();
+
+        // defer the actual callbacking until we are out of the synchronized
+        // block.
+        return new Runnable() {
+            @Override
+            public void run() {
+                for (final Handle<T> handle : handlers) {
+                    invokeFinished(handle);
+                }
+
+                for (final Ended handle : ended) {
+                    invokeEnded(handle);
+                }
+            };
+        };
+    }
+
+    private synchronized Runnable synchronizedCancel(CancelReason reason) {
+        if (state != State.INITIALIZED)
+            return null;
+
+        this.state = State.CANCELLED;
+        this.cancelReason = reason;
+
+        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
+                this.handlers);
+        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+
+        clearAll();
+
+        return new Runnable() {
+            @Override
+            public void run() {
+                for (final Handle<T> handle : handlers) {
+                    invokeCancelled(handle);
+                }
+
+                for (final Ended handle : ended) {
+                    invokeEnded(handle);
+                }
+            };
+        };
     }
 }

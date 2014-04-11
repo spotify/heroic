@@ -5,7 +5,9 @@ import java.util.concurrent.TimeUnit;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
+@ToString(of = { "now", "unit", "value" })
 public class RelativeDateRange implements DateRange {
     private final Date now = new Date();
 

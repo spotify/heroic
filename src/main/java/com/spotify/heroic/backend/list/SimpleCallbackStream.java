@@ -33,19 +33,22 @@ public final class SimpleCallbackStream implements
     }
 
     @Override
-    public void finish(Callback<MetricBackend.DataPointsResult> callback,
+    public void finish(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback,
             MetricBackend.DataPointsResult result) throws Exception {
         results.add(result);
     }
 
     @Override
-    public void error(Callback<MetricBackend.DataPointsResult> callback,
-            Throwable error) throws Exception {
+    public void error(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback, Throwable error)
+            throws Exception {
         log.error("Result failed: " + error, error);
     }
 
     @Override
-    public void cancel(Callback<MetricBackend.DataPointsResult> callback,
+    public void cancel(CallbackStream<MetricBackend.DataPointsResult> stream,
+            Callback<MetricBackend.DataPointsResult> callback,
             CancelReason reason) throws Exception {
     }
 

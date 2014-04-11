@@ -13,6 +13,7 @@ import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 
 public interface MetricBackend extends Backend {
+    @ToString(of = { "datapoints", "rowKey" })
     public static class DataPointsResult {
         @Getter
         private final List<DataPoint> datapoints;
@@ -44,6 +45,7 @@ public interface MetricBackend extends Backend {
     public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
             Date start, Date end);
 
+    @ToString(of = { "rows", "backend" })
     public static class FindRowsResult {
         @Getter
         private final List<DataPointsRowKey> rows;
@@ -61,6 +63,7 @@ public interface MetricBackend extends Backend {
         }
     }
 
+    @ToString(of = { "key", "start", "end", "filter" })
     public static class FindRows {
         @Getter
         private final String key;
@@ -94,6 +97,7 @@ public interface MetricBackend extends Backend {
      */
     public Callback<FindRowsResult> findRows(FindRows query);
 
+    @ToString(of = { "rowGroups", "backend" })
     public static class FindRowGroupsResult {
         @Getter
         private final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups;
@@ -150,6 +154,7 @@ public interface MetricBackend extends Backend {
     public Callback<FindRowGroupsResult> findRowGroups(FindRowGroups query)
             throws QueryException;
 
+    @ToString(of = { "tags", "metrics" })
     public static class FindTagsResult {
         @Getter
         private final Map<String, Set<String>> tags;
@@ -187,6 +192,6 @@ public interface MetricBackend extends Backend {
      * @param rows
      * @return
      */
-    public List<Callback<Long>> getColumnCount(List<DataPointsRowKey> rows,
+    public Callback<Long> getColumnCount(final DataPointsRowKey row,
             Date start, Date end);
 }
