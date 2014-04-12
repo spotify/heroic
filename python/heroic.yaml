@@ -1,0 +1,17 @@
+clusters:
+    sjc:
+        - sjc1-kairosdbcassandra-a1.spotify.net
+        - sjc1-kairosdbcassandra-a2.spotify.net
+        - sjc1-kairosdbcassandra-a3.spotify.net
+    ash:
+        - ash2-kairosdbcassandra-a1.spotify.net
+        - ash2-kairosdbcassandra-a2.spotify.net
+        - ash2-kairosdbcassandra-a3.spotify.net
+    sto:
+        - sto3-kairosdbcassandra-a1.spotify.net
+        - sto3-kairosdbcassandra-a2.spotify.net
+        - sto3-kairosdbcassandra-a3.spotify.net
+    lon:
+        - lon3-kairosdbcassandra-a2.spotify.net
+        - lon3-kairosdbcassandra-a3.spotify.net
+        - lon3-kairosdbcassandra-a4.spotify.net
