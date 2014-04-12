@@ -34,7 +34,7 @@ public abstract class CallbackRunnable<T> implements Runnable {
 
         final T result;
         final Timer.Context context = timer.time();
-        log.debug("{} (id {})", task, hashCode());
+        log.debug("{} (id {}, started)", task, hashCode());
 
         try {
             result = execute();
@@ -45,7 +45,7 @@ public abstract class CallbackRunnable<T> implements Runnable {
             final long time = context.stop();
             final long ms = TimeUnit.MILLISECONDS.convert(time,
                     TimeUnit.NANOSECONDS);
-            // log.debug("{} (id {}, took {}ms)", task, hashCode(), ms);
+            log.debug("{} (id {}, ended: {}ms)", task, hashCode(), ms);
         }
 
         callback.finish(result);

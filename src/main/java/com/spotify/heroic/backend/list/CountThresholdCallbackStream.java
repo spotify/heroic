@@ -3,6 +3,8 @@ package com.spotify.heroic.backend.list;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
@@ -13,6 +15,7 @@ import com.spotify.heroic.async.CancelReason;
  * 
  * @author udoprog
  */
+@Slf4j
 final class CountThresholdCallbackStream implements
         Callback.StreamReducer<Long, Void> {
     private final long threshold;
@@ -45,6 +48,7 @@ final class CountThresholdCallbackStream implements
     @Override
     public void error(CallbackStream<Long> stream, Callback<Long> callback,
             Throwable error) throws Exception {
+        log.error("One count query failed", error);
     }
 
     @Override
