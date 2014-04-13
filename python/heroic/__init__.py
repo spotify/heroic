@@ -5,13 +5,16 @@ import contextlib
 
 from heroic.actions import find_buggy
 from heroic.actions import delete_buggy
+from heroic.actions import list_keys
+from heroic.dao import DAO
 
 log = logging.getLogger(__name__)
 
 
 ACTIONS = [
     find_buggy.setup,
-    delete_buggy.setup
+    delete_buggy.setup,
+    list_keys.setup
 ]
 
 
@@ -55,7 +58,7 @@ def prepare_cluster(seeds):
         log.info("Connected!")
 
         try:
-            yield session
+            yield DAO(session)
         except:
             cluster.shutdown()
             raise
@@ -81,7 +84,7 @@ def prepare_clusters(config):
 
 
 def main(args):
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     parser = setup_parser()
     ns = parser.parse_args(args)
 

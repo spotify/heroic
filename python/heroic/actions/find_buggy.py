@@ -1,16 +1,7 @@
 import logging
 import base64
-import itertools
-
-from heroic.models import RowKey
 
 log = logging.getLogger(__name__)
-
-
-SELECT_STMT = (
-    "SELECT DISTINCT key FROM data_points "
-    "WHERE token(key) > token(?) "
-    "LIMIT ?")
 
 
 def action(ns):
@@ -18,44 +9,23 @@ def action(ns):
     Finds buggy data_point row keys and writes them to file.
     """
 
-    with ns.clusters(ns) as session:
-        kill_path = ns.output_file.format(ns)
+    kill_path = ns.output_file.format(ns)
 
-        log.info("Writing to {}".format(kill_path))
+    log.info("Writing to {}".format(kill_path))
 
-        buggy_count = 0
+    buggy_count = 0
 
-        last = ""
-
-        with open(kill_path, "w") as kill:
-            for i in itertools.count():
-                if last is None:
-                    break
-
-                start = i * ns.limit
-                stop = (i + 1) * ns.limit
-
-                log.info("Scanning from: {} - {}".format(start, stop))
-
-                stmt = session.prepare(SELECT_STMT).bind((last, ns.limit))
-
-                result = session.execute(stmt, timeout=None)
-
-                last = None
-
-                for row in result:
-                    key = RowKey.deserialize(row.key)
-
-                    if key.is_buggy():
-                        log.info("buggy: {}".format(repr(key)))
-                        buggy_count += 1
-                        kill.write(base64.b64encode(row.key) + "\n")
-
-                    last = row.key
+    with open(kill_path, "w") as kill:
+        with ns.clusters(ns) as dao:
+            for row, key in dao.list_keys(limit=ns.limit):
+                if key.is_buggy():
+                    log.info("buggy: {}".format(repr(key)))
+                    buggy_count += 1
+                    kill.write(base64.b64encode(row.key) + "\n")
 
                 kill.flush()
 
-        log.info("Found {} buggy row(s)".format(buggy_count))
+    log.info("Found {} buggy row(s)".format(buggy_count))
 
     return 0
 
