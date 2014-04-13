@@ -81,8 +81,14 @@ class RowKey(object):
         return False
 
     def __repr__(self):
-        return "RowKey(key={} timestamp={}, tags={}, buggy_tags={}, is_buggy={})".format(
-            self.key, self.timestamp, repr(self.tags), self.buggy_tags, self.is_buggy())
+        tags = ", ".join("{}={}".format(*e) for e in
+                         sorted(self.tags.items()))
+
+        return (
+            "RowKey(key={} timestamp={}, "
+            "tags=({}), buggy_tags={}, is_buggy={})"
+        ).format(self.key, self.timestamp, tags, self.buggy_tags,
+                 self.is_buggy())
 
 
 class DAO(object):

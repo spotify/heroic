@@ -15,7 +15,7 @@ LIST_KEYS_STMT = (
 DELETE_DATA_POINTS = "DELETE FROM data_points WHERE key = ?"
 DELETE_ROW_KEY_INDEX = (
     "DELETE FROM row_key_index "
-    "WHERE key=? AND column1 = ?")
+    "WHERE key = ? AND column1 = ?")
 
 
 class DAO(object):
