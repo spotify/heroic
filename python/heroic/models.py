@@ -38,10 +38,16 @@ class RowKey(object):
 
     def is_buggy(self):
         for key, value in self.tags.items():
-            if ":" in key:
+            if ":" in key or "=" in key:
                 return True
 
-            if ":" in value:
+            if ":" in value or "=" in value:
+                return True
+
+            if key == "metric_name" and "fantomextranscoder" in value:
                 return True
 
         return False
+
+    def __repr__(self):
+        return "{} {} {}".format(self.key, self.timestamp, repr(self.tags))

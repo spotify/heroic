@@ -1,77 +1,17 @@
-"""
-
-"""
-
-import itertools
+import logging
 import argparse
 import sys
 import contextlib
 
-from heroic.models import RowKey
+from heroic.actions import find_buggy
+from heroic.actions import delete_buggy
 
-
-def find_buggy_rows(subparsers):
-    """
-    Finds buggy rows and writes them to file.
-    """
-    import base64
-
-    def action(ns):
-        with ns.clusters(ns) as session:
-            last_key = None
-
-            with open(ns.output_file, "w") as kill:
-                for i in itertools.count():
-                    if last_key is not None:
-                        where_stmt = session.prepare(
-                            "SELECT DISTINCT key FROM data_points "
-                            "WHERE token(key) > token(?) LIMIT ?")
-                        stmt = where_stmt.bind((last_key, ns.limit))
-                    else:
-                        stmt = session.prepare(
-                            "SELECT DISTINCT key FROM data_points LIMIT ?"
-                        ).bind((ns.limit,))
-
-                    empty = True
-                    result = session.execute(stmt, timeout=None)
-
-                    for row in result:
-                        empty = False
-
-                        last_key = row
-                        key = RowKey.deserialize(row.key)
-
-                        if key.is_buggy():
-                            print "DIE:", key.key, key.timestamp, key.tags
-                            kill.write(base64.b64encode(row.key) + "\n")
-
-                    kill.flush()
-
-                    print "DONE: {} - {}".format(
-                        i * ns.limit, (i + 1) * ns.limit)
-
-                    if empty:
-                        break
-
-        return 0
-
-    parser = subparsers.add_parser(
-        "find-buggy-rows",
-        help=find_buggy_rows.__doc__)
-
-    parser.add_argument("cluster", help="Cluster to search for buggy rows.")
-
-    parser.add_argument(
-        "-f", default="buggy_rows.txt",
-        dest="output_file",
-        metavar="<file>",
-        help="Output file to write buggy rows to.")
-
-    parser.set_defaults(action=action)
+log = logging.getLogger(__name__)
 
 
 ACTIONS = [
-    find_buggy_rows
+    find_buggy.setup,
+    delete_buggy.setup
 ]
 
 
@@ -84,12 +24,13 @@ def setup_parser():
                         default="kairosdb", help="Cassandra keyspace to use.")
     parser.add_argument("-l", dest="limit", metavar="<limit>",
                         default=100,
+                        type=int,
                         help="Max number of rows to query at-a-time.")
 
     subparsers = parser.add_subparsers()
 
-    for a in ACTIONS:
-        a(subparsers)
+    for setup in ACTIONS:
+        setup(subparsers)
 
     return parser
 
@@ -106,12 +47,12 @@ def prepare_cluster(seeds):
 
     @contextlib.contextmanager
     def connect(ns):
-        print "Connecting..."
+        log.info("Connecting...")
         cluster = Cluster(seeds, control_connection_timeout=None)
         session = cluster.connect()
         session.execute("USE {}".format(ns.keyspace))
 
-        print "Got session"
+        log.info("Connected!")
 
         try:
             yield session
@@ -123,18 +64,24 @@ def prepare_cluster(seeds):
 
 
 def prepare_clusters(config):
-    setup = dict()
+    prepared = dict()
 
     for name, seeds in config["clusters"].items():
-        setup[name] = prepare_cluster(seeds)
+        prepared[name] = prepare_cluster(seeds)
 
     def clusters(ns):
-        return setup[ns.cluster](ns)
+        setup = prepared.get(ns.cluster)
+
+        if setup is None:
+            raise Exception("No such cluster: {}".format(ns.cluster))
+
+        return setup(ns)
 
     return clusters
 
 
 def main(args):
+    logging.basicConfig(level=logging.INFO)
     parser = setup_parser()
     ns = parser.parse_args(args)
 
