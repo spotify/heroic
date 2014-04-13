@@ -3,13 +3,27 @@ import logging
 
 from heroic.models import RowKey
 
+class String:
+    @classmethod
+    def deserialize(self, s):
+        return s
+
+
 log = logging.getLogger(__name__)
 
 DEFAULT_LIMIT = 1000
 
-LIST_KEYS_STMT = (
+LIST_DATA_POINT_ROW_KEYS = (
     "SELECT DISTINCT key FROM data_points "
     "WHERE token(key) > token(?) "
+    "LIMIT ?")
+SELECT_ROW_KEY_INDEX_KEYS = (
+    "SELECT DISTINCT key FROM row_key_index "
+    "WHERE token(key) > token(?) "
+    "LIMIT ?")
+SELECT_ROW_KEY_INDEX_COLUMN_KEYS = (
+    "SELECT column1 FROM row_key_index "
+    "WHERE key = ? AND column1 > ? "
     "LIMIT ?")
 
 DELETE_DATA_POINTS = "DELETE FROM data_points WHERE key = ?"
@@ -22,27 +36,38 @@ class DAO(object):
     def __init__(self, session):
         self.session = session
 
-    def list_keys(self, limit=DEFAULT_LIMIT):
+    def _paginate(self, stmt, serializer, bind_prefix=tuple(),
+                       limit=DEFAULT_LIMIT, attr="key"):
         last = ""
 
         for i in itertools.count():
             if last is None:
                 break
 
-            start = i * limit
-            stop = (i + 1) * limit
+            bind = bind_prefix + (last, limit)
+            execute_stmt = self.session.prepare(stmt).bind(bind)
 
-            log.debug("Scanning from: {} - {}".format(start, stop))
-
-            stmt = self.session.prepare(LIST_KEYS_STMT).bind((last, limit))
-
-            result = self.session.execute(stmt, timeout=None)
+            result = self.session.execute(execute_stmt, timeout=None)
 
             last = None
 
             for row in result:
-                yield row, RowKey.deserialize(row.key)
-                last = row.key
+                value = getattr(row, attr)
+                yield row, serializer.deserialize(value)
+                last = value
+
+    def list_row_key_index_keys(self, limit=DEFAULT_LIMIT):
+        for _, s in self._paginate(
+            SELECT_ROW_KEY_INDEX_KEYS, String, limit=limit):
+            for row, key in self._paginate(
+                SELECT_ROW_KEY_INDEX_COLUMN_KEYS,
+                RowKey, bind_prefix=(s,), limit=limit, attr="column1"):
+                yield row.column1, key
+
+    def list_data_point_row_keys(self, **kw):
+        for row, row_key in self._paginate(
+            LIST_DATA_POINT_ROW_KEYS, RowKey, **kw):
+            yield row.key, row_key
 
     def delete_timeseries(self, key, force_non_buggy=False):
         row_key = RowKey.deserialize(key)
