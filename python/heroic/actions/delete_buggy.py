@@ -29,11 +29,15 @@ def action(ns):
                             repr(row_key)))
                         continue
 
-                    log.info("Deleting: {}".format(repr(row_key)))
-                    result0, result1 = dao.delete_timeseries(key)
+                    if not ns.exclude_data_points:
+                        log.info("Deleting (data_points): {}".format(
+                            repr(row_key)))
+                        dao.delete_data_points(row_key)
 
-                    log.info("result0={}".format(repr(result0)))
-                    log.info("result1={}".format(repr(result1)))
+                    if not ns.exclude_row_key_index:
+                        log.info("Deleting (row_key_index): {}".format(
+                            repr(row_key)))
+                        dao.delete_row_key_index(row_key)
 
                     deleted_count += 1
         finally:
@@ -49,6 +53,18 @@ def setup(subparsers):
 
     parser.add_argument("cluster", help="Cluster where to delete buggy rows.")
 
+    parser.add_argument("--exclude-data-points",
+                        action="store_const", const=True, default=False,
+                        help=(
+                            "Exclude data_points column family when looking "
+                            "for keys."
+                        ))
+    parser.add_argument("--exclude-row-key-index",
+                        action="store_const", const=True, default=False,
+                        help=(
+                            "Exclude row_key_index column family when looking "
+                            "for keys."
+                        ))
     parser.add_argument(
         "-f", default="buggy_rows.{0.cluster}.txt",
         dest="input_file",

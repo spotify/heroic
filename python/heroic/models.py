@@ -4,16 +4,17 @@ import struct
 class RowKey(object):
     TS = struct.Struct("!q")
 
-    def __init__(self, key, timestamp, tags, buggy_tags):
+    def __init__(self, raw, key, timestamp, tags, buggy_tags):
+        self.raw = raw
         self.key = key
         self.timestamp = timestamp
         self.tags = tags
         self.buggy_tags = buggy_tags
 
     @classmethod
-    def decode_tags(cls, bb):
+    def decode_tags(cls, raw):
         result = dict()
-        data = bb.decode("utf-8")
+        data = raw.decode("utf-8")
 
         while len(data) > 0:
             index = data.find("=")
@@ -30,12 +31,12 @@ class RowKey(object):
         return result, len(data) > 0
 
     @classmethod
-    def deserialize(cls, bb):
-        index = bb.find("\0")
-        key = bb[:index].decode("utf-8")
-        (timestamp,) = cls.TS.unpack(bb[index + 1:index + 1 + cls.TS.size])
-        tags, buggy_tags = cls.decode_tags(bb[index + 1 + cls.TS.size:])
-        return cls(key, timestamp, tags, buggy_tags)
+    def deserialize(cls, raw):
+        index = raw.find("\0")
+        key = raw[:index].decode("utf-8")
+        (timestamp,) = cls.TS.unpack(raw[index + 1:index + 1 + cls.TS.size])
+        tags, buggy_tags = cls.decode_tags(raw[index + 1 + cls.TS.size:])
+        return cls(raw, key, timestamp, tags, buggy_tags)
 
     def is_buggy(self):
         """
@@ -91,29 +92,3 @@ class RowKey(object):
                  self.is_buggy())
 
 
-class DAO(object):
-    def __init__(self, session):
-        self.session = session
-
-    def list_keys(self):
-        last = ""
-
-        for i in itertools.count():
-            if last is None:
-                break
-
-            start = i * ns.limit
-            stop = (i + 1) * ns.limit
-
-            log.debug("Scanning from: {} - {}".format(start, stop))
-
-            stmt = session.prepare(SELECT_STMT).bind((last, ns.limit))
-
-            result = session.execute(stmt, timeout=None)
-
-            last = None
-
-            for row in result:
-                key = RowKey.deserialize(row.key)
-                log.info(repr(key))
-                last = row.key

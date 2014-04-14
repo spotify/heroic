@@ -27,7 +27,7 @@ SELECT_ROW_KEY_INDEX_COLUMN_KEYS = (
     "LIMIT ?")
 
 DELETE_DATA_POINTS = "DELETE FROM data_points WHERE key = ?"
-DELETE_ROW_KEY_INDEX = (
+DELETE_ROW_KEY_INDEX_COLUMN = (
     "DELETE FROM row_key_index "
     "WHERE key = ? AND column1 = ?")
 
@@ -69,19 +69,22 @@ class DAO(object):
             LIST_DATA_POINT_ROW_KEYS, RowKey, **kw):
             yield row.key, row_key
 
-    def delete_timeseries(self, key, force_non_buggy=False):
-        row_key = RowKey.deserialize(key)
-
+    def delete_data_points(self, row_key, force_non_buggy=False):
         if not force_non_buggy and not row_key.is_buggy():
             raise Exception(
                 "Refusing to delete non-buggy timeseries: {}".format(
-                    repr(key)))
+                    repr(row_key)))
+
+        data_points_stmt = self.session.prepare(
+            DELETE_DATA_POINTS).bind((row_key.raw,))
+        self.session.execute(data_points_stmt, timeout=None)
+
+    def delete_row_key_index(self, row_key, force_non_buggy=False):
+        if not force_non_buggy and not row_key.is_buggy():
+            raise Exception(
+                "Refusing to delete non-buggy timeseries: {}".format(
+                    repr(row_key)))
 
         row_key_index_stmt = self.session.prepare(
-            DELETE_ROW_KEY_INDEX).bind((row_key.key, key))
-        data_points_stmt = self.session.prepare(
-            DELETE_DATA_POINTS).bind((key,))
-
-        result0 = self.session.execute(row_key_index_stmt, timeout=None)
-        result1 = self.session.execute(data_points_stmt, timeout=None)
-        return result0, result1
+            DELETE_ROW_KEY_INDEX_COLUMN).bind((row_key.key, row_key.raw))
+        self.session.execute(row_key_index_stmt, timeout=None)
