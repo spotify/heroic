@@ -6,42 +6,41 @@ from heroic.models import RowKey
 log = logging.getLogger(__name__)
 
 
+def read_rows(path):
+    with open(path, "r") as kill:
+        for line in kill:
+            key = base64.b64decode(line)
+            yield RowKey.deserialize(key)
+
+
 def action(ns):
     """
     Finds buggy data_point row keys and writes them to file.
     """
-
-    deleted_count = 0
 
     with ns.clusters(ns) as dao:
         kill_path = ns.input_file.format(ns)
 
         log.info("Reading from {}".format(kill_path))
 
-        try:
-            with open(kill_path, "r") as kill:
-                for line in kill:
-                    key = base64.b64decode(line)
-                    row_key = RowKey.deserialize(key)
+        rows = list(read_rows(kill_path))
+        length = len(rows)
 
-                    if not row_key.is_buggy():
-                        log.warn("KEY NOT BUGGY, SKIPPING: {}".format(
-                            repr(row_key)))
-                        continue
+        for i, row_key in enumerate(rows):
+            if not row_key.is_buggy():
+                log.warn("KEY NOT BUGGY, SKIPPING: {}".format(
+                    repr(row_key)))
+                continue
 
-                    if not ns.exclude_data_points:
-                        log.info("Deleting (data_points): {}".format(
-                            repr(row_key)))
-                        dao.delete_data_points(row_key)
+            if not ns.exclude_data_points:
+                log.info("Deleting (data_points {}/{}): {}".format(
+                    i, length, repr(row_key)))
+                dao.delete_data_points(row_key)
 
-                    if not ns.exclude_row_key_index:
-                        log.info("Deleting (row_key_index): {}".format(
-                            repr(row_key)))
-                        dao.delete_row_key_index(row_key)
-
-                    deleted_count += 1
-        finally:
-            log.info("Deleted {} buggy row(s)".format(deleted_count))
+            if not ns.exclude_row_key_index:
+                log.info("Deleting (row_key_index {}/{}): {}".format(
+                    i, length, repr(row_key)))
+                dao.delete_row_key_index(row_key)
 
     return 0
 
