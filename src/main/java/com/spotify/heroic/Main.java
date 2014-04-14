@@ -83,7 +83,7 @@ public class Main extends GuiceServletContextListener {
         final ConsoleReporter reporter = ConsoleReporter.forRegistry(registry)
                 .convertRatesTo(TimeUnit.SECONDS)
                 .convertDurationsTo(TimeUnit.MILLISECONDS).build();
-        reporter.start(1, TimeUnit.MINUTES);
+        reporter.start(30, TimeUnit.MINUTES);
 
         if (config == null) {
             log.error("No configuration, shutting down");
