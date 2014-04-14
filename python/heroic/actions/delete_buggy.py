@@ -32,14 +32,18 @@ def action(ns):
                     repr(row_key)))
                 continue
 
-            if not ns.exclude_data_points:
-                log.info("Deleting (data_points {}/{}): {}".format(
+            if ns.pretend:
+                log.info("Would delete ({}/{}): {}".format(
                     i, length, repr(row_key)))
+                continue
+
+            log.info("Deleting ({}/{}): {}".format(
+                i, length, repr(row_key)))
+
+            if not ns.exclude_data_points:
                 dao.delete_data_points(row_key)
 
             if not ns.exclude_row_key_index:
-                log.info("Deleting (row_key_index {}/{}): {}".format(
-                    i, length, repr(row_key)))
                 dao.delete_row_key_index(row_key)
 
     return 0
@@ -52,6 +56,12 @@ def setup(subparsers):
 
     parser.add_argument("cluster", help="Cluster where to delete buggy rows.")
 
+    parser.add_argument("--pretend",
+                        action="store_const", const=True, default=False,
+                        help=(
+                            "Only pretend to delete rows and print the ones "
+                            "which would be deleted."
+                        ))
     parser.add_argument("--exclude-data-points",
                         action="store_const", const=True, default=False,
                         help=(
