@@ -40,8 +40,8 @@ import lombok.extern.slf4j.Slf4j;
 public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         Callback<T> {
     private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
-    private final List<Cancelled> cancelled = new LinkedList<Cancelled>();
-    private final List<Ended> ended = new LinkedList<Ended>();
+    private final List<Cancellable> cancellables = new LinkedList<Cancellable>();
+    private final List<Finishable> finishables = new LinkedList<Finishable>();
     private State state = State.INITIALIZED;
 
     private Throwable error;
@@ -85,14 +85,14 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     @Override
-    public Callback<T> register(Ended ended) {
-        registerEnded(ended);
+    public Callback<T> register(Finishable finishable) {
+        registerFinishable(finishable);
         return this;
     }
 
     @Override
-    public Callback<T> register(Cancelled cancelled) {
-        registerCancelled(cancelled);
+    public Callback<T> register(Cancellable cancellable) {
+        registerCancellable(cancellable);
         return this;
     }
 
@@ -107,8 +107,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
      */
     private void clearAll() {
         handlers.clear();
-        cancelled.clear();
-        ended.clear();
+        cancellables.clear();
+        finishables.clear();
     }
 
     private boolean registerHandle(Handle<T> handle) {
@@ -119,7 +119,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
             invokeFinished(handle);
             return true;
         case CANCELLED:
-            invokeCancelled(handle);
+            invokeCancel(handle);
             return true;
         case FAILED:
             invokeFailed(handle);
@@ -129,26 +129,26 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         }
     }
 
-    private boolean registerCancelled(Cancelled handle) {
-        final State s = addCancelled(handle);
+    private boolean registerCancellable(Cancellable cancellable) {
+        final State s = addCancellable(cancellable);
 
         switch (s) {
         case CANCELLED:
-            invokeCancelled(handle);
+            invokeCancel(cancellable);
             return true;
         default:
             return false;
         }
     }
 
-    private boolean registerEnded(Ended ended) {
-        final State s = addEnded(ended);
+    private boolean registerFinishable(Finishable finishable) {
+        final State s = addFinishable(finishable);
 
         switch (s) {
         case FINISHED:
         case CANCELLED:
         case FAILED:
-            invokeEnded(ended);
+            invokeFinish(finishable);
             return true;
         default:
             return false;
@@ -171,17 +171,17 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         }
     }
 
-    private void invokeEnded(Ended ended) {
+    private void invokeFinish(Finishable finishable) {
         try {
-            ended.ended();
+            finishable.finish();
         } catch (final Exception e) {
-            log.error("Failed to invoke ended callback", e);
+            log.error("Failed to invoke finish callback", e);
         }
     }
 
-    private void invokeCancelled(Cancelled handle) {
+    private void invokeCancel(Cancellable cancellable) {
         try {
-            handle.cancel(cancelReason);
+            cancellable.cancel(cancelReason);
         } catch (final Exception e) {
             log.error("Failed to invoke cancel callback", e);
         }
@@ -202,23 +202,23 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     private synchronized State addHandler(Handle<T> handle) {
         if (state == State.INITIALIZED) {
             handlers.add(handle);
-            cancelled.add(handle);
+            cancellables.add(handle);
         }
 
         return state;
     }
 
-    private synchronized State addCancelled(Cancelled handle) {
+    private synchronized State addCancellable(Cancellable cancellable) {
         if (state == State.INITIALIZED) {
-            cancelled.add(handle);
+            cancellables.add(cancellable);
         }
 
         return state;
     }
 
-    private synchronized State addEnded(Ended handle) {
+    private synchronized State addFinishable(Finishable finishable) {
         if (state == State.INITIALIZED) {
-            ended.add(handle);
+            finishables.add(finishable);
         }
 
         return state;
@@ -233,7 +233,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
         final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
                 this.handlers);
-        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+        final Collection<Finishable> finishables = new ArrayList<Finishable>(
+                this.finishables);
 
         clearAll();
 
@@ -246,8 +247,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
                     invokeFailed(handle);
                 }
 
-                for (final Ended handle : ended) {
-                    invokeEnded(handle);
+                for (final Finishable finishable : finishables) {
+                    invokeFinish(finishable);
                 }
             };
         };
@@ -262,7 +263,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
         final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
                 this.handlers);
-        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+        final Collection<Finishable> finishables = new ArrayList<Finishable>(
+                this.finishables);
 
         clearAll();
 
@@ -275,8 +277,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
                     invokeFinished(handle);
                 }
 
-                for (final Ended handle : ended) {
-                    invokeEnded(handle);
+                for (final Finishable finishable : finishables) {
+                    invokeFinish(finishable);
                 }
             };
         };
@@ -289,21 +291,22 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         this.state = State.CANCELLED;
         this.cancelReason = reason;
 
-        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
+        final Collection<Handle<T>> cancellables = new ArrayList<Handle<T>>(
                 this.handlers);
-        final Collection<Ended> ended = new ArrayList<Ended>(this.ended);
+        final Collection<Finishable> finishables = new ArrayList<Finishable>(
+                this.finishables);
 
         clearAll();
 
         return new Runnable() {
             @Override
             public void run() {
-                for (final Handle<T> handle : handlers) {
-                    invokeCancelled(handle);
+                for (final Handle<T> cancellable : cancellables) {
+                    invokeCancel(cancellable);
                 }
 
-                for (final Ended handle : ended) {
-                    invokeEnded(handle);
+                for (final Finishable finishable : finishables) {
+                    invokeFinish(finishable);
                 }
             };
         };

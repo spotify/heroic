@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CallbackGroup<T> implements Callback.Cancelled {
+public class CallbackGroup<T> implements Callback.Cancellable {
     public static interface Handle<T> {
         void done(Collection<T> results, Collection<Throwable> errors,
                 Collection<CancelReason> cancelled) throws Exception;
@@ -29,19 +29,19 @@ public class CallbackGroup<T> implements Callback.Cancelled {
         @Override
         public void error(Throwable e) throws Exception {
             errors.add(e);
-            CallbackGroup.this.check();
+            CallbackGroup.this.checkIn();
         }
 
         @Override
         public void finish(T result) throws Exception {
             results.add(result);
-            CallbackGroup.this.check();
+            CallbackGroup.this.checkIn();
         }
 
         @Override
         public void cancel(CancelReason reason) throws Exception {
             cancelled.add(reason);
-            CallbackGroup.this.check();
+            CallbackGroup.this.checkIn();
         }
     };
 
@@ -58,7 +58,11 @@ public class CallbackGroup<T> implements Callback.Cancelled {
             end();
     }
 
-    private void check() {
+    /**
+     * Checks in a call back. It also wraps up the group if all the callbacks
+     * have checked in.
+     */
+    private void checkIn() {
         final int value = countdown.decrementAndGet();
 
         if (value != 0)
@@ -71,12 +75,12 @@ public class CallbackGroup<T> implements Callback.Cancelled {
         if (done)
             return;
 
-        trigger(handle);
+        triggerDone(handle);
 
         done = true;
     }
 
-    private void trigger(Handle<T> handle) {
+    private void triggerDone(Handle<T> handle) {
         try {
             handle.done(results, errors, cancelled);
         } catch (final Exception e) {

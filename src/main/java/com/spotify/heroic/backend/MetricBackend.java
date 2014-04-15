@@ -1,84 +1,32 @@
 package com.spotify.heroic.backend;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.backend.model.FindRows;
+import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.query.DateRange;
 
 public interface MetricBackend extends Backend {
-    @ToString(of = { "datapoints", "rowKey" })
-    public static class DataPointsResult {
-        @Getter
-        private final List<DataPoint> datapoints;
-
-        @Getter
-        private final DataPointsRowKey rowKey;
-
-        public DataPointsResult(List<DataPoint> datapoints,
-                DataPointsRowKey rowKey) {
-            this.datapoints = datapoints;
-            this.rowKey = rowKey;
-        }
-    }
-
     /**
      * Query for data points that is part of the specified list of rows and
      * range.
      * 
-     * @param rows
-     *            Query metrics for the specified rows.
-     * @param range
-     *            Filter on the specified date range.
+     * @param fetchDataPointsQuery
+     *            The query for fetching data points. The query contains rows
+     *            and a specified time range.
+     * 
      * @return A list of asynchronous data handlers for the resulting data
      *         points. This is suitable to use with GroupQuery. There will be
      *         one query per row.
      * 
      * @throws QueryException
      */
-    public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            DateRange range);
-
-    @ToString(of = { "rows", "backend" })
-    public static class FindRowsResult {
-        @Getter
-        private final List<DataPointsRowKey> rows;
-
-        @Getter
-        private final MetricBackend backend;
-
-        public FindRowsResult(List<DataPointsRowKey> rows, MetricBackend backend) {
-            this.rows = rows;
-            this.backend = backend;
-        }
-
-        public boolean isEmpty() {
-            return rows.isEmpty();
-        }
-    }
-
-    @ToString(of = { "key", "range", "filter" })
-    public static class FindRows {
-        @Getter
-        private final String key;
-        @Getter
-        private final DateRange range;
-        @Getter
-        private final Map<String, String> filter;
-
-        public FindRows(String key, DateRange range,
-                Map<String, String> filter) {
-            this.key = key;
-            this.range = range;
-            this.filter = filter;
-        }
-    }
+    public List<Callback<FetchDataPoints.Result>> query(
+            FetchDataPoints fetchDataPointsQuery);
 
     /**
      * Find the data point rows matching the specified criteria.
@@ -92,43 +40,7 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowsResult> findRows(FindRows query);
-
-    @ToString(of = { "rowGroups", "backend" })
-    public static class FindRowGroupsResult {
-        @Getter
-        private final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups;
-
-        @Getter
-        private final MetricBackend backend;
-
-        public FindRowGroupsResult(
-                Map<Map<String, String>, List<DataPointsRowKey>> rowGroups,
-                MetricBackend backend) {
-            this.rowGroups = rowGroups;
-            this.backend = backend;
-        }
-    }
-
-    @ToString(of = { "key", "filter", "groupBy" })
-    public static class FindRowGroups {
-        @Getter
-        private final String key;
-        @Getter
-        private final DateRange range;
-        @Getter
-        private final Map<String, String> filter;
-        @Getter
-        private final List<String> groupBy;
-
-        public FindRowGroups(String key, DateRange range,
-                Map<String, String> filter, List<String> groupBy) {
-            this.key = key;
-            this.range = range;
-            this.filter = filter;
-            this.groupBy = groupBy;
-        }
-    }
+    public Callback<FindRows.Result> findRows(FindRows query);
 
     /**
      * Find a rows by a group specification.
@@ -145,33 +57,8 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowGroupsResult> findRowGroups(FindRowGroups query)
+    public Callback<FindRowGroups.Result> findRowGroups(FindRowGroups query)
             throws QueryException;
-
-    @ToString(of = { "tags", "metrics" })
-    public static class FindTagsResult {
-        @Getter
-        private final Map<String, Set<String>> tags;
-
-        @Getter
-        private final List<String> metrics;
-
-        public FindTagsResult(Map<String, Set<String>> tags,
-                List<String> metrics) {
-            this.tags = tags;
-            this.metrics = metrics;
-        }
-    }
-
-    @ToString(of = { "rows" })
-    public static class GetAllRowsResult {
-        @Getter
-        private final Map<String, List<DataPointsRowKey>> rows;
-
-        public GetAllRowsResult(Map<String, List<DataPointsRowKey>> rows) {
-            this.rows = rows;
-        }
-    }
 
     /**
      * Gets all available rows

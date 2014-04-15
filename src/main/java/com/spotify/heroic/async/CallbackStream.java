@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CallbackStream<T> implements Callback.Cancelled {
+public class CallbackStream<T> implements Callback.Cancellable {
     public static interface Handle<T> {
         void finish(CallbackStream<T> stream, Callback<T> callback, T result)
                 throws Exception;

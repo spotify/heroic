@@ -19,15 +19,15 @@ public interface Callback<T> {
         INITIALIZED, FAILED, FINISHED, CANCELLED
     }
 
-    public static interface Cancelled {
+    public static interface Cancellable {
         void cancel(CancelReason reason) throws Exception;
     }
 
-    public static interface Ended {
-        void ended() throws Exception;
+    public static interface Finishable {
+        void finish() throws Exception;
     }
 
-    public static interface Handle<T> extends Cancelled {
+    public static interface Handle<T> extends Cancellable {
         void error(Throwable e) throws Exception;
 
         void finish(T result) throws Exception;
@@ -49,8 +49,7 @@ public interface Callback<T> {
      */
     public static interface Reducer<C, R> {
         R done(Collection<C> results, Collection<Throwable> errors,
-                Collection<CancelReason> cancelled)
-                throws Exception;
+                Collection<CancelReason> cancelled) throws Exception;
     }
 
     /**
@@ -84,9 +83,9 @@ public interface Callback<T> {
 
     public Callback<T> register(Handle<T> handle);
 
-    public Callback<T> register(Ended ended);
+    public Callback<T> register(Finishable finishable);
 
-    public Callback<T> register(Cancelled cancelled);
+    public Callback<T> register(Cancellable cancellable);
 
     public boolean isInitialized();
 
@@ -101,8 +100,9 @@ public interface Callback<T> {
      *            Callbacks to group.
      * @param timer
      *            Timer to measure the handle time of the group.
-     * @param handle
-     *            Handle for the group operation.
+     * @param reducer
+     *            reducer is responsible for reducing the given callbacks into
+     *            the returned callback
      */
     public <C> Callback<T> reduce(List<Callback<C>> callbacks, Timer timer,
             final Reducer<C, T> reducer);

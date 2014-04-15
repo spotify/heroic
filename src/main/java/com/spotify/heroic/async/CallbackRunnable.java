@@ -8,7 +8,7 @@ import com.codahale.metrics.Timer;
 
 /**
  * Helper class that allows for safer Runnable implementations meant to wrap
- * Query<T>
+ * {@link Callback}
  * 
  * @author udoprog
  * @param <T>

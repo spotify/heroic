@@ -36,10 +36,20 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.backend.model.FindRows;
+import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
+/**
+ * The data access layer for accessing KairosDB schema in Cassandra
+ * 
+ * @author mehrdad
+ * 
+ */
 public class KairosDBBackend implements MetricBackend {
     public static final String QUERY = "query";
     public static final String GET_COLUMN_COUNT = "get-column-count";
@@ -165,19 +175,22 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     @Override
-    public List<Callback<DataPointsResult>> query(List<DataPointsRowKey> rows,
-            DateRange range) {
-        final List<Callback<DataPointsResult>> queries = new ArrayList<Callback<DataPointsResult>>();
+    public List<Callback<FetchDataPoints.Result>> query(
+            FetchDataPoints fetchDataPointsQuery) {
+        final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
+
+        final List<DataPointsRowKey> rows = fetchDataPointsQuery.getRows();
+        final DateRange range = fetchDataPointsQuery.getRange();
 
         for (final DataPointsRowKey rowKey : rows) {
-            final Callback<DataPointsResult> callback = buildQuery(rowKey,
-                    range);
+            final Callback<FetchDataPoints.Result> callback = buildQuery(
+                    rowKey, range);
 
             final Timer.Context context = queryTimer.time();
 
-            callback.register(new Callback.Ended() {
+            callback.register(new Callback.Finishable() {
                 @Override
-                public void ended() throws Exception {
+                public void finish() throws Exception {
                     context.stop();
                 }
             });
@@ -189,11 +202,12 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     private static final class QueryRunnable extends
-            CallbackRunnable<DataPointsResult> {
+            CallbackRunnable<FetchDataPoints.Result> {
         private final RowQuery<DataPointsRowKey, Integer> dataQuery;
         private final DataPointsRowKey rowKey;
 
-        private QueryRunnable(Timer timer, Callback<DataPointsResult> callback,
+        private QueryRunnable(Timer timer,
+                Callback<FetchDataPoints.Result> callback,
                 RowQuery<DataPointsRowKey, Integer> dataQuery,
                 DataPointsRowKey rowKey) {
             super(QUERY, timer, callback);
@@ -202,12 +216,12 @@ public class KairosDBBackend implements MetricBackend {
         }
 
         @Override
-        public DataPointsResult execute() throws Exception {
+        public FetchDataPoints.Result execute() throws Exception {
             final OperationResult<ColumnList<Integer>> result = dataQuery
                     .execute();
             final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
 
-            return new DataPointsResult(datapoints, rowKey);
+            return new FetchDataPoints.Result(datapoints, rowKey);
         }
 
         private List<DataPoint> buildDataPoints(final DataPointsRowKey rowKey,
@@ -222,7 +236,7 @@ public class KairosDBBackend implements MetricBackend {
         }
     }
 
-    private Callback<DataPointsResult> buildQuery(
+    private Callback<FetchDataPoints.Result> buildQuery(
             final DataPointsRowKey rowKey, DateRange range) {
         final long timestamp = rowKey.getTimestamp();
         final long startTime = DataPoint.Name.toStartTimeStamp(range.start(),
@@ -241,7 +255,7 @@ public class KairosDBBackend implements MetricBackend {
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
-        final Callback<DataPointsResult> callback = new ConcurrentCallback<DataPointsResult>();
+        final Callback<FetchDataPoints.Result> callback = new ConcurrentCallback<FetchDataPoints.Result>();
 
         executor.execute(new QueryRunnable(queryTimer, callback, dataQuery,
                 rowKey));
@@ -295,12 +309,12 @@ public class KairosDBBackend implements MetricBackend {
     }
 
     private final class FindRowsRunnable extends
-            CallbackRunnable<FindRowsResult> {
+            CallbackRunnable<FindRows.Result> {
         private final RowQuery<String, DataPointsRowKey> query;
         private final Map<String, String> filter;
 
         private FindRowsRunnable(Timer timer,
-                Callback<FindRowsResult> callback,
+                Callback<FindRows.Result> callback,
                 RowQuery<String, DataPointsRowKey> dbQuery,
                 Map<String, String> filter) {
             super(FIND_ROWS, timer, callback);
@@ -309,7 +323,7 @@ public class KairosDBBackend implements MetricBackend {
         }
 
         @Override
-        public FindRowsResult execute() throws Exception {
+        public FindRows.Result execute() throws Exception {
             final OperationResult<ColumnList<DataPointsRowKey>> result = query
                     .execute();
 
@@ -327,12 +341,12 @@ public class KairosDBBackend implements MetricBackend {
                 rowKeys.add(rowKey);
             }
 
-            return new FindRowsResult(rowKeys, KairosDBBackend.this);
+            return new FindRows.Result(rowKeys, KairosDBBackend.this);
         }
     }
 
     @Override
-    public Callback<FindRowsResult> findRows(final FindRows criteria) {
+    public Callback<FindRows.Result> findRows(final FindRows criteria) {
         final String key = criteria.getKey();
         final Map<String, String> filter = criteria.getFilter();
 
@@ -350,7 +364,7 @@ public class KairosDBBackend implements MetricBackend {
                     .setEnd(endKey, DataPointsRowKey.Serializer.get()).build());
         }
 
-        final Callback<FindRowsResult> callback = new ConcurrentCallback<FindRowsResult>();
+        final Callback<FindRows.Result> callback = new ConcurrentCallback<FindRows.Result>();
 
         executor.execute(new FindRowsRunnable(findRowsTimer, callback, query,
                 filter));
@@ -364,13 +378,13 @@ public class KairosDBBackend implements MetricBackend {
      * @author udoprog
      */
     private final class FindRowGroupsCallbackRunnable extends
-            CallbackRunnable<FindRowGroupsResult> {
+            CallbackRunnable<FindRowGroups.Result> {
         private final RowQuery<String, DataPointsRowKey> dbQuery;
         private final Map<String, String> filter;
         private final List<String> groupBy;
 
         private FindRowGroupsCallbackRunnable(
-                Callback<FindRowGroupsResult> callback, Timer timer,
+                Callback<FindRowGroups.Result> callback, Timer timer,
                 RowQuery<String, DataPointsRowKey> dbQuery,
                 Map<String, String> filter, List<String> groupBy) {
             super(FIND_ROW_GROUPS, timer, callback);
@@ -380,7 +394,7 @@ public class KairosDBBackend implements MetricBackend {
         }
 
         @Override
-        public FindRowGroupsResult execute() throws Exception {
+        public FindRowGroups.Result execute() throws Exception {
             final OperationResult<ColumnList<DataPointsRowKey>> result = dbQuery
                     .execute();
 
@@ -412,13 +426,13 @@ public class KairosDBBackend implements MetricBackend {
                 rows.add(rowKey);
             }
 
-            return new FindRowGroupsResult(rowGroups, KairosDBBackend.this);
+            return new FindRowGroups.Result(rowGroups, KairosDBBackend.this);
         }
     }
 
     @Override
-    public Callback<FindRowGroupsResult> findRowGroups(final FindRowGroups query)
-            throws QueryException {
+    public Callback<FindRowGroups.Result> findRowGroups(
+            final FindRowGroups query) throws QueryException {
         final String key = query.getKey();
         final DateRange range = query.getRange();
         final Map<String, String> filter = query.getFilter();
@@ -439,7 +453,7 @@ public class KairosDBBackend implements MetricBackend {
                                         DataPointsRowKey.Serializer.get())
                                 .build());
 
-        final Callback<FindRowGroupsResult> handle = new ConcurrentCallback<FindRowGroupsResult>();
+        final Callback<FindRowGroups.Result> handle = new ConcurrentCallback<FindRowGroups.Result>();
 
         executor.execute(new FindRowGroupsCallbackRunnable(handle,
                 findRowGroupsTimer, dbQuery, filter, groupBy));

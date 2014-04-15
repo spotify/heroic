@@ -26,7 +26,6 @@ public abstract class AbstractCallback<T> implements Callback<T> {
                     Collection<CancelReason> cancelled) throws Exception {
                 return reducer.done(results, errors, cancelled);
             }
-
         };
 
         return register(new CallbackGroup<C>(queries, handle));

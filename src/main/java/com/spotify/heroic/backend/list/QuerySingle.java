@@ -16,9 +16,9 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
-import com.spotify.heroic.backend.MetricBackend.DataPointsResult;
-import com.spotify.heroic.backend.MetricBackend.FindRowsResult;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.query.DateRange;
 
 @Slf4j
@@ -35,7 +35,7 @@ public class QuerySingle {
     }
 
     private final class HandleFindRowsResult implements
-            CallbackGroup.Handle<MetricBackend.FindRowsResult> {
+            CallbackGroup.Handle<FindRows.Result> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
@@ -49,8 +49,7 @@ public class QuerySingle {
         }
 
         @Override
-        public void done(
-                final Collection<MetricBackend.FindRowsResult> results,
+        public void done(final Collection<FindRows.Result> results,
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
             final Aggregator.Session session = aggregators.session();
@@ -70,7 +69,7 @@ public class QuerySingle {
          * @param results
          */
         private void countTheProcessDataPoints(
-                final Collection<MetricBackend.FindRowsResult> results) {
+                final Collection<FindRows.Result> results) {
             final List<Callback<Long>> counters = buildCountRequests(results);
 
             final Callback<Void> check = new ConcurrentCallback<Void>();
@@ -103,34 +102,35 @@ public class QuerySingle {
          * @return
          */
         private List<Callback<Long>> buildCountRequests(
-                final Collection<MetricBackend.FindRowsResult> results) {
+                final Collection<FindRows.Result> results) {
             final List<Callback<Long>> counters = new LinkedList<Callback<Long>>();
 
-            for (final FindRowsResult result : results) {
+            for (final FindRows.Result result : results) {
                 if (result.isEmpty())
                     continue;
 
                 final MetricBackend backend = result.getBackend();
 
-                for (DataPointsRowKey row : result.getRows()) {
+                for (final DataPointsRowKey row : result.getRows()) {
                     counters.add(backend.getColumnCount(row, range));
                 }
             }
             return counters;
         }
 
-        private void processDataPoints(Collection<FindRowsResult> results,
+        private void processDataPoints(Collection<FindRows.Result> results,
                 final Aggregator.Session session) {
-            final List<Callback<DataPointsResult>> queries = new LinkedList<Callback<DataPointsResult>>();
-            for (final FindRowsResult result : results) {
+            final List<Callback<FetchDataPoints.Result>> queries = new LinkedList<Callback<FetchDataPoints.Result>>();
+            for (final FindRows.Result result : results) {
                 if (result.isEmpty())
                     continue;
 
                 final MetricBackend backend = result.getBackend();
-                queries.addAll(backend.query(result.getRows(), range));
+                queries.addAll(backend.query(new FetchDataPoints(result
+                        .getRows(), range)));
             }
 
-            final Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> reducer;
+            final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
 
             if (session == null) {
                 reducer = new SimpleCallbackStream(null);
@@ -142,9 +142,9 @@ public class QuerySingle {
         }
     }
 
-    public Callback<QueryMetricsResult> execute(
-            MetricBackend.FindRows criteria, AggregatorGroup aggregators) {
-        final List<Callback<MetricBackend.FindRowsResult>> queries = new ArrayList<Callback<MetricBackend.FindRowsResult>>();
+    public Callback<QueryMetricsResult> execute(FindRows criteria,
+            AggregatorGroup aggregators) {
+        final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
 
         for (final MetricBackend backend : backends) {
             try {
@@ -158,15 +158,14 @@ public class QuerySingle {
 
         final DateRange range = criteria.getRange();
 
-        final CallbackGroup<MetricBackend.FindRowsResult> group = new CallbackGroup<MetricBackend.FindRowsResult>(
-                queries, new HandleFindRowsResult(range, callback,
-                        aggregators));
+        final CallbackGroup<FindRows.Result> group = new CallbackGroup<FindRows.Result>(
+                queries, new HandleFindRowsResult(range, callback, aggregators));
 
         final Timer.Context context = timer.time();
 
-        return callback.register(group).register(new Callback.Ended() {
+        return callback.register(group).register(new Callback.Finishable() {
             @Override
-            public void ended() throws Exception {
+            public void finish() throws Exception {
                 context.stop();
             }
         });

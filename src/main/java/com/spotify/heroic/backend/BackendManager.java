@@ -2,13 +2,12 @@ package com.spotify.heroic.backend;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import lombok.Getter;
-import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.query.MetricsQuery;
 
 public interface BackendManager {
@@ -48,15 +47,5 @@ public interface BackendManager {
     public Callback<QueryMetricsResult> queryMetrics(MetricsQuery query)
             throws QueryException;
 
-    @ToString(of = { "timeSeries" })
-    public static class GetAllRowsResult {
-        @Getter
-        private final Set<TimeSerie> timeSeries;
-
-        public GetAllRowsResult(Set<TimeSerie> timeSeries) {
-            this.timeSeries = timeSeries;
-        }
-    }
-
-    public Callback<GetAllRowsResult> getAllRows();
+    public Callback<GroupedAllRowsResult> getAllRows();
 }

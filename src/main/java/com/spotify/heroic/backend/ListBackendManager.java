@@ -1,8 +1,11 @@
 package com.spotify.heroic.backend;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.Getter;
 
@@ -11,9 +14,15 @@ import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.list.GetAllRows;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.list.QueryGroup;
 import com.spotify.heroic.backend.list.QuerySingle;
+import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.backend.model.FindRows;
+import com.spotify.heroic.backend.model.GetAllRowsResult;
+import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
 
@@ -27,9 +36,8 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
-    private final long maxQueriableDataPoints;
+    private final Timer getAllRowsTimer;
 
-    private final GetAllRows getAllRows;
     private final QuerySingle querySingle;
     private final QueryGroup queryGroup;
 
@@ -38,11 +46,9 @@ public class ListBackendManager implements BackendManager {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
-        this.maxQueriableDataPoints = maxQueriableDataPoints;
 
-        final Timer getAllRowsTimer = registry.timer(MetricRegistry.name(
-                "heroic", "get-all-rows"));
-        this.getAllRows = new GetAllRows(metricBackends, getAllRowsTimer);
+        getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
+                "get-all-rows"));
 
         final Timer queryMetricsSingle = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
@@ -95,19 +101,50 @@ public class ListBackendManager implements BackendManager {
         final DateRange rounded = roundRange(aggregators, range);
 
         if (groupBy != null && !groupBy.isEmpty()) {
-            final MetricBackend.FindRowGroups criteria = new MetricBackend.FindRowGroups(
-                    key, rounded, tags, groupBy);
+            final FindRowGroups criteria = new FindRowGroups(key, rounded,
+                    tags, groupBy);
             return queryGroup.execute(criteria, aggregators);
         }
 
-        final MetricBackend.FindRows criteria = new MetricBackend.FindRows(key,
-                rounded, tags);
+        final FindRows criteria = new FindRows(key, rounded, tags);
         return querySingle.execute(criteria, aggregators);
     }
 
     @Override
-    public Callback<GetAllRowsResult> getAllRows() {
-        return this.getAllRows.execute();
+    public Callback<GroupedAllRowsResult> getAllRows() {
+        final List<Callback<GetAllRowsResult>> backendRequests = new ArrayList<Callback<GetAllRowsResult>>();
+        final Callback<GroupedAllRowsResult> overallCallback = new ConcurrentCallback<GroupedAllRowsResult>();
+
+        for (final MetricBackend backend : metricBackends) {
+            backendRequests.add(backend.getAllRows());
+        }
+
+        final Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult> resultReducer = new Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult>() {
+            @Override
+            public GroupedAllRowsResult done(
+                    Collection<GetAllRowsResult> results,
+                    Collection<Throwable> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
+                final Set<TimeSerie> result = new HashSet<TimeSerie>();
+
+                for (final GetAllRowsResult backendResult : results) {
+                    final Map<String, List<DataPointsRowKey>> rows = backendResult
+                            .getRows();
+
+                    for (final Map.Entry<String, List<DataPointsRowKey>> entry : rows
+                            .entrySet()) {
+                        for (final DataPointsRowKey rowKey : entry.getValue()) {
+                            result.add(new TimeSerie(rowKey.getMetricName(),
+                                    rowKey.getTags()));
+                        }
+                    }
+                }
+
+                return new GroupedAllRowsResult(result);
+            }
+        };
+
+        return overallCallback.reduce(backendRequests, getAllRowsTimer, resultReducer);
     }
 
     private AggregatorGroup buildAggregators(

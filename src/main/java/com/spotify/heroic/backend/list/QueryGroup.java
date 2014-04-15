@@ -19,6 +19,8 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.query.DateRange;
 
 @Slf4j
@@ -32,7 +34,7 @@ public class QueryGroup {
     }
 
     private final class FindRowGroupsHandle implements
-            CallbackGroup.Handle<MetricBackend.FindRowGroupsResult> {
+            CallbackGroup.Handle<FindRowGroups.Result> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
@@ -46,10 +48,10 @@ public class QueryGroup {
         }
 
         @Override
-        public void done(Collection<MetricBackend.FindRowGroupsResult> results,
+        public void done(Collection<FindRowGroups.Result> results,
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
-            final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries = prepareGroups(results);
+            final Map<Map<String, String>, List<Callback<FetchDataPoints.Result>>> mappedQueries = prepareGroups(results);
 
             final List<Callback<QueryMetricsResult>> queries = prepareQueries(mappedQueries);
             final JoinQueryMetricsResult join = new JoinQueryMetricsResult();
@@ -58,20 +60,20 @@ public class QueryGroup {
         }
 
         private List<Callback<QueryMetricsResult>> prepareQueries(
-                final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries)
+                final Map<Map<String, String>, List<Callback<FetchDataPoints.Result>>> mappedQueries)
                 throws Exception {
             final List<Callback<QueryMetricsResult>> queries = new ArrayList<Callback<QueryMetricsResult>>();
 
-            for (final Map.Entry<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> entry : mappedQueries
+            for (final Map.Entry<Map<String, String>, List<Callback<FetchDataPoints.Result>>> entry : mappedQueries
                     .entrySet()) {
                 final Map<String, String> tags = entry.getKey();
-                final List<Callback<MetricBackend.DataPointsResult>> callbacks = entry
+                final List<Callback<FetchDataPoints.Result>> callbacks = entry
                         .getValue();
 
                 final Aggregator.Session session = aggregators.session();
 
                 final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
-                final Callback.StreamReducer<MetricBackend.DataPointsResult, QueryMetricsResult> reducer;
+                final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
 
                 if (session == null) {
                     reducer = new SimpleCallbackStream(tags);
@@ -85,13 +87,12 @@ public class QueryGroup {
             return queries;
         }
 
-        private final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> prepareGroups(
-                Collection<MetricBackend.FindRowGroupsResult> results)
-                throws QueryException {
+        private final Map<Map<String, String>, List<Callback<FetchDataPoints.Result>>> prepareGroups(
+                Collection<FindRowGroups.Result> results) throws QueryException {
 
-            final Map<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>> mappedQueries = new HashMap<Map<String, String>, List<Callback<MetricBackend.DataPointsResult>>>();
+            final Map<Map<String, String>, List<Callback<FetchDataPoints.Result>>> mappedQueries = new HashMap<Map<String, String>, List<Callback<FetchDataPoints.Result>>>();
 
-            for (final MetricBackend.FindRowGroupsResult result : results) {
+            for (final FindRowGroups.Result result : results) {
                 final MetricBackend backend = result.getBackend();
 
                 for (final Map.Entry<Map<String, String>, List<DataPointsRowKey>> entry : result
@@ -99,15 +100,16 @@ public class QueryGroup {
                     final Map<String, String> tags = entry.getKey();
                     final List<DataPointsRowKey> rows = entry.getValue();
 
-                    List<Callback<MetricBackend.DataPointsResult>> callbacks = mappedQueries
+                    List<Callback<FetchDataPoints.Result>> callbacks = mappedQueries
                             .get(tags);
 
                     if (callbacks == null) {
-                        callbacks = new ArrayList<Callback<MetricBackend.DataPointsResult>>();
+                        callbacks = new ArrayList<Callback<FetchDataPoints.Result>>();
                         mappedQueries.put(tags, callbacks);
                     }
 
-                    callbacks.addAll(backend.query(rows, range));
+                    callbacks.addAll(backend.query(new FetchDataPoints(rows,
+                            range)));
                 }
             }
 
@@ -115,11 +117,10 @@ public class QueryGroup {
         }
     }
 
-    public Callback<QueryMetricsResult> execute(
-            MetricBackend.FindRowGroups criteria,
+    public Callback<QueryMetricsResult> execute(FindRowGroups criteria,
             final AggregatorGroup aggregators) {
 
-        final List<Callback<MetricBackend.FindRowGroupsResult>> queries = new ArrayList<Callback<MetricBackend.FindRowGroupsResult>>();
+        final List<Callback<FindRowGroups.Result>> queries = new ArrayList<Callback<FindRowGroups.Result>>();
 
         for (final MetricBackend backend : backends) {
             try {
@@ -133,15 +134,14 @@ public class QueryGroup {
 
         final DateRange range = criteria.getRange();
 
-        final CallbackGroup<MetricBackend.FindRowGroupsResult> group = new CallbackGroup<MetricBackend.FindRowGroupsResult>(
-                queries, new FindRowGroupsHandle(range, callback,
-                        aggregators));
+        final CallbackGroup<FindRowGroups.Result> group = new CallbackGroup<FindRowGroups.Result>(
+                queries, new FindRowGroupsHandle(range, callback, aggregators));
 
         final Timer.Context context = timer.time();
 
-        return callback.register(group).register(new Callback.Ended() {
+        return callback.register(group).register(new Callback.Finishable() {
             @Override
-            public void ended() throws Exception {
+            public void finish() throws Exception {
                 context.stop();
             }
         });
