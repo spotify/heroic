@@ -42,7 +42,7 @@ public class DataPoint implements Comparable<DataPoint> {
 
         private static long getColumnName(long rowTime, long timestamp,
                 boolean isInteger) {
-            long offset = timestamp - rowTime;
+            final long offset = timestamp - rowTime;
 
             if (offset > DataPointsRowKey.MAX_WIDTH) {
                 throw new RuntimeException("Offset exceeds max width: "
@@ -50,9 +50,9 @@ public class DataPoint implements Comparable<DataPoint> {
             }
 
             if (isInteger) {
-                return offset << 1 + LONG_FLAG;
+                return offset << 1 | LONG_FLAG;
             } else {
-                return offset << 1 + FLOAT_FLAG;
+                return offset << 1 | FLOAT_FLAG;
             }
         }
     }
