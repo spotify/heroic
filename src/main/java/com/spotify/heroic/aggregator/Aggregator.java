@@ -5,7 +5,6 @@ import java.util.List;
 import lombok.Getter;
 
 import com.spotify.heroic.backend.kairosdb.DataPoint;
-import com.spotify.heroic.query.DateRange;
 
 public interface Aggregator {
     public static class Result {
@@ -21,10 +20,6 @@ public interface Aggregator {
             this.sampleSize = sampleSize;
             this.outOfBounds = outOfBounds;
         }
-    }
-
-    public static interface Definition {
-        public Aggregator build(DateRange range);
     }
 
     public interface Session {

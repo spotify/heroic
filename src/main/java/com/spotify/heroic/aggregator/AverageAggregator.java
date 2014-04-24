@@ -5,13 +5,6 @@ import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.Resolution;
 
 public class AverageAggregator extends SumBucketAggregator {
-    public static class Definition extends SumBucketAggregator.Definition {
-        @Override
-        public SumBucketAggregator build(DateRange range) {
-            return new AverageAggregator(range, getSampling());
-        }
-    }
-
     public AverageAggregator(DateRange range, Resolution resolution) {
         super(range, resolution);
     }

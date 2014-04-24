@@ -18,4 +18,8 @@ public class TimeSerie {
         this.key = key;
         this.tags = tags;
     }
+
+    public TimeSerieSlice slice(long start, long end) {
+        return new TimeSerieSlice(this, start, end);
+    }
 }

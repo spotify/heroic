@@ -11,6 +11,7 @@ import lombok.Getter;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
@@ -84,7 +85,7 @@ public class ListBackendManager implements BackendManager {
     @Override
     public Callback<QueryMetricsResult> queryMetrics(final MetricsQuery query)
             throws QueryException {
-        final List<Aggregator.Definition> definitions = query.getAggregators();
+        final List<Aggregation> definitions = query.getAggregators();
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
@@ -148,7 +149,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     private AggregatorGroup buildAggregators(
-            List<Aggregator.Definition> definitions, DateRange range)
+            List<Aggregation> definitions, DateRange range)
             throws QueryException {
         final List<Aggregator> instances = new ArrayList<Aggregator>();
 
@@ -156,7 +157,7 @@ public class ListBackendManager implements BackendManager {
             return new AggregatorGroup(instances);
         }
 
-        for (final Aggregator.Definition definition : definitions) {
+        for (final Aggregation definition : definitions) {
             instances.add(definition.build(range));
         }
 
