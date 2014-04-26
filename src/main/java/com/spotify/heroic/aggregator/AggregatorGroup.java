@@ -3,6 +3,8 @@ package com.spotify.heroic.aggregator;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.Getter;
+
 import com.spotify.heroic.aggregator.Aggregator.Result;
 import com.spotify.heroic.model.DataPoint;
 
@@ -47,6 +49,8 @@ public class AggregatorGroup {
     }
 
     private final List<Aggregator> aggregators;
+
+    @Getter
     private final Aggregation aggregation;
 
     public AggregatorGroup(List<Aggregator> aggregators, Aggregation aggregation) {

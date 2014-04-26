@@ -1,8 +1,12 @@
 package com.spotify.heroic.cache;
 
+import java.util.List;
+
 import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.cache.model.AggregationCacheResult;
+import com.spotify.heroic.cache.model.CachePutResult;
+import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerieSlice;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -16,6 +20,9 @@ public interface AggregationCache {
         AggregationCache build(String context) throws ValidationException;
     }
 
-    public Callback<AggregationCacheResult> query(TimeSerieSlice slice,
+    public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             Aggregation aggregation);
+    
+    public Callback<CachePutResult> put(TimeSerieSlice slice,
+            Aggregation aggregation, List<DataPoint> datapoints);
 }

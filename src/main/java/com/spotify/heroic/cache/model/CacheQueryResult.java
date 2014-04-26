@@ -9,7 +9,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @ToString(of = { "result", "misses" })
-public class AggregationCacheResult {
+public class CacheQueryResult {
     /**
      * Collected results so far. Should be joined by the result from the above
      * cache misses.
@@ -23,7 +23,7 @@ public class AggregationCacheResult {
     @Getter
     private final List<TimeSerieSlice> misses;
 
-    public AggregationCacheResult(List<DataPoint> result,
+    public CacheQueryResult(List<DataPoint> result,
             List<TimeSerieSlice> misses) {
         this.result = result;
         this.misses = misses;

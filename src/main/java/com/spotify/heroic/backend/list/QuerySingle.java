@@ -8,18 +8,23 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.Timer;
+import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.TimeSerieSlice;
 import com.spotify.heroic.query.DateRange;
 
 @Slf4j
@@ -42,21 +47,20 @@ public class QuerySingle {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
-        private final AggregationCache cache;
 
         private HandleFindRowsResult(DateRange range,
                 Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators, AggregationCache cache) {
+                AggregatorGroup aggregators) {
             this.range = range;
             this.callback = callback;
             this.aggregators = aggregators;
-            this.cache = cache;
         }
 
         @Override
         public void done(final Collection<FindRows.Result> results,
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
+
             final Aggregator.Session session = aggregators.session();
 
             if (session == null) {
@@ -130,11 +134,6 @@ public class QuerySingle {
                 if (result.isEmpty())
                     continue;
 
-                if (cache != null) {
-                    // XXX: Make it so!
-                    log.info("SHOULD ATTEMPT TO DO CACHE LOOKUP HERE");
-                }
-
                 final MetricBackend backend = result.getBackend();
                 queries.addAll(backend.query(new FetchDataPoints(result
                         .getRows(), range)));
@@ -152,7 +151,55 @@ public class QuerySingle {
         }
     }
 
-    public Callback<QueryMetricsResult> execute(FindRows criteria,
+    public Callback<QueryMetricsResult> execute(final FindRows criteria,
+            final AggregatorGroup aggregators) {
+
+        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
+        
+        final Callback<CacheQueryResult> cacheCallback = checkCache(
+                criteria,
+                aggregators);
+
+        if (cacheCallback != null) {
+            cacheCallback
+                    .register(new Callback.Handle<CacheQueryResult>() {
+                        @Override
+                        public void cancel(CancelReason reason)
+                                throws Exception {
+                            callback.cancel(reason);
+                        }
+
+                        @Override
+                        public void error(Throwable e) throws Exception {
+                            callback.fail(e);
+                        }
+
+                        @Override
+                        public void finish(CacheQueryResult result)
+                                throws Exception {
+                            final DataPointGroup group = new DataPointGroup(
+                                    null, result.getResult());
+                            final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+                            groups.add(group);
+
+                            if (result.getMisses().isEmpty()) {
+                                callback.finish(new QueryMetricsResult(groups,
+                                        0, 0, null));
+                                return;
+                            }
+
+                            executeSingle(callback, criteria, aggregators);
+                        }
+                    });
+        }
+        
+        executeSingle(callback, criteria, aggregators);
+
+        return callback;
+    }
+
+    private void executeSingle(
+            Callback<QueryMetricsResult> callback, FindRows criteria,
             AggregatorGroup aggregators) {
         final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
 
@@ -164,21 +211,31 @@ public class QuerySingle {
             }
         }
 
-        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
-
         final DateRange range = criteria.getRange();
 
         final CallbackGroup<FindRows.Result> group = new CallbackGroup<FindRows.Result>(
-                queries, new HandleFindRowsResult(range, callback, aggregators,
-                        cache));
+                queries, new HandleFindRowsResult(range, callback, aggregators));
 
         final Timer.Context context = timer.time();
 
-        return callback.register(group).register(new Callback.Finishable() {
+        callback.register(group).register(new Callback.Finishable() {
             @Override
             public void finish() throws Exception {
                 context.stop();
             }
         });
+    }
+
+    private Callback<CacheQueryResult> checkCache(FindRows criteria,
+            AggregatorGroup aggregators) {
+        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(),
+                criteria.getFilter());
+        final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
+        final Aggregation aggregation = aggregators.getAggregation();
+
+        if (cache == null)
+            return null;
+
+        return cache.query(slice, aggregation);
     }
 }

@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.cache.model.AggregationCacheResult;
+import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.cache.model.CachePutResult;
+import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerieSlice;
@@ -33,14 +35,40 @@ public class InMemoryAggregationCache implements AggregationCache {
     public Map<CacheKey, List<DataPoint>> cache = new HashMap<CacheKey, List<DataPoint>>();
 
     @Override
-    public Callback<AggregationCacheResult> query(TimeSerieSlice slice,
+    public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             Aggregation aggregation) {
         final List<Long> range = calculateRange(slice, aggregation);
 
-        log.info("Request range: " + range);
+        for (long base : range) {
+            /* get from cache and duuuh */
+        }
 
-        return null;
+        final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
+
+        final List<DataPoint> result = new ArrayList<DataPoint>();
+        final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
+
+        callback.finish(new CacheQueryResult(result, misses));
+
+        return callback;
     }
+
+    @Override
+    public Callback<CachePutResult> put(TimeSerieSlice slice,
+            Aggregation aggregation, List<DataPoint> datapoints) {
+        final List<Long> range = calculateRange(slice, aggregation);
+
+        for (long base : range) {
+            /* put in cache and duuuh */
+        }
+
+        final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
+
+        callback.finish(new CachePutResult());
+
+        return callback;
+    }
+
 
     private List<Long> calculateRange(TimeSerieSlice slice,
             Aggregation aggregation) {
