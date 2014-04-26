@@ -28,7 +28,7 @@ import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.MetricsResponse;

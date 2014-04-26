@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.backend.RowStatistics;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.DataPoint;
 
 public class MetricsResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {

@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.spotify.heroic.aggregator.Aggregator.Result;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.DataPoint;
 
 public class AggregatorGroup {
-    private final List<Aggregator> aggregators;
-
     private static final class Session implements Aggregator.Session {
         private final Aggregator.Session first;
         private final Iterable<Aggregator.Session> rest;
+        private final Aggregation aggregation;
 
         public Session(Aggregator.Session first,
-                Iterable<Aggregator.Session> rest) {
+                Iterable<Aggregator.Session> rest, Aggregation aggregation) {
             this.first = first;
             this.rest = rest;
+            this.aggregation = aggregation;
         }
 
         @Override
@@ -39,10 +39,19 @@ public class AggregatorGroup {
 
             return new Result(datapoints, sampleSize, outOfBounds);
         }
+
+        @Override
+        public Aggregation getAggregation() {
+            return aggregation;
+        }
     }
 
-    public AggregatorGroup(List<Aggregator> aggregators) {
+    private final List<Aggregator> aggregators;
+    private final Aggregation aggregation;
+
+    public AggregatorGroup(List<Aggregator> aggregators, Aggregation aggregation) {
         this.aggregators = aggregators;
+        this.aggregation = aggregation;
     }
 
     public long getIntervalHint() {
@@ -72,7 +81,7 @@ public class AggregatorGroup {
             rest.add(aggregator.session());
         }
 
-        return new Session(first, rest);
+        return new Session(first, rest, aggregation);
     }
 
     /**

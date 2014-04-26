@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.kairosdb;
+package com.spotify.heroic.model;
 
 import java.nio.ByteBuffer;
 
@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import com.netflix.astyanax.model.Column;
+import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 
 @ToString(of = { "timestamp", "value" })
 @EqualsAndHashCode(of = { "timestamp", "value" })

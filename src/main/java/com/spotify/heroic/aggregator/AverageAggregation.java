@@ -14,6 +14,6 @@ public class AverageAggregation extends SumBucketAggregation {
 
     @Override
     public SumBucketAggregator build(DateRange range) {
-        return new AverageAggregator(range, getSampling());
+        return new AverageAggregator(this, range, getSampling());
     }
 }

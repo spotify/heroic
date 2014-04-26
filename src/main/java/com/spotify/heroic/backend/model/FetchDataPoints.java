@@ -5,8 +5,8 @@ import java.util.List;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.query.DateRange;
 
 @ToString(of = { "rows", "range" })

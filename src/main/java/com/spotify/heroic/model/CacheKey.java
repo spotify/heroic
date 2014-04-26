@@ -17,8 +17,12 @@ public class CacheKey {
     @Getter
     private final Aggregation aggregation;
 
-    public CacheKey(TimeSerie timeSerie, Aggregation aggregation) {
+    @Getter
+    private final long base;
+
+    public CacheKey(TimeSerie timeSerie, Aggregation aggregation, long base) {
         this.timeSerie = timeSerie;
         this.aggregation = aggregation;
+        this.base = base;
     }
 }

@@ -4,7 +4,7 @@ import java.util.List;
 
 import lombok.Getter;
 
-import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.DataPoint;
 
 public interface Aggregator {
     public static class Result {
@@ -36,6 +36,13 @@ public interface Aggregator {
          * Get the result of this aggregator.
          */
         public Result result();
+
+        /**
+         * Get the aggregation type this session belongs to.
+         * 
+         * @return The aggregation type this session belongs to.
+         */
+        public Aggregation getAggregation();
     }
 
     /**

@@ -24,6 +24,7 @@ import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
@@ -38,16 +39,21 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
+    @Getter
+    private final AggregationCache cache;
+
     private final Timer getAllRowsTimer;
 
     private final QuerySingle querySingle;
     private final QueryGroup queryGroup;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long maxAggregationMagnitude, long maxQueriableDataPoints) {
+            long maxAggregationMagnitude, long maxQueriableDataPoints,
+            AggregationCache cache) {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
+        this.cache = cache;
 
         getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
                 "get-all-rows"));
@@ -55,7 +61,7 @@ public class ListBackendManager implements BackendManager {
         final Timer queryMetricsSingle = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "single"));
         this.querySingle = new QuerySingle(metricBackends, queryMetricsSingle,
-                maxQueriableDataPoints);
+                maxQueriableDataPoints, cache);
         final Timer queryMetricsGroup = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "group"));
         this.queryGroup = new QueryGroup(metricBackends, queryMetricsGroup);
@@ -154,15 +160,16 @@ public class ListBackendManager implements BackendManager {
             throws QueryException {
         final List<Aggregator> instances = new ArrayList<Aggregator>();
 
-        if (definitions == null) {
-            return new AggregatorGroup(instances);
+        if (definitions == null || definitions.isEmpty()) {
+            return new AggregatorGroup(instances, null);
         }
 
         for (final Aggregation definition : definitions) {
             instances.add(definition.build(range));
         }
 
-        final AggregatorGroup aggregators = new AggregatorGroup(instances);
+        final AggregatorGroup aggregators = new AggregatorGroup(instances,
+                definitions.get(0));
 
         final long memoryMagnitude = aggregators
                 .getCalculationMemoryMagnitude();

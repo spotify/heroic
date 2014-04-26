@@ -15,8 +15,8 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.RowStatistics;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.model.DataPoint;
 
 @Slf4j
 public final class SimpleCallbackStream implements

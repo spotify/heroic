@@ -6,8 +6,8 @@ import java.util.Map;
 import lombok.Getter;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.query.MetricsQuery;
 
 public interface BackendManager {

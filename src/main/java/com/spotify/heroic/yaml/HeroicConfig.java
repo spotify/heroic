@@ -16,6 +16,8 @@ import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.ListBackendManager;
 import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
+import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.InMemoryAggregationCache;
 
 public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
@@ -24,16 +26,21 @@ public class HeroicConfig {
     @Getter
     private final BackendManager backendManager;
 
-    public HeroicConfig(BackendManager backendManager) {
+    @Getter
+    private final AggregationCache cache;
+
+    public HeroicConfig(BackendManager backendManager, AggregationCache cache) {
         this.backendManager = backendManager;
+        this.cache = cache;
     }
 
-    private static final TypeDescription[] types = new TypeDescription[] { Utils
-            .makeType(KairosDBBackend.YAML.class) };
+    private static final TypeDescription[] TYPES = new TypeDescription[] {
+            Utils.makeType(KairosDBBackend.YAML.class),
+            Utils.makeType(InMemoryAggregationCache.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
-            for (final TypeDescription t : types) {
+            for (final TypeDescription t : TYPES) {
                 addTypeDescription(t);
             }
         }
@@ -42,8 +49,8 @@ public class HeroicConfig {
     public static HeroicConfig buildDefault(MetricRegistry registry) {
         final BackendManager backendManager = new ListBackendManager(
                 new ArrayList<Backend>(), registry, MAX_AGGREGATION_MAGNITUDE,
-                MAX_QUERIABLE_DATA_POINTS);
-        return new HeroicConfig(backendManager);
+                MAX_QUERIABLE_DATA_POINTS, null);
+        return new HeroicConfig(backendManager, null);
     }
 
     public static HeroicConfig parse(Path path, MetricRegistry registry)

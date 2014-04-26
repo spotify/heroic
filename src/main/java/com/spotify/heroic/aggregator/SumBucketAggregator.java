@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import lombok.Getter;
 
 import com.google.common.util.concurrent.AtomicDouble;
-import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Resolution;
 import com.spotify.heroic.query.DateRange;
 
@@ -42,9 +42,11 @@ public abstract class SumBucketAggregator implements Aggregator {
         private final AtomicLong outOfBounds = new AtomicLong(0);
 
         private final List<Bucket> buckets;
+        private final Aggregation aggregation;
 
-        public Session(List<Bucket> buckets) {
+        public Session(List<Bucket> buckets, Aggregation aggregation) {
             this.buckets = buckets;
+            this.aggregation = aggregation;
         }
 
         @Override
@@ -87,18 +89,26 @@ public abstract class SumBucketAggregator implements Aggregator {
 
             return new Result(result, sampleSize.get(), outOfBounds.get());
         }
+
+        @Override
+        public Aggregation getAggregation() {
+            return aggregation;
+        }
     }
 
+    private final Aggregation aggregation;
     private final long count;
     private final long width;
     private final long offset;
 
-    public SumBucketAggregator(DateRange range, Resolution resolution) {
+    public SumBucketAggregator(Aggregation aggregation, DateRange range,
+            Resolution resolution) {
         final long width = resolution.getWidth();
         final long diff = range.diff();
         final long start = range.start();
         final long count = diff / width;
 
+        this.aggregation = aggregation;
         this.count = count;
         this.width = width;
         this.offset = start - (start % width);
@@ -107,7 +117,7 @@ public abstract class SumBucketAggregator implements Aggregator {
     @Override
     public Aggregator.Session session() {
         final List<Bucket> buckets = initializeBuckets();
-        return new Session(buckets);
+        return new Session(buckets, aggregation);
     }
 
     @Override

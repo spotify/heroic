@@ -19,6 +19,7 @@ import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRows;
+import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.query.DateRange;
 
 @Slf4j
@@ -26,12 +27,14 @@ public class QuerySingle {
     private final List<MetricBackend> backends;
     private final Timer timer;
     private final long maxQueriableDataPoints;
+    private final AggregationCache cache;
 
     public QuerySingle(List<MetricBackend> backends, Timer timer,
-            long maxQueriableDataPoints) {
+            long maxQueriableDataPoints, AggregationCache cache) {
         this.backends = backends;
         this.timer = timer;
         this.maxQueriableDataPoints = maxQueriableDataPoints;
+        this.cache = cache;
     }
 
     private final class HandleFindRowsResult implements
@@ -39,13 +42,15 @@ public class QuerySingle {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
         private final AggregatorGroup aggregators;
+        private final AggregationCache cache;
 
         private HandleFindRowsResult(DateRange range,
                 Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators) {
+                AggregatorGroup aggregators, AggregationCache cache) {
             this.range = range;
             this.callback = callback;
             this.aggregators = aggregators;
+            this.cache = cache;
         }
 
         @Override
@@ -125,6 +130,11 @@ public class QuerySingle {
                 if (result.isEmpty())
                     continue;
 
+                if (cache != null) {
+                    // XXX: Make it so!
+                    log.info("SHOULD ATTEMPT TO DO CACHE LOOKUP HERE");
+                }
+
                 final MetricBackend backend = result.getBackend();
                 queries.addAll(backend.query(new FetchDataPoints(result
                         .getRows(), range)));
@@ -159,7 +169,8 @@ public class QuerySingle {
         final DateRange range = criteria.getRange();
 
         final CallbackGroup<FindRows.Result> group = new CallbackGroup<FindRows.Result>(
-                queries, new HandleFindRowsResult(range, callback, aggregators));
+                queries, new HandleFindRowsResult(range, callback, aggregators,
+                        cache));
 
         final Timer.Context context = timer.time();
 
