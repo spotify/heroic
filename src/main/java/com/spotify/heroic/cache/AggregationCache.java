@@ -7,6 +7,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -23,6 +24,6 @@ public interface AggregationCache {
     public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             Aggregation aggregation);
     
-    public Callback<CachePutResult> put(TimeSerieSlice slice,
+    public Callback<CachePutResult> put(TimeSerie timeSerie,
             Aggregation aggregation, List<DataPoint> datapoints);
 }

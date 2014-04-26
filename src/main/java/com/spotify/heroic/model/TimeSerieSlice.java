@@ -54,6 +54,20 @@ public class TimeSerieSlice {
         return true;
     }
 
+    /**
+     * Create an expanded time slice.
+     * 
+     * This will cause the current time slice to be expanded if it the specified
+     * range is larger.
+     * 
+     * @param first
+     * @param last
+     * @return
+     */
+    public TimeSerieSlice modify(long start, long end) {
+        return new TimeSerieSlice(timeSerie, start, end);
+    }
+
     private static final Comparator<TimeSerieSlice> JOIN_ALL_COMPARATOR = new Comparator<TimeSerieSlice>() {
         @Override
         public int compare(TimeSerieSlice o1, TimeSerieSlice o2) {

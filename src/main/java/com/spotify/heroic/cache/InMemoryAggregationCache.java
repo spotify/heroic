@@ -6,8 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -15,12 +13,12 @@ import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 import com.spotify.heroic.yaml.ValidationException;
 
-@Slf4j
 public class InMemoryAggregationCache implements AggregationCache {
-    public static final long WIDTH = 1200;
+    public static final int WIDTH = 1200;
 
     public static class YAML implements AggregationCache.YAML {
         public static final String TYPE = "!in-memory-cache";
@@ -32,34 +30,66 @@ public class InMemoryAggregationCache implements AggregationCache {
         }
     }
 
-    public Map<CacheKey, List<DataPoint>> cache = new HashMap<CacheKey, List<DataPoint>>();
+    public Map<CacheKey, DataPoint[]> cache = new HashMap<CacheKey, DataPoint[]>();
 
     @Override
     public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             Aggregation aggregation) {
         final List<Long> range = calculateRange(slice, aggregation);
 
-        for (long base : range) {
-            /* get from cache and duuuh */
+        final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
+        final List<DataPoint> result = new ArrayList<DataPoint>();
+
+        for (final long base : range) {
+            final CacheKey key = new CacheKey(slice.getTimeSerie(),
+                    aggregation, base);
+
+            final DataPoint[] datapoints = cache.get(key);
+
+            if (datapoints == null) {
+                misses.add(slice.modify(base, base + aggregation.getWidth()));
+                break;
+            }
+
+            for (int i = 0; i < datapoints.length; i++) {
+                final DataPoint datapoint = datapoints[i];
+
+                if (datapoint == null) {
+                    long start = base + i * aggregation.getWidth();
+                    long end = start + aggregation.getWidth();
+                    misses.add(slice.modify(start, end));
+                    continue;
+                }
+
+                result.add(datapoint);
+            }
         }
 
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
 
-        final List<DataPoint> result = new ArrayList<DataPoint>();
-        final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
-
-        callback.finish(new CacheQueryResult(result, misses));
+        callback.finish(new CacheQueryResult(result, TimeSerieSlice
+                .joinAll(misses)));
 
         return callback;
     }
 
     @Override
-    public Callback<CachePutResult> put(TimeSerieSlice slice,
-            Aggregation aggregation, List<DataPoint> datapoints) {
-        final List<Long> range = calculateRange(slice, aggregation);
+    public Callback<CachePutResult> put(TimeSerie timeSerie,
+            Aggregation aggregation, List<DataPoint> updates) {
+        for (final DataPoint update : updates) {
+            final long sampling = aggregation.getWidth();
+            final long base = calculateBucket(sampling, update.getTimestamp());
+            final CacheKey key = new CacheKey(timeSerie, aggregation, base);
 
-        for (long base : range) {
-            /* put in cache and duuuh */
+            DataPoint[] datapoints = cache.get(key);
+            
+            if (datapoints == null) {
+                datapoints = new DataPoint[WIDTH];
+                cache.put(key, datapoints);
+            }
+
+            int offset = calculateOffset(sampling, update);
+            datapoints[offset] = update;
         }
 
         final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
@@ -69,15 +99,11 @@ public class InMemoryAggregationCache implements AggregationCache {
         return callback;
     }
 
-
     private List<Long> calculateRange(TimeSerieSlice slice,
             Aggregation aggregation) {
         final long period = aggregation.getWidth();
-        final long end = slice.getEnd();
-        final long start = slice.getStart();
-
-        final long first = start - start % period;
-        final long last = end + period - end % period;
+        final long first = calculateBucket(period, slice.getStart());
+        final long last = calculateEndBucket(period, slice.getEnd());
 
         final List<Long> range = new ArrayList<Long>();
 
@@ -86,5 +112,22 @@ public class InMemoryAggregationCache implements AggregationCache {
         }
 
         return range;
+    }
+
+    private int calculateOffset(final long sampling, DataPoint datapoint) {
+        final long width = sampling * WIDTH;
+        final long timestamp = datapoint.getTimestamp() % width;
+        final int offset = (int) (timestamp / sampling);
+        return offset;
+    }
+
+    private long calculateBucket(final long sampling, final long start) {
+        final long width = sampling * WIDTH;
+        return start - start % width;
+    }
+
+    private long calculateEndBucket(final long sampling, final long end) {
+        final long width = sampling * WIDTH;
+        return end + width - end % width;
     }
 }
