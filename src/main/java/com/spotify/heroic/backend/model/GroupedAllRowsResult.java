@@ -5,7 +5,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.backend.TimeSerie;
+import com.spotify.heroic.model.TimeSerie;
 
 /**
  * Grouped results of all backends for get all rows request.

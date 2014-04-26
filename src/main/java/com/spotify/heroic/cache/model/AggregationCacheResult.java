@@ -5,8 +5,8 @@ import java.util.List;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.backend.TimeSerieSlice;
 import com.spotify.heroic.backend.kairosdb.DataPoint;
+import com.spotify.heroic.model.TimeSerieSlice;
 
 @ToString(of = { "result", "misses" })
 public class AggregationCacheResult {

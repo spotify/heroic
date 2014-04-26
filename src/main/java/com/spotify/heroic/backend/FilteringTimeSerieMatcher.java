@@ -3,6 +3,8 @@ package com.spotify.heroic.backend;
 import java.util.Map;
 import java.util.Set;
 
+import com.spotify.heroic.model.TimeSerie;
+
 public class FilteringTimeSerieMatcher implements TimeSerieMatcher {
     private final String matchKey;
     private final Map<String, String> matchTags;

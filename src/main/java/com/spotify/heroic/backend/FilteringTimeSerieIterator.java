@@ -2,6 +2,8 @@ package com.spotify.heroic.backend;
 
 import java.util.Iterator;
 
+import com.spotify.heroic.model.TimeSerie;
+
 public class FilteringTimeSerieIterator implements Iterator<TimeSerie> {
     private TimeSerie current;
 

@@ -24,6 +24,12 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
     public static final short SUM_AGGREGATION = 0x0001;
     public static final short AVERAGE_AGGREGATION = 0x0002;
 
+    public static final AggregationSerializer instance = new AggregationSerializer();
+
+    public static AggregationSerializer get() {
+        return instance;
+    }
+
     /**
      * Sets up all static mappings and assert that they are unique.
      */

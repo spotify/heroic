@@ -2,6 +2,8 @@ package com.spotify.heroic.backend;
 
 import java.util.Map;
 
+import com.spotify.heroic.model.TimeSerie;
+
 public interface TimeSerieMatcher {
     public boolean matches(TimeSerie timeserie);
 

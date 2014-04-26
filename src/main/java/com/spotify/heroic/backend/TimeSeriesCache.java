@@ -23,6 +23,7 @@ import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.model.TimeSerie;
 
 @Singleton
 @Slf4j

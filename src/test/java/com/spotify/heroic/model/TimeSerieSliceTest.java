@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,6 +8,9 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.TimeSerieSlice;
 
 public class TimeSerieSliceTest {
     private static final String KEY = "key";

@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.model;
 
 import java.util.ArrayList;
 import java.util.Collections;

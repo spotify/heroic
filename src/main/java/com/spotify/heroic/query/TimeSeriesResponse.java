@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.backend.TimeSerie;
+import com.spotify.heroic.model.TimeSerie;
 
 public class TimeSeriesResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {

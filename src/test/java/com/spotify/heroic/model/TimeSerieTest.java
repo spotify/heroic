@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.model;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.spotify.heroic.model.TimeSerie;
 
 public class TimeSerieTest {
     @Test
