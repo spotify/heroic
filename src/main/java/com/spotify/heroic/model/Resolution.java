@@ -1,4 +1,4 @@
-package com.spotify.heroic.query;
+package com.spotify.heroic.model;
 
 import java.util.concurrent.TimeUnit;
 

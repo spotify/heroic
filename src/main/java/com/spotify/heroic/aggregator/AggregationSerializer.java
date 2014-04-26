@@ -1,0 +1,85 @@
+package com.spotify.heroic.aggregator;
+
+import java.lang.reflect.Constructor;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.netflix.astyanax.model.Composite;
+import com.netflix.astyanax.serializers.AbstractSerializer;
+import com.netflix.astyanax.serializers.ShortSerializer;
+
+/**
+ * Serializes aggregation configurations.
+ * 
+ * Each aggregation configuration is packed into a Composite which has the type
+ * of the aggregation as a prefixed short.
+ * 
+ * @author udoprog
+ */
+public class AggregationSerializer extends AbstractSerializer<Aggregation> {
+    private static final Map<Short, Class<? extends Aggregation>> TYPES = new HashMap<Short, Class<? extends Aggregation>>();
+    private static final Map<Class<? extends Aggregation>, Short> MAP = new HashMap<Class<? extends Aggregation>, Short>();
+
+    public static final short SUM_AGGREGATION = 0x0001;
+    public static final short AVERAGE_AGGREGATION = 0x0002;
+
+    /**
+     * Sets up all static mappings and assert that they are unique.
+     */
+    static {
+        assert TYPES.put(SUM_AGGREGATION, SumAggregation.class) == null;
+        assert TYPES.put(AVERAGE_AGGREGATION, AverageAggregation.class) == null;
+
+        for (Map.Entry<Short, Class<? extends Aggregation>> entry : TYPES
+                .entrySet()) {
+            assert MAP.put(entry.getValue(), entry.getKey()) == null;
+        }
+    }
+
+    @Override
+    public ByteBuffer toByteBuffer(Aggregation obj) {
+        final Composite composite = new Composite();
+        final Short type = MAP.get(obj.getClass());
+
+        if (type == null)
+            throw new RuntimeException(
+                    "Type is not a serializable aggregate: "
+                            + obj.getClass());
+
+        composite.addComponent(type, ShortSerializer.get());
+        obj.serialize(composite);
+        return composite.serialize();
+    }
+
+    @Override
+    public Aggregation fromByteBuffer(ByteBuffer byteBuffer) {
+        final Composite composite = Composite.fromByteBuffer(byteBuffer);
+        short type = composite.get(0, ShortSerializer.get());
+        return buildInstance(composite, type);
+    }
+
+    private Aggregation buildInstance(final Composite composite, short typeId) {
+        final Class<? extends Aggregation> type = TYPES.get(typeId);
+
+        if (type == null) {
+            throw new RuntimeException("No such aggregation type: " + type);
+        }
+
+        final Constructor<? extends Aggregation> constructor;
+
+        try {
+            constructor = type.getConstructor(Composite.class);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(
+                    "No Composite constructor found for aggregator " + type, e);
+        }
+
+        try {
+            return constructor.newInstance(composite);
+        } catch (ReflectiveOperationException | IllegalArgumentException e) {
+            throw new RuntimeException(
+                    "Failed to create new aggregation instance", e);
+        }
+    }
+}
