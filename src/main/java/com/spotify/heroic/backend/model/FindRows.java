@@ -42,4 +42,8 @@ public class FindRows {
             return rows.isEmpty();
         }
     }
+
+    public FindRows withRange(final DateRange range) {
+        return new FindRows(key, range, filter);
+    }
 }

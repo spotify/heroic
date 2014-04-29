@@ -10,6 +10,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+import com.spotify.heroic.query.AbsoluteDateRange;
+import com.spotify.heroic.query.DateRange;
+
 @ToString(of = { "timeSerie", "start", "end" })
 @EqualsAndHashCode(of = { "timeSerie", "start", "end" })
 public class TimeSerieSlice {
@@ -24,6 +27,10 @@ public class TimeSerieSlice {
         this.timeSerie = timeSerie;
         this.start = start;
         this.end = end;
+    }
+
+    public DateRange getRange() {
+        return new AbsoluteDateRange(start, end);
     }
 
     public TimeSerieSlice join(TimeSerieSlice other) {

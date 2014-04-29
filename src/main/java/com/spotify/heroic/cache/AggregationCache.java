@@ -2,6 +2,7 @@ package com.spotify.heroic.cache;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +24,8 @@ import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.query.AbsoluteDateRange;
+import com.spotify.heroic.query.DateRange;
 
 @Slf4j
 public class AggregationCache {
@@ -37,10 +40,54 @@ public class AggregationCache {
         this.queryTimer = registry.timer("aggregation-cache.query");
     }
 
-    public Callback<CacheQueryResult> query(TimeSerieSlice slice,
-            Aggregation aggregation) {
-        final List<Long> range = calculateRange(slice, aggregation);
+    private static final class HandleGetResults implements
+            Callback.Reducer<CacheBackendGetResult, CacheQueryResult> {
+        private final TimeSerie timeSerie;
+        private final long sampling;
 
+        public HandleGetResults(TimeSerie timeSerie, Aggregation aggregation) {
+            this.timeSerie = timeSerie;
+            this.sampling = aggregation.getWidth();
+        }
+
+        @Override
+        public CacheQueryResult done(Collection<CacheBackendGetResult> results,
+                Collection<Throwable> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            final List<DataPoint> resultDatapoints = new ArrayList<DataPoint>();
+            final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
+
+            for (final CacheBackendGetResult result : results) {
+                final DataPoint[] datapoints = result.getDatapoints();
+
+                for (int i = 0; i < datapoints.length; i++) {
+                    final DataPoint d = datapoints[i];
+
+                    if (d == null) {
+                        misses.add(timeSerie.slice(rangeForDataPoint(d)));
+                        continue;
+                    }
+
+                    resultDatapoints.add(d);
+                }
+            }
+
+            Collections.sort(resultDatapoints);
+
+            return new CacheQueryResult(timeSerie.getTags(), resultDatapoints,
+                    TimeSerieSlice.joinAll(misses));
+        }
+
+        private DateRange rangeForDataPoint(DataPoint d) {
+            final long start = d.getTimestamp();
+            final long end = start + sampling;
+            return new AbsoluteDateRange(start, end);
+        }
+    }
+
+    public Callback<CacheQueryResult> query(TimeSerieSlice slice,
+            final Aggregation aggregation) {
+        final List<Long> range = calculateRange(slice, aggregation);
         final Set<CacheKey> keys = new HashSet<CacheKey>();
 
         for (final long base : range) {
@@ -50,7 +97,7 @@ public class AggregationCache {
         final List<Callback<CacheBackendGetResult>> queries = new ArrayList<Callback<CacheBackendGetResult>>(
                 keys.size());
 
-        for (CacheKey key : keys) {
+        for (final CacheKey key : keys) {
             try {
                 queries.add(backend.get(key));
             } catch (AggregationCacheException e) {
@@ -60,23 +107,9 @@ public class AggregationCache {
 
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
 
-        return callback
-                .reduce(queries,
-                        queryTimer,
-                        new Callback.Reducer<CacheBackendGetResult, CacheQueryResult>() {
-                            @Override
-                            public CacheQueryResult done(
-                                    Collection<CacheBackendGetResult> results,
-                                    Collection<Throwable> errors,
-                                    Collection<CancelReason> cancelled)
-                                    throws Exception {
-                                final List<DataPoint> result = new ArrayList<DataPoint>();
-                                final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
-
-                                return new CacheQueryResult(result,
-                                        TimeSerieSlice.joinAll(misses));
-                            }
-                        });
+        final TimeSerie timeSerie = slice.getTimeSerie();
+        return callback.reduce(queries, queryTimer, new HandleGetResults(
+                timeSerie, aggregation));
     }
 
     public Callback<Void> put(TimeSerie timeSerie, Aggregation aggregation,

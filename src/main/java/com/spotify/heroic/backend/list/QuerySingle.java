@@ -2,9 +2,13 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.Timer;
@@ -18,11 +22,13 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
+import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 import com.spotify.heroic.query.DateRange;
@@ -154,48 +160,200 @@ public class QuerySingle {
     public Callback<QueryMetricsResult> execute(final FindRows criteria,
             final AggregatorGroup aggregators) {
 
-        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
-
         final Callback<CacheQueryResult> cacheCallback = checkCache(criteria,
                 aggregators);
 
         if (cacheCallback != null) {
-            cacheCallback.register(new Callback.Handle<CacheQueryResult>() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                    callback.cancel(reason);
-                }
-
-                @Override
-                public void error(Throwable e) throws Exception {
-                    callback.fail(e);
-                }
-
-                @Override
-                public void finish(CacheQueryResult result) throws Exception {
-                    final DataPointGroup group = new DataPointGroup(null,
-                            result.getResult());
-                    final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-                    groups.add(group);
-
-                    if (result.getMisses().isEmpty()) {
-                        callback.finish(new QueryMetricsResult(groups, 0, 0,
-                                null));
-                        return;
-                    }
-
-                    executeSingle(callback, criteria, aggregators);
-                }
-            });
+            return executeSingleWithCache(criteria, aggregators, cacheCallback);
         }
 
-        executeSingle(callback, criteria, aggregators);
+        return executeSingle(criteria, aggregators);
+    }
+
+    private static final class HandleCacheMisses implements
+            Callback.Reducer<QueryMetricsResult, QueryMetricsResult> {
+        private static final class JoinResult {
+            @Getter
+            final Map<Map<String, String>, Map<Long, DataPoint>> groups;
+            @Getter
+            final long sampleSize;
+            @Getter
+            final long outOfBounds;
+            @Getter
+            final RowStatistics statistics;
+
+            public JoinResult(
+                    Map<Map<String, String>, Map<Long, DataPoint>> groups,
+                    long sampleSize, long outOfBounds, RowStatistics statistics) {
+                this.groups = groups;
+                this.sampleSize = sampleSize;
+                this.outOfBounds = outOfBounds;
+                this.statistics = statistics;
+            }
+        }
+
+        private final CacheQueryResult cacheResult;
+
+        public HandleCacheMisses(CacheQueryResult cacheResult) {
+            this.cacheResult = cacheResult;
+        }
+
+        @Override
+        public QueryMetricsResult done(Collection<QueryMetricsResult> results,
+                Collection<Throwable> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+
+            final JoinResult joinResults = joinResults(results);
+            final List<DataPointGroup> groups = buildDataPointGroups(joinResults);
+
+            return new QueryMetricsResult(groups, joinResults.getSampleSize(),
+                    joinResults.getOutOfBounds(), joinResults.getStatistics());
+        }
+
+        private List<DataPointGroup> buildDataPointGroups(JoinResult joinResult) {
+            final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+
+            for (Map.Entry<Map<String, String>, Map<Long, DataPoint>> entry : joinResult
+                    .getGroups().entrySet()) {
+                final Map<String, String> tags = entry.getKey();
+                final List<DataPoint> datapoints = new ArrayList<DataPoint>(
+                        entry.getValue().values());
+
+                Collections.sort(datapoints);
+
+                groups.add(new DataPointGroup(tags, datapoints));
+            }
+
+            return groups;
+        }
+
+        /**
+         * Use a map from <code>{tags -> {long -> DataPoint}}</code> to
+         * deduplicate overlapping datapoints.
+         * 
+         * These overlaps are called 'cache duplicates', which mean that we've
+         * somehow managed to fetch duplicate entries from one of.
+         * 
+         * <ul>
+         * <li>The cache backend.</li>
+         * <li>The raw backends.</li>
+         * </ul>
+         * 
+         * While this contributes to unecessary overhead, it's not the end of
+         * the world. These duplicates are reported as cacheDuplicates in
+         * RowStatistics.
+         */
+        private JoinResult joinResults(Collection<QueryMetricsResult> results) {
+            final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups = new HashMap<Map<String, String>, Map<Long, DataPoint>>();
+
+            long sampleSize = 0;
+            long outOfBounds = 0;
+
+            int rowsSuccessful = 0;
+            int rowsFailed = 0;
+            int rowsCancelled = 0;
+            int cacheDuplicates = 0;
+            int resultDuplicates = 0;
+
+            for (final QueryMetricsResult result : results) {
+                sampleSize += result.getSampleSize();
+                outOfBounds += result.getOutOfBounds();
+
+                final RowStatistics statistics = result.getRowStatistics();
+                rowsSuccessful += statistics.getSuccessful();
+                rowsFailed += statistics.getFailed();
+                rowsCancelled += statistics.getCancelled();
+
+                for (final DataPointGroup group : result.getGroups()) {
+                    Map<Long, DataPoint> resultSet = resultGroups.get(group
+                            .getTags());
+
+                    if (resultSet == null) {
+                        resultSet = new HashMap<Long, DataPoint>();
+                        resultGroups.put(group.getTags(), resultSet);
+                    }
+
+                    for (final DataPoint d : group.getDatapoints()) {
+                        if (resultSet.put(d.getTimestamp(), d) != null) {
+                            resultDuplicates += 1;
+                        }
+                    }
+
+                    if (cacheResult.getTags().equals(group.getTags())) {
+                        for (final DataPoint d : cacheResult.getResult()) {
+                            if (resultSet.put(d.getTimestamp(), d) != null) {
+                                cacheDuplicates += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            final RowStatistics rowStatistics = new RowStatistics(
+                    rowsSuccessful, rowsFailed, rowsCancelled, cacheDuplicates,
+                    resultDuplicates);
+
+            return new JoinResult(resultGroups, sampleSize, outOfBounds,
+                    rowStatistics);
+        }
+    }
+
+    private Callback<QueryMetricsResult> executeSingleWithCache(
+            final FindRows original, final AggregatorGroup aggregators,
+            final Callback<CacheQueryResult> cacheCallback) {
+
+        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
+
+        cacheCallback.register(new Callback.Handle<CacheQueryResult>() {
+            @Override
+            public void cancel(CancelReason reason) throws Exception {
+                callback.cancel(reason);
+            }
+
+            @Override
+            public void error(Throwable e) throws Exception {
+                callback.fail(e);
+            }
+
+            @Override
+            public void finish(final CacheQueryResult cacheResult)
+                    throws Exception {
+                final List<Callback<QueryMetricsResult>> missQueries = new ArrayList<Callback<QueryMetricsResult>>();
+
+                for (TimeSerieSlice slice : cacheResult.getMisses()) {
+                    missQueries.add(executeSingle(
+                            original.withRange(slice.getRange()), aggregators));
+                }
+
+                /**
+                 * EVERYTHING in cache!
+                 */
+                if (missQueries.isEmpty()) {
+                    final DataPointGroup group = new DataPointGroup(original
+                            .getFilter(), cacheResult.getResult());
+                    final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+
+                    groups.add(group);
+
+                    callback.finish(new QueryMetricsResult(groups, 0, 0, null));
+                    return;
+                }
+
+                /**
+                 * Merge with actual queried data.
+                 */
+                callback.reduce(missQueries, timer, new HandleCacheMisses(
+                        cacheResult));
+            }
+        });
 
         return callback;
     }
 
-    private void executeSingle(Callback<QueryMetricsResult> callback,
-            FindRows criteria, AggregatorGroup aggregators) {
+    private Callback<QueryMetricsResult> executeSingle(FindRows criteria,
+            AggregatorGroup aggregators) {
+        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
+
         final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
 
         for (final MetricBackend backend : backends) {
@@ -213,7 +371,7 @@ public class QuerySingle {
 
         final Timer.Context context = timer.time();
 
-        callback.register(group).register(new Callback.Finishable() {
+        return callback.register(group).register(new Callback.Finishable() {
             @Override
             public void finish() throws Exception {
                 context.stop();
