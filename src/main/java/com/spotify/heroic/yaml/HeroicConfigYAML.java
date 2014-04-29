@@ -11,6 +11,7 @@ import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.ListBackendManager;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.AggregationCacheBackend;
 
 public class HeroicConfigYAML {
     @Getter
@@ -19,7 +20,7 @@ public class HeroicConfigYAML {
 
     @Getter
     @Setter
-    private AggregationCache.YAML cache;
+    private AggregationCacheBackend.YAML cache;
 
     @Getter
     @Setter
@@ -51,7 +52,7 @@ public class HeroicConfigYAML {
         if (this.cache == null) {
             cache = null;
         } else {
-            cache = this.cache.build("cache");
+            cache = new AggregationCache(registry, this.cache.build("cache"));
         }
 
         final BackendManager backendManager = new ListBackendManager(backends,

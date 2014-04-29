@@ -1,5 +1,6 @@
 package com.spotify.heroic.aggregator;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -10,6 +11,7 @@ import com.spotify.heroic.model.ResolutionSerializer;
 import com.spotify.heroic.query.DateRange;
 
 @ToString(of = { "sampling" })
+@EqualsAndHashCode(of = { "sampling" })
 public abstract class Aggregation {
     @Getter
     @Setter

@@ -155,52 +155,47 @@ public class QuerySingle {
             final AggregatorGroup aggregators) {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
-        
-        final Callback<CacheQueryResult> cacheCallback = checkCache(
-                criteria,
+
+        final Callback<CacheQueryResult> cacheCallback = checkCache(criteria,
                 aggregators);
 
         if (cacheCallback != null) {
-            cacheCallback
-                    .register(new Callback.Handle<CacheQueryResult>() {
-                        @Override
-                        public void cancel(CancelReason reason)
-                                throws Exception {
-                            callback.cancel(reason);
-                        }
+            cacheCallback.register(new Callback.Handle<CacheQueryResult>() {
+                @Override
+                public void cancel(CancelReason reason) throws Exception {
+                    callback.cancel(reason);
+                }
 
-                        @Override
-                        public void error(Throwable e) throws Exception {
-                            callback.fail(e);
-                        }
+                @Override
+                public void error(Throwable e) throws Exception {
+                    callback.fail(e);
+                }
 
-                        @Override
-                        public void finish(CacheQueryResult result)
-                                throws Exception {
-                            final DataPointGroup group = new DataPointGroup(
-                                    null, result.getResult());
-                            final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-                            groups.add(group);
+                @Override
+                public void finish(CacheQueryResult result) throws Exception {
+                    final DataPointGroup group = new DataPointGroup(null,
+                            result.getResult());
+                    final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+                    groups.add(group);
 
-                            if (result.getMisses().isEmpty()) {
-                                callback.finish(new QueryMetricsResult(groups,
-                                        0, 0, null));
-                                return;
-                            }
+                    if (result.getMisses().isEmpty()) {
+                        callback.finish(new QueryMetricsResult(groups, 0, 0,
+                                null));
+                        return;
+                    }
 
-                            executeSingle(callback, criteria, aggregators);
-                        }
-                    });
+                    executeSingle(callback, criteria, aggregators);
+                }
+            });
         }
-        
+
         executeSingle(callback, criteria, aggregators);
 
         return callback;
     }
 
-    private void executeSingle(
-            Callback<QueryMetricsResult> callback, FindRows criteria,
-            AggregatorGroup aggregators) {
+    private void executeSingle(Callback<QueryMetricsResult> callback,
+            FindRows criteria, AggregatorGroup aggregators) {
         final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
 
         for (final MetricBackend backend : backends) {

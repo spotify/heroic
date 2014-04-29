@@ -39,9 +39,6 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
-    @Getter
-    private final AggregationCache cache;
-
     private final Timer getAllRowsTimer;
 
     private final QuerySingle querySingle;
@@ -53,7 +50,6 @@ public class ListBackendManager implements BackendManager {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
-        this.cache = cache;
 
         getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
                 "get-all-rows"));
@@ -152,12 +148,12 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        return overallCallback.reduce(backendRequests, getAllRowsTimer, resultReducer);
+        return overallCallback.reduce(backendRequests, getAllRowsTimer,
+                resultReducer);
     }
 
-    private AggregatorGroup buildAggregators(
-            List<Aggregation> definitions, DateRange range)
-            throws QueryException {
+    private AggregatorGroup buildAggregators(List<Aggregation> definitions,
+            DateRange range) throws QueryException {
         final List<Aggregator> instances = new ArrayList<Aggregator>();
 
         if (definitions == null || definitions.isEmpty()) {

@@ -1,9 +1,11 @@
 package com.spotify.heroic.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 import com.spotify.heroic.aggregator.Aggregation;
 
+@EqualsAndHashCode(of = { "timeSerie", "aggregation", "base" })
 public class CacheKey {
     /**
      * Includes key and tags.
