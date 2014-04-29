@@ -25,8 +25,6 @@ import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
-import com.spotify.heroic.query.AbsoluteDateRange;
-import com.spotify.heroic.query.DateRange;
 
 @Slf4j
 public class AggregationCache {
@@ -43,11 +41,11 @@ public class AggregationCache {
 
     private static final class HandleGetResults implements
             Callback.Reducer<CacheBackendGetResult, CacheQueryResult> {
-        private final TimeSerie timeSerie;
+        private final TimeSerieSlice slice;
         private final Aggregation aggregation;
 
-        public HandleGetResults(TimeSerie timeSerie, Aggregation aggregation) {
-            this.timeSerie = timeSerie;
+        public HandleGetResults(TimeSerieSlice slice, Aggregation aggregation) {
+            this.slice = slice;
             this.aggregation = aggregation;
         }
 
@@ -61,12 +59,20 @@ public class AggregationCache {
             for (final CacheBackendGetResult result : results) {
                 final DataPoint[] datapoints = result.getDatapoints();
 
-                for (int i = 0; i < datapoints.length; i++) {
+                final CacheKey key = result.getCacheKey();
+                long sampling = aggregation.getWidth();
+
+                int first = makeIndex(sampling, slice.getStart());
+                int last = makeIndex(sampling, slice.getEnd());
+
+                for (int i = first; i < last; i++) {
                     final DataPoint d = datapoints[i];
+                    log.info(i + " = " + d);
 
                     if (d == null) {
-                        misses.add(timeSerie.slice(offsetForIndex(
-                                result.getCacheKey(), i)));
+                        long f = makeTimestamp(key.getBase(), sampling, i);
+                        long t = makeTimestamp(key.getBase(), sampling, i + 1);
+                        misses.add(slice.modify(f, t));
                         continue;
                     }
 
@@ -79,18 +85,8 @@ public class AggregationCache {
             final List<TimeSerieSlice> allMisses = TimeSerieSlice
                     .joinAll(misses);
 
-            return new CacheQueryResult(timeSerie, aggregation,
+            return new CacheQueryResult(slice, aggregation,
                     resultDatapoints, allMisses);
-        }
-
-        private DateRange offsetForIndex(CacheKey key, int index) {
-            final long base = key.getBase();
-            final long sampling = key.getAggregation().getWidth();
-
-            final long start = base + index * sampling;
-            final long end = start + sampling;
-
-            return new AbsoluteDateRange(start, end);
         }
     }
 
@@ -116,9 +112,9 @@ public class AggregationCache {
 
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
 
-        final TimeSerie timeSerie = slice.getTimeSerie();
         return callback.reduce(queries, queryTimer, new HandleGetResults(
-                timeSerie, aggregation));
+slice,
+                aggregation));
     }
 
     public Callback<CachePutResult> put(TimeSerie timeSerie,
@@ -167,7 +163,8 @@ public class AggregationCache {
 
         for (final DataPoint d : datapoints) {
             final long sampling = aggregation.getWidth();
-            final long base = calculateBucket(sampling, d.getTimestamp());
+            final long width = sampling * WIDTH;
+            final long base = calculateBucket(width, d.getTimestamp());
             final CacheKey key = new CacheKey(timeSerie, aggregation, base);
 
             DataPoint[] group = requests.get(key);
@@ -177,7 +174,7 @@ public class AggregationCache {
                 requests.put(key, group);
             }
 
-            int offset = calculateOffset(sampling, d);
+            int offset = makeIndex(sampling, d.getTimestamp());
             group[offset] = d;
         }
 
@@ -199,23 +196,21 @@ public class AggregationCache {
         return buckets;
     }
 
-    private int calculateOffset(final long sampling, DataPoint datapoint) {
-        final long width = sampling * WIDTH;
-        final long timestamp = datapoint.getTimestamp() % width;
-
-        if (timestamp % sampling != 0)
-            throw new RuntimeException(
-                    "Datapoint timestamp is not a multiple of the sampling period");
-
-        final int offset = (int) (timestamp / sampling);
+    private static int makeIndex(long sampling, long timestamp) {
+        final long relative = timestamp % (sampling * WIDTH);
+        final int offset = (int) (relative / sampling);
         return offset;
     }
 
-    private long calculateBucket(final long width, final long start) {
+    private static long makeTimestamp(long base, long sampling, int index) {
+        return base + sampling * index;
+    }
+
+    private static long calculateBucket(long width, long start) {
         return start - start % width;
     }
 
-    private long calculateEndBucket(final long width, final long end) {
+    private static long calculateEndBucket(long width, long end) {
         return end + width - end % width;
     }
 }

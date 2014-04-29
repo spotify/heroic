@@ -3,6 +3,8 @@ package com.spotify.heroic.cache;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FinishedCallback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
@@ -11,6 +13,7 @@ import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.yaml.ValidationException;
 
+@Slf4j
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
     public static class YAML implements AggregationCacheBackend.YAML {
         public static final String TYPE = "!in-memory-cache";
@@ -50,7 +53,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         for (int i = 0; i < datapoints.length; i++) {
-            if (entry[i] != null)
+            log.info(i + " = " + entry[i] + ":" + datapoints[i]);
+
+            if (entry[i] != null || datapoints[i] == null)
                 continue;
 
             entry[i] = datapoints[i];

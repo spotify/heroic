@@ -2,9 +2,11 @@ package com.spotify.heroic.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 import com.spotify.heroic.aggregator.Aggregation;
 
+@ToString(of = { "timeSerie", "aggregation", "base" })
 @EqualsAndHashCode(of = { "timeSerie", "aggregation", "base" })
 public class CacheKey {
     /**

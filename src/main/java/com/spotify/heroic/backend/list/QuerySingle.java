@@ -199,11 +199,13 @@ public class QuerySingle {
 
         private final AggregationCache cache;
         private final CacheQueryResult cacheResult;
+        private final boolean singular;
 
         public HandleCacheMisses(AggregationCache cache,
-                CacheQueryResult cacheResult) {
+                CacheQueryResult cacheResult, boolean singular) {
             this.cache = cache;
             this.cacheResult = cacheResult;
+            this.singular = singular;
         }
 
         @Override
@@ -295,9 +297,17 @@ public class QuerySingle {
                     Map<Long, DataPoint> resultSet = resultGroups.get(group
                             .getTags());
 
+                    final Map<String, String> tags;
+
+                    if (singular) {
+                        tags = null;
+                    } else {
+                        tags = group.getTags();
+                    }
+
                     if (resultSet == null) {
                         resultSet = new HashMap<Long, DataPoint>();
-                        resultGroups.put(group.getTags(), resultSet);
+                        resultGroups.put(tags, resultSet);
                     }
 
                     for (final DataPoint d : group.getDatapoints()) {
@@ -306,7 +316,7 @@ public class QuerySingle {
                         }
                     }
 
-                    cacheUpdates.put(cacheResult.getTimeSerie(),
+                    cacheUpdates.put(cacheResult.getSlice().getTimeSerie(),
                             group.getDatapoints());
                 }
             }
@@ -336,7 +346,15 @@ public class QuerySingle {
                 }
             }
 
-            resultGroups.put(cacheResult.getTimeSerie().getTags(), resultSet);
+            final Map<String, String> tags;
+
+            if (singular) {
+                tags = null;
+            } else {
+                tags = cacheResult.getSlice().getTimeSerie().getTags();
+            }
+
+            resultGroups.put(tags, resultSet);
             return cacheDuplicates;
         }
     }
@@ -386,7 +404,7 @@ public class QuerySingle {
                  * Merge with actual queried data.
                  */
                 callback.reduce(missQueries, timer, new HandleCacheMisses(
-                        cache, cacheResult));
+                        cache, cacheResult, true));
             }
         });
 
