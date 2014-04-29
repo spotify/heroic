@@ -1,18 +1,22 @@
 package com.spotify.heroic.cache.model;
 
 import java.util.List;
-import java.util.Map;
 
 import lombok.Getter;
 import lombok.ToString;
 
+import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
-@ToString(of = { "tags", "result", "misses" })
+@ToString(of = { "timeSerie", "result", "misses" })
 public class CacheQueryResult {
     @Getter
-    private final Map<String, String> tags;
+    private final TimeSerie timeSerie;
+
+    @Getter
+    private final Aggregation aggregation;
 
     /**
      * Collected results so far. Should be joined by the result from the above
@@ -27,9 +31,10 @@ public class CacheQueryResult {
     @Getter
     private final List<TimeSerieSlice> misses;
 
-    public CacheQueryResult(Map<String, String> tags, List<DataPoint> result,
-            List<TimeSerieSlice> misses) {
-        this.tags = tags;
+    public CacheQueryResult(TimeSerie timeSerie, Aggregation aggregation,
+            List<DataPoint> result, List<TimeSerieSlice> misses) {
+        this.timeSerie = timeSerie;
+        this.aggregation = aggregation;
         this.result = result;
         this.misses = misses;
     }

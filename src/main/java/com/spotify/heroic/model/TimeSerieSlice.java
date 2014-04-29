@@ -125,7 +125,7 @@ public class TimeSerieSlice {
                         + " from different time series");
             }
 
-            if (tail.getStart() > first.getEnd()) {
+            if (tail.getStart() > end) {
                 joined.add(new TimeSerieSlice(first.getTimeSerie(), first
                         .getStart(), end));
                 return tail;

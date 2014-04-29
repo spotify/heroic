@@ -19,6 +19,7 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
+import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
@@ -43,11 +44,11 @@ public class AggregationCache {
     private static final class HandleGetResults implements
             Callback.Reducer<CacheBackendGetResult, CacheQueryResult> {
         private final TimeSerie timeSerie;
-        private final long sampling;
+        private final Aggregation aggregation;
 
         public HandleGetResults(TimeSerie timeSerie, Aggregation aggregation) {
             this.timeSerie = timeSerie;
-            this.sampling = aggregation.getWidth();
+            this.aggregation = aggregation;
         }
 
         @Override
@@ -64,7 +65,8 @@ public class AggregationCache {
                     final DataPoint d = datapoints[i];
 
                     if (d == null) {
-                        misses.add(timeSerie.slice(rangeForDataPoint(d)));
+                        misses.add(timeSerie.slice(offsetForIndex(
+                                result.getCacheKey(), i)));
                         continue;
                     }
 
@@ -74,23 +76,30 @@ public class AggregationCache {
 
             Collections.sort(resultDatapoints);
 
-            return new CacheQueryResult(timeSerie.getTags(), resultDatapoints,
-                    TimeSerieSlice.joinAll(misses));
+            final List<TimeSerieSlice> allMisses = TimeSerieSlice
+                    .joinAll(misses);
+
+            return new CacheQueryResult(timeSerie, aggregation,
+                    resultDatapoints, allMisses);
         }
 
-        private DateRange rangeForDataPoint(DataPoint d) {
-            final long start = d.getTimestamp();
+        private DateRange offsetForIndex(CacheKey key, int index) {
+            final long base = key.getBase();
+            final long sampling = key.getAggregation().getWidth();
+
+            final long start = base + index * sampling;
             final long end = start + sampling;
+
             return new AbsoluteDateRange(start, end);
         }
     }
 
     public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             final Aggregation aggregation) {
-        final List<Long> range = calculateRange(slice, aggregation);
+        final List<Long> buckets = calculateBuckets(slice, aggregation);
         final Set<CacheKey> keys = new HashSet<CacheKey>();
 
-        for (final long base : range) {
+        for (final long base : buckets) {
             keys.add(new CacheKey(slice.getTimeSerie(), aggregation, base));
         }
 
@@ -112,8 +121,8 @@ public class AggregationCache {
                 timeSerie, aggregation));
     }
 
-    public Callback<Void> put(TimeSerie timeSerie, Aggregation aggregation,
-            List<DataPoint> datapoints) {
+    public Callback<CachePutResult> put(TimeSerie timeSerie,
+            Aggregation aggregation, List<DataPoint> datapoints) {
         final Map<CacheKey, DataPoint[]> requests = buildPutRequests(timeSerie,
                 aggregation, datapoints);
 
@@ -128,16 +137,17 @@ public class AggregationCache {
             }
         }
 
-        final Callback<Void> callback = new ConcurrentCallback<Void>();
+        final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
         return callback.reduce(queries, queryTimer,
-                new Callback.Reducer<CacheBackendPutResult, Void>() {
+                new Callback.Reducer<CacheBackendPutResult, CachePutResult>() {
                     @Override
-                    public Void done(Collection<CacheBackendPutResult> results,
+                    public CachePutResult done(
+                            Collection<CacheBackendPutResult> results,
                             Collection<Throwable> errors,
                             Collection<CancelReason> cancelled)
                             throws Exception {
-                        return null;
+                        return new CachePutResult();
                     }
                 });
     }
@@ -174,19 +184,19 @@ public class AggregationCache {
         return requests;
     }
 
-    private List<Long> calculateRange(TimeSerieSlice slice,
+    private List<Long> calculateBuckets(TimeSerieSlice slice,
             Aggregation aggregation) {
-        final long period = aggregation.getWidth();
-        final long first = calculateBucket(period, slice.getStart());
-        final long last = calculateEndBucket(period, slice.getEnd());
+        final long width = aggregation.getWidth() * WIDTH;
+        final long first = calculateBucket(width, slice.getStart());
+        final long last = calculateEndBucket(width, slice.getEnd());
 
-        final List<Long> range = new ArrayList<Long>();
+        final List<Long> buckets = new ArrayList<Long>();
 
-        for (long current = first; current < last; current += period) {
-            range.add(current);
+        for (long current = first; current < last; current += width) {
+            buckets.add(current);
         }
 
-        return range;
+        return buckets;
     }
 
     private int calculateOffset(final long sampling, DataPoint datapoint) {
@@ -201,13 +211,11 @@ public class AggregationCache {
         return offset;
     }
 
-    private long calculateBucket(final long sampling, final long start) {
-        final long width = sampling * WIDTH;
+    private long calculateBucket(final long width, final long start) {
         return start - start % width;
     }
 
-    private long calculateEndBucket(final long sampling, final long end) {
-        final long width = sampling * WIDTH;
+    private long calculateEndBucket(final long width, final long end) {
         return end + width - end % width;
     }
 }

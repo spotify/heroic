@@ -27,6 +27,7 @@ import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
@@ -176,6 +177,8 @@ public class QuerySingle {
             @Getter
             final Map<Map<String, String>, Map<Long, DataPoint>> groups;
             @Getter
+            final Map<TimeSerie, List<DataPoint>> cacheUpdates;
+            @Getter
             final long sampleSize;
             @Getter
             final long outOfBounds;
@@ -184,17 +187,22 @@ public class QuerySingle {
 
             public JoinResult(
                     Map<Map<String, String>, Map<Long, DataPoint>> groups,
+                    Map<TimeSerie, List<DataPoint>> cacheUpdates,
                     long sampleSize, long outOfBounds, RowStatistics statistics) {
                 this.groups = groups;
+                this.cacheUpdates = cacheUpdates;
                 this.sampleSize = sampleSize;
                 this.outOfBounds = outOfBounds;
                 this.statistics = statistics;
             }
         }
 
+        private final AggregationCache cache;
         private final CacheQueryResult cacheResult;
 
-        public HandleCacheMisses(CacheQueryResult cacheResult) {
+        public HandleCacheMisses(AggregationCache cache,
+                CacheQueryResult cacheResult) {
+            this.cache = cache;
             this.cacheResult = cacheResult;
         }
 
@@ -206,8 +214,26 @@ public class QuerySingle {
             final JoinResult joinResults = joinResults(results);
             final List<DataPointGroup> groups = buildDataPointGroups(joinResults);
 
+            updateCache(joinResults.getCacheUpdates());
+
             return new QueryMetricsResult(groups, joinResults.getSampleSize(),
                     joinResults.getOutOfBounds(), joinResults.getStatistics());
+        }
+
+        private List<Callback<CachePutResult>> updateCache(
+                Map<TimeSerie, List<DataPoint>> cacheUpdates) {
+            List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(
+                    cacheUpdates.size());
+
+            for (Map.Entry<TimeSerie, List<DataPoint>> update : cacheUpdates
+                    .entrySet()) {
+                final TimeSerie timeSerie = update.getKey();
+                final List<DataPoint> datapoints = update.getValue();
+                queries.add(cache.put(timeSerie, cacheResult.getAggregation(),
+                        datapoints));
+            }
+
+            return queries;
         }
 
         private List<DataPointGroup> buildDataPointGroups(JoinResult joinResult) {
@@ -245,6 +271,7 @@ public class QuerySingle {
          */
         private JoinResult joinResults(Collection<QueryMetricsResult> results) {
             final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups = new HashMap<Map<String, String>, Map<Long, DataPoint>>();
+            final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
             long sampleSize = 0;
             long outOfBounds = 0;
@@ -252,8 +279,8 @@ public class QuerySingle {
             int rowsSuccessful = 0;
             int rowsFailed = 0;
             int rowsCancelled = 0;
-            int cacheDuplicates = 0;
-            int resultDuplicates = 0;
+
+            int cacheDuplicates = addCachedResults(resultGroups);
 
             for (final QueryMetricsResult result : results) {
                 sampleSize += result.getSampleSize();
@@ -275,26 +302,42 @@ public class QuerySingle {
 
                     for (final DataPoint d : group.getDatapoints()) {
                         if (resultSet.put(d.getTimestamp(), d) != null) {
-                            resultDuplicates += 1;
+                            cacheDuplicates += 1;
                         }
                     }
 
-                    if (cacheResult.getTags().equals(group.getTags())) {
-                        for (final DataPoint d : cacheResult.getResult()) {
-                            if (resultSet.put(d.getTimestamp(), d) != null) {
-                                cacheDuplicates += 1;
-                            }
-                        }
-                    }
+                    cacheUpdates.put(cacheResult.getTimeSerie(),
+                            group.getDatapoints());
                 }
             }
 
             final RowStatistics rowStatistics = new RowStatistics(
-                    rowsSuccessful, rowsFailed, rowsCancelled, cacheDuplicates,
-                    resultDuplicates);
+                    rowsSuccessful, rowsFailed, rowsCancelled, cacheDuplicates);
 
-            return new JoinResult(resultGroups, sampleSize, outOfBounds,
-                    rowStatistics);
+            return new JoinResult(resultGroups, cacheUpdates, sampleSize,
+                    outOfBounds, rowStatistics);
+        }
+
+        /**
+         * Add the results previously retrieved from cache.
+         * 
+         * @param resultGroups
+         * @return
+         */
+        private int addCachedResults(
+                final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups) {
+            int cacheDuplicates = 0;
+
+            final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
+
+            for (final DataPoint d : cacheResult.getResult()) {
+                if (resultSet.put(d.getTimestamp(), d) != null) {
+                    cacheDuplicates += 1;
+                }
+            }
+
+            resultGroups.put(cacheResult.getTimeSerie().getTags(), resultSet);
+            return cacheDuplicates;
         }
     }
 
@@ -343,7 +386,7 @@ public class QuerySingle {
                  * Merge with actual queried data.
                  */
                 callback.reduce(missQueries, timer, new HandleCacheMisses(
-                        cacheResult));
+                        cache, cacheResult));
             }
         });
 

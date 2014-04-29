@@ -13,8 +13,6 @@ public class RowStatistics {
     private final int cancelled;
     @Getter
     private final int cacheDuplicates;
-    @Getter
-    private final int resultDuplicates;
 
     public RowStatistics(int successful, int failed, int cancelled) {
         this.total = failed + successful + cancelled;
@@ -22,16 +20,14 @@ public class RowStatistics {
         this.failed = failed;
         this.cancelled = cancelled;
         this.cacheDuplicates = 0;
-        this.resultDuplicates = 0;
     }
 
     public RowStatistics(int successful, int failed, int cancelled,
-            int cacheDuplicates, int resultDuplicates) {
+            int cacheDuplicates) {
         this.total = failed + successful + cancelled;
         this.successful = successful;
         this.failed = failed;
         this.cancelled = cancelled;
         this.cacheDuplicates = cacheDuplicates;
-        this.resultDuplicates = resultDuplicates;
     }
 }
