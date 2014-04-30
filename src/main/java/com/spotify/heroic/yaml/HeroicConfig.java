@@ -17,8 +17,8 @@ import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.ListBackendManager;
 import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.cache.CassandraAggregationCacheBackend;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
+import com.spotify.heroic.cache.cassandra.CassandraAggregationCacheBackend;
 
 public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;

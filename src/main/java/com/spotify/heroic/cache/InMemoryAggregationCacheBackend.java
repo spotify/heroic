@@ -14,7 +14,11 @@ import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.yaml.ValidationException;
 
-@Slf4j
+/**
+ * A reference aggregation cache implementation to allow for easier testing of application logic.
+ *
+ * @author udoprog
+ */
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
     public static class YAML implements AggregationCacheBackend.YAML {
         public static final String TYPE = "!in-memory-cache";
