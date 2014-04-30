@@ -7,6 +7,8 @@ import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 
+import com.codahale.metrics.Timer;
+
 /**
  * A class implementing the callback pattern concurrently in a way that any
  * thread can use the callback instance in a thread-safe manner.
@@ -310,5 +312,10 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
                 }
             };
         };
+    }
+
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
+            Timer timer, final Reducer<C, T> reducer) {
+        return new ConcurrentCallback<T>().reduce(queries, timer, reducer);
     }
 }

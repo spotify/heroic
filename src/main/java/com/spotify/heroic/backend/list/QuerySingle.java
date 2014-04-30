@@ -450,6 +450,6 @@ public class QuerySingle {
         if (cache == null)
             return null;
 
-        return cache.query(slice, aggregation);
+        return cache.get(slice, aggregation);
     }
 }
