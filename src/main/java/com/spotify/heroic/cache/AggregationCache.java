@@ -65,9 +65,8 @@ public class AggregationCache {
                 int first = makeIndex(sampling, slice.getStart());
                 int last = makeIndex(sampling, slice.getEnd());
 
-                for (int i = first; i < last; i++) {
+                for (int i = first; i <= last; i++) {
                     final DataPoint d = datapoints[i];
-                    log.info(i + " = " + d);
 
                     if (d == null) {
                         long f = makeTimestamp(key.getBase(), sampling, i);
@@ -85,6 +84,10 @@ public class AggregationCache {
             final List<TimeSerieSlice> allMisses = TimeSerieSlice
                     .joinAll(misses);
 
+            for (final TimeSerieSlice miss : allMisses) {
+                log.info("Missing: " + miss);
+            }
+
             return new CacheQueryResult(slice, aggregation,
                     resultDatapoints, allMisses);
         }
@@ -92,10 +95,10 @@ public class AggregationCache {
 
     public Callback<CacheQueryResult> query(TimeSerieSlice slice,
             final Aggregation aggregation) {
-        final List<Long> buckets = calculateBuckets(slice, aggregation);
+        final List<Long> bases = calculateBases(slice, aggregation);
         final Set<CacheKey> keys = new HashSet<CacheKey>();
 
-        for (final long base : buckets) {
+        for (final long base : bases) {
             keys.add(new CacheKey(slice.getTimeSerie(), aggregation, base));
         }
 
@@ -112,9 +115,10 @@ public class AggregationCache {
 
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
 
-        return callback.reduce(queries, queryTimer, new HandleGetResults(
-slice,
-                aggregation));
+        final HandleGetResults reducer = new HandleGetResults(slice,
+                aggregation);
+
+        return callback.reduce(queries, queryTimer, reducer);
     }
 
     public Callback<CachePutResult> put(TimeSerie timeSerie,
@@ -181,7 +185,7 @@ slice,
         return requests;
     }
 
-    private List<Long> calculateBuckets(TimeSerieSlice slice,
+    private List<Long> calculateBases(TimeSerieSlice slice,
             Aggregation aggregation) {
         final long width = aggregation.getWidth() * WIDTH;
         final long first = calculateBucket(width, slice.getStart());

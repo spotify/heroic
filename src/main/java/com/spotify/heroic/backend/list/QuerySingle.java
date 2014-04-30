@@ -68,7 +68,7 @@ public class QuerySingle {
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
 
-            final Aggregator.Session session = aggregators.session();
+            final Aggregator.Session session = aggregators.session(range);
 
             if (session == null) {
                 countTheProcessDataPoints(results);

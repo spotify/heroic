@@ -161,14 +161,14 @@ public class ListBackendManager implements BackendManager {
         }
 
         for (final Aggregation definition : definitions) {
-            instances.add(definition.build(range));
+            instances.add(definition.build());
         }
 
         final AggregatorGroup aggregators = new AggregatorGroup(instances,
                 definitions.get(0));
 
         final long memoryMagnitude = aggregators
-                .getCalculationMemoryMagnitude();
+                .getCalculationMemoryMagnitude(range);
 
         if (memoryMagnitude > maxAggregationMagnitude) {
             throw new QueryException(

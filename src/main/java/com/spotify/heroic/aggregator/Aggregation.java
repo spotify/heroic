@@ -8,7 +8,6 @@ import lombok.ToString;
 import com.netflix.astyanax.model.Composite;
 import com.spotify.heroic.model.Resolution;
 import com.spotify.heroic.model.ResolutionSerializer;
-import com.spotify.heroic.query.DateRange;
 
 @ToString(of = { "sampling" })
 @EqualsAndHashCode(of = { "sampling" })
@@ -34,7 +33,7 @@ public abstract class Aggregation {
         serializeRest(composite);
     }
 
-    public abstract Aggregator build(DateRange range);
+    public abstract Aggregator build();
 
     public abstract void serializeRest(Composite composite);
 }

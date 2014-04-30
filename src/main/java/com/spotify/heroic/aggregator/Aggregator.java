@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.Getter;
 
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.query.DateRange;
 
 public interface Aggregator {
     public static class Result {
@@ -50,7 +51,7 @@ public interface Aggregator {
      * 
      * @return
      */
-    public Session session();
+    public Session session(DateRange range);
 
     /**
      * Get a hint of how large the interval is that this aggregator will
@@ -68,5 +69,5 @@ public interface Aggregator {
      * 
      * @return
      */
-    public long getCalculationMemoryMagnitude();
+    public long getCalculationMemoryMagnitude(DateRange range);
 }

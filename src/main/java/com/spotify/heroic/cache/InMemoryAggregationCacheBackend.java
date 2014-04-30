@@ -53,8 +53,6 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         for (int i = 0; i < datapoints.length; i++) {
-            log.info(i + " = " + entry[i] + ":" + datapoints[i]);
-
             if (entry[i] != null || datapoints[i] == null)
                 continue;
 

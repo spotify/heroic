@@ -37,16 +37,23 @@ public abstract class SumBucketAggregator implements Aggregator {
         }
     }
 
-    private class Session implements Aggregator.Session {
+    private final class Session implements Aggregator.Session {
         private final AtomicLong sampleSize = new AtomicLong(0);
         private final AtomicLong outOfBounds = new AtomicLong(0);
 
         private final List<Bucket> buckets;
         private final Aggregation aggregation;
+        private final long offset;
+        private final long count;
+        private final long width;
 
-        public Session(List<Bucket> buckets, Aggregation aggregation) {
+        public Session(List<Bucket> buckets, Aggregation aggregation,
+                long offset, long count) {
             this.buckets = buckets;
             this.aggregation = aggregation;
+            this.offset = offset;
+            this.count = count;
+            this.width = aggregation.getWidth();
         }
 
         @Override
@@ -97,41 +104,42 @@ public abstract class SumBucketAggregator implements Aggregator {
     }
 
     private final Aggregation aggregation;
-    private final long count;
-    private final long width;
-    private final long offset;
+    private final Resolution resolution;
 
-    public SumBucketAggregator(Aggregation aggregation, DateRange range,
+    public SumBucketAggregator(Aggregation aggregation,
             Resolution resolution) {
+        this.aggregation = aggregation;
+        this.resolution = resolution;
+    }
+
+    @Override
+    public Aggregator.Session session(DateRange range) {
         final long width = resolution.getWidth();
         final long diff = range.diff();
         final long start = range.start();
         final long count = diff / width;
+        long offset = start - (start % width);
 
-        this.aggregation = aggregation;
-        this.count = count;
-        this.width = width;
-        this.offset = start - (start % width);
-    }
-
-    @Override
-    public Aggregator.Session session() {
-        final List<Bucket> buckets = initializeBuckets();
-        return new Session(buckets, aggregation);
+        final List<Bucket> buckets = initializeBuckets(count, offset, width);
+        return new Session(buckets, aggregation, offset, count);
     }
 
     @Override
     public long getIntervalHint() {
-        return width;
+        return resolution.getWidth();
     }
 
     @Override
-    public long getCalculationMemoryMagnitude() {
+    public long getCalculationMemoryMagnitude(DateRange range) {
+        final long width = resolution.getWidth();
+        final long diff = range.diff();
+        final long count = diff / width;
         final int bucketSize = Bucket.getApproximateMemoryUse();
+
         return count * bucketSize;
     }
 
-    private List<Bucket> initializeBuckets() {
+    private List<Bucket> initializeBuckets(long count, long offset, long width) {
         final List<Bucket> buckets = new ArrayList<Bucket>((int) count);
 
         for (int i = 0; i < count; i++) {

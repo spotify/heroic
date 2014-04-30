@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import com.spotify.heroic.aggregator.Aggregator.Result;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.query.DateRange;
 
 public class AggregatorGroup {
     private static final class Session implements Aggregator.Session {
@@ -72,17 +73,17 @@ public class AggregatorGroup {
         return max;
     }
 
-    public Aggregator.Session session() {
+    public Aggregator.Session session(DateRange range) {
         if (aggregators.isEmpty()) {
             return null;
         }
 
-        final Aggregator.Session first = aggregators.get(0).session();
+        final Aggregator.Session first = aggregators.get(0).session(range);
         final List<Aggregator.Session> rest = new ArrayList<Aggregator.Session>();
 
         for (final Aggregator aggregator : aggregators.subList(1,
                 aggregators.size())) {
-            rest.add(aggregator.session());
+            rest.add(aggregator.session(range));
         }
 
         return new Session(first, rest, aggregation);
@@ -95,10 +96,10 @@ public class AggregatorGroup {
      * 
      * @return
      */
-    public long getCalculationMemoryMagnitude() {
+    public long getCalculationMemoryMagnitude(DateRange range) {
         long sum = 0;
         for (final Aggregator aggregator : aggregators) {
-            sum += aggregator.getCalculationMemoryMagnitude();
+            sum += aggregator.getCalculationMemoryMagnitude(range);
         }
         return sum;
     }

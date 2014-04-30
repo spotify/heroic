@@ -70,7 +70,7 @@ public class QueryGroup {
                 final List<Callback<FetchDataPoints.Result>> callbacks = entry
                         .getValue();
 
-                final Aggregator.Session session = aggregators.session();
+                final Aggregator.Session session = aggregators.session(range);
 
                 final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
                 final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;

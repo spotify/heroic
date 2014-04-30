@@ -2,12 +2,11 @@ package com.spotify.heroic.aggregator;
 
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Resolution;
-import com.spotify.heroic.query.DateRange;
 
 public class SumAggregator extends SumBucketAggregator {
-    public SumAggregator(Aggregation aggregation, DateRange range,
+    public SumAggregator(Aggregation aggregation,
             Resolution resolution) {
-        super(aggregation, range, resolution);
+        super(aggregation, resolution);
     }
 
     @Override
