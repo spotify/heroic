@@ -5,6 +5,7 @@ import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
 
+import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FinishedCallback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
@@ -19,8 +20,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         public static final String TYPE = "!in-memory-cache";
 
         @Override
-        public AggregationCacheBackend build(String context)
-                throws ValidationException {
+        public AggregationCacheBackend build(String context,
+                MetricRegistry registry) throws ValidationException {
             return new InMemoryAggregationCacheBackend();
         }
     }

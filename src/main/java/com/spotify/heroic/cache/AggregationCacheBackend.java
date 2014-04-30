@@ -1,5 +1,6 @@
 package com.spotify.heroic.cache;
 
+import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
@@ -14,7 +15,7 @@ import com.spotify.heroic.yaml.ValidationException;
  */
 public interface AggregationCacheBackend {
     public static interface YAML {
-        AggregationCacheBackend build(String context)
+        AggregationCacheBackend build(String context, MetricRegistry registry)
                 throws ValidationException;
     }
 

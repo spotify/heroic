@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.netflix.astyanax.AstyanaxConfiguration;
@@ -31,9 +34,53 @@ import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.yaml.ValidationException;
 
 public class CassandraAggregationCacheBackend implements
         AggregationCacheBackend {
+
+    public static class YAML implements AggregationCacheBackend.YAML {
+        public static final String TYPE = "!cassandra-cache";
+
+        /**
+         * Cassandra seed nodes.
+         */
+        @Getter
+        @Setter
+        private String seeds;
+
+        /**
+         * Cassandra keyspace for aggregations data.
+         */
+        @Getter
+        @Setter
+        private String keyspace = "aggregations";
+
+        /**
+         * Max connections per host in the cassandra cluster.
+         */
+        @Getter
+        @Setter
+        private int maxConnectionsPerHost = 20;
+
+        /**
+         * Threads dedicated to asynchronous request handling.
+         */
+        @Getter
+        @Setter
+        private int threads = 20;
+
+        @Override
+        public AggregationCacheBackend build(String context,
+                MetricRegistry registry) throws ValidationException {
+            Utils.notEmpty(context + ".keyspace", this.keyspace);
+            Utils.notEmpty(context + ".seeds", this.seeds);
+            final Executor executor = Executors.newFixedThreadPool(threads);
+            return new CassandraAggregationCacheBackend(registry, executor,
+                    seeds, keyspace, maxConnectionsPerHost);
+        }
+    }
 
     private final Keyspace keyspace;
     private final Executor executor;
@@ -49,9 +96,10 @@ public class CassandraAggregationCacheBackend implements
     private final MetricRegistry metricsRegistry;
 
     public CassandraAggregationCacheBackend(MetricRegistry registry,
-            String seeds, String keyspace, int maxConnectionsPerHost) {
+            Executor executor, String seeds, String keyspace,
+            int maxConnectionsPerHost) {
         this.metricsRegistry = registry;
-        executor = Executors.newFixedThreadPool(20);
+        this.executor = executor;
         timerPool = new HashMap<String, Timer>();
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()

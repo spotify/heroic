@@ -52,7 +52,7 @@ public class HeroicConfigYAML {
         if (this.cache == null) {
             cache = null;
         } else {
-            cache = new AggregationCache(registry, this.cache.build("cache"));
+            cache = new AggregationCache(registry, this.cache.build("cache", registry));
         }
 
         final BackendManager backendManager = new ListBackendManager(backends,

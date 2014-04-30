@@ -17,6 +17,7 @@ import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.ListBackendManager;
 import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.CassandraAggregationCacheBackend;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 
 public class HeroicConfig {
@@ -36,7 +37,8 @@ public class HeroicConfig {
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
             Utils.makeType(KairosDBBackend.YAML.class),
-            Utils.makeType(InMemoryAggregationCacheBackend.YAML.class) };
+            Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+            Utils.makeType(CassandraAggregationCacheBackend.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
