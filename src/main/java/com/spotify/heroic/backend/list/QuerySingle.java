@@ -30,9 +30,9 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
-import com.spotify.heroic.query.DateRange;
 
 @Slf4j
 public class QuerySingle {

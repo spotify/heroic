@@ -6,8 +6,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.query.DateRange;
-
 @ToString(of = { "key", "tags" })
 @EqualsAndHashCode(of = { "key", "tags" })
 public class TimeSerie {
@@ -22,10 +20,10 @@ public class TimeSerie {
     }
 
     public TimeSerieSlice slice(DateRange range) {
-        return new TimeSerieSlice(this, range.start(), range.end());
+        return new TimeSerieSlice(this, range);
     }
 
     public TimeSerieSlice slice(long start, long end) {
-        return new TimeSerieSlice(this, start, end);
+        return new TimeSerieSlice(this, new DateRange(start, end));
     }
 }

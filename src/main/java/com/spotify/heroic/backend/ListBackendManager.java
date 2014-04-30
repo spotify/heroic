@@ -25,8 +25,8 @@ import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.query.DateRange;
 import com.spotify.heroic.query.MetricsQuery;
 
 public class ListBackendManager implements BackendManager {
@@ -92,7 +92,7 @@ public class ListBackendManager implements BackendManager {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
-        final DateRange range = query.getRange();
+        final DateRange range = query.getRange().buildDateRange();
 
         if (range == null)
             throw new QueryException("Range must be specified");

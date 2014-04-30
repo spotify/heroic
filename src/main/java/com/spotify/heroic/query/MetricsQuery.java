@@ -17,7 +17,7 @@ import com.spotify.heroic.aggregator.SumAggregation;
 
 @ToString(of = { "key", "tags", "range", "aggregators" })
 public class MetricsQuery {
-    private static final DateRange DEFAULT_DATE_RANGE = new RelativeDateRange(
+    private static final DateRangeQuery DEFAULT_DATE_RANGE = new RelativeDateRangeQuery(
             TimeUnit.DAYS, 7);
 
     @Getter
@@ -30,7 +30,7 @@ public class MetricsQuery {
     private final List<String> groupBy = new ArrayList<String>();
 
     @Getter
-    private final DateRange range = DEFAULT_DATE_RANGE;
+    private final DateRangeQuery range = DEFAULT_DATE_RANGE;
 
     @Getter
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")

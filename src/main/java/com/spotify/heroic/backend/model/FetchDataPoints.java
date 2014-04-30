@@ -7,7 +7,7 @@ import lombok.ToString;
 
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.query.DateRange;
+import com.spotify.heroic.model.DateRange;
 
 @ToString(of = { "rows", "range" })
 public class FetchDataPoints {

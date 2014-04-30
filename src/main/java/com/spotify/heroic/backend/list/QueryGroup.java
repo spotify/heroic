@@ -21,7 +21,7 @@ import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRowGroups;
-import com.spotify.heroic.query.DateRange;
+import com.spotify.heroic.model.DateRange;
 
 @Slf4j
 public class QueryGroup {

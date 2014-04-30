@@ -23,6 +23,7 @@ import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
@@ -64,8 +65,8 @@ public class AggregationCache {
 
             Collections.sort(datapoints);
 
-            final List<TimeSerieSlice> misses = TimeSerieSlice
-                    .joinAll(allMisses);
+            final List<TimeSerieSlice> misses = ignoreSmallSlices(TimeSerieSlice
+                    .joinAll(allMisses));
 
             for (final TimeSerieSlice miss : misses) {
                 log.info("Missing: " + miss);
@@ -75,6 +76,20 @@ public class AggregationCache {
                     datapoints, misses);
         }
 
+        private List<TimeSerieSlice> ignoreSmallSlices(
+                List<TimeSerieSlice> slices) {
+            List<TimeSerieSlice> result = new ArrayList<TimeSerieSlice>();
+
+            for (TimeSerieSlice slice : slices) {
+                if (slice.getWidth() <= aggregation.getWidth())
+                    continue;
+
+                result.add(slice);
+            }
+
+            return result;
+        }
+
         private void mergeResult(final List<DataPoint> datapoints,
                 final List<TimeSerieSlice> allMisses,
                 final CacheBackendGetResult result) {
@@ -82,9 +97,10 @@ public class AggregationCache {
 
             final long base = key.getBase();
             final long sampling = aggregation.getWidth();
+            final DateRange range = slice.getRange();
 
-            int first = makeIndex(sampling, slice.getStart());
-            int last = makeIndex(sampling, slice.getEnd());
+            int first = makeIndex(sampling, range.start());
+            int last = makeIndex(sampling, range.end());
 
             final DataPoint[] source = result.getDatapoints();
 
@@ -224,9 +240,10 @@ public class AggregationCache {
             Aggregation aggregation) {
         final long sampling = aggregation.getWidth();
         final long width = sampling * WIDTH;
+        final DateRange range = slice.getRange();
 
-        final long first = calculateBucket(sampling, slice.getStart());
-        final long last = calculateBucket(sampling, slice.getEnd() + width);
+        final long first = calculateBucket(sampling, range.start());
+        final long last = calculateBucket(sampling, range.end() + width);
 
         final List<Long> bases = new ArrayList<Long>();
 

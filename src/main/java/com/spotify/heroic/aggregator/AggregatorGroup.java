@@ -7,7 +7,7 @@ import lombok.Getter;
 
 import com.spotify.heroic.aggregator.Aggregator.Result;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.query.DateRange;
+import com.spotify.heroic.model.DateRange;
 
 public class AggregatorGroup {
     private static final class Session implements Aggregator.Session {

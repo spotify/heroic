@@ -9,8 +9,8 @@ import lombok.Getter;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Resolution;
-import com.spotify.heroic.query.DateRange;
 
 public abstract class SumBucketAggregator implements Aggregator {
     public static final class Bucket {

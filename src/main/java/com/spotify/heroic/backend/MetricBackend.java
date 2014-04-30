@@ -8,7 +8,7 @@ import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
-import com.spotify.heroic.query.DateRange;
+import com.spotify.heroic.model.DateRange;
 
 public interface MetricBackend extends Backend {
     /**

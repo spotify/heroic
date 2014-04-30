@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Getter;
 
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.query.DateRange;
+import com.spotify.heroic.model.DateRange;
 
 public interface Aggregator {
     public static class Result {

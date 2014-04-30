@@ -21,9 +21,9 @@ public class TimeSerieSliceTest {
     @Test
     public void testEquality() throws Exception {
         final TimeSerie timeSerieA = Mockito.mock(TimeSerie.class);
-        final TimeSerieSlice a = new TimeSerieSlice(timeSerieA, 0, 42);
-        final TimeSerieSlice b = new TimeSerieSlice(timeSerieA, 0, 42);
-        final TimeSerieSlice c = new TimeSerieSlice(timeSerieA, 0, 50);
+        final TimeSerieSlice a = new TimeSerieSlice(timeSerieA, new DateRange(0, 42));
+        final TimeSerieSlice b = new TimeSerieSlice(timeSerieA, new DateRange(0, 42));
+        final TimeSerieSlice c = new TimeSerieSlice(timeSerieA, new DateRange(0, 50));
         Assert.assertEquals(a, b);
         Assert.assertNotEquals(a, c);
     }
@@ -31,8 +31,8 @@ public class TimeSerieSliceTest {
     @Test
     public void testSlice() throws Exception {
         final TimeSerieSlice sliceA = TS.slice(0, 1000);
-        Assert.assertEquals(0, sliceA.getStart());
-        Assert.assertEquals(1000, sliceA.getEnd());
+        Assert.assertEquals(0, sliceA.getRange().start());
+        Assert.assertEquals(1000, sliceA.getRange().end());
     }
 
     @Test
@@ -41,8 +41,8 @@ public class TimeSerieSliceTest {
         final TimeSerieSlice sliceB = TS.slice(1000, 2000);
         final TimeSerieSlice sliceC = sliceA.join(sliceB);
 
-        Assert.assertEquals(sliceA.getStart(), sliceC.getStart());
-        Assert.assertEquals(sliceB.getEnd(), sliceC.getEnd());
+        Assert.assertEquals(sliceA.getRange().start(), sliceC.getRange().start());
+        Assert.assertEquals(sliceB.getRange().end(), sliceC.getRange().end());
     }
 
     @Test

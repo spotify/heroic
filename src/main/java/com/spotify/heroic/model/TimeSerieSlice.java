@@ -10,27 +10,17 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.query.AbsoluteDateRange;
-import com.spotify.heroic.query.DateRange;
-
-@ToString(of = { "timeSerie", "start", "end" })
-@EqualsAndHashCode(of = { "timeSerie", "start", "end" })
+@ToString(of = { "timeSerie", "range" })
+@EqualsAndHashCode(of = { "timeSerie", "range" })
 public class TimeSerieSlice {
     @Getter
     private final TimeSerie timeSerie;
     @Getter
-    private final long start;
-    @Getter
-    private final long end;
+    private final DateRange range;
 
-    public TimeSerieSlice(TimeSerie timeSerie, long start, long end) {
+    public TimeSerieSlice(TimeSerie timeSerie, DateRange range) {
         this.timeSerie = timeSerie;
-        this.start = start;
-        this.end = end;
-    }
-
-    public DateRange getRange() {
-        return new AbsoluteDateRange(start, end);
+        this.range = range;
     }
 
     public TimeSerieSlice join(TimeSerieSlice other) {
@@ -39,10 +29,7 @@ public class TimeSerieSlice {
                     + other + " does not overlap");
         }
 
-        long start = Math.min(this.start, other.start);
-        long end = Math.max(this.end, other.end);
-
-        return new TimeSerieSlice(timeSerie, start, end);
+        return new TimeSerieSlice(timeSerie, range.join(other.range));
     }
 
     public boolean overlap(TimeSerieSlice other) {
@@ -50,11 +37,12 @@ public class TimeSerieSlice {
             return false;
         }
 
-        if (end < other.start) {
+        /* cannot be determined. */
+        if (range == null || other.range == null) {
             return false;
         }
 
-        if (start > other.end) {
+        if (range.overlap(other.range)) {
             return false;
         }
 
@@ -72,13 +60,13 @@ public class TimeSerieSlice {
      * @return
      */
     public TimeSerieSlice modify(long start, long end) {
-        return new TimeSerieSlice(timeSerie, start, end);
+        return new TimeSerieSlice(timeSerie, new DateRange(start, end));
     }
 
     private static final Comparator<TimeSerieSlice> JOIN_ALL_COMPARATOR = new Comparator<TimeSerieSlice>() {
         @Override
         public int compare(TimeSerieSlice o1, TimeSerieSlice o2) {
-            return Long.compare(o1.start, o2.start);
+            return o1.range.compareTo(o2.range);
         }
     };
 
@@ -114,7 +102,7 @@ public class TimeSerieSlice {
             final List<TimeSerieSlice> joined, final TimeSerieSlice first,
             Iterator<TimeSerieSlice> iterator) {
 
-        long end = first.getEnd();
+        long end = first.range.end();
 
         while (iterator.hasNext()) {
             final TimeSerieSlice tail = iterator.next();
@@ -125,18 +113,22 @@ public class TimeSerieSlice {
                         + " from different time series");
             }
 
-            if (tail.getStart() > end) {
-                joined.add(new TimeSerieSlice(first.getTimeSerie(), first
-                        .getStart(), end));
+            if (tail.range.start() > end) {
+                final DateRange range = new DateRange(first
+                        .range.start(), end);
+                joined.add(new TimeSerieSlice(first.getTimeSerie(), range));
                 return tail;
             }
 
-            end = Math.max(end, tail.getEnd());
+            end = Math.max(end, tail.range.end());
         }
 
-        joined.add(new TimeSerieSlice(first.getTimeSerie(), first.getStart(),
-                end));
-
+        final DateRange range = new DateRange(first.range.start(), end);
+        joined.add(new TimeSerieSlice(first.getTimeSerie(), range));
         return null;
+    }
+
+    public long getWidth() {
+        return range.diff();
     }
 }
