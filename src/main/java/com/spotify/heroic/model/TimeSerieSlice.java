@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -138,5 +139,9 @@ public class TimeSerieSlice {
 
     public boolean contains(long f, long t) {
         return f <= t && range.contains(f) && range.contains(t);
+    }
+
+    public TimeSerieSlice modifyTags(Map<String, String> tags) {
+        return new TimeSerieSlice(timeSerie.modifyTags(tags), range);
     }
 }

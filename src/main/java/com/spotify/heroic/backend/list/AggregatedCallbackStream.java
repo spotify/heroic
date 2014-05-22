@@ -2,8 +2,8 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregator.Aggregator;
@@ -14,18 +14,15 @@ import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
+import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
+@RequiredArgsConstructor
 public class AggregatedCallbackStream implements
         Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> {
-    private final Map<String, String> tags;
+    private final TimeSerieSlice slice;
     private final Aggregator.Session session;
-
-    AggregatedCallbackStream(Map<String, String> tags,
-            Aggregator.Session session) {
-        this.tags = tags;
-        this.session = session;
-    }
 
     @Override
     public void finish(CallbackStream<FetchDataPoints.Result> stream,
@@ -54,9 +51,10 @@ public class AggregatedCallbackStream implements
         final Aggregator.Result result = session.result();
         final RowStatistics rowStatistics = new RowStatistics(successful,
                 failed, cancelled);
+        final TimeSerie timeSerie = slice.getTimeSerie();
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(tags, result.getResult()));
+        groups.add(new DataPointGroup(timeSerie.getTags(), result.getResult()));
 
         return new QueryMetricsResult(groups, result.getSampleSize(),
                 result.getOutOfBounds(), rowStatistics);

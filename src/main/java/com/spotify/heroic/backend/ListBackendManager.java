@@ -61,7 +61,7 @@ public class ListBackendManager implements BackendManager {
                 maxQueriableDataPoints, cache);
         final Timer queryMetricsGroup = registry.timer(MetricRegistry.name(
                 "heroic", "query-metrics", "group"));
-        this.queryGroup = new QueryGroup(metricBackends, queryMetricsGroup);
+        this.queryGroup = new QueryGroup(metricBackends, queryMetricsGroup, cache);
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {

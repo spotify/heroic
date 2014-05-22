@@ -3,7 +3,6 @@ package com.spotify.heroic.backend.list;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -17,16 +16,18 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
 public final class SimpleCallbackStream implements
         Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> {
-    private final Map<String, String> tags;
+    private final TimeSerieSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
 
-    SimpleCallbackStream(Map<String, String> tags) {
-        this.tags = tags;
+    SimpleCallbackStream(TimeSerieSlice slice) {
+        this.slice = slice;
     }
 
     @Override
@@ -53,12 +54,13 @@ public final class SimpleCallbackStream implements
     public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
         final List<DataPoint> datapoints = joinRawResults();
+        final TimeSerie timeSerie = slice.getTimeSerie();
 
         final RowStatistics rowStatistics = new RowStatistics(successful,
                 failed, cancelled);
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(tags, datapoints));
+        groups.add(new DataPointGroup(timeSerie.getTags(), datapoints));
 
         return new QueryMetricsResult(groups, datapoints.size(), 0,
                 rowStatistics);

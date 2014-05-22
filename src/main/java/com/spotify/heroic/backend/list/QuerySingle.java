@@ -442,13 +442,12 @@ public class QuerySingle {
 
     private Callback<CacheQueryResult> checkCache(FindRows criteria,
             AggregatorGroup aggregator) {
-        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(),
-                criteria.getFilter());
-        final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
-
         if (cache == null)
             return null;
 
+        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(),
+                criteria.getFilter());
+        final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
         return cache.get(slice, aggregator);
     }
 }

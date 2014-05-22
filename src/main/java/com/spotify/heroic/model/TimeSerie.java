@@ -1,5 +1,6 @@
 package com.spotify.heroic.model;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import lombok.EqualsAndHashCode;
@@ -25,5 +26,11 @@ public class TimeSerie {
 
     public TimeSerieSlice slice(long start, long end) {
         return new TimeSerieSlice(this, new DateRange(start, end));
+    }
+
+    public TimeSerie modifyTags(Map<String, String> tags) {
+        final Map<String, String> modifiedTags = new HashMap<String, String>(this.tags);
+        modifiedTags.putAll(tags);
+        return new TimeSerie(key, modifiedTags);
     }
 }
