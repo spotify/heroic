@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
@@ -11,6 +12,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.query.MetricsQuery;
 
 public interface BackendManager {
+    @ToString(of={"tags", "datapoints"})
     public static final class DataPointGroup {
         @Getter
         private final Map<String, String> tags;

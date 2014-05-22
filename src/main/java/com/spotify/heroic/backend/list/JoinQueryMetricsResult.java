@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
@@ -15,12 +17,17 @@ import com.spotify.heroic.backend.RowStatistics;
  * 
  * @author udoprog
  */
+@Slf4j
 public final class JoinQueryMetricsResult implements
         Callback.Reducer<QueryMetricsResult, QueryMetricsResult> {
     @Override
     public QueryMetricsResult done(Collection<QueryMetricsResult> results,
             Collection<Throwable> errors, Collection<CancelReason> cancelled)
             throws Exception {
+        for (Throwable error : errors) {
+            log.error("Query failed", error);
+        }
+
         final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();
 
         long sampleSize = 0;

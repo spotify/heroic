@@ -15,15 +15,19 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
+import com.spotify.heroic.async.CallbackHandle;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.backend.RowStatistics;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
@@ -60,7 +64,57 @@ public class QueryGroup {
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
             final Map<TimeSerieSlice, List<PreparedGroup>> groups = prepareGroups(results);
-            callback.reduce(executeQueries(groups), timer, new JoinQueryMetricsResult());
+
+            if (cache == null) {
+                callback.reduce(executeQueries(groups), timer, new JoinQueryMetricsResult());
+                return;
+            }
+
+            callback.reduce(executeCacheQueries(groups), timer, new JoinQueryMetricsResult());
+        }
+
+        private List<Callback<QueryMetricsResult>> executeCacheQueries(
+                Map<TimeSerieSlice, List<PreparedGroup>> groups) {
+            final List<Callback<QueryMetricsResult>> callbacks = new ArrayList<Callback<QueryMetricsResult>>();
+
+            for (Map.Entry<TimeSerieSlice, List<PreparedGroup>> entry : groups.entrySet()) {
+                final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
+                final TimeSerieSlice slice = entry.getKey();
+                final List<PreparedGroup> preparedGroups = entry.getValue();
+
+                callbacks.add(callback);
+
+                cache.get(slice, aggregator).register(new CallbackHandle<CacheQueryResult, QueryMetricsResult>("group.cache-query", timer, callback) {
+                    public void execute(Callback<QueryMetricsResult> callback, CacheQueryResult cacheResult) {
+                        final List<Callback<QueryMetricsResult>> missQueries = new ArrayList<Callback<QueryMetricsResult>>();
+
+                        for (final TimeSerieSlice slice : cacheResult.getMisses()) {
+                            missQueries.add(executeSingle(slice, preparedGroups));
+                        }
+
+                        /**
+                         * EVERYTHING in cache!
+                         */
+                        if (missQueries.isEmpty()) {
+                            final DataPointGroup group = new DataPointGroup(slice.getTimeSerie().getTags(), cacheResult.getResult());
+                            final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+
+                            groups.add(group);
+
+                            callback.finish(new QueryMetricsResult(groups, 0, 0, new RowStatistics(0, 0, 0)));
+                            return;
+                        }
+
+                        /**
+                         * Merge with actual queried data.
+                         */
+                        callback.reduce(missQueries, timer, new HandleCacheMisses(
+                                cache, cacheResult, false));
+                    }
+                });
+            }
+
+            return callbacks;
         }
 
         private final Map<TimeSerieSlice, List<PreparedGroup>> prepareGroups(
@@ -95,6 +149,29 @@ public class QueryGroup {
             return mappedQueries;
         }
 
+        private Callback<QueryMetricsResult> executeSingle(TimeSerieSlice slice, List<PreparedGroup> preparedGroups) {
+            final Aggregator.Session session = aggregator.session(slice.getRange());
+
+            final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
+            final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
+
+            if (session == null) {
+                reducer = new SimpleCallbackStream(slice);
+            } else {
+                reducer = new AggregatedCallbackStream(slice, session);
+            }
+
+            final List<Callback<FetchDataPoints.Result>> backendQueries = new ArrayList<Callback<FetchDataPoints.Result>>();
+
+            for (final PreparedGroup prepared : preparedGroups) {
+                final MetricBackend backend = prepared.getBackend();
+                backendQueries.addAll(
+                        backend.query(new FetchDataPoints(prepared.getRows(), slice.getRange())));
+            }
+
+            return partial.reduce(backendQueries, timer, reducer);
+        }
+
         private List<Callback<QueryMetricsResult>> executeQueries(
                 final Map<TimeSerieSlice, List<PreparedGroup>> groups)
                 throws Exception {
@@ -103,27 +180,7 @@ public class QueryGroup {
             for (final Map.Entry<TimeSerieSlice, List<PreparedGroup>> entry : groups.entrySet()) {
                 final TimeSerieSlice slice = entry.getKey();
                 final List<PreparedGroup> preparedGroups = entry.getValue();
-
-                final Aggregator.Session session = aggregator.session(slice.getRange());
-
-                final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
-                final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
-
-                if (session == null) {
-                    reducer = new SimpleCallbackStream(slice);
-                } else {
-                    reducer = new AggregatedCallbackStream(slice, session);
-                }
-
-                final List<Callback<FetchDataPoints.Result>> backendQueries = new ArrayList<Callback<FetchDataPoints.Result>>();
-
-                for (final PreparedGroup prepared : preparedGroups) {
-                    final MetricBackend backend = prepared.getBackend();
-                    backendQueries.addAll(
-                            backend.query(new FetchDataPoints(prepared.getRows(), slice.getRange())));
-                }
-
-                queries.add(partial.reduce(backendQueries, timer, reducer));
+                queries.add(executeSingle(slice, preparedGroups));
             }
 
             return queries;
