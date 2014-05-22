@@ -37,7 +37,7 @@ public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
         final Composite composite = Composite.fromByteBuffer(byteBuffer);
 
         final String key = composite.get(0, keySerializer);
-        final Map<String, String> tags = composite.get(0, tagsSerializer);
+        final Map<String, String> tags = composite.get(1, tagsSerializer);
 
         return new TimeSerie(key, tags);
     }

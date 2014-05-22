@@ -1,11 +1,14 @@
 package com.spotify.heroic.cache;
 
+import java.util.List;
+
 import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
+import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
-import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -29,7 +32,7 @@ public interface AggregationCacheBackend {
      *         null values to indicate that entries are missing.
      * @throws AggregationCacheException
      */
-    public Callback<CacheBackendGetResult> get(CacheKey key)
+    public Callback<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
             throws AggregationCacheException;
 
     /**
@@ -47,6 +50,5 @@ public interface AggregationCacheBackend {
      *             An early throw exception, if the backend is unable to prepare
      *             the request.
      */
-    public Callback<CacheBackendPutResult> put(CacheKey key,
-            DataPoint[] datapoints) throws AggregationCacheException;
+    public Callback<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints) throws AggregationCacheException;
 }

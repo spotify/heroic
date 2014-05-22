@@ -12,6 +12,7 @@ import lombok.Getter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregation;
+import com.spotify.heroic.aggregator.AggregationGroup;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
@@ -100,18 +101,27 @@ public class ListBackendManager implements BackendManager {
         if (!(range.start() < range.end()))
             throw new QueryException("Range start must come before its end");
 
-        final AggregatorGroup aggregators = buildAggregators(definitions, range);
+        final AggregationGroup aggregation = new AggregationGroup(definitions);
+        final AggregatorGroup aggregator = aggregation.build();
 
-        final DateRange rounded = roundRange(aggregators, range);
+        final long memoryMagnitude = aggregator
+                .getCalculationMemoryMagnitude(range);
+
+        if (memoryMagnitude > maxAggregationMagnitude) {
+            throw new QueryException(
+                    "This query would result in too many datapoints");
+        }
+
+        final DateRange rounded = roundRange(aggregator, range);
 
         if (groupBy != null && !groupBy.isEmpty()) {
             final FindRowGroups criteria = new FindRowGroups(key, rounded,
                     tags, groupBy);
-            return queryGroup.execute(criteria, aggregators);
+            return queryGroup.execute(criteria, aggregator);
         }
 
         final FindRows criteria = new FindRows(key, rounded, tags);
-        return querySingle.execute(criteria, aggregators);
+        return querySingle.execute(criteria, aggregator);
     }
 
     @Override
@@ -152,32 +162,6 @@ public class ListBackendManager implements BackendManager {
                 resultReducer);
     }
 
-    private AggregatorGroup buildAggregators(List<Aggregation> definitions,
-            DateRange range) throws QueryException {
-        final List<Aggregator> instances = new ArrayList<Aggregator>();
-
-        if (definitions == null || definitions.isEmpty()) {
-            return new AggregatorGroup(instances, null);
-        }
-
-        for (final Aggregation definition : definitions) {
-            instances.add(definition.build());
-        }
-
-        final AggregatorGroup aggregators = new AggregatorGroup(instances,
-                definitions.get(0));
-
-        final long memoryMagnitude = aggregators
-                .getCalculationMemoryMagnitude(range);
-
-        if (memoryMagnitude > maxAggregationMagnitude) {
-            throw new QueryException(
-                    "This query would result in too many datapoints");
-        }
-
-        return aggregators;
-    }
-
     /**
      * Check if the query wants to hint at a specific interval. If that is the
      * case, round the provided date to the specified interval.
@@ -185,8 +169,8 @@ public class ListBackendManager implements BackendManager {
      * @param query
      * @return
      */
-    private DateRange roundRange(AggregatorGroup aggregators, DateRange range) {
-        final long hint = aggregators.getIntervalHint();
+    private DateRange roundRange(AggregatorGroup aggregator, DateRange range) {
+        final long hint = aggregator.getWidth();
 
         if (hint > 0) {
             return range.roundToInterval(hint);

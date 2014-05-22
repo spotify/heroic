@@ -18,7 +18,7 @@ import com.spotify.heroic.backend.ListBackendManager;
 import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
-import com.spotify.heroic.cache.cassandra.CassandraAggregationCacheBackend;
+import com.spotify.heroic.cache.cassandra.CassandraCache;
 
 public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
@@ -38,7 +38,7 @@ public class HeroicConfig {
     private static final TypeDescription[] TYPES = new TypeDescription[] {
             Utils.makeType(KairosDBBackend.YAML.class),
             Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-            Utils.makeType(CassandraAggregationCacheBackend.YAML.class) };
+            Utils.makeType(CassandraCache.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {

@@ -37,14 +37,14 @@ public class QueryGroup {
             CallbackGroup.Handle<FindRowGroups.Result> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
-        private final AggregatorGroup aggregators;
+        private final AggregatorGroup aggregator;
 
         private FindRowGroupsHandle(DateRange range,
                 Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators) {
+                AggregatorGroup aggregator) {
             this.range = range;
             this.callback = callback;
-            this.aggregators = aggregators;
+            this.aggregator = aggregator;
         }
 
         @Override
@@ -70,7 +70,7 @@ public class QueryGroup {
                 final List<Callback<FetchDataPoints.Result>> callbacks = entry
                         .getValue();
 
-                final Aggregator.Session session = aggregators.session(range);
+                final Aggregator.Session session = aggregator.session(range);
 
                 final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
                 final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
@@ -118,7 +118,7 @@ public class QueryGroup {
     }
 
     public Callback<QueryMetricsResult> execute(FindRowGroups criteria,
-            final AggregatorGroup aggregators) {
+            final AggregatorGroup aggregator) {
 
         final List<Callback<FindRowGroups.Result>> queries = new ArrayList<Callback<FindRowGroups.Result>>();
 
@@ -135,7 +135,7 @@ public class QueryGroup {
         final DateRange range = criteria.getRange();
 
         final CallbackGroup<FindRowGroups.Result> group = new CallbackGroup<FindRowGroups.Result>(
-                queries, new FindRowGroupsHandle(range, callback, aggregators));
+                queries, new FindRowGroupsHandle(range, callback, aggregator));
 
         final Timer.Context context = timer.time();
 

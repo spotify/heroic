@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import com.spotify.heroic.aggregator.Aggregation;
+import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerieSlice;
 
@@ -15,7 +16,7 @@ public class CacheQueryResult {
     private final TimeSerieSlice slice;
 
     @Getter
-    private final Aggregation aggregation;
+    private final AggregatorGroup aggregator;
 
     /**
      * Collected results so far. Should be joined by the result from the above
@@ -30,10 +31,10 @@ public class CacheQueryResult {
     @Getter
     private final List<TimeSerieSlice> misses;
 
-    public CacheQueryResult(TimeSerieSlice slice, Aggregation aggregation,
+    public CacheQueryResult(TimeSerieSlice slice, AggregatorGroup aggregator,
             List<DataPoint> result, List<TimeSerieSlice> misses) {
         this.slice = slice;
-        this.aggregation = aggregation;
+        this.aggregator = aggregator;
         this.result = result;
         this.misses = misses;
     }

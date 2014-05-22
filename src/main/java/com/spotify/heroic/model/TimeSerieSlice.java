@@ -60,7 +60,11 @@ public class TimeSerieSlice {
      * @return
      */
     public TimeSerieSlice modify(long start, long end) {
-        return new TimeSerieSlice(timeSerie, new DateRange(start, end));
+        return modify(new DateRange(start, end));
+    }
+
+    public TimeSerieSlice modify(DateRange range) {
+        return new TimeSerieSlice(timeSerie, this.range.modify(range));
     }
 
     private static final Comparator<TimeSerieSlice> JOIN_ALL_COMPARATOR = new Comparator<TimeSerieSlice>() {
@@ -130,5 +134,9 @@ public class TimeSerieSlice {
 
     public long getWidth() {
         return range.diff();
+    }
+
+    public boolean contains(long f, long t) {
+        return f <= t && range.contains(f) && range.contains(t);
     }
 }

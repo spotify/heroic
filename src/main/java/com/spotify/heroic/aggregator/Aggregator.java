@@ -37,13 +37,6 @@ public interface Aggregator {
          * Get the result of this aggregator.
          */
         public Result result();
-
-        /**
-         * Get the aggregation type this session belongs to.
-         * 
-         * @return The aggregation type this session belongs to.
-         */
-        public Aggregation getAggregation();
     }
 
     /**
@@ -60,7 +53,7 @@ public interface Aggregator {
      * @return 0 if no interval is used, otherwise a positive value indicating
      *         the millisecond interval.
      */
-    public long getIntervalHint();
+    public long getWidth();
 
     /**
      * Get a guesstimate of how big of a memory the aggregation would need. This

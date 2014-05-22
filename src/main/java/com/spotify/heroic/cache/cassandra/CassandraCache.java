@@ -1,6 +1,7 @@
 package com.spotify.heroic.cache.cassandra;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -24,14 +25,16 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCacheBackend;
 import com.spotify.heroic.cache.AggregationCacheException;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
+import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
-import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
-public class CassandraAggregationCacheBackend implements
+public class CassandraCache implements
         AggregationCacheBackend {
+    public static final int WIDTH = 1200;
 
     public static class YAML implements AggregationCacheBackend.YAML {
         public static final String TYPE = "!cassandra-cache";
@@ -70,7 +73,7 @@ public class CassandraAggregationCacheBackend implements
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new CassandraAggregationCacheBackend(registry, executor,
+            return new CassandraCache(registry, executor,
                     seeds, keyspace, maxConnectionsPerHost);
         }
     }
@@ -85,7 +88,7 @@ public class CassandraAggregationCacheBackend implements
     private final Map<String, Timer> timerPool;
     private final MetricRegistry metricsRegistry;
 
-    public CassandraAggregationCacheBackend(MetricRegistry registry,
+    public CassandraCache(MetricRegistry registry,
             Executor executor, String seeds, String keyspace,
             int maxConnectionsPerHost) {
         this.metricsRegistry = registry;
@@ -108,13 +111,13 @@ public class CassandraAggregationCacheBackend implements
     }
 
     @Override
-    public Callback<CacheBackendGetResult> get(final CacheKey key)
+    public Callback<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range)
             throws AggregationCacheException {
         final ConcurrentCallback<CacheBackendGetResult> callback = new ConcurrentCallback<CacheBackendGetResult>();
         final String taskName = "get-cache-row";
         final Timer timer = getTimer(taskName);
 
-        executor.execute(new CacheGetRunnable(taskName, timer, callback, keyspace, CQL3_CF, key));
+        executor.execute(new CacheGetRunnable(taskName, timer, callback, keyspace, CQL3_CF, key, range));
 
         return callback;
     }
@@ -132,14 +135,14 @@ public class CassandraAggregationCacheBackend implements
     }
 
     @Override
-    public Callback<CacheBackendPutResult> put(final CacheKey key,
-            final DataPoint[] datapoints) throws AggregationCacheException {
+    public Callback<CacheBackendPutResult> put(final CacheBackendKey key,
+            final List<DataPoint> datapoints) throws AggregationCacheException {
         final ConcurrentCallback<CacheBackendPutResult> callback = new ConcurrentCallback<CacheBackendPutResult>();
         final String taskName = "put-cache-row";
         final Timer timer = getTimer(taskName);
 
-        executor.execute(new CachePutRunnable(taskName, timer, callback, keyspace, CQL3_CF, key, datapoints));
 
+        executor.execute(new CachePutRunnable(taskName, timer, callback, keyspace, CQL3_CF, key, datapoints));
         return callback;
     }
 }

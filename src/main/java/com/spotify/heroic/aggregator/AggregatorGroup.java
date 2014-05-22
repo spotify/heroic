@@ -3,23 +3,25 @@ package com.spotify.heroic.aggregator;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 import com.spotify.heroic.aggregator.Aggregator.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
+@ToString(of = { "aggregators" })
+@EqualsAndHashCode(of = { "aggregators" })
 public class AggregatorGroup {
     private static final class Session implements Aggregator.Session {
         private final Aggregator.Session first;
         private final Iterable<Aggregator.Session> rest;
-        private final Aggregation aggregation;
 
         public Session(Aggregator.Session first,
-                Iterable<Aggregator.Session> rest, Aggregation aggregation) {
+                Iterable<Aggregator.Session> rest) {
             this.first = first;
             this.rest = rest;
-            this.aggregation = aggregation;
         }
 
         @Override
@@ -42,28 +44,27 @@ public class AggregatorGroup {
 
             return new Result(datapoints, sampleSize, outOfBounds);
         }
-
-        @Override
-        public Aggregation getAggregation() {
-            return aggregation;
-        }
     }
+
+    @Getter
+    private final AggregationGroup aggregationGroup;
 
     private final List<Aggregator> aggregators;
 
     @Getter
-    private final Aggregation aggregation;
+    private final long width;
 
-    public AggregatorGroup(List<Aggregator> aggregators, Aggregation aggregation) {
+    public AggregatorGroup(AggregationGroup aggregationGroup, List<Aggregator> aggregators) {
+        this.aggregationGroup = aggregationGroup;
         this.aggregators = aggregators;
-        this.aggregation = aggregation;
+        this.width = calculateWidth(aggregators);
     }
 
-    public long getIntervalHint() {
+    private long calculateWidth(List<Aggregator> aggregators) {
         long max = 0;
 
         for (final Aggregator aggregator : aggregators) {
-            final long hint = aggregator.getIntervalHint();
+            final long hint = aggregator.getWidth();
 
             if (hint > max) {
                 max = hint;
@@ -86,7 +87,7 @@ public class AggregatorGroup {
             rest.add(aggregator.session(range));
         }
 
-        return new Session(first, rest, aggregation);
+        return new Session(first, rest);
     }
 
     /**

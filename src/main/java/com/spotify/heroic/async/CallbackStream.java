@@ -102,7 +102,6 @@ public class CallbackStream<T> implements Callback.Cancellable {
         if (value != 0)
             return;
 
-        log.info("Done");
         handleDone(handle);
     }
 

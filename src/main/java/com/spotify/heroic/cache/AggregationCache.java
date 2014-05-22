@@ -1,36 +1,26 @@
 package com.spotify.heroic.cache;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.spotify.heroic.aggregator.Aggregation;
+import com.spotify.heroic.aggregator.Aggregator;
+import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
+import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
-import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
-@Slf4j
 public class AggregationCache {
-    public static final int WIDTH = 1200;
-
     private final AggregationCacheBackend backend;
     private final Timer getTimer;
     private final Timer putTimer;
@@ -42,220 +32,106 @@ public class AggregationCache {
         this.putTimer = registry.timer("aggregation-cache.put");
     }
 
-    private static final class HandleGetResults implements
-            Callback.Reducer<CacheBackendGetResult, CacheQueryResult> {
+    private final class BackendCacheGetHandle implements
+            Callback.Handle<CacheBackendGetResult> {
+        private final Callback<CacheQueryResult> callback;
         private final TimeSerieSlice slice;
-        private final Aggregation aggregation;
+        private final AggregatorGroup aggregator;
 
-        public HandleGetResults(TimeSerieSlice slice, Aggregation aggregation) {
+        private BackendCacheGetHandle(Callback<CacheQueryResult> callback, TimeSerieSlice slice, AggregatorGroup aggregator) {
+            this.callback = callback;
             this.slice = slice;
-            this.aggregation = aggregation;
+            this.aggregator = aggregator;
         }
 
         @Override
-        public CacheQueryResult done(Collection<CacheBackendGetResult> results,
-                Collection<Throwable> errors, Collection<CancelReason> cancelled)
-                throws Exception {
-            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-            final List<TimeSerieSlice> allMisses = new ArrayList<TimeSerieSlice>();
-
-            for (final CacheBackendGetResult result : results) {
-                mergeResult(datapoints, allMisses, result);
-            }
-
-            Collections.sort(datapoints);
-
-            final List<TimeSerieSlice> misses = ignoreSmallSlices(TimeSerieSlice
-                    .joinAll(allMisses));
-
-            for (final TimeSerieSlice miss : misses) {
-                log.info("Missing: " + miss);
-            }
-
-            return new CacheQueryResult(slice, aggregation,
-                    datapoints, misses);
+        public void cancel(CancelReason reason) throws Exception {
+            callback.cancel(reason);
         }
 
-        private List<TimeSerieSlice> ignoreSmallSlices(
-                List<TimeSerieSlice> slices) {
-            List<TimeSerieSlice> result = new ArrayList<TimeSerieSlice>();
-
-            for (TimeSerieSlice slice : slices) {
-                if (slice.getWidth() <= aggregation.getWidth())
-                    continue;
-
-                result.add(slice);
-            }
-
-            return result;
+        @Override
+        public void error(Throwable e) throws Exception {
+            callback.fail(e);
         }
 
-        private void mergeResult(final List<DataPoint> datapoints,
-                final List<TimeSerieSlice> allMisses,
-                final CacheBackendGetResult result) {
-            final CacheKey key = result.getCacheKey();
-
-            final long base = key.getBase();
-            final long sampling = aggregation.getWidth();
+        @Override
+        public void finish(CacheBackendGetResult result) throws Exception {
+            final long width = aggregator.getWidth();
             final DateRange range = slice.getRange();
+            final long end = range.getEnd() - range.getEnd() % width;
 
-            int first = makeIndex(sampling, range.start());
-            int last = makeIndex(sampling, range.end());
+            final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
+            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+            final List<DataPoint> cached = result.getDatapoints();
 
-            final DataPoint[] source = result.getDatapoints();
+            if (!cached.isEmpty()) {
+                long expected = range.getStart() - range.getStart() % width;
 
-            if (first > last || last >= source.length) {
-                allMisses.add(slice);
-                return;
-            }
+                for (final DataPoint d : result.getDatapoints()) {
+                    final long start = expected;
 
-            for (int i = first; i <= last; i++) {
-                final DataPoint d = source[i];
+                    while (expected != d.getTimestamp() && expected < end) {
+                        expected += width;
+                    }
 
-                if (d != null) {
-                    datapoints.add(d);
-                    continue;
+                    if (expected != start)
+                        misses.add(slice.modify(start, expected));
+
+                    if (expected == d.getTimestamp())
+                        datapoints.add(d);
+
+                    expected += width;
                 }
-
-                long f = makeTimestamp(base, sampling, i);
-                long t = makeTimestamp(base, sampling, i + 1);
-
-                allMisses.add(slice.modify(f, t));
+            } else {
+                misses.add(slice);
             }
-        }
-    }
 
-    private static final class HandlePutResults implements
-            Callback.Reducer<CacheBackendPutResult, CachePutResult> {
-        @Override
-        public CachePutResult done(Collection<CacheBackendPutResult> results,
-                Collection<Throwable> errors, Collection<CancelReason> cancelled)
-                throws Exception {
-            return new CachePutResult();
+            callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
         }
     }
 
     public Callback<CacheQueryResult> get(TimeSerieSlice slice,
-            final Aggregation aggregation) {
-        final Set<CacheKey> keys = buildCacheKeys(slice, aggregation);
-        return ConcurrentCallback.newReduce(buildBackendGetQueries(keys),
-                getTimer, new HandleGetResults(slice, aggregation));
+            final AggregatorGroup aggregator) {
+        final CacheBackendKey key = new CacheBackendKey(slice.getTimeSerie(), aggregator.getAggregationGroup());
+        final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
+        final DateRange range = slice.getRange();
+
+        try {
+            backend.get(key, range).register(new BackendCacheGetHandle(callback, slice, aggregator));
+        } catch (AggregationCacheException e) {
+            callback.fail(e);
+        }
+
+        return callback;
     }
 
     public Callback<CachePutResult> put(TimeSerie timeSerie,
-            Aggregation aggregation, List<DataPoint> datapoints) {
-        final Map<CacheKey, DataPoint[]> requests = buildPutRequests(timeSerie,
-                aggregation, datapoints);
-        return ConcurrentCallback.newReduce(buildBackendPutQueries(requests),
-                putTimer, new HandlePutResults());
-    }
+            AggregatorGroup aggregator, List<DataPoint> datapoints) {
+        final CacheBackendKey key = new CacheBackendKey(timeSerie, aggregator.getAggregationGroup());
+        final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
-    private Set<CacheKey> buildCacheKeys(TimeSerieSlice slice,
-            final Aggregation aggregation) {
-        final List<Long> bases = calculateBases(slice, aggregation);
-        final Set<CacheKey> keys = new HashSet<CacheKey>();
+        try {
+            backend.put(key, datapoints).register(new Callback.Handle<CacheBackendPutResult>() {
+                @Override
+                public void cancel(CancelReason reason) throws Exception {
+                    callback.cancel(reason);
+                }
 
-        for (final long base : bases) {
-            keys.add(new CacheKey(slice.getTimeSerie(), aggregation, base));
+                @Override
+                public void error(Throwable e) throws Exception {
+                    callback.fail(e);
+                }
+
+                @Override
+                public void finish(CacheBackendPutResult result)
+                        throws Exception {
+                    callback.finish(new CachePutResult());
+                }
+            });
+        } catch (AggregationCacheException e) {
+            callback.fail(e);
         }
 
-        return keys;
-    }
-
-    private List<Callback<CacheBackendGetResult>> buildBackendGetQueries(
-            final Set<CacheKey> keys) {
-        final List<Callback<CacheBackendGetResult>> queries = new ArrayList<Callback<CacheBackendGetResult>>(
-                keys.size());
-
-        for (final CacheKey key : keys) {
-            try {
-                queries.add(backend.get(key));
-            } catch (AggregationCacheException e) {
-                log.error("Failed to prepare get request for cache backend", e);
-            }
-        }
-
-        return queries;
-    }
-
-    private List<Callback<CacheBackendPutResult>> buildBackendPutQueries(
-            final Map<CacheKey, DataPoint[]> requests) {
-        final List<Callback<CacheBackendPutResult>> queries = new ArrayList<Callback<CacheBackendPutResult>>(
-                requests.size());
-
-        for (final Map.Entry<CacheKey, DataPoint[]> entry : requests.entrySet()) {
-            try {
-                queries.add(backend.put(entry.getKey(), entry.getValue()));
-            } catch (AggregationCacheException e) {
-                log.error("Failed to prepare put request for cache backend", e);
-            }
-        }
-
-        return queries;
-    }
-
-    /**
-     * Calculate and build all necessary put requests to update the specified
-     * list of datapoints.
-     * 
-     * @param timeSerie
-     * @param aggregation
-     * @param datapoints
-     * @return A map from cache keys to an array of datapoints.
-     */
-    private Map<CacheKey, DataPoint[]> buildPutRequests(TimeSerie timeSerie,
-            Aggregation aggregation, List<DataPoint> datapoints) {
-        final Map<CacheKey, DataPoint[]> requests = new HashMap<CacheKey, DataPoint[]>();
-
-        for (final DataPoint d : datapoints) {
-            final long sampling = aggregation.getWidth();
-            final long base = calculateBucket(sampling, d.getTimestamp());
-            final CacheKey key = new CacheKey(timeSerie, aggregation, base);
-
-            DataPoint[] group = requests.get(key);
-
-            if (group == null) {
-                group = new DataPoint[WIDTH];
-                requests.put(key, group);
-            }
-
-            int offset = makeIndex(sampling, d.getTimestamp());
-            group[offset] = d;
-        }
-
-        return requests;
-    }
-
-    public static int makeIndex(long sampling, long timestamp) {
-        final long relative = timestamp % (sampling * WIDTH);
-        final int offset = (int) (relative / sampling);
-        return offset;
-    }
-
-    public static long makeTimestamp(long base, long sampling, int index) {
-        return base + sampling * index;
-    }
-
-    public static List<Long> calculateBases(TimeSerieSlice slice,
-            Aggregation aggregation) {
-        final long sampling = aggregation.getWidth();
-        final long width = sampling * WIDTH;
-        final DateRange range = slice.getRange();
-
-        final long first = calculateBucket(sampling, range.start());
-        final long last = calculateBucket(sampling, range.end() + width);
-
-        final List<Long> bases = new ArrayList<Long>();
-
-        for (long current = first; current < last; current += width) {
-            bases.add(current);
-        }
-
-        return bases;
-    }
-
-    public static long calculateBucket(long sampling, long start) {
-        final long width = sampling * WIDTH;
-        return start - start % width;
+        return callback;
     }
 }

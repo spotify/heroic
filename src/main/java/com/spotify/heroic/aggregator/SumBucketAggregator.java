@@ -96,11 +96,6 @@ public abstract class SumBucketAggregator implements Aggregator {
 
             return new Result(result, sampleSize.get(), outOfBounds.get());
         }
-
-        @Override
-        public Aggregation getAggregation() {
-            return aggregation;
-        }
     }
 
     private final Aggregation aggregation;
@@ -125,7 +120,7 @@ public abstract class SumBucketAggregator implements Aggregator {
     }
 
     @Override
-    public long getIntervalHint() {
+    public long getWidth() {
         return resolution.getWidth();
     }
 
@@ -143,9 +138,10 @@ public abstract class SumBucketAggregator implements Aggregator {
         final List<Bucket> buckets = new ArrayList<Bucket>((int) count);
 
         for (int i = 0; i < count; i++) {
-            final long timestamp = offset + width * i + width;
+            final long timestamp = offset + width * i;
             buckets.add(new Bucket(timestamp));
         }
+
         return buckets;
     }
 

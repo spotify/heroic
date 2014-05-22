@@ -24,29 +24,37 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
     public static final short SUM_AGGREGATION = 0x0001;
     public static final short AVERAGE_AGGREGATION = 0x0002;
 
+    /**
+     * Sets up all static mappings and assert that they are unique.
+     */
+    static {
+        TYPES.put(SUM_AGGREGATION, SumAggregation.class);
+        TYPES.put(AVERAGE_AGGREGATION, AverageAggregation.class);
+
+        for (Map.Entry<Short, Class<? extends Aggregation>> entry : TYPES
+                .entrySet()) {
+            MAP.put(entry.getValue(), entry.getKey());
+        }
+    }
+
+    private static Class<? extends Aggregation> findClass(short type) {
+        return TYPES.get(type);
+    }
+
+    private static short findType(Class<? extends Aggregation> clazz) {
+        return MAP.get(clazz);
+    }
+
     public static final AggregationSerializer instance = new AggregationSerializer();
 
     public static AggregationSerializer get() {
         return instance;
     }
 
-    /**
-     * Sets up all static mappings and assert that they are unique.
-     */
-    static {
-        assert TYPES.put(SUM_AGGREGATION, SumAggregation.class) == null;
-        assert TYPES.put(AVERAGE_AGGREGATION, AverageAggregation.class) == null;
-
-        for (Map.Entry<Short, Class<? extends Aggregation>> entry : TYPES
-                .entrySet()) {
-            assert MAP.put(entry.getValue(), entry.getKey()) == null;
-        }
-    }
-
     @Override
     public ByteBuffer toByteBuffer(Aggregation obj) {
         final Composite composite = new Composite();
-        final Short type = MAP.get(obj.getClass());
+        final Short type = findType(obj.getClass());
 
         if (type == null)
             throw new RuntimeException(
@@ -66,7 +74,7 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
     }
 
     private Aggregation buildInstance(final Composite composite, short typeId) {
-        final Class<? extends Aggregation> type = TYPES.get(typeId);
+        final Class<? extends Aggregation> type = findClass(typeId);
 
         if (type == null) {
             throw new RuntimeException("No such aggregation type: " + type);

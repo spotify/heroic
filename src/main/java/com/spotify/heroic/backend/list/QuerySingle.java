@@ -53,14 +53,14 @@ public class QuerySingle {
             CallbackGroup.Handle<FindRows.Result> {
         private final DateRange range;
         private final Callback<QueryMetricsResult> callback;
-        private final AggregatorGroup aggregators;
+        private final AggregatorGroup aggregator;
 
         private HandleFindRowsResult(DateRange range,
                 Callback<QueryMetricsResult> callback,
-                AggregatorGroup aggregators) {
+                AggregatorGroup aggregator) {
             this.range = range;
             this.callback = callback;
-            this.aggregators = aggregators;
+            this.aggregator = aggregator;
         }
 
         @Override
@@ -68,7 +68,7 @@ public class QuerySingle {
                 Collection<Throwable> errors, Collection<CancelReason> cancelled)
                 throws Exception {
 
-            final Aggregator.Session session = aggregators.session(range);
+            final Aggregator.Session session = aggregator.session(range);
 
             if (session == null) {
                 countTheProcessDataPoints(results);
@@ -159,16 +159,16 @@ public class QuerySingle {
     }
 
     public Callback<QueryMetricsResult> execute(final FindRows criteria,
-            final AggregatorGroup aggregators) {
+            final AggregatorGroup aggregator) {
 
         final Callback<CacheQueryResult> cacheCallback = checkCache(criteria,
-                aggregators);
+                aggregator);
 
         if (cacheCallback != null) {
-            return executeSingleWithCache(criteria, aggregators, cacheCallback);
+            return executeSingleWithCache(criteria, aggregator, cacheCallback);
         }
 
-        return executeSingle(criteria, aggregators);
+        return executeSingle(criteria, aggregator);
     }
 
     private static final class HandleCacheMisses implements
@@ -231,7 +231,7 @@ public class QuerySingle {
                     .entrySet()) {
                 final TimeSerie timeSerie = update.getKey();
                 final List<DataPoint> datapoints = update.getValue();
-                queries.add(cache.put(timeSerie, cacheResult.getAggregation(),
+                queries.add(cache.put(timeSerie, cacheResult.getAggregator(),
                         datapoints));
             }
 
@@ -360,7 +360,7 @@ public class QuerySingle {
     }
 
     private Callback<QueryMetricsResult> executeSingleWithCache(
-            final FindRows original, final AggregatorGroup aggregators,
+            final FindRows original, final AggregatorGroup aggregator,
             final Callback<CacheQueryResult> cacheCallback) {
 
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
@@ -383,7 +383,7 @@ public class QuerySingle {
 
                 for (TimeSerieSlice slice : cacheResult.getMisses()) {
                     missQueries.add(executeSingle(
-                            original.withRange(slice.getRange()), aggregators));
+                            original.withRange(slice.getRange()), aggregator));
                 }
 
                 /**
@@ -412,7 +412,7 @@ public class QuerySingle {
     }
 
     private Callback<QueryMetricsResult> executeSingle(FindRows criteria,
-            AggregatorGroup aggregators) {
+            AggregatorGroup aggregator) {
         final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
 
         final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
@@ -428,7 +428,7 @@ public class QuerySingle {
         final DateRange range = criteria.getRange();
 
         final CallbackGroup<FindRows.Result> group = new CallbackGroup<FindRows.Result>(
-                queries, new HandleFindRowsResult(range, callback, aggregators));
+                queries, new HandleFindRowsResult(range, callback, aggregator));
 
         final Timer.Context context = timer.time();
 
@@ -441,15 +441,14 @@ public class QuerySingle {
     }
 
     private Callback<CacheQueryResult> checkCache(FindRows criteria,
-            AggregatorGroup aggregators) {
+            AggregatorGroup aggregator) {
         final TimeSerie timeSerie = new TimeSerie(criteria.getKey(),
                 criteria.getFilter());
         final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
-        final Aggregation aggregation = aggregators.getAggregation();
 
         if (cache == null)
             return null;
 
-        return cache.get(slice, aggregation);
+        return cache.get(slice, aggregator);
     }
 }
