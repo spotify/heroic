@@ -43,7 +43,7 @@ public class TimeSerieSlice {
             return false;
         }
 
-        if (range.overlap(other.range)) {
+        if (!range.overlap(other.range)) {
             return false;
         }
 

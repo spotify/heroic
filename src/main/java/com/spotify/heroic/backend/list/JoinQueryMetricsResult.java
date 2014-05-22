@@ -24,8 +24,14 @@ public final class JoinQueryMetricsResult implements
     public QueryMetricsResult done(Collection<QueryMetricsResult> results,
             Collection<Throwable> errors, Collection<CancelReason> cancelled)
             throws Exception {
-        for (Throwable error : errors) {
-            log.error("Query failed", error);
+        if (!errors.isEmpty()) {
+            log.error("There were {} error(s) when quering for metrics", errors.size());
+
+            int i = 0;
+
+            for (final Throwable error : errors) {
+                log.error("Query #{} failed", i++, error);
+            }
         }
 
         final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();

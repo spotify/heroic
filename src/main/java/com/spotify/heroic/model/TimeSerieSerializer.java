@@ -3,18 +3,17 @@ package com.spotify.heroic.model;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.cassandra.db.marshal.UTF8Type;
-
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
-import com.netflix.astyanax.serializers.StringSerializer;
+import com.spotify.heroic.marshal.SafeUTF8Type;
+import com.spotify.heroic.serializers.SafeStringSerializer;
 
 public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
-    private static final StringSerializer keySerializer = StringSerializer
+    private static final SafeStringSerializer keySerializer = SafeStringSerializer
             .get();
     private static final MapSerializer<String, String> tagsSerializer = new MapSerializer<String, String>(
-            UTF8Type.instance, UTF8Type.instance);
+            SafeUTF8Type.instance, SafeUTF8Type.instance);
 
     private static final TimeSerieSerializer instance = new TimeSerieSerializer();
 
