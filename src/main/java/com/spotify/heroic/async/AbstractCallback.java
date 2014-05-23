@@ -3,8 +3,6 @@ package com.spotify.heroic.async;
 import java.util.Collection;
 import java.util.List;
 
-import com.codahale.metrics.Timer;
-
 /**
  * Provide some simple common implementations of a callback.
  * 
@@ -15,11 +13,9 @@ import com.codahale.metrics.Timer;
  */
 public abstract class AbstractCallback<T> implements Callback<T> {
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries, Timer timer,
-            final Reducer<C, T> reducer) {
-
+    public <C> Callback<T> reduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
         final CallbackGroupHandle<T, C> handle = new CallbackGroupHandle<T, C>(
-                this, timer) {
+                this) {
             @Override
             public T execute(Collection<C> results,
                     Collection<Throwable> errors,
@@ -32,11 +28,8 @@ public abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries, final Timer timer,
-            final StreamReducer<C, T> reducer) {
-
-        final CallbackStreamHandle<T, C> handle = new CallbackStreamHandle<T, C>(
-                this, timer) {
+    public <C> Callback<T> reduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
+        final CallbackStreamHandle<T, C> handle = new CallbackStreamHandle<T, C>(this) {
             @Override
             public void finish(CallbackStream<C> stream, Callback<C> callback,
                     C result) throws Exception {
@@ -64,4 +57,49 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
         return register(new CallbackStream<C>(queries, handle));
     }
+
+    @Override
+    public <C> Callback<C> transform(final Transformer<T, C> transformer) {
+        final Callback<C> callback = newCallback();
+
+        register(new Handle<T>() {
+            @Override
+            public void cancel(CancelReason reason) throws Exception {
+                callback.cancel(reason);
+            }
+
+            @Override
+            public void error(Throwable e) throws Exception {
+                callback.fail(e);
+            }
+
+            @Override
+            public void finish(T result) throws Exception {
+                try {
+                    transformer.transform(result, callback);
+                } catch (Throwable t) {
+                    callback.fail(t);
+                }
+            }
+        });
+
+        callback.register(new Callback.Handle<C>() {
+            @Override
+            public void cancel(CancelReason reason) throws Exception {
+                AbstractCallback.this.cancel(reason);
+            }
+
+            @Override
+            public void error(Throwable e) throws Exception {
+                AbstractCallback.this.fail(e);
+            }
+
+            @Override
+            public void finish(C result) throws Exception {}
+        });
+
+        return callback;
+    }
+
+    public abstract <C> Callback<C> newCallback();
 }

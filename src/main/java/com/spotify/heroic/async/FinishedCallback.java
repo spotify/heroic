@@ -4,8 +4,6 @@ import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.codahale.metrics.Timer;
-
 @Slf4j
 public class FinishedCallback<T> implements Callback<T> {
     private final T value;
@@ -36,14 +34,12 @@ public class FinishedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Timer timer,
-            Callback.Reducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.Reducer<C, T> reducer) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Timer timer,
-            Callback.StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.StreamReducer<C, T> reducer) {
         return this;
     }
 
@@ -74,5 +70,18 @@ public class FinishedCallback<T> implements Callback<T> {
     public boolean isInitialized() {
         /* already done, so never initialized */
         return false;
+    }
+
+    @Override
+    public <C> Callback<C> transform(Transformer<T, C> transformer) {
+        final Callback<C> callback = new ConcurrentCallback<C>();
+
+        try {
+            transformer.transform(value, callback);
+        } catch (Throwable e) {
+            callback.fail(e);
+        }
+
+        return callback;
     }
 }

@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
-import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -22,14 +20,10 @@ import com.spotify.heroic.model.TimeSerieSlice;
 
 public class AggregationCache {
     private final AggregationCacheBackend backend;
-    private final Timer getTimer;
-    private final Timer putTimer;
 
     public AggregationCache(MetricRegistry registry,
             AggregationCacheBackend backend) {
         this.backend = backend;
-        this.getTimer = registry.timer("aggregation-cache.get");
-        this.putTimer = registry.timer("aggregation-cache.put");
     }
 
     private final class BackendCacheGetHandle implements
@@ -82,6 +76,9 @@ public class AggregationCache {
 
                     expected += width;
                 }
+
+                if (expected != end)
+                    misses.add(slice.modify(expected, end));
             } else {
                 misses.add(slice);
             }

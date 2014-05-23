@@ -10,7 +10,6 @@ import java.util.Set;
 import lombok.Getter;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.aggregator.AggregationGroup;
 import com.spotify.heroic.aggregator.AggregatorGroup;
@@ -39,8 +38,6 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
-    private final Timer getAllRowsTimer;
-
     private final QuerySingle querySingle;
     private final QueryGroup queryGroup;
 
@@ -51,16 +48,9 @@ public class ListBackendManager implements BackendManager {
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
 
-        getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
-                "get-all-rows"));
-
-        final Timer queryMetricsSingle = registry.timer(MetricRegistry.name(
-                "heroic", "query-metrics", "single"));
-        this.querySingle = new QuerySingle(metricBackends, queryMetricsSingle,
+        this.querySingle = new QuerySingle(metricBackends,
                 maxQueriableDataPoints, cache);
-        final Timer queryMetricsGroup = registry.timer(MetricRegistry.name(
-                "heroic", "query-metrics", "group"));
-        this.queryGroup = new QueryGroup(metricBackends, queryMetricsGroup, cache);
+        this.queryGroup = new QueryGroup(metricBackends, cache);
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -157,7 +147,7 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        return overallCallback.reduce(backendRequests, getAllRowsTimer,
+        return overallCallback.reduce(backendRequests,
                 resultReducer);
     }
 

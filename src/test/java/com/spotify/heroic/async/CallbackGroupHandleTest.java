@@ -10,8 +10,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.codahale.metrics.Timer;
-
 public class CallbackGroupHandleTest {
     final List<Void> results = new LinkedList<Void>();
     final List<Throwable> exceptions = new LinkedList<Throwable>();
@@ -23,12 +21,8 @@ public class CallbackGroupHandleTest {
         Callback<Object> callback = mock(Callback.class);
         when(callback.isInitialized()).thenReturn(true);
 
-        Timer.Context context = mock(Timer.Context.class);
-        Timer timer = mock(Timer.class);
-        when(timer.time()).thenReturn(context);
-
         CallbackGroupHandle<Object, Void> group = new CallbackGroupHandle<Object, Void>(
-                callback, timer) {
+                callback) {
 
             @Override
             public Object execute(Collection<Void> results,
@@ -40,7 +34,6 @@ public class CallbackGroupHandleTest {
 
         group.done(results, exceptions, reasons);
         verify(callback).finish(reference);
-        verify(context).stop();
     }
 
     @Test
@@ -49,12 +42,8 @@ public class CallbackGroupHandleTest {
         Callback<Object> callback = mock(Callback.class);
         when(callback.isInitialized()).thenReturn(true);
 
-        Timer.Context context = mock(Timer.Context.class);
-        Timer timer = mock(Timer.class);
-        when(timer.time()).thenReturn(context);
-
         CallbackGroupHandle<Object, Void> group = new CallbackGroupHandle<Object, Void>(
-                callback, timer) {
+                callback) {
 
             @Override
             public Object execute(Collection<Void> results,
@@ -66,6 +55,5 @@ public class CallbackGroupHandleTest {
 
         group.done(results, exceptions, reasons);
         verify(callback).fail(reference);
-        verify(context).stop();
     }
 }

@@ -6,7 +6,6 @@ import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 
-import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
@@ -23,7 +22,6 @@ import com.spotify.heroic.model.TimeSerieSlice;
 @RequiredArgsConstructor
 public final class FindRowsHandle implements
         CallbackGroup.Handle<FindRows.Result> {
-    private final Timer timer;
     private final TimeSerieSlice slice;
     private final Callback<QueryMetricsResult> callback;
     private final AggregatorGroup aggregator;
@@ -56,7 +54,7 @@ public final class FindRowsHandle implements
 
         final Callback<Void> check = new ConcurrentCallback<Void>();
 
-        check.reduce(counters, timer, new CountThresholdCallbackStream(
+        check.reduce(counters, new CountThresholdCallbackStream(
                 maxQueriableDataPoints, check));
 
         check.register(new Callback.Handle<Void>() {
@@ -120,6 +118,6 @@ public final class FindRowsHandle implements
             reducer = new AggregatedCallbackStream(slice, session);
         }
 
-        callback.reduce(queries, timer, reducer);
+        callback.reduce(queries, reducer);
     }
 }

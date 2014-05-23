@@ -3,9 +3,9 @@ package com.spotify.heroic.backend.list;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackGroup;
@@ -19,19 +19,11 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
+@RequiredArgsConstructor
 public class QuerySingle {
     private final List<MetricBackend> backends;
-    private final Timer timer;
     private final long maxQueriableDataPoints;
     private final AggregationCache cache;
-
-    public QuerySingle(List<MetricBackend> backends, Timer timer,
-            long maxQueriableDataPoints, AggregationCache cache) {
-        this.backends = backends;
-        this.timer = timer;
-        this.maxQueriableDataPoints = maxQueriableDataPoints;
-        this.cache = cache;
-    }
 
     public Callback<QueryMetricsResult> execute(final FindRows criteria,
             final AggregatorGroup aggregator, boolean noCache) {
@@ -44,22 +36,18 @@ public class QuerySingle {
 
     private Callback<QueryMetricsResult> executeSingleWithCache(
             final FindRows criteria, final AggregatorGroup aggregator) {
-
-        final Callback<QueryMetricsResult> callback = new ConcurrentCallback<QueryMetricsResult>();
-
-        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(),
-                criteria.getFilter());
+        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(), criteria.getFilter());
         final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
 
-        cache.get(slice, aggregator).register(new CacheGetHandle("single.cache-query", timer, callback, criteria.getFilter(), cache) {
+        final CacheGetTransformer transformer = new CacheGetTransformer(criteria.getFilter(), cache) {
             @Override
             public Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice)
                     throws Exception {
                 return executeSingle(criteria.withRange(slice.getRange()), aggregator);
             }
-        });
+        };
 
-        return callback;
+        return cache.get(slice, aggregator).transform(transformer);
     }
 
     private Callback<QueryMetricsResult> executeSingle(FindRows criteria,
@@ -81,15 +69,8 @@ public class QuerySingle {
         final TimeSerieSlice slice = new TimeSerieSlice(timeSerie, range);
 
         final CallbackGroup<FindRows.Result> group = new CallbackGroup<FindRows.Result>(
-                queries, new FindRowsHandle(timer, slice, callback, aggregator, maxQueriableDataPoints));
+                queries, new FindRowsHandle(slice, callback, aggregator, maxQueriableDataPoints));
 
-        final Timer.Context context = timer.time();
-
-        return callback.register(group).register(new Callback.Finishable() {
-            @Override
-            public void finish() throws Exception {
-                context.stop();
-            }
-        });
+        return callback.register(group);
     }
 }

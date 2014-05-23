@@ -3,8 +3,6 @@ package com.spotify.heroic.async;
 import java.util.Collection;
 import java.util.List;
 
-import com.codahale.metrics.Timer;
-
 /**
  * Interface for asynchronous callbacks with the ability to subscribe to
  * interesting events.
@@ -75,6 +73,10 @@ public interface Callback<T> {
         R done(int successful, int failed, int cancelled) throws Exception;
     }
 
+    public static interface Transformer<C, R> {
+        void transform(C result, Callback<R> callback) throws Exception;
+    }
+
     public Callback<T> fail(Throwable error);
 
     public Callback<T> finish(T result);
@@ -104,9 +106,9 @@ public interface Callback<T> {
      *            reducer is responsible for reducing the given callbacks into
      *            the returned callback
      */
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Timer timer,
-            final Reducer<C, T> reducer);
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final Reducer<C, T> reducer);
 
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Timer timer,
-            final StreamReducer<C, T> reducer);
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final StreamReducer<C, T> reducer);
+
+    public <C> Callback<C> transform(Transformer<T, C> transformer);
 }
