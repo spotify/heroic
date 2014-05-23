@@ -12,7 +12,7 @@ import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
-import com.spotify.heroic.backend.RowStatistics;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
@@ -49,7 +49,7 @@ public class AggregatedCallbackStream implements
     public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
         final Aggregator.Result result = session.result();
-        final RowStatistics rowStatistics = new RowStatistics(successful,
+        final Statistics rowStatistics = new Statistics(successful,
                 failed, cancelled);
         final TimeSerie timeSerie = slice.getTimeSerie();
 

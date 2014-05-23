@@ -33,6 +33,9 @@ public class MetricsQuery {
     private final DateRangeQuery range = DEFAULT_DATE_RANGE;
 
     @Getter
+    private final boolean noCache = false;
+
+    @Getter
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
     @JsonSubTypes({
             @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),

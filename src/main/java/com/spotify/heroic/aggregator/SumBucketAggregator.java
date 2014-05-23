@@ -42,15 +42,12 @@ public abstract class SumBucketAggregator implements Aggregator {
         private final AtomicLong outOfBounds = new AtomicLong(0);
 
         private final List<Bucket> buckets;
-        private final Aggregation aggregation;
         private final long offset;
         private final long count;
         private final long width;
 
-        public Session(List<Bucket> buckets, Aggregation aggregation,
-                long offset, long count) {
+        public Session(List<Bucket> buckets, long offset, long count) {
             this.buckets = buckets;
-            this.aggregation = aggregation;
             this.offset = offset;
             this.count = count;
             this.width = aggregation.getWidth();
@@ -116,7 +113,7 @@ public abstract class SumBucketAggregator implements Aggregator {
         long offset = start - (start % width);
 
         final List<Bucket> buckets = initializeBuckets(count, offset, width);
-        return new Session(buckets, aggregation, offset, count);
+        return new Session(buckets, offset, count);
     }
 
     @Override

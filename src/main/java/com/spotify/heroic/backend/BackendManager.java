@@ -35,10 +35,10 @@ public interface BackendManager {
         @Getter
         private final long outOfBounds;
         @Getter
-        private final RowStatistics rowStatistics;
+        private final Statistics rowStatistics;
 
         public QueryMetricsResult(List<DataPointGroup> groups, long sampleSize,
-                long outOfBounds, final RowStatistics rowStatistics) {
+                long outOfBounds, final Statistics rowStatistics) {
             this.groups = groups;
             this.sampleSize = sampleSize;
             this.outOfBounds = outOfBounds;

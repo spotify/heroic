@@ -13,7 +13,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.aggregator.Aggregation;
 import com.spotify.heroic.aggregator.AggregationGroup;
-import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -117,11 +116,11 @@ public class ListBackendManager implements BackendManager {
         if (groupBy != null && !groupBy.isEmpty()) {
             final FindRowGroups criteria = new FindRowGroups(key, rounded,
                     tags, groupBy);
-            return queryGroup.execute(criteria, aggregator);
+            return queryGroup.execute(criteria, aggregator, query.isNoCache());
         }
 
         final FindRows criteria = new FindRows(key, rounded, tags);
-        return querySingle.execute(criteria, aggregator);
+        return querySingle.execute(criteria, aggregator, query.isNoCache());
     }
 
     @Override

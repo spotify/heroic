@@ -8,13 +8,14 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
-import com.spotify.heroic.backend.RowStatistics;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
@@ -22,42 +23,26 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
 @Slf4j
+@RequiredArgsConstructor
 final class CacheMissMerger implements
         Callback.Reducer<QueryMetricsResult, QueryMetricsResult> {
+    @RequiredArgsConstructor
     private static final class JoinResult {
         @Getter
-        final Map<Map<String, String>, Map<Long, DataPoint>> groups;
+        private final Map<Long, DataPoint> resultSet;
         @Getter
-        final Map<TimeSerie, List<DataPoint>> cacheUpdates;
+        private final Map<TimeSerie, List<DataPoint>> cacheUpdates;
         @Getter
-        final long sampleSize;
+        private final long sampleSize;
         @Getter
-        final long outOfBounds;
+        private final long outOfBounds;
         @Getter
-        final RowStatistics statistics;
-
-        public JoinResult(
-                Map<Map<String, String>, Map<Long, DataPoint>> groups,
-                Map<TimeSerie, List<DataPoint>> cacheUpdates,
-                long sampleSize, long outOfBounds, RowStatistics statistics) {
-            this.groups = groups;
-            this.cacheUpdates = cacheUpdates;
-            this.sampleSize = sampleSize;
-            this.outOfBounds = outOfBounds;
-            this.statistics = statistics;
-        }
+        private final Statistics statistics;
     }
 
     private final AggregationCache cache;
+    private final Map<String, String> tags;
     private final CacheQueryResult cacheResult;
-    private final boolean singular;
-
-    public CacheMissMerger(AggregationCache cache,
-            CacheQueryResult cacheResult, boolean singular) {
-        this.cache = cache;
-        this.cacheResult = cacheResult;
-        this.singular = singular;
-    }
 
     @Override
     public QueryMetricsResult done(Collection<QueryMetricsResult> results,
@@ -67,7 +52,7 @@ final class CacheMissMerger implements
         final CacheMissMerger.JoinResult joinResults = joinResults(results);
         final List<DataPointGroup> groups = buildDataPointGroups(joinResults);
 
-        final RowStatistics statistics = joinResults.getStatistics();
+        final Statistics statistics = joinResults.getStatistics();
 
         if (statistics.getFailed() == 0) {
             updateCache(joinResults.getCacheUpdates());
@@ -97,18 +82,9 @@ final class CacheMissMerger implements
 
     private List<DataPointGroup> buildDataPointGroups(CacheMissMerger.JoinResult joinResult) {
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-
-        for (Map.Entry<Map<String, String>, Map<Long, DataPoint>> entry : joinResult
-                .getGroups().entrySet()) {
-            final Map<String, String> tags = entry.getKey();
-            final List<DataPoint> datapoints = new ArrayList<DataPoint>(
-                    entry.getValue().values());
-
-            Collections.sort(datapoints);
-
-            groups.add(new DataPointGroup(tags, datapoints));
-        }
-
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult.getResultSet().values());
+        Collections.sort(datapoints);
+        groups.add(new DataPointGroup(tags, datapoints));
         return groups;
     }
 
@@ -124,12 +100,11 @@ final class CacheMissMerger implements
      * <li>The raw backends.</li>
      * </ul>
      * 
-     * While this contributes to unecessary overhead, it's not the end of
+     * While this contributes to unnecessary overhead, it's not the end of
      * the world. These duplicates are reported as cacheDuplicates in
      * RowStatistics.
      */
     private CacheMissMerger.JoinResult joinResults(Collection<QueryMetricsResult> results) {
-        final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups = new HashMap<Map<String, String>, Map<Long, DataPoint>>();
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
         long sampleSize = 0;
@@ -138,38 +113,26 @@ final class CacheMissMerger implements
         int rowsSuccessful = 0;
         int rowsFailed = 0;
         int rowsCancelled = 0;
+        int cacheConflicts = 0;
 
-        int cacheDuplicates = addCachedResults(resultGroups);
+        final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
+
+        final AddCachedResults cached = addCachedResults(resultSet);
 
         for (final QueryMetricsResult result : results) {
             sampleSize += result.getSampleSize();
             outOfBounds += result.getOutOfBounds();
 
-            final RowStatistics statistics = result.getRowStatistics();
+            final Statistics statistics = result.getRowStatistics();
+
             rowsSuccessful += statistics.getSuccessful();
             rowsFailed += statistics.getFailed();
             rowsCancelled += statistics.getCancelled();
 
             for (final DataPointGroup group : result.getGroups()) {
-                Map<Long, DataPoint> resultSet = resultGroups.get(group
-                        .getTags());
-
-                final Map<String, String> tags;
-
-                if (singular) {
-                    tags = null;
-                } else {
-                    tags = group.getTags();
-                }
-
-                if (resultSet == null) {
-                    resultSet = new HashMap<Long, DataPoint>();
-                    resultGroups.put(tags, resultSet);
-                }
-
                 for (final DataPoint d : group.getDatapoints()) {
                     if (resultSet.put(d.getTimestamp(), d) != null) {
-                        cacheDuplicates += 1;
+                        cacheConflicts += 1;
                     }
                 }
 
@@ -178,40 +141,39 @@ final class CacheMissMerger implements
             }
         }
 
-        final RowStatistics rowStatistics = new RowStatistics(
-                rowsSuccessful, rowsFailed, rowsCancelled, cacheDuplicates);
+        final Statistics statistics = new Statistics(
+                rowsSuccessful, rowsFailed, rowsCancelled,
+                cacheConflicts, cached.getDuplicates(), cached.getHits());
 
-        return new JoinResult(resultGroups, cacheUpdates, sampleSize,
-                outOfBounds, rowStatistics);
+        return new JoinResult(resultSet, cacheUpdates, sampleSize,
+                outOfBounds, statistics);
     }
 
+    @RequiredArgsConstructor
+    private static final class AddCachedResults {
+        @Getter
+        private final int duplicates;
+        @Getter
+        private final int hits;
+    }
     /**
      * Add the results previously retrieved from cache.
      * 
      * @param resultGroups
      * @return
      */
-    private int addCachedResults(
-            final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups) {
-        int cacheDuplicates = 0;
-
-        final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
+    private AddCachedResults addCachedResults(Map<Long, DataPoint> resultSet) {
+        int duplicates = 0;
+        int hits = 0;
 
         for (final DataPoint d : cacheResult.getResult()) {
             if (resultSet.put(d.getTimestamp(), d) != null) {
-                cacheDuplicates += 1;
+                duplicates += 1;
+            } else {
+                hits += 1;
             }
         }
 
-        final Map<String, String> tags;
-
-        if (singular) {
-            tags = null;
-        } else {
-            tags = cacheResult.getSlice().getTimeSerie().getTags();
-        }
-
-        resultGroups.put(tags, resultSet);
-        return cacheDuplicates;
+        return new AddCachedResults(duplicates, hits);
     }
 }

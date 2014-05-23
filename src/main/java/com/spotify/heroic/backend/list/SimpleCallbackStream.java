@@ -13,7 +13,7 @@ import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
-import com.spotify.heroic.backend.RowStatistics;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
@@ -56,7 +56,7 @@ public final class SimpleCallbackStream implements
         final List<DataPoint> datapoints = joinRawResults();
         final TimeSerie timeSerie = slice.getTimeSerie();
 
-        final RowStatistics rowStatistics = new RowStatistics(successful,
+        final Statistics rowStatistics = new Statistics(successful,
                 failed, cancelled);
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();

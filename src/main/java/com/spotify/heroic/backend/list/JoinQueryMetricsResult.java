@@ -10,7 +10,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
-import com.spotify.heroic.backend.RowStatistics;
+import com.spotify.heroic.backend.Statistics;
 
 /**
  * Callback GroupHandle that joins multiple QueryMetricResult's.
@@ -38,25 +38,32 @@ public final class JoinQueryMetricsResult implements
 
         long sampleSize = 0;
         long outOfBounds = 0;
-        int rowSuccessful = 0;
-        int rowFailed = 0;
-        int rowCancelled = 0;
+        int statSuccessful = 0;
+        int statFailed = 0;
+        int statCancelled = 0;
+        int statCacheConflicts = 0;
+        int statCacheDuplicates = 0;
+        int statCacheHits = 0;
 
         for (final QueryMetricsResult result : results) {
             sampleSize += result.getSampleSize();
             outOfBounds += result.getOutOfBounds();
 
-            final RowStatistics rowStatistics = result.getRowStatistics();
+            final Statistics statistics = result.getRowStatistics();
 
-            rowSuccessful += rowStatistics.getSuccessful();
-            rowFailed += rowStatistics.getFailed();
-            rowCancelled += rowStatistics.getCancelled();
+            statSuccessful += statistics.getSuccessful();
+            statFailed += statistics.getFailed();
+            statCancelled += statistics.getCancelled();
+            statCacheConflicts += statistics.getCacheConflicts();
+            statCacheDuplicates += statistics.getCacheDuplicates();
+            statCacheHits += statistics.getCacheHits();
 
             groups.addAll(result.getGroups());
         }
 
-        final RowStatistics rowStatistics = new RowStatistics(
-                rowSuccessful, rowFailed, rowCancelled);
+        final Statistics rowStatistics = new Statistics(
+                statSuccessful, statFailed, statCancelled,
+                statCacheConflicts, statCacheDuplicates, statCacheHits);
 
         return new QueryMetricsResult(groups, sampleSize, outOfBounds,
                 rowStatistics);

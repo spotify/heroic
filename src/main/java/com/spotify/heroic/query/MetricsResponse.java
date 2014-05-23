@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.backend.RowStatistics;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
 
 public class MetricsResponse {
@@ -63,12 +63,12 @@ public class MetricsResponse {
     private final long outOfBounds;
 
     @Getter
-    private final RowStatistics rowStatistics;
+    private final Statistics rowStatistics;
 
     public MetricsResponse(
             final Map<Map<String, String>, List<DataPoint>> result,
             final long sampleSize, final long outOfBounds,
-            final RowStatistics rowStatistics) {
+            final Statistics rowStatistics) {
         this.result = result;
         this.sampleSize = sampleSize;
         this.outOfBounds = outOfBounds;

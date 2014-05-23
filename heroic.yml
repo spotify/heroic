@@ -7,18 +7,18 @@ backends:
     attributes:
       site: sto
     seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
-#  - !kairosdb-backend
-#    attributes:
-#      site: lon
-#    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
-#  - !kairosdb-backend
-#    attributes:
-#      site: ash
-#    seeds: ash2-kairosdbcassandra-a1.spotify.net:9160,ash2-kairosdbcassandra-a2.spotify.net:9160,ash2-kairosdbcassandra-a3.spotify.net:9160
-#  - !kairosdb-backend
-#    attributes:
-#      site: sjc
-#    seeds: sjc1-kairosdbcassandra-a1.spotify.net:9160,sjc1-kairosdbcassandra-a2.spotify.net:9160,sjc1-kairosdbcassandra-a3.spotify.net:9160
+  - !kairosdb-backend
+    attributes:
+      site: lon
+    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
+  - !kairosdb-backend
+    attributes:
+      site: ash
+    seeds: ash2-kairosdbcassandra-a1.spotify.net:9160,ash2-kairosdbcassandra-a2.spotify.net:9160,ash2-kairosdbcassandra-a3.spotify.net:9160
+  - !kairosdb-backend
+    attributes:
+      site: sjc
+    seeds: sjc1-kairosdbcassandra-a1.spotify.net:9160,sjc1-kairosdbcassandra-a2.spotify.net:9160,sjc1-kairosdbcassandra-a3.spotify.net:9160
 
 cache:
 #  !in-memory-cache {}
