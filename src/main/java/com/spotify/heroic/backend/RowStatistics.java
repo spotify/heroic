@@ -1,7 +1,9 @@
 package com.spotify.heroic.backend;
 
 import lombok.Getter;
+import lombok.ToString;
 
+@ToString(of={"total", "failed", "successful", "cancelled", "cacheDuplicates"})
 public class RowStatistics {
     @Getter
     private final int total;

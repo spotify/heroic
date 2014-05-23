@@ -1,13 +1,18 @@
-package com.spotify.heroic.serializers;
+package com.spotify.heroic.ext.serializers;
 
 import java.nio.ByteBuffer;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
-import com.spotify.heroic.marshal.SafeUTF8Type;
+import com.spotify.heroic.ext.marshal.SafeUTF8Type;
 
+/**
+ * A StringSerializer that correctly handles null and empty values.
+ *
+ * @author udoprog
+ */
 public class SafeStringSerializer extends AbstractSerializer<String> {
     private static final SafeStringSerializer instance = new SafeStringSerializer();
-    
+
     public static SafeStringSerializer get() {
         return instance;
     }

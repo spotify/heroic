@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -20,7 +21,8 @@ import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
-final class HandleCacheMisses implements
+@Slf4j
+final class CacheMissMerger implements
         Callback.Reducer<QueryMetricsResult, QueryMetricsResult> {
     private static final class JoinResult {
         @Getter
@@ -50,7 +52,7 @@ final class HandleCacheMisses implements
     private final CacheQueryResult cacheResult;
     private final boolean singular;
 
-    public HandleCacheMisses(AggregationCache cache,
+    public CacheMissMerger(AggregationCache cache,
             CacheQueryResult cacheResult, boolean singular) {
         this.cache = cache;
         this.cacheResult = cacheResult;
@@ -62,10 +64,16 @@ final class HandleCacheMisses implements
             Collection<Throwable> errors, Collection<CancelReason> cancelled)
             throws Exception {
 
-        final HandleCacheMisses.JoinResult joinResults = joinResults(results);
+        final CacheMissMerger.JoinResult joinResults = joinResults(results);
         final List<DataPointGroup> groups = buildDataPointGroups(joinResults);
 
-        updateCache(joinResults.getCacheUpdates());
+        final RowStatistics statistics = joinResults.getStatistics();
+
+        if (statistics.getFailed() == 0) {
+            updateCache(joinResults.getCacheUpdates());
+        } else {
+            log.warn("Not updating cache because failed requests is non-zero: {}", statistics);
+        }
 
         return new QueryMetricsResult(groups, joinResults.getSampleSize(),
                 joinResults.getOutOfBounds(), joinResults.getStatistics());
@@ -87,7 +95,7 @@ final class HandleCacheMisses implements
         return queries;
     }
 
-    private List<DataPointGroup> buildDataPointGroups(HandleCacheMisses.JoinResult joinResult) {
+    private List<DataPointGroup> buildDataPointGroups(CacheMissMerger.JoinResult joinResult) {
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
 
         for (Map.Entry<Map<String, String>, Map<Long, DataPoint>> entry : joinResult
@@ -120,7 +128,7 @@ final class HandleCacheMisses implements
      * the world. These duplicates are reported as cacheDuplicates in
      * RowStatistics.
      */
-    private HandleCacheMisses.JoinResult joinResults(Collection<QueryMetricsResult> results) {
+    private CacheMissMerger.JoinResult joinResults(Collection<QueryMetricsResult> results) {
         final Map<Map<String, String>, Map<Long, DataPoint>> resultGroups = new HashMap<Map<String, String>, Map<Long, DataPoint>>();
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 

@@ -1,4 +1,4 @@
-package com.spotify.heroic.marshal;
+package com.spotify.heroic.ext.marshal;
 
 import java.nio.ByteBuffer;
 
@@ -7,6 +7,11 @@ import org.apache.cassandra.db.marshal.MarshalException;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
+/**
+ * An extension to the {@link UTF8Type} to allow for null and empty values.
+ *
+ * @author udoprog
+ */
 public class SafeUTF8Type extends AbstractType<String> {
     public static SafeUTF8Type instance = new SafeUTF8Type();
 

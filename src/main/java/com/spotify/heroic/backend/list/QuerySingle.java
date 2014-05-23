@@ -191,7 +191,7 @@ public class QuerySingle {
                 /**
                  * Merge with actual queried data.
                  */
-                callback.reduce(missQueries, timer, new HandleCacheMisses(
+                callback.reduce(missQueries, timer, new CacheMissMerger(
                         cache, cacheResult, true));
             }
         });

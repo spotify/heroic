@@ -6,8 +6,8 @@ import java.util.Map;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
-import com.spotify.heroic.marshal.SafeUTF8Type;
-import com.spotify.heroic.serializers.SafeStringSerializer;
+import com.spotify.heroic.ext.marshal.SafeUTF8Type;
+import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 
 public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer
