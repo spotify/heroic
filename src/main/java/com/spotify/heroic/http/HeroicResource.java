@@ -84,11 +84,13 @@ public class HeroicResource {
     @POST
     @Path("/metrics-stream")
     @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response makeMetricsStream(MetricsQuery query, @Context UriInfo info) {
         final String id = Integer.toHexString(query.hashCode());
         storedQueries.put(id, query);
         final URI location = info.getBaseUriBuilder().path("/metrics-stream/" + id).build();
-        return Response.created(location).build();
+        final MetricsStreamResponse entity = new MetricsStreamResponse(id);
+        return Response.created(location).entity(entity).build();
     }
 
     @GET
