@@ -5,30 +5,39 @@ import java.util.Set;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @ToString(of = { "matchKey", "matchTags", "hasTags" })
 @EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags" })
+@RequiredArgsConstructor
 public class TimeSeriesQuery {
     /**
      * Only include time series which match the exact key.
      */
     @Getter
-    @Setter
-    private String matchKey;
+    private final String matchKey;
 
     /**
      * Only include time series which matches the exact key/value combination.
      */
     @Getter
-    @Setter
-    private Map<String, String> matchTags;
+    private final Map<String, String> matchTags;
 
     /**
      * Only include time series which has the following tags.
      */
     @Getter
-    @Setter
-    private Set<String> hasTags;
+    private final Set<String> hasTags;
+
+    @JsonCreator
+    public static TimeSeriesQuery create(
+            @JsonProperty("matchKey") String matchKey,
+            @JsonProperty("matchTags") Map<String, String> matchTags,
+            @JsonProperty("hasTags") Set<String> hasTags) {
+        return new TimeSeriesQuery(matchKey, matchTags, hasTags);
+    }
 }

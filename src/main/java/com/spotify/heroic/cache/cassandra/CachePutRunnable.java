@@ -6,7 +6,7 @@ import com.codahale.metrics.Timer;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.spotify.heroic.aggregator.AggregationGroup;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackRunnable;
 import com.spotify.heroic.cache.model.CacheBackendKey;

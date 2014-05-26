@@ -1,4 +1,4 @@
-package com.spotify.heroic.aggregator;
+package com.spotify.heroic.aggregation;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

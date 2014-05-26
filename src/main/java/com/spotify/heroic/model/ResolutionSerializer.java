@@ -3,13 +3,11 @@ package com.spotify.heroic.model;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 
 public class ResolutionSerializer extends AbstractSerializer<Resolution> {
     private static final LongSerializer serializer = LongSerializer.get();
-    private static final ResolutionSerializer instance = new ResolutionSerializer();
 
     @Override
     public ByteBuffer toByteBuffer(Resolution obj) {
@@ -22,7 +20,9 @@ public class ResolutionSerializer extends AbstractSerializer<Resolution> {
         return new Resolution(TimeUnit.MILLISECONDS, value);
     }
 
-    public static Serializer<Resolution> get() {
+    private static final ResolutionSerializer instance = new ResolutionSerializer();
+
+    public static ResolutionSerializer get() {
         return instance;
     }
 }

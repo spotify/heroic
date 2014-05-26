@@ -4,29 +4,36 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import lombok.Getter;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.model.DateRange;
 
 @ToString(of = { "now", "unit", "value" })
+@RequiredArgsConstructor
 public class RelativeDateRangeQuery implements DateRangeQuery {
+    public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
+    public static final long DEFAULT_VALUE = 1;
+
     private final Date now = new Date();
 
     @Getter
-    @Setter
-    private TimeUnit unit = TimeUnit.DAYS;
+    private final TimeUnit unit;
 
     @Getter
-    @Setter
-    private long value = 1;
+    private final long value;
 
-    public RelativeDateRangeQuery() {
-    }
+    @JsonCreator
+    public static RelativeDateRangeQuery create(@JsonProperty("unit") TimeUnit unit, @JsonProperty("value") Long value) {
+        if (unit == null)
+            unit = DEFAULT_UNIT;
 
-    public RelativeDateRangeQuery(TimeUnit unit, long value) {
-        this.unit = unit;
-        this.value = value;
+        if (value == null)
+            value = DEFAULT_VALUE;
+
+        return new RelativeDateRangeQuery(unit, value);
     }
 
     private long start() {

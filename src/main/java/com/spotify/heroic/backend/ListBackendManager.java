@@ -10,8 +10,8 @@ import java.util.Set;
 import lombok.Getter;
 
 import com.codahale.metrics.MetricRegistry;
-import com.spotify.heroic.aggregator.Aggregation;
-import com.spotify.heroic.aggregator.AggregationGroup;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;

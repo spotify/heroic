@@ -2,27 +2,20 @@ package com.spotify.heroic.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 @ToString(of = {"start", "end"})
 @EqualsAndHashCode(of = {"start", "end"})
 public class DateRange implements Comparable<DateRange> {
     @Getter
-    @Setter
-    private long start;
+    private final long start;
 
     @Getter
-    @Setter
-    private long end;
-
-    public DateRange() {
-    }
+    private final long end;
 
     public DateRange(long start, long end) {
-        if (start > end) {
+        if (start > end)
             throw new IllegalArgumentException("'start' time must not be after 'end'");
-        }
 
         this.start = start;
         this.end = end;

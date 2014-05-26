@@ -1,5 +1,6 @@
 package com.spotify.heroic.aggregator;
 
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Resolution;
 

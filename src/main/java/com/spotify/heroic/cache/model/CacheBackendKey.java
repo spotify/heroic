@@ -4,7 +4,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.spotify.heroic.aggregator.AggregationGroup;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.model.TimeSerie;
 
 

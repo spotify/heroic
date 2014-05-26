@@ -2,29 +2,40 @@ package com.spotify.heroic.model;
 
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
 @ToString(of = { "unit", "value" })
 public class Resolution {
+    public static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
+    public static final long DEFAULT_VALUE = 10;
+
     public static final Resolution DEFAULT_RESOLUTION = new Resolution(
-            TimeUnit.MINUTES, 5);
+            DEFAULT_UNIT, 5);
 
     @Getter
-    @Setter
-    private TimeUnit unit = TimeUnit.MINUTES;
+    private final TimeUnit unit;
 
     @Getter
-    @Setter
-    private long value = 5;
-
-    public Resolution() {
-    }
+    private final long value;
 
     public Resolution(TimeUnit unit, long value) {
         this.unit = unit;
         this.value = value;
+    }
+
+    @JsonCreator
+    public static Resolution create(@JsonProperty("unit") TimeUnit unit, @JsonProperty("value") Long value) {
+        if (unit == null)
+            unit = DEFAULT_UNIT;
+
+        if (value == null)
+            value = DEFAULT_VALUE;
+
+        return new Resolution(unit, value);
     }
 
     public long getWidth() {

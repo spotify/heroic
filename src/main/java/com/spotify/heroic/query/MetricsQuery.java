@@ -11,9 +11,9 @@ import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.spotify.heroic.aggregator.Aggregation;
-import com.spotify.heroic.aggregator.AverageAggregation;
-import com.spotify.heroic.aggregator.SumAggregation;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AverageAggregation;
+import com.spotify.heroic.aggregation.SumAggregation;
 
 @ToString(of = { "key", "tags", "range", "aggregators" })
 public class MetricsQuery {

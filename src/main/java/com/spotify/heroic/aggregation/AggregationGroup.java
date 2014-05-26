@@ -1,7 +1,10 @@
-package com.spotify.heroic.aggregator;
+package com.spotify.heroic.aggregation;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.spotify.heroic.aggregator.Aggregator;
+import com.spotify.heroic.aggregator.AggregatorGroup;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -22,17 +25,11 @@ public class AggregationGroup {
     }
 
     private long calculateWidth(List<Aggregation> aggregations) {
-        long max = 0;
+        if (aggregations.isEmpty())
+            return 0;
 
-        for (final Aggregation aggregation : aggregations) {
-            final long hint = aggregation.getWidth();
-
-            if (hint > max) {
-                max = hint;
-            }
-        }
-
-        return max;
+        final Aggregation last = aggregations.get(aggregations.size() - 1);
+        return last.getWidth();
     }
 
     public AggregatorGroup build() {

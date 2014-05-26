@@ -1,4 +1,4 @@
-package com.spotify.heroic.aggregator;
+package com.spotify.heroic.aggregation;
 
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
+import com.netflix.astyanax.serializers.CompositeSerializer;
 import com.netflix.astyanax.serializers.ShortSerializer;
 
 /**
@@ -56,24 +57,30 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
         final Composite composite = new Composite();
         final Short type = findType(obj.getClass());
 
-        if (type == null)
+        if (type == null) {
             throw new RuntimeException(
                     "Type is not a serializable aggregate: "
                             + obj.getClass());
+        }
+
+        final Composite aggregation = new Composite();
+        obj.serialize(aggregation);
 
         composite.addComponent(type, ShortSerializer.get());
-        obj.serialize(composite);
+        composite.addComponent(aggregation, CompositeSerializer.get());
+
         return composite.serialize();
     }
 
     @Override
     public Aggregation fromByteBuffer(ByteBuffer byteBuffer) {
         final Composite composite = Composite.fromByteBuffer(byteBuffer);
-        short type = composite.get(0, ShortSerializer.get());
-        return buildInstance(composite, type);
+        final Short type = composite.get(0, ShortSerializer.get());
+        final Composite aggregator = composite.get(1, CompositeSerializer.get());
+        return buildInstance(aggregator, type);
     }
 
-    private Aggregation buildInstance(final Composite composite, short typeId) {
+    private Aggregation buildInstance(final Composite aggregator, short typeId) {
         final Class<? extends Aggregation> type = findClass(typeId);
 
         if (type == null) {
@@ -90,7 +97,7 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
         }
 
         try {
-            return constructor.newInstance(composite);
+            return constructor.newInstance(aggregator);
         } catch (ReflectiveOperationException | IllegalArgumentException e) {
             throw new RuntimeException(
                     "Failed to create new aggregation instance", e);

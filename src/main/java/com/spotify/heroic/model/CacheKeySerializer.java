@@ -6,8 +6,8 @@ import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
-import com.spotify.heroic.aggregator.AggregationGroup;
-import com.spotify.heroic.aggregator.AggregationGroupSerializer;
+import com.spotify.heroic.aggregation.AggregationGroup;
+import com.spotify.heroic.aggregation.AggregationGroupSerializer;
 
 public class CacheKeySerializer extends AbstractSerializer<CacheKey> {
     private static final IntegerSerializer integerSerializer = IntegerSerializer.get();

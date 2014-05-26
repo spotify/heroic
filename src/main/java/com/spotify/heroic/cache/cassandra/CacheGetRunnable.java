@@ -12,7 +12,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.spotify.heroic.aggregator.AggregationGroup;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackRunnable;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
