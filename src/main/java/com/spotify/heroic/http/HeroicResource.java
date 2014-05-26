@@ -125,12 +125,11 @@ public class HeroicResource {
 
             @Override
             public void close() throws Exception {
-
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.TEXT_PLAIN_TYPE);
-                builder.name("close");
-                builder.data(String.class, "");
+                builder.name("end");
+                builder.data(String.class, "end");
 
                 final OutboundEvent event = builder.build();
 
