@@ -13,7 +13,6 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.model.DateRange;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -21,9 +20,12 @@ public class QueryGroup {
     private final List<MetricBackend> backends;
     private final AggregationCache cache;
 
-    public Callback<QueryMetricsResult> execute(FindRowGroups criteria,
-            final AggregatorGroup aggregator) {
-        return findRowGroups(criteria).transform(new RowGroupsHandle(cache, aggregator));
+    public Callback<QueryMetricsResult> execute(FindRowGroups criteria, final AggregatorGroup aggregator) {
+        return findRowGroups(criteria).transform(buildTransformer(criteria, aggregator));
+    }
+
+    public RowGroupsHandle buildTransformer(FindRowGroups criteria, final AggregatorGroup aggregator) {
+        return new RowGroupsHandle(cache, aggregator, criteria.getRange());
     }
 
     public Callback<RowGroups> findRowGroups(FindRowGroups criteria) {
@@ -37,7 +39,6 @@ public class QueryGroup {
             }
         }
 
-        final DateRange range = criteria.getRange();
-        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer(range));
+        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer());
     }
 }

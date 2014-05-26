@@ -7,10 +7,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.backend.list.FindRowGroupsReducer.PreparedGroup;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 public class RowGroups {
     @Getter
-    private final Map<TimeSerieSlice, List<PreparedGroup>> groups;
+    private final Map<TimeSerie, List<PreparedGroup>> groups;
 }

@@ -2,8 +2,6 @@ package com.spotify.heroic.http;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.inject.Singleton;
-
 import com.spotify.heroic.query.MetricsQuery;
 
 public class StoredMetricsQueries {

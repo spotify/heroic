@@ -20,10 +20,12 @@ import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.list.QueryGroup;
 import com.spotify.heroic.backend.list.QuerySingle;
+import com.spotify.heroic.backend.list.RowGroups;
 import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.backend.model.RangedQuery;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -142,57 +144,28 @@ public class ListBackendManager implements BackendManager {
         final DateRange rounded = roundRange(aggregator, range);
 
         if (groupBy != null && !groupBy.isEmpty()) {
-            final FindRowGroups criteria = new FindRowGroups(key, rounded,
-                    tags, groupBy);
-            streamMetricsByGroup(criteria, aggregator, query.isNoCache(), handle);
+            final FindRowGroups criteria = new FindRowGroups(key, rounded, tags, groupBy);
+            final Callback<RowGroups> rowGroups = queryGroup.findRowGroups(criteria);
+
+            stream(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle,
+                    new StreamingQuery<FindRowGroups>() {
+                @Override
+                public Callback<QueryMetricsResult> query(FindRowGroups current, AggregatorGroup aggregator) {
+                    return rowGroups.transform(queryGroup.buildTransformer(current, aggregator));
+                }
+            });
+
             return;
         }
 
         final FindRows criteria = new FindRows(key, rounded, tags);
-        streamSingle(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle);
-    }
-
-    private static final long DIFF = 3600 * 1000 * 6;
-
-    private void streamSingle(final FindRows original, final FindRows last,
-            final AggregationGroup aggregation, final Stream.Handle<QueryMetricsResult> handle) {
-        final DateRange range = original.getRange();
-        final DateRange currentRange = last.getRange();
-        final DateRange nextRange = 
-                currentRange.withStart(Math.max(currentRange.start() - DIFF, range.start()));
-
-        final FindRows current = last.withRange(nextRange);
-        final AggregatorGroup aggregator = aggregation.build();
-
-        querySingle.execute(current, aggregator).register(new Callback.Handle<QueryMetricsResult>() {
+        stream(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle,
+                new StreamingQuery<FindRows>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
-                handle.close();
-            }
-
-            @Override
-            public void error(Throwable e) throws Exception {
-                handle.close();
-            }
-
-            @Override
-            public void finish(QueryMetricsResult result) throws Exception {
-                handle.stream(result);
-
-                if (current.getRange().start() <= range.start()) {
-                    handle.close();
-                    return;
-                }
-
-                streamSingle(original, current, aggregation, handle);
+            public Callback<QueryMetricsResult> query(FindRows current, AggregatorGroup aggregator) {
+                return querySingle.execute(current, aggregator);
             }
         });
-    }
-
-    private void streamMetricsByGroup(FindRowGroups criteria,
-            AggregatorGroup aggregator, boolean noCache,
-            Stream.Handle<QueryMetricsResult> handle) {
-        queryGroup.findRowGroups(criteria);
     }
 
     @Override
@@ -248,5 +221,47 @@ public class ListBackendManager implements BackendManager {
         } else {
             return range;
         }
+    }
+
+    private static final long DIFF = 3600 * 1000 * 6;
+
+    public static interface StreamingQuery<T extends RangedQuery<T>> {
+        public Callback<QueryMetricsResult> query(final T current, final AggregatorGroup aggregator);
+    }
+
+    private <T extends RangedQuery<T>> void stream(final T original,
+            final T last, final AggregationGroup aggregation,
+            final Stream.Handle<QueryMetricsResult> handle, final StreamingQuery<T> query) {
+        final DateRange range = original.getRange();
+        final DateRange currentRange = last.getRange();
+        final DateRange nextRange = 
+                currentRange.withStart(Math.max(currentRange.start() - DIFF, range.start()));
+
+        final T current = last.withRange(nextRange);
+        final AggregatorGroup aggregator = aggregation.build();
+
+        query.query(current, aggregator).register(new Callback.Handle<QueryMetricsResult>() {
+            @Override
+            public void cancel(CancelReason reason) throws Exception {
+                handle.close();
+            }
+
+            @Override
+            public void error(Throwable e) throws Exception {
+                handle.close();
+            }
+
+            @Override
+            public void finish(QueryMetricsResult result) throws Exception {
+                handle.stream(result);
+
+                if (current.getRange().start() <= range.start()) {
+                    handle.close();
+                    return;
+                }
+
+                stream(original, current, aggregation, handle, query);
+            }
+        });
     }
 }

@@ -15,6 +15,7 @@ import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.list.FindRowGroupsReducer.PreparedGroup;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
@@ -22,6 +23,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
 public final class RowGroupsHandle implements Callback.Transformer<RowGroups, QueryMetricsResult> {
     private final AggregationCache cache;
     private final AggregatorGroup aggregator;
+    private final DateRange range;
 
     public void transform(RowGroups result, Callback<QueryMetricsResult> callback) throws Exception {
         if (cache == null) {
@@ -33,13 +35,13 @@ public final class RowGroupsHandle implements Callback.Transformer<RowGroups, Qu
     }
 
     private List<Callback<QueryMetricsResult>> executeCacheQueries(
-            Map<TimeSerieSlice, List<PreparedGroup>> groups) {
+            Map<TimeSerie, List<PreparedGroup>> groups) {
         final List<Callback<QueryMetricsResult>> callbacks = new ArrayList<Callback<QueryMetricsResult>>();
 
-        for (Map.Entry<TimeSerieSlice, List<PreparedGroup>> entry : groups.entrySet()) {
-            final TimeSerieSlice slice = entry.getKey();
+        for (Map.Entry<TimeSerie, List<PreparedGroup>> entry : groups.entrySet()) {
+            final TimeSerie timeSerie = entry.getKey();
+            final TimeSerieSlice slice = timeSerie.slice(range);
             final List<PreparedGroup> preparedGroups = entry.getValue();
-            final TimeSerie timeSerie = slice.getTimeSerie();
 
             final CacheGetTransformer transformer = new CacheGetTransformer(timeSerie, cache) {
                 @Override
@@ -78,12 +80,13 @@ public final class RowGroupsHandle implements Callback.Transformer<RowGroups, Qu
     }
 
     private List<Callback<QueryMetricsResult>> executeQueries(
-            final Map<TimeSerieSlice, List<PreparedGroup>> groups)
+            final Map<TimeSerie, List<PreparedGroup>> groups)
             throws Exception {
         final List<Callback<QueryMetricsResult>> queries = new ArrayList<Callback<QueryMetricsResult>>();
 
-        for (final Map.Entry<TimeSerieSlice, List<PreparedGroup>> entry : groups.entrySet()) {
-            final TimeSerieSlice slice = entry.getKey();
+        for (final Map.Entry<TimeSerie, List<PreparedGroup>> entry : groups.entrySet()) {
+            final TimeSerie timeSerie = entry.getKey();
+            final TimeSerieSlice slice = timeSerie.slice(range);
             final List<PreparedGroup> preparedGroups = entry.getValue();
             queries.add(executeSingle(slice, preparedGroups));
         }

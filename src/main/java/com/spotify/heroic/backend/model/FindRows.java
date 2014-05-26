@@ -14,7 +14,7 @@ import com.spotify.heroic.model.TimeSerie;
 
 @ToString(of = { "key", "range", "filter" })
 @RequiredArgsConstructor
-public class FindRows {
+public class FindRows implements RangedQuery<FindRows> {
     @Getter
     private final String key;
     @Getter

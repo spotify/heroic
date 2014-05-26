@@ -11,8 +11,8 @@ import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
-@ToString(of = { "key", "filter", "groupBy" })
-public class FindRowGroups {
+@ToString(of = { "key", "range", "filter", "groupBy" })
+public class FindRowGroups implements RangedQuery<FindRowGroups> {
     @Getter
     private final String key;
     @Getter
@@ -44,5 +44,9 @@ public class FindRowGroups {
             this.rowGroups = rowGroups;
             this.backend = backend;
         }
+    }
+
+    public FindRowGroups withRange(DateRange range) {
+        return new FindRowGroups(key, range, filter, groupBy);
     }
 }
