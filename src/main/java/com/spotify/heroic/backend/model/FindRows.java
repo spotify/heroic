@@ -10,6 +10,7 @@ import lombok.ToString;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeSerie;
 
 @ToString(of = { "key", "range", "filter" })
 @RequiredArgsConstructor
@@ -24,12 +25,16 @@ public class FindRows {
     @ToString(of = { "rows", "backend" })
     public static class Result {
         @Getter
+        private final TimeSerie timeSerie;
+
+        @Getter
         private final List<DataPointsRowKey> rows;
 
         @Getter
         private final MetricBackend backend;
 
-        public Result(List<DataPointsRowKey> rows, MetricBackend backend) {
+        public Result(TimeSerie timeSerie, List<DataPointsRowKey> rows, MetricBackend backend) {
+            this.timeSerie = timeSerie;
             this.rows = rows;
             this.backend = backend;
         }

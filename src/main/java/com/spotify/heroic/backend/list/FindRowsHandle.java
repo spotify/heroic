@@ -54,10 +54,9 @@ public final class FindRowsHandle implements
 
         final Callback<Void> check = new ConcurrentCallback<Void>();
 
-        check.reduce(counters, new CountThresholdCallbackStream(
-                maxQueriableDataPoints, check));
-
-        check.register(new Callback.Handle<Void>() {
+        ConcurrentCallback.newReduce(counters, new CountThresholdCallbackStream(
+                maxQueriableDataPoints, check))
+                .register(new Callback.Handle<Void>() {
             @Override
             public void cancel(CancelReason reason) throws Exception {
                 callback.cancel(reason);
@@ -95,12 +94,14 @@ public final class FindRowsHandle implements
                 counters.add(backend.getColumnCount(row, slice.getRange()));
             }
         }
+
         return counters;
     }
 
     private void processDataPoints(Collection<FindRows.Result> results,
             final Aggregator.Session session) {
         final List<Callback<FetchDataPoints.Result>> queries = new LinkedList<Callback<FetchDataPoints.Result>>();
+
         for (final FindRows.Result result : results) {
             if (result.isEmpty())
                 continue;

@@ -15,6 +15,8 @@ import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
@@ -28,7 +30,7 @@ public final class FindRowGroupsReducer implements
         private final List<DataPointsRowKey> rows;
     }
 
-    private final TimeSerieSlice querySlice;
+    private final DateRange range;
 
     @Override
     public RowGroups done(Collection<FindRowGroups.Result> results,
@@ -40,30 +42,26 @@ public final class FindRowGroupsReducer implements
     private final Map<TimeSerieSlice, List<PreparedGroup>> prepareGroups(
             Collection<FindRowGroups.Result> results) throws QueryException {
 
-        final Map<TimeSerieSlice, List<PreparedGroup>> mappedQueries = new HashMap<TimeSerieSlice, List<PreparedGroup>>();
+        final Map<TimeSerieSlice, List<PreparedGroup>> queries = new HashMap<TimeSerieSlice, List<PreparedGroup>>();
 
         for (final FindRowGroups.Result result : results) {
             final MetricBackend backend = result.getBackend();
 
-            for (final Map.Entry<Map<String, String>, List<DataPointsRowKey>> entry : result
+            for (final Map.Entry<TimeSerie, List<DataPointsRowKey>> entry : result
                     .getRowGroups().entrySet()) {
+                final TimeSerieSlice slice = entry.getKey().slice(range);
 
-                final Map<String, String> tags = entry.getKey();
-                final List<DataPointsRowKey> rows = entry.getValue();
-
-                final TimeSerieSlice slice = querySlice.modifyTags(tags);
-
-                List<PreparedGroup> groups = mappedQueries.get(slice);
+                List<PreparedGroup> groups = queries.get(slice);
 
                 if (groups == null) {
                     groups = new ArrayList<PreparedGroup>();
-                    mappedQueries.put(slice, groups);
+                    queries.put(slice, groups);
                 }
 
-                groups.add(new PreparedGroup(backend, rows));
+                groups.add(new PreparedGroup(backend, entry.getValue()));
             }
         }
 
-        return mappedQueries;
+        return queries;
     }
 }

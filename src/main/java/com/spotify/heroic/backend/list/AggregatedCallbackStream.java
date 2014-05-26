@@ -2,6 +2,8 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,9 @@ public class AggregatedCallbackStream implements
     private final TimeSerieSlice slice;
     private final Aggregator.Session session;
 
+    private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
+    private final Queue<CancelReason> cancellations = new ConcurrentLinkedQueue<CancelReason>();
+
     @Override
     public void finish(CallbackStream<FetchDataPoints.Result> stream,
             Callback<FetchDataPoints.Result> callback,
@@ -35,26 +40,45 @@ public class AggregatedCallbackStream implements
     public void error(CallbackStream<FetchDataPoints.Result> stream,
             Callback<FetchDataPoints.Result> callback, Throwable error)
             throws Exception {
-        log.error("Result failed: " + error, error);
+        errors.add(error);
     }
 
     @Override
     public void cancel(CallbackStream<FetchDataPoints.Result> stream,
             Callback<FetchDataPoints.Result> callback, CancelReason reason)
             throws Exception {
-        log.error("Result cancelled: " + reason);
+        cancellations.add(reason);
     }
 
     @Override
     public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
+        if (!errors.isEmpty()) {
+            log.error("{} error(s) encountered when processing request", failed);
+
+            int i = 0;
+
+            for (final Throwable error : errors) {
+                log.error("Error #{}", i++, error);
+            }
+        }
+
+        if (!cancellations.isEmpty()) {
+            log.error("{} cancellation(s) encountered when processing request", cancelled);
+
+            int i = 0;
+
+            for (final CancelReason reason : cancellations) {
+                log.error("Cancel #{}: {}", i++, reason);
+            }
+        }
+
         final Aggregator.Result result = session.result();
-        final Statistics rowStatistics = new Statistics(successful,
-                failed, cancelled);
+        final Statistics rowStatistics = new Statistics(successful, failed, cancelled);
         final TimeSerie timeSerie = slice.getTimeSerie();
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(timeSerie.getTags(), result.getResult()));
+        groups.add(new DataPointGroup(timeSerie, result.getResult()));
 
         return new QueryMetricsResult(groups, result.getSampleSize(),
                 result.getOutOfBounds(), rowStatistics);

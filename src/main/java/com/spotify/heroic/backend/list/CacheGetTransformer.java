@@ -2,7 +2,6 @@ package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -13,6 +12,7 @@ import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 /**
@@ -22,7 +22,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
  */
 @RequiredArgsConstructor
 public abstract class CacheGetTransformer implements Callback.Transformer<CacheQueryResult, QueryMetricsResult> {
-    private final Map<String, String> tags;
+    private final TimeSerie timeSerie;
     private final AggregationCache cache;
 
     public void transform(CacheQueryResult cacheResult, Callback<QueryMetricsResult> callback) throws Exception {
@@ -37,7 +37,7 @@ public abstract class CacheGetTransformer implements Callback.Transformer<CacheQ
          */
         if (missQueries.isEmpty()) {
             final List<DataPoint> datapoints = cacheResult.getResult();
-            final DataPointGroup group = new DataPointGroup(tags, datapoints);
+            final DataPointGroup group = new DataPointGroup(timeSerie, datapoints);
             final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
 
             groups.add(group);
@@ -50,7 +50,7 @@ public abstract class CacheGetTransformer implements Callback.Transformer<CacheQ
          * Merge with queried data.
          */
         callback.reduce(missQueries, new CacheMissMerger(
-                cache, tags, cacheResult));
+                cache, timeSerie, cacheResult));
     }
 
     public abstract Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice) throws Exception;

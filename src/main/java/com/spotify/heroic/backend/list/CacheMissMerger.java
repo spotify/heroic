@@ -41,7 +41,7 @@ final class CacheMissMerger implements
     }
 
     private final AggregationCache cache;
-    private final Map<String, String> tags;
+    private final TimeSerie timeSerie;
     private final CacheQueryResult cacheResult;
 
     @Override
@@ -84,7 +84,7 @@ final class CacheMissMerger implements
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
         final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult.getResultSet().values());
         Collections.sort(datapoints);
-        groups.add(new DataPointGroup(tags, datapoints));
+        groups.add(new DataPointGroup(timeSerie, datapoints));
         return groups;
     }
 

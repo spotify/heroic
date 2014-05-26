@@ -320,4 +320,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
     }
+
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
+        return new ConcurrentCallback<T>().reduce(queries, reducer);
+    }
 }

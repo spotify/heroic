@@ -41,7 +41,7 @@ public final class RowGroupsHandle implements Callback.Transformer<RowGroups, Qu
             final List<PreparedGroup> preparedGroups = entry.getValue();
             final TimeSerie timeSerie = slice.getTimeSerie();
 
-            final CacheGetTransformer transformer = new CacheGetTransformer(timeSerie.getTags(), cache) {
+            final CacheGetTransformer transformer = new CacheGetTransformer(timeSerie, cache) {
                 @Override
                 public Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice) throws Exception {
                     return executeSingle(slice, preparedGroups);

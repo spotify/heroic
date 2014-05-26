@@ -9,6 +9,7 @@ import lombok.ToString;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeSerie;
 
 @ToString(of = { "key", "filter", "groupBy" })
 public class FindRowGroups {
@@ -32,13 +33,13 @@ public class FindRowGroups {
     @ToString(of = { "rowGroups", "backend" })
     public static class Result {
         @Getter
-        private final Map<Map<String, String>, List<DataPointsRowKey>> rowGroups;
+        private final Map<TimeSerie, List<DataPointsRowKey>> rowGroups;
 
         @Getter
         private final MetricBackend backend;
 
         public Result(
-                Map<Map<String, String>, List<DataPointsRowKey>> rowGroups,
+                Map<TimeSerie, List<DataPointsRowKey>> rowGroups,
                 MetricBackend backend) {
             this.rowGroups = rowGroups;
             this.backend = backend;

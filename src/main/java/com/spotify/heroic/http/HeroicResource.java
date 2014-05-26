@@ -29,6 +29,7 @@ import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.query.KeysResponse;
 import com.spotify.heroic.query.MetricsQuery;
 import com.spotify.heroic.query.MetricsResponse;
@@ -96,8 +97,7 @@ public class HeroicResource {
                             @Override
                             public void finish(QueryMetricsResult result)
                                     throws Exception {
-                                final Map<Map<String, String>, List<DataPoint>> data = makeData(result
-                                        .getGroups());
+                                final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
 
                                 final MetricsResponse entity = new MetricsResponse(
                                         data, result.getSampleSize(), result
@@ -109,13 +109,12 @@ public class HeroicResource {
                                         .entity(entity).build());
                             }
 
-                            private Map<Map<String, String>, List<DataPoint>> makeData(
+                            private Map<TimeSerie, List<DataPoint>> makeData(
                                     List<DataPointGroup> groups) {
-                                final Map<Map<String, String>, List<DataPoint>> data = new HashMap<Map<String, String>, List<DataPoint>>();
+                                final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
 
                                 for (final DataPointGroup group : groups) {
-                                    data.put(group.getTags(),
-                                            group.getDatapoints());
+                                    data.put(group.getTimeSerie(), group.getDatapoints());
                                 }
 
                                 return data;

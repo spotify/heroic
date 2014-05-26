@@ -13,8 +13,6 @@ import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
 public class QueryGroup {
@@ -40,10 +38,8 @@ public class QueryGroup {
         }
 
         final DateRange range = criteria.getRange();
-        final TimeSerie timeSerie = new TimeSerie(criteria.getKey(), criteria.getFilter());
-        final TimeSerieSlice slice = new TimeSerieSlice(timeSerie, range);
 
-        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer(slice))
+        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer(range))
             .transform(new RowGroupsHandle(cache, aggregator));
     }
 }

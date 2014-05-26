@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,7 +14,9 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.TimeSerie;
 
+@RequiredArgsConstructor
 public class MetricsResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
@@ -22,17 +25,21 @@ public class MetricsResponse {
                 SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
-            final Map<Map<String, String>, List<DataPoint>> result = (Map<Map<String, String>, List<DataPoint>>) value;
+            final Map<TimeSerie, List<DataPoint>> result = (Map<TimeSerie, List<DataPoint>>) value;
 
             jgen.writeStartArray();
 
-            for (Map.Entry<Map<String, String>, List<DataPoint>> entry : result
+            for (Map.Entry<TimeSerie, List<DataPoint>> entry : result
                     .entrySet()) {
+                final TimeSerie timeSerie = entry.getKey();
                 final List<DataPoint> datapoints = entry.getValue();
 
                 jgen.writeStartObject();
+                jgen.writeFieldName("key");
+                jgen.writeString(timeSerie.getKey());
+
                 jgen.writeFieldName("tags");
-                jgen.writeObject(entry.getKey());
+                jgen.writeObject(timeSerie.getTags());
 
                 jgen.writeFieldName("values");
                 jgen.writeStartArray();
@@ -54,7 +61,7 @@ public class MetricsResponse {
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)
-    private final Map<Map<String, String>, List<DataPoint>> result;
+    private final Map<TimeSerie, List<DataPoint>> result;
 
     @Getter
     private final long sampleSize;
@@ -64,14 +71,4 @@ public class MetricsResponse {
 
     @Getter
     private final Statistics rowStatistics;
-
-    public MetricsResponse(
-            final Map<Map<String, String>, List<DataPoint>> result,
-            final long sampleSize, final long outOfBounds,
-            final Statistics rowStatistics) {
-        this.result = result;
-        this.sampleSize = sampleSize;
-        this.outOfBounds = outOfBounds;
-        this.rowStatistics = rowStatistics;
-    }
 }

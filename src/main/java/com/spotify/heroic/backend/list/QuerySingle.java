@@ -39,7 +39,7 @@ public class QuerySingle {
         final TimeSerie timeSerie = new TimeSerie(criteria.getKey(), criteria.getFilter());
         final TimeSerieSlice slice = timeSerie.slice(criteria.getRange());
 
-        final CacheGetTransformer transformer = new CacheGetTransformer(criteria.getFilter(), cache) {
+        final CacheGetTransformer transformer = new CacheGetTransformer(timeSerie, cache) {
             @Override
             public Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice)
                     throws Exception {

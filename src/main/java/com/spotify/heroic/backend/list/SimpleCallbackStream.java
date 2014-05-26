@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
@@ -20,15 +21,14 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
+@RequiredArgsConstructor
 public final class SimpleCallbackStream implements
         Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> {
     private final TimeSerieSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
-
-    SimpleCallbackStream(TimeSerieSlice slice) {
-        this.slice = slice;
-    }
+    private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
+    private final Queue<CancelReason> cancellations = new ConcurrentLinkedQueue<CancelReason>();
 
     @Override
     public void finish(CallbackStream<FetchDataPoints.Result> stream,
@@ -41,18 +41,39 @@ public final class SimpleCallbackStream implements
     public void error(CallbackStream<FetchDataPoints.Result> stream,
             Callback<FetchDataPoints.Result> callback, Throwable error)
             throws Exception {
-        log.error("Result failed: " + error, error);
+        errors.add(error);
     }
 
     @Override
     public void cancel(CallbackStream<FetchDataPoints.Result> stream,
             Callback<FetchDataPoints.Result> callback, CancelReason reason)
             throws Exception {
+        cancellations.add(reason);
     }
 
     @Override
     public QueryMetricsResult done(int successful, int failed, int cancelled)
             throws Exception {
+        if (!errors.isEmpty()) {
+            log.error("{} error(s) encountered when processing request", failed);
+
+            int i = 0;
+
+            for (final Throwable error : errors) {
+                log.error("Error #{}", i++, error);
+            }
+        }
+
+        if (!cancellations.isEmpty()) {
+            log.error("{} cancellation(s) encountered when processing request", cancelled);
+
+            int i = 0;
+
+            for (final CancelReason reason : cancellations) {
+                log.error("Cancel #{}: {}", i++, reason);
+            }
+        }
+
         final List<DataPoint> datapoints = joinRawResults();
         final TimeSerie timeSerie = slice.getTimeSerie();
 
@@ -60,7 +81,7 @@ public final class SimpleCallbackStream implements
                 failed, cancelled);
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(timeSerie.getTags(), datapoints));
+        groups.add(new DataPointGroup(timeSerie, datapoints));
 
         return new QueryMetricsResult(groups, datapoints.size(), 0,
                 rowStatistics);
