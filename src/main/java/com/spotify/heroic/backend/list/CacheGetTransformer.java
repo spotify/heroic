@@ -42,7 +42,10 @@ public abstract class CacheGetTransformer implements Callback.Transformer<CacheQ
 
             groups.add(group);
 
-            callback.finish(new QueryMetricsResult(groups, 0, 0, new Statistics(0, 0, 0, 0, 0, datapoints.size())));
+            final Statistics stat = new Statistics();
+            stat.setCache(new Statistics.Cache(datapoints.size(), 0, 0));
+
+            callback.finish(new QueryMetricsResult(groups, stat));
             return;
         }
 

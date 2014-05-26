@@ -25,6 +25,7 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.http.HeroicResourceCache;
+import com.spotify.heroic.http.StoredMetricsQueries;
 import com.spotify.heroic.yaml.HeroicConfig;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -44,6 +45,7 @@ public class Main extends GuiceServletContextListener {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
+        final StoredMetricsQueries storedMetricsQueries = new StoredMetricsQueries();
 
         modules.add(new AbstractModule() {
             @Override
@@ -52,6 +54,7 @@ public class Main extends GuiceServletContextListener {
                         config.getBackendManager());
                 bind(HeroicResourceCache.class);
                 bind(MetricRegistry.class).toInstance(registry);
+                bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
             }
         });
         modules.add(new SchedulerModule());

@@ -9,6 +9,7 @@ import lombok.Getter;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Resolution;
@@ -92,7 +93,8 @@ public abstract class SumBucketAggregator implements Aggregator {
                 result.add(d);
             }
 
-            return new Result(result, sampleSize.get(), outOfBounds.get());
+            final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize.get(), outOfBounds.get());
+            return new Result(result, statistics);
         }
     }
 

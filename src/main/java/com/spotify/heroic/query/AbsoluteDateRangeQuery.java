@@ -1,5 +1,6 @@
 package com.spotify.heroic.query;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -9,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.model.DateRange;
 
 @ToString(of = { "start", "end" })
+@EqualsAndHashCode(of={"start", "end"})
 @RequiredArgsConstructor
 public class AbsoluteDateRangeQuery implements DateRangeQuery {
     @Getter

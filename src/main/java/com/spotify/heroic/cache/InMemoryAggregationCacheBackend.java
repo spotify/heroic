@@ -47,10 +47,15 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final AggregationGroup aggregation = key.getAggregationGroup();
         final long width = aggregation.getWidth();
 
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+        if (width == 0) {
+            return new FinishedCallback<CacheBackendGetResult>(
+                    new CacheBackendGetResult(key, datapoints));
+        }
+
         final long start = range.getStart() - range.getStart() % width;
         final long end = range.getEnd() - range.getEnd() % width;
-
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         for (long i = start; i < end; i += width) {
             final DataPoint d = entry.get(i);
@@ -77,6 +82,11 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
 
         final AggregationGroup aggregator = key.getAggregationGroup();
         final long width = aggregator.getWidth();
+
+        if (width == 0) {
+            return new FinishedCallback<CacheBackendPutResult>(
+                    new CacheBackendPutResult());
+        }
 
         for (final DataPoint d : datapoints) {
             final long timestamp = d.getTimestamp();

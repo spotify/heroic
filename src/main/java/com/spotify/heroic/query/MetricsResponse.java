@@ -35,6 +35,9 @@ public class MetricsResponse {
                 final List<DataPoint> datapoints = entry.getValue();
 
                 jgen.writeStartObject();
+                jgen.writeFieldName("hash");
+                jgen.writeString(Integer.toHexString(timeSerie.hashCode()));
+
                 jgen.writeFieldName("key");
                 jgen.writeString(timeSerie.getKey());
 
@@ -64,11 +67,5 @@ public class MetricsResponse {
     private final Map<TimeSerie, List<DataPoint>> result;
 
     @Getter
-    private final long sampleSize;
-
-    @Getter
-    private final long outOfBounds;
-
-    @Getter
-    private final Statistics rowStatistics;
+    private final Statistics statistics;
 }

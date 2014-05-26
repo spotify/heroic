@@ -9,6 +9,7 @@ import lombok.ToString;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregator.Aggregator.Result;
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
@@ -32,18 +33,18 @@ public class AggregatorGroup {
 
         @Override
         public Result result() {
-            final Result partial = first.result();
-            List<DataPoint> datapoints = partial.getResult();
-            final long sampleSize = partial.getSampleSize();
-            final long outOfBounds = partial.getOutOfBounds();
+            final Result firstResult = first.result();
+            List<DataPoint> datapoints = firstResult.getResult();
+            Statistics.Aggregator statistics = firstResult.getStatistics();
 
             for (final Aggregator.Session session : rest) {
                 session.stream(datapoints);
                 final Result next = session.result();
                 datapoints = next.getResult();
+                statistics = statistics.merge(next.getStatistics());
             }
 
-            return new Result(datapoints, sampleSize, outOfBounds);
+            return new Result(datapoints, statistics);
         }
     }
 

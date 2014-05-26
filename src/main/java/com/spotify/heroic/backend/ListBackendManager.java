@@ -75,14 +75,24 @@ public class ListBackendManager implements BackendManager {
         return metricBackends;
     }
 
+    private <T> List<T> optionalEmptyList(List<T> list) {
+        if (list == null)
+            return new ArrayList<T>();
+
+        return list;
+    }
+
     @Override
     public Callback<QueryMetricsResult> queryMetrics(final MetricsQuery query)
             throws QueryException {
-        final List<Aggregation> definitions = query.getAggregators();
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange().buildDateRange();
+        final List<Aggregation> definitions = optionalEmptyList(query.getAggregators());
+
+        if (key == null || key.isEmpty())
+            throw new QueryException("'key' must be defined");
 
         if (range == null)
             throw new QueryException("Range must be specified");

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -15,10 +16,12 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AverageAggregation;
 import com.spotify.heroic.aggregation.SumAggregation;
 
-@ToString(of = { "key", "tags", "range", "aggregators" })
+@ToString(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
+@EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
 public class MetricsQuery {
     private static final DateRangeQuery DEFAULT_DATE_RANGE = new RelativeDateRangeQuery(
             TimeUnit.DAYS, 7);
+    private static final List<Aggregation> EMPTY_AGGREGATIONS = new ArrayList<Aggregation>();
 
     @Getter
     private final String key = null;
@@ -40,5 +43,5 @@ public class MetricsQuery {
     @JsonSubTypes({
             @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),
             @JsonSubTypes.Type(value = AverageAggregation.class, name = "average") })
-    private List<Aggregation> aggregators;
+    private final List<Aggregation> aggregators = EMPTY_AGGREGATIONS;
 }

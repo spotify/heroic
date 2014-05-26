@@ -51,37 +51,39 @@ public class AggregationCache {
         @Override
         public void finish(CacheBackendGetResult result) throws Exception {
             final long width = aggregator.getWidth();
-            final DateRange range = slice.getRange();
-            final long end = range.getEnd() - range.getEnd() % width;
 
             final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
             final List<DataPoint> datapoints = new ArrayList<DataPoint>();
             final List<DataPoint> cached = result.getDatapoints();
 
-            if (!cached.isEmpty()) {
-                long expected = range.getStart() - range.getStart() % width;
+            if (width == 0 || cached.isEmpty()) {
+                misses.add(slice);
+                callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
+                return;
+            }
 
-                for (final DataPoint d : result.getDatapoints()) {
-                    final long start = expected;
+            final DateRange range = slice.getRange();
+            final long end = range.getEnd() - range.getEnd() % width;
+            long expected = range.getStart() - range.getStart() % width;
 
-                    while (expected != d.getTimestamp() && expected < end) {
-                        expected += width;
-                    }
+            for (final DataPoint d : result.getDatapoints()) {
+                final long start = expected;
 
-                    if (expected != start)
-                        misses.add(slice.modify(start, expected));
-
-                    if (expected == d.getTimestamp())
-                        datapoints.add(d);
-
+                while (expected != d.getTimestamp() && expected < end) {
                     expected += width;
                 }
 
-                if (expected != end)
-                    misses.add(slice.modify(expected, end));
-            } else {
-                misses.add(slice);
+                if (expected != start)
+                    misses.add(slice.modify(start, expected));
+
+                if (expected == d.getTimestamp())
+                    datapoints.add(d);
+
+                expected += width;
             }
+
+            if (expected != end)
+                misses.add(slice.modify(expected, end));
 
             callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
         }

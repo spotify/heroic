@@ -1,5 +1,6 @@
 package com.spotify.heroic.http;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,19 +8,29 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;
 import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.container.TimeoutHandler;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+
+import org.glassfish.jersey.media.sse.EventOutput;
+import org.glassfish.jersey.media.sse.OutboundEvent;
+import org.glassfish.jersey.media.sse.SseFeature;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -51,6 +62,9 @@ public class HeroicResource {
     @Inject
     private HeroicResourceCache cache;
 
+    @Inject
+    private StoredMetricsQueries storedQueries;
+
     public static final class Message {
         @Getter
         private final String message;
@@ -68,58 +82,122 @@ public class HeroicResource {
     }
 
     @POST
+    @Path("/metrics-stream")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response makeMetricsStream(MetricsQuery query, @Context UriInfo info) {
+        final String id = Integer.toHexString(query.hashCode());
+        storedQueries.put(id, query);
+        final URI location = info.getBaseUriBuilder().path("/metrics-stream/" + id).build();
+        return Response.created(location).build();
+    }
+
+    @GET
+    @Path("/metrics-stream/{id}")
+    @Produces(SseFeature.SERVER_SENT_EVENTS)
+    public EventOutput getMetricsStream(@PathParam("id") String id) throws WebApplicationException, QueryException {
+        final MetricsQuery query = storedQueries.get(id);
+
+        if (query == null) {
+            throw new NotFoundException("No such stored query: " + id);
+        }
+
+        log.info("Query: {}", query);
+
+        final EventOutput eventOutput = new EventOutput();
+
+        backendManager.queryMetrics(query).register(
+            new Callback.Handle<QueryMetricsResult>() {
+                @Override
+                public void cancel(CancelReason reason) throws Exception {
+                }
+
+                @Override
+                public void error(Throwable e) throws Exception {
+                }
+
+                @Override
+                public void finish(QueryMetricsResult result)
+                        throws Exception {
+                    final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
+
+                    final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
+
+                    final OutboundEvent.Builder eventBuilder = new OutboundEvent.Builder();
+
+                    eventBuilder.mediaType(MediaType.APPLICATION_JSON_TYPE);
+                    eventBuilder.name("metrics");
+                    eventBuilder.data(MetricsResponse.class, entity);
+
+                    final OutboundEvent event = eventBuilder.build();
+
+                    eventOutput.write(event);
+                    eventOutput.close();
+                }
+
+                private Map<TimeSerie, List<DataPoint>> makeData(
+                        List<DataPointGroup> groups) {
+                    final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
+
+                    for (final DataPointGroup group : groups) {
+                        data.put(group.getTimeSerie(), group.getDatapoints());
+                    }
+
+                    return data;
+                }
+            });
+
+        return eventOutput;
+    }
+
+    @POST
     @Path("/metrics")
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(@Suspended final AsyncResponse response,
             MetricsQuery query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<QueryMetricsResult> callback = backendManager
-                .queryMetrics(query).register(
-                        new Callback.Handle<QueryMetricsResult>() {
-                            @Override
-                            public void cancel(CancelReason reason)
-                                    throws Exception {
-                                response.resume(Response
-                                        .status(Response.Status.GATEWAY_TIMEOUT)
-                                        .entity(new ErrorMessage(
-                                                "Request cancelled: " + reason))
-                                        .build());
-                            }
+        final Callback<QueryMetricsResult> callback = backendManager.queryMetrics(query).register(
+            new Callback.Handle<QueryMetricsResult>() {
+                @Override
+                public void cancel(CancelReason reason)
+                        throws Exception {
+                    response.resume(Response
+                            .status(Response.Status.GATEWAY_TIMEOUT)
+                            .entity(new ErrorMessage(
+                                    "Request cancelled: " + reason))
+                            .build());
+                }
 
-                            @Override
-                            public void error(Throwable e) throws Exception {
-                                response.resume(Response
-                                        .status(Response.Status.INTERNAL_SERVER_ERROR)
-                                        .entity(e).build());
-                            }
+                @Override
+                public void error(Throwable e) throws Exception {
+                    response.resume(Response
+                            .status(Response.Status.INTERNAL_SERVER_ERROR)
+                            .entity(e).build());
+                }
 
-                            @Override
-                            public void finish(QueryMetricsResult result)
-                                    throws Exception {
-                                final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
+                @Override
+                public void finish(QueryMetricsResult result)
+                        throws Exception {
+                    final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
 
-                                final MetricsResponse entity = new MetricsResponse(
-                                        data, result.getSampleSize(), result
-                                                .getOutOfBounds(), result
-                                                .getRowStatistics());
+                    final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
 
-                                response.resume(Response
-                                        .status(Response.Status.OK)
-                                        .entity(entity).build());
-                            }
+                    response.resume(Response
+                            .status(Response.Status.OK)
+                            .entity(entity).build());
+                }
 
-                            private Map<TimeSerie, List<DataPoint>> makeData(
-                                    List<DataPointGroup> groups) {
-                                final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
+                private Map<TimeSerie, List<DataPoint>> makeData(
+                        List<DataPointGroup> groups) {
+                    final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
 
-                                for (final DataPointGroup group : groups) {
-                                    data.put(group.getTimeSerie(), group.getDatapoints());
-                                }
+                    for (final DataPointGroup group : groups) {
+                        data.put(group.getTimeSerie(), group.getDatapoints());
+                    }
 
-                                return data;
-                            }
-                        });
+                    return data;
+                }
+            });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 

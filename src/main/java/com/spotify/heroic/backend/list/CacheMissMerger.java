@@ -33,10 +33,6 @@ final class CacheMissMerger implements
         @Getter
         private final Map<TimeSerie, List<DataPoint>> cacheUpdates;
         @Getter
-        private final long sampleSize;
-        @Getter
-        private final long outOfBounds;
-        @Getter
         private final Statistics statistics;
     }
 
@@ -54,14 +50,13 @@ final class CacheMissMerger implements
 
         final Statistics statistics = joinResults.getStatistics();
 
-        if (statistics.getFailed() == 0) {
+        if (statistics.getRow().getFailed() == 0) {
             updateCache(joinResults.getCacheUpdates());
         } else {
             log.warn("Not updating cache because failed requests is non-zero: {}", statistics);
         }
 
-        return new QueryMetricsResult(groups, joinResults.getSampleSize(),
-                joinResults.getOutOfBounds(), joinResults.getStatistics());
+        return new QueryMetricsResult(groups, joinResults.getStatistics());
     }
 
     private List<Callback<CachePutResult>> updateCache(
@@ -107,27 +102,15 @@ final class CacheMissMerger implements
     private CacheMissMerger.JoinResult joinResults(Collection<QueryMetricsResult> results) {
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
-        long sampleSize = 0;
-        long outOfBounds = 0;
-
-        int rowsSuccessful = 0;
-        int rowsFailed = 0;
-        int rowsCancelled = 0;
         int cacheConflicts = 0;
 
         final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
 
         final AddCachedResults cached = addCachedResults(resultSet);
+        Statistics statistics = new Statistics();
 
         for (final QueryMetricsResult result : results) {
-            sampleSize += result.getSampleSize();
-            outOfBounds += result.getOutOfBounds();
-
-            final Statistics statistics = result.getRowStatistics();
-
-            rowsSuccessful += statistics.getSuccessful();
-            rowsFailed += statistics.getFailed();
-            rowsCancelled += statistics.getCancelled();
+            statistics = statistics.merge(result.getStatistics());
 
             for (final DataPointGroup group : result.getGroups()) {
                 for (final DataPoint d : group.getDatapoints()) {
@@ -141,12 +124,9 @@ final class CacheMissMerger implements
             }
         }
 
-        final Statistics statistics = new Statistics(
-                rowsSuccessful, rowsFailed, rowsCancelled,
-                cacheConflicts, cached.getDuplicates(), cached.getHits());
+        statistics.setCache(new Statistics.Cache(cacheConflicts, cached.getDuplicates(), cached.getHits()));
 
-        return new JoinResult(resultSet, cacheUpdates, sampleSize,
-                outOfBounds, statistics);
+        return new JoinResult(resultSet, cacheUpdates, statistics);
     }
 
     @RequiredArgsConstructor

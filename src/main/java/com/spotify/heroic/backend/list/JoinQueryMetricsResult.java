@@ -36,36 +36,13 @@ public final class JoinQueryMetricsResult implements
 
         final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();
 
-        long sampleSize = 0;
-        long outOfBounds = 0;
-        int statSuccessful = 0;
-        int statFailed = 0;
-        int statCancelled = 0;
-        int statCacheConflicts = 0;
-        int statCacheDuplicates = 0;
-        int statCacheHits = 0;
+        Statistics statistics = new Statistics();
 
         for (final QueryMetricsResult result : results) {
-            sampleSize += result.getSampleSize();
-            outOfBounds += result.getOutOfBounds();
-
-            final Statistics statistics = result.getRowStatistics();
-
-            statSuccessful += statistics.getSuccessful();
-            statFailed += statistics.getFailed();
-            statCancelled += statistics.getCancelled();
-            statCacheConflicts += statistics.getCacheConflicts();
-            statCacheDuplicates += statistics.getCacheDuplicates();
-            statCacheHits += statistics.getCacheHits();
-
+            statistics = statistics.merge(result.getStatistics());
             groups.addAll(result.getGroups());
         }
 
-        final Statistics rowStatistics = new Statistics(
-                statSuccessful, statFailed, statCancelled,
-                statCacheConflicts, statCacheDuplicates, statCacheHits);
-
-        return new QueryMetricsResult(groups, sampleSize, outOfBounds,
-                rowStatistics);
+        return new QueryMetricsResult(groups, statistics);
     }
 }

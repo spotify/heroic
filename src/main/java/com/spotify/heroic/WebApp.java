@@ -5,6 +5,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
 import org.glassfish.hk2.api.ServiceLocator;
+import org.glassfish.jersey.media.sse.SseFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.jvnet.hk2.guice.bridge.api.GuiceBridge;
 import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
@@ -25,6 +26,7 @@ public class WebApp extends ResourceConfig {
         register(HeroicExceptionMapper.class);
         register(UnrecognizedPropertyExceptionMapper.class);
         register(CustomExceptionMapper.class);
+        register(SseFeature.class);
 
         // Resources.
         register(HeroicResource.class);

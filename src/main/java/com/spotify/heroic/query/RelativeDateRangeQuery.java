@@ -3,6 +3,7 @@ package com.spotify.heroic.query;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -11,13 +12,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.model.DateRange;
 
-@ToString(of = { "now", "unit", "value" })
+@ToString(of = {"unit", "value"})
+@EqualsAndHashCode(of={"unit", "value"})
 @RequiredArgsConstructor
 public class RelativeDateRangeQuery implements DateRangeQuery {
     public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
     public static final long DEFAULT_VALUE = 1;
-
-    private final Date now = new Date();
 
     @Getter
     private final TimeUnit unit;
@@ -36,16 +36,17 @@ public class RelativeDateRangeQuery implements DateRangeQuery {
         return new RelativeDateRangeQuery(unit, value);
     }
 
-    private long start() {
+    private long start(final Date now) {
         return now.getTime()
                 - TimeUnit.MILLISECONDS.convert(value, unit);
     }
 
-    private long end() {
+    private long end(final Date now) {
         return now.getTime();
     }
 
     public DateRange buildDateRange() {
-        return new DateRange(start(), end());
+        final Date now = new Date();
+        return new DateRange(start(now), end(now));
     }
 }

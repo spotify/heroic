@@ -74,13 +74,16 @@ public class AggregatedCallbackStream implements
         }
 
         final Aggregator.Result result = session.result();
-        final Statistics rowStatistics = new Statistics(successful, failed, cancelled);
+
+        final Statistics stat = new Statistics();
+        stat.setAggregator(result.getStatistics());
+        stat.setRow(new Statistics.Row(successful, failed, cancelled));
+
         final TimeSerie timeSerie = slice.getTimeSerie();
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
         groups.add(new DataPointGroup(timeSerie, result.getResult()));
 
-        return new QueryMetricsResult(groups, result.getSampleSize(),
-                result.getOutOfBounds(), rowStatistics);
+        return new QueryMetricsResult(groups, stat);
     }
 }

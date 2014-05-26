@@ -3,24 +3,19 @@ package com.spotify.heroic.aggregator;
 import java.util.List;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
+import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
 public interface Aggregator {
+    @RequiredArgsConstructor
     public static class Result {
         @Getter
         private final List<DataPoint> result;
         @Getter
-        private final long sampleSize;
-        @Getter
-        private final long outOfBounds;
-
-        public Result(List<DataPoint> result, long sampleSize, long outOfBounds) {
-            this.result = result;
-            this.sampleSize = sampleSize;
-            this.outOfBounds = outOfBounds;
-        }
+        private final Statistics.Aggregator statistics;
     }
 
     public interface Session {

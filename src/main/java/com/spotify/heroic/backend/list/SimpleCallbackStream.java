@@ -77,14 +77,14 @@ public final class SimpleCallbackStream implements
         final List<DataPoint> datapoints = joinRawResults();
         final TimeSerie timeSerie = slice.getTimeSerie();
 
-        final Statistics rowStatistics = new Statistics(successful,
-                failed, cancelled);
+        final Statistics statistics = new Statistics();
+        statistics.setRow(new Statistics.Row(successful, failed, cancelled));
+        statistics.setAggregator(new Statistics.Aggregator(datapoints.size(), 0));
 
         final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
         groups.add(new DataPointGroup(timeSerie, datapoints));
 
-        return new QueryMetricsResult(groups, datapoints.size(), 0,
-                rowStatistics);
+        return new QueryMetricsResult(groups, statistics);
     }
 
     private List<DataPoint> joinRawResults() {

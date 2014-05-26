@@ -23,17 +23,13 @@ public interface BackendManager {
         private final List<DataPoint> datapoints;
     }
 
-    @ToString(of={"groups", "sampleSize", "outOfBounds", "rowStatistics"})
+    @ToString(of={"groups", "statistics"})
     @RequiredArgsConstructor
     public static final class QueryMetricsResult {
         @Getter
         private final List<DataPointGroup> groups;
         @Getter
-        private final long sampleSize;
-        @Getter
-        private final long outOfBounds;
-        @Getter
-        private final Statistics rowStatistics;
+        private final Statistics statistics;
     }
 
     public Callback<QueryMetricsResult> queryMetrics(MetricsQuery query)
