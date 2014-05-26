@@ -3,6 +3,7 @@ package com.spotify.heroic.backend.list;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregator.AggregatorGroup;
@@ -15,18 +16,17 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.model.DateRange;
 
 @Slf4j
+@RequiredArgsConstructor
 public class QueryGroup {
     private final List<MetricBackend> backends;
     private final AggregationCache cache;
 
-    public QueryGroup(List<MetricBackend> backends, AggregationCache cache) {
-        this.backends = backends;
-        this.cache = cache;
+    public Callback<QueryMetricsResult> execute(FindRowGroups criteria,
+            final AggregatorGroup aggregator) {
+        return findRowGroups(criteria).transform(new RowGroupsHandle(cache, aggregator));
     }
 
-    public Callback<QueryMetricsResult> execute(FindRowGroups criteria,
-            final AggregatorGroup aggregator, boolean noCache) {
-
+    public Callback<RowGroups> findRowGroups(FindRowGroups criteria) {
         final List<Callback<FindRowGroups.Result>> queries = new ArrayList<Callback<FindRowGroups.Result>>();
 
         for (final MetricBackend backend : backends) {
@@ -38,8 +38,6 @@ public class QueryGroup {
         }
 
         final DateRange range = criteria.getRange();
-
-        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer(range))
-            .transform(new RowGroupsHandle(cache, aggregator));
+        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer(range));
     }
 }

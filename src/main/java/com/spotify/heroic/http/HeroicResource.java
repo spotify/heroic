@@ -34,6 +34,7 @@ import org.glassfish.jersey.media.sse.SseFeature;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
@@ -107,46 +108,37 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        backendManager.queryMetrics(query).register(
-            new Callback.Handle<QueryMetricsResult>() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                }
+        backendManager.streamMetrics(query, new Stream.Handle<QueryMetricsResult>() {
+            public void stream(QueryMetricsResult result) throws Exception {
+                final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
 
-                @Override
-                public void error(Throwable e) throws Exception {
-                }
+                final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
 
-                @Override
-                public void finish(QueryMetricsResult result)
-                        throws Exception {
-                    final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
+                final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
-                    final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
+                builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
+                builder.name("metrics");
+                builder.data(MetricsResponse.class, entity);
 
-                    final OutboundEvent.Builder eventBuilder = new OutboundEvent.Builder();
+                eventOutput.write(builder.build());
+            }
 
-                    eventBuilder.mediaType(MediaType.APPLICATION_JSON_TYPE);
-                    eventBuilder.name("metrics");
-                    eventBuilder.data(MetricsResponse.class, entity);
+            @Override
+            public void close() throws Exception {
 
-                    final OutboundEvent event = eventBuilder.build();
+                final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
-                    eventOutput.write(event);
-                    eventOutput.close();
-                }
+                builder.mediaType(MediaType.TEXT_PLAIN_TYPE);
+                builder.name("close");
+                builder.data(String.class, "");
 
-                private Map<TimeSerie, List<DataPoint>> makeData(
-                        List<DataPointGroup> groups) {
-                    final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
+                final OutboundEvent event = builder.build();
 
-                    for (final DataPointGroup group : groups) {
-                        data.put(group.getTimeSerie(), group.getDatapoints());
-                    }
+                eventOutput.write(event);
 
-                    return data;
-                }
-            });
+                eventOutput.close();
+            }
+        });
 
         return eventOutput;
     }
@@ -187,17 +179,6 @@ public class HeroicResource {
                     response.resume(Response
                             .status(Response.Status.OK)
                             .entity(entity).build());
-                }
-
-                private Map<TimeSerie, List<DataPoint>> makeData(
-                        List<DataPointGroup> groups) {
-                    final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
-
-                    for (final DataPointGroup group : groups) {
-                        data.put(group.getTimeSerie(), group.getDatapoints());
-                    }
-
-                    return data;
                 }
             });
 
@@ -265,5 +246,16 @@ public class HeroicResource {
 
         final TimeSeriesResponse response = cache.timeseries(query);
         return Response.status(Response.Status.OK).entity(response).build();
+    }
+
+    private static Map<TimeSerie, List<DataPoint>> makeData(
+            List<DataPointGroup> groups) {
+        final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
+
+        for (final DataPointGroup group : groups) {
+            data.put(group.getTimeSerie(), group.getDatapoints());
+        }
+
+        return data;
     }
 }

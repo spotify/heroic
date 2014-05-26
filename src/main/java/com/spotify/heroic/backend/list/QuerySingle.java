@@ -26,8 +26,8 @@ public class QuerySingle {
     private final AggregationCache cache;
 
     public Callback<QueryMetricsResult> execute(final FindRows criteria,
-            final AggregatorGroup aggregator, boolean noCache) {
-        if (cache != null && !noCache) {
+            final AggregatorGroup aggregator) {
+        if (cache != null) {
             return executeSingleWithCache(criteria, aggregator);
         }
 

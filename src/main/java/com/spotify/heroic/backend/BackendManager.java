@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
@@ -33,6 +34,9 @@ public interface BackendManager {
     }
 
     public Callback<QueryMetricsResult> queryMetrics(MetricsQuery query)
+            throws QueryException;
+
+    public void streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult> handle)
             throws QueryException;
 
     public Callback<GroupedAllRowsResult> getAllRows();
