@@ -17,7 +17,7 @@ public class AggregationGroupSerializer extends AbstractSerializer<AggregationGr
     private static final IntegerSerializer integerSerializer = IntegerSerializer.get();
     private static final AggregationSerializer aggregationSerializer = AggregationSerializer.get();
 
-    public static final AggregationGroupSerializer instance = new AggregationGroupSerializer();
+    private static final AggregationGroupSerializer instance = new AggregationGroupSerializer();
 
     public static AggregationGroupSerializer get() {
         return instance;

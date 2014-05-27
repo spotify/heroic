@@ -22,8 +22,8 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
     private static final Map<Short, Class<? extends Aggregation>> TYPES = new HashMap<Short, Class<? extends Aggregation>>();
     private static final Map<Class<? extends Aggregation>, Short> MAP = new HashMap<Class<? extends Aggregation>, Short>();
 
-    public static final short SUM_AGGREGATION = 0x0001;
-    public static final short AVERAGE_AGGREGATION = 0x0002;
+    private static final short SUM_AGGREGATION = 0x0001;
+    private static final short AVERAGE_AGGREGATION = 0x0002;
 
     /**
      * Sets up all static mappings and assert that they are unique.
@@ -44,12 +44,6 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
 
     private static short findType(Class<? extends Aggregation> clazz) {
         return MAP.get(clazz);
-    }
-
-    public static final AggregationSerializer instance = new AggregationSerializer();
-
-    public static AggregationSerializer get() {
-        return instance;
     }
 
     @Override
@@ -102,5 +96,11 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
             throw new RuntimeException(
                     "Failed to create new aggregation instance", e);
         }
+    }
+
+    private static final AggregationSerializer instance = new AggregationSerializer();
+
+    public static AggregationSerializer get() {
+        return instance;
     }
 }

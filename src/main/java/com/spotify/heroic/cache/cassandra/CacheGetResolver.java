@@ -3,7 +3,8 @@ package com.spotify.heroic.cache.cassandra;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.codahale.metrics.Timer;
+import lombok.RequiredArgsConstructor;
+
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -14,7 +15,6 @@ import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CallbackRunnable;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.model.CacheKey;
@@ -23,8 +23,9 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
-public final class CacheGetRunnable extends
-        CallbackRunnable<CacheBackendGetResult> {
+@RequiredArgsConstructor
+public final class CacheGetResolver implements
+        Callback.Resolver<CacheBackendGetResult> {
     static final String CQL_QUERY = "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
@@ -33,17 +34,7 @@ public final class CacheGetRunnable extends
     private final CacheBackendKey key;
     private final DateRange range;
 
-    public CacheGetRunnable(String task, Timer timer,
-            Callback<CacheBackendGetResult> callback, Keyspace keyspace, ColumnFamily<Integer, String> columnFamily, CacheBackendKey key, DateRange range) {
-        super(task, timer, callback);
-        this.keyspace = keyspace;
-        this.columnFamily = columnFamily;
-        this.key = key;
-        this.range = range;
-    }
-
-    @Override
-    public CacheBackendGetResult execute() throws Exception {
+    public CacheBackendGetResult run() throws Exception {
         return new CacheBackendGetResult(key, doGetRow());
     }
 

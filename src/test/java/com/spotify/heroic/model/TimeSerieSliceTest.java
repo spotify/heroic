@@ -13,7 +13,6 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 public class TimeSerieSliceTest {
-    private static final String KEY = "key";
     private static final Map<String, String> TAGS = new HashMap<String, String>();
     final TimeSerie TS = new TimeSerie("key_a", TAGS);
     final TimeSerie TS_B = new TimeSerie("key_b", TAGS);

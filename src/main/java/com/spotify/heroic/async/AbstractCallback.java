@@ -2,6 +2,7 @@ package com.spotify.heroic.async;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Provide some simple common implementations of a callback.
@@ -14,13 +15,19 @@ import java.util.List;
 public abstract class AbstractCallback<T> implements Callback<T> {
     @Override
     public <C> Callback<T> reduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
-        final CallbackGroupHandle<T, C> handle = new CallbackGroupHandle<T, C>(
-                this) {
+        final CallbackGroup.Handle<C> handle = new CallbackGroup.Handle<C>() {
             @Override
-            public T execute(Collection<C> results,
+            public void done(Collection<C> results,
                     Collection<Throwable> errors,
                     Collection<CancelReason> cancelled) throws Exception {
-                return reducer.done(results, errors, cancelled);
+                if (!AbstractCallback.this.isInitialized())
+                    return;
+
+                try {
+                    AbstractCallback.this.finish(reducer.done(results, errors, cancelled));
+                } catch(Throwable error) {
+                    AbstractCallback.this.fail(error);
+                }
             }
         };
 
@@ -29,7 +36,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
     @Override
     public <C> Callback<T> reduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
-        final CallbackStreamHandle<T, C> handle = new CallbackStreamHandle<T, C>(this) {
+        final CallbackStream.Handle<C> handle = new CallbackStream.Handle<C>() {
             @Override
             public void finish(CallbackStream<C> stream, Callback<C> callback,
                     C result) throws Exception {
@@ -37,8 +44,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void error(CallbackStream<C> stream, Callback<C> callback,
-                    Throwable error) throws Exception {
+            public void error(CallbackStream<C> stream, Callback<C> callback, Throwable error) throws Exception {
                 reducer.error(stream, callback, error);
             }
 
@@ -49,9 +55,16 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public T execute(int successful, int failed, int cancelled)
+            public void done(int successful, int failed, int cancelled)
                     throws Exception {
-                return reducer.done(successful, failed, cancelled);
+                if (!AbstractCallback.this.isInitialized())
+                    return;
+
+                try {
+                    AbstractCallback.this.finish(reducer.done(successful, failed, cancelled));
+                } catch(Throwable error) {
+                    AbstractCallback.this.fail(error);
+                }
             }
         };
 
@@ -99,6 +112,25 @@ public abstract class AbstractCallback<T> implements Callback<T> {
         });
 
         return callback;
+    }
+
+    @Override
+    public Callback<T> resolve(final Executor executor, final Resolver<T> resolver) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                if (!AbstractCallback.this.isInitialized())
+                    return;
+
+                try {
+                    AbstractCallback.this.finish(resolver.run());
+                } catch(Throwable error) {
+                    AbstractCallback.this.fail(error);
+                }
+            }
+        });
+
+        return this;
     }
 
     public abstract <C> Callback<C> newCallback();

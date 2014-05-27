@@ -20,7 +20,7 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
-public final class RowGroupsHandle implements Callback.Transformer<RowGroups, QueryMetricsResult> {
+public final class RowGroupsTransformer implements Callback.Transformer<RowGroups, QueryMetricsResult> {
     private final AggregationCache cache;
     private final AggregatorGroup aggregator;
     private final DateRange range;

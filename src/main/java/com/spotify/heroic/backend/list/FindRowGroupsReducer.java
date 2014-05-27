@@ -14,12 +14,12 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 public final class FindRowGroupsReducer implements
-        Callback.Reducer<FindRowGroups.Result, RowGroups> {
+        Callback.Reducer<FindRows.Result, RowGroups> {
     @RequiredArgsConstructor
     public static final class PreparedGroup {
         @Getter
@@ -29,18 +29,18 @@ public final class FindRowGroupsReducer implements
     }
 
     @Override
-    public RowGroups done(Collection<FindRowGroups.Result> results,
+    public RowGroups done(Collection<FindRows.Result> results,
             Collection<Throwable> errors, Collection<CancelReason> cancelled)
             throws Exception {
         return new RowGroups(prepareGroups(results));
     }
 
     private final Map<TimeSerie, List<PreparedGroup>> prepareGroups(
-            Collection<FindRowGroups.Result> results) throws QueryException {
+            Collection<FindRows.Result> results) throws QueryException {
 
         final Map<TimeSerie, List<PreparedGroup>> queries = new HashMap<TimeSerie, List<PreparedGroup>>();
 
-        for (final FindRowGroups.Result result : results) {
+        for (final FindRows.Result result : results) {
             final MetricBackend backend = result.getBackend();
 
             for (final Map.Entry<TimeSerie, List<DataPointsRowKey>> entry : result

@@ -1,6 +1,7 @@
 package com.spotify.heroic.async;
 
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -83,5 +84,16 @@ public class FinishedCallback<T> implements Callback<T> {
         }
 
         return callback;
+    }
+
+    @Override
+    public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
+        try {
+            finish(resolver.run());
+        } catch (Throwable e) {
+            fail(e);
+        }
+
+        return this;
     }
 }

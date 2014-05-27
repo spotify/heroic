@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -18,10 +19,9 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.backend.list.QueryGroup;
-import com.spotify.heroic.backend.list.QuerySingle;
+import com.spotify.heroic.backend.list.FindRowGroupsReducer;
 import com.spotify.heroic.backend.list.RowGroups;
-import com.spotify.heroic.backend.model.FindRowGroups;
+import com.spotify.heroic.backend.list.RowGroupsTransformer;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
@@ -31,6 +31,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.query.MetricsQuery;
 
+@Slf4j
 public class ListBackendManager implements BackendManager {
     @Getter
     private final List<MetricBackend> metricBackends;
@@ -41,8 +42,8 @@ public class ListBackendManager implements BackendManager {
     @Getter
     private final long maxAggregationMagnitude;
 
-    private final QuerySingle querySingle;
-    private final QueryGroup queryGroup;
+    @Getter
+    private final AggregationCache cache;
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
             long maxAggregationMagnitude, long maxQueriableDataPoints,
@@ -50,10 +51,7 @@ public class ListBackendManager implements BackendManager {
         this.metricBackends = filterMetricBackends(backends);
         this.eventBackends = filterEventBackends(backends);
         this.maxAggregationMagnitude = maxAggregationMagnitude;
-
-        this.querySingle = new QuerySingle(metricBackends,
-                maxQueriableDataPoints, cache);
-        this.queryGroup = new QueryGroup(metricBackends, cache);
+        this.cache = cache;
     }
 
     private List<EventBackend> filterEventBackends(List<Backend> backends) {
@@ -115,15 +113,9 @@ public class ListBackendManager implements BackendManager {
         }
 
         final DateRange rounded = roundRange(aggregator, range);
+        final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
 
-        if (groupBy != null && !groupBy.isEmpty()) {
-            final FindRowGroups criteria = new FindRowGroups(key, rounded,
-                    tags, groupBy);
-            return queryGroup.execute(criteria, aggregator);
-        }
-
-        final FindRows criteria = new FindRows(key, rounded, tags);
-        return querySingle.execute(criteria, aggregator);
+        return findRowGroups(criteria).transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()));
     }
 
     @Override
@@ -142,28 +134,14 @@ public class ListBackendManager implements BackendManager {
 
         final DateRange range = query.getRange().buildDateRange();
         final DateRange rounded = roundRange(aggregator, range);
+        final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
+        final Callback<RowGroups> rowGroups = findRowGroups(criteria);
 
-        if (groupBy != null && !groupBy.isEmpty()) {
-            final FindRowGroups criteria = new FindRowGroups(key, rounded, tags, groupBy);
-            final Callback<RowGroups> rowGroups = queryGroup.findRowGroups(criteria);
-
-            stream(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle,
-                    new StreamingQuery<FindRowGroups>() {
-                @Override
-                public Callback<QueryMetricsResult> query(FindRowGroups current, AggregatorGroup aggregator) {
-                    return rowGroups.transform(queryGroup.buildTransformer(current, aggregator));
-                }
-            });
-
-            return;
-        }
-
-        final FindRows criteria = new FindRows(key, rounded, tags);
         stream(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle,
                 new StreamingQuery<FindRows>() {
             @Override
             public Callback<QueryMetricsResult> query(FindRows current, AggregatorGroup aggregator) {
-                return querySingle.execute(current, aggregator);
+                return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()));
             }
         });
     }
@@ -263,5 +241,19 @@ public class ListBackendManager implements BackendManager {
                 stream(original, current, aggregation, handle, query);
             }
         });
+    }
+
+    private Callback<RowGroups> findRowGroups(FindRows criteria) {
+        final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
+
+        for (final MetricBackend backend : metricBackends) {
+            try {
+                queries.add(backend.findRows(criteria));
+            } catch (final Exception e) {
+                log.error("Failed to query backend", e);
+            }
+        }
+
+        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer());
     }
 }

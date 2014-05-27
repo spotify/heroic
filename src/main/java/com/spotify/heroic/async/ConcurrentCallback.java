@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -312,9 +313,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         };
     }
 
-    @Override
-    public <C> Callback<C> newCallback() {
-        return new ConcurrentCallback<C>();
+    public static <C> Callback<C> newResolve(Executor executor, final Resolver<C> resolver) {
+        return new ConcurrentCallback<C>().resolve(executor, resolver);
     }
 
     public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
@@ -323,5 +323,10 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
     public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
+    }
+
+    @Override
+    public <C> Callback<C> newCallback() {
+        return new ConcurrentCallback<C>();
     }
 }

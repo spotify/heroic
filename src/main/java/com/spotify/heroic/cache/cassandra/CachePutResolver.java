@@ -2,13 +2,13 @@ package com.spotify.heroic.cache.cassandra;
 
 import java.util.List;
 
-import com.codahale.metrics.Timer;
+import lombok.RequiredArgsConstructor;
+
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CallbackRunnable;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.CacheKey;
@@ -16,8 +16,9 @@ import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
-final class CachePutRunnable extends
-        CallbackRunnable<CacheBackendPutResult> {
+@RequiredArgsConstructor
+final class CachePutResolver implements
+        Callback.Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
@@ -26,18 +27,8 @@ final class CachePutRunnable extends
     private final CacheBackendKey key;
     private final List<DataPoint> datapoints;
 
-    CachePutRunnable(String task, Timer timer,
-            Callback<CacheBackendPutResult> callback, Keyspace keyspace, ColumnFamily<Integer, String> columnFamily, CacheBackendKey key,
-            List<DataPoint> datapoints) {
-        super(task, timer, callback);
-        this.keyspace = keyspace;
-        this.columnFamily = columnFamily;
-        this.key = key;
-        this.datapoints = datapoints;
-    }
-
     @Override
-    public CacheBackendPutResult execute() throws Exception {
+    public CacheBackendPutResult run() throws Exception {
         final AggregationGroup aggregation = key.getAggregationGroup();
         final TimeSerie timeSerie = key.getTimeSerie();
         final long width = aggregation.getWidth();

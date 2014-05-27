@@ -1,8 +1,6 @@
 package com.spotify.heroic.cache.cassandra;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -10,7 +8,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -85,7 +82,7 @@ public class CassandraCache implements
             .newColumnFamily("Cql3CF", IntegerSerializer.get(),
                     StringSerializer.get());
 
-    private final Map<String, Timer> timerPool;
+    @SuppressWarnings("unused")
     private final MetricRegistry metricsRegistry;
 
     public CassandraCache(MetricRegistry registry,
@@ -93,7 +90,6 @@ public class CassandraCache implements
             int maxConnectionsPerHost) {
         this.metricsRegistry = registry;
         this.executor = executor;
-        timerPool = new HashMap<String, Timer>();
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
                 .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
@@ -113,36 +109,14 @@ public class CassandraCache implements
     @Override
     public Callback<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range)
             throws AggregationCacheException {
-        final ConcurrentCallback<CacheBackendGetResult> callback = new ConcurrentCallback<CacheBackendGetResult>();
-        final String taskName = "get-cache-row";
-        final Timer timer = getTimer(taskName);
-
-        executor.execute(new CacheGetRunnable(taskName, timer, callback, keyspace, CQL3_CF, key, range));
-
-        return callback;
-    }
-
-    private Timer getTimer(String taskName) {
-        Timer timer = timerPool.get(taskName);
-
-        if (timer == null) {
-            timer = metricsRegistry.timer(MetricRegistry.name("heroic",
-                    "cache", "aggregation", "cassandra", taskName));
-            timerPool.put(taskName, timer);
-        }
-
-        return timer;
+        return ConcurrentCallback.newResolve(
+                executor, new CacheGetResolver(keyspace, CQL3_CF, key, range));
     }
 
     @Override
     public Callback<CacheBackendPutResult> put(final CacheBackendKey key,
             final List<DataPoint> datapoints) throws AggregationCacheException {
-        final ConcurrentCallback<CacheBackendPutResult> callback = new ConcurrentCallback<CacheBackendPutResult>();
-        final String taskName = "put-cache-row";
-        final Timer timer = getTimer(taskName);
-
-
-        executor.execute(new CachePutRunnable(taskName, timer, callback, keyspace, CQL3_CF, key, datapoints));
-        return callback;
+        return ConcurrentCallback.newResolve(
+                executor, new CachePutResolver( keyspace, CQL3_CF, key, datapoints));
     }
 }

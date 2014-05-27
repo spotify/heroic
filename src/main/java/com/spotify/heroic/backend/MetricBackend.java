@@ -5,7 +5,6 @@ import java.util.List;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.model.FetchDataPoints;
-import com.spotify.heroic.backend.model.FindRowGroups;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.model.DateRange;
@@ -29,20 +28,6 @@ public interface MetricBackend extends Backend {
             FetchDataPoints fetchDataPointsQuery);
 
     /**
-     * Find the data point rows matching the specified criteria.
-     * 
-     * @param key
-     *            Only return rows matching this key.
-     * @param range
-     *            Filter on the specified date range.
-     * @param filter
-     *            Filter on the specified tags.
-     * @return An asynchronous handler resulting in a FindRowsResult.
-     * @throws QueryException
-     */
-    public Callback<FindRows.Result> findRows(FindRows query);
-
-    /**
      * Find a rows by a group specification.
      * 
      * @param key
@@ -57,7 +42,7 @@ public interface MetricBackend extends Backend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRowGroups.Result> findRowGroups(FindRowGroups query)
+    public Callback<FindRows.Result> findRows(FindRows query)
             throws QueryException;
 
     /**

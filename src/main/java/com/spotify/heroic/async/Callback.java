@@ -2,6 +2,7 @@ package com.spotify.heroic.async;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Interface for asynchronous callbacks with the ability to subscribe to
@@ -77,6 +78,10 @@ public interface Callback<T> {
         void transform(C result, Callback<R> callback) throws Exception;
     }
 
+    public static interface Resolver<R> {
+        R run() throws Exception;
+    }
+
     public Callback<T> fail(Throwable error);
 
     public Callback<T> finish(T result);
@@ -111,4 +116,6 @@ public interface Callback<T> {
     public <C> Callback<T> reduce(List<Callback<C>> callbacks, final StreamReducer<C, T> reducer);
 
     public <C> Callback<C> transform(Transformer<T, C> transformer);
+
+    public Callback<T> resolve(Executor executor, Resolver<T> resolver);
 }
