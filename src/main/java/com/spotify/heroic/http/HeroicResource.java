@@ -38,6 +38,7 @@ import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.http.model.KeysResponse;
@@ -109,8 +110,13 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        backendManager.streamMetrics(query, new Stream.Handle<QueryMetricsResult>() {
-            public void stream(QueryMetricsResult result) throws Exception {
+        backendManager.streamMetrics(query, new Stream.Handle<QueryMetricsResult, StreamMetricsResult>() {
+            public void stream(Callback<StreamMetricsResult> callback, QueryMetricsResult result) throws Exception {
+                if (eventOutput.isClosed()) {
+                    callback.cancel(new CancelReason("client disconnected"));
+                    return;
+                }
+
                 final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
 
                 final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
@@ -120,7 +126,6 @@ public class HeroicResource {
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
                 builder.name("metrics");
                 builder.data(MetricsResponse.class, entity);
-
                 eventOutput.write(builder.build());
             }
 

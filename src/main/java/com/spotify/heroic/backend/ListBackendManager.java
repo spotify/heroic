@@ -25,7 +25,6 @@ import com.spotify.heroic.backend.list.RowGroupsTransformer;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
-import com.spotify.heroic.backend.model.RangedQuery;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQuery;
 import com.spotify.heroic.model.DateRange;
@@ -119,7 +118,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public void streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult> handle)
+    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle)
             throws QueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
@@ -137,13 +136,17 @@ public class ListBackendManager implements BackendManager {
         final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
         final Callback<RowGroups> rowGroups = findRowGroups(criteria);
 
-        stream(criteria, criteria.withRange(rounded.withStart(rounded.end())), aggregation, handle,
-                new StreamingQuery<FindRows>() {
+        final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
+
+        streamChunks(callback, aggregation, handle,
+                new StreamingQuery() {
             @Override
             public Callback<QueryMetricsResult> query(FindRows current, AggregatorGroup aggregator) {
                 return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()));
             }
-        });
+        }, criteria, criteria.withRange(rounded.withStart(rounded.end())));
+
+        return callback;
     }
 
     @Override
@@ -203,19 +206,35 @@ public class ListBackendManager implements BackendManager {
 
     private static final long DIFF = 3600 * 1000 * 6;
 
-    public static interface StreamingQuery<T extends RangedQuery<T>> {
-        public Callback<QueryMetricsResult> query(final T current, final AggregatorGroup aggregator);
+    public static interface StreamingQuery {
+        public Callback<QueryMetricsResult> query(final FindRows current, final AggregatorGroup aggregator);
     }
 
-    private <T extends RangedQuery<T>> void stream(final T original,
-            final T last, final AggregationGroup aggregation,
-            final Stream.Handle<QueryMetricsResult> handle, final StreamingQuery<T> query) {
+    /**
+     * Streaming implementation that backs down in time in DIFF ms for each invocation.
+     *
+     * @param callback
+     * @param aggregation
+     * @param handle
+     * @param query
+     * @param original
+     * @param last
+     */
+    private void streamChunks(
+        final Callback<StreamMetricsResult> callback,
+        final AggregationGroup aggregation,
+        final Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle,
+        final StreamingQuery query,
+        final FindRows original,
+        final FindRows last
+    )
+    {
         final DateRange range = original.getRange();
         final DateRange currentRange = last.getRange();
-        final DateRange nextRange = 
-                currentRange.withStart(Math.max(currentRange.start() - DIFF, range.start()));
+        // decrease the range for the current chunk.
+        final DateRange nextRange = currentRange.withStart(Math.max(currentRange.start() - DIFF, range.start()));
 
-        final T current = last.withRange(nextRange);
+        final FindRows current = last.withRange(nextRange);
         final AggregatorGroup aggregator = aggregation.build();
 
         query.query(current, aggregator).register(new Callback.Handle<QueryMetricsResult>() {
@@ -231,14 +250,19 @@ public class ListBackendManager implements BackendManager {
 
             @Override
             public void finish(QueryMetricsResult result) throws Exception {
-                handle.stream(result);
+                // is cancelled?
+                if (!callback.isInitialized())
+                    return;
+
+                handle.stream(callback, result);
 
                 if (current.getRange().start() <= range.start()) {
+                    callback.finish(new StreamMetricsResult());
                     handle.close();
                     return;
                 }
 
-                stream(original, current, aggregation, handle, query);
+                streamChunks(callback, aggregation, handle, query,  original, current);
             }
         });
     }

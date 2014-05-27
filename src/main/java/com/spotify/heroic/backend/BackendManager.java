@@ -36,7 +36,12 @@ public interface BackendManager {
     public Callback<QueryMetricsResult> queryMetrics(MetricsQuery query)
             throws QueryException;
 
-    public void streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult> handle)
+    @ToString(of={})
+    @RequiredArgsConstructor
+    public static final class StreamMetricsResult {
+    }
+
+    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle)
             throws QueryException;
 
     public Callback<GroupedAllRowsResult> getAllRows();

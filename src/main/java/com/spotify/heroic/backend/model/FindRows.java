@@ -12,7 +12,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
 @ToString(of = { "key", "range", "filter", "groupBy" })
-public class FindRows implements RangedQuery<FindRows> {
+public class FindRows {
     @Getter
     private final String key;
     @Getter
