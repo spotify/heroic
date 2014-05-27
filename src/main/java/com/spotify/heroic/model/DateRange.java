@@ -15,7 +15,7 @@ public class DateRange implements Comparable<DateRange> {
 
     public DateRange(long start, long end) {
         if (start > end)
-            throw new IllegalArgumentException("'start' time must not be after 'end'");
+            start = end;
 
         this.start = start;
         this.end = end;
@@ -27,6 +27,10 @@ public class DateRange implements Comparable<DateRange> {
 
     public long end() {
         return end;
+    }
+
+    public boolean isEmpty() {
+        return diff() == 0;
     }
 
     public long diff() {
@@ -81,5 +85,9 @@ public class DateRange implements Comparable<DateRange> {
 
     public DateRange withStart(long start) {
         return new DateRange(start, this.end);
+    }
+
+    public DateRange withEnd(long end) {
+        return new DateRange(this.start, end);
     }
 }

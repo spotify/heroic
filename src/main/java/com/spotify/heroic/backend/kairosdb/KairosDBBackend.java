@@ -183,15 +183,28 @@ public class KairosDBBackend implements MetricBackend {
         final DateRange range = fetchDataPointsQuery.getRange();
 
         for (final DataPointsRowKey rowKey : rows) {
-            queries.add(buildQuery(rowKey, range));
+            final Callback<Result> query = buildQuery(rowKey, range);
+
+            if (query == null)
+                continue;
+
+            queries.add(query);
         }
 
         return queries;
     }
 
     private Callback<FetchDataPoints.Result> buildQuery(
-            final DataPointsRowKey rowKey, DateRange range) {
+            final DataPointsRowKey rowKey, DateRange queryRange) {
         final long timestamp = rowKey.getTimestamp();
+
+        final DateRange rowRange = new DateRange(timestamp, timestamp + DataPointsRowKey.MAX_WIDTH);
+
+        final DateRange range = queryRange.modify(rowRange);
+
+        if (range.isEmpty())
+            return null;
+
         final long startTime = DataPoint.Name.toStartTimeStamp(range.start(),
                 timestamp);
         final long endTime = DataPoint.Name.toEndTimeStamp(range.end(),

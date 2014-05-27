@@ -138,13 +138,15 @@ public class ListBackendManager implements BackendManager {
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
-        streamChunks(callback, aggregation, handle,
-                new StreamingQuery() {
+        final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
-            public Callback<QueryMetricsResult> query(FindRows current, AggregatorGroup aggregator) {
-                return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()));
+            public Callback<QueryMetricsResult> query(DateRange range) {
+                final AggregatorGroup aggregator = aggregation.build();
+                return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, range));
             }
-        }, criteria, criteria.withRange(rounded.withStart(rounded.end())));
+        };
+
+        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()));
 
         return callback;
     }
@@ -207,7 +209,7 @@ public class ListBackendManager implements BackendManager {
     private static final long DIFF = 3600 * 1000 * 6;
 
     public static interface StreamingQuery {
-        public Callback<QueryMetricsResult> query(final FindRows current, final AggregatorGroup aggregator);
+        public Callback<QueryMetricsResult> query(final DateRange range);
     }
 
     /**
@@ -222,22 +224,18 @@ public class ListBackendManager implements BackendManager {
      */
     private void streamChunks(
         final Callback<StreamMetricsResult> callback,
-        final AggregationGroup aggregation,
         final Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle,
         final StreamingQuery query,
         final FindRows original,
-        final FindRows last
+        final DateRange lastRange
     )
     {
-        final DateRange range = original.getRange();
-        final DateRange currentRange = last.getRange();
+        final DateRange originalRange = original.getRange();
         // decrease the range for the current chunk.
-        final DateRange nextRange = currentRange.withStart(Math.max(currentRange.start() - DIFF, range.start()));
+        final DateRange currentRange = lastRange.withStart(
+                Math.max(lastRange.start() - DIFF, originalRange.start()));
 
-        final FindRows current = last.withRange(nextRange);
-        final AggregatorGroup aggregator = aggregation.build();
-
-        query.query(current, aggregator).register(new Callback.Handle<QueryMetricsResult>() {
+        query.query(currentRange).register(new Callback.Handle<QueryMetricsResult>() {
             @Override
             public void cancel(CancelReason reason) throws Exception {
                 handle.close();
@@ -256,13 +254,13 @@ public class ListBackendManager implements BackendManager {
 
                 handle.stream(callback, result);
 
-                if (current.getRange().start() <= range.start()) {
+                if (currentRange.start() <= originalRange.start()) {
                     callback.finish(new StreamMetricsResult());
                     handle.close();
                     return;
                 }
 
-                streamChunks(callback, aggregation, handle, query,  original, current);
+                streamChunks(callback, handle, query, original, currentRange);
             }
         });
     }
