@@ -1,4 +1,4 @@
-package com.spotify.heroic.http;
+package com.spotify.heroic.http.model;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

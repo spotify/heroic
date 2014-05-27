@@ -1,4 +1,4 @@
-package com.spotify.heroic.query;
+package com.spotify.heroic.http.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;

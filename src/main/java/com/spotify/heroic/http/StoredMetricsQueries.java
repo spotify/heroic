@@ -2,8 +2,13 @@ package com.spotify.heroic.http;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.spotify.heroic.query.MetricsQuery;
+import com.spotify.heroic.http.model.MetricsQuery;
 
+/**
+ * Storage for prepared queries.
+ *
+ * @author udoprog
+ */
 public class StoredMetricsQueries {
     private final ConcurrentHashMap<String, MetricsQuery> storedQueries = new ConcurrentHashMap<String, MetricsQuery>();
 

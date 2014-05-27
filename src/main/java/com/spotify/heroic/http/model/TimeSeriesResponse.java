@@ -1,4 +1,4 @@
-package com.spotify.heroic.query;
+package com.spotify.heroic.http.model;
 
 import java.io.IOException;
 import java.util.List;

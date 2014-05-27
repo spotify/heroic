@@ -40,15 +40,16 @@ import com.spotify.heroic.backend.BackendManager.DataPointGroup;
 import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
+import com.spotify.heroic.http.model.KeysResponse;
+import com.spotify.heroic.http.model.MetricsQuery;
+import com.spotify.heroic.http.model.MetricsResponse;
+import com.spotify.heroic.http.model.MetricsStreamResponse;
+import com.spotify.heroic.http.model.TagsQuery;
+import com.spotify.heroic.http.model.TagsResponse;
+import com.spotify.heroic.http.model.TimeSeriesQuery;
+import com.spotify.heroic.http.model.TimeSeriesResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.query.KeysResponse;
-import com.spotify.heroic.query.MetricsQuery;
-import com.spotify.heroic.query.MetricsResponse;
-import com.spotify.heroic.query.TagsQuery;
-import com.spotify.heroic.query.TagsResponse;
-import com.spotify.heroic.query.TimeSeriesQuery;
-import com.spotify.heroic.query.TimeSeriesResponse;
 
 @Slf4j
 @Path("/")

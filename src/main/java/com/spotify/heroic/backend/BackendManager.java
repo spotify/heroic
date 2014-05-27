@@ -9,9 +9,9 @@ import lombok.ToString;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.http.model.MetricsQuery;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.query.MetricsQuery;
 
 public interface BackendManager {
     @ToString(of={"timeSerie", "datapoints"})

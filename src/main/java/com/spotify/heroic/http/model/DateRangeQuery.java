@@ -1,4 +1,4 @@
-package com.spotify.heroic.query;
+package com.spotify.heroic.http.model;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

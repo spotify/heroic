@@ -11,11 +11,11 @@ import com.spotify.heroic.backend.TimeSeriesCache.FindTagsResult;
 import com.spotify.heroic.backend.TimeSeriesCache.FindTimeSeriesResult;
 import com.spotify.heroic.http.cache.CachedHandle;
 import com.spotify.heroic.http.cache.CachedRequest;
-import com.spotify.heroic.query.KeysResponse;
-import com.spotify.heroic.query.TagsQuery;
-import com.spotify.heroic.query.TagsResponse;
-import com.spotify.heroic.query.TimeSeriesQuery;
-import com.spotify.heroic.query.TimeSeriesResponse;
+import com.spotify.heroic.http.model.KeysResponse;
+import com.spotify.heroic.http.model.TagsQuery;
+import com.spotify.heroic.http.model.TagsResponse;
+import com.spotify.heroic.http.model.TimeSeriesQuery;
+import com.spotify.heroic.http.model.TimeSeriesResponse;
 
 @Singleton
 public class HeroicResourceCache {

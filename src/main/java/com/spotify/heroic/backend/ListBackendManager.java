@@ -27,9 +27,9 @@ import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.backend.model.RangedQuery;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.http.model.MetricsQuery;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.query.MetricsQuery;
 
 @Slf4j
 public class ListBackendManager implements BackendManager {
