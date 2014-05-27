@@ -7,16 +7,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.http.model.MetricsQuery;
+import com.spotify.heroic.http.model.MetricsQueryResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
 public interface BackendManager {
     @ToString(of={"timeSerie", "datapoints"})
     @RequiredArgsConstructor
-    public static final class DataPointGroup {
+    public static final class MetricGroup {
         @Getter
         private final TimeSerie timeSerie;
 
@@ -26,14 +26,20 @@ public interface BackendManager {
 
     @ToString(of={"groups", "statistics"})
     @RequiredArgsConstructor
-    public static final class QueryMetricsResult {
+    public static final class MetricGroups {
         @Getter
-        private final List<DataPointGroup> groups;
+        private final List<MetricGroup> groups;
         @Getter
         private final Statistics statistics;
     }
 
-    public Callback<QueryMetricsResult> queryMetrics(MetricsQuery query)
+    public static interface MetricStream {
+        public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result)
+                throws Exception;
+        public void close() throws Exception;
+    }
+
+    public Callback<MetricsQueryResult> queryMetrics(MetricsQuery query)
             throws QueryException;
 
     @ToString(of={})
@@ -41,7 +47,7 @@ public interface BackendManager {
     public static final class StreamMetricsResult {
     }
 
-    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle)
+    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, MetricStream handle)
             throws QueryException;
 
     public Callback<GroupedAllRowsResult> getAllRows();

@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
@@ -61,6 +62,9 @@ public class MetricsResponse {
             jgen.writeEndArray();
         }
     }
+
+    @Getter
+    private final DateRange range;
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)

@@ -1,5 +1,7 @@
 package com.spotify.heroic.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -29,6 +31,7 @@ public class DateRange implements Comparable<DateRange> {
         return end;
     }
 
+    @JsonIgnore
     public boolean isEmpty() {
         return diff() == 0;
     }

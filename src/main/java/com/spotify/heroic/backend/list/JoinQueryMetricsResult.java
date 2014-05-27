@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroup;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
 
 /**
@@ -19,9 +19,9 @@ import com.spotify.heroic.backend.Statistics;
  */
 @Slf4j
 public final class JoinQueryMetricsResult implements
-        Callback.Reducer<QueryMetricsResult, QueryMetricsResult> {
+        Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
-    public QueryMetricsResult done(Collection<QueryMetricsResult> results,
+    public MetricGroups done(Collection<MetricGroups> results,
             Collection<Throwable> errors, Collection<CancelReason> cancelled)
             throws Exception {
         if (!errors.isEmpty()) {
@@ -34,15 +34,15 @@ public final class JoinQueryMetricsResult implements
             }
         }
 
-        final List<DataPointGroup> groups = new LinkedList<DataPointGroup>();
+        final List<MetricGroup> groups = new LinkedList<MetricGroup>();
 
         Statistics statistics = new Statistics();
 
-        for (final QueryMetricsResult result : results) {
+        for (final MetricGroups result : results) {
             statistics = statistics.merge(result.getStatistics());
             groups.addAll(result.getGroups());
         }
 
-        return new QueryMetricsResult(groups, statistics);
+        return new MetricGroups(groups, statistics);
     }
 }

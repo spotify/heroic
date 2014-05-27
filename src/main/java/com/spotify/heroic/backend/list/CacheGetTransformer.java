@@ -6,8 +6,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroup;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
@@ -21,12 +21,12 @@ import com.spotify.heroic.model.TimeSerieSlice;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public abstract class CacheGetTransformer implements Callback.Transformer<CacheQueryResult, QueryMetricsResult> {
+public abstract class CacheGetTransformer implements Callback.Transformer<CacheQueryResult, MetricGroups> {
     private final TimeSerie timeSerie;
     private final AggregationCache cache;
 
-    public void transform(CacheQueryResult cacheResult, Callback<QueryMetricsResult> callback) throws Exception {
-        final List<Callback<QueryMetricsResult>> missQueries = new ArrayList<Callback<QueryMetricsResult>>();
+    public void transform(CacheQueryResult cacheResult, Callback<MetricGroups> callback) throws Exception {
+        final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
 
         for (final TimeSerieSlice slice : cacheResult.getMisses()) {
             missQueries.add(cacheMiss(slice));
@@ -37,15 +37,15 @@ public abstract class CacheGetTransformer implements Callback.Transformer<CacheQ
          */
         if (missQueries.isEmpty()) {
             final List<DataPoint> datapoints = cacheResult.getResult();
-            final DataPointGroup group = new DataPointGroup(timeSerie, datapoints);
-            final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
+            final MetricGroup group = new MetricGroup(timeSerie, datapoints);
+            final List<MetricGroup> groups = new ArrayList<MetricGroup>();
 
             groups.add(group);
 
             final Statistics stat = new Statistics();
             stat.setCache(new Statistics.Cache(datapoints.size(), 0, 0));
 
-            callback.finish(new QueryMetricsResult(groups, stat));
+            callback.finish(new MetricGroups(groups, stat));
             return;
         }
 
@@ -56,5 +56,5 @@ public abstract class CacheGetTransformer implements Callback.Transformer<CacheQ
                 cache, timeSerie, cacheResult));
     }
 
-    public abstract Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice) throws Exception;
+    public abstract Callback<MetricGroups> cacheMiss(TimeSerieSlice slice) throws Exception;
 }

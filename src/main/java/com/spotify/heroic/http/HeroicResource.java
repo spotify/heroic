@@ -34,15 +34,15 @@ import org.glassfish.jersey.media.sse.SseFeature;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroup;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.http.model.KeysResponse;
 import com.spotify.heroic.http.model.MetricsQuery;
+import com.spotify.heroic.http.model.MetricsQueryResult;
 import com.spotify.heroic.http.model.MetricsResponse;
 import com.spotify.heroic.http.model.MetricsStreamResponse;
 import com.spotify.heroic.http.model.TagsQuery;
@@ -110,17 +110,17 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        backendManager.streamMetrics(query, new Stream.Handle<QueryMetricsResult, StreamMetricsResult>() {
-            public void stream(Callback<StreamMetricsResult> callback, QueryMetricsResult result) throws Exception {
+        backendManager.streamMetrics(query, new BackendManager.MetricStream() {
+            public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
                     return;
                 }
 
-                final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
-
-                final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
-
+                final MetricGroups groups = result.getMetricGroups();
+                final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
+                final MetricsResponse entity = new MetricsResponse(
+                        result.getQueryRange(), data, groups.getStatistics());
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -155,8 +155,8 @@ public class HeroicResource {
             MetricsQuery query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<QueryMetricsResult> callback = backendManager.queryMetrics(query).register(
-            new Callback.Handle<QueryMetricsResult>() {
+        final Callback<MetricsQueryResult> callback = backendManager.queryMetrics(query).register(
+            new Callback.Handle<MetricsQueryResult>() {
                 @Override
                 public void cancel(CancelReason reason)
                         throws Exception {
@@ -175,11 +175,12 @@ public class HeroicResource {
                 }
 
                 @Override
-                public void finish(QueryMetricsResult result)
+                public void finish(MetricsQueryResult result)
                         throws Exception {
-                    final Map<TimeSerie, List<DataPoint>> data = makeData(result.getGroups());
-
-                    final MetricsResponse entity = new MetricsResponse(data, result.getStatistics());
+                    final MetricGroups groups = result.getMetricGroups();
+                    final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
+                    final MetricsResponse entity = new MetricsResponse(
+                            result.getQueryRange(), data, groups.getStatistics());
 
                     response.resume(Response
                             .status(Response.Status.OK)
@@ -254,10 +255,10 @@ public class HeroicResource {
     }
 
     private static Map<TimeSerie, List<DataPoint>> makeData(
-            List<DataPointGroup> groups) {
+            List<MetricGroup> groups) {
         final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
 
-        for (final DataPointGroup group : groups) {
+        for (final MetricGroup group : groups) {
             data.put(group.getTimeSerie(), group.getDatapoints());
         }
 

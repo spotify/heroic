@@ -17,7 +17,6 @@ import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.Stream;
 import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.backend.list.FindRowGroupsReducer;
 import com.spotify.heroic.backend.list.RowGroups;
@@ -27,6 +26,7 @@ import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQuery;
+import com.spotify.heroic.http.model.MetricsQueryResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -83,7 +83,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public Callback<QueryMetricsResult> queryMetrics(final MetricsQuery query)
+    public Callback<MetricsQueryResult> queryMetrics(final MetricsQuery query)
             throws QueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
@@ -114,11 +114,19 @@ public class ListBackendManager implements BackendManager {
         final DateRange rounded = roundRange(aggregator, range);
         final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
 
-        return findRowGroups(criteria).transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()));
+        return findRowGroups(criteria)
+                .transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()))
+                .transform(new Callback.Transformer<MetricGroups, MetricsQueryResult>() {
+            @Override
+            public void transform(MetricGroups result, Callback<MetricsQueryResult> callback)
+                throws Exception {
+                callback.finish(new MetricsQueryResult(rounded, result));
+            }
+        });
     }
 
     @Override
-    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle)
+    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, MetricStream handle)
             throws QueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
@@ -140,7 +148,7 @@ public class ListBackendManager implements BackendManager {
 
         final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
-            public Callback<QueryMetricsResult> query(DateRange range) {
+            public Callback<MetricGroups> query(DateRange range) {
                 final AggregatorGroup aggregator = aggregation.build();
                 return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, range));
             }
@@ -209,7 +217,7 @@ public class ListBackendManager implements BackendManager {
     private static final long DIFF = 3600 * 1000 * 6;
 
     public static interface StreamingQuery {
-        public Callback<QueryMetricsResult> query(final DateRange range);
+        public Callback<MetricGroups> query(final DateRange range);
     }
 
     /**
@@ -224,7 +232,7 @@ public class ListBackendManager implements BackendManager {
      */
     private void streamChunks(
         final Callback<StreamMetricsResult> callback,
-        final Stream.Handle<QueryMetricsResult, StreamMetricsResult> handle,
+        final MetricStream handle,
         final StreamingQuery query,
         final FindRows original,
         final DateRange lastRange
@@ -235,7 +243,7 @@ public class ListBackendManager implements BackendManager {
         final DateRange currentRange = lastRange.withStart(
                 Math.max(lastRange.start() - DIFF, originalRange.start()));
 
-        query.query(currentRange).register(new Callback.Handle<QueryMetricsResult>() {
+        query.query(currentRange).register(new Callback.Handle<MetricGroups>() {
             @Override
             public void cancel(CancelReason reason) throws Exception {
                 handle.close();
@@ -247,12 +255,12 @@ public class ListBackendManager implements BackendManager {
             }
 
             @Override
-            public void finish(QueryMetricsResult result) throws Exception {
+            public void finish(MetricGroups result) throws Exception {
                 // is cancelled?
                 if (!callback.isInitialized())
                     return;
 
-                handle.stream(callback, result);
+                handle.stream(callback, new MetricsQueryResult(originalRange, result));
 
                 if (currentRange.start() <= originalRange.start()) {
                     callback.finish(new StreamMetricsResult());

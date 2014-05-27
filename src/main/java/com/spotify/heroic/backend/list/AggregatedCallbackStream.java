@@ -12,8 +12,8 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroup;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.model.TimeSerie;
@@ -22,7 +22,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
 @Slf4j
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> {
+        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
     private final Aggregator.Session session;
 
@@ -51,7 +51,7 @@ public class AggregatedCallbackStream implements
     }
 
     @Override
-    public QueryMetricsResult done(int successful, int failed, int cancelled)
+    public MetricGroups done(int successful, int failed, int cancelled)
             throws Exception {
         if (!errors.isEmpty()) {
             log.error("{} error(s) encountered when processing request", failed);
@@ -81,9 +81,9 @@ public class AggregatedCallbackStream implements
 
         final TimeSerie timeSerie = slice.getTimeSerie();
 
-        final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(timeSerie, result.getResult()));
+        final List<MetricGroup> groups = new ArrayList<MetricGroup>();
+        groups.add(new MetricGroup(timeSerie, result.getResult()));
 
-        return new QueryMetricsResult(groups, stat);
+        return new MetricGroups(groups, stat);
     }
 }

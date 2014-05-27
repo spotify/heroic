@@ -12,8 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendManager.DataPointGroup;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroup;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.model.DataPoint;
@@ -23,7 +23,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
 @Slf4j
 @RequiredArgsConstructor
 public final class SimpleCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> {
+        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
@@ -52,7 +52,7 @@ public final class SimpleCallbackStream implements
     }
 
     @Override
-    public QueryMetricsResult done(int successful, int failed, int cancelled)
+    public MetricGroups done(int successful, int failed, int cancelled)
             throws Exception {
         if (!errors.isEmpty()) {
             log.error("{} error(s) encountered when processing request", failed);
@@ -81,10 +81,10 @@ public final class SimpleCallbackStream implements
         statistics.setRow(new Statistics.Row(successful, failed, cancelled));
         statistics.setAggregator(new Statistics.Aggregator(datapoints.size(), 0));
 
-        final List<DataPointGroup> groups = new ArrayList<DataPointGroup>();
-        groups.add(new DataPointGroup(timeSerie, datapoints));
+        final List<MetricGroup> groups = new ArrayList<MetricGroup>();
+        groups.add(new MetricGroup(timeSerie, datapoints));
 
-        return new QueryMetricsResult(groups, statistics);
+        return new MetricGroups(groups, statistics);
     }
 
     private List<DataPoint> joinRawResults() {

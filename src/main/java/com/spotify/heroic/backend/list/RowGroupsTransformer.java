@@ -10,7 +10,7 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.BackendManager.QueryMetricsResult;
+import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.list.FindRowGroupsReducer.PreparedGroup;
 import com.spotify.heroic.backend.model.FetchDataPoints;
@@ -20,12 +20,12 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
-public final class RowGroupsTransformer implements Callback.Transformer<RowGroups, QueryMetricsResult> {
+public final class RowGroupsTransformer implements Callback.Transformer<RowGroups, MetricGroups> {
     private final AggregationCache cache;
     private final AggregatorGroup aggregator;
     private final DateRange range;
 
-    public void transform(RowGroups result, Callback<QueryMetricsResult> callback) throws Exception {
+    public void transform(RowGroups result, Callback<MetricGroups> callback) throws Exception {
         if (cache == null) {
             callback.reduce(executeQueries(result.getGroups()), new JoinQueryMetricsResult());
             return;
@@ -34,9 +34,9 @@ public final class RowGroupsTransformer implements Callback.Transformer<RowGroup
         callback.reduce(executeCacheQueries(result.getGroups()), new JoinQueryMetricsResult());
     }
 
-    private List<Callback<QueryMetricsResult>> executeCacheQueries(
+    private List<Callback<MetricGroups>> executeCacheQueries(
             Map<TimeSerie, List<PreparedGroup>> groups) {
-        final List<Callback<QueryMetricsResult>> callbacks = new ArrayList<Callback<QueryMetricsResult>>();
+        final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
         for (Map.Entry<TimeSerie, List<PreparedGroup>> entry : groups.entrySet()) {
             final TimeSerie timeSerie = entry.getKey();
@@ -45,7 +45,7 @@ public final class RowGroupsTransformer implements Callback.Transformer<RowGroup
 
             final CacheGetTransformer transformer = new CacheGetTransformer(timeSerie, cache) {
                 @Override
-                public Callback<QueryMetricsResult> cacheMiss(TimeSerieSlice slice) throws Exception {
+                public Callback<MetricGroups> cacheMiss(TimeSerieSlice slice) throws Exception {
                     return executeSingle(slice, preparedGroups);
                 }
             };
@@ -56,11 +56,11 @@ public final class RowGroupsTransformer implements Callback.Transformer<RowGroup
         return callbacks;
     }
 
-    private Callback<QueryMetricsResult> executeSingle(TimeSerieSlice slice, List<PreparedGroup> preparedGroups) {
+    private Callback<MetricGroups> executeSingle(TimeSerieSlice slice, List<PreparedGroup> preparedGroups) {
         final Aggregator.Session session = aggregator.session(slice.getRange());
 
-        final Callback<QueryMetricsResult> partial = new ConcurrentCallback<QueryMetricsResult>();
-        final Callback.StreamReducer<FetchDataPoints.Result, QueryMetricsResult> reducer;
+        final Callback<MetricGroups> partial = new ConcurrentCallback<MetricGroups>();
+        final Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> reducer;
 
         if (session == null) {
             reducer = new SimpleCallbackStream(slice);
@@ -79,10 +79,10 @@ public final class RowGroupsTransformer implements Callback.Transformer<RowGroup
         return partial.reduce(backendQueries, reducer);
     }
 
-    private List<Callback<QueryMetricsResult>> executeQueries(
+    private List<Callback<MetricGroups>> executeQueries(
             final Map<TimeSerie, List<PreparedGroup>> groups)
             throws Exception {
-        final List<Callback<QueryMetricsResult>> queries = new ArrayList<Callback<QueryMetricsResult>>();
+        final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final Map.Entry<TimeSerie, List<PreparedGroup>> entry : groups.entrySet()) {
             final TimeSerie timeSerie = entry.getKey();

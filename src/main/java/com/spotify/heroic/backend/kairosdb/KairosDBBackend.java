@@ -199,7 +199,6 @@ public class KairosDBBackend implements MetricBackend {
         final long timestamp = rowKey.getTimestamp();
 
         final DateRange rowRange = new DateRange(timestamp, timestamp + DataPointsRowKey.MAX_WIDTH);
-
         final DateRange range = queryRange.modify(rowRange);
 
         if (range.isEmpty())
