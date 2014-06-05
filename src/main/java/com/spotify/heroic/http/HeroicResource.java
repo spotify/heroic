@@ -110,7 +110,7 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        backendManager.streamMetrics(query, new BackendManager.MetricStream() {
+        final Callback<?> callback = backendManager.streamMetrics(query, new BackendManager.MetricStream() {
             public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
@@ -128,22 +128,25 @@ public class HeroicResource {
                 builder.data(MetricsResponse.class, entity);
                 eventOutput.write(builder.build());
             }
-
-            @Override
-            public void close() throws Exception {
-                final OutboundEvent.Builder builder = new OutboundEvent.Builder();
-
-                builder.mediaType(MediaType.TEXT_PLAIN_TYPE);
-                builder.name("end");
-                builder.data(String.class, "end");
-
-                final OutboundEvent event = builder.build();
-
-                eventOutput.write(event);
-
-                eventOutput.close();
-            }
         });
+
+        callback.register(new Callback.Finishable() {
+			@Override
+			public void finish() throws Exception {
+				log.info("Request finished");
+
+	            final OutboundEvent.Builder builder = new OutboundEvent.Builder();
+
+	            builder.mediaType(MediaType.TEXT_PLAIN_TYPE);
+	            builder.name("end");
+	            builder.data(String.class, "end");
+
+	            final OutboundEvent event = builder.build();
+
+	            eventOutput.write(event);
+	            eventOutput.close();
+			}
+		});
 
         return eventOutput;
     }
@@ -168,7 +171,7 @@ public class HeroicResource {
                 }
 
                 @Override
-                public void error(Throwable e) throws Exception {
+                public void error(Exception e) throws Exception {
                     response.resume(Response
                             .status(Response.Status.INTERNAL_SERVER_ERROR)
                             .entity(e).build());

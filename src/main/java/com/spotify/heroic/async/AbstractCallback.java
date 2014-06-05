@@ -18,14 +18,14 @@ public abstract class AbstractCallback<T> implements Callback<T> {
         final CallbackGroup.Handle<C> handle = new CallbackGroup.Handle<C>() {
             @Override
             public void done(Collection<C> results,
-                    Collection<Throwable> errors,
+                    Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 if (!AbstractCallback.this.isInitialized())
                     return;
 
                 try {
                     AbstractCallback.this.finish(reducer.done(results, errors, cancelled));
-                } catch(Throwable error) {
+                } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }
@@ -44,7 +44,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void error(CallbackStream<C> stream, Callback<C> callback, Throwable error) throws Exception {
+            public void error(CallbackStream<C> stream, Callback<C> callback, Exception error) throws Exception {
                 reducer.error(stream, callback, error);
             }
 
@@ -62,7 +62,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
                 try {
                     AbstractCallback.this.finish(reducer.done(successful, failed, cancelled));
-                } catch(Throwable error) {
+                } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }
@@ -82,7 +82,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void error(Throwable e) throws Exception {
+            public void error(Exception e) throws Exception {
                 callback.fail(e);
             }
 
@@ -90,7 +90,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             public void finish(T result) throws Exception {
                 try {
                     transformer.transform(result, callback);
-                } catch (Throwable t) {
+                } catch (Exception t) {
                     callback.fail(t);
                 }
             }
@@ -103,7 +103,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void error(Throwable e) throws Exception {
+            public void error(Exception e) throws Exception {
                 AbstractCallback.this.fail(e);
             }
 
@@ -124,7 +124,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
                 try {
                     AbstractCallback.this.finish(resolver.run());
-                } catch(Throwable error) {
+                } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }

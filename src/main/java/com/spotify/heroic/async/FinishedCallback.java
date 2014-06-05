@@ -15,7 +15,7 @@ public class FinishedCallback<T> implements Callback<T> {
 
     /* all of these should do nothing. */
     @Override
-    public Callback<T> fail(Throwable error) {
+    public Callback<T> fail(Exception error) {
         return this;
     }
 
@@ -79,7 +79,7 @@ public class FinishedCallback<T> implements Callback<T> {
 
         try {
             transformer.transform(value, callback);
-        } catch (Throwable e) {
+        } catch (Exception e) {
             callback.fail(e);
         }
 
@@ -90,7 +90,7 @@ public class FinishedCallback<T> implements Callback<T> {
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
         try {
             finish(resolver.run());
-        } catch (Throwable e) {
+        } catch (Exception e) {
             fail(e);
         }
 

@@ -44,4 +44,11 @@ public class MetricsQuery {
             @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),
             @JsonSubTypes.Type(value = AverageAggregation.class, name = "average") })
     private final List<Aggregation> aggregators = EMPTY_AGGREGATIONS;
+
+    @Getter
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),
+            @JsonSubTypes.Type(value = AverageAggregation.class, name = "average") })
+    private final List<Aggregation> postAggregators = EMPTY_AGGREGATIONS;
 }

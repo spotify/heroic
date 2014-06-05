@@ -38,7 +38,7 @@ public class AggregatedCallbackStream implements
 
     @Override
     public void error(CallbackStream<FetchDataPoints.Result> stream,
-            Callback<FetchDataPoints.Result> callback, Throwable error)
+            Callback<FetchDataPoints.Result> callback, Exception error)
             throws Exception {
         errors.add(error);
     }

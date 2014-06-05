@@ -36,7 +36,6 @@ public interface BackendManager {
     public static interface MetricStream {
         public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result)
                 throws Exception;
-        public void close() throws Exception;
     }
 
     public Callback<MetricsQueryResult> queryMetrics(MetricsQuery query)

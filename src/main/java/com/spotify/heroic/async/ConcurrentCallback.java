@@ -45,12 +45,12 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     private final List<Finishable> finishables = new LinkedList<Finishable>();
     private State state = State.INITIALIZED;
 
-    private Throwable error;
+    private Exception error;
     private CancelReason cancelReason;
     private T result;
 
     @Override
-    public Callback<T> fail(Throwable error) {
+    public Callback<T> fail(Exception error) {
         final Runnable runnable = synhronizedFail(error);
 
         if (runnable != null)
@@ -225,7 +225,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         return state;
     }
 
-    private synchronized Runnable synhronizedFail(Throwable error) {
+    private synchronized Runnable synhronizedFail(Exception error) {
         if (state != State.INITIALIZED)
             return null;
 

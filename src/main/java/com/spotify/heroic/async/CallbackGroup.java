@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CallbackGroup<T> implements Callback.Cancellable {
     public static interface Handle<T> {
-        void done(Collection<T> results, Collection<Throwable> errors,
+        void done(Collection<T> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception;
     }
 
@@ -21,13 +21,13 @@ public class CallbackGroup<T> implements Callback.Cancellable {
     private final Handle<T> handle;
     private volatile boolean done = false;
 
-    private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
+    private final Queue<Exception> errors = new ConcurrentLinkedQueue<Exception>();
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
     private final Queue<CancelReason> cancelled = new ConcurrentLinkedQueue<CancelReason>();
 
     private final Callback.Handle<T> listener = new Callback.Handle<T>() {
         @Override
-        public void error(Throwable e) throws Exception {
+        public void error(Exception e) throws Exception {
             errors.add(e);
             CallbackGroup.this.checkIn();
         }

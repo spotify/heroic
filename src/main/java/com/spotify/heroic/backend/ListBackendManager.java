@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,11 @@ public class ListBackendManager implements BackendManager {
 
     @Getter
     private final AggregationCache cache;
+
+    /**
+     * Used for deferring work to avoid deep stack traces.
+     */
+    private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
     public ListBackendManager(List<Backend> backends, MetricRegistry registry,
             long maxAggregationMagnitude, long maxQueriableDataPoints,
@@ -154,7 +161,7 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()));
+        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()), DIFF);
 
         return callback;
     }
@@ -172,7 +179,7 @@ public class ListBackendManager implements BackendManager {
             @Override
             public GroupedAllRowsResult done(
                     Collection<GetAllRowsResult> results,
-                    Collection<Throwable> errors,
+                    Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
@@ -215,6 +222,7 @@ public class ListBackendManager implements BackendManager {
     }
 
     private static final long DIFF = 3600 * 1000 * 6;
+    private static final long QUERY_THRESHOLD = 10 * 1000;
 
     public static interface StreamingQuery {
         public Callback<MetricGroups> query(final DateRange range);
@@ -235,23 +243,28 @@ public class ListBackendManager implements BackendManager {
         final MetricStream handle,
         final StreamingQuery query,
         final FindRows original,
-        final DateRange lastRange
+        final DateRange lastRange,
+        final long window
     )
     {
+
         final DateRange originalRange = original.getRange();
         // decrease the range for the current chunk.
         final DateRange currentRange = lastRange.withStart(
-                Math.max(lastRange.start() - DIFF, originalRange.start()));
+                Math.max(lastRange.start() - window, originalRange.start()));
 
-        query.query(currentRange).register(new Callback.Handle<MetricGroups>() {
+    	log.info("Querying range {} with window {}", currentRange, window); 
+        final long then = System.currentTimeMillis();
+
+        final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
             @Override
             public void cancel(CancelReason reason) throws Exception {
-                handle.close();
+                callback.cancel(reason);
             }
 
             @Override
-            public void error(Throwable e) throws Exception {
-                handle.close();
+            public void error(Exception e) throws Exception {
+                callback.fail(e);
             }
 
             @Override
@@ -260,16 +273,47 @@ public class ListBackendManager implements BackendManager {
                 if (!callback.isInitialized())
                     return;
 
-                handle.stream(callback, new MetricsQueryResult(originalRange, result));
+                try {
+                	handle.stream(callback, new MetricsQueryResult(originalRange, result));
+                } catch(Exception e) {
+                	callback.fail(e);
+                	return;
+                }
 
                 if (currentRange.start() <= originalRange.start()) {
                     callback.finish(new StreamMetricsResult());
-                    handle.close();
                     return;
                 }
 
-                streamChunks(callback, handle, query, original, currentRange);
+                final long nextWindow = calculateNextWindow(then, result, window);
+                streamChunks(callback, handle, query, original, currentRange, nextWindow);
             }
+
+			private long calculateNextWindow(long then, MetricGroups result, long window) {
+				final Statistics s = result.getStatistics();
+				final Statistics.Cache cache = s.getCache();
+
+				if (cache.getHits() != 0) {
+					return window;
+				}
+
+				final long diff = System.currentTimeMillis() - then;
+
+				if (diff >= QUERY_THRESHOLD) {
+					return window;
+				}
+
+				double factor = ((Long)QUERY_THRESHOLD).doubleValue() / ((Long)diff).doubleValue();
+				return (long) (window * factor);
+			}
+        };
+
+        /* Prevent long stack traces for very fast queries. */
+        deferredExecutor.execute(new Runnable() {
+			@Override
+			public void run() {
+				query.query(currentRange).register(callbackHandle);
+			}
         });
     }
 

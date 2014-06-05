@@ -66,7 +66,7 @@ public class TimeSeriesCache {
             }
 
             @Override
-            public void error(Throwable e) throws Exception {
+            public void error(Exception e) throws Exception {
                 log.error("Failed to refresh tags cache", e);
             }
 

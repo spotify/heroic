@@ -14,7 +14,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
                 throws Exception;
 
         void error(CallbackStream<T> stream, Callback<T> callback,
-                Throwable error) throws Exception;
+        		Exception error) throws Exception;
 
         void cancel(CallbackStream<T> stream, Callback<T> callback,
                 CancelReason reason) throws Exception;
@@ -36,7 +36,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
         for (final Callback<T> callback : callbacks) {
             callback.register(new Callback.Handle<T>() {
                 @Override
-                public void error(Throwable e) throws Exception {
+                public void error(Exception e) throws Exception {
                     failed.incrementAndGet();
                     handleError(handle, callback, e);
                     CallbackStream.this.check(handle);
@@ -63,10 +63,10 @@ public class CallbackStream<T> implements Callback.Cancellable {
     }
 
     private void handleError(Handle<T> handle, Callback<T> callback,
-            Throwable error) {
+    		Exception error) {
         try {
             handle.error(this, callback, error);
-        } catch (final Throwable t) {
+        } catch (final Exception t) {
             log.error("Failed to call error on handle", t);
         }
     }
@@ -74,7 +74,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
     private void handleFinish(Handle<T> handle, Callback<T> callback, T result) {
         try {
             handle.finish(this, callback, result);
-        } catch (final Throwable t) {
+        } catch (final Exception t) {
             log.error("Failed to call finish on handle", t);
         }
     }
@@ -83,7 +83,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
             CancelReason reason) {
         try {
             handle.cancel(this, callback, reason);
-        } catch (final Throwable t) {
+        } catch (final Exception t) {
             log.error("Failed to call cancel on handle", t);
         }
     }

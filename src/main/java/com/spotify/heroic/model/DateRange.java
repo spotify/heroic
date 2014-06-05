@@ -1,12 +1,13 @@
 package com.spotify.heroic.model;
 
+import java.sql.Date;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-@ToString(of = {"start", "end"})
 @EqualsAndHashCode(of = {"start", "end"})
 public class DateRange implements Comparable<DateRange> {
     @Getter
@@ -92,5 +93,11 @@ public class DateRange implements Comparable<DateRange> {
 
     public DateRange withEnd(long end) {
         return new DateRange(this.start, end);
+    }
+
+    public String toString() {
+    	final Date start = new Date(this.start);
+    	final Date end = new Date(this.end);
+    	return "DateRange(start=" + start + ", end=" + end + ")";
     }
 }

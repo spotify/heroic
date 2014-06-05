@@ -44,7 +44,7 @@ public class AggregationCache {
         }
 
         @Override
-        public void error(Throwable e) throws Exception {
+        public void error(Exception e) throws Exception {
             callback.fail(e);
         }
 
@@ -117,7 +117,7 @@ public class AggregationCache {
                 }
 
                 @Override
-                public void error(Throwable e) throws Exception {
+                public void error(Exception e) throws Exception {
                     callback.fail(e);
                 }
 

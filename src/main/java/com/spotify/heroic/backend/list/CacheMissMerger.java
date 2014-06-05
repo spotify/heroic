@@ -42,7 +42,7 @@ final class CacheMissMerger implements
 
     @Override
     public MetricGroups done(Collection<MetricGroups> results,
-            Collection<Throwable> errors, Collection<CancelReason> cancelled)
+            Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
 
         final CacheMissMerger.JoinResult joinResults = joinResults(results);

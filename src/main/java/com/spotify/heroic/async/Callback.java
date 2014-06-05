@@ -27,7 +27,7 @@ public interface Callback<T> {
     }
 
     public static interface Handle<T> extends Cancellable {
-        void error(Throwable e) throws Exception;
+        void error(Exception e) throws Exception;
 
         void finish(T result) throws Exception;
     }
@@ -47,7 +47,7 @@ public interface Callback<T> {
      *            The return type of the callback operation.
      */
     public static interface Reducer<C, R> {
-        R done(Collection<C> results, Collection<Throwable> errors,
+        R done(Collection<C> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception;
     }
 
@@ -66,7 +66,7 @@ public interface Callback<T> {
                 throws Exception;
 
         void error(CallbackStream<C> stream, Callback<C> callback,
-                Throwable error) throws Exception;
+        		Exception error) throws Exception;
 
         void cancel(CallbackStream<C> stream, Callback<C> callback,
                 CancelReason reason) throws Exception;
@@ -82,7 +82,7 @@ public interface Callback<T> {
         R run() throws Exception;
     }
 
-    public Callback<T> fail(Throwable error);
+    public Callback<T> fail(Exception error);
 
     public Callback<T> finish(T result);
 

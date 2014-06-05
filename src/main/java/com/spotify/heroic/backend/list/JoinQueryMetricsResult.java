@@ -22,7 +22,7 @@ public final class JoinQueryMetricsResult implements
         Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
     public MetricGroups done(Collection<MetricGroups> results,
-            Collection<Throwable> errors, Collection<CancelReason> cancelled)
+            Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
         if (!errors.isEmpty()) {
             log.error("There were {} error(s) when quering for metrics", errors.size());
