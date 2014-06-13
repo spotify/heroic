@@ -7,7 +7,6 @@ import java.util.concurrent.Executors;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.codahale.metrics.MetricRegistry;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -26,6 +25,7 @@ import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -65,12 +65,11 @@ public class CassandraCache implements
         private int threads = 20;
 
         @Override
-        public AggregationCacheBackend build(String context,
-                MetricRegistry registry) throws ValidationException {
+        public AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new CassandraCache(registry, executor,
+            return new CassandraCache(reporter, executor,
                     seeds, keyspace, maxConnectionsPerHost);
         }
     }
@@ -83,12 +82,12 @@ public class CassandraCache implements
                     StringSerializer.get());
 
     @SuppressWarnings("unused")
-    private final MetricRegistry metricsRegistry;
+    private final AggregationCacheBackendReporter reporter;
 
-    public CassandraCache(MetricRegistry registry,
+    public CassandraCache(AggregationCacheBackendReporter reporter,
             Executor executor, String seeds, String keyspace,
             int maxConnectionsPerHost) {
-        this.metricsRegistry = registry;
+        this.reporter = reporter;
         this.executor = executor;
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()

@@ -138,7 +138,7 @@ public abstract class SumBucketAggregator implements Aggregator {
         final List<Bucket> buckets = new ArrayList<Bucket>((int) count);
 
         for (int i = 0; i < count; i++) {
-            final long timestamp = offset + width * i;
+            final long timestamp = offset + width * i + width;
             buckets.add(new Bucket(timestamp));
         }
 

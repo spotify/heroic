@@ -10,9 +10,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregator.AggregatorGroup;
@@ -31,7 +31,9 @@ import com.spotify.heroic.http.model.MetricsQuery;
 import com.spotify.heroic.http.model.MetricsQueryResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.statistics.BackendManagerReporter;
 
+@RequiredArgsConstructor
 @Slf4j
 public class ListBackendManager implements BackendManager {
     @Getter
@@ -41,46 +43,18 @@ public class ListBackendManager implements BackendManager {
     private final List<EventBackend> eventBackends;
 
     @Getter
-    private final long maxAggregationMagnitude;
+    private final AggregationCache cache;
 
     @Getter
-    private final AggregationCache cache;
+    private final BackendManagerReporter reporter;
+
+    @Getter
+    private final long maxAggregationMagnitude;
 
     /**
      * Used for deferring work to avoid deep stack traces.
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
-
-    public ListBackendManager(List<Backend> backends, MetricRegistry registry,
-            long maxAggregationMagnitude, long maxQueriableDataPoints,
-            AggregationCache cache) {
-        this.metricBackends = filterMetricBackends(backends);
-        this.eventBackends = filterEventBackends(backends);
-        this.maxAggregationMagnitude = maxAggregationMagnitude;
-        this.cache = cache;
-    }
-
-    private List<EventBackend> filterEventBackends(List<Backend> backends) {
-        final List<EventBackend> eventBackends = new ArrayList<EventBackend>();
-
-        for (final Backend backend : backends) {
-            if (backend instanceof EventBackend)
-                eventBackends.add((EventBackend) backend);
-        }
-
-        return eventBackends;
-    }
-
-    private List<MetricBackend> filterMetricBackends(List<Backend> backends) {
-        final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
-
-        for (final Backend backend : backends) {
-            if (backend instanceof MetricBackend)
-                metricBackends.add((MetricBackend) backend);
-        }
-
-        return metricBackends;
-    }
 
     private <T> List<T> optionalEmptyList(List<T> list) {
         if (list == null)
@@ -123,13 +97,8 @@ public class ListBackendManager implements BackendManager {
 
         return findRowGroups(criteria)
                 .transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()))
-                .transform(new Callback.Transformer<MetricGroups, MetricsQueryResult>() {
-            @Override
-            public void transform(MetricGroups result, Callback<MetricsQueryResult> callback)
-                throws Exception {
-                callback.finish(new MetricsQueryResult(rounded, result));
-            }
-        });
+                .transform(new MetricGroupsTransformer(rounded))
+                .register(reporter.timeQueryMetrics());
     }
 
     @Override
@@ -163,13 +132,13 @@ public class ListBackendManager implements BackendManager {
 
         streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()), DIFF);
 
-        return callback;
+        return callback.register(reporter.timeStreamMetrics());
     }
 
     @Override
     public Callback<GroupedAllRowsResult> getAllRows() {
         final List<Callback<GetAllRowsResult>> backendRequests = new ArrayList<Callback<GetAllRowsResult>>();
-        final Callback<GroupedAllRowsResult> overallCallback = new ConcurrentCallback<GroupedAllRowsResult>();
+        final Callback<GroupedAllRowsResult> all = new ConcurrentCallback<GroupedAllRowsResult>();
 
         for (final MetricBackend backend : metricBackends) {
             backendRequests.add(backend.getAllRows());
@@ -200,8 +169,7 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        return overallCallback.reduce(backendRequests,
-                resultReducer);
+        return all.reduce(backendRequests, resultReducer).register(reporter.timeGetAllRows());
     }
 
     /**
@@ -274,10 +242,10 @@ public class ListBackendManager implements BackendManager {
                     return;
 
                 try {
-                	handle.stream(callback, new MetricsQueryResult(originalRange, result));
+                    handle.stream(callback, new MetricsQueryResult(originalRange, result));
                 } catch(Exception e) {
-                	callback.fail(e);
-                	return;
+                    callback.fail(e);
+                    return;
                 }
 
                 if (currentRange.start() <= originalRange.start()) {
@@ -289,31 +257,31 @@ public class ListBackendManager implements BackendManager {
                 streamChunks(callback, handle, query, original, currentRange, nextWindow);
             }
 
-			private long calculateNextWindow(long then, MetricGroups result, long window) {
-				final Statistics s = result.getStatistics();
-				final Statistics.Cache cache = s.getCache();
+            private long calculateNextWindow(long then, MetricGroups result, long window) {
+                final Statistics s = result.getStatistics();
+                final Statistics.Cache cache = s.getCache();
 
-				if (cache.getHits() != 0) {
-					return window;
-				}
+                if (cache.getHits() != 0) {
+                    return window;
+                }
 
-				final long diff = System.currentTimeMillis() - then;
+                final long diff = System.currentTimeMillis() - then;
 
-				if (diff >= QUERY_THRESHOLD) {
-					return window;
-				}
+                if (diff >= QUERY_THRESHOLD) {
+                    return window;
+                }
 
-				double factor = ((Long)QUERY_THRESHOLD).doubleValue() / ((Long)diff).doubleValue();
-				return (long) (window * factor);
-			}
+                double factor = ((Long)QUERY_THRESHOLD).doubleValue() / ((Long)diff).doubleValue();
+                return (long) (window * factor);
+            }
         };
 
         /* Prevent long stack traces for very fast queries. */
         deferredExecutor.execute(new Runnable() {
-			@Override
-			public void run() {
-				query.query(currentRange).register(callbackHandle);
-			}
+            @Override
+            public void run() {
+                query.query(currentRange).register(callbackHandle).register(reporter.timeStreamMetricsChunk());
+            }
         });
     }
 

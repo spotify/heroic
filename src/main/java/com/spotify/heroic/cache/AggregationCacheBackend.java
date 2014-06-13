@@ -2,13 +2,13 @@ package com.spotify.heroic.cache;
 
 import java.util.List;
 
-import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -18,7 +18,7 @@ import com.spotify.heroic.yaml.ValidationException;
  */
 public interface AggregationCacheBackend {
     public static interface YAML {
-        AggregationCacheBackend build(String context, MetricRegistry registry)
+        AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter)
                 throws ValidationException;
     }
 

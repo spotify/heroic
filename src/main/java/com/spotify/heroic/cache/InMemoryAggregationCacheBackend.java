@@ -14,6 +14,7 @@ import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -26,8 +27,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         public static final String TYPE = "!in-memory-cache";
 
         @Override
-        public AggregationCacheBackend build(String context,
-                MetricRegistry registry) throws ValidationException {
+        public AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter)
+                throws ValidationException {
             return new InMemoryAggregationCacheBackend();
         }
     }

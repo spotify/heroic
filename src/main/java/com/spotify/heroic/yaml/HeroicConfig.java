@@ -11,14 +11,16 @@ import org.yaml.snakeyaml.TypeDescription;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-import com.codahale.metrics.MetricRegistry;
-import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.backend.EventBackend;
 import com.spotify.heroic.backend.ListBackendManager;
+import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.kairosdb.KairosDBBackend;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
@@ -48,14 +50,15 @@ public class HeroicConfig {
         }
     }
 
-    public static HeroicConfig buildDefault(MetricRegistry registry) {
+    public static HeroicConfig buildDefault(HeroicReporter reporter) {
+    	final AggregationCache cache = new AggregationCache(reporter.newAggregationCache(null), new InMemoryAggregationCacheBackend());
         final BackendManager backendManager = new ListBackendManager(
-                new ArrayList<Backend>(), registry, MAX_AGGREGATION_MAGNITUDE,
-                MAX_QUERIABLE_DATA_POINTS, null);
+                new ArrayList<MetricBackend>(), new ArrayList<EventBackend>(),
+                cache, reporter.newBackendManager(null), MAX_AGGREGATION_MAGNITUDE);
         return new HeroicConfig(backendManager, null);
     }
 
-    public static HeroicConfig parse(Path path, MetricRegistry registry)
+    public static HeroicConfig parse(Path path, HeroicReporter reporter)
             throws ValidationException, IOException {
         final Yaml yaml = new Yaml(new CustomConstructor());
 
@@ -63,9 +66,9 @@ public class HeroicConfig {
                 Files.newInputStream(path), HeroicConfigYAML.class);
 
         if (configYaml == null) {
-            return HeroicConfig.buildDefault(registry);
+            return HeroicConfig.buildDefault(reporter);
         }
 
-        return configYaml.build(registry);
+        return configYaml.build(reporter);
     }
 }

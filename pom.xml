@@ -152,9 +152,9 @@
       <version>1.4.0</version>
     </dependency>
     <dependency>
-      <groupId>com.codahale.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-      <version>3.0.2</version>
+      <groupId>com.spotify.metrics</groupId>
+      <artifactId>semantic-metrics</artifactId>
+      <version>0.0.2</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

@@ -42,6 +42,7 @@ import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -101,38 +102,31 @@ public class KairosDBBackend implements MetricBackend {
         private int threads = 20;
 
         @Override
-        public Backend build(String context, MetricRegistry registry)
+        public Backend build(String context, BackendReporter reporter)
                 throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Map<String, String> attributes = Utils.toMap(context,
                     this.attributes);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new KairosDBBackend(registry, executor, keyspace, seeds,
+            return new KairosDBBackend(reporter, executor, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
 
+    private final BackendReporter reporter;
     private final Executor executor;
     private final Map<String, String> backendTags;
     private final Keyspace keyspace;
     private final ColumnFamily<DataPointsRowKey, Integer> dataPoints;
     private final ColumnFamily<String, DataPointsRowKey> rowKeyIndex;
+
     ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
 
     private final AstyanaxContext<Keyspace> ctx;
 
-    @SuppressWarnings("unused")
-    private final Timer queryTimer;
-    @SuppressWarnings("unused")
-    private final Timer findRowGroupsTimer;
-    @SuppressWarnings("unused")
-    private final Timer getAllRowsTimer;
-    @SuppressWarnings("unused")
-    private final Timer getColumnCountTimer;
-
-    public KairosDBBackend(MetricRegistry registry, Executor executor,
+    public KairosDBBackend(BackendReporter reporter, Executor executor,
             String keyspace, String seeds, int maxConnectionsPerHost,
             Map<String, String> backendTags) {
 
@@ -150,6 +144,7 @@ public class KairosDBBackend implements MetricBackend {
 
         ctx.start();
 
+        this.reporter = reporter;
         this.executor = executor;
 
         this.dataPoints = new ColumnFamily<DataPointsRowKey, Integer>(
@@ -162,16 +157,6 @@ public class KairosDBBackend implements MetricBackend {
         this.keyspace = ctx.getClient();
 
         this.backendTags = backendTags;
-
-        /* setup metric timers */
-        this.queryTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", QUERY, backendTags.toString()));
-        this.findRowGroupsTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", FIND_ROW_GROUPS, backendTags.toString()));
-        this.getAllRowsTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", GET_ALL_ROWS, backendTags.toString()));
-        this.getColumnCountTimer = registry.timer(MetricRegistry.name("heroic",
-                "kairosdb", GET_COLUMN_COUNT, backendTags.toString()));
     }
 
     @Override

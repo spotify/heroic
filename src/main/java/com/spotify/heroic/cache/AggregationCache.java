@@ -3,7 +3,8 @@ package com.spotify.heroic.cache;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.codahale.metrics.MetricRegistry;
+import lombok.RequiredArgsConstructor;
+
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -17,14 +18,13 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.statistics.AggregationCacheReporter;
 
+@RequiredArgsConstructor
 public class AggregationCache {
-    private final AggregationCacheBackend backend;
+    private final AggregationCacheReporter reporter;
 
-    public AggregationCache(MetricRegistry registry,
-            AggregationCacheBackend backend) {
-        this.backend = backend;
-    }
+    private final AggregationCacheBackend backend;
 
     private final class BackendCacheGetHandle implements
             Callback.Handle<CacheBackendGetResult> {

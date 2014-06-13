@@ -16,8 +16,6 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
-import com.codahale.metrics.ConsoleReporter;
-import com.codahale.metrics.MetricRegistry;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -26,8 +24,13 @@ import com.google.inject.servlet.GuiceServletContextListener;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.http.HeroicResourceCache;
 import com.spotify.heroic.http.StoredMetricsQueries;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
 import com.spotify.heroic.yaml.ValidationException;
+import com.spotify.metrics.core.MetricId;
+import com.spotify.metrics.core.SemanticMetricRegistry;
+import com.spotify.metrics.ffwd.FastForwardReporter;
 
 @Slf4j
 public class Main extends GuiceServletContextListener {
@@ -40,8 +43,7 @@ public class Main extends GuiceServletContextListener {
         return injector;
     }
 
-    public static Injector setupInjector(final HeroicConfig config,
-            final MetricRegistry registry) {
+    public static Injector setupInjector(final HeroicConfig config) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -53,7 +55,6 @@ public class Main extends GuiceServletContextListener {
                 bind(BackendManager.class).toInstance(
                         config.getBackendManager());
                 bind(HeroicResourceCache.class);
-                bind(MetricRegistry.class).toInstance(registry);
                 bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
             }
         });
@@ -73,20 +74,20 @@ public class Main extends GuiceServletContextListener {
 
         final HeroicConfig config;
 
-        final MetricRegistry registry = new MetricRegistry();
+        final SemanticMetricRegistry registry = new SemanticMetricRegistry();
+        final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
         try {
-            config = HeroicConfig.parse(Paths.get(configPath), registry);
+            config = HeroicConfig.parse(Paths.get(configPath), reporter);
         } catch (ValidationException | IOException e) {
             log.error("Invalid configuration file: " + configPath);
             System.exit(1);
             return;
         }
 
-        final ConsoleReporter reporter = ConsoleReporter.forRegistry(registry)
-                .convertRatesTo(TimeUnit.SECONDS)
-                .convertDurationsTo(TimeUnit.MILLISECONDS).build();
-        reporter.start(30, TimeUnit.MINUTES);
+        final FastForwardReporter ffwd = FastForwardReporter.forRegistry(registry)
+                .schedule(TimeUnit.MINUTES, 5).prefix(MetricId.build("heroic").tagged("service", "heroic")).build();
+        ffwd.start();
 
         if (config == null) {
             log.error("No configuration, shutting down");
@@ -94,7 +95,7 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        injector = setupInjector(config, registry);
+        injector = setupInjector(config);
 
         final GrizzlyServer grizzlyServer = new GrizzlyServer();
         final HttpServer server;
