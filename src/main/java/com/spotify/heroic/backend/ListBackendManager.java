@@ -26,9 +26,11 @@ import com.spotify.heroic.backend.list.RowGroupsTransformer;
 import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.backend.model.MetricGroups;
+import com.spotify.heroic.backend.model.MetricStream;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.http.model.MetricsQuery;
-import com.spotify.heroic.http.model.MetricsQueryResult;
+import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.BackendManagerReporter;
@@ -56,7 +58,7 @@ public class ListBackendManager implements BackendManager {
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    private <T> List<T> optionalEmptyList(List<T> list) {
+    private <T> List<T> defaultList(List<T> list) {
         if (list == null)
             return new ArrayList<T>();
 
@@ -64,13 +66,16 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public Callback<MetricsQueryResult> queryMetrics(final MetricsQuery query)
+    public Callback<MetricsQueryResponse> queryMetrics(final MetricsRequest query)
             throws QueryException {
+        if (query == null)
+            throw new QueryException("Query must be defined");
+
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange().buildDateRange();
-        final List<Aggregation> definitions = optionalEmptyList(query.getAggregators());
+        final AggregationGroup aggregation = new AggregationGroup(defaultList(query.getAggregators()));
 
         if (key == null || key.isEmpty())
             throw new QueryException("'key' must be defined");
@@ -81,7 +86,6 @@ public class ListBackendManager implements BackendManager {
         if (!(range.start() < range.end()))
             throw new QueryException("Range start must come before its end");
 
-        final AggregationGroup aggregation = new AggregationGroup(definitions);
         final AggregatorGroup aggregator = aggregation.build();
 
         final long memoryMagnitude = aggregator
@@ -102,12 +106,12 @@ public class ListBackendManager implements BackendManager {
     }
 
     @Override
-    public Callback<StreamMetricsResult> streamMetrics(MetricsQuery query, MetricStream handle)
+    public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query, MetricStream handle)
             throws QueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
-        final List<Aggregation> definitions = optionalEmptyList(query.getAggregators());
+        final List<Aggregation> definitions = defaultList(query.getAggregators());
 
         if (key == null || key.isEmpty())
             throw new QueryException("'key' must be defined");
@@ -242,7 +246,7 @@ public class ListBackendManager implements BackendManager {
                     return;
 
                 try {
-                    handle.stream(callback, new MetricsQueryResult(originalRange, result));
+                    handle.stream(callback, new MetricsQueryResponse(originalRange, result));
                 } catch(Exception e) {
                     callback.fail(e);
                     return;

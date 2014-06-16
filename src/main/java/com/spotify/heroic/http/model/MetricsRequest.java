@@ -18,8 +18,8 @@ import com.spotify.heroic.aggregation.SumAggregation;
 
 @ToString(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
 @EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
-public class MetricsQuery {
-    private static final DateRangeQuery DEFAULT_DATE_RANGE = new RelativeDateRangeQuery(
+public class MetricsRequest {
+    private static final DateRangeRequest DEFAULT_DATE_RANGE = new RelativeDateRangeRequest(
             TimeUnit.DAYS, 7);
     private static final List<Aggregation> EMPTY_AGGREGATIONS = new ArrayList<Aggregation>();
 
@@ -33,7 +33,7 @@ public class MetricsQuery {
     private final List<String> groupBy = new ArrayList<String>();
 
     @Getter
-    private final DateRangeQuery range = DEFAULT_DATE_RANGE;
+    private final DateRangeRequest range = DEFAULT_DATE_RANGE;
 
     @Getter
     private final boolean noCache = false;

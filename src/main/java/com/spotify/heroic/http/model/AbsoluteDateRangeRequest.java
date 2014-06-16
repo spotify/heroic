@@ -12,7 +12,7 @@ import com.spotify.heroic.model.DateRange;
 @ToString(of = { "start", "end" })
 @EqualsAndHashCode(of={"start", "end"})
 @RequiredArgsConstructor
-public class AbsoluteDateRangeQuery implements DateRangeQuery {
+public class AbsoluteDateRangeRequest implements DateRangeRequest {
     @Getter
     private final long start;
 
@@ -20,10 +20,10 @@ public class AbsoluteDateRangeQuery implements DateRangeQuery {
     private final long end;
 
     @JsonCreator
-    public static AbsoluteDateRangeQuery create(
+    public static AbsoluteDateRangeRequest create(
             @JsonProperty(value="start", required=true) long start,
             @JsonProperty(value="end", required=true) long end) {
-        return new AbsoluteDateRangeQuery(start, end);
+        return new AbsoluteDateRangeRequest(start, end);
     }
 
     public DateRange buildDateRange() {

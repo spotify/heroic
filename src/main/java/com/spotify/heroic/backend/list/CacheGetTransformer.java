@@ -6,9 +6,9 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.BackendManager.MetricGroup;
-import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
+import com.spotify.heroic.backend.model.MetricGroup;
+import com.spotify.heroic.backend.model.MetricGroups;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.model.DataPoint;

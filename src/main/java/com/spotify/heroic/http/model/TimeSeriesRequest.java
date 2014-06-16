@@ -14,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @ToString(of = { "matchKey", "matchTags", "hasTags" })
 @EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags" })
 @RequiredArgsConstructor
-public class TimeSeriesQuery {
+public class TimeSeriesRequest {
     /**
      * Only include time series which match the exact key.
      */
@@ -34,10 +34,10 @@ public class TimeSeriesQuery {
     private final Set<String> hasTags;
 
     @JsonCreator
-    public static TimeSeriesQuery create(
+    public static TimeSeriesRequest create(
             @JsonProperty("matchKey") String matchKey,
             @JsonProperty("matchTags") Map<String, String> matchTags,
             @JsonProperty("hasTags") Set<String> hasTags) {
-        return new TimeSeriesQuery(matchKey, matchTags, hasTags);
+        return new TimeSeriesRequest(matchKey, matchTags, hasTags);
     }
 }

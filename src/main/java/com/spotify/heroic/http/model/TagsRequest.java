@@ -11,7 +11,7 @@ import lombok.ToString;
 @ToString(of = { "matchKey", "matchTags", "hasTags", "include", "exclude" })
 @EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags", "include",
         "exclude" })
-public class TagsQuery {
+public class TagsRequest {
     /**
      * Only include time series which match the exact key.
      */

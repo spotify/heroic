@@ -12,9 +12,9 @@ import com.spotify.heroic.backend.TimeSeriesCache.FindTimeSeriesResult;
 import com.spotify.heroic.http.cache.CachedHandle;
 import com.spotify.heroic.http.cache.CachedRequest;
 import com.spotify.heroic.http.model.KeysResponse;
-import com.spotify.heroic.http.model.TagsQuery;
+import com.spotify.heroic.http.model.TagsRequest;
 import com.spotify.heroic.http.model.TagsResponse;
-import com.spotify.heroic.http.model.TimeSeriesQuery;
+import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
 
 @Singleton
@@ -26,10 +26,10 @@ public class HeroicResourceCache {
         return timeSeriesCache.isReady();
     }
 
-    final CachedHandle<TagsQuery, TagsResponse> tagsHandle = new CachedHandle<TagsQuery, TagsResponse>(
-            new CachedRequest<TagsQuery, TagsResponse>() {
+    final CachedHandle<TagsRequest, TagsResponse> tagsHandle = new CachedHandle<TagsRequest, TagsResponse>(
+            new CachedRequest<TagsRequest, TagsResponse>() {
                 @Override
-                public TagsResponse run(TagsQuery query) {
+                public TagsResponse run(TagsRequest query) {
                     final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
                             query.getMatchKey(), query.getMatchTags(), query
                                     .getHasTags());
@@ -41,14 +41,14 @@ public class HeroicResourceCache {
                 }
             });
 
-    public TagsResponse tags(TagsQuery query) {
+    public TagsResponse tags(TagsRequest query) {
         return tagsHandle.run(query);
     }
 
-    final CachedHandle<TimeSeriesQuery, KeysResponse> keysHandle = new CachedHandle<TimeSeriesQuery, KeysResponse>(
-            new CachedRequest<TimeSeriesQuery, KeysResponse>() {
+    final CachedHandle<TimeSeriesRequest, KeysResponse> keysHandle = new CachedHandle<TimeSeriesRequest, KeysResponse>(
+            new CachedRequest<TimeSeriesRequest, KeysResponse>() {
                 @Override
-                public KeysResponse run(TimeSeriesQuery query) {
+                public KeysResponse run(TimeSeriesRequest query) {
                     final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
                             query.getMatchKey(), query.getMatchTags(), query
                                     .getHasTags());
@@ -60,14 +60,14 @@ public class HeroicResourceCache {
                 }
             });
 
-    public KeysResponse keys(TimeSeriesQuery query) {
+    public KeysResponse keys(TimeSeriesRequest query) {
         return keysHandle.run(query);
     }
 
-    final CachedHandle<TimeSeriesQuery, TimeSeriesResponse> timeseriesHandle = new CachedHandle<TimeSeriesQuery, TimeSeriesResponse>(
-            new CachedRequest<TimeSeriesQuery, TimeSeriesResponse>() {
+    final CachedHandle<TimeSeriesRequest, TimeSeriesResponse> timeseriesHandle = new CachedHandle<TimeSeriesRequest, TimeSeriesResponse>(
+            new CachedRequest<TimeSeriesRequest, TimeSeriesResponse>() {
                 @Override
-                public TimeSeriesResponse run(TimeSeriesQuery query) {
+                public TimeSeriesResponse run(TimeSeriesRequest query) {
                     final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
                             query.getMatchKey(), query.getMatchTags(), query
                                     .getHasTags());
@@ -80,7 +80,7 @@ public class HeroicResourceCache {
                 }
             });
 
-    public TimeSeriesResponse timeseries(TimeSeriesQuery query) {
+    public TimeSeriesResponse timeseries(TimeSeriesRequest query) {
         return timeseriesHandle.run(query);
     }
 

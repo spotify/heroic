@@ -15,7 +15,7 @@ import com.spotify.heroic.model.DateRange;
 @ToString(of = {"unit", "value"})
 @EqualsAndHashCode(of={"unit", "value"})
 @RequiredArgsConstructor
-public class RelativeDateRangeQuery implements DateRangeQuery {
+public class RelativeDateRangeRequest implements DateRangeRequest {
     public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
     public static final long DEFAULT_VALUE = 1;
 
@@ -26,14 +26,14 @@ public class RelativeDateRangeQuery implements DateRangeQuery {
     private final long value;
 
     @JsonCreator
-    public static RelativeDateRangeQuery create(@JsonProperty("unit") TimeUnit unit, @JsonProperty("value") Long value) {
+    public static RelativeDateRangeRequest create(@JsonProperty("unit") TimeUnit unit, @JsonProperty("value") Long value) {
         if (unit == null)
             unit = DEFAULT_UNIT;
 
         if (value == null)
             value = DEFAULT_VALUE;
 
-        return new RelativeDateRangeQuery(unit, value);
+        return new RelativeDateRangeRequest(unit, value);
     }
 
     private long start(final Date now) {

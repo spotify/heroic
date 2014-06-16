@@ -36,19 +36,20 @@ import org.glassfish.jersey.media.sse.SseFeature;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.BackendManager.MetricGroup;
-import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
+import com.spotify.heroic.backend.model.MetricGroup;
+import com.spotify.heroic.backend.model.MetricGroups;
+import com.spotify.heroic.backend.model.MetricStream;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.http.model.KeysResponse;
-import com.spotify.heroic.http.model.MetricsQuery;
-import com.spotify.heroic.http.model.MetricsQueryResult;
+import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsResponse;
 import com.spotify.heroic.http.model.MetricsStreamResponse;
-import com.spotify.heroic.http.model.TagsQuery;
+import com.spotify.heroic.http.model.TagsRequest;
 import com.spotify.heroic.http.model.TagsResponse;
-import com.spotify.heroic.http.model.TimeSeriesQuery;
+import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
@@ -89,7 +90,7 @@ public class HeroicResource {
     @Path("/metrics-stream")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(MetricsQuery query, @Context UriInfo info) {
+    public Response makeMetricsStream(MetricsRequest query, @Context UriInfo info) {
         final String id = Integer.toHexString(query.hashCode());
         storedQueries.put(id, query);
         final URI location = info.getBaseUriBuilder().path("/metrics-stream/" + id).build();
@@ -101,7 +102,7 @@ public class HeroicResource {
     @Path("/metrics-stream/{id}")
     @Produces(SseFeature.SERVER_SENT_EVENTS)
     public EventOutput getMetricsStream(@PathParam("id") String id) throws WebApplicationException, QueryException {
-        final MetricsQuery query = storedQueries.get(id);
+        final MetricsRequest query = storedQueries.get(id);
 
         if (query == null) {
             throw new NotFoundException("No such stored query: " + id);
@@ -111,8 +112,8 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        final Callback<StreamMetricsResult> callback = backendManager.streamMetrics(query, new BackendManager.MetricStream() {
-            public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result) throws Exception {
+        final Callback<StreamMetricsResult> callback = backendManager.streamMetrics(query, new MetricStream() {
+            public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResponse result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
                     return;
@@ -169,11 +170,11 @@ public class HeroicResource {
     @Path("/metrics")
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(@Suspended final AsyncResponse response,
-            MetricsQuery query) throws QueryException {
+            MetricsRequest query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<MetricsQueryResult> callback = backendManager.queryMetrics(query).register(
-                new Callback.Handle<MetricsQueryResult>() {
+        final Callback<MetricsQueryResponse> callback = backendManager.queryMetrics(query).register(
+                new Callback.Handle<MetricsQueryResponse>() {
                     @Override
                     public void cancel(CancelReason reason)
                             throws Exception {
@@ -192,7 +193,7 @@ public class HeroicResource {
                     }
 
                     @Override
-                    public void finish(MetricsQueryResult result)
+                    public void finish(MetricsQueryResponse result)
                             throws Exception {
                         final MetricGroups groups = result.getMetricGroups();
                         final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
@@ -235,7 +236,7 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response tags(TagsQuery query) {
+    public Response tags(TagsRequest query) {
         if (!cache.isReady()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build();
@@ -248,7 +249,7 @@ public class HeroicResource {
     @POST
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response keys(TimeSeriesQuery query) {
+    public Response keys(TimeSeriesRequest query) {
         if (!cache.isReady()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build();
@@ -261,7 +262,7 @@ public class HeroicResource {
     @POST
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getTimeSeries(TimeSeriesQuery query) {
+    public Response getTimeSeries(TimeSeriesRequest query) {
         if (!timeSeriesCache.isReady()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build();

@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendManager.MetricGroup;
-import com.spotify.heroic.backend.BackendManager.MetricGroups;
 import com.spotify.heroic.backend.Statistics;
+import com.spotify.heroic.backend.model.MetricGroup;
+import com.spotify.heroic.backend.model.MetricGroups;
 
 /**
  * Callback GroupHandle that joins multiple QueryMetricResult's.
