@@ -4,8 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import com.spotify.heroic.statistics.HeroicTimer;
-
 /**
  * Interface for asynchronous callbacks with the ability to subscribe to
  * interesting events.

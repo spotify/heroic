@@ -1,5 +1,6 @@
 package com.spotify.heroic.http;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -110,7 +111,7 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        final Callback<?> callback = backendManager.streamMetrics(query, new BackendManager.MetricStream() {
+        final Callback<StreamMetricsResult> callback = backendManager.streamMetrics(query, new BackendManager.MetricStream() {
             public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResult result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
@@ -130,23 +131,36 @@ public class HeroicResource {
             }
         });
 
-        callback.register(new Callback.Finishable() {
-			@Override
-			public void finish() throws Exception {
-				log.info("Request finished");
+        callback.register(new Callback.Handle<StreamMetricsResult>() {
+            @Override
+            public void cancel(CancelReason reason) throws Exception {
+                sendEvent(eventOutput, "cancel", new ErrorMessage(reason.getMessage()));
+            }
 
-	            final OutboundEvent.Builder builder = new OutboundEvent.Builder();
+            @Override
+            public void error(Exception e) throws Exception {
+                sendEvent(eventOutput, "error", new ErrorMessage(e.getMessage()));
+            }
 
-	            builder.mediaType(MediaType.TEXT_PLAIN_TYPE);
-	            builder.name("end");
-	            builder.data(String.class, "end");
+            @Override
+            public void finish(StreamMetricsResult result) throws Exception {
+                sendEvent(eventOutput, "end", "end");
+            }
 
-	            final OutboundEvent event = builder.build();
+            private void sendEvent(final EventOutput eventOutput, String type, Object message)
+                    throws IOException {
+                final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
-	            eventOutput.write(event);
-	            eventOutput.close();
-			}
-		});
+                builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
+                builder.name(type);
+                builder.data(message);
+
+                final OutboundEvent event = builder.build();
+
+                eventOutput.write(event);
+                eventOutput.close();
+            }
+        });
 
         return eventOutput;
     }
@@ -159,37 +173,37 @@ public class HeroicResource {
         log.info("Query: " + query);
 
         final Callback<MetricsQueryResult> callback = backendManager.queryMetrics(query).register(
-            new Callback.Handle<MetricsQueryResult>() {
-                @Override
-                public void cancel(CancelReason reason)
-                        throws Exception {
-                    response.resume(Response
-                            .status(Response.Status.GATEWAY_TIMEOUT)
-                            .entity(new ErrorMessage(
-                                    "Request cancelled: " + reason))
-                            .build());
-                }
+                new Callback.Handle<MetricsQueryResult>() {
+                    @Override
+                    public void cancel(CancelReason reason)
+                            throws Exception {
+                        response.resume(Response
+                                .status(Response.Status.GATEWAY_TIMEOUT)
+                                .entity(new ErrorMessage(
+                                        "Request cancelled: " + reason))
+                                        .build());
+                    }
 
-                @Override
-                public void error(Exception e) throws Exception {
-                    response.resume(Response
-                            .status(Response.Status.INTERNAL_SERVER_ERROR)
-                            .entity(e).build());
-                }
+                    @Override
+                    public void error(Exception e) throws Exception {
+                        response.resume(Response
+                                .status(Response.Status.INTERNAL_SERVER_ERROR)
+                                .entity(e).build());
+                    }
 
-                @Override
-                public void finish(MetricsQueryResult result)
-                        throws Exception {
-                    final MetricGroups groups = result.getMetricGroups();
-                    final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
-                    final MetricsResponse entity = new MetricsResponse(
-                            result.getQueryRange(), data, groups.getStatistics());
+                    @Override
+                    public void finish(MetricsQueryResult result)
+                            throws Exception {
+                        final MetricGroups groups = result.getMetricGroups();
+                        final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
+                        final MetricsResponse entity = new MetricsResponse(
+                                result.getQueryRange(), data, groups.getStatistics());
 
-                    response.resume(Response
-                            .status(Response.Status.OK)
-                            .entity(entity).build());
-                }
-            });
+                        response.resume(Response
+                                .status(Response.Status.OK)
+                                .entity(entity).build());
+                    }
+                });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 

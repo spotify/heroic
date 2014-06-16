@@ -1,42 +1,49 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.spotify.heroic.statistics.BackendManagerReporter;
-import com.spotify.heroic.statistics.HeroicTimer;
-import com.spotify.heroic.statistics.HeroicTimer.Context;
+import com.spotify.heroic.statistics.CallbackReporter;
+import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticBackendManagerReporter implements BackendManagerReporter {
-    private final HeroicTimer getAllRows;
-    private final HeroicTimer queryMetrics;
-    private final HeroicTimer streamMetrics;
-    private final HeroicTimer streamMetricsChunk;
+    private final CallbackReporter getAllRows;
+    private final CallbackReporter queryMetrics;
+    private final CallbackReporter streamMetrics;
+    private final CallbackReporter streamMetricsChunk;
+    private final CallbackReporter findRowGroups;
 
     public SemanticBackendManagerReporter(SemanticMetricRegistry registry, String context) {
         final MetricId id = MetricId.build("backend-manager").tagged("context", context);
-        this.getAllRows = new SemanticHeroicTimer(registry.timer(id.resolve("get-all-rows")));
-        this.queryMetrics = new SemanticHeroicTimer(registry.timer(id.resolve("query-metrics")));
-        this.streamMetrics = new SemanticHeroicTimer(registry.timer(id.resolve("stream-metrics")));
-        this.streamMetricsChunk = new SemanticHeroicTimer(registry.timer(id.resolve("stream-metrics-chunk")));
+        this.getAllRows = new SemanticCallbackReporter(registry, id.tagged("operation", "get-all-rows"));
+        this.queryMetrics = new SemanticCallbackReporter(registry, id.tagged("operation", "query-metrics"));
+        this.streamMetrics = new SemanticCallbackReporter(registry, id.tagged("operation", "stream-metrics"));
+        this.streamMetricsChunk = new SemanticCallbackReporter(registry, id.tagged("operation", "stream-metrics-chunk"));
+        this.findRowGroups = new SemanticCallbackReporter(registry, id.tagged("operation", "find-row-groups"));
     }
 
     @Override
-    public HeroicTimer.Context timeGetAllRows() {
-        return getAllRows.time();
+    public CallbackReporter.Context reportGetAllRows() {
+        return getAllRows.setup();
     }
 
     @Override
-    public Context timeQueryMetrics() {
-        return queryMetrics.time();
+    public CallbackReporter.Context reportQueryMetrics() {
+        return queryMetrics.setup();
     }
 
     @Override
-    public Context timeStreamMetrics() {
-        return streamMetrics.time();
+    public CallbackReporter.Context reportStreamMetrics() {
+        return streamMetrics.setup();
     }
 
     @Override
-    public Context timeStreamMetricsChunk() {
-        return streamMetricsChunk.time();
+    public CallbackReporter.Context reportStreamMetricsChunk() {
+        return streamMetricsChunk.setup();
+    }
+
+    @Override
+    public Context reportFindRowGroups() {
+        return findRowGroups.setup();
     }
 }

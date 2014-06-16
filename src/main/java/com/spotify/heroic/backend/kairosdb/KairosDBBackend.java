@@ -10,8 +10,6 @@ import java.util.concurrent.Executors;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;

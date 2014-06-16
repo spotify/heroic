@@ -98,7 +98,7 @@ public class ListBackendManager implements BackendManager {
         return findRowGroups(criteria)
                 .transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()))
                 .transform(new MetricGroupsTransformer(rounded))
-                .register(reporter.timeQueryMetrics());
+                .register(reporter.reportQueryMetrics());
     }
 
     @Override
@@ -130,9 +130,9 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()), DIFF);
+        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()), INITIAL_DIFF);
 
-        return callback.register(reporter.timeStreamMetrics());
+        return callback.register(reporter.reportStreamMetrics());
     }
 
     @Override
@@ -169,7 +169,7 @@ public class ListBackendManager implements BackendManager {
             }
         };
 
-        return all.reduce(backendRequests, resultReducer).register(reporter.timeGetAllRows());
+        return all.reduce(backendRequests, resultReducer).register(reporter.reportGetAllRows());
     }
 
     /**
@@ -189,7 +189,7 @@ public class ListBackendManager implements BackendManager {
         }
     }
 
-    private static final long DIFF = 3600 * 1000 * 6;
+    private static final long INITIAL_DIFF = 3600 * 1000 * 6;
     private static final long QUERY_THRESHOLD = 10 * 1000;
 
     public static interface StreamingQuery {
@@ -215,8 +215,8 @@ public class ListBackendManager implements BackendManager {
         final long window
     )
     {
-
         final DateRange originalRange = original.getRange();
+
         // decrease the range for the current chunk.
         final DateRange currentRange = lastRange.withStart(
                 Math.max(lastRange.start() - window, originalRange.start()));
@@ -280,7 +280,7 @@ public class ListBackendManager implements BackendManager {
         deferredExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                query.query(currentRange).register(callbackHandle).register(reporter.timeStreamMetricsChunk());
+                query.query(currentRange).register(callbackHandle).register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -296,6 +296,7 @@ public class ListBackendManager implements BackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer());
+        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer())
+                .register(reporter.reportFindRowGroups());
     }
 }

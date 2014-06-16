@@ -26,17 +26,13 @@ public class AggregationCache {
 
     private final AggregationCacheBackend backend;
 
-    private final class BackendCacheGetHandle implements
+    @RequiredArgsConstructor
+    private static final class BackendCacheGetHandle implements
             Callback.Handle<CacheBackendGetResult> {
+        private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final TimeSerieSlice slice;
         private final AggregatorGroup aggregator;
-
-        private BackendCacheGetHandle(Callback<CacheQueryResult> callback, TimeSerieSlice slice, AggregatorGroup aggregator) {
-            this.callback = callback;
-            this.slice = slice;
-            this.aggregator = aggregator;
-        }
 
         @Override
         public void cancel(CancelReason reason) throws Exception {
@@ -85,7 +81,30 @@ public class AggregationCache {
             if (expected != end)
                 misses.add(slice.modify(expected, end));
 
+            reporter.reportGetMisses(misses.size());
             callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
+        }
+    }
+
+    @RequiredArgsConstructor
+    private final class BackendCachePutHandle implements
+            Callback.Handle<CacheBackendPutResult> {
+        private final Callback<CachePutResult> callback;
+
+        @Override
+        public void cancel(CancelReason reason) throws Exception {
+            callback.cancel(reason);
+        }
+
+        @Override
+        public void error(Exception e) throws Exception {
+            callback.fail(e);
+        }
+
+        @Override
+        public void finish(CacheBackendPutResult result)
+                throws Exception {
+            callback.finish(new CachePutResult());
         }
     }
 
@@ -96,7 +115,7 @@ public class AggregationCache {
         final DateRange range = slice.getRange();
 
         try {
-            backend.get(key, range).register(new BackendCacheGetHandle(callback, slice, aggregator));
+            backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, slice, aggregator));
         } catch (AggregationCacheException e) {
             callback.fail(e);
         }
@@ -110,23 +129,7 @@ public class AggregationCache {
         final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
         try {
-            backend.put(key, datapoints).register(new Callback.Handle<CacheBackendPutResult>() {
-                @Override
-                public void cancel(CancelReason reason) throws Exception {
-                    callback.cancel(reason);
-                }
-
-                @Override
-                public void error(Exception e) throws Exception {
-                    callback.fail(e);
-                }
-
-                @Override
-                public void finish(CacheBackendPutResult result)
-                        throws Exception {
-                    callback.finish(new CachePutResult());
-                }
-            });
+            backend.put(key, datapoints).register(new BackendCachePutHandle(callback)).register(reporter.reportPut());
         } catch (AggregationCacheException e) {
             callback.fail(e);
         }

@@ -3,11 +3,13 @@ package com.spotify.heroic.statistics;
 
 
 public interface BackendManagerReporter {
-    HeroicTimer.Context timeGetAllRows();
+    CallbackReporter.Context reportGetAllRows();
 
-    HeroicTimer.Context timeQueryMetrics();
+    CallbackReporter.Context reportQueryMetrics();
 
-    HeroicTimer.Context timeStreamMetrics();
+    CallbackReporter.Context reportStreamMetrics();
 
-    HeroicTimer.Context timeStreamMetricsChunk();
+    CallbackReporter.Context reportStreamMetricsChunk();
+
+    CallbackReporter.Context reportFindRowGroups();
 }
