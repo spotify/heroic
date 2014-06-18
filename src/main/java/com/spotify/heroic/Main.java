@@ -20,10 +20,14 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.StoredMetricsQueries;
+import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
@@ -44,7 +48,7 @@ public class Main extends GuiceServletContextListener {
         return injector;
     }
 
-    public static Injector setupInjector(final HeroicConfig config) {
+    public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -54,9 +58,23 @@ public class Main extends GuiceServletContextListener {
             @Override
             protected void configure() {
                 bind(AggregationCache.class).toInstance(config.getAggregationCache());
-                bind(MetricBackendManager.class).toInstance(config.getMetricBackend());
-                bind(MetadataBackendManager.class).toInstance(config.getMetadataBackend());
+                bind(MetricBackendManager.class).toInstance(new MetricBackendManager(reporter.newMetricBackendManager(null), config.getMaxAggregationMagnitude()));
+                bind(MetadataBackendManager.class).toInstance(new MetadataBackendManager(reporter.newMetadataBackendManager(null)));
                 bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
+
+                {
+                    final Multibinder<MetricBackend> bindings = Multibinder.newSetBinder(binder(), MetricBackend.class);
+                    for (final MetricBackend backend : config.getMetricBackends()) {
+                        bindings.addBinding().toInstance(backend);
+                    }
+                }
+
+                {
+                    final Multibinder<MetadataBackend> bindings = Multibinder.newSetBinder(binder(), MetadataBackend.class);
+                    for (final MetadataBackend backend : config.getMetadataBackends()) {
+                        bindings.addBinding().toInstance(backend);
+                    }
+                }
             }
         });
 
@@ -97,7 +115,7 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        injector = setupInjector(config);
+        injector = setupInjector(config, reporter);
 
         final GrizzlyServer grizzlyServer = new GrizzlyServer();
         final HttpServer server;

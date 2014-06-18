@@ -21,13 +21,10 @@ import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
 @RequiredArgsConstructor
-public final class SimpleCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+public final class SimpleCallbackStream implements Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
-    private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
-    private final Queue<CancelReason> cancellations = new ConcurrentLinkedQueue<CancelReason>();
 
     @Override
     public void resolved(Callback<FetchDataPoints.Result> callback,
@@ -38,38 +35,18 @@ public final class SimpleCallbackStream implements
     @Override
     public void failed(Callback<FetchDataPoints.Result> callback, Exception error)
             throws Exception {
-        errors.add(error);
+        log.error("Error encountered when processing request", error);
     }
 
     @Override
     public void cancelled(Callback<FetchDataPoints.Result> callback, CancelReason reason)
             throws Exception {
-        cancellations.add(reason);
+        log.error("Cancel encountered when processing request", reason);
     }
 
     @Override
     public MetricGroups resolved(int successful, int failed, int cancelled)
             throws Exception {
-        if (!errors.isEmpty()) {
-            log.error("{} error(s) encountered when processing request", failed);
-
-            int i = 0;
-
-            for (final Throwable error : errors) {
-                log.error("Error #{}", i++, error);
-            }
-        }
-
-        if (!cancellations.isEmpty()) {
-            log.error("{} cancellation(s) encountered when processing request", cancelled);
-
-            int i = 0;
-
-            for (final CancelReason reason : cancellations) {
-                log.error("Cancel #{}: {}", i++, reason);
-            }
-        }
-
         final List<DataPoint> datapoints = joinRawResults();
         final TimeSerie timeSerie = slice.getTimeSerie();
 

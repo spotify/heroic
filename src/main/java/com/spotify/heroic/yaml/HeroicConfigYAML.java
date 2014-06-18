@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
+import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -66,17 +67,21 @@ public class HeroicConfigYAML {
         final List<MetricBackend> metricBackends = setupMetricBackends("backends", reporter);
         final List<MetadataBackend> metadataBackends = setupMetadataBackends("metadataBackends", reporter);
 
+        if (metadataBackends.isEmpty()) {
+            metadataBackends.add(new InMemoryMetadataBackend(reporter.newMetadataBackend(null)));
+        }
+
         final AggregationCache cache;
 
         if (this.cache == null) {
             cache = null;
         } else {
-        	final AggregationCacheBackend backend = this.cache.build("cache", reporter.newAggregationCacheBackend(null));
+            final AggregationCacheBackend backend = this.cache.build("cache", reporter.newAggregationCacheBackend(null));
             cache = new AggregationCache(reporter.newAggregationCache(null), backend);
         }
 
-        final MetricBackendManager metrics = new MetricBackendManager(metricBackends, reporter.newMetricBackendManager(null), maxAggregationMagnitude);
-        final MetadataBackendManager metadata = new MetadataBackendManager(metadataBackends, reporter.newMetadataBackendManager(null));
-        return new HeroicConfig(metrics, metadata, cache);
+        final MetricBackendManager metrics = new MetricBackendManager(reporter.newMetricBackendManager(null), maxAggregationMagnitude);
+        final MetadataBackendManager metadata = new MetadataBackendManager(reporter.newMetadataBackendManager(null));
+        return new HeroicConfig(metricBackends, maxAggregationMagnitude, metadataBackends, cache);
     }
 }

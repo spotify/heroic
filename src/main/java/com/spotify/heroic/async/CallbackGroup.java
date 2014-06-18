@@ -34,6 +34,9 @@ public class CallbackGroup<T> implements Callback.Cancellable {
 
         @Override
         public void resolved(T result) throws Exception {
+            if (result == null)
+                throw new NullPointerException("CallbackGroup cannot handle null results (due to using a Queue for storing results)");
+
             results.add(result);
             CallbackGroup.this.checkIn();
         }
@@ -54,7 +57,7 @@ public class CallbackGroup<T> implements Callback.Cancellable {
         for (final Callback<T> callback : callbacks)
             callback.register(listener);
 
-        if (callbacks.isEmpty())
+        if (this.callbacks.isEmpty())
             end();
     }
 
@@ -75,24 +78,18 @@ public class CallbackGroup<T> implements Callback.Cancellable {
         if (done)
             return;
 
-        triggerDone(handle);
-
-        done = true;
-    }
-
-    private void triggerDone(Handle<T> handle) {
         try {
             handle.done(results, errors, cancelled);
         } catch (final Exception e) {
             log.error("Failed to call handler", e);
         }
+
+        done = true;
     }
 
     /* cancel all queries in this group */
     @Override
     public void cancelled(CancelReason reason) {
-        log.warn("Cancelling");
-
         for (final Callback<T> callback : callbacks) {
             callback.cancel(reason);
         }

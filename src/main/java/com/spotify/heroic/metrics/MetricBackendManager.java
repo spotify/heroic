@@ -43,9 +43,6 @@ import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 @Slf4j
 public class MetricBackendManager {
     @Getter
-    private final List<MetricBackend> metricBackends;
-
-    @Getter
     private final MetricBackendManagerReporter reporter;
 
     @Getter
@@ -53,6 +50,9 @@ public class MetricBackendManager {
 
     @Inject
     private AggregationCache aggregationCache;
+
+    @Inject
+    private Set<MetricBackend> metricBackends;
 
     /**
      * Used for deferring work to avoid deep stack traces.

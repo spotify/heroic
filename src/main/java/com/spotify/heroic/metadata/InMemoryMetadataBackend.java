@@ -12,7 +12,6 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +29,6 @@ import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
-@Singleton
 @Slf4j
 public class InMemoryMetadataBackend implements MetadataBackend {
     public static class YAML implements MetadataBackend.YAML {

@@ -18,10 +18,8 @@ import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
 import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.kairosdb.KairosMetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
@@ -31,10 +29,13 @@ public class HeroicConfig {
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
 
     @Getter
-    private final MetricBackendManager metricBackend;
+    private final List<MetricBackend> metricBackends;
 
     @Getter
-    private final MetadataBackendManager metadataBackend;
+    private final long maxAggregationMagnitude;
+
+    @Getter
+    private final List<MetadataBackend> metadataBackends;
 
     @Getter
     private final AggregationCache aggregationCache;
@@ -56,12 +57,10 @@ public class HeroicConfig {
 
     public static HeroicConfig buildDefault(HeroicReporter reporter) {
         final AggregationCache cache = new AggregationCache(reporter.newAggregationCache(null), new InMemoryAggregationCacheBackend());
-        final MetricBackendManager metrics = new MetricBackendManager(
-                new ArrayList<MetricBackend>(), reporter.newMetricBackendManager(null), MAX_AGGREGATION_MAGNITUDE);
+        final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
         metadataBackends.add(new InMemoryMetadataBackend(reporter.newMetadataBackend(null)));
-        final MetadataBackendManager metadata = new MetadataBackendManager(metadataBackends, reporter.newMetadataBackendManager(null));
-        return new HeroicConfig(metrics, metadata, cache);
+        return new HeroicConfig(metricBackends, MAX_AGGREGATION_MAGNITUDE, metadataBackends, cache);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

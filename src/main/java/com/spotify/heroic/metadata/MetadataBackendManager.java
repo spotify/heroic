@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.inject.Inject;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,8 +26,10 @@ import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 @RequiredArgsConstructor
 @Slf4j
 public class MetadataBackendManager {
-    private final List<MetadataBackend> backends;
     private final MetadataBackendManagerReporter reporter;
+
+    @Inject
+    private Set<MetadataBackend> backends;
 
     public Callback<FindTags> findTags(TimeSerieMatcher matcher, Set<String> include, Set<String> exclude) {
         final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
@@ -130,13 +134,11 @@ public class MetadataBackendManager {
             callbacks.add(backend.refresh());
         }
 
-        return ConcurrentCallback.newReduce(callbacks, new Callback.Reducer<Void, Boolean>() {
+        return ConcurrentCallback.newReduce(callbacks, new Callback.DefaultStreamReducer<Void, Boolean>() {
             @Override
-            public Boolean resolved(Collection<Void> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                // TODO: log errors.
-                return errors.isEmpty() && cancelled.isEmpty();
+            public Boolean resolved(int successful, int failed, int cancelled)
+                    throws Exception {
+                return failed == 0 && cancelled == 0;
             }
         }).register(reporter.reportRefresh());
     }

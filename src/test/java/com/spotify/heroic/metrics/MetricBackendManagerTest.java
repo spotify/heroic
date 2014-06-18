@@ -11,9 +11,9 @@ import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 public class MetricBackendManagerTest {
     @Mock
-    private List<MetricBackend> metricBackends;
-    @Mock
     private MetricBackendManagerReporter reporter;
+    @Mock
+    private List<MetricBackend> metricBackends;
 
     private static final long MAGNITUDE = 42;
 
@@ -21,7 +21,7 @@ public class MetricBackendManagerTest {
 
     @Before
     public void before() {
-        this.manager = new MetricBackendManager(metricBackends, reporter, MAGNITUDE);
+        this.manager = new MetricBackendManager(reporter, MAGNITUDE);
     }
 
     @Test(expected=QueryException.class)

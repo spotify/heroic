@@ -2,8 +2,6 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,13 +18,9 @@ import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
 @RequiredArgsConstructor
-public class AggregatedCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
     private final Aggregator.Session session;
-
-    private final Queue<Throwable> errors = new ConcurrentLinkedQueue<Throwable>();
-    private final Queue<CancelReason> cancellations = new ConcurrentLinkedQueue<CancelReason>();
 
     @Override
     public void resolved(Callback<FetchDataPoints.Result> callback,
@@ -37,38 +31,17 @@ public class AggregatedCallbackStream implements
     @Override
     public void failed(Callback<FetchDataPoints.Result> callback, Exception error)
             throws Exception {
-        errors.add(error);
+        log.error("Error encountered when processing request", error);
     }
 
     @Override
     public void cancelled(Callback<FetchDataPoints.Result> callback, CancelReason reason)
             throws Exception {
-        cancellations.add(reason);
+        log.error("Cancel encountered when processing request", reason);
     }
 
     @Override
-    public MetricGroups resolved(int successful, int failed, int cancelled)
-            throws Exception {
-        if (!errors.isEmpty()) {
-            log.error("{} error(s) encountered when processing request", failed);
-
-            int i = 0;
-
-            for (final Throwable error : errors) {
-                log.error("Error #{}", i++, error);
-            }
-        }
-
-        if (!cancellations.isEmpty()) {
-            log.error("{} cancellation(s) encountered when processing request", cancelled);
-
-            int i = 0;
-
-            for (final CancelReason reason : cancellations) {
-                log.error("Cancel #{}: {}", i++, reason);
-            }
-        }
-
+    public MetricGroups resolved(int successful, int failed, int cancelled) {
         final Aggregator.Result result = session.result();
 
         final Statistics stat = new Statistics();

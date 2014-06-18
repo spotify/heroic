@@ -6,15 +6,15 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import com.spotify.heroic.metadata.InMemoryMetadataBackend;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 
 public class RefreshTagsJob implements Job {
     @Inject
-    private InMemoryMetadataBackend tagsCacheManager;
+    private MetadataBackendManager metadata;
 
     @Override
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-        tagsCacheManager.refresh();
+        metadata.refresh();
     }
 }

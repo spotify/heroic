@@ -149,8 +149,8 @@ public class KairosMetricBackend implements MetricBackend {
     private final MetricBackendReporter reporter;
     private final Executor executor;
     private final Map<String, String> backendTags;
-    private final Keyspace keyspace;
     private final AstyanaxContext<Keyspace> context;
+    private final Keyspace keyspace;
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
@@ -158,6 +158,9 @@ public class KairosMetricBackend implements MetricBackend {
     public KairosMetricBackend(MetricBackendReporter reporter, Executor executor,
             String keyspace, String seeds, int maxConnectionsPerHost,
             Map<String, String> backendTags) {
+        this.reporter = reporter;
+        this.executor = executor;
+        this.backendTags = backendTags;
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
                 .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
@@ -172,11 +175,7 @@ public class KairosMetricBackend implements MetricBackend {
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         context.start();
-
-        this.reporter = reporter;
-        this.executor = executor;
         this.keyspace = context.getClient();
-        this.backendTags = backendTags;
     }
 
     @Override

@@ -40,7 +40,7 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, StreamReducer<C, T> reducer) {
         return this;
     }
 

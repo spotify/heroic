@@ -46,19 +46,44 @@ public interface Callback<T> {
                 Collection<CancelReason> cancelled) throws Exception;
     }
 
+    public static interface StreamReducer<C, R> {
+        /**
+         * Implement to trigger on one resolved.
+         */
+        void resolved(Callback<C> callback, C result) throws Exception;
+        /**
+         * Implement to trigger on one failed.
+         */
+        void failed(Callback<C> callback, Exception error) throws Exception;
+        /**
+         * Implement to trigger on one cancelled.
+         */
+        void cancelled(Callback<C> callback, CancelReason reason) throws Exception;
+        /**
+         * Implement to fire when all callbacks have been resolved.
+         */
+        R resolved(int successful, int failed, int cancelled) throws Exception;
+    }
     /**
-     * Simplified abstraction on top of CallbackStream meant to reduce the
-     * result of multiple queries into one.
-     * 
-     * Will be called each time a result is available immediately.
-     * 
+     * Convenience class that can be used to extend and implement only a subset of the functionality of {@link StreamReducer}.
+     *
+     * Note: {@link StreamReducer#resolved(int, int, int)} is the minimal required implementation since it is not provided here.
+     *
      * @author udoprog
      */
-    public static interface StreamReducer<C, R> {
-        void resolved(Callback<C> callback, C result) throws Exception;
-        void failed(Callback<C> callback, Exception error) throws Exception;
-        void cancelled(Callback<C> callback, CancelReason reason) throws Exception;
-        R resolved(int successful, int failed, int cancelled) throws Exception;
+    public static abstract class DefaultStreamReducer<C, R> implements StreamReducer<C, R> {
+        /**
+         * Override to trigger on one resolved.
+         */
+        public void resolved(Callback<C> callback, C result) throws Exception { }
+        /**
+         * Override to trigger on one failed.
+         */
+        public void failed(Callback<C> callback, Exception error) throws Exception { }
+        /**
+         * Override to trigger on one cancelled.
+         */
+        public void cancelled(Callback<C> callback, CancelReason reason) throws Exception { }
     }
 
     public static interface DeferredTransformer<C, R> {
