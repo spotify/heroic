@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.UriBuilder;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -20,11 +21,17 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
+import com.google.inject.matcher.AbstractMatcher;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.GuiceServletContextListener;
+import com.google.inject.spi.InjectionListener;
+import com.google.inject.spi.TypeEncounter;
+import com.google.inject.spi.TypeListener;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.StoredMetricsQueries;
+import com.spotify.heroic.injection.Startable;
+import com.spotify.heroic.injection.Stoppable;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -41,11 +48,24 @@ import com.spotify.metrics.ffwd.FastForwardReporter;
 public class Main extends GuiceServletContextListener {
     public static final String DEFAULT_CONFIG = "heroic.yml";
 
-    static Injector injector;
+    public static Injector injector;
+
+    public static List<Startable> startable = new ArrayList<Startable>();
+    public static List<Stoppable> stoppable = new ArrayList<Stoppable>();
 
     @Override
     protected Injector getInjector() {
         return injector;
+    }
+
+    @RequiredArgsConstructor
+    private static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
+        private final Class<?> clazz;
+
+        @Override
+        public boolean matches(TypeLiteral<?> t) {
+            return clazz.isAssignableFrom(t.getRawType());
+        }
     }
 
     public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter) {
@@ -75,6 +95,32 @@ public class Main extends GuiceServletContextListener {
                         bindings.addBinding().toInstance(backend);
                     }
                 }
+
+                bindListener(new IsSubclassOf(Startable.class), new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
+                            @Override
+                            public void afterInjection(Object i) {
+                                startable.add((Startable) i);
+                            }
+                        });
+                    }
+                });
+
+                bindListener(new IsSubclassOf(Stoppable.class), new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
+                            @Override
+                            public void afterInjection(Object i) {
+                                stoppable.add((Stoppable) i);
+                            }
+                        });
+                    }
+                });
             }
         });
 
@@ -97,6 +143,7 @@ public class Main extends GuiceServletContextListener {
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
+        log.info("Loading configuration from: {}", configPath);
         try {
             config = HeroicConfig.parse(Paths.get(configPath), reporter);
         } catch (ValidationException | IOException e) {
@@ -116,6 +163,16 @@ public class Main extends GuiceServletContextListener {
         }
 
         injector = setupInjector(config, reporter);
+
+        /* fire startable handlers */
+        for (final Startable startable : Main.startable) {
+            try {
+                startable.start();
+            } catch (Exception e) {
+                log.error("Failed to start {}", startable, e);
+                System.exit(1);
+            }
+        }
 
         final GrizzlyServer grizzlyServer = new GrizzlyServer();
         final HttpServer server;
@@ -172,6 +229,15 @@ public class Main extends GuiceServletContextListener {
             latch.await();
         } catch (InterruptedException e) {
             log.error("Shutdown interrupted", e);
+        }
+
+        /* fire Stoppable handlers */
+        for (final Stoppable stoppable : Main.stoppable) {
+            try {
+                stoppable.stop();
+            } catch (Exception e) {
+                log.error("Failed to stop {}", startable, e);
+            }
         }
 
         System.exit(0);

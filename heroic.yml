@@ -20,6 +20,12 @@ backends:
 #      site: sjc
 #    seeds: sjc1-kairosdbcassandra-a1.spotify.net:9160,sjc1-kairosdbcassandra-a2.spotify.net:9160,sjc1-kairosdbcassandra-a3.spotify.net:9160
 
+metadataBackends:
+  - !elasticsearch-metadata
+#    clusterName: monelastic-production
+    seeds:
+      - localhost
+
 cache:
   !in-memory-cache {}
 # cassandra-cache uses the schema located at "docs/aggregation-schema.cql"

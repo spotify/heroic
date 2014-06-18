@@ -295,9 +295,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             return getAll();
         }
 
-        log.info(
-                "{} matche(s) for query: key:{} filter:{} matched(tag:{} key:{})",
-                smallest.size(), key, filter, matchedTag, matchedKey);
+        //log.info("{} matche(s) for query: key:{} filter:{} matched(tag:{} key:{})", smallest.size(), key, filter, matchedTag, matchedKey);
         return smallest;
     }
 

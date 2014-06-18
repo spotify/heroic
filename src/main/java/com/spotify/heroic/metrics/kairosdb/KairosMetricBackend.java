@@ -12,7 +12,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
@@ -36,6 +38,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
@@ -53,7 +56,9 @@ import com.spotify.heroic.yaml.ValidationException;
  * 
  * @author mehrdad
  */
-public class KairosMetricBackend implements MetricBackend {
+@RequiredArgsConstructor
+@Slf4j
+public class KairosMetricBackend implements MetricBackend, Startable {
     private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
             + "column1 > ? AND column1 < ?";
 
@@ -148,35 +153,36 @@ public class KairosMetricBackend implements MetricBackend {
 
     private final MetricBackendReporter reporter;
     private final Executor executor;
+    private final String keyspaceName;
+    private final String seeds;
+    private final int maxConnectionsPerHost;
     private final Map<String, String> backendTags;
-    private final AstyanaxContext<Keyspace> context;
-    private final Keyspace keyspace;
+
+    private AstyanaxContext<Keyspace> context;
+    private Keyspace keyspace;
+
+    @Override
+    public void start() throws Exception {
+        log.info("Starting");
+
+        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
+            .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
+
+        context = new AstyanaxContext.Builder()
+            .withConnectionPoolConfiguration(
+                new ConnectionPoolConfigurationImpl(
+                        "HeroicConnectionPool").setPort(9160)
+                        .setMaxConnsPerHost(maxConnectionsPerHost)
+                        .setSeeds(seeds)).forKeyspace(keyspaceName)
+                        .withAstyanaxConfiguration(config)
+                        .buildKeyspace(ThriftFamilyFactory.getInstance());
+
+        context.start();
+        keyspace = context.getClient();
+    }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
-
-    public KairosMetricBackend(MetricBackendReporter reporter, Executor executor,
-            String keyspace, String seeds, int maxConnectionsPerHost,
-            Map<String, String> backendTags) {
-        this.reporter = reporter;
-        this.executor = executor;
-        this.backendTags = backendTags;
-
-        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-                .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
-
-        context = new AstyanaxContext.Builder()
-                .withConnectionPoolConfiguration(
-                        new ConnectionPoolConfigurationImpl(
-                                "HeroicConnectionPool").setPort(9160)
-                                .setMaxConnsPerHost(maxConnectionsPerHost)
-                                .setSeeds(seeds)).forKeyspace(keyspace)
-                .withAstyanaxConfiguration(config)
-                .buildKeyspace(ThriftFamilyFactory.getInstance());
-
-        context.start();
-        this.keyspace = context.getClient();
-    }
 
     @Override
     public List<Callback<FetchDataPoints.Result>> query(
