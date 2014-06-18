@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.model;
+package com.spotify.heroic.metrics.model;
 
 import java.util.List;
 

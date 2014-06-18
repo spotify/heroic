@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,18 +13,18 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.model.MetricGroup;
-import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.metrics.model.MetricGroup;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
 @Slf4j
 @RequiredArgsConstructor
-final class CacheMissMerger implements
+final class MergeCacheMisses implements
         Callback.Reducer<MetricGroups, MetricGroups> {
     @RequiredArgsConstructor
     private static final class JoinResult {
@@ -45,7 +45,7 @@ final class CacheMissMerger implements
             Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
 
-        final CacheMissMerger.JoinResult joinResults = joinResults(results);
+        final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);
 
         final Statistics statistics = joinResults.getStatistics();
@@ -75,7 +75,7 @@ final class CacheMissMerger implements
         return queries;
     }
 
-    private List<MetricGroup> buildDataPointGroups(CacheMissMerger.JoinResult joinResult) {
+    private List<MetricGroup> buildDataPointGroups(MergeCacheMisses.JoinResult joinResult) {
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult.getResultSet().values());
         Collections.sort(datapoints);
@@ -99,7 +99,7 @@ final class CacheMissMerger implements
      * the world. These duplicates are reported as cacheDuplicates in
      * RowStatistics.
      */
-    private CacheMissMerger.JoinResult joinResults(Collection<MetricGroups> results) {
+    private MergeCacheMisses.JoinResult joinResults(Collection<MetricGroups> results) {
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
         int cacheConflicts = 0;

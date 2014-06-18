@@ -9,7 +9,7 @@ import lombok.Getter;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.backend.model.Statistics;
+import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Resolution;

@@ -21,10 +21,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceServletContextListener;
-import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.StoredMetricsQueries;
-import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
@@ -54,11 +54,12 @@ public class Main extends GuiceServletContextListener {
             @Override
             protected void configure() {
                 bind(AggregationCache.class).toInstance(config.getAggregationCache());
-                bind(BackendManager.class).toInstance(config.getBackendManager());
-                bind(MetadataBackend.class).toInstance(config.getMetadataBackend());
+                bind(MetricBackendManager.class).toInstance(config.getMetricBackend());
+                bind(MetadataBackendManager.class).toInstance(config.getMetadataBackend());
                 bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
             }
         });
+
         modules.add(new SchedulerModule());
 
         return Guice.createInjector(modules);

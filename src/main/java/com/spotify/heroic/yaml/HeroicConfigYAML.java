@@ -6,21 +6,22 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-import com.spotify.heroic.backend.Backend;
-import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.list.ListBackendManager;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
-import com.spotify.heroic.events.EventBackend;
-import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 public class HeroicConfigYAML {
     @Getter
     @Setter
-    private List<Backend.YAML> backends;
+    private List<MetricBackend.YAML> backends;
+
+    @Getter
+    @Setter
+    private List<MetadataBackend.YAML> metadataBackends;
 
     @Getter
     @Setter
@@ -34,44 +35,36 @@ public class HeroicConfigYAML {
     @Setter
     private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
 
-    private List<Backend> setupBackends(String context, HeroicReporter reporter)
+    private List<MetricBackend> setupMetricBackends(String context, HeroicReporter reporter)
             throws ValidationException {
-        List<Backend> backends = new ArrayList<Backend>();
+        List<MetricBackend> backends = new ArrayList<MetricBackend>();
 
         int i = 0;
 
-        for (Backend.YAML backend : Utils.toList("backends", this.backends)) {
-            backends.add(backend.build("backends[" + i++ + "]", reporter.newBackend(context)));
+        for (MetricBackend.YAML backend : Utils.toList("backends", this.backends)) {
+            backends.add(backend.build("backends[" + i++ + "]", reporter.newMetricBackend(context)));
         }
 
         return backends;
     }
 
-    private List<EventBackend> filterEventBackends(List<Backend> backends) {
-        final List<EventBackend> eventBackends = new ArrayList<EventBackend>();
+    private List<MetadataBackend> setupMetadataBackends(String context, HeroicReporter reporter)
+            throws ValidationException {
+        List<MetadataBackend> backends = new ArrayList<MetadataBackend>();
 
-        for (final Backend backend : backends) {
-            if (backend instanceof EventBackend)
-                eventBackends.add((EventBackend) backend);
+        int i = 0;
+
+        for (MetadataBackend.YAML backend : Utils.toList("metadataBackends", this.metadataBackends)) {
+            backends.add(backend.build("metadataBackends[" + i++ + "]", reporter.newMetadataBackend(context)));
         }
 
-        return eventBackends;
-    }
-
-    private List<MetricBackend> filterMetricBackends(List<Backend> backends) {
-        final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
-
-        for (final Backend backend : backends) {
-            if (backend instanceof MetricBackend)
-                metricBackends.add((MetricBackend) backend);
-        }
-
-        return metricBackends;
+        return backends;
     }
 
     public HeroicConfig build(HeroicReporter reporter)
             throws ValidationException {
-        final List<Backend> backends = setupBackends("backends", reporter);
+        final List<MetricBackend> metricBackends = setupMetricBackends("backends", reporter);
+        final List<MetadataBackend> metadataBackends = setupMetadataBackends("metadataBackends", reporter);
 
         final AggregationCache cache;
 
@@ -82,12 +75,8 @@ public class HeroicConfigYAML {
             cache = new AggregationCache(reporter.newAggregationCache(null), backend);
         }
 
-        final MetadataBackend metadataBackend = new InMemoryMetadataBackend();
-
-        final List<MetricBackend> metricBackends = filterMetricBackends(backends);
-        final List<EventBackend> eventBackends = filterEventBackends(backends);
-
-        final BackendManager backendManager = new ListBackendManager(metricBackends, eventBackends, reporter.newBackendManager(null), maxAggregationMagnitude);
-        return new HeroicConfig(backendManager, cache, metadataBackend);
+        final MetricBackendManager metrics = new MetricBackendManager(metricBackends, reporter.newMetricBackendManager(null), maxAggregationMagnitude);
+        final MetadataBackendManager metadata = new MetadataBackendManager(metadataBackends, reporter.newMetadataBackendManager(null));
+        return new HeroicConfig(metrics, metadata, cache);
     }
 }

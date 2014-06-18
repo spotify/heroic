@@ -2,6 +2,7 @@ package com.spotify.heroic.http;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,13 +37,7 @@ import org.glassfish.jersey.media.sse.SseFeature;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.BackendException;
-import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
-import com.spotify.heroic.backend.MetricStream;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.TimeSerieMatcher;
-import com.spotify.heroic.backend.model.MetricGroup;
-import com.spotify.heroic.backend.model.MetricGroups;
 import com.spotify.heroic.http.model.KeysResponse;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
@@ -53,10 +48,16 @@ import com.spotify.heroic.http.model.TagsResponse;
 import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
 import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
-import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.TimeSerieMatcher;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.metrics.MetricStream;
+import com.spotify.heroic.metrics.model.MetricGroup;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -65,10 +66,10 @@ import com.spotify.heroic.model.TimeSerie;
 @Produces(MediaType.APPLICATION_JSON)
 public class HeroicResource {
     @Inject
-    private BackendManager backendManager;
+    private MetricBackendManager metrics;
 
     @Inject
-    private MetadataBackend metadataBackend;
+    private MetadataBackendManager metadataBackend;
 
     @Inject
     private StoredMetricsQueries storedQueries;
@@ -115,7 +116,7 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        final Callback<StreamMetricsResult> callback = backendManager.streamMetrics(query, new MetricStream() {
+        final Callback<StreamMetricsResult> callback = metrics.streamMetrics(query, new MetricStream() {
             public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResponse result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
@@ -176,7 +177,7 @@ public class HeroicResource {
             MetricsRequest query) throws QueryException {
         log.info("Query: " + query);
 
-        final Callback<MetricsQueryResponse> callback = backendManager.queryMetrics(query).register(
+        final Callback<MetricsQueryResponse> callback = metrics.queryMetrics(query).register(
                 new Callback.Handle<MetricsQueryResponse>() {
                     @Override
                     public void cancelled(CancelReason reason)
@@ -299,7 +300,7 @@ public class HeroicResource {
         metadataResult(response, metadataBackend.findTimeSeries(matcher).transform(new Callback.DeferredTransformer<FindTimeSeries, TimeSeriesResponse>() {
             @Override
             public void transform(FindTimeSeries result, Callback<TimeSeriesResponse> callback) throws Exception {
-                callback.resolve(new TimeSeriesResponse(result.getTimeSeries(), result.getSize()));
+                callback.resolve(new TimeSeriesResponse(new ArrayList<TimeSerie>(result.getTimeSeries()), result.getSize()));
             }
         }));
     }

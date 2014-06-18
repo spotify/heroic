@@ -2,7 +2,7 @@ package com.spotify.heroic.statistics;
 
 
 
-public interface BackendManagerReporter {
+public interface MetricBackendManagerReporter {
     CallbackReporter.Context reportGetAllRows();
 
     CallbackReporter.Context reportQueryMetrics();

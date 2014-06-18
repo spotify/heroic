@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.async;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.model.MetricGroup;
-import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.Statistics;
+import com.spotify.heroic.metrics.model.MetricGroup;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.Statistics;
 
 /**
  * Callback GroupHandle that joins multiple QueryMetricResult's.
@@ -18,7 +18,7 @@ import com.spotify.heroic.backend.model.Statistics;
  * @author udoprog
  */
 @Slf4j
-public final class JoinQueryMetricsResult implements
+public final class MergeMetricGroups implements
         Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,

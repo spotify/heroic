@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,11 +10,12 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.PreparedGroup;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.PreparedGroup;
+import com.spotify.heroic.metrics.model.RowGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
@@ -27,11 +28,11 @@ public final class RowGroupsTransformer implements Callback.DeferredTransformer<
 
     public void transform(RowGroups result, Callback<MetricGroups> callback) throws Exception {
         if (cache == null) {
-            callback.reduce(executeQueries(result.getGroups()), new JoinQueryMetricsResult());
+            callback.reduce(executeQueries(result.getGroups()), new MergeMetricGroups());
             return;
         }
 
-        callback.reduce(executeCacheQueries(result.getGroups()), new JoinQueryMetricsResult());
+        callback.reduce(executeCacheQueries(result.getGroups()), new MergeMetricGroups());
     }
 
     private List<Callback<MetricGroups>> executeCacheQueries(

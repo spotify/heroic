@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.metadata;
 
 import java.util.Map;
 

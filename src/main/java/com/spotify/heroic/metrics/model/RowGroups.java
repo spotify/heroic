@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.model;
 
 import java.util.List;
 import java.util.Map;
@@ -6,7 +6,6 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.backend.model.PreparedGroup;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor

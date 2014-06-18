@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.model;
+package com.spotify.heroic.metadata.model;
 
 import java.util.Set;
 

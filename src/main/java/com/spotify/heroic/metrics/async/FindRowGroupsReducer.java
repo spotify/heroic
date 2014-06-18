@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,9 +12,10 @@ import lombok.RequiredArgsConstructor;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.model.PreparedGroup;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FindRows;
+import com.spotify.heroic.metrics.model.PreparedGroup;
+import com.spotify.heroic.metrics.model.RowGroups;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,32 +14,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ResolvedCallback;
-import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.TimeSerieMatcher;
-import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.GroupedAllRowsResult;
+import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.yaml.ValidationException;
 
+@RequiredArgsConstructor
 @Singleton
 @Slf4j
 public class InMemoryMetadataBackend implements MetadataBackend {
-    private static final String HEROIC_REFRESH = MetricRegistry.name("heroic",
-            "cache-request");
+    public static class YAML implements MetadataBackend.YAML {
+        public static String TYPE = "!in-memory-metadata";
+
+        @Override
+        public MetadataBackend build(String context,
+                MetadataBackendReporter reporter) throws ValidationException {
+            return new InMemoryMetadataBackend(reporter);
+        }
+    }
+
+    private final MetadataBackendReporter reporter;
 
     @Inject
-    private BackendManager backendManager;
-
-    @Inject
-    private MetricRegistry registry;
+    private MetricBackendManager backendManager;
 
     private Map<Map.Entry<String, String>, List<TimeSerie>> byTag;
     private Map<String, List<TimeSerie>> byKey;
@@ -50,16 +56,13 @@ public class InMemoryMetadataBackend implements MetadataBackend {
     private final AtomicBoolean inProgress = new AtomicBoolean(false);
 
     @Override
-    public void refresh() {
+    public Callback<Void> refresh() {
         if (!inProgress.compareAndSet(false, true)) {
             log.warn("Refresh already in progress");
-            return;
+            return new ResolvedCallback<Void>(null);
         }
 
         log.info("Refreshing tags cache");
-
-        final Timer timer = registry.timer(HEROIC_REFRESH);
-        final Timer.Context context = timer.time();
 
         final Callback<GroupedAllRowsResult> callback = backendManager
                 .getAllRows();
@@ -100,10 +103,16 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             @Override
             public void finished() {
                 log.info("Refresh ended");
-                context.stop();
                 inProgress.set(false);
             }
         });
+
+        return callback.transform(new Callback.Transformer<GroupedAllRowsResult, Void>() {
+            @Override
+            public Void transform(GroupedAllRowsResult result) throws Exception {
+                return null;
+            }
+        }).register(reporter.reportRefresh());
     }
 
     /* (non-Javadoc)
@@ -148,7 +157,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
         final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
                 matcher.indexTags());
 
-        final List<TimeSerie> result = new LinkedList<TimeSerie>();
+        final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie);

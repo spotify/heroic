@@ -35,7 +35,6 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
@@ -45,7 +44,7 @@ import com.spotify.heroic.metrics.model.GetAllTimeSeries;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -90,7 +89,7 @@ public class KairosMetricBackend implements MetricBackend {
         }
     }
 
-    public static class YAML implements Backend.YAML {
+    public static class YAML implements MetricBackend.YAML {
         public static final String TYPE = "!kairosdb-backend";
 
         /**
@@ -128,7 +127,7 @@ public class KairosMetricBackend implements MetricBackend {
         private int threads = 20;
 
         @Override
-        public Backend build(String context, BackendReporter reporter)
+        public MetricBackend build(String context, MetricBackendReporter reporter)
                 throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
@@ -147,7 +146,7 @@ public class KairosMetricBackend implements MetricBackend {
     private final ColumnFamily<String, DataPointsRowKey> ROW_KEY_INDEX_CF =
             new ColumnFamily<>("row_key_index", StringSerializer.get(), DataPointsRowKey.Serializer.get());
 
-    private final BackendReporter reporter;
+    private final MetricBackendReporter reporter;
     private final Executor executor;
     private final Map<String, String> backendTags;
     private final Keyspace keyspace;
@@ -156,7 +155,7 @@ public class KairosMetricBackend implements MetricBackend {
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
 
-    public KairosMetricBackend(BackendReporter reporter, Executor executor,
+    public KairosMetricBackend(MetricBackendReporter reporter, Executor executor,
             String keyspace, String seeds, int maxConnectionsPerHost,
             Map<String, String> backendTags) {
 
@@ -197,19 +196,6 @@ public class KairosMetricBackend implements MetricBackend {
         }
 
         return queries;
-    }
-
-    private List<Long> buildBases(DateRange range) {
-        final List<Long> bases = new ArrayList<Long>();
-
-        final long start = range.getStart() - range.getStart() % DataPointsRowKey.MAX_WIDTH;
-        final long end = range.getEnd() - range.getEnd() % DataPointsRowKey.MAX_WIDTH + DataPointsRowKey.MAX_WIDTH;
-
-        for (long i = start; i < end; i += DataPointsRowKey.MAX_WIDTH) {
-            bases.add(i);
-        }
-
-        return bases;
     }
 
     private Callback<FetchDataPoints.Result> buildQuery(
@@ -414,12 +400,25 @@ public class KairosMetricBackend implements MetricBackend {
         return true;
     }
 
-    private DataPointsRowKey rowKeyStart(long start, String key) {
+    private static List<Long> buildBases(DateRange range) {
+        final List<Long> bases = new ArrayList<Long>();
+
+        final long start = range.getStart() - range.getStart() % DataPointsRowKey.MAX_WIDTH;
+        final long end = range.getEnd() - range.getEnd() % DataPointsRowKey.MAX_WIDTH + DataPointsRowKey.MAX_WIDTH;
+
+        for (long i = start; i < end; i += DataPointsRowKey.MAX_WIDTH) {
+            bases.add(i);
+        }
+
+        return bases;
+    }
+
+    private static DataPointsRowKey rowKeyStart(long start, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(start);
         return new DataPointsRowKey(key, timeBucket);
     }
 
-    private DataPointsRowKey rowKeyEnd(long end, String key) {
+    private static DataPointsRowKey rowKeyEnd(long end, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(end);
         return new DataPointsRowKey(key, timeBucket + 1);
     }

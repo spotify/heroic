@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,11 +6,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.model.MetricGroup;
-import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.metrics.model.MetricGroup;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
@@ -52,7 +52,7 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
         /**
          * Merge with queried data.
          */
-        callback.reduce(missQueries, new CacheMissMerger(
+        callback.reduce(missQueries, new MergeCacheMisses(
                 cache, timeSerie, cacheResult));
     }
 

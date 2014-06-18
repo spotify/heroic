@@ -1,20 +1,17 @@
 package com.spotify.heroic.metadata.model;
 
-import java.util.List;
+import java.util.Set;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.model.TimeSerie;
 
+@RequiredArgsConstructor
 public class FindTimeSeries {
     @Getter
-    private final List<TimeSerie> timeSeries;
+    private final Set<TimeSerie> timeSeries;
 
     @Getter
     private final int size;
-
-    public FindTimeSeries(List<TimeSerie> timeSeries, int size) {
-        this.timeSeries = timeSeries;
-        this.size = size;
-    }
 }

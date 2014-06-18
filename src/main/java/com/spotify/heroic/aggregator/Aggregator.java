@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.backend.model.Statistics;
+import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 

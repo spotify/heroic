@@ -3,12 +3,12 @@ package com.spotify.heroic.statistics.semantic;
 import lombok.RequiredArgsConstructor;
 
 import com.codahale.metrics.Histogram;
-import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
-public class SemanticBackendReporter implements BackendReporter {
+public class SemanticBackendReporter implements MetricBackendReporter {
     private final Histogram rowCount;
 
     public SemanticBackendReporter(SemanticMetricRegistry registry, String context) {

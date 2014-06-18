@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.list;
+package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,35 +21,32 @@ import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.MetricGroupsTransformer;
-import com.spotify.heroic.backend.MetricStream;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.model.GroupedAllRowsResult;
-import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.events.EventBackend;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
-import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metadata.model.GroupedAllRowsResult;
+import com.spotify.heroic.metrics.async.FindRowGroupsReducer;
+import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
+import com.spotify.heroic.metrics.async.RowGroupsTransformer;
 import com.spotify.heroic.metrics.model.FindRows;
 import com.spotify.heroic.metrics.model.GetAllTimeSeries;
+import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.RowGroups;
+import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.statistics.BackendManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 @RequiredArgsConstructor
 @Slf4j
-public class ListBackendManager implements BackendManager {
+public class MetricBackendManager {
     @Getter
     private final List<MetricBackend> metricBackends;
 
     @Getter
-    private final List<EventBackend> eventBackends;
-
-    @Getter
-    private final BackendManagerReporter reporter;
+    private final MetricBackendManagerReporter reporter;
 
     @Getter
     private final long maxAggregationMagnitude;
@@ -69,7 +66,6 @@ public class ListBackendManager implements BackendManager {
         return list;
     }
 
-    @Override
     public Callback<MetricsQueryResponse> queryMetrics(final MetricsRequest query)
             throws QueryException {
         if (query == null)
@@ -109,7 +105,6 @@ public class ListBackendManager implements BackendManager {
                 .register(reporter.reportQueryMetrics());
     }
 
-    @Override
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query, MetricStream handle)
             throws QueryException {
         final String key = query.getKey();
@@ -144,7 +139,6 @@ public class ListBackendManager implements BackendManager {
         return callback.register(reporter.reportStreamMetrics());
     }
 
-    @Override
     public Callback<GroupedAllRowsResult> getAllRows() {
         final List<Callback<GetAllTimeSeries>> backendRequests = new ArrayList<Callback<GetAllTimeSeries>>();
         final Callback<GroupedAllRowsResult> all = new ConcurrentCallback<GroupedAllRowsResult>();

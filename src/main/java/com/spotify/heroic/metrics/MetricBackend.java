@@ -3,15 +3,20 @@ package com.spotify.heroic.metrics;
 import java.util.List;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindRows;
 import com.spotify.heroic.metrics.model.GetAllTimeSeries;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.yaml.ValidationException;
 
-public interface MetricBackend extends Backend {
+public interface MetricBackend {
+    public static interface YAML {
+        MetricBackend build(String context, MetricBackendReporter reporter) throws ValidationException;
+    }
+
     /**
      * Query for data points that is part of the specified list of rows and
      * range.
