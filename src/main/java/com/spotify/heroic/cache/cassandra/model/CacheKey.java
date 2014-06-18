@@ -1,10 +1,11 @@
-package com.spotify.heroic.model;
+package com.spotify.heroic.cache.cassandra.model;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
+import com.spotify.heroic.model.TimeSerie;
 
 @ToString(of = { "timeSerie", "aggregationGroup", "base" })
 @EqualsAndHashCode(of = { "timeSerie", "aggregationGroup", "base" })

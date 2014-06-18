@@ -1,4 +1,4 @@
-package com.spotify.heroic.aggregation;
+package com.spotify.heroic.cache.cassandra.model;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -7,13 +7,15 @@ import java.util.List;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationGroup;
 
 /**
  * Serializer for AggregationGroup's.
  *
  * @author udoprog
  */
-public class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
+class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
     private static final IntegerSerializer integerSerializer = IntegerSerializer.get();
     private static final AggregationSerializer aggregationSerializer = AggregationSerializer.get();
 

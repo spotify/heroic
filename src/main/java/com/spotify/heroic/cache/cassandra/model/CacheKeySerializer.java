@@ -1,4 +1,4 @@
-package com.spotify.heroic.model;
+package com.spotify.heroic.cache.cassandra.model;
 
 import java.nio.ByteBuffer;
 
@@ -7,7 +7,7 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.aggregation.AggregationGroupSerializer;
+import com.spotify.heroic.model.TimeSerie;
 
 public class CacheKeySerializer extends AbstractSerializer<CacheKey> {
     private static final IntegerSerializer integerSerializer = IntegerSerializer.get();

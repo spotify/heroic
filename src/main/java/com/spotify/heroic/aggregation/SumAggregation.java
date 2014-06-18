@@ -3,7 +3,6 @@ package com.spotify.heroic.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.netflix.astyanax.model.Composite;
 import com.spotify.heroic.aggregator.SumAggregator;
 import com.spotify.heroic.model.Resolution;
 
@@ -11,10 +10,6 @@ import com.spotify.heroic.model.Resolution;
 public class SumAggregation extends SumBucketAggregation {
     public SumAggregation(Resolution sampling) {
         super(sampling);
-    }
-
-    public SumAggregation(Composite composite) {
-        super(composite);
     }
 
     @JsonCreator

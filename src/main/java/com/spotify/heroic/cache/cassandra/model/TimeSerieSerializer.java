@@ -1,4 +1,4 @@
-package com.spotify.heroic.model;
+package com.spotify.heroic.cache.cassandra.model;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -8,8 +8,9 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
 import com.spotify.heroic.ext.marshal.SafeUTF8Type;
 import com.spotify.heroic.ext.serializers.SafeStringSerializer;
+import com.spotify.heroic.model.TimeSerie;
 
-public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
+class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer
             .get();
     private static final MapSerializer<String, String> tagsSerializer = new MapSerializer<String, String>(

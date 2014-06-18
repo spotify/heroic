@@ -1,4 +1,4 @@
-package com.spotify.heroic.aggregator;
+package com.spotify.heroic.cache.cassandra.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +8,8 @@ import org.junit.Test;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.aggregation.AggregationGroupSerializer;
 import com.spotify.heroic.aggregation.SumAggregation;
+import com.spotify.heroic.cache.cassandra.model.AggregationGroupSerializer;
 import com.spotify.heroic.model.Resolution;
 
 public class AggregationGroupSerializerTest {
@@ -27,7 +27,7 @@ public class AggregationGroupSerializerTest {
     }
 
     @Test
-    public void testSome() throws Exception {
+    public void testOne() throws Exception {
         final Aggregation aggregation = new SumAggregation(resolution);
         final List<Aggregation> aggregations = new ArrayList<Aggregation>();
         aggregations.add(aggregation);

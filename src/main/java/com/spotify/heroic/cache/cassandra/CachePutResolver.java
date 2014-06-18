@@ -9,10 +9,10 @@ import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.cache.cassandra.model.CacheKey;
+import com.spotify.heroic.cache.cassandra.model.CacheKeySerializer;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
-import com.spotify.heroic.model.CacheKey;
-import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 

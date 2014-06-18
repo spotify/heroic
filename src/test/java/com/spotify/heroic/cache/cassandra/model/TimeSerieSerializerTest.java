@@ -1,10 +1,13 @@
-package com.spotify.heroic.model;
+package com.spotify.heroic.cache.cassandra.model;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.spotify.heroic.cache.cassandra.model.TimeSerieSerializer;
+import com.spotify.heroic.model.TimeSerie;
 
 public class TimeSerieSerializerTest {
     private static final TimeSerieSerializer serializer = TimeSerieSerializer.get();
