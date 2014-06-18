@@ -2,6 +2,7 @@ package com.spotify.heroic.metrics.kairosdb;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -14,9 +15,9 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 
 @ToString(of = { "metricName", "timestamp", "tags" })
 @EqualsAndHashCode(of = { "metricName", "timestamp", "tags" })
-public class DataPointsRowKey {
+class DataPointsRowKey {
     public static final long MAX_WIDTH = 1814400000L;
-    private static final SortedMap<String, String> EMPTY_TAGS = new TreeMap<String, String>();
+    private static final HashMap<String, String> EMPTY_TAGS = new HashMap<String, String>();
 
     public static class Serializer extends AbstractSerializer<DataPointsRowKey> {
         public static final Serializer instance = new Serializer();
@@ -33,7 +34,7 @@ public class DataPointsRowKey {
             byte[] metricName = dataPointsRowKey.getMetricName().getBytes(UTF8);
             size += metricName.length;
             size++; // Add one for null at end of string
-            byte[] tagString = generateTagString(dataPointsRowKey.getTags())
+            byte[] tagString = generateTagString(new TreeMap<String, String>(dataPointsRowKey.getTags()))
                     .getBytes(UTF8);
             size += tagString.length;
 
@@ -59,8 +60,8 @@ public class DataPointsRowKey {
             return buffer.toString();
         }
 
-        private SortedMap<String, String> parseTags(byte[] tagsBuffer) {
-            final SortedMap<String, String> tags = new TreeMap<String, String>();
+        private Map<String, String> parseTags(byte[] tagsBuffer) {
+            final Map<String, String> tags = new HashMap<String, String>();
 
             final String tagsString = new String(tagsBuffer, UTF8);
 
@@ -113,7 +114,7 @@ public class DataPointsRowKey {
             byteBuffer.get(tagsBuffer);
 
             final String metricName = new String(metricNameBuffer, UTF8);
-            final SortedMap<String, String> tags = parseTags(tagsBuffer);
+            final Map<String, String> tags = parseTags(tagsBuffer);
 
             return new DataPointsRowKey(metricName, timestamp, tags);
         }
@@ -124,14 +125,14 @@ public class DataPointsRowKey {
     @Getter
     private final long timestamp;
     @Getter
-    private final SortedMap<String, String> tags;
+    private final Map<String, String> tags;
 
     public DataPointsRowKey(String metricName, long timestamp) {
         this(metricName, timestamp, EMPTY_TAGS);
     }
 
     public DataPointsRowKey(String metricName, long timestamp,
-            SortedMap<String, String> tags) {
+            Map<String, String> tags) {
         this.metricName = metricName;
         this.timestamp = timestamp;
         this.tags = tags;

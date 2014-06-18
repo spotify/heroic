@@ -33,9 +33,8 @@ import com.spotify.heroic.events.EventBackend;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.metrics.model.FindRows;
-import com.spotify.heroic.metrics.model.GetAllRowsResult;
+import com.spotify.heroic.metrics.model.GetAllTimeSeries;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.BackendManagerReporter;
@@ -146,32 +145,23 @@ public class ListBackendManager implements BackendManager {
 
     @Override
     public Callback<GroupedAllRowsResult> getAllRows() {
-        final List<Callback<GetAllRowsResult>> backendRequests = new ArrayList<Callback<GetAllRowsResult>>();
+        final List<Callback<GetAllTimeSeries>> backendRequests = new ArrayList<Callback<GetAllTimeSeries>>();
         final Callback<GroupedAllRowsResult> all = new ConcurrentCallback<GroupedAllRowsResult>();
 
         for (final MetricBackend backend : metricBackends) {
-            backendRequests.add(backend.getAllRows());
+            backendRequests.add(backend.getAllTimeSeries());
         }
 
-        final Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult> resultReducer = new Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult>() {
+        final Callback.Reducer<GetAllTimeSeries, GroupedAllRowsResult> resultReducer = new Callback.Reducer<GetAllTimeSeries, GroupedAllRowsResult>() {
             @Override
             public GroupedAllRowsResult resolved(
-                    Collection<GetAllRowsResult> results,
+                    Collection<GetAllTimeSeries> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
-                for (final GetAllRowsResult backendResult : results) {
-                    final Map<String, List<DataPointsRowKey>> rows = backendResult
-                            .getRows();
-
-                    for (final Map.Entry<String, List<DataPointsRowKey>> entry : rows
-                            .entrySet()) {
-                        for (final DataPointsRowKey rowKey : entry.getValue()) {
-                            result.add(new TimeSerie(rowKey.getMetricName(),
-                                    rowKey.getTags()));
-                        }
-                    }
+                for (final GetAllTimeSeries backendResult : results) {
+                    result.addAll(backendResult.getTimeSeries());
                 }
 
                 return new GroupedAllRowsResult(result);

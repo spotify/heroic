@@ -73,7 +73,7 @@ public final class RowGroupsTransformer implements Callback.DeferredTransformer<
         for (final PreparedGroup prepared : preparedGroups) {
             final MetricBackend backend = prepared.getBackend();
             backendQueries.addAll(
-                    backend.query(new FetchDataPoints(prepared.getRows(), slice.getRange())));
+                    backend.query(new FetchDataPoints(prepared.getTimeSerie(), slice.getRange())));
         }
 
         return partial.reduce(backendQueries, reducer);

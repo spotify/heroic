@@ -3,37 +3,29 @@ package com.spotify.heroic.metrics.model;
 import java.util.List;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeSerie;
 
-@ToString(of = { "rows", "range" })
+@RequiredArgsConstructor
+@ToString(of = { "timeSerie", "range" })
 public class FetchDataPoints {
     @Getter
-    private final List<DataPointsRowKey> rows;
+    private final TimeSerie timeSerie;
 
     @Getter
     private final DateRange range;
 
-    public FetchDataPoints(List<DataPointsRowKey> rows, DateRange range) {
-        super();
-        this.rows = rows;
-        this.range = range;
-    }
-
-    @ToString(of = { "datapoints", "rowKey" })
+    @RequiredArgsConstructor
+    @ToString(of = { "datapoints", "timeSerie" })
     public static class Result {
         @Getter
         private final List<DataPoint> datapoints;
 
         @Getter
-        private final DataPointsRowKey rowKey;
-
-        public Result(List<DataPoint> datapoints, DataPointsRowKey rowKey) {
-            this.datapoints = datapoints;
-            this.rowKey = rowKey;
-        }
+        private final TimeSerie timeSerie;
     }
 }

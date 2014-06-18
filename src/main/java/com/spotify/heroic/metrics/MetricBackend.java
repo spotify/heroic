@@ -5,11 +5,11 @@ import java.util.List;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindRows;
-import com.spotify.heroic.metrics.model.GetAllRowsResult;
+import com.spotify.heroic.metrics.model.GetAllTimeSeries;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeSerie;
 
 public interface MetricBackend extends Backend {
     /**
@@ -50,9 +50,9 @@ public interface MetricBackend extends Backend {
     /**
      * Gets all available rows
      * 
-     * @return An asynchronous handler resulting in a {@link GetAllRowsResult}
+     * @return An asynchronous handler resulting in a {@link GetAllTimeSeries}
      */
-    public Callback<GetAllRowsResult> getAllRows();
+    public Callback<GetAllTimeSeries> getAllTimeSeries();
 
     /**
      * Gets the total number of columns that are in the given rows
@@ -60,6 +60,6 @@ public interface MetricBackend extends Backend {
      * @param rows
      * @return
      */
-    public Callback<Long> getColumnCount(final DataPointsRowKey row,
+    public Callback<Long> getColumnCount(final TimeSerie timeSerie,
             DateRange range);
 }

@@ -2,13 +2,13 @@ package com.spotify.heroic.metrics.model;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -28,7 +28,7 @@ public class FindRows {
     @ToString(of = { "rowGroups", "backend" })
     public static class Result {
         @Getter
-        private final Map<TimeSerie, List<DataPointsRowKey>> rowGroups;
+        private final Map<TimeSerie, Set<TimeSerie>> rowGroups;
 
         @Getter
         private final MetricBackend backend;
