@@ -25,6 +25,10 @@ import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @RequiredArgsConstructor
 @Slf4j
+/**
+ * TODO: Do not ignore errors from individual backends.
+ * @author udoprog
+ */
 public class MetadataBackendManager {
     private final MetadataBackendManagerReporter reporter;
 
@@ -122,7 +126,19 @@ public class MetadataBackendManager {
             public FindKeys resolved(Collection<FindKeys> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
-                return null;
+                return mergeFindKeys(results);
+            }
+
+            private FindKeys mergeFindKeys(Collection<FindKeys> results) {
+                final Set<String> keys = new HashSet<String>();
+                int size = 0;
+
+                for (final FindKeys findKeys : results) {
+                    keys.addAll(findKeys.getKeys());
+                    size += findKeys.getSize();
+                }
+
+                return new FindKeys(keys, size);
             }
         }).register(reporter.reportFindKeys());
     }
