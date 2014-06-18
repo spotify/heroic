@@ -54,7 +54,9 @@ public class AggregationCache {
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(slice);
-                callback.resolve(new CacheQueryResult(slice, aggregator, datapoints, misses));
+                callback.resolve(new CacheQueryResult(slice, aggregator,
+                        datapoints, misses));
+                reporter.reportGetMisses(misses.size());
                 return;
             }
 
