@@ -6,28 +6,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.backend.model.FindRows;
+import com.spotify.heroic.backend.model.PreparedGroup;
+import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.metrics.model.FindRows;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 public final class FindRowGroupsReducer implements
         Callback.Reducer<FindRows.Result, RowGroups> {
-    @RequiredArgsConstructor
-    public static final class PreparedGroup {
-        @Getter
-        private final MetricBackend backend;
-        @Getter
-        private final List<DataPointsRowKey> rows;
-    }
-
     @Override
     public RowGroups resolved(Collection<FindRows.Result> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)

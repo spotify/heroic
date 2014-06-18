@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.backend.list;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import javax.inject.Inject;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -19,17 +21,21 @@ import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.backend.list.FindRowGroupsReducer;
-import com.spotify.heroic.backend.list.RowGroups;
-import com.spotify.heroic.backend.list.RowGroupsTransformer;
-import com.spotify.heroic.backend.model.FindRows;
-import com.spotify.heroic.backend.model.GetAllRowsResult;
+import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.backend.MetricGroupsTransformer;
+import com.spotify.heroic.backend.MetricStream;
+import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.backend.model.MetricGroups;
+import com.spotify.heroic.backend.model.Statistics;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.events.EventBackend;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
+import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.metrics.model.FindRows;
+import com.spotify.heroic.metrics.model.GetAllRowsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.BackendManagerReporter;
@@ -44,13 +50,13 @@ public class ListBackendManager implements BackendManager {
     private final List<EventBackend> eventBackends;
 
     @Getter
-    private final AggregationCache cache;
-
-    @Getter
     private final BackendManagerReporter reporter;
 
     @Getter
     private final long maxAggregationMagnitude;
+
+    @Inject
+    private AggregationCache aggregationCache;
 
     /**
      * Used for deferring work to avoid deep stack traces.
@@ -99,7 +105,7 @@ public class ListBackendManager implements BackendManager {
         final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
 
         return findRowGroups(criteria)
-                .transform(new RowGroupsTransformer(cache, aggregator, criteria.getRange()))
+                .transform(new RowGroupsTransformer(aggregationCache, aggregator, criteria.getRange()))
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
     }
@@ -129,7 +135,7 @@ public class ListBackendManager implements BackendManager {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
                 final AggregatorGroup aggregator = aggregation.build();
-                return rowGroups.transform(new RowGroupsTransformer(cache, aggregator, range));
+                return rowGroups.transform(new RowGroupsTransformer(aggregationCache, aggregator, range));
             }
         };
 

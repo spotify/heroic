@@ -8,11 +8,13 @@ import lombok.Setter;
 
 import com.spotify.heroic.backend.Backend;
 import com.spotify.heroic.backend.BackendManager;
-import com.spotify.heroic.backend.EventBackend;
-import com.spotify.heroic.backend.ListBackendManager;
-import com.spotify.heroic.backend.MetricBackend;
+import com.spotify.heroic.backend.list.ListBackendManager;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
+import com.spotify.heroic.events.EventBackend;
+import com.spotify.heroic.metadata.InMemoryMetadataBackend;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 public class HeroicConfigYAML {
@@ -80,12 +82,12 @@ public class HeroicConfigYAML {
             cache = new AggregationCache(reporter.newAggregationCache(null), backend);
         }
 
+        final MetadataBackend metadataBackend = new InMemoryMetadataBackend();
+
         final List<MetricBackend> metricBackends = filterMetricBackends(backends);
         final List<EventBackend> eventBackends = filterEventBackends(backends);
 
-        final BackendManager backendManager = new ListBackendManager(metricBackends, eventBackends,
-           cache, reporter.newBackendManager(null), maxAggregationMagnitude);
-
-        return new HeroicConfig(backendManager, cache);
+        final BackendManager backendManager = new ListBackendManager(metricBackends, eventBackends, reporter.newBackendManager(null), maxAggregationMagnitude);
+        return new HeroicConfig(backendManager, cache, metadataBackend);
     }
 }

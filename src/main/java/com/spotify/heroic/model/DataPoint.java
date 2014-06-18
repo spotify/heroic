@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.ToString;
 
 import com.netflix.astyanax.model.Column;
-import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
 
 @ToString(of = { "timestamp", "value" })
 @EqualsAndHashCode(of = { "timestamp", "value" })

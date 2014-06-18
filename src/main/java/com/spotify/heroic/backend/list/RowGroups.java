@@ -6,7 +6,7 @@ import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.backend.list.FindRowGroupsReducer.PreparedGroup;
+import com.spotify.heroic.backend.model.PreparedGroup;
 import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor

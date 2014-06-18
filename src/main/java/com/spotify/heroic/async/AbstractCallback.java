@@ -70,7 +70,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(final Transformer<T, C> transformer) {
+    public <C> Callback<C> transform(final DeferredTransformer<T, C> transformer) {
         final Callback<C> callback = newCallback();
 
         register(new Handle<T>() {
@@ -88,6 +88,49 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             public void resolved(T result) throws Exception {
                 try {
                     transformer.transform(result, callback);
+                } catch (Exception t) {
+                    callback.fail(t);
+                }
+            }
+        });
+
+        callback.register(new Callback.Handle<C>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                AbstractCallback.this.cancel(reason);
+            }
+
+            @Override
+            public void failed(Exception e) throws Exception {
+                AbstractCallback.this.fail(e);
+            }
+
+            @Override
+            public void resolved(C result) throws Exception {}
+        });
+
+        return callback;
+    }
+
+    @Override
+    public <C> Callback<C> transform(final Transformer<T, C> transformer) {
+        final Callback<C> callback = newCallback();
+
+        register(new Handle<T>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                callback.cancel(reason);
+            }
+
+            @Override
+            public void failed(Exception e) throws Exception {
+                callback.fail(e);
+            }
+
+            @Override
+            public void resolved(T result) throws Exception {
+                try {
+                    callback.resolve(transformer.transform(result));
                 } catch (Exception t) {
                     callback.fail(t);
                 }

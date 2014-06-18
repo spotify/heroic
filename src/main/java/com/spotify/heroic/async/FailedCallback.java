@@ -6,11 +6,11 @@ import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class FinishedCallback<T> implements Callback<T> {
-    private final T value;
+public class FailedCallback<T> implements Callback<T> {
+    private final Exception error;
 
-    public FinishedCallback(T value) {
-        this.value = value;
+    public FailedCallback(Exception error) {
+        this.error = error;
     }
 
     /* all of these should do nothing. */
@@ -44,11 +44,11 @@ public class FinishedCallback<T> implements Callback<T> {
         return this;
     }
 
-    /* all of these should be immediately resolved. */
+    /* all of these should be immediately failed/finished. */
     @Override
     public Callback<T> register(Callback.Handle<T> handle) {
         try {
-            handle.resolved(value);
+            handle.failed(error);
         } catch (Exception e) {
             log.error("Failed to call handle finish callback", e);
         }
@@ -74,26 +74,17 @@ public class FinishedCallback<T> implements Callback<T> {
     }
 
     @Override
+    public <C> Callback<C> transform(DeferredTransformer<T, C> transformer) {
+        return new FailedCallback<C>(error);
+    }
+
+    @Override
     public <C> Callback<C> transform(Transformer<T, C> transformer) {
-        final Callback<C> callback = new ConcurrentCallback<C>();
-
-        try {
-            transformer.transform(value, callback);
-        } catch (Exception e) {
-            callback.fail(e);
-        }
-
-        return callback;
+        return new FailedCallback<C>(error);
     }
 
     @Override
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
-        try {
-            resolve(resolver.resolve());
-        } catch (Exception e) {
-            fail(e);
-        }
-
         return this;
     }
 }

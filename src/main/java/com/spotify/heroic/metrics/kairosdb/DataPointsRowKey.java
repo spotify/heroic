@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.kairosdb;
+package com.spotify.heroic.metrics.kairosdb;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;

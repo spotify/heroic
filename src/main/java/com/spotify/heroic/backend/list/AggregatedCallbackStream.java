@@ -11,10 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.Statistics;
-import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.MetricGroup;
 import com.spotify.heroic.backend.model.MetricGroups;
+import com.spotify.heroic.backend.model.Statistics;
+import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 

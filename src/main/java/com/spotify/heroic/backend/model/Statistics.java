@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.backend.model;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

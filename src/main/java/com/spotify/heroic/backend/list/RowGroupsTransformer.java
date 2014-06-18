@@ -10,17 +10,17 @@ import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.MetricBackend;
-import com.spotify.heroic.backend.list.FindRowGroupsReducer.PreparedGroup;
-import com.spotify.heroic.backend.model.FetchDataPoints;
 import com.spotify.heroic.backend.model.MetricGroups;
+import com.spotify.heroic.backend.model.PreparedGroup;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
-public final class RowGroupsTransformer implements Callback.Transformer<RowGroups, MetricGroups> {
+public final class RowGroupsTransformer implements Callback.DeferredTransformer<RowGroups, MetricGroups> {
     private final AggregationCache cache;
     private final AggregatorGroup aggregator;
     private final DateRange range;

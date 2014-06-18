@@ -1,12 +1,14 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.metrics;
 
 import java.util.List;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.kairosdb.DataPointsRowKey;
-import com.spotify.heroic.backend.model.FetchDataPoints;
-import com.spotify.heroic.backend.model.FindRows;
-import com.spotify.heroic.backend.model.GetAllRowsResult;
+import com.spotify.heroic.backend.Backend;
+import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.metrics.kairosdb.DataPointsRowKey;
+import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FindRows;
+import com.spotify.heroic.metrics.model.GetAllRowsResult;
 import com.spotify.heroic.model.DateRange;
 
 public interface MetricBackend extends Backend {

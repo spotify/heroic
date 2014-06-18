@@ -1,7 +1,8 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.metadata;
 
 import java.util.Iterator;
 
+import com.spotify.heroic.backend.TimeSerieMatcher;
 import com.spotify.heroic.model.TimeSerie;
 
 public class FilteringTimeSerieIterator implements Iterator<TimeSerie> {

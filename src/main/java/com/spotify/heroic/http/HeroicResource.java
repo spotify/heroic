@@ -35,22 +35,28 @@ import org.glassfish.jersey.media.sse.SseFeature;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.backend.BackendException;
 import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
-import com.spotify.heroic.backend.model.MetricGroup;
-import com.spotify.heroic.backend.model.MetricGroups;
 import com.spotify.heroic.backend.MetricStream;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.TimeSeriesCache;
+import com.spotify.heroic.backend.TimeSerieMatcher;
+import com.spotify.heroic.backend.model.MetricGroup;
+import com.spotify.heroic.backend.model.MetricGroups;
 import com.spotify.heroic.http.model.KeysResponse;
-import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
+import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.http.model.MetricsResponse;
 import com.spotify.heroic.http.model.MetricsStreamResponse;
 import com.spotify.heroic.http.model.TagsRequest;
 import com.spotify.heroic.http.model.TagsResponse;
 import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
+import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -62,10 +68,7 @@ public class HeroicResource {
     private BackendManager backendManager;
 
     @Inject
-    private TimeSeriesCache timeSeriesCache;
-
-    @Inject
-    private HeroicResourceCache cache;
+    private MetadataBackend metadataBackend;
 
     @Inject
     private StoredMetricsQueries storedQueries;
@@ -236,40 +239,95 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response tags(TagsRequest query) {
-        if (!cache.isReady()) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build();
+    public void tags(@Suspended final AsyncResponse response, TagsRequest query) throws BackendException {
+        if (!metadataBackend.isReady()) {
+            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build());
+            return;
         }
 
-        final TagsResponse response = cache.tags(query);
-        return Response.status(Response.Status.OK).entity(response).build();
+        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+                query.getMatchKey(), query.getMatchTags(), query
+                        .getHasTags());
+
+        metadataResult(response, metadataBackend.findTags(matcher, query.getInclude(), query.getExclude()).transform(new Callback.DeferredTransformer<FindTags, TagsResponse>() {
+            @Override
+            public void transform(FindTags result,
+                    Callback<TagsResponse> callback) throws Exception {
+                callback.resolve(new TagsResponse(result.getTags(), result.getSize()));
+            }
+        }));
     }
 
     @POST
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response keys(TimeSeriesRequest query) {
-        if (!cache.isReady()) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build();
+    public void keys(@Suspended final AsyncResponse response, TimeSeriesRequest query) throws BackendException {
+        if (!metadataBackend.isReady()) {
+            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build());
+            return;
         }
 
-        final KeysResponse response = cache.keys(query);
-        return Response.status(Response.Status.OK).entity(response).build();
+        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+                query.getMatchKey(), query.getMatchTags(), query
+                        .getHasTags());
+
+        metadataResult(response, metadataBackend.findKeys(matcher).transform(new Callback.DeferredTransformer<FindKeys, KeysResponse>() {
+            @Override
+            public void transform(FindKeys result,
+                    Callback<KeysResponse> callback) throws Exception {
+                callback.resolve(new KeysResponse(result.getKeys(), result.getSize()));
+            }
+        }));
     }
 
     @POST
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getTimeSeries(TimeSeriesRequest query) {
-        if (!timeSeriesCache.isReady()) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build();
+    public void getTimeSeries(@Suspended final AsyncResponse response, TimeSeriesRequest query) throws BackendException {
+        if (!metadataBackend.isReady()) {
+            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build());
+            return;
         }
 
-        final TimeSeriesResponse response = cache.timeseries(query);
-        return Response.status(Response.Status.OK).entity(response).build();
+        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+                query.getMatchKey(), query.getMatchTags(), query
+                        .getHasTags());
+
+        metadataResult(response, metadataBackend.findTimeSeries(matcher).transform(new Callback.DeferredTransformer<FindTimeSeries, TimeSeriesResponse>() {
+            @Override
+            public void transform(FindTimeSeries result, Callback<TimeSeriesResponse> callback) throws Exception {
+                callback.resolve(new TimeSeriesResponse(result.getTimeSeries(), result.getSize()));
+            }
+        }));
+    }
+
+    private <T> void metadataResult(final AsyncResponse response, Callback<T> callback) {
+        callback.register(new Callback.Handle<T>() {
+            @Override
+            public void cancelled(CancelReason reason)
+                    throws Exception {
+                response.resume(Response
+                        .status(Response.Status.GATEWAY_TIMEOUT)
+                        .entity(new ErrorMessage(
+                                "Request cancelled: " + reason))
+                                .build());
+            }
+
+            @Override
+            public void failed(Exception e) throws Exception {
+                response.resume(Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(e).build());
+            }
+
+            @Override
+            public void resolved(T result) throws Exception {
+                response.resume(Response.status(Response.Status.OK).entity(result).build());
+            }
+        });
     }
 
     private static Map<TimeSerie, List<DataPoint>> makeData(

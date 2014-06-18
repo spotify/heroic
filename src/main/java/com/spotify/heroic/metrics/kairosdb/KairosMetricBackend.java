@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend.kairosdb;
+package com.spotify.heroic.metrics.kairosdb;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,12 +31,12 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.Backend;
-import com.spotify.heroic.backend.MetricBackend;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.backend.model.FetchDataPoints;
-import com.spotify.heroic.backend.model.FetchDataPoints.Result;
-import com.spotify.heroic.backend.model.FindRows;
-import com.spotify.heroic.backend.model.GetAllRowsResult;
+import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
+import com.spotify.heroic.metrics.model.FindRows;
+import com.spotify.heroic.metrics.model.GetAllRowsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -49,7 +49,7 @@ import com.spotify.heroic.yaml.ValidationException;
  * 
  * @author mehrdad
  */
-public class KairosDBBackend implements MetricBackend {
+public class KairosMetricBackend implements MetricBackend {
     private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
             + "column1 > ? AND column1 < ?";
 
@@ -66,7 +66,6 @@ public class KairosDBBackend implements MetricBackend {
         /**
          * Cassandra keyspace for kairosdb.
          */
-        @Getter
         @Setter
         private String keyspace = "kairosdb";
 
@@ -99,7 +98,7 @@ public class KairosDBBackend implements MetricBackend {
             final Map<String, String> attributes = Utils.toMap(context,
                     this.attributes);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new KairosDBBackend(reporter, executor, keyspace, seeds,
+            return new KairosMetricBackend(reporter, executor, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
@@ -120,7 +119,7 @@ public class KairosDBBackend implements MetricBackend {
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
 
-    public KairosDBBackend(BackendReporter reporter, Executor executor,
+    public KairosMetricBackend(BackendReporter reporter, Executor executor,
             String keyspace, String seeds, int maxConnectionsPerHost,
             Map<String, String> backendTags) {
 
@@ -263,7 +262,7 @@ public class KairosDBBackend implements MetricBackend {
 
         return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FindRows.Result>() {
             @Override
-            public com.spotify.heroic.backend.model.FindRows.Result resolve()
+            public com.spotify.heroic.metrics.model.FindRows.Result resolve()
                     throws Exception {
                 final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
                         .execute();
@@ -300,7 +299,7 @@ public class KairosDBBackend implements MetricBackend {
                     rows.add(rowKey);
                 }
 
-                return new FindRows.Result(rowGroups, KairosDBBackend.this);
+                return new FindRows.Result(rowGroups, KairosMetricBackend.this);
             }
         });
     }

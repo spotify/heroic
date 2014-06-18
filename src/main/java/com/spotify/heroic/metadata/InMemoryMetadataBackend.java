@@ -1,4 +1,4 @@
-package com.spotify.heroic.backend;
+package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,19 +15,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.backend.BackendManager;
+import com.spotify.heroic.backend.TimeSerieMatcher;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
+import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.TimeSerie;
 
 @Singleton
 @Slf4j
-public class TimeSeriesCache {
+public class InMemoryMetadataBackend implements MetadataBackend {
     private static final String HEROIC_REFRESH = MetricRegistry.name("heroic",
             "cache-request");
 
@@ -44,6 +49,7 @@ public class TimeSeriesCache {
 
     private final AtomicBoolean inProgress = new AtomicBoolean(false);
 
+    @Override
     public void refresh() {
         if (!inProgress.compareAndSet(false, true)) {
             log.warn("Refresh already in progress");
@@ -81,11 +87,11 @@ public class TimeSeriesCache {
                 final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = calculateByTag(timeSeries);
                 final Map<String, List<TimeSerie>> byKey = calculateByKey(timeSeries);
 
-                synchronized (TimeSeriesCache.this) {
-                    TimeSeriesCache.this.byTag = byTag;
-                    TimeSeriesCache.this.byKey = byKey;
-                    TimeSeriesCache.this.all = timeSeries;
-                    TimeSeriesCache.this.ready = true;
+                synchronized (InMemoryMetadataBackend.this) {
+                    InMemoryMetadataBackend.this.byTag = byTag;
+                    InMemoryMetadataBackend.this.byKey = byKey;
+                    InMemoryMetadataBackend.this.all = timeSeries;
+                    InMemoryMetadataBackend.this.ready = true;
                 }
             }
         });
@@ -100,20 +106,11 @@ public class TimeSeriesCache {
         });
     }
 
-    public static class FindTagsResult {
-        @Getter
-        private final Map<String, Set<String>> tags;
-
-        @Getter
-        private final int size;
-
-        public FindTagsResult(Map<String, Set<String>> tags, int size) {
-            this.tags = tags;
-            this.size = size;
-        }
-    }
-
-    public FindTagsResult findTags(TimeSerieMatcher matcher,
+    /* (non-Javadoc)
+     * @see com.spotify.heroic.backend.MetadataBackend#findTags(com.spotify.heroic.backend.TimeSerieMatcher, java.util.Set, java.util.Set)
+     */
+    @Override
+    public Callback<FindTags> findTags(TimeSerieMatcher matcher,
             Set<String> include, Set<String> exclude) {
         final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
@@ -140,23 +137,14 @@ public class TimeSeriesCache {
             }
         }
 
-        return new FindTagsResult(result, timeSeries.size());
+        return new ResolvedCallback<FindTags>(new FindTags(result, timeSeries.size()));
     }
 
-    public static class FindTimeSeriesResult {
-        @Getter
-        private final List<TimeSerie> timeSeries;
-
-        @Getter
-        private final int size;
-
-        public FindTimeSeriesResult(List<TimeSerie> timeSeries, int size) {
-            this.timeSeries = timeSeries;
-            this.size = size;
-        }
-    }
-
-    public FindTimeSeriesResult findTimeSeries(TimeSerieMatcher matcher) {
+    /* (non-Javadoc)
+     * @see com.spotify.heroic.backend.MetadataBackend#findTimeSeries(com.spotify.heroic.backend.TimeSerieMatcher)
+     */
+    @Override
+    public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {
         final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
                 matcher.indexTags());
 
@@ -166,23 +154,14 @@ public class TimeSeriesCache {
             result.add(timeSerie);
         }
 
-        return new FindTimeSeriesResult(result, timeSeries.size());
+        return new ResolvedCallback<FindTimeSeries>(new FindTimeSeries(result, timeSeries.size()));
     }
 
-    public static class FindKeysResult {
-        @Getter
-        private final Set<String> keys;
-
-        @Getter
-        private final int size;
-
-        public FindKeysResult(Set<String> keys, int size) {
-            this.keys = keys;
-            this.size = size;
-        }
-    }
-
-    public FindKeysResult findKeys(TimeSerieMatcher matcher) {
+    /* (non-Javadoc)
+     * @see com.spotify.heroic.backend.MetadataBackend#findKeys(com.spotify.heroic.backend.TimeSerieMatcher)
+     */
+    @Override
+    public Callback<FindKeys> findKeys(TimeSerieMatcher matcher) {
         final SortedSet<String> result = new TreeSet<String>();
 
         final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
@@ -192,7 +171,7 @@ public class TimeSeriesCache {
             result.add(timeSerie.getKey());
         }
 
-        return new FindKeysResult(result, timeSeries.size());
+        return new ResolvedCallback<FindKeys>(new FindKeys(result, timeSeries.size()));
     }
 
     private static Iterable<TimeSerie> filter(final List<TimeSerie> series,
@@ -327,6 +306,10 @@ public class TimeSeriesCache {
         return all;
     }
 
+    /* (non-Javadoc)
+     * @see com.spotify.heroic.backend.MetadataBackend#isReady()
+     */
+    @Override
     public synchronized boolean isReady() {
         return ready;
     }

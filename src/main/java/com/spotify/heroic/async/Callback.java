@@ -61,8 +61,12 @@ public interface Callback<T> {
         R resolved(int successful, int failed, int cancelled) throws Exception;
     }
 
-    public static interface Transformer<C, R> {
+    public static interface DeferredTransformer<C, R> {
         void transform(C result, Callback<R> callback) throws Exception;
+    }
+
+    public static interface Transformer<C, R> {
+        R transform(C result) throws Exception;
     }
 
     public static interface Resolver<R> {
@@ -204,5 +208,6 @@ public interface Callback<T> {
      * @param transformer The function to use when transforming the value.
      * @return A callback of type <C> which resolves with the transformed value.
      */
+    public <C> Callback<C> transform(DeferredTransformer<T, C> transformer);
     public <C> Callback<C> transform(Transformer<T, C> transformer);
 }

@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.FinishedCallback;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
@@ -50,7 +50,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         if (width == 0) {
-            return new FinishedCallback<CacheBackendGetResult>(
+            return new ResolvedCallback<CacheBackendGetResult>(
                     new CacheBackendGetResult(key, datapoints));
         }
 
@@ -66,7 +66,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             datapoints.add(d);
         }
 
-        return new FinishedCallback<CacheBackendGetResult>(
+        return new ResolvedCallback<CacheBackendGetResult>(
                 new CacheBackendGetResult(key, datapoints));
     }
 
@@ -84,7 +84,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final long width = aggregator.getWidth();
 
         if (width == 0) {
-            return new FinishedCallback<CacheBackendPutResult>(
+            return new ResolvedCallback<CacheBackendPutResult>(
                     new CacheBackendPutResult());
         }
 
@@ -98,7 +98,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             entry.put(timestamp, d);
         }
 
-        return new FinishedCallback<CacheBackendPutResult>(
+        return new ResolvedCallback<CacheBackendPutResult>(
                 new CacheBackendPutResult());
     }
 }

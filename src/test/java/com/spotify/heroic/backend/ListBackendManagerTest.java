@@ -6,7 +6,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
-import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.backend.list.ListBackendManager;
+import com.spotify.heroic.events.EventBackend;
+import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.statistics.BackendManagerReporter;
 
 public class ListBackendManagerTest {
@@ -14,8 +16,6 @@ public class ListBackendManagerTest {
     private List<MetricBackend> metricBackends;
     @Mock
     private List<EventBackend> eventBackends;
-    @Mock
-    private AggregationCache cache;
     @Mock
     private BackendManagerReporter reporter;
 
@@ -25,7 +25,7 @@ public class ListBackendManagerTest {
 
     @Before
     public void before() {
-        this.manager = new ListBackendManager(metricBackends, eventBackends, cache, reporter, MAGNITUDE);
+        this.manager = new ListBackendManager(metricBackends, eventBackends, reporter, MAGNITUDE);
     }
 
     @Test(expected=QueryException.class)

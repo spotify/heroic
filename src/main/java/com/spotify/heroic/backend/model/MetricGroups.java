@@ -2,8 +2,6 @@ package com.spotify.heroic.backend.model;
 
 import java.util.List;
 
-import com.spotify.heroic.backend.Statistics;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
