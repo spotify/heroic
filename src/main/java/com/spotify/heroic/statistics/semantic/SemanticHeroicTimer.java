@@ -12,7 +12,7 @@ public class SemanticHeroicTimer implements HeroicTimer {
         private final Timer.Context context;
 
         @Override
-        public void finish() throws Exception {
+        public void finished() throws Exception {
             stop();
         }
 

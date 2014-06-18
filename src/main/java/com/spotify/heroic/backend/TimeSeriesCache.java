@@ -60,18 +60,18 @@ public class TimeSeriesCache {
 
         callback.register(new Callback.Handle<GroupedAllRowsResult>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 log.warn("Request for tags cache refresh was cancelled: "
                         + reason);
             }
 
             @Override
-            public void error(Exception e) throws Exception {
+            public void failed(Exception e) throws Exception {
                 log.error("Failed to refresh tags cache", e);
             }
 
             @Override
-            public void finish(GroupedAllRowsResult result) throws Exception {
+            public void resolved(GroupedAllRowsResult result) throws Exception {
                 log.info("Successfully refreshed with {} timeserie(s)", result
                         .getTimeSeries().size());
 
@@ -92,7 +92,7 @@ public class TimeSeriesCache {
 
         callback.register(new Callback.Finishable() {
             @Override
-            public void finish() {
+            public void finished() {
                 log.info("Refresh ended");
                 context.stop();
                 inProgress.set(false);

@@ -10,14 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CallbackStream<T> implements Callback.Cancellable {
     public static interface Handle<T> {
-        void finish(CallbackStream<T> stream, Callback<T> callback, T result)
-                throws Exception;
+        void finish(Callback<T> callback, T result) throws Exception;
 
-        void error(CallbackStream<T> stream, Callback<T> callback,
-        		Exception error) throws Exception;
+        void error(Callback<T> callback, Exception error) throws Exception;
 
-        void cancel(CallbackStream<T> stream, Callback<T> callback,
-                CancelReason reason) throws Exception;
+        void cancel(Callback<T> callback, CancelReason reason) throws Exception;
 
         void done(int successful, int failed, int cancelled) throws Exception;
     }
@@ -36,21 +33,21 @@ public class CallbackStream<T> implements Callback.Cancellable {
         for (final Callback<T> callback : callbacks) {
             callback.register(new Callback.Handle<T>() {
                 @Override
-                public void error(Exception e) throws Exception {
+                public void failed(Exception e) throws Exception {
                     failed.incrementAndGet();
                     handleError(handle, callback, e);
                     CallbackStream.this.check(handle);
                 }
 
                 @Override
-                public void finish(T result) throws Exception {
+                public void resolved(T result) throws Exception {
                     successful.incrementAndGet();
                     handleFinish(handle, callback, result);
                     CallbackStream.this.check(handle);
                 }
 
                 @Override
-                public void cancel(CancelReason reason) throws Exception {
+                public void cancelled(CancelReason reason) throws Exception {
                     cancelled.incrementAndGet();
                     handleCancel(handle, callback, reason);
                     CallbackStream.this.check(handle);
@@ -65,7 +62,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
     private void handleError(Handle<T> handle, Callback<T> callback,
     		Exception error) {
         try {
-            handle.error(this, callback, error);
+            handle.error(callback, error);
         } catch (final Exception t) {
             log.error("Failed to call error on handle", t);
         }
@@ -73,7 +70,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
 
     private void handleFinish(Handle<T> handle, Callback<T> callback, T result) {
         try {
-            handle.finish(this, callback, result);
+            handle.finish(callback, result);
         } catch (final Exception t) {
             log.error("Failed to call finish on handle", t);
         }
@@ -82,7 +79,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
     private void handleCancel(Handle<T> handle, Callback<T> callback,
             CancelReason reason) {
         try {
-            handle.cancel(this, callback, reason);
+            handle.cancel(callback, reason);
         } catch (final Exception t) {
             log.error("Failed to call cancel on handle", t);
         }
@@ -107,7 +104,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
 
     /* cancel all queries in this group */
     @Override
-    public void cancel(CancelReason reason) {
+    public void cancelled(CancelReason reason) {
         log.warn("Cancelling all callbacks");
 
         for (final Callback<T> callback : callbacks) {

@@ -28,7 +28,7 @@ final class CachePutResolver implements
     private final List<DataPoint> datapoints;
 
     @Override
-    public CacheBackendPutResult run() throws Exception {
+    public CacheBackendPutResult resolve() throws Exception {
         final AggregationGroup aggregation = key.getAggregationGroup();
         final TimeSerie timeSerie = key.getTimeSerie();
         final long width = aggregation.getWidth();

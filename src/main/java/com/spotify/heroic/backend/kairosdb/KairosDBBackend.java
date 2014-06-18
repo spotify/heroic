@@ -50,14 +50,6 @@ import com.spotify.heroic.yaml.ValidationException;
  * @author mehrdad
  */
 public class KairosDBBackend implements MetricBackend {
-    public static final String QUERY = "query";
-    public static final String GET_COLUMN_COUNT = "get-column-count";
-    private static final String GET_ALL_ROWS = "get-all-rows";
-    private static final String FIND_ROW_GROUPS = "find-row-groups";
-
-    private static final String CF_DATA_POINTS_NAME = "data_points";
-    private static final String CF_ROW_KEY_INDEX = "row_key_index";
-
     private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
             + "column1 > ? AND column1 < ?";
 
@@ -112,17 +104,21 @@ public class KairosDBBackend implements MetricBackend {
         }
     }
 
+    private static final ColumnFamily<DataPointsRowKey, Integer> DATA_POINTS_CF =
+            new ColumnFamily<DataPointsRowKey, Integer>("data_points", DataPointsRowKey.Serializer.get(),
+            IntegerSerializer.get());
+
+    private final ColumnFamily<String, DataPointsRowKey> ROW_KEY_INDEX_CF =
+            new ColumnFamily<>("row_key_index", StringSerializer.get(), DataPointsRowKey.Serializer.get());
+
     private final BackendReporter reporter;
     private final Executor executor;
     private final Map<String, String> backendTags;
     private final Keyspace keyspace;
-    private final ColumnFamily<DataPointsRowKey, Integer> dataPoints;
-    private final ColumnFamily<String, DataPointsRowKey> rowKeyIndex;
+    private final AstyanaxContext<Keyspace> context;
 
-    ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
+    private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily(
             "Cql3CF", IntegerSerializer.get(), StringSerializer.get());
-
-    private final AstyanaxContext<Keyspace> ctx;
 
     public KairosDBBackend(BackendReporter reporter, Executor executor,
             String keyspace, String seeds, int maxConnectionsPerHost,
@@ -131,7 +127,7 @@ public class KairosDBBackend implements MetricBackend {
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
                 .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
 
-        ctx = new AstyanaxContext.Builder()
+        context = new AstyanaxContext.Builder()
                 .withConnectionPoolConfiguration(
                         new ConnectionPoolConfigurationImpl(
                                 "HeroicConnectionPool").setPort(9160)
@@ -140,20 +136,11 @@ public class KairosDBBackend implements MetricBackend {
                 .withAstyanaxConfiguration(config)
                 .buildKeyspace(ThriftFamilyFactory.getInstance());
 
-        ctx.start();
+        context.start();
 
         this.reporter = reporter;
         this.executor = executor;
-
-        this.dataPoints = new ColumnFamily<DataPointsRowKey, Integer>(
-                CF_DATA_POINTS_NAME, DataPointsRowKey.Serializer.get(),
-                IntegerSerializer.get());
-
-        this.rowKeyIndex = new ColumnFamily<>(CF_ROW_KEY_INDEX,
-                StringSerializer.get(), DataPointsRowKey.Serializer.get());
-
-        this.keyspace = ctx.getClient();
-
+        this.keyspace = context.getClient();
         this.backendTags = backendTags;
     }
 
@@ -193,7 +180,7 @@ public class KairosDBBackend implements MetricBackend {
                 timestamp);
 
         final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
-                .prepareQuery(dataPoints)
+                .prepareQuery(DATA_POINTS_CF)
                 .getRow(rowKey)
                 .autoPaginate(true)
                 .withColumnRange(
@@ -205,7 +192,7 @@ public class KairosDBBackend implements MetricBackend {
 
         return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FetchDataPoints.Result>() {
             @Override
-            public Result run() throws Exception {
+            public Result resolve() throws Exception {
                 final OperationResult<ColumnList<Integer>> result = dataQuery.execute();
                 final List<DataPoint> datapoints = buildDataPoints(rowKey, result);
                 return new FetchDataPoints.Result(datapoints, rowKey);
@@ -228,7 +215,7 @@ public class KairosDBBackend implements MetricBackend {
     public Callback<Long> getColumnCount(final DataPointsRowKey row, final DateRange range) {
         return ConcurrentCallback.newResolve(executor, new Callback.Resolver<Long>() {
             @Override
-            public Long run() throws Exception {
+            public Long resolve() throws Exception {
                 final long timestamp = row.getTimestamp();
                 final long start = DataPoint.Name.toStartTimeStamp(range.start(),
                         timestamp);
@@ -263,7 +250,7 @@ public class KairosDBBackend implements MetricBackend {
         final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
 
         final RowQuery<String, DataPointsRowKey> rowQuery = keyspace
-                .prepareQuery(rowKeyIndex)
+                .prepareQuery(ROW_KEY_INDEX_CF)
                 .getRow(key)
                 .autoPaginate(true)
                 .withColumnRange(
@@ -276,7 +263,7 @@ public class KairosDBBackend implements MetricBackend {
 
         return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FindRows.Result>() {
             @Override
-            public com.spotify.heroic.backend.model.FindRows.Result run()
+            public com.spotify.heroic.backend.model.FindRows.Result resolve()
                     throws Exception {
                 final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
                         .execute();
@@ -321,11 +308,11 @@ public class KairosDBBackend implements MetricBackend {
     @Override
     public Callback<GetAllRowsResult> getAllRows() {
         final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
-                .prepareQuery(rowKeyIndex).getAllRows();
+                .prepareQuery(ROW_KEY_INDEX_CF).getAllRows();
 
         return ConcurrentCallback.newResolve(executor, new Callback.Resolver<GetAllRowsResult>() {
             @Override
-            public GetAllRowsResult run() throws Exception {
+            public GetAllRowsResult resolve() throws Exception {
                 final Map<String, List<DataPointsRowKey>> queryResult = new HashMap<String, List<DataPointsRowKey>>();
                 final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
                         .execute();

@@ -20,7 +20,7 @@ public class FinishedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public Callback<T> finish(T result) {
+    public Callback<T> resolve(T result) {
         return this;
     }
 
@@ -48,7 +48,7 @@ public class FinishedCallback<T> implements Callback<T> {
     @Override
     public Callback<T> register(Callback.Handle<T> handle) {
         try {
-            handle.finish(value);
+            handle.resolved(value);
         } catch (Exception e) {
             log.error("Failed to call handle finish callback", e);
         }
@@ -59,7 +59,7 @@ public class FinishedCallback<T> implements Callback<T> {
     @Override
     public Callback<T> register(Callback.Finishable finishable) {
         try {
-            finishable.finish();
+            finishable.finished();
         } catch (Exception e) {
             log.error("Failed to call finish callback", e);
         }
@@ -89,7 +89,7 @@ public class FinishedCallback<T> implements Callback<T> {
     @Override
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
         try {
-            finish(resolver.run());
+            resolve(resolver.resolve());
         } catch (Exception e) {
             fail(e);
         }

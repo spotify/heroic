@@ -29,7 +29,7 @@ public final class FindRowGroupsReducer implements
     }
 
     @Override
-    public RowGroups done(Collection<FindRows.Result> results,
+    public RowGroups resolved(Collection<FindRows.Result> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
         return new RowGroups(prepareGroups(results));

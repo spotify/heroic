@@ -41,7 +41,7 @@ final class CacheMissMerger implements
     private final CacheQueryResult cacheResult;
 
     @Override
-    public MetricGroups done(Collection<MetricGroups> results,
+    public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
 

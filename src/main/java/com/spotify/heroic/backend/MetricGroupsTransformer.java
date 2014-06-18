@@ -13,6 +13,6 @@ public class MetricGroupsTransformer implements Callback.Transformer<MetricGroup
 
     @Override
     public void transform(MetricGroups result, Callback<MetricsQueryResponse> callback) throws Exception {
-        callback.finish(new MetricsQueryResponse(rounded, result));
+        callback.resolve(new MetricsQueryResponse(rounded, result));
     }
 }

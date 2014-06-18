@@ -60,7 +60,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     @Override
-    public Callback<T> finish(T result) {
+    public Callback<T> resolve(T result) {
         final Runnable runnable = synchronizedFinish(result);
 
         if (runnable != null)
@@ -158,7 +158,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
     private void invokeFinished(Handle<T> handle) {
         try {
-            handle.finish(result);
+            handle.resolved(result);
         } catch (final Exception e) {
             log.error("Failed to invoke finish callback", e);
         }
@@ -166,7 +166,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
     private void invokeFailed(Handle<T> handle) {
         try {
-            handle.error(error);
+            handle.failed(error);
         } catch (final Exception e) {
             log.error("Failed to invoke error callback", e);
         }
@@ -174,7 +174,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
     private void invokeFinish(Finishable finishable) {
         try {
-            finishable.finish();
+            finishable.finished();
         } catch (final Exception e) {
             log.error("Failed to invoke finish callback", e);
         }
@@ -182,7 +182,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
 
     private void invokeCancel(Cancellable cancellable) {
         try {
-            cancellable.cancel(cancelReason);
+            cancellable.cancelled(cancelReason);
         } catch (final Exception e) {
             log.error("Failed to invoke cancel callback", e);
         }

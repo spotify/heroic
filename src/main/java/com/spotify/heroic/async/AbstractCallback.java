@@ -24,7 +24,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
                     return;
 
                 try {
-                    AbstractCallback.this.finish(reducer.done(results, errors, cancelled));
+                    AbstractCallback.this.resolve(reducer.resolved(results, errors, cancelled));
                 } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
@@ -38,20 +38,18 @@ public abstract class AbstractCallback<T> implements Callback<T> {
     public <C> Callback<T> reduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
         final CallbackStream.Handle<C> handle = new CallbackStream.Handle<C>() {
             @Override
-            public void finish(CallbackStream<C> stream, Callback<C> callback,
-                    C result) throws Exception {
-                reducer.finish(stream, callback, result);
+            public void finish(Callback<C> callback, C result) throws Exception {
+                reducer.resolved(callback, result);
             }
 
             @Override
-            public void error(CallbackStream<C> stream, Callback<C> callback, Exception error) throws Exception {
-                reducer.error(stream, callback, error);
+            public void error(Callback<C> callback, Exception error) throws Exception {
+                reducer.failed(callback, error);
             }
 
             @Override
-            public void cancel(CallbackStream<C> stream, Callback<C> callback,
-                    CancelReason reason) throws Exception {
-                reducer.cancel(stream, callback, reason);
+            public void cancel(Callback<C> callback, CancelReason reason) throws Exception {
+                reducer.cancelled(callback, reason);
             }
 
             @Override
@@ -61,7 +59,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
                     return;
 
                 try {
-                    AbstractCallback.this.finish(reducer.done(successful, failed, cancelled));
+                    AbstractCallback.this.resolve(reducer.resolved(successful, failed, cancelled));
                 } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
@@ -77,17 +75,17 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
         register(new Handle<T>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 callback.cancel(reason);
             }
 
             @Override
-            public void error(Exception e) throws Exception {
+            public void failed(Exception e) throws Exception {
                 callback.fail(e);
             }
 
             @Override
-            public void finish(T result) throws Exception {
+            public void resolved(T result) throws Exception {
                 try {
                     transformer.transform(result, callback);
                 } catch (Exception t) {
@@ -98,17 +96,17 @@ public abstract class AbstractCallback<T> implements Callback<T> {
 
         callback.register(new Callback.Handle<C>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 AbstractCallback.this.cancel(reason);
             }
 
             @Override
-            public void error(Exception e) throws Exception {
+            public void failed(Exception e) throws Exception {
                 AbstractCallback.this.fail(e);
             }
 
             @Override
-            public void finish(C result) throws Exception {}
+            public void resolved(C result) throws Exception {}
         });
 
         return callback;
@@ -123,7 +121,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
                     return;
 
                 try {
-                    AbstractCallback.this.finish(resolver.run());
+                    AbstractCallback.this.resolve(resolver.resolve());
                 } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }

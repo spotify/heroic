@@ -21,7 +21,7 @@ import com.spotify.heroic.backend.model.MetricGroups;
 public final class JoinQueryMetricsResult implements
         Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
-    public MetricGroups done(Collection<MetricGroups> results,
+    public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
         if (!errors.isEmpty()) {

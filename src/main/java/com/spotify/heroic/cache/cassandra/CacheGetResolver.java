@@ -34,7 +34,7 @@ public final class CacheGetResolver implements
     private final CacheBackendKey key;
     private final DateRange range;
 
-    public CacheBackendGetResult run() throws Exception {
+    public CacheBackendGetResult resolve() throws Exception {
         return new CacheBackendGetResult(key, doGetRow());
     }
 

@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregator.Aggregator;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CallbackStream;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.backend.Statistics;
 import com.spotify.heroic.backend.model.FetchDataPoints;
@@ -30,28 +29,25 @@ public class AggregatedCallbackStream implements
     private final Queue<CancelReason> cancellations = new ConcurrentLinkedQueue<CancelReason>();
 
     @Override
-    public void finish(CallbackStream<FetchDataPoints.Result> stream,
-            Callback<FetchDataPoints.Result> callback,
+    public void resolved(Callback<FetchDataPoints.Result> callback,
             FetchDataPoints.Result result) throws Exception {
         session.stream(result.getDatapoints());
     }
 
     @Override
-    public void error(CallbackStream<FetchDataPoints.Result> stream,
-            Callback<FetchDataPoints.Result> callback, Exception error)
+    public void failed(Callback<FetchDataPoints.Result> callback, Exception error)
             throws Exception {
         errors.add(error);
     }
 
     @Override
-    public void cancel(CallbackStream<FetchDataPoints.Result> stream,
-            Callback<FetchDataPoints.Result> callback, CancelReason reason)
+    public void cancelled(Callback<FetchDataPoints.Result> callback, CancelReason reason)
             throws Exception {
         cancellations.add(reason);
     }
 
     @Override
-    public MetricGroups done(int successful, int failed, int cancelled)
+    public MetricGroups resolved(int successful, int failed, int cancelled)
             throws Exception {
         if (!errors.isEmpty()) {
             log.error("{} error(s) encountered when processing request", failed);

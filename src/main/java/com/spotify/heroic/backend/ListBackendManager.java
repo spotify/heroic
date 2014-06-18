@@ -27,7 +27,6 @@ import com.spotify.heroic.backend.model.FindRows;
 import com.spotify.heroic.backend.model.GetAllRowsResult;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
 import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.MetricStream;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
@@ -150,7 +149,7 @@ public class ListBackendManager implements BackendManager {
 
         final Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult> resultReducer = new Callback.Reducer<GetAllRowsResult, GroupedAllRowsResult>() {
             @Override
-            public GroupedAllRowsResult done(
+            public GroupedAllRowsResult resolved(
                     Collection<GetAllRowsResult> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
@@ -230,17 +229,17 @@ public class ListBackendManager implements BackendManager {
 
         final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 callback.cancel(reason);
             }
 
             @Override
-            public void error(Exception e) throws Exception {
+            public void failed(Exception e) throws Exception {
                 callback.fail(e);
             }
 
             @Override
-            public void finish(MetricGroups result) throws Exception {
+            public void resolved(MetricGroups result) throws Exception {
                 // is cancelled?
                 if (!callback.isInitialized())
                     return;
@@ -253,7 +252,7 @@ public class ListBackendManager implements BackendManager {
                 }
 
                 if (currentRange.start() <= originalRange.start()) {
-                    callback.finish(new StreamMetricsResult());
+                    callback.resolve(new StreamMetricsResult());
                     return;
                 }
 

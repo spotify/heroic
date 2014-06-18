@@ -5,7 +5,6 @@ import lombok.ToString;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.model.GroupedAllRowsResult;
-import com.spotify.heroic.backend.model.MetricStream;
 import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 

@@ -20,19 +20,19 @@ public class SemanticCallbackReporter implements CallbackReporter {
         private final HeroicTimer.Context context;
 
         @Override
-        public void error(Exception e) throws Exception {
+        public void failed(Exception e) throws Exception {
             error.mark();
             context.stop();
         }
 
         @Override
-        public void finish(Object result) throws Exception {
+        public void resolved(Object result) throws Exception {
             finish.mark();
             context.stop();
         }
 
         @Override
-        public void cancel(CancelReason reason) throws Exception {
+        public void cancelled(CancelReason reason) throws Exception {
             cancel.mark();
             context.stop();
         }

@@ -27,19 +27,19 @@ public class CallbackGroup<T> implements Callback.Cancellable {
 
     private final Callback.Handle<T> listener = new Callback.Handle<T>() {
         @Override
-        public void error(Exception e) throws Exception {
+        public void failed(Exception e) throws Exception {
             errors.add(e);
             CallbackGroup.this.checkIn();
         }
 
         @Override
-        public void finish(T result) throws Exception {
+        public void resolved(T result) throws Exception {
             results.add(result);
             CallbackGroup.this.checkIn();
         }
 
         @Override
-        public void cancel(CancelReason reason) throws Exception {
+        public void cancelled(CancelReason reason) throws Exception {
             cancelled.add(reason);
             CallbackGroup.this.checkIn();
         }
@@ -90,7 +90,7 @@ public class CallbackGroup<T> implements Callback.Cancellable {
 
     /* cancel all queries in this group */
     @Override
-    public void cancel(CancelReason reason) {
+    public void cancelled(CancelReason reason) {
         log.warn("Cancelling");
 
         for (final Callback<T> callback : callbacks) {

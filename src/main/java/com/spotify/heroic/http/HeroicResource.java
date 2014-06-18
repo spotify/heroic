@@ -39,7 +39,7 @@ import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
 import com.spotify.heroic.backend.model.MetricGroup;
 import com.spotify.heroic.backend.model.MetricGroups;
-import com.spotify.heroic.backend.model.MetricStream;
+import com.spotify.heroic.backend.MetricStream;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.backend.TimeSeriesCache;
 import com.spotify.heroic.http.model.KeysResponse;
@@ -134,17 +134,17 @@ public class HeroicResource {
 
         callback.register(new Callback.Handle<StreamMetricsResult>() {
             @Override
-            public void cancel(CancelReason reason) throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 sendEvent(eventOutput, "cancel", new ErrorMessage(reason.getMessage()));
             }
 
             @Override
-            public void error(Exception e) throws Exception {
+            public void failed(Exception e) throws Exception {
                 sendEvent(eventOutput, "error", new ErrorMessage(e.getMessage()));
             }
 
             @Override
-            public void finish(StreamMetricsResult result) throws Exception {
+            public void resolved(StreamMetricsResult result) throws Exception {
                 sendEvent(eventOutput, "end", "end");
             }
 
@@ -176,7 +176,7 @@ public class HeroicResource {
         final Callback<MetricsQueryResponse> callback = backendManager.queryMetrics(query).register(
                 new Callback.Handle<MetricsQueryResponse>() {
                     @Override
-                    public void cancel(CancelReason reason)
+                    public void cancelled(CancelReason reason)
                             throws Exception {
                         response.resume(Response
                                 .status(Response.Status.GATEWAY_TIMEOUT)
@@ -186,14 +186,14 @@ public class HeroicResource {
                     }
 
                     @Override
-                    public void error(Exception e) throws Exception {
+                    public void failed(Exception e) throws Exception {
                         response.resume(Response
                                 .status(Response.Status.INTERNAL_SERVER_ERROR)
                                 .entity(e).build());
                     }
 
                     @Override
-                    public void finish(MetricsQueryResponse result)
+                    public void resolved(MetricsQueryResponse result)
                             throws Exception {
                         final MetricGroups groups = result.getMetricGroups();
                         final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());

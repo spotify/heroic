@@ -1,7 +1,6 @@
-package com.spotify.heroic.backend.model;
+package com.spotify.heroic.backend;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.BackendManager;
 import com.spotify.heroic.backend.BackendManager.StreamMetricsResult;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 

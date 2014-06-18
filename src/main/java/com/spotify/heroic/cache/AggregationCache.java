@@ -35,17 +35,17 @@ public class AggregationCache {
         private final AggregatorGroup aggregator;
 
         @Override
-        public void cancel(CancelReason reason) throws Exception {
+        public void cancelled(CancelReason reason) throws Exception {
             callback.cancel(reason);
         }
 
         @Override
-        public void error(Exception e) throws Exception {
+        public void failed(Exception e) throws Exception {
             callback.fail(e);
         }
 
         @Override
-        public void finish(CacheBackendGetResult result) throws Exception {
+        public void resolved(CacheBackendGetResult result) throws Exception {
             final long width = aggregator.getWidth();
 
             final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
@@ -54,7 +54,7 @@ public class AggregationCache {
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(slice);
-                callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
+                callback.resolve(new CacheQueryResult(slice, aggregator, datapoints, misses));
                 return;
             }
 
@@ -82,7 +82,7 @@ public class AggregationCache {
                 misses.add(slice.modify(expected, end));
 
             reporter.reportGetMisses(misses.size());
-            callback.finish(new CacheQueryResult(slice, aggregator, datapoints, misses));
+            callback.resolve(new CacheQueryResult(slice, aggregator, datapoints, misses));
         }
     }
 
@@ -92,19 +92,19 @@ public class AggregationCache {
         private final Callback<CachePutResult> callback;
 
         @Override
-        public void cancel(CancelReason reason) throws Exception {
+        public void cancelled(CancelReason reason) throws Exception {
             callback.cancel(reason);
         }
 
         @Override
-        public void error(Exception e) throws Exception {
+        public void failed(Exception e) throws Exception {
             callback.fail(e);
         }
 
         @Override
-        public void finish(CacheBackendPutResult result)
+        public void resolved(CacheBackendPutResult result)
                 throws Exception {
-            callback.finish(new CachePutResult());
+            callback.resolve(new CachePutResult());
         }
     }
 

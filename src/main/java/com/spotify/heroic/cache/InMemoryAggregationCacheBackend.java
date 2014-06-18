@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.codahale.metrics.MetricRegistry;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FinishedCallback;
