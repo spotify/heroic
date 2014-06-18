@@ -134,6 +134,7 @@ public class ListBackendManager implements BackendManager {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
                 final AggregatorGroup aggregator = aggregation.build();
+                log.info("streaming {} on {}", criteria, range);
                 return rowGroups.transform(new RowGroupsTransformer(aggregationCache, aggregator, range));
             }
         };
@@ -220,7 +221,6 @@ public class ListBackendManager implements BackendManager {
         final DateRange currentRange = lastRange.withStart(
                 Math.max(lastRange.start() - window, originalRange.start()));
 
-    	log.info("Querying range {} with window {}", currentRange, window); 
         final long then = System.currentTimeMillis();
 
         final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {

@@ -2,6 +2,8 @@ package com.spotify.heroic.model;
 
 import java.sql.Date;
 
+import org.apache.commons.lang.time.FastDateFormat;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
@@ -94,9 +96,11 @@ public class DateRange implements Comparable<DateRange> {
         return new DateRange(this.start, end);
     }
 
+    private static final FastDateFormat format = FastDateFormat.getInstance("yyyy-MM-dd HH:mm");
+
     public String toString() {
-    	final Date start = new Date(this.start);
-    	final Date end = new Date(this.end);
-    	return "DateRange(start=" + start + ", end=" + end + ")";
+        final Date start = new Date(this.start);
+        final Date end = new Date(this.end);
+        return "DateRange(start=" + format.format(start) + ", end=" + format.format(end) + ")";
     }
 }
