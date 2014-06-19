@@ -75,15 +75,11 @@ public class ResolvedCallback<T> implements Callback<T> {
 
     @Override
     public <C> Callback<C> transform(DeferredTransformer<T, C> transformer) {
-        final Callback<C> callback = new ConcurrentCallback<C>();
-
         try {
-            transformer.transform(value, callback);
+            return transformer.transform(value);
         } catch (Exception e) {
-            callback.fail(e);
+            return new FailedCallback<C>(e);
         }
-
-        return callback;
     }
 
     @Override

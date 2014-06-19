@@ -3,34 +3,26 @@ package com.spotify.heroic.http.model;
 import java.util.Map;
 import java.util.Set;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-@ToString(of = { "matchKey", "matchTags", "hasTags" })
-@EqualsAndHashCode(of = { "matchKey", "matchTags", "hasTags" })
-@RequiredArgsConstructor
+@Data
 public class TimeSeriesRequest {
     /**
      * Only include time series which match the exact key.
      */
-    @Getter
     private final String matchKey;
 
     /**
      * Only include time series which matches the exact key/value combination.
      */
-    @Getter
     private final Map<String, String> matchTags;
 
     /**
      * Only include time series which has the following tags.
      */
-    @Getter
     private final Set<String> hasTags;
 
     @JsonCreator

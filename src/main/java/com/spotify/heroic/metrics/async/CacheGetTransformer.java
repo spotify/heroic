@@ -6,6 +6,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.metrics.model.MetricGroup;
@@ -25,7 +27,8 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
     private final TimeSerie timeSerie;
     private final AggregationCache cache;
 
-    public void transform(CacheQueryResult cacheResult, Callback<MetricGroups> callback) throws Exception {
+    @Override
+    public Callback<MetricGroups> transform(CacheQueryResult cacheResult) throws Exception {
         final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
 
         for (final TimeSerieSlice slice : cacheResult.getMisses()) {
@@ -45,15 +48,13 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
             final Statistics stat = new Statistics();
             stat.setCache(new Statistics.Cache(datapoints.size(), 0, 0));
 
-            callback.resolve(new MetricGroups(groups, stat));
-            return;
+            return new ResolvedCallback<MetricGroups>(new MetricGroups(groups, stat));
         }
 
         /**
          * Merge with queried data.
          */
-        callback.reduce(missQueries, new MergeCacheMisses(
-                cache, timeSerie, cacheResult));
+        return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(cache, timeSerie, cacheResult));
     }
 
     public abstract Callback<MetricGroups> cacheMiss(TimeSerieSlice slice) throws Exception;

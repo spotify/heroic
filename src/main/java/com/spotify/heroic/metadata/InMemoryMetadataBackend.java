@@ -121,8 +121,8 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             Set<String> include, Set<String> exclude) {
         final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
-                matcher.indexTags());
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
+                matcher.matchTags());
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             for (final Map.Entry<String, String> entry : timeSerie.getTags()
@@ -152,8 +152,8 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      */
     @Override
     public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
-                matcher.indexTags());
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
+                matcher.matchTags());
 
         final Set<TimeSerie> result = new HashSet<TimeSerie>();
 
@@ -171,8 +171,8 @@ public class InMemoryMetadataBackend implements MetadataBackend {
     public Callback<FindKeys> findKeys(TimeSerieMatcher matcher) {
         final SortedSet<String> result = new TreeSet<String>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.indexKey(),
-                matcher.indexTags());
+        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
+                matcher.matchTags());
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie.getKey());

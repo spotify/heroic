@@ -2,10 +2,8 @@ package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -17,6 +15,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.backend.BackendException;
+import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -46,35 +45,7 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, new Callback.Reducer<FindTags, FindTags>() {
-            @Override
-            public FindTags resolved(Collection<FindTags> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                return mergeFindTags(results);
-            }
-
-            private FindTags mergeFindTags(Collection<FindTags> results) {
-                final Map<String, Set<String>> tags = new HashMap<String, Set<String>>();
-                int size = 0;
-
-                for (final FindTags findTags : results) {
-                    for (Map.Entry<String, Set<String>> entry : findTags.getTags().entrySet()) {
-                        Set<String> entries = tags.get(entry.getKey());
-
-                        if (entries == null) {
-                            entries = new HashSet<String>();
-                        }
-
-                        entries.addAll(entry.getValue());
-                    }
-
-                    size += findTags.getSize();
-                }
-
-                return new FindTags(tags, size);
-            }
-        }).register(reporter.reportFindTags());
+        return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer()).register(reporter.reportFindTags());
     }
 
     public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {

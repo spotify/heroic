@@ -58,12 +58,17 @@ public class FilteringTimeSerieMatcher implements TimeSerieMatcher {
     }
 
     @Override
-    public String indexKey() {
+    public String matchKey() {
         return matchKey;
     }
 
     @Override
-    public Map<String, String> indexTags() {
+    public Map<String, String> matchTags() {
         return matchTags;
+    }
+
+    @Override
+    public Set<String> hasTags() {
+        return hasTags;
     }
 }

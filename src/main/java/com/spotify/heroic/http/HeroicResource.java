@@ -251,11 +251,11 @@ public class HeroicResource {
                 query.getMatchKey(), query.getMatchTags(), query
                         .getHasTags());
 
-        metadataResult(response, metadataBackend.findTags(matcher, query.getInclude(), query.getExclude()).transform(new Callback.DeferredTransformer<FindTags, TagsResponse>() {
+        metadataResult(response, metadataBackend.findTags(matcher, query.getInclude(), query.getExclude())
+                .transform(new Callback.Transformer<FindTags, TagsResponse>() {
             @Override
-            public void transform(FindTags result,
-                    Callback<TagsResponse> callback) throws Exception {
-                callback.resolve(new TagsResponse(result.getTags(), result.getSize()));
+            public TagsResponse transform(FindTags result) throws Exception {
+                return new TagsResponse(result.getTags(), result.getSize());
             }
         }));
     }
@@ -274,11 +274,10 @@ public class HeroicResource {
                 query.getMatchKey(), query.getMatchTags(), query
                         .getHasTags());
 
-        metadataResult(response, metadataBackend.findKeys(matcher).transform(new Callback.DeferredTransformer<FindKeys, KeysResponse>() {
+        metadataResult(response, metadataBackend.findKeys(matcher).transform(new Callback.Transformer<FindKeys, KeysResponse>() {
             @Override
-            public void transform(FindKeys result,
-                    Callback<KeysResponse> callback) throws Exception {
-                callback.resolve(new KeysResponse(result.getKeys(), result.getSize()));
+            public KeysResponse transform(FindKeys result) throws Exception {
+                return new KeysResponse(result.getKeys(), result.getSize());
             }
         }));
     }
@@ -297,10 +296,10 @@ public class HeroicResource {
                 query.getMatchKey(), query.getMatchTags(), query
                         .getHasTags());
 
-        metadataResult(response, metadataBackend.findTimeSeries(matcher).transform(new Callback.DeferredTransformer<FindTimeSeries, TimeSeriesResponse>() {
+        metadataResult(response, metadataBackend.findTimeSeries(matcher).transform(new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
             @Override
-            public void transform(FindTimeSeries result, Callback<TimeSeriesResponse> callback) throws Exception {
-                callback.resolve(new TimeSeriesResponse(new ArrayList<TimeSerie>(result.getTimeSeries()), result.getSize()));
+            public TimeSeriesResponse transform(FindTimeSeries result) throws Exception {
+                return new TimeSeriesResponse(new ArrayList<TimeSerie>(result.getTimeSeries()), result.getSize());
             }
         }));
     }

@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.QueryException;
+import com.spotify.heroic.injection.Startable;
+import com.spotify.heroic.injection.Stoppable;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindRows;
 import com.spotify.heroic.metrics.model.GetAllTimeSeries;

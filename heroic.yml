@@ -24,7 +24,7 @@ metadataBackends:
   - !elasticsearch-metadata
 #    clusterName: monelastic-production
     seeds:
-      - localhost
+      - localhost:9301
 
 cache:
   !in-memory-cache {}

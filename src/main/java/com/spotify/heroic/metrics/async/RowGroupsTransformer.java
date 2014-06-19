@@ -26,13 +26,12 @@ public final class RowGroupsTransformer implements Callback.DeferredTransformer<
     private final AggregatorGroup aggregator;
     private final DateRange range;
 
-    public void transform(RowGroups result, Callback<MetricGroups> callback) throws Exception {
+    public Callback<MetricGroups> transform(RowGroups result) throws Exception {
         if (cache == null) {
-            callback.reduce(executeQueries(result.getGroups()), new MergeMetricGroups());
-            return;
+            return ConcurrentCallback.newReduce(executeQueries(result.getGroups()), new MergeMetricGroups());
         }
 
-        callback.reduce(executeCacheQueries(result.getGroups()), new MergeMetricGroups());
+        return ConcurrentCallback.newReduce(executeCacheQueries(result.getGroups()), new MergeMetricGroups());
     }
 
     private List<Callback<MetricGroups>> executeCacheQueries(

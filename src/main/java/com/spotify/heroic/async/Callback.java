@@ -87,7 +87,7 @@ public interface Callback<T> {
     }
 
     public static interface DeferredTransformer<C, R> {
-        void transform(C result, Callback<R> callback) throws Exception;
+        Callback<R> transform(C result) throws Exception;
     }
 
     public static interface Transformer<C, R> {
@@ -143,6 +143,10 @@ public interface Callback<T> {
      */
     public Callback<T> register(Cancellable cancellable);
 
+    /**
+     * Check if callback is initialized or not.
+     * @return
+     */
     public boolean isInitialized();
 
     /**
