@@ -43,7 +43,7 @@ public class SemanticMetricBackendManagerReporter implements MetricBackendManage
     }
 
     @Override
-    public Context reportFindRowGroups() {
+    public Context reportFindTimeSeries() {
         return findRowGroups.setup();
     }
 }

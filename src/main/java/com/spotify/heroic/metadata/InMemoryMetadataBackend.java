@@ -1,6 +1,7 @@
 package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -19,10 +20,10 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Transformers;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.metadata.model.GroupedAllRowsResult;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
@@ -62,10 +63,10 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
         log.info("Refreshing tags cache");
 
-        final Callback<GroupedAllRowsResult> callback = backendManager
-                .getAllRows();
+        final Callback<Set<TimeSerie>> callback = backendManager
+                .getAllTimeSeries();
 
-        callback.register(new Callback.Handle<GroupedAllRowsResult>() {
+        callback.register(new Callback.Handle<Set<TimeSerie>>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 log.warn("Request for tags cache refresh was cancelled: "
@@ -78,12 +79,12 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             }
 
             @Override
-            public void resolved(GroupedAllRowsResult result) throws Exception {
-                log.info("Successfully refreshed with {} timeserie(s)", result
-                        .getTimeSeries().size());
+            public void resolved(Set<TimeSerie> result) throws Exception {
+                log.info("Successfully refreshed with {} timeserie(s)",
+                        result.size());
 
                 final List<TimeSerie> timeSeries = new ArrayList<TimeSerie>(
-                        result.getTimeSeries());
+                        result);
 
                 final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = calculateByTag(timeSeries);
                 final Map<String, List<TimeSerie>> byKey = calculateByKey(timeSeries);
@@ -105,16 +106,16 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             }
         });
 
-        return callback.transform(new Callback.Transformer<GroupedAllRowsResult, Void>() {
-            @Override
-            public Void transform(GroupedAllRowsResult result) throws Exception {
-                return null;
-            }
-        }).register(reporter.reportRefresh());
+        return callback.transform(Transformers.<Set<TimeSerie>> toVoid())
+                .register(reporter.reportRefresh());
     }
 
-    /* (non-Javadoc)
-     * @see com.spotify.heroic.backend.MetadataBackend#findTags(com.spotify.heroic.backend.TimeSerieMatcher, java.util.Set, java.util.Set)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.spotify.heroic.backend.MetadataBackend#findTags(com.spotify.heroic
+     * .backend.TimeSerieMatcher, java.util.Set, java.util.Set)
      */
     @Override
     public Callback<FindTags> findTags(TimeSerieMatcher matcher,
@@ -144,11 +145,16 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             }
         }
 
-        return new ResolvedCallback<FindTags>(new FindTags(result, timeSeries.size()));
+        return new ResolvedCallback<FindTags>(new FindTags(result,
+                timeSeries.size()));
     }
 
-    /* (non-Javadoc)
-     * @see com.spotify.heroic.backend.MetadataBackend#findTimeSeries(com.spotify.heroic.backend.TimeSerieMatcher)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.spotify.heroic.backend.MetadataBackend#findTimeSeries(com.spotify
+     * .heroic.backend.TimeSerieMatcher)
      */
     @Override
     public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {
@@ -161,11 +167,16 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             result.add(timeSerie);
         }
 
-        return new ResolvedCallback<FindTimeSeries>(new FindTimeSeries(result, timeSeries.size()));
+        return new ResolvedCallback<FindTimeSeries>(new FindTimeSeries(result,
+                timeSeries.size()));
     }
 
-    /* (non-Javadoc)
-     * @see com.spotify.heroic.backend.MetadataBackend#findKeys(com.spotify.heroic.backend.TimeSerieMatcher)
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.spotify.heroic.backend.MetadataBackend#findKeys(com.spotify.heroic
+     * .backend.TimeSerieMatcher)
      */
     @Override
     public Callback<FindKeys> findKeys(TimeSerieMatcher matcher) {
@@ -178,7 +189,8 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             result.add(timeSerie.getKey());
         }
 
-        return new ResolvedCallback<FindKeys>(new FindKeys(result, timeSeries.size()));
+        return new ResolvedCallback<FindKeys>(new FindKeys(result,
+                timeSeries.size()));
     }
 
     private static Iterable<TimeSerie> filter(final List<TimeSerie> series,
@@ -199,7 +211,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      * @return
      */
     private Map<Map.Entry<String, String>, List<TimeSerie>> calculateByTag(
-            List<TimeSerie> timeSeries) {
+            Collection<TimeSerie> timeSeries) {
         final Map<Map.Entry<String, String>, List<TimeSerie>> byTag = new HashMap<Map.Entry<String, String>, List<TimeSerie>>();
 
         for (final TimeSerie timeSerie : timeSeries) {
@@ -226,7 +238,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      * @return
      */
     private Map<String, List<TimeSerie>> calculateByKey(
-            List<TimeSerie> timeseries) {
+            Collection<TimeSerie> timeseries) {
         final Map<String, List<TimeSerie>> byTag = new HashMap<String, List<TimeSerie>>();
 
         for (final TimeSerie t : timeseries) {
@@ -295,7 +307,8 @@ public class InMemoryMetadataBackend implements MetadataBackend {
             return getAll();
         }
 
-        //log.info("{} matche(s) for query: key:{} filter:{} matched(tag:{} key:{})", smallest.size(), key, filter, matchedTag, matchedKey);
+        // log.info("{} matche(s) for query: key:{} filter:{} matched(tag:{} key:{})",
+        // smallest.size(), key, filter, matchedTag, matchedKey);
         return smallest;
     }
 
@@ -311,7 +324,9 @@ public class InMemoryMetadataBackend implements MetadataBackend {
         return all;
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     * 
      * @see com.spotify.heroic.backend.MetadataBackend#isReady()
      */
     @Override

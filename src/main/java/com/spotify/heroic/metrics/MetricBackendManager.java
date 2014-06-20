@@ -1,8 +1,6 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,18 +19,15 @@ import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
-import com.spotify.heroic.metadata.model.GroupedAllRowsResult;
-import com.spotify.heroic.metrics.async.FindRowGroupsReducer;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.RowGroupsTransformer;
-import com.spotify.heroic.metrics.model.FindRows;
-import com.spotify.heroic.metrics.model.GetAllTimeSeries;
+import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.RowGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
@@ -66,8 +61,8 @@ public class MetricBackendManager {
         return list;
     }
 
-    public Callback<MetricsQueryResponse> queryMetrics(final MetricsRequest query)
-            throws QueryException {
+    public Callback<MetricsQueryResponse> queryMetrics(
+            final MetricsRequest query) throws QueryException {
         if (query == null)
             throw new QueryException("Query must be defined");
 
@@ -75,7 +70,8 @@ public class MetricBackendManager {
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange().buildDateRange();
-        final AggregationGroup aggregation = new AggregationGroup(defaultList(query.getAggregators()));
+        final AggregationGroup aggregation = new AggregationGroup(
+                defaultList(query.getAggregators()));
 
         if (key == null || key.isEmpty())
             throw new QueryException("'key' must be defined");
@@ -97,20 +93,24 @@ public class MetricBackendManager {
         }
 
         final DateRange rounded = roundRange(aggregator, range);
-        final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
+        final FindTimeSeries criteria = new FindTimeSeries(key, rounded, tags,
+                groupBy);
 
-        return findRowGroups(criteria)
-                .transform(new RowGroupsTransformer(aggregationCache, aggregator, criteria.getRange()))
+        return findTimeSeries(criteria)
+                .transform(
+                        new RowGroupsTransformer(aggregationCache, aggregator,
+                                criteria.getRange()))
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
     }
 
-    public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query, MetricStream handle)
-            throws QueryException {
+    public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
+            MetricStream handle) throws QueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
-        final List<Aggregation> definitions = defaultList(query.getAggregators());
+        final List<Aggregation> definitions = defaultList(query
+                .getAggregators());
 
         if (key == null || key.isEmpty())
             throw new QueryException("'key' must be defined");
@@ -120,8 +120,9 @@ public class MetricBackendManager {
 
         final DateRange range = query.getRange().buildDateRange();
         final DateRange rounded = roundRange(aggregator, range);
-        final FindRows criteria = new FindRows(key, rounded, tags, groupBy);
-        final Callback<RowGroups> rowGroups = findRowGroups(criteria);
+        final FindTimeSeries criteria = new FindTimeSeries(key, rounded, tags,
+                groupBy);
+        final Callback<List<FindTimeSeries.Result>> rows = findTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -130,40 +131,27 @@ public class MetricBackendManager {
             public Callback<MetricGroups> query(DateRange range) {
                 final AggregatorGroup aggregator = aggregation.build();
                 log.info("streaming {} on {}", criteria, range);
-                return rowGroups.transform(new RowGroupsTransformer(aggregationCache, aggregator, range));
+                return rows.transform(new RowGroupsTransformer(
+                        aggregationCache, aggregator, range));
             }
         };
 
-        streamChunks(callback, handle, streamingQuery, criteria, rounded.withStart(rounded.end()), INITIAL_DIFF);
+        streamChunks(callback, handle, streamingQuery, criteria,
+                rounded.withStart(rounded.end()), INITIAL_DIFF);
 
         return callback.register(reporter.reportStreamMetrics());
     }
 
-    public Callback<GroupedAllRowsResult> getAllRows() {
-        final List<Callback<GetAllTimeSeries>> backendRequests = new ArrayList<Callback<GetAllTimeSeries>>();
-        final Callback<GroupedAllRowsResult> all = new ConcurrentCallback<GroupedAllRowsResult>();
+    public Callback<Set<TimeSerie>> getAllTimeSeries() {
+        final List<Callback<Set<TimeSerie>>> backendRequests = new ArrayList<Callback<Set<TimeSerie>>>();
 
         for (final MetricBackend backend : metricBackends) {
             backendRequests.add(backend.getAllTimeSeries());
         }
 
-        final Callback.Reducer<GetAllTimeSeries, GroupedAllRowsResult> resultReducer = new Callback.Reducer<GetAllTimeSeries, GroupedAllRowsResult>() {
-            @Override
-            public GroupedAllRowsResult resolved(
-                    Collection<GetAllTimeSeries> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                final Set<TimeSerie> result = new HashSet<TimeSerie>();
-
-                for (final GetAllTimeSeries backendResult : results) {
-                    result.addAll(backendResult.getTimeSeries());
-                }
-
-                return new GroupedAllRowsResult(result);
-            }
-        };
-
-        return all.reduce(backendRequests, resultReducer).register(reporter.reportGetAllRows());
+        return ConcurrentCallback.newReduce(backendRequests,
+                Reducers.<TimeSerie> joinSets()).register(
+                reporter.reportGetAllRows());
     }
 
     /**
@@ -191,8 +179,9 @@ public class MetricBackendManager {
     }
 
     /**
-     * Streaming implementation that backs down in time in DIFF ms for each invocation.
-     *
+     * Streaming implementation that backs down in time in DIFF ms for each
+     * invocation.
+     * 
      * @param callback
      * @param aggregation
      * @param handle
@@ -200,20 +189,15 @@ public class MetricBackendManager {
      * @param original
      * @param last
      */
-    private void streamChunks(
-        final Callback<StreamMetricsResult> callback,
-        final MetricStream handle,
-        final StreamingQuery query,
-        final FindRows original,
-        final DateRange lastRange,
-        final long window
-    )
-    {
+    private void streamChunks(final Callback<StreamMetricsResult> callback,
+            final MetricStream handle, final StreamingQuery query,
+            final FindTimeSeries original, final DateRange lastRange,
+            final long window) {
         final DateRange originalRange = original.getRange();
 
         // decrease the range for the current chunk.
-        final DateRange currentRange = lastRange.withStart(
-                Math.max(lastRange.start() - window, originalRange.start()));
+        final DateRange currentRange = lastRange.withStart(Math.max(
+                lastRange.start() - window, originalRange.start()));
 
         final long then = System.currentTimeMillis();
 
@@ -235,8 +219,9 @@ public class MetricBackendManager {
                     return;
 
                 try {
-                    handle.stream(callback, new MetricsQueryResponse(originalRange, result));
-                } catch(Exception e) {
+                    handle.stream(callback, new MetricsQueryResponse(
+                            originalRange, result));
+                } catch (Exception e) {
                     callback.fail(e);
                     return;
                 }
@@ -246,11 +231,14 @@ public class MetricBackendManager {
                     return;
                 }
 
-                final long nextWindow = calculateNextWindow(then, result, window);
-                streamChunks(callback, handle, query, original, currentRange, nextWindow);
+                final long nextWindow = calculateNextWindow(then, result,
+                        window);
+                streamChunks(callback, handle, query, original, currentRange,
+                        nextWindow);
             }
 
-            private long calculateNextWindow(long then, MetricGroups result, long window) {
+            private long calculateNextWindow(long then, MetricGroups result,
+                    long window) {
                 final Statistics s = result.getStatistics();
                 final Statistics.Cache cache = s.getCache();
 
@@ -264,7 +252,8 @@ public class MetricBackendManager {
                     return window;
                 }
 
-                double factor = ((Long)QUERY_THRESHOLD).doubleValue() / ((Long)diff).doubleValue();
+                double factor = ((Long) QUERY_THRESHOLD).doubleValue()
+                        / ((Long) diff).doubleValue();
                 return (long) (window * factor);
             }
         };
@@ -273,23 +262,26 @@ public class MetricBackendManager {
         deferredExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                query.query(currentRange).register(callbackHandle).register(reporter.reportStreamMetricsChunk());
+                query.query(currentRange).register(callbackHandle)
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
 
-    private Callback<RowGroups> findRowGroups(FindRows criteria) {
-        final List<Callback<FindRows.Result>> queries = new ArrayList<Callback<FindRows.Result>>();
+    private Callback<List<FindTimeSeries.Result>> findTimeSeries(
+            FindTimeSeries criteria) {
+        final List<Callback<FindTimeSeries.Result>> queries = new ArrayList<Callback<FindTimeSeries.Result>>();
 
         for (final MetricBackend backend : metricBackends) {
             try {
-                queries.add(backend.findRows(criteria));
+                queries.add(backend.findTimeSeries(criteria));
             } catch (final Exception e) {
                 log.error("Failed to query backend", e);
             }
         }
 
-        return ConcurrentCallback.newReduce(queries, new FindRowGroupsReducer())
-                .register(reporter.reportFindRowGroups());
+        return ConcurrentCallback.newReduce(queries,
+                Reducers.<FindTimeSeries.Result> list()).register(
+                reporter.reportFindTimeSeries());
     }
 }

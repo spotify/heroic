@@ -11,5 +11,5 @@ public interface MetricBackendManagerReporter {
 
     CallbackReporter.Context reportStreamMetricsChunk();
 
-    CallbackReporter.Context reportFindRowGroups();
+    CallbackReporter.Context reportFindTimeSeries();
 }

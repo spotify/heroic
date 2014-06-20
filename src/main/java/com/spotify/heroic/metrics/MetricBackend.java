@@ -1,14 +1,12 @@
 package com.spotify.heroic.metrics;
 
 import java.util.List;
+import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.backend.QueryException;
-import com.spotify.heroic.injection.Startable;
-import com.spotify.heroic.injection.Stoppable;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
-import com.spotify.heroic.metrics.model.FindRows;
-import com.spotify.heroic.metrics.model.GetAllTimeSeries;
+import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -16,14 +14,15 @@ import com.spotify.heroic.yaml.ValidationException;
 
 public interface MetricBackend {
     public static interface YAML {
-        MetricBackend build(String context, MetricBackendReporter reporter) throws ValidationException;
+        MetricBackend build(String context, MetricBackendReporter reporter)
+                throws ValidationException;
     }
 
     /**
      * Query for data points that is part of the specified list of rows and
      * range.
      * 
-     * @param fetchDataPointsQuery
+     * @param query
      *            The query for fetching data points. The query contains rows
      *            and a specified time range.
      * 
@@ -34,7 +33,7 @@ public interface MetricBackend {
      * @throws QueryException
      */
     public List<Callback<FetchDataPoints.Result>> query(
-            FetchDataPoints fetchDataPointsQuery);
+            final TimeSerie timeSerie, final DateRange range);
 
     /**
      * Find a rows by a group specification.
@@ -51,7 +50,7 @@ public interface MetricBackend {
      * @return An asynchronous handler resulting in a FindRowsResult.
      * @throws QueryException
      */
-    public Callback<FindRows.Result> findRows(FindRows query)
+    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
             throws QueryException;
 
     /**
@@ -59,7 +58,7 @@ public interface MetricBackend {
      * 
      * @return An asynchronous handler resulting in a {@link GetAllTimeSeries}
      */
-    public Callback<GetAllTimeSeries> getAllTimeSeries();
+    public Callback<Set<TimeSerie>> getAllTimeSeries();
 
     /**
      * Gets the total number of columns that are in the given rows

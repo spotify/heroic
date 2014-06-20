@@ -14,7 +14,7 @@ import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 @ToString(of = { "key", "range", "filter", "groupBy" })
-public class FindRows {
+public class FindTimeSeries {
     @Getter
     private final String key;
     @Getter
@@ -34,7 +34,7 @@ public class FindRows {
         private final MetricBackend backend;
     }
 
-    public FindRows withRange(DateRange range) {
-        return new FindRows(key, range, filter, groupBy);
+    public FindTimeSeries withRange(DateRange range) {
+        return new FindTimeSeries(key, range, filter, groupBy);
     }
 }
