@@ -37,7 +37,6 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
@@ -301,7 +300,7 @@ public class KairosMetricBackend implements MetricBackend, Startable {
 
     @Override
     public Callback<FindTimeSeries.Result> findTimeSeries(
-            final FindTimeSeries query) throws QueryException {
+            final FindTimeSeries query) {
         final String key = query.getKey();
         final DateRange range = query.getRange();
         final Map<String, String> filter = query.getFilter();

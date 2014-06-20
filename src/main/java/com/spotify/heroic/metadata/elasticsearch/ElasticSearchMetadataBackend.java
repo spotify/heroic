@@ -39,10 +39,10 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
-import com.spotify.heroic.backend.BackendException;
 import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
 import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.TimeSerieMatcher;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -60,10 +60,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     private static final String ATTRIBUTES = "attributes";
 
     /**
-     * host -
-     * key -
-     * attribute -
-     * tags -
+     * host - key - attribute - tags -
      */
     public static class YAML implements MetadataBackend.YAML {
         public static String TYPE = "!elasticsearch-metadata";
@@ -79,9 +76,11 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         @Override
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
-            final String[] seeds = this.seeds.toArray(new String[this.seeds.size()]);
+            final String[] seeds = this.seeds.toArray(new String[this.seeds
+                    .size()]);
             final Executor executor = Executors.newFixedThreadPool(10);
-            return new ElasticSearchMetadataBackend(reporter, seeds, clusterName, executor);
+            return new ElasticSearchMetadataBackend(reporter, seeds,
+                    clusterName, executor);
         }
     }
 
@@ -95,174 +94,225 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     private Node node;
     private Client client;
 
+    @Override
     @PostConstruct
     public void start() throws Exception {
         log.info("Starting");
 
         final Settings settings = ImmutableSettings.builder()
                 .put("discovery.zen.ping.multicast.enabled", false)
-                .putArray("discovery.zen.ping.unicast.hosts", seeds)
-            .build();
+                .putArray("discovery.zen.ping.unicast.hosts", seeds).build();
 
-        this.node = NodeBuilder.nodeBuilder().settings(settings).client(true).clusterName(clusterName).node();
+        this.node = NodeBuilder.nodeBuilder().settings(settings).client(true)
+                .clusterName(clusterName).node();
         this.client = node.client();
     }
 
     @Override
-    public Callback<FindTags> findTags(final TimeSerieMatcher matcher, final Set<String> includes, final Set<String> excludes) throws BackendException {
+    public Callback<FindTags> findTags(final TimeSerieMatcher matcher,
+            final Set<String> includes, final Set<String> excludes)
+            throws MetadataQueryException {
         if (node == null)
-            throw new BackendException("Node not started");
+            throw new MetadataQueryException("Node not started");
 
-        return findKeys(matcher).transform(new Callback.DeferredTransformer<FindKeys, FindTags>(){
-            @Override
-            public Callback<FindTags> transform(FindKeys result) throws Exception {
-                final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
-
-                for (final String key : result.getKeys()) {
-                    if (includes != null && !includes.contains(key))
-                        continue;
-
-                    if (excludes != null && excludes.contains(key))
-                        continue;
-
-                    callbacks.add(findSingle(matcher, key));
-                }
-
-                return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer());
-            }
-
-            /**
-             * Finds a single set of tags, excluding any criteria for this specific set of tags.
-             *
-             * @param matcher
-             * @param key
-             * @return
-             */
-            private Callback<FindTags> findSingle(final TimeSerieMatcher matcher, final String key) {
-                final TimeSerieMatcher newMatcher;
-
-                if (matcher.matchTags() == null) {
-                    newMatcher = matcher;
-                } else {
-                    final Map<String, String> newMatchTags = new HashMap<String, String>(matcher.matchTags());
-                    newMatchTags.remove(key);
-                    newMatcher = new FilteringTimeSerieMatcher(matcher.matchKey(), newMatchTags, matcher.hasTags());
-                }
-
-                final QueryBuilder query = setupTimeSeriesQuery(newMatcher);
-
-                return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FindTags>() {
+        return findKeys(matcher).transform(
+                new Callback.DeferredTransformer<FindKeys, FindTags>() {
                     @Override
-                    public FindTags resolve() throws Exception {
-                        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSearchType("count");
+                    public Callback<FindTags> transform(FindKeys result)
+                            throws Exception {
+                        final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
+
+                        for (final String key : result.getKeys()) {
+                            if (includes != null && !includes.contains(key))
+                                continue;
+
+                            if (excludes != null && excludes.contains(key))
+                                continue;
+
+                            callbacks.add(findSingle(matcher, key));
+                        }
+
+                        return ConcurrentCallback.newReduce(callbacks,
+                                new FindTagsReducer());
+                    }
+
+                    /**
+                     * Finds a single set of tags, excluding any criteria for
+                     * this specific set of tags.
+                     * 
+                     * @param matcher
+                     * @param key
+                     * @return
+                     */
+                    private Callback<FindTags> findSingle(
+                            final TimeSerieMatcher matcher, final String key) {
+                        final TimeSerieMatcher newMatcher;
+
+                        if (matcher.matchTags() == null) {
+                            newMatcher = matcher;
+                        } else {
+                            final Map<String, String> newMatchTags = new HashMap<String, String>(
+                                    matcher.matchTags());
+                            newMatchTags.remove(key);
+                            newMatcher = new FilteringTimeSerieMatcher(matcher
+                                    .matchKey(), newMatchTags, matcher
+                                    .hasTags());
+                        }
+
+                        final QueryBuilder query = setupTimeSeriesQuery(newMatcher);
+
+                        return ConcurrentCallback.newResolve(executor,
+                                new Callback.Resolver<FindTags>() {
+                                    @Override
+                                    public FindTags resolve() throws Exception {
+                                        final SearchRequestBuilder request = client
+                                                .prepareSearch(index)
+                                                .setTypes(type)
+                                                .setSearchType("count");
+
+                                        if (query != null) {
+                                            request.setQuery(query);
+                                        }
+
+                                        {
+                                            final AggregationBuilder<?> terms = AggregationBuilders
+                                                    .terms("terms").field(
+                                                            ATTRIBUTES_VALUE);
+                                            final AggregationBuilder<?> filter = AggregationBuilders
+                                                    .filter("filter")
+                                                    .filter(FilterBuilders
+                                                            .termFilter(
+                                                                    ATTRIBUTES_KEY,
+                                                                    key))
+                                                    .subAggregation(terms);
+                                            final AggregationBuilder<?> aggregation = AggregationBuilders
+                                                    .nested("nested")
+                                                    .path(ATTRIBUTES)
+                                                    .subAggregation(filter);
+                                            request.addAggregation(aggregation);
+                                        }
+
+                                        final SearchResponse response = request
+                                                .get();
+
+                                        final Terms terms;
+
+                                        /*
+                                         * IMPORTANT: has to be unwrapped with
+                                         * the correct type in the correct order
+                                         * as specified above!
+                                         */
+                                        {
+                                            final Aggregations aggregations = response
+                                                    .getAggregations();
+                                            final Nested attributes = (Nested) aggregations
+                                                    .get("nested");
+                                            final Filter filter = (Filter) attributes
+                                                    .getAggregations().get(
+                                                            "filter");
+                                            terms = (Terms) filter
+                                                    .getAggregations().get(
+                                                            "terms");
+                                        }
+
+                                        final Set<String> values = new HashSet<String>();
+
+                                        for (final Terms.Bucket bucket : terms
+                                                .getBuckets()) {
+                                            values.add(bucket.getKey());
+                                        }
+
+                                        final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
+                                        result.put(key, values);
+                                        return new FindTags(result, result
+                                                .size());
+                                    }
+                                });
+                    }
+                }).register(reporter.reportFindTags());
+    }
+
+    @Override
+    public Callback<FindTimeSeries> findTimeSeries(
+            final TimeSerieMatcher matcher) throws MetadataQueryException {
+        if (node == null)
+            throw new MetadataQueryException("Node not started");
+
+        final QueryBuilder query = setupTimeSeriesQuery(matcher);
+
+        return ConcurrentCallback.newResolve(executor,
+                new Callback.Resolver<FindTimeSeries>() {
+                    @Override
+                    public FindTimeSeries resolve() throws Exception {
+                        final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
+
+                        for (final SearchResponse response : setupFindTimeSeries(
+                                matcher, query)) {
+                            for (final SearchHit hit : response.getHits()) {
+                                timeSeries.add(hitToTimeSerie(hit));
+                            }
+                        }
+
+                        return new FindTimeSeries(timeSeries, timeSeries.size());
+                    }
+                }).register(reporter.reportFindTimeSeries());
+    }
+
+    @Override
+    public Callback<FindKeys> findKeys(final TimeSerieMatcher matcher)
+            throws MetadataQueryException {
+        if (node == null)
+            throw new MetadataQueryException("Node not started");
+
+        final QueryBuilder query = setupTimeSeriesQuery(matcher);
+
+        return ConcurrentCallback.newResolve(executor,
+                new Callback.Resolver<FindKeys>() {
+                    @Override
+                    public FindKeys resolve() throws Exception {
+                        final SearchRequestBuilder request = client
+                                .prepareSearch(index).setTypes(type)
+                                .setSearchType("count");
 
                         if (query != null) {
                             request.setQuery(query);
                         }
 
                         {
-                            final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(ATTRIBUTES_VALUE);
-                            final AggregationBuilder<?> filter = AggregationBuilders.filter("filter").filter(FilterBuilders.termFilter(ATTRIBUTES_KEY, key)).subAggregation(terms);
-                            final AggregationBuilder<?> aggregation = AggregationBuilders.nested("nested").path(ATTRIBUTES).subAggregation(filter);
-                            request.addAggregation(aggregation);
+                            final AggregationBuilder<?> terms = AggregationBuilders
+                                    .terms("terms").field(ATTRIBUTES_KEY);
+                            final AggregationBuilder<?> nested = AggregationBuilders
+                                    .nested("nested").path(ATTRIBUTES)
+                                    .subAggregation(terms);
+                            request.addAggregation(nested);
                         }
 
                         final SearchResponse response = request.get();
 
                         final Terms terms;
 
-                        /* IMPORTANT: has to be unwrapped with the correct type in the correct order as specified above! */
                         {
-                            final Aggregations aggregations = response.getAggregations();
-                            final Nested attributes = (Nested)aggregations.get("nested");
-                            final Filter filter = (Filter)attributes.getAggregations().get("filter");
-                            terms = (Terms)filter.getAggregations().get("terms");
+                            final Aggregations aggregations = response
+                                    .getAggregations();
+                            final Nested attributes = (Nested) aggregations
+                                    .get("nested");
+                            terms = (Terms) attributes.getAggregations().get(
+                                    "terms");
                         }
 
-                        final Set<String> values = new HashSet<String>();
+                        final Set<String> keys = new HashSet<String>();
 
                         for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            values.add(bucket.getKey());
+                            keys.add(bucket.getKey());
                         }
 
-                        final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
-                        result.put(key, values);
-                        return new FindTags(result, result.size());
+                        return new FindKeys(keys, keys.size());
                     }
-                });
-            }
-        }).register(reporter.reportFindTags());
+                }).register(reporter.reportFindTimeSeries());
     }
 
-    @Override
-    public Callback<FindTimeSeries> findTimeSeries(final TimeSerieMatcher matcher)
-            throws BackendException {
-        if (node == null)
-            throw new BackendException("Node not started");
-
-        final QueryBuilder query = setupTimeSeriesQuery(matcher);
-
-        return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FindTimeSeries>() {
-            @Override
-            public FindTimeSeries resolve() throws Exception {
-                final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
-
-                for (final SearchResponse response : setupFindTimeSeries(matcher, query)) {
-                    for (final SearchHit hit : response.getHits()) {
-                        timeSeries.add(hitToTimeSerie(hit));
-                    }
-                }
-
-                return new FindTimeSeries(timeSeries, timeSeries.size());
-            }
-        }).register(reporter.reportFindTimeSeries());
-    }
-
-    @Override
-    public Callback<FindKeys> findKeys(final TimeSerieMatcher matcher)
-            throws BackendException {
-        if (node == null)
-            throw new BackendException("Node not started");
-
-        final QueryBuilder query = setupTimeSeriesQuery(matcher);
-
-        return ConcurrentCallback.newResolve(executor, new Callback.Resolver<FindKeys>() {
-            @Override
-            public FindKeys resolve() throws Exception {
-                final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSearchType("count");
-
-                if (query != null) {
-                    request.setQuery(query);
-                }
-
-                {
-                    final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(ATTRIBUTES_KEY);
-                    final AggregationBuilder<?> nested = AggregationBuilders.nested("nested").path(ATTRIBUTES).subAggregation(terms);
-                    request.addAggregation(nested);
-                }
-
-                final SearchResponse response = request.get();
-
-                final Terms terms;
-
-                {
-                    final Aggregations aggregations = response.getAggregations();
-                    final Nested attributes = (Nested)aggregations.get("nested");
-                    terms = (Terms)attributes.getAggregations().get("terms");
-                }
-
-                final Set<String> keys = new HashSet<String>();
-
-                for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    keys.add(bucket.getKey());
-                }
-
-                return new FindKeys(keys, keys.size());
-            }
-        }).register(reporter.reportFindTimeSeries());
-    }
-
-    private Iterable<SearchResponse> setupFindTimeSeries(final TimeSerieMatcher matcher, final QueryBuilder query) {
+    private Iterable<SearchResponse> setupFindTimeSeries(
+            final TimeSerieMatcher matcher, final QueryBuilder query) {
         return new Iterable<SearchResponse>() {
             @Override
             public Iterator<SearchResponse> iterator() {
@@ -273,7 +323,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
                     @Override
                     public boolean hasNext() {
-                        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setFrom(from).setSize(size);
+                        final SearchRequestBuilder request = client
+                                .prepareSearch(index).setTypes(type)
+                                .setFrom(from).setSize(size);
 
                         if (query != null) {
                             request.setQuery(query);
@@ -297,7 +349,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                     }
 
                     @Override
-                    public void remove() { };
+                    public void remove() {
+                    };
                 };
             }
         };
@@ -315,15 +368,18 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         if (matcher.matchTags() != null) {
             any = true;
 
-            for (Map.Entry<String, String> entry : matcher.matchTags().entrySet()) {
+            for (Map.Entry<String, String> entry : matcher.matchTags()
+                    .entrySet()) {
                 if (entry.getKey().equals("host")) {
                     query.must(QueryBuilders.termQuery("host", entry.getValue()));
                     continue;
                 }
 
                 final BoolQueryBuilder tagQuery = QueryBuilders.boolQuery();
-                tagQuery.must(QueryBuilders.termQuery(ATTRIBUTES_KEY, entry.getKey()));
-                tagQuery.must(QueryBuilders.termQuery("attributes.value", entry.getValue()));
+                tagQuery.must(QueryBuilders.termQuery(ATTRIBUTES_KEY,
+                        entry.getKey()));
+                tagQuery.must(QueryBuilders.termQuery("attributes.value",
+                        entry.getValue()));
                 query.must(QueryBuilders.nestedQuery(ATTRIBUTES, tagQuery));
             }
         }
@@ -334,7 +390,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                     continue;
 
                 any = true;
-                query.must(QueryBuilders.nestedQuery(ATTRIBUTES, QueryBuilders.termQuery(ATTRIBUTES_KEY, key)));
+                query.must(QueryBuilders.nestedQuery(ATTRIBUTES,
+                        QueryBuilders.termQuery(ATTRIBUTES_KEY, key)));
             }
         }
 
@@ -347,13 +404,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     private TimeSerie hitToTimeSerie(SearchHit hit) {
         final Map<String, Object> source = hit.getSource();
         final Map<String, String> tags = extractTags(source);
-        final String key = (String)source.get("key");
+        final String key = (String) source.get("key");
         return new TimeSerie(key, tags);
     }
 
     private Map<String, String> extractTags(final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
-        final List<Map<String, String>> attributes = (List<Map<String, String>>)source.get(ATTRIBUTES);
+        final List<Map<String, String>> attributes = (List<Map<String, String>>) source
+                .get(ATTRIBUTES);
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (Map<String, String> entry : attributes) {
@@ -362,7 +420,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
             tags.put(key, value);
         }
 
-        final String host = (String)source.get("host");
+        final String host = (String) source.get("host");
         tags.put("host", host);
         return tags;
     }

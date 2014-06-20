@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DateRange;
@@ -51,7 +50,7 @@ public interface MetricBackend {
      * @throws QueryException
      */
     public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
-            throws QueryException;
+            throws MetricQueryException;
 
     /**
      * Gets all available rows

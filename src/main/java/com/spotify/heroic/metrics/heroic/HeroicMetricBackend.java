@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
@@ -20,8 +19,7 @@ public class HeroicMetricBackend implements MetricBackend {
     }
 
     @Override
-    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
-            throws QueryException {
+    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query) {
         return null;
     }
 

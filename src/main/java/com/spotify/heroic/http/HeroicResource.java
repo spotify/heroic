@@ -36,8 +36,6 @@ import org.glassfish.jersey.media.sse.SseFeature;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.backend.BackendException;
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.http.model.KeysResponse;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
@@ -49,11 +47,13 @@ import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
 import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
 import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.TimeSerieMatcher;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -94,10 +94,12 @@ public class HeroicResource {
     @Path("/metrics-stream")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(MetricsRequest query, @Context UriInfo info) {
+    public Response makeMetricsStream(MetricsRequest query,
+            @Context UriInfo info) {
         final String id = Integer.toHexString(query.hashCode());
         storedQueries.put(id, query);
-        final URI location = info.getBaseUriBuilder().path("/metrics-stream/" + id).build();
+        final URI location = info.getBaseUriBuilder()
+                .path("/metrics-stream/" + id).build();
         final MetricsStreamResponse entity = new MetricsStreamResponse(id);
         return Response.created(location).entity(entity).build();
     }
@@ -105,7 +107,8 @@ public class HeroicResource {
     @GET
     @Path("/metrics-stream/{id}")
     @Produces(SseFeature.SERVER_SENT_EVENTS)
-    public EventOutput getMetricsStream(@PathParam("id") String id) throws WebApplicationException, QueryException {
+    public EventOutput getMetricsStream(@PathParam("id") String id)
+            throws WebApplicationException, MetricQueryException {
         final MetricsRequest query = storedQueries.get(id);
 
         if (query == null) {
@@ -116,35 +119,43 @@ public class HeroicResource {
 
         final EventOutput eventOutput = new EventOutput();
 
-        final Callback<StreamMetricsResult> callback = metrics.streamMetrics(query, new MetricStream() {
-            public void stream(Callback<StreamMetricsResult> callback, MetricsQueryResponse result) throws Exception {
-                if (eventOutput.isClosed()) {
-                    callback.cancel(new CancelReason("client disconnected"));
-                    return;
-                }
+        final Callback<StreamMetricsResult> callback = metrics.streamMetrics(
+                query, new MetricStream() {
+                    @Override
+                    public void stream(Callback<StreamMetricsResult> callback,
+                            MetricsQueryResponse result) throws Exception {
+                        if (eventOutput.isClosed()) {
+                            callback.cancel(new CancelReason(
+                                    "client disconnected"));
+                            return;
+                        }
 
-                final MetricGroups groups = result.getMetricGroups();
-                final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
-                final MetricsResponse entity = new MetricsResponse(
-                        result.getQueryRange(), data, groups.getStatistics());
-                final OutboundEvent.Builder builder = new OutboundEvent.Builder();
+                        final MetricGroups groups = result.getMetricGroups();
+                        final Map<TimeSerie, List<DataPoint>> data = makeData(groups
+                                .getGroups());
+                        final MetricsResponse entity = new MetricsResponse(
+                                result.getQueryRange(), data, groups
+                                        .getStatistics());
+                        final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
-                builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
-                builder.name("metrics");
-                builder.data(MetricsResponse.class, entity);
-                eventOutput.write(builder.build());
-            }
-        });
+                        builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
+                        builder.name("metrics");
+                        builder.data(MetricsResponse.class, entity);
+                        eventOutput.write(builder.build());
+                    }
+                });
 
         callback.register(new Callback.Handle<StreamMetricsResult>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                sendEvent(eventOutput, "cancel", new ErrorMessage(reason.getMessage()));
+                sendEvent(eventOutput, "cancel",
+                        new ErrorMessage(reason.getMessage()));
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                sendEvent(eventOutput, "error", new ErrorMessage(e.getMessage()));
+                sendEvent(eventOutput, "error",
+                        new ErrorMessage(e.getMessage()));
             }
 
             @Override
@@ -152,8 +163,8 @@ public class HeroicResource {
                 sendEvent(eventOutput, "end", "end");
             }
 
-            private void sendEvent(final EventOutput eventOutput, String type, Object message)
-                    throws IOException {
+            private void sendEvent(final EventOutput eventOutput, String type,
+                    Object message) throws IOException {
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -174,41 +185,38 @@ public class HeroicResource {
     @Path("/metrics")
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(@Suspended final AsyncResponse response,
-            MetricsRequest query) throws QueryException {
+            MetricsRequest query) throws MetricQueryException {
         log.info("Query: " + query);
 
-        final Callback<MetricsQueryResponse> callback = metrics.queryMetrics(query).register(
-                new Callback.Handle<MetricsQueryResponse>() {
-                    @Override
-                    public void cancelled(CancelReason reason)
-                            throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.GATEWAY_TIMEOUT)
-                                .entity(new ErrorMessage(
-                                        "Request cancelled: " + reason))
-                                        .build());
-                    }
+        final Callback<MetricsQueryResponse> callback = metrics.queryMetrics(
+                query).register(new Callback.Handle<MetricsQueryResponse>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                response.resume(Response
+                        .status(Response.Status.GATEWAY_TIMEOUT)
+                        .entity(new ErrorMessage("Request cancelled: " + reason))
+                        .build());
+            }
 
-                    @Override
-                    public void failed(Exception e) throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                                .entity(e).build());
-                    }
+            @Override
+            public void failed(Exception e) throws Exception {
+                response.resume(Response
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(e).build());
+            }
 
-                    @Override
-                    public void resolved(MetricsQueryResponse result)
-                            throws Exception {
-                        final MetricGroups groups = result.getMetricGroups();
-                        final Map<TimeSerie, List<DataPoint>> data = makeData(groups.getGroups());
-                        final MetricsResponse entity = new MetricsResponse(
-                                result.getQueryRange(), data, groups.getStatistics());
+            @Override
+            public void resolved(MetricsQueryResponse result) throws Exception {
+                final MetricGroups groups = result.getMetricGroups();
+                final Map<TimeSerie, List<DataPoint>> data = makeData(groups
+                        .getGroups());
+                final MetricsResponse entity = new MetricsResponse(result
+                        .getQueryRange(), data, groups.getStatistics());
 
-                        response.resume(Response
-                                .status(Response.Status.OK)
-                                .entity(entity).build());
-                    }
-                });
+                response.resume(Response.status(Response.Status.OK)
+                        .entity(entity).build());
+            }
+        });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
@@ -240,80 +248,102 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void tags(@Suspended final AsyncResponse response, TagsRequest query) throws BackendException {
+    public void tags(@Suspended final AsyncResponse response, TagsRequest query)
+            throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            response.resume(Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
         final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
-                query.getMatchKey(), query.getMatchTags(), query
-                        .getHasTags());
+                query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
-        metadataResult(response, metadataBackend.findTags(matcher, query.getInclude(), query.getExclude())
-                .transform(new Callback.Transformer<FindTags, TagsResponse>() {
-            @Override
-            public TagsResponse transform(FindTags result) throws Exception {
-                return new TagsResponse(result.getTags(), result.getSize());
-            }
-        }));
+        metadataResult(
+                response,
+                metadataBackend.findTags(matcher, query.getInclude(),
+                        query.getExclude()).transform(
+                        new Callback.Transformer<FindTags, TagsResponse>() {
+                            @Override
+                            public TagsResponse transform(FindTags result)
+                                    throws Exception {
+                                return new TagsResponse(result.getTags(),
+                                        result.getSize());
+                            }
+                        }));
     }
 
     @POST
     @Path("/keys")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void keys(@Suspended final AsyncResponse response, TimeSeriesRequest query) throws BackendException {
+    public void keys(@Suspended final AsyncResponse response,
+            TimeSeriesRequest query) throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            response.resume(Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
         final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
-                query.getMatchKey(), query.getMatchTags(), query
-                        .getHasTags());
+                query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
-        metadataResult(response, metadataBackend.findKeys(matcher).transform(new Callback.Transformer<FindKeys, KeysResponse>() {
-            @Override
-            public KeysResponse transform(FindKeys result) throws Exception {
-                return new KeysResponse(result.getKeys(), result.getSize());
-            }
-        }));
+        metadataResult(
+                response,
+                metadataBackend.findKeys(matcher).transform(
+                        new Callback.Transformer<FindKeys, KeysResponse>() {
+                            @Override
+                            public KeysResponse transform(FindKeys result)
+                                    throws Exception {
+                                return new KeysResponse(result.getKeys(),
+                                        result.getSize());
+                            }
+                        }));
     }
 
     @POST
     @Path("/timeseries")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void getTimeSeries(@Suspended final AsyncResponse response, TimeSeriesRequest query) throws BackendException {
+    public void getTimeSeries(@Suspended final AsyncResponse response,
+            TimeSeriesRequest query) throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            response.resume(Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
         final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
-                query.getMatchKey(), query.getMatchTags(), query
-                        .getHasTags());
+                query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
-        metadataResult(response, metadataBackend.findTimeSeries(matcher).transform(new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-            @Override
-            public TimeSeriesResponse transform(FindTimeSeries result) throws Exception {
-                return new TimeSeriesResponse(new ArrayList<TimeSerie>(result.getTimeSeries()), result.getSize());
-            }
-        }));
+        metadataResult(
+                response,
+                metadataBackend
+                        .findTimeSeries(matcher)
+                        .transform(
+                                new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
+                                    @Override
+                                    public TimeSeriesResponse transform(
+                                            FindTimeSeries result)
+                                            throws Exception {
+                                        return new TimeSeriesResponse(
+                                                new ArrayList<TimeSerie>(result
+                                                        .getTimeSeries()),
+                                                result.getSize());
+                                    }
+                                }));
     }
 
-    private <T> void metadataResult(final AsyncResponse response, Callback<T> callback) {
+    private <T> void metadataResult(final AsyncResponse response,
+            Callback<T> callback) {
         callback.register(new Callback.Handle<T>() {
             @Override
-            public void cancelled(CancelReason reason)
-                    throws Exception {
+            public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
                         .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new ErrorMessage(
-                                "Request cancelled: " + reason))
-                                .build());
+                        .entity(new ErrorMessage("Request cancelled: " + reason))
+                        .build());
             }
 
             @Override
@@ -325,7 +355,8 @@ public class HeroicResource {
 
             @Override
             public void resolved(T result) throws Exception {
-                response.resume(Response.status(Response.Status.OK).entity(result).build());
+                response.resume(Response.status(Response.Status.OK)
+                        .entity(result).build());
             }
         });
     }

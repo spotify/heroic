@@ -20,7 +20,6 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.Reducers;
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
@@ -62,9 +61,9 @@ public class MetricBackendManager {
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(
-            final MetricsRequest query) throws QueryException {
+            final MetricsRequest query) throws MetricQueryException {
         if (query == null)
-            throw new QueryException("Query must be defined");
+            throw new MetricQueryException("Query must be defined");
 
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
@@ -74,13 +73,14 @@ public class MetricBackendManager {
                 defaultList(query.getAggregators()));
 
         if (key == null || key.isEmpty())
-            throw new QueryException("'key' must be defined");
+            throw new MetricQueryException("'key' must be defined");
 
         if (range == null)
-            throw new QueryException("Range must be specified");
+            throw new MetricQueryException("Range must be specified");
 
         if (!(range.start() < range.end()))
-            throw new QueryException("Range start must come before its end");
+            throw new MetricQueryException(
+                    "Range start must come before its end");
 
         final AggregatorGroup aggregator = aggregation.build();
 
@@ -88,7 +88,7 @@ public class MetricBackendManager {
                 .getCalculationMemoryMagnitude(range);
 
         if (memoryMagnitude > maxAggregationMagnitude) {
-            throw new QueryException(
+            throw new MetricQueryException(
                     "This query would result in too many datapoints");
         }
 
@@ -105,7 +105,7 @@ public class MetricBackendManager {
     }
 
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
-            MetricStream handle) throws QueryException {
+            MetricStream handle) throws MetricQueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
@@ -113,7 +113,7 @@ public class MetricBackendManager {
                 .getAggregators());
 
         if (key == null || key.isEmpty())
-            throw new QueryException("'key' must be defined");
+            throw new MetricQueryException("'key' must be defined");
 
         final AggregationGroup aggregation = new AggregationGroup(definitions);
         final AggregatorGroup aggregator = aggregation.build();

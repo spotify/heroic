@@ -6,7 +6,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
-import com.spotify.heroic.backend.QueryException;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 public class MetricBackendManagerTest {
@@ -24,8 +23,8 @@ public class MetricBackendManagerTest {
         this.manager = new MetricBackendManager(reporter, MAGNITUDE);
     }
 
-    @Test(expected=QueryException.class)
-    public void testQueryMustBeDefined() throws QueryException {
+    @Test(expected = MetricQueryException.class)
+    public void testQueryMustBeDefined() throws MetricQueryException {
         manager.queryMetrics(null);
     }
 }
