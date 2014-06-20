@@ -51,40 +51,14 @@
     <!-- used by anything cassandra. -->
     <dependency>
       <groupId>com.netflix.astyanax</groupId>
-      <artifactId>astyanax</artifactId>
+      <artifactId>astyanax-cassandra</artifactId>
       <version>1.56.48</version>
-      <!-- Can someone explain to me why a Cassandra _client_ needs HTTP API's?
-           These thoroughly messes up the classpath magic _if_ not excluded, do not remove! -->
-      <exclusions>
-        <exclusion>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jersey.contribs</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>jetty</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.ws.rs</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>*</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>com.netflix.astyanax</groupId>
+      <artifactId>astyanax-thrift</artifactId>
+      <version>1.56.48</version>
     </dependency>
 
     <dependency>

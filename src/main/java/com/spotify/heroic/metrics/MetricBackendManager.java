@@ -29,6 +29,7 @@ import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
@@ -58,6 +59,24 @@ public class MetricBackendManager {
             return new ArrayList<T>();
 
         return list;
+    }
+
+    public Callback<Void> write(final TimeSerie timeSerie,
+            final List<DataPoint> datapoints) {
+        final List<Callback<Void>> writes = new ArrayList<Callback<Void>>();
+
+        for (final MetricBackend backend : metricBackends) {
+            if (!backend.matches(timeSerie))
+                continue;
+
+            try {
+                writes.add(backend.write(timeSerie, datapoints));
+            } catch (final Exception e) {
+                log.error("Failed to query backend", e);
+            }
+        }
+
+        return ConcurrentCallback.newReduce(writes, Reducers.<Void> toVoid());
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(
@@ -93,8 +112,8 @@ public class MetricBackendManager {
         }
 
         final DateRange rounded = roundRange(aggregator, range);
-        final FindTimeSeries criteria = new FindTimeSeries(key, rounded, tags,
-                groupBy);
+        final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
+                rounded);
 
         return findTimeSeries(criteria)
                 .transform(
@@ -120,8 +139,8 @@ public class MetricBackendManager {
 
         final DateRange range = query.getRange().buildDateRange();
         final DateRange rounded = roundRange(aggregator, range);
-        final FindTimeSeries criteria = new FindTimeSeries(key, rounded, tags,
-                groupBy);
+        final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
+                rounded);
         final Callback<List<FindTimeSeries.Result>> rows = findTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();

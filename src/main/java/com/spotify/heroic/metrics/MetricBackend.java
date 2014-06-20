@@ -6,6 +6,7 @@ import java.util.Set;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -16,6 +17,27 @@ public interface MetricBackend {
         MetricBackend build(String context, MetricBackendReporter reporter)
                 throws ValidationException;
     }
+
+    /**
+     * Indicate if the specified time series matches this backend.
+     * 
+     * @param timeSerie
+     * @return Return <code>true</code> if the specified time series is expected
+     *         to be found in this backend. Else <code>false</code>
+     */
+    public boolean matches(final TimeSerie timeSerie);
+
+    /**
+     * Write a collection of datapoints for a specific time series.
+     * 
+     * @param timeSerie
+     *            Time serie to write to.
+     * @param datapoints
+     *            Datapoints to write.
+     * @return A callback indicating if the write was successful or not.
+     */
+    public Callback<Void> write(final TimeSerie timeSerie,
+            final List<DataPoint> datapoints);
 
     /**
      * Query for data points that is part of the specified list of rows and

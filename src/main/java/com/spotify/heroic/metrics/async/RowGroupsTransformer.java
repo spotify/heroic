@@ -46,7 +46,7 @@ public final class RowGroupsTransformer implements
         for (final FindTimeSeries.Result r : result) {
             final MetricBackend backend = r.getBackend();
 
-            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getRowGroups()
+            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
                     .entrySet()) {
                 final TimeSerie timeSerie = entry.getKey();
                 final Set<TimeSerie> timeSeries = entry.getValue();
@@ -74,7 +74,7 @@ public final class RowGroupsTransformer implements
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final FindTimeSeries.Result r : result) {
-            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getRowGroups()
+            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
                     .entrySet()) {
                 final TimeSerieSlice slice = entry.getKey().slice(range);
                 queries.add(executeSingle(slice, r.getBackend(),

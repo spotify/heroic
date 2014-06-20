@@ -6,6 +6,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -15,14 +16,14 @@ public interface MetadataBackend {
                 throws ValidationException;
     }
 
-    public Callback<FindTags> findTags(TimeSerieMatcher matcher,
+    public Callback<FindTags> findTags(TimeSerieQuery matcher,
             Set<String> include, Set<String> exclude)
             throws MetadataQueryException;
 
-    public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher)
+    public Callback<FindTimeSeries> findTimeSeries(TimeSerieQuery matcher)
             throws MetadataQueryException;
 
-    public Callback<FindKeys> findKeys(TimeSerieMatcher matcher)
+    public Callback<FindKeys> findKeys(TimeSerieQuery matcher)
             throws MetadataQueryException;
 
     public Callback<Void> refresh();

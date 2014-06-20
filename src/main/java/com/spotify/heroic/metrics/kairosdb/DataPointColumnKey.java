@@ -1,6 +1,5 @@
 package com.spotify.heroic.metrics.kairosdb;
 
-
 class DataPointColumnKey {
     private static final int LONG_FLAG = 0x0;
     private static final int FLOAT_FLAG = 0x1;
@@ -14,8 +13,7 @@ class DataPointColumnKey {
         return (name & 0x1) == LONG_FLAG;
     }
 
-    public static long toStartTimeStamp(final long start,
-            final long timestamp) {
+    public static long toStartTimeStamp(final long start, final long timestamp) {
         if (start < timestamp)
             return getColumnName(timestamp, timestamp, true);
 
@@ -35,8 +33,7 @@ class DataPointColumnKey {
         final long offset = timestamp - rowTime;
 
         if (offset > DataPointsRowKey.MAX_WIDTH) {
-            throw new RuntimeException("Offset exceeds max width: "
-                    + offset);
+            throw new RuntimeException("Offset exceeds max width: " + offset);
         }
 
         if (isInteger) {

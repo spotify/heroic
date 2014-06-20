@@ -29,8 +29,13 @@ public class TimeSerie {
     }
 
     public TimeSerie modifyTags(Map<String, String> tags) {
-        final Map<String, String> modifiedTags = new HashMap<String, String>(this.tags);
+        final Map<String, String> modifiedTags = new HashMap<String, String>(
+                this.tags);
         modifiedTags.putAll(tags);
         return new TimeSerie(key, modifiedTags);
+    }
+
+    public TimeSerie withTags(Map<String, String> tags) {
+        return new TimeSerie(key, tags);
     }
 }

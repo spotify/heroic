@@ -37,6 +37,7 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
@@ -159,6 +160,22 @@ public class KairosMetricBackend implements MetricBackend, Startable {
 
     private AstyanaxContext<Keyspace> context;
     private Keyspace keyspace;
+
+    @Override
+    public boolean matches(final TimeSerie timeSerie) {
+        final Map<String, String> tags = timeSerie.getTags();
+
+        if ((tags == null || tags.isEmpty()) && !backendTags.isEmpty())
+            return false;
+
+        for (Map.Entry<String, String> entry : backendTags.entrySet()) {
+            if (!tags.get(entry.getKey()).equals(entry.getValue())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     @Override
     public void start() throws Exception {
@@ -452,5 +469,10 @@ public class KairosMetricBackend implements MetricBackend, Startable {
     private static DataPointsRowKey rowKeyEnd(long end, String key) {
         final long timeBucket = DataPointsRowKey.getTimeBucket(end);
         return new DataPointsRowKey(key, timeBucket + 1);
+    }
+
+    @Override
+    public Callback<Void> write(TimeSerie timeSerie, List<DataPoint> datapoint) {
+        return new FailedCallback<Void>(new Exception("not implemented"));
     }
 }

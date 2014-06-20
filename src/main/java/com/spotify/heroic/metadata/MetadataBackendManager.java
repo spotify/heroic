@@ -18,6 +18,7 @@ import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
@@ -33,13 +34,13 @@ public class MetadataBackendManager {
     @Inject
     private Set<MetadataBackend> backends;
 
-    public Callback<FindTags> findTags(TimeSerieMatcher matcher,
+    public Callback<FindTags> findTags(final TimeSerieQuery query,
             Set<String> include, Set<String> exclude) {
         final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findTags(matcher, include, exclude));
+                callbacks.add(backend.findTags(query, include, exclude));
             } catch (MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }
@@ -49,12 +50,12 @@ public class MetadataBackendManager {
                 .register(reporter.reportFindTags());
     }
 
-    public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {
+    public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query) {
         final List<Callback<FindTimeSeries>> callbacks = new ArrayList<Callback<FindTimeSeries>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findTimeSeries(matcher));
+                callbacks.add(backend.findTimeSeries(query));
             } catch (MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }
@@ -86,12 +87,12 @@ public class MetadataBackendManager {
                 }).register(reporter.reportFindTimeSeries());
     }
 
-    public Callback<FindKeys> findKeys(TimeSerieMatcher matcher) {
+    public Callback<FindKeys> findKeys(final TimeSerieQuery query) {
         final List<Callback<FindKeys>> callbacks = new ArrayList<Callback<FindKeys>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findKeys(matcher));
+                callbacks.add(backend.findKeys(query));
             } catch (MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }

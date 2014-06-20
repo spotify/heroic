@@ -4,13 +4,13 @@ import java.util.Iterator;
 
 import com.spotify.heroic.model.TimeSerie;
 
-public class FilteringTimeSerieIterator implements Iterator<TimeSerie> {
+class TimeSerieIterator implements Iterator<TimeSerie> {
     private TimeSerie current;
 
     private final Iterator<TimeSerie> iterator;
     private final TimeSerieMatcher matcher;
 
-    public FilteringTimeSerieIterator(Iterator<TimeSerie> iterator,
+    public TimeSerieIterator(Iterator<TimeSerie> iterator,
             TimeSerieMatcher matcher) {
         this.iterator = iterator;
         this.matcher = matcher;

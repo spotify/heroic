@@ -1,7 +1,5 @@
 package com.spotify.heroic.statistics;
 
-
-
 public interface MetricBackendManagerReporter {
     CallbackReporter.Context reportGetAllRows();
 
@@ -12,4 +10,6 @@ public interface MetricBackendManagerReporter {
     CallbackReporter.Context reportStreamMetricsChunk();
 
     CallbackReporter.Context reportFindTimeSeries();
+
+    CallbackReporter.Context reportWrite();
 }

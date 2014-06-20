@@ -45,13 +45,12 @@ import com.spotify.heroic.http.model.TagsRequest;
 import com.spotify.heroic.http.model.TagsResponse;
 import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
-import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
-import com.spotify.heroic.metadata.TimeSerieMatcher;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
@@ -257,12 +256,12 @@ public class HeroicResource {
             return;
         }
 
-        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(
                 query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
         metadataResult(
                 response,
-                metadataBackend.findTags(matcher, query.getInclude(),
+                metadataBackend.findTags(timeSeriesQuery, query.getInclude(),
                         query.getExclude()).transform(
                         new Callback.Transformer<FindTags, TagsResponse>() {
                             @Override
@@ -286,20 +285,18 @@ public class HeroicResource {
             return;
         }
 
-        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(
                 query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
-        metadataResult(
-                response,
-                metadataBackend.findKeys(matcher).transform(
-                        new Callback.Transformer<FindKeys, KeysResponse>() {
-                            @Override
-                            public KeysResponse transform(FindKeys result)
-                                    throws Exception {
-                                return new KeysResponse(result.getKeys(),
-                                        result.getSize());
-                            }
-                        }));
+        metadataResult(response, metadataBackend.findKeys(timeSeriesQuery)
+                .transform(new Callback.Transformer<FindKeys, KeysResponse>() {
+                    @Override
+                    public KeysResponse transform(FindKeys result)
+                            throws Exception {
+                        return new KeysResponse(result.getKeys(), result
+                                .getSize());
+                    }
+                }));
     }
 
     @POST
@@ -314,13 +311,13 @@ public class HeroicResource {
             return;
         }
 
-        final TimeSerieMatcher matcher = new FilteringTimeSerieMatcher(
+        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(
                 query.getMatchKey(), query.getMatchTags(), query.getHasTags());
 
         metadataResult(
                 response,
                 metadataBackend
-                        .findTimeSeries(matcher)
+                        .findTimeSeries(timeSeriesQuery)
                         .transform(
                                 new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
                                     @Override

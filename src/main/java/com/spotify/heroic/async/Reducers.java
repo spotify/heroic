@@ -61,4 +61,23 @@ public final class Reducers {
     public static <T> Callback.Reducer<Set<T>, Set<T>> joinSets() {
         return (JoinSets<T>) JOIN_SETS;
     }
+
+    private static final Callback.Reducer<Object, Void> TO_VOID = new Callback.Reducer<Object, Void>() {
+        @Override
+        public Void resolved(Collection<Object> results,
+                Collection<Exception> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            return null;
+        }
+    };
+
+    /**
+     * A reducer that maps T -> Void.
+     * 
+     * @return
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Callback.Reducer<T, Void> toVoid() {
+        return (Callback.Reducer<T, Void>) TO_VOID;
+    }
 }

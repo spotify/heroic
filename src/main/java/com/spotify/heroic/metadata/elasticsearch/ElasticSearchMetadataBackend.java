@@ -40,14 +40,13 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.injection.Startable;
-import com.spotify.heroic.metadata.FilteringTimeSerieMatcher;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataQueryException;
-import com.spotify.heroic.metadata.TimeSerieMatcher;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
@@ -109,13 +108,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     }
 
     @Override
-    public Callback<FindTags> findTags(final TimeSerieMatcher matcher,
+    public Callback<FindTags> findTags(final TimeSerieQuery query,
             final Set<String> includes, final Set<String> excludes)
             throws MetadataQueryException {
         if (node == null)
             throw new MetadataQueryException("Node not started");
 
-        return findKeys(matcher).transform(
+        return findKeys(query).transform(
                 new Callback.DeferredTransformer<FindKeys, FindTags>() {
                     @Override
                     public Callback<FindTags> transform(FindKeys result)
@@ -129,7 +128,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                             if (excludes != null && excludes.contains(key))
                                 continue;
 
-                            callbacks.add(findSingle(matcher, key));
+                            callbacks.add(findSingle(query, key));
                         }
 
                         return ConcurrentCallback.newReduce(callbacks,
@@ -145,21 +144,20 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                      * @return
                      */
                     private Callback<FindTags> findSingle(
-                            final TimeSerieMatcher matcher, final String key) {
-                        final TimeSerieMatcher newMatcher;
+                            final TimeSerieQuery query, final String key) {
+                        final TimeSerieQuery newQuery;
 
-                        if (matcher.matchTags() == null) {
-                            newMatcher = matcher;
+                        if (query.getMatchTags() == null) {
+                            newQuery = query;
                         } else {
                             final Map<String, String> newMatchTags = new HashMap<String, String>(
-                                    matcher.matchTags());
+                                    query.getMatchTags());
                             newMatchTags.remove(key);
-                            newMatcher = new FilteringTimeSerieMatcher(matcher
-                                    .matchKey(), newMatchTags, matcher
-                                    .hasTags());
+                            newQuery = new TimeSerieQuery(query.getMatchKey(),
+                                    newMatchTags, query.getHasTags());
                         }
 
-                        final QueryBuilder query = setupTimeSeriesQuery(newMatcher);
+                        final QueryBuilder builder = setupTimeSeriesQuery(newQuery);
 
                         return ConcurrentCallback.newResolve(executor,
                                 new Callback.Resolver<FindTags>() {
@@ -171,7 +169,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                                                 .setSearchType("count");
 
                                         if (query != null) {
-                                            request.setQuery(query);
+                                            request.setQuery(builder);
                                         }
 
                                         {
@@ -233,12 +231,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     }
 
     @Override
-    public Callback<FindTimeSeries> findTimeSeries(
-            final TimeSerieMatcher matcher) throws MetadataQueryException {
+    public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query)
+            throws MetadataQueryException {
         if (node == null)
             throw new MetadataQueryException("Node not started");
 
-        final QueryBuilder query = setupTimeSeriesQuery(matcher);
+        final QueryBuilder builder = setupTimeSeriesQuery(query);
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<FindTimeSeries>() {
@@ -246,8 +244,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                     public FindTimeSeries resolve() throws Exception {
                         final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
 
-                        for (final SearchResponse response : setupFindTimeSeries(
-                                matcher, query)) {
+                        for (final SearchResponse response : setupFindTimeSeries(builder)) {
                             for (final SearchHit hit : response.getHits()) {
                                 timeSeries.add(hitToTimeSerie(hit));
                             }
@@ -259,12 +256,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     }
 
     @Override
-    public Callback<FindKeys> findKeys(final TimeSerieMatcher matcher)
+    public Callback<FindKeys> findKeys(final TimeSerieQuery query)
             throws MetadataQueryException {
         if (node == null)
             throw new MetadataQueryException("Node not started");
 
-        final QueryBuilder query = setupTimeSeriesQuery(matcher);
+        final QueryBuilder builder = setupTimeSeriesQuery(query);
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<FindKeys>() {
@@ -274,8 +271,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                                 .prepareSearch(index).setTypes(type)
                                 .setSearchType("count");
 
-                        if (query != null) {
-                            request.setQuery(query);
+                        if (builder != null) {
+                            request.setQuery(builder);
                         }
 
                         {
@@ -312,7 +309,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     }
 
     private Iterable<SearchResponse> setupFindTimeSeries(
-            final TimeSerieMatcher matcher, final QueryBuilder query) {
+            final QueryBuilder builder) {
         return new Iterable<SearchResponse>() {
             @Override
             public Iterator<SearchResponse> iterator() {
@@ -327,8 +324,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                                 .prepareSearch(index).setTypes(type)
                                 .setFrom(from).setSize(size);
 
-                        if (query != null) {
-                            request.setQuery(query);
+                        if (builder != null) {
+                            request.setQuery(builder);
                         }
 
                         final SearchResponse next = request.get();
@@ -356,22 +353,23 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         };
     }
 
-    private QueryBuilder setupTimeSeriesQuery(final TimeSerieMatcher matcher) {
+    private QueryBuilder setupTimeSeriesQuery(final TimeSerieQuery query) {
         boolean any = false;
-        final BoolQueryBuilder query = QueryBuilders.boolQuery();
+        final BoolQueryBuilder builder = QueryBuilders.boolQuery();
 
-        if (matcher.matchKey() != null) {
+        if (query.getMatchKey() != null) {
             any = true;
-            query.must(QueryBuilders.termQuery("key", matcher.matchKey()));
+            builder.must(QueryBuilders.termQuery("key", query.getMatchKey()));
         }
 
-        if (matcher.matchTags() != null) {
+        if (query.getMatchTags() != null) {
             any = true;
 
-            for (Map.Entry<String, String> entry : matcher.matchTags()
+            for (Map.Entry<String, String> entry : query.getMatchTags()
                     .entrySet()) {
                 if (entry.getKey().equals("host")) {
-                    query.must(QueryBuilders.termQuery("host", entry.getValue()));
+                    builder.must(QueryBuilders.termQuery("host",
+                            entry.getValue()));
                     continue;
                 }
 
@@ -380,17 +378,17 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                         entry.getKey()));
                 tagQuery.must(QueryBuilders.termQuery("attributes.value",
                         entry.getValue()));
-                query.must(QueryBuilders.nestedQuery(ATTRIBUTES, tagQuery));
+                builder.must(QueryBuilders.nestedQuery(ATTRIBUTES, tagQuery));
             }
         }
 
-        if (matcher.hasTags() != null) {
-            for (String key : matcher.hasTags()) {
+        if (query.getHasTags() != null) {
+            for (String key : query.getHasTags()) {
                 if (key.equals("host"))
                     continue;
 
                 any = true;
-                query.must(QueryBuilders.nestedQuery(ATTRIBUTES,
+                builder.must(QueryBuilders.nestedQuery(ATTRIBUTES,
                         QueryBuilders.termQuery(ATTRIBUTES_KEY, key)));
             }
         }
@@ -398,7 +396,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         if (!any)
             return null;
 
-        return query;
+        return builder;
     }
 
     private TimeSerie hitToTimeSerie(SearchHit hit) {

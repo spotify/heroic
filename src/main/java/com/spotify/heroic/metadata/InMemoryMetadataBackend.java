@@ -24,11 +24,23 @@ import com.spotify.heroic.async.Transformers;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
+import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
+/**
+ * An in-memory implementation of MetadataBackend.
+ * 
+ * This causes MetricBackends to have support iteration of their backends
+ * (through {@link MetricBackend#getAllTimeSeries()} because it requests all
+ * available time-series and builds a (sort of) efficient in-memory index of
+ * them.
+ * 
+ * @author udoprog
+ */
 @RequiredArgsConstructor
 @Slf4j
 public class InMemoryMetadataBackend implements MetadataBackend {
@@ -118,12 +130,13 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      * .backend.TimeSerieMatcher, java.util.Set, java.util.Set)
      */
     @Override
-    public Callback<FindTags> findTags(TimeSerieMatcher matcher,
+    public Callback<FindTags> findTags(TimeSerieQuery query,
             Set<String> include, Set<String> exclude) {
         final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
-                matcher.matchTags());
+        final List<TimeSerie> timeSeries = findBestMatch(query.getMatchKey(),
+                query.getMatchTags());
+        final TimeSerieMatcher matcher = new TimeSerieMatcher(query);
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             for (final Map.Entry<String, String> entry : timeSerie.getTags()
@@ -157,11 +170,12 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      * .heroic.backend.TimeSerieMatcher)
      */
     @Override
-    public Callback<FindTimeSeries> findTimeSeries(TimeSerieMatcher matcher) {
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
-                matcher.matchTags());
+    public Callback<FindTimeSeries> findTimeSeries(TimeSerieQuery query) {
+        final List<TimeSerie> timeSeries = findBestMatch(query.getMatchKey(),
+                query.getMatchTags());
 
         final Set<TimeSerie> result = new HashSet<TimeSerie>();
+        final TimeSerieMatcher matcher = new TimeSerieMatcher(query);
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie);
@@ -179,11 +193,12 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      * .backend.TimeSerieMatcher)
      */
     @Override
-    public Callback<FindKeys> findKeys(TimeSerieMatcher matcher) {
+    public Callback<FindKeys> findKeys(TimeSerieQuery query) {
         final SortedSet<String> result = new TreeSet<String>();
 
-        final List<TimeSerie> timeSeries = findBestMatch(matcher.matchKey(),
-                matcher.matchTags());
+        final List<TimeSerie> timeSeries = findBestMatch(query.getMatchKey(),
+                query.getMatchTags());
+        final TimeSerieMatcher matcher = new TimeSerieMatcher(query);
 
         for (final TimeSerie timeSerie : filter(timeSeries, matcher)) {
             result.add(timeSerie.getKey());
@@ -198,8 +213,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
         return new Iterable<TimeSerie>() {
             @Override
             public Iterator<TimeSerie> iterator() {
-                return new FilteringTimeSerieIterator(series.iterator(),
-                        matcher);
+                return new TimeSerieIterator(series.iterator(), matcher);
             }
         };
     }
