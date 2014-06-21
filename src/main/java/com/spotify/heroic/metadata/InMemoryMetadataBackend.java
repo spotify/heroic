@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.async.Transformers;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -28,6 +29,7 @@ import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -206,6 +208,12 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
         return new ResolvedCallback<FindKeys>(new FindKeys(result,
                 timeSeries.size()));
+    }
+
+    @Override
+    public Callback<WriteResponse> write(TimeSerie timeSerie) {
+        return new FailedCallback<WriteResponse>(new Exception(
+                "writes are not supported"));
     }
 
     private static Iterable<TimeSerie> filter(final List<TimeSerie> series,

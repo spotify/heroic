@@ -20,6 +20,7 @@ import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @RequiredArgsConstructor
@@ -33,6 +34,34 @@ public class MetadataBackendManager {
 
     @Inject
     private Set<MetadataBackend> backends;
+
+    public Callback<WriteResponse> write(TimeSerie timeSerie) {
+        final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
+
+        for (final MetadataBackend backend : backends) {
+            try {
+                callbacks.add(backend.write(timeSerie));
+            } catch (MetadataQueryException e) {
+                log.error("Failed to write to backend", e);
+            }
+        }
+
+        return ConcurrentCallback.newReduce(callbacks,
+                new Callback.Reducer<WriteResponse, WriteResponse>() {
+                    @Override
+                    public WriteResponse resolved(
+                            Collection<WriteResponse> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
+                            throws Exception {
+                        for (final Exception e : errors) {
+                            log.error("Failed to write", e);
+                        }
+
+                        return new WriteResponse();
+                    }
+                }).register(reporter.reportFindTags());
+    }
 
     public Callback<FindTags> findTags(final TimeSerieQuery query,
             Set<String> include, Set<String> exclude) {

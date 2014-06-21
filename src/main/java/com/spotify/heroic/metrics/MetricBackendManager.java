@@ -24,16 +24,17 @@ import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.RowGroupsTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
-import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 @RequiredArgsConstructor
@@ -50,6 +51,9 @@ public class MetricBackendManager {
 
     @Inject
     private Set<MetricBackend> metricBackends;
+
+    @Inject
+    private MetadataBackendManager metadata;
 
     /**
      * Used for deferring work to avoid deep stack traces.
@@ -77,6 +81,8 @@ public class MetricBackendManager {
                 log.error("Failed to query backend", e);
             }
         }
+
+        writes.add(metadata.write(timeSerie));
 
         return ConcurrentCallback.newReduce(writes,
                 new Callback.Reducer<WriteResponse, WriteResponse>() {

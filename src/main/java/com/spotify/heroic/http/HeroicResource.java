@@ -59,9 +59,9 @@ import com.spotify.heroic.metrics.MetricStream;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
-import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 
 @Slf4j
 @Path("/")

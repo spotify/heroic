@@ -6,10 +6,10 @@ import java.util.Set;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
-import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 

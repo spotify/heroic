@@ -3,11 +3,14 @@ package com.spotify.heroic.metrics.heroic;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+
+import javax.inject.Inject;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -38,14 +41,16 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.injection.Startable;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
-import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -119,6 +124,9 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
     private AstyanaxContext<Keyspace> context;
     private Keyspace keyspace;
+
+    @Inject
+    private MetadataBackendManager metadata;
 
     @Override
     public boolean matches(final TimeSerie timeSerie) {
@@ -314,46 +322,49 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     @Override
     public Callback<FindTimeSeries.Result> findTimeSeries(
             final FindTimeSeries query) {
-        // TODO: USE METADATA BACKEND.
+        final Map<String, String> filter = query.getFilter();
+        final List<String> groupBy = query.getGroupBy();
 
-        /*
-         * return ConcurrentCallback.newResolve(executor, new
-         * Callback.Resolver<FindTimeSeries.Result>() {
-         * 
-         * @Override public FindTimeSeries.Result resolve() throws Exception {
-         * final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
-         * .execute();
-         * 
-         * final Map<TimeSerie, Set<TimeSerie>> rowGroups = new
-         * HashMap<TimeSerie, Set<TimeSerie>>();
-         * 
-         * final ColumnList<DataPointsRowKey> columns = result .getResult();
-         * 
-         * for (final Column<DataPointsRowKey> column : columns) { final
-         * DataPointsRowKey rowKey = column.getName(); final TimeSerie
-         * rowTimeSerie = rowKey .getTimeSerie(); final Map<String, String>
-         * rowTags = rowTimeSerie .getTags();
-         * 
-         * final Map<String, String> tags = new HashMap<String, String>(
-         * filter);
-         * 
-         * if (groupBy != null) { for (final String group : groupBy) {
-         * tags.put(group, rowTags.get(group)); } }
-         * 
-         * final TimeSerie timeSerie = rowTimeSerie .withTags(tags);
-         * 
-         * Set<TimeSerie> timeSeries = rowGroups .get(timeSerie);
-         * 
-         * if (timeSeries == null) { timeSeries = new HashSet<TimeSerie>();
-         * rowGroups.put(timeSerie, timeSeries); }
-         * 
-         * timeSeries.add(rowTimeSerie); }
-         * 
-         * return new FindTimeSeries.Result(rowGroups,
-         * HeroicMetricBackend.this); } });
-         */
-        return new FailedCallback<FindTimeSeries.Result>(new Exception(
-                "not implemented"));
+        return metadata
+                .findTimeSeries(
+                        new TimeSerieQuery(query.getKey(), filter, null))
+                .transform(
+                        new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
+                            @Override
+                            public FindTimeSeries.Result transform(
+                                    com.spotify.heroic.metadata.model.FindTimeSeries result)
+                                    throws Exception {
+                                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+
+                                for (final TimeSerie timeSerie : result
+                                        .getTimeSeries()) {
+                                    final Map<String, String> tags = new HashMap<String, String>(
+                                            filter);
+
+                                    if (groupBy != null) {
+                                        for (final String group : groupBy) {
+                                            tags.put(group, timeSerie.getTags()
+                                                    .get(group));
+                                        }
+                                    }
+
+                                    final TimeSerie key = timeSerie
+                                            .withTags(tags);
+
+                                    Set<TimeSerie> group = groups.get(key);
+
+                                    if (group == null) {
+                                        group = new HashSet<TimeSerie>();
+                                        groups.put(key, group);
+                                    }
+
+                                    group.add(timeSerie);
+                                }
+
+                                return new FindTimeSeries.Result(groups,
+                                        HeroicMetricBackend.this);
+                            }
+                        });
     }
 
     @Override

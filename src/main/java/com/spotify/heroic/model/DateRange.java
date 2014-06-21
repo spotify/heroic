@@ -87,7 +87,8 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     public DateRange modify(long start, long end) {
-        return new DateRange(Math.max(start, start), Math.min(end, end));
+        return new DateRange(Math.max(this.start, start), Math.min(this.end,
+                end));
     }
 
     public DateRange withStart(long start) {

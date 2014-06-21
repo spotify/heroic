@@ -7,6 +7,8 @@ import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
+import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -15,6 +17,9 @@ public interface MetadataBackend {
         MetadataBackend build(String context, MetadataBackendReporter reporter)
                 throws ValidationException;
     }
+
+    public Callback<WriteResponse> write(TimeSerie timeSerie)
+            throws MetadataQueryException;
 
     public Callback<FindTags> findTags(TimeSerieQuery matcher,
             Set<String> include, Set<String> exclude)
