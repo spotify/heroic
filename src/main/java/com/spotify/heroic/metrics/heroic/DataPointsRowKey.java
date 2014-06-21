@@ -9,7 +9,9 @@ import com.spotify.heroic.model.TimeSerie;
 
 @Data
 class DataPointsRowKey {
-    public static final long MAX_WIDTH = 1814400000L;
+    public static final long MAX_WIDTH = 4294967296L;
+    public static final long MAX_BITSET = 0xffffffff;
+
     private static final HashMap<String, String> EMPTY_TAGS = new HashMap<String, String>();
 
     @Getter

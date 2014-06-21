@@ -3,21 +3,25 @@ package com.spotify.heroic.model;
 import java.util.HashMap;
 import java.util.Map;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 
-@ToString(of = { "key", "tags" })
-@EqualsAndHashCode(of = { "key", "tags" })
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+@Data
 public class TimeSerie {
-    @Getter
     private final String key;
-    @Getter
     private final Map<String, String> tags;
 
     public TimeSerie(String key, Map<String, String> tags) {
         this.key = key;
         this.tags = tags;
+    }
+
+    @JsonCreator
+    public static TimeSerie create(@JsonProperty("key") String key,
+            @JsonProperty("tags") Map<String, String> tags) {
+        return new TimeSerie(key, tags);
     }
 
     public TimeSerieSlice slice(DateRange range) {

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Getter;
+import lombok.Data;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.model.TimeSerie;
 
+@Data
 public class TimeSeriesResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
@@ -47,15 +48,7 @@ public class TimeSeriesResponse {
         }
     }
 
-    @Getter
     @JsonSerialize(using = ResultSerializer.class)
     private final List<TimeSerie> result;
-
-    @Getter
     private final int sampleSize;
-
-    public TimeSeriesResponse(final List<TimeSerie> result, int sampleSize) {
-        this.result = result;
-        this.sampleSize = sampleSize;
-    }
 }

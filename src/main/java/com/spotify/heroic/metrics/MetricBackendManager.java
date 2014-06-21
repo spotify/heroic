@@ -1,6 +1,7 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +30,7 @@ import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
+import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -61,9 +63,9 @@ public class MetricBackendManager {
         return list;
     }
 
-    public Callback<Void> write(final TimeSerie timeSerie,
+    public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
-        final List<Callback<Void>> writes = new ArrayList<Callback<Void>>();
+        final List<Callback<WriteResponse>> writes = new ArrayList<Callback<WriteResponse>>();
 
         for (final MetricBackend backend : metricBackends) {
             if (!backend.matches(timeSerie))
@@ -76,7 +78,18 @@ public class MetricBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(writes, Reducers.<Void> toVoid());
+        return ConcurrentCallback.newReduce(writes,
+                new Callback.Reducer<WriteResponse, WriteResponse>() {
+
+                    @Override
+                    public WriteResponse resolved(
+                            Collection<WriteResponse> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
+                            throws Exception {
+                        return new WriteResponse();
+                    }
+                });
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(

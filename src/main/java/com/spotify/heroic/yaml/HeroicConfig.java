@@ -20,6 +20,7 @@ import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.heroic.HeroicMetricBackend;
 import com.spotify.heroic.metrics.kairosdb.KairosMetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
@@ -41,11 +42,12 @@ public class HeroicConfig {
     private final AggregationCache aggregationCache;
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
+            Utils.makeType(HeroicMetricBackend.YAML.class),
             Utils.makeType(KairosMetricBackend.YAML.class),
             Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
             Utils.makeType(CassandraCache.YAML.class),
             Utils.makeType(InMemoryMetadataBackend.YAML.class),
-            Utils.makeType(ElasticSearchMetadataBackend.YAML.class)};
+            Utils.makeType(ElasticSearchMetadataBackend.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
@@ -56,11 +58,15 @@ public class HeroicConfig {
     }
 
     public static HeroicConfig buildDefault(HeroicReporter reporter) {
-        final AggregationCache cache = new AggregationCache(reporter.newAggregationCache(null), new InMemoryAggregationCacheBackend());
+        final AggregationCache cache = new AggregationCache(
+                reporter.newAggregationCache(null),
+                new InMemoryAggregationCacheBackend());
         final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
-        metadataBackends.add(new InMemoryMetadataBackend(reporter.newMetadataBackend(null)));
-        return new HeroicConfig(metricBackends, MAX_AGGREGATION_MAGNITUDE, metadataBackends, cache);
+        metadataBackends.add(new InMemoryMetadataBackend(reporter
+                .newMetadataBackend(null)));
+        return new HeroicConfig(metricBackends, MAX_AGGREGATION_MAGNITUDE,
+                metadataBackends, cache);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

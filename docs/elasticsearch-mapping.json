@@ -1,0 +1,12 @@
+{
+  "properties": {
+    "key": { "type": "string" },
+    "tags": {
+      "type": "nested",
+      "properties": {
+        "value": { "type": "string" },
+        "key": { "type": "string" }
+      }
+    }
+  }
+}

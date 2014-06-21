@@ -43,6 +43,7 @@ import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -472,7 +473,9 @@ public class KairosMetricBackend implements MetricBackend, Startable {
     }
 
     @Override
-    public Callback<Void> write(TimeSerie timeSerie, List<DataPoint> datapoint) {
-        return new FailedCallback<Void>(new Exception("not implemented"));
+    public Callback<WriteResponse> write(TimeSerie timeSerie,
+            List<DataPoint> datapoint) {
+        return new FailedCallback<WriteResponse>(new Exception(
+                "not implemented"));
     }
 }

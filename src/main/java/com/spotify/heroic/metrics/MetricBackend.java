@@ -6,6 +6,7 @@ import java.util.Set;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -36,7 +37,7 @@ public interface MetricBackend {
      *            Datapoints to write.
      * @return A callback indicating if the write was successful or not.
      */
-    public Callback<Void> write(final TimeSerie timeSerie,
+    public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints);
 
     /**

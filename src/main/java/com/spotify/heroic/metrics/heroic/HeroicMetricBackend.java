@@ -1,6 +1,7 @@
 package com.spotify.heroic.metrics.heroic;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,21 +25,24 @@ import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.RowQuery;
+import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
-import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -47,13 +51,13 @@ import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
- * The data access layer for accessing KairosDB schema in Cassandra.
+ * MetricBackend for Heroic cassandra datastore.
  */
 @RequiredArgsConstructor
 @Slf4j
 public class HeroicMetricBackend implements MetricBackend, Startable {
     public static class YAML implements MetricBackend.YAML {
-        public static final String TYPE = "!kairosdb-backend";
+        public static final String TYPE = "!heroic-backend";
 
         /**
          * Cassandra seed nodes.
@@ -63,17 +67,17 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         private String seeds;
 
         /**
-         * Cassandra keyspace for kairosdb.
+         * Cassandra keyspace for heroic.
          */
         @Setter
-        private String keyspace = "kairosdb";
+        private String keyspace = "heroic";
 
         /**
-         * Attributes passed into the Astyanax driver for configuration.
+         * 
          */
         @Getter
         @Setter
-        private Map<String, String> attributes;
+        private Map<String, String> tags;
 
         /**
          * Max connections per host in the cassandra cluster.
@@ -95,15 +99,16 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Map<String, String> attributes = Utils.toMap(context,
-                    this.attributes);
+                    this.tags);
             final Executor executor = Executors.newFixedThreadPool(threads);
             return new HeroicMetricBackend(reporter, executor, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
 
-    private static final ColumnFamily<DataPointsRowKey, Long> METRICS_CF = new ColumnFamily<DataPointsRowKey, Long>(
-            "metrics", DataPointsRowKeySerializer.get(), LongSerializer.get());
+    private static final ColumnFamily<DataPointsRowKey, Integer> METRICS_CF = new ColumnFamily<DataPointsRowKey, Integer>(
+            "metrics", DataPointsRowKeySerializer.get(),
+            IntegerSerializer.get());
 
     private final MetricBackendReporter reporter;
     private final Executor executor;
@@ -155,12 +160,14 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
             .newColumnFamily("Cql3CF", IntegerSerializer.get(),
                     StringSerializer.get());
 
+    private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp, data_value) VALUES (?, ?, ?)";
+
     @Override
-    public Callback<Void> write(final TimeSerie timeSerie,
+    public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
         final Map<Long, List<DataPoint>> batches = buildBatches(datapoints);
 
-        final List<Callback<Void>> callbacks = new ArrayList<Callback<Void>>();
+        final List<Callback<Integer>> callbacks = new ArrayList<Callback<Integer>>();
 
         for (final Map.Entry<Long, List<DataPoint>> batch : batches.entrySet()) {
             final long base = batch.getKey();
@@ -169,47 +176,87 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
             callbacks.add(write(rowKey, batch.getValue()));
         }
 
-        return ConcurrentCallback
-                .newReduce(callbacks, Reducers.<Void> toVoid());
-    }
-
-    private Callback<Void> write(final DataPointsRowKey rowKey,
-            final List<DataPoint> datapoints) {
-        final MutationBatch mutation = keyspace.prepareMutationBatch();
-
-        final ColumnListMutation<Long> m = mutation.withRow(METRICS_CF, rowKey);
-
-        for (final DataPoint d : datapoints) {
-            m.putColumn(d.getTimestamp(), d.getValue());
-        }
-
-        return ConcurrentCallback.newResolve(executor,
-                new Callback.Resolver<Void>() {
+        return ConcurrentCallback.newReduce(callbacks,
+                new Callback.Reducer<Integer, WriteResponse>() {
                     @Override
-                    public Void resolve() throws Exception {
-                        mutation.execute();
-                        return null;
+                    public WriteResponse resolved(Collection<Integer> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
+                            throws Exception {
+                        for (Exception e : errors) {
+                            log.error("Failed to write", e);
+                        }
+
+                        return new WriteResponse();
                     }
                 });
     }
 
-    private Map<Long, List<DataPoint>> buildBatches(
+    /**
+     * CQL3 implementation for insertions.
+     * 
+     * TODO: I cannot figure out how to get batch insertions to work. Until
+     * then, THIS IS NOT an option because it will murder performance in its
+     * sleep and steal its cookies.
+     * 
+     * @param rowKey
+     * @param datapoints
+     * @return
+     */
+    @SuppressWarnings("unused")
+    private Callback<Integer> writeCQL(final DataPointsRowKey rowKey,
             final List<DataPoint> datapoints) {
-        final Map<Long, List<DataPoint>> batches = new HashMap<Long, List<DataPoint>>();
+        return ConcurrentCallback.newResolve(executor,
+                new Callback.Resolver<Integer>() {
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            DataPointsRowKeySerializer.get())
+                                    .withByteBufferValue(d.getTimestamp(),
+                                            LongSerializer.get())
+                                    .withByteBufferValue(d.getValue(),
+                                            DoubleSerializer.get()).execute();
+                        }
+
+                        return datapoints.size();
+                    }
+                });
+    }
+
+    /**
+     * The thrift batch mutation write function.
+     * 
+     * Use this since it will help with performance.
+     * 
+     * @param rowKey
+     * @param datapoints
+     * @return
+     */
+    private Callback<Integer> write(final DataPointsRowKey rowKey,
+            final List<DataPoint> datapoints) {
+        final MutationBatch mutation = keyspace.prepareMutationBatch()
+                .setConsistencyLevel(ConsistencyLevel.CL_ANY);
+
+        final ColumnListMutation<Integer> m = mutation.withRow(METRICS_CF,
+                rowKey);
 
         for (final DataPoint d : datapoints) {
-            final long base = buildBase(d.getTimestamp());
-            List<DataPoint> batch = batches.get(base);
-
-            if (batch == null) {
-                batch = new ArrayList<DataPoint>();
-                batches.put(base, batch);
-            }
-
-            batch.add(d);
+            int key = (int) (d.getTimestamp() & DataPointsRowKey.MAX_BITSET);
+            m.putColumn(key, d.getValue());
         }
 
-        return batches;
+        return ConcurrentCallback.newResolve(executor,
+                new Callback.Resolver<Integer>() {
+                    @Override
+                    public Integer resolve() throws Exception {
+                        mutation.execute();
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override
@@ -239,37 +286,27 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
         final DataPointsRowKey key = new DataPointsRowKey(timeSerie, base);
 
-        final RowQuery<DataPointsRowKey, Long> dataQuery = keyspace
+        int start = (int) (newRange.getStart() & DataPointsRowKey.MAX_BITSET);
+        int end = (int) (newRange.getEnd() & DataPointsRowKey.MAX_BITSET);
+
+        final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(METRICS_CF)
                 .getRow(key)
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                                .setStart(newRange.getStart(),
-                                        LongSerializer.get())
-                                .setEnd(newRange.getEnd(), LongSerializer.get())
-                                .build());
+                                .setStart(start, IntegerSerializer.get())
+                                .setEnd(end, IntegerSerializer.get()).build());
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<FetchDataPoints.Result>() {
                     @Override
                     public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Long>> result = dataQuery
+                        final OperationResult<ColumnList<Integer>> result = dataQuery
                                 .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(result);
+                        final List<DataPoint> datapoints = buildDataPoints(key,
+                                result);
                         return new FetchDataPoints.Result(datapoints, timeSerie);
-                    }
-
-                    private List<DataPoint> buildDataPoints(
-                            final OperationResult<ColumnList<Long>> result) {
-                        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-                        for (final Column<Long> column : result.getResult()) {
-                            datapoints.add(new DataPoint(column.getName(),
-                                    column.getDoubleValue()));
-                        }
-
-                        return datapoints;
                     }
                 });
     }
@@ -330,7 +367,38 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         return new FailedCallback<Long>(new Exception("not implemented"));
     }
 
-    private long buildBase(long timestamp) {
+    private static List<DataPoint> buildDataPoints(final DataPointsRowKey key,
+            final OperationResult<ColumnList<Integer>> result) {
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+        for (final Column<Integer> column : result.getResult()) {
+            datapoints.add(new DataPoint(key.getBase()
+                    + ((long) column.getName()), column.getDoubleValue()));
+        }
+
+        return datapoints;
+    }
+
+    private static Map<Long, List<DataPoint>> buildBatches(
+            final List<DataPoint> datapoints) {
+        final Map<Long, List<DataPoint>> batches = new HashMap<Long, List<DataPoint>>();
+
+        for (final DataPoint d : datapoints) {
+            final long base = buildBase(d.getTimestamp());
+            List<DataPoint> batch = batches.get(base);
+
+            if (batch == null) {
+                batch = new ArrayList<DataPoint>();
+                batches.put(base, batch);
+            }
+
+            batch.add(d);
+        }
+
+        return batches;
+    }
+
+    private static long buildBase(long timestamp) {
         return timestamp - timestamp % DataPointsRowKey.MAX_WIDTH;
     }
 

@@ -22,44 +22,36 @@ public class MetricsResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
         @Override
-        public void serialize(Object value, JsonGenerator jgen,
+        public void serialize(Object value, JsonGenerator g,
                 SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
             final Map<TimeSerie, List<DataPoint>> result = (Map<TimeSerie, List<DataPoint>>) value;
 
-            jgen.writeStartArray();
+            g.writeStartArray();
 
             for (Map.Entry<TimeSerie, List<DataPoint>> entry : result
                     .entrySet()) {
                 final TimeSerie timeSerie = entry.getKey();
                 final List<DataPoint> datapoints = entry.getValue();
 
-                jgen.writeStartObject();
-                jgen.writeFieldName("hash");
-                jgen.writeString(Integer.toHexString(timeSerie.hashCode()));
+                g.writeStartObject();
+                g.writeFieldName("hash");
+                g.writeString(Integer.toHexString(timeSerie.hashCode()));
 
-                jgen.writeFieldName("key");
-                jgen.writeString(timeSerie.getKey());
+                g.writeFieldName("key");
+                g.writeString(timeSerie.getKey());
 
-                jgen.writeFieldName("tags");
-                jgen.writeObject(timeSerie.getTags());
+                g.writeFieldName("tags");
+                g.writeObject(timeSerie.getTags());
 
-                jgen.writeFieldName("values");
-                jgen.writeStartArray();
+                g.writeFieldName("values");
+                g.writeObject(datapoints);
 
-                for (final DataPoint d : datapoints) {
-                    jgen.writeStartArray();
-                    jgen.writeNumber(d.getTimestamp());
-                    jgen.writeNumber(d.getValue());
-                    jgen.writeEndArray();
-                }
-
-                jgen.writeEndArray();
-                jgen.writeEndObject();
+                g.writeEndObject();
             }
 
-            jgen.writeEndArray();
+            g.writeEndArray();
         }
     }
 

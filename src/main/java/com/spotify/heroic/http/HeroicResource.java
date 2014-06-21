@@ -45,6 +45,8 @@ import com.spotify.heroic.http.model.TagsRequest;
 import com.spotify.heroic.http.model.TagsResponse;
 import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
+import com.spotify.heroic.http.model.WriteMetricsRequest;
+import com.spotify.heroic.http.model.WriteMetricsResponse;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -57,6 +59,7 @@ import com.spotify.heroic.metrics.MetricStream;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
+import com.spotify.heroic.metrics.model.WriteResponse;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -180,6 +183,43 @@ public class HeroicResource {
         return eventOutput;
     }
 
+    interface Resume<T, R> {
+        public R resume(T value) throws Exception;
+    }
+
+    private static final Resume<WriteResponse, WriteMetricsResponse> METRICS = new Resume<WriteResponse, WriteMetricsResponse>() {
+        @Override
+        public WriteMetricsResponse resume(WriteResponse result)
+                throws Exception {
+            return new WriteMetricsResponse(0);
+        }
+    };
+
+    @POST
+    @Path("/write")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void writeMetrics(@Suspended final AsyncResponse response,
+            WriteMetricsRequest write) {
+        log.info("Write: {}", write);
+
+        Callback<WriteResponse> callback = metrics.write(write.getTimeSerie(),
+                write.getDatapoints());
+
+        handleAsyncResume(response, callback, METRICS);
+    }
+
+    private static final Resume<MetricsQueryResponse, MetricsResponse> WRITE_METRICS = new Resume<MetricsQueryResponse, MetricsResponse>() {
+        @Override
+        public MetricsResponse resume(MetricsQueryResponse result)
+                throws Exception {
+            final MetricGroups groups = result.getMetricGroups();
+            final Map<TimeSerie, List<DataPoint>> data = makeData(groups
+                    .getGroups());
+            return new MetricsResponse(result.getQueryRange(), data,
+                    groups.getStatistics());
+        }
+    };
+
     @POST
     @Path("/metrics")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -187,8 +227,25 @@ public class HeroicResource {
             MetricsRequest query) throws MetricQueryException {
         log.info("Query: " + query);
 
-        final Callback<MetricsQueryResponse> callback = metrics.queryMetrics(
-                query).register(new Callback.Handle<MetricsQueryResponse>() {
+        final Callback<MetricsQueryResponse> callback = metrics
+                .queryMetrics(query);
+
+        handleAsyncResume(response, callback, WRITE_METRICS);
+    }
+
+    /**
+     * Helper function to correctly wire up async response management.
+     * 
+     * @param response
+     *            The async response object.
+     * @param callback
+     *            Callback for the pending request.
+     * @param resume
+     *            The resume implementation.
+     */
+    private static <T, R> void handleAsyncResume(final AsyncResponse response,
+            final Callback<T> callback, final Resume<T, R> resume) {
+        callback.register(new Callback.Handle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
@@ -205,15 +262,9 @@ public class HeroicResource {
             }
 
             @Override
-            public void resolved(MetricsQueryResponse result) throws Exception {
-                final MetricGroups groups = result.getMetricGroups();
-                final Map<TimeSerie, List<DataPoint>> data = makeData(groups
-                        .getGroups());
-                final MetricsResponse entity = new MetricsResponse(result
-                        .getQueryRange(), data, groups.getStatistics());
-
+            public void resolved(T result) throws Exception {
                 response.resume(Response.status(Response.Status.OK)
-                        .entity(entity).build());
+                        .entity(resume.resume(result)).build());
             }
         });
 
