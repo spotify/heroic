@@ -20,7 +20,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             public void done(Collection<C> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
-                if (!AbstractCallback.this.isInitialized())
+                if (!AbstractCallback.this.isReady())
                     return;
 
                 try {
@@ -55,7 +55,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             @Override
             public void done(int successful, int failed, int cancelled)
                     throws Exception {
-                if (!AbstractCallback.this.isInitialized())
+                if (!AbstractCallback.this.isReady())
                     return;
 
                 try {
@@ -190,7 +190,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
         executor.execute(new Runnable() {
             @Override
             public void run() {
-                if (!AbstractCallback.this.isInitialized())
+                if (!AbstractCallback.this.isReady())
                     return;
 
                 try {
@@ -198,6 +198,45 @@ public abstract class AbstractCallback<T> implements Callback<T> {
                 } catch(Exception error) {
                     AbstractCallback.this.fail(error);
                 }
+            }
+        });
+
+        return this;
+    }
+
+    @Override
+    public Callback<T> register(final Callback<T> callback) {
+        register(new Handle<T>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                callback.cancel(reason);
+            }
+
+            @Override
+            public void failed(Exception e) throws Exception {
+                callback.fail(e);
+            }
+
+            @Override
+            public void resolved(T result) throws Exception {
+                callback.resolve(result);
+            }
+        });
+
+        callback.register(new Handle<T>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                AbstractCallback.this.cancel(reason);
+            }
+
+            @Override
+            public void failed(Exception e) throws Exception {
+                AbstractCallback.this.fail(e);
+            }
+
+            @Override
+            public void resolved(T result) throws Exception {
+                AbstractCallback.this.resolve(result);
             }
         });
 

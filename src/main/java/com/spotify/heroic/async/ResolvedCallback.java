@@ -68,7 +68,13 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public boolean isInitialized() {
+    public Callback<T> register(Callback<T> callback) {
+        callback.resolve(value);
+        return this;
+    }
+
+    @Override
+    public boolean isReady() {
         /* already done, so never initialized */
         return false;
     }

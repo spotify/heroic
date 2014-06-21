@@ -253,7 +253,7 @@ public class MetricBackendManager {
             @Override
             public void resolved(MetricGroups result) throws Exception {
                 // is cancelled?
-                if (!callback.isInitialized())
+                if (!callback.isReady())
                     return;
 
                 try {

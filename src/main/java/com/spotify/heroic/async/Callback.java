@@ -15,7 +15,10 @@ import java.util.concurrent.Executor;
  */
 public interface Callback<T> {
     public static enum State {
-        INITIALIZED, FAILED, FINISHED, CANCELLED
+        // state when it's not been resolved, failed or cancelled.
+        READY,
+        // every other state.
+        FAILED, RESOLVED, CANCELLED
     }
 
     public static interface Cancellable {
@@ -75,14 +78,17 @@ public interface Callback<T> {
         /**
          * Override to trigger on one resolved.
          */
+        @Override
         public void resolved(Callback<C> callback, C result) throws Exception { }
         /**
          * Override to trigger on one failed.
          */
+        @Override
         public void failed(Callback<C> callback, Exception error) throws Exception { }
         /**
          * Override to trigger on one cancelled.
          */
+        @Override
         public void cancelled(Callback<C> callback, CancelReason reason) throws Exception { }
     }
 
@@ -107,10 +113,10 @@ public interface Callback<T> {
      * This is a common pattern which is provided because the implementation details are important.
      *
      * 1. Since anything scheduled on an executor is viable for execution 'later', the callback might have already been resolved or cancelled.
-     *    It is therefore important to check {@link #isInitialized()} before calling the resolved.
+     *    It is therefore important to check {@link #isReady()} before calling the resolved.
      * 2. Since the resolver might throw an exception, it is important that this exception is caught and that the callback is marked as 'failed' appropriately.
      *
-     * If you are willing to ensure these two behaviours, the Executor can be used directly. 
+     * If you are willing to ensure these two behaviours, the Executor can be used directly.
      *
      * @param executor Executor to schedule the resolver task on.
      * @param resolver The resolver to use for resolving this callback.
@@ -144,10 +150,27 @@ public interface Callback<T> {
     public Callback<T> register(Cancellable cancellable);
 
     /**
-     * Check if callback is initialized or not.
-     * @return
+     * Make this callback depend on another and vice-versa.
+     * 
+     * @param callback
+     *            Callback to depend on.
+     * @return This callback.
      */
-    public boolean isInitialized();
+    public Callback<T> register(Callback<T> callback);
+
+    /**
+     * Check if callback is ready.
+     * 
+     * If not, any operation associated with the callback should be avoided as
+     * much as possible, because;
+     * 
+     * a) A result is already available. b) Some other required part of the
+     * computation failed, meaning that a result is useless anyways. c) The
+     * request was cancelled.
+     * 
+     * @return Boolean indiciating if this callback is ready or not.
+     */
+    public boolean isReady();
 
     /**
      * Resolve the value of a callback using a collection of callbacks.
