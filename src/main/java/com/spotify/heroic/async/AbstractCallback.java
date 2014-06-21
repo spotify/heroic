@@ -204,5 +204,5 @@ public abstract class AbstractCallback<T> implements Callback<T> {
         return this;
     }
 
-    public abstract <C> Callback<C> newCallback();
+    protected abstract <C> Callback<C> newCallback();
 }

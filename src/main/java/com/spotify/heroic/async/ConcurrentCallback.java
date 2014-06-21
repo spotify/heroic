@@ -1,6 +1,5 @@
 package com.spotify.heroic.async;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,17 +19,11 @@ import lombok.extern.slf4j.Slf4j;
  * 
  * <h1>Example</h1>
  * 
- * <code>
- * Callback<Integer> callback = new ConcurrentCallback<Integer>();
+ * {@code Callback<Integer> callback = new ConcurrentCallback<Integer>();
  * 
- * new Thread(new Runnable() {
- *     callback.finish(12);
- * }).start();
+ * new Thread(new Runnable() callback.finish(12); }).start();
  * 
- * callback.listen(new Callback.Handle<T>() {
- *     ...
- * });
- * </code>
+ * callback.listen(new Callback.Handle<T>() { ... }); }
  * 
  * @author udoprog
  * 
@@ -40,9 +33,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         Callback<T> {
-    private final List<Handle<T>> handlers = new LinkedList<Handle<T>>();
-    private final List<Cancellable> cancellables = new LinkedList<Cancellable>();
-    private final List<Finishable> finishables = new LinkedList<Finishable>();
+    private List<Handle<T>> handlers = new LinkedList<Handle<T>>();
+    private List<Cancellable> cancellables = new LinkedList<Cancellable>();
+    private List<Finishable> finishables = new LinkedList<Finishable>();
+
     private State state = State.INITIALIZED;
 
     private Exception error;
@@ -103,13 +97,13 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     /**
-     * Make a point to clear all handles to make sure their memory can be freed
-     * if necessary.
+     * Make a point to clear all handles to assert that any associated memory
+     * can be freed up ASAP.
      */
     private void clearAll() {
-        handlers.clear();
-        cancellables.clear();
-        finishables.clear();
+        handlers = null;
+        cancellables = null;
+        finishables = null;
     }
 
     private boolean registerHandle(Handle<T> handle) {
@@ -188,6 +182,11 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         }
     }
 
+    @Override
+    protected <C> Callback<C> newCallback() {
+        return new ConcurrentCallback<C>();
+    }
+
     /**
      * Synchronized functions.
      * 
@@ -232,15 +231,14 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         this.state = State.FAILED;
         this.error = error;
 
-        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
-                this.handlers);
-        final Collection<Finishable> finishables = new ArrayList<Finishable>(
-                this.finishables);
+        final Collection<Handle<T>> handlers = this.handlers;
+        final Collection<Finishable> finishables = this.finishables;
 
         clearAll();
 
-        // defer the actual callbacking until we are out of the synchronized
-        // block.
+        // execution has to be deferred to avoid deadlocking on the same
+        // synchronized block in case there are events calling the same
+        // callback.
         return new Runnable() {
             @Override
             public void run() {
@@ -262,15 +260,14 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         this.state = State.FINISHED;
         this.result = result;
 
-        final Collection<Handle<T>> handlers = new ArrayList<Handle<T>>(
-                this.handlers);
-        final Collection<Finishable> finishables = new ArrayList<Finishable>(
-                this.finishables);
+        final Collection<Handle<T>> handlers = this.handlers;
+        final Collection<Finishable> finishables = this.finishables;
 
         clearAll();
 
-        // defer the actual callbacking until we are out of the synchronized
-        // block.
+        // execution has to be deferred to avoid deadlocking on the same
+        // synchronized block in case there are events calling the same
+        // callback.
         return new Runnable() {
             @Override
             public void run() {
@@ -292,17 +289,18 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         this.state = State.CANCELLED;
         this.cancelReason = reason;
 
-        final Collection<Handle<T>> cancellables = new ArrayList<Handle<T>>(
-                this.handlers);
-        final Collection<Finishable> finishables = new ArrayList<Finishable>(
-                this.finishables);
+        final Collection<Cancellable> cancellables = this.cancellables;
+        final Collection<Finishable> finishables = this.finishables;
 
         clearAll();
 
+        // execution has to be deferred to avoid deadlocking on the same
+        // synchronized block in case there are events calling the same
+        // callback.
         return new Runnable() {
             @Override
             public void run() {
-                for (final Handle<T> cancellable : cancellables) {
+                for (final Cancellable cancellable : cancellables) {
                     invokeCancel(cancellable);
                 }
 
@@ -313,20 +311,37 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         };
     }
 
-    public static <C> Callback<C> newResolve(Executor executor, final Resolver<C> resolver) {
+    /**
+     * Helper functions.
+     */
+
+    /**
+     * Creates a new concurrent callback using the specified resolver.
+     * 
+     * @see {@link Callback#resolve(Executor, com.spotify.heroic.async.Callback.Resolver)}
+     */
+    public static <C> Callback<C> newResolve(Executor executor,
+            final Resolver<C> resolver) {
         return new ConcurrentCallback<C>().resolve(executor, resolver);
     }
 
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
+    /**
+     * Creates a new concurrent callback using the specified reducer.
+     * 
+     * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.Reducer)}
+     */
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
+            final Reducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
     }
 
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
+    /**
+     * Creates a new concurrent callback using the specified stream reducer.
+     * 
+     * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.StreamReducer)}
+     */
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
+            final StreamReducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
-    }
-
-    @Override
-    public <C> Callback<C> newCallback() {
-        return new ConcurrentCallback<C>();
     }
 }
