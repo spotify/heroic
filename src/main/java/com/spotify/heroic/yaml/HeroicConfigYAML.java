@@ -46,7 +46,8 @@ public class HeroicConfigYAML {
         int i = 0;
 
         for (MetricBackend.YAML backend : Utils.toList("backends", this.backends)) {
-            backends.add(backend.build("backends[" + i++ + "]", reporter.newMetricBackend(context)));
+            final String c = context + "[" + i++ + "]";
+            backends.add(backend.build(c, reporter.newMetricBackend(c)));
         }
 
         return backends;
@@ -59,7 +60,8 @@ public class HeroicConfigYAML {
         int i = 0;
 
         for (MetadataBackend.YAML backend : Utils.toList("metadataBackends", this.metadataBackends)) {
-            backends.add(backend.build("metadataBackends[" + i++ + "]", reporter.newMetadataBackend(context)));
+            final String c = context + "[" + i++ + "]";
+            backends.add(backend.build(c, reporter.newMetadataBackend(c)));
         }
 
         return backends;
@@ -74,8 +76,8 @@ public class HeroicConfigYAML {
 
         for (Consumer.YAML consumer : Utils.toList("consumers",
                 this.consumers)) {
-            consumers.add(consumer.build("consumers[" + i++ + "]",
-                    reporter.newConsumerReporter(context)));
+            final String c = context + "[" + i++ + "]";
+            consumers.add(consumer.build(c, reporter.newConsumerReporter(c)));
         }
 
         return consumers;

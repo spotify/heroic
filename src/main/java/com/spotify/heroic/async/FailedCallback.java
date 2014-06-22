@@ -56,6 +56,12 @@ public class FailedCallback<T> implements Callback<T> {
         return this;
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public Callback<T> register(ObjectHandle handle) {
+        return register((Handle<T>) handle);
+    }
+
     @Override
     public Callback<T> register(Callback.Finishable finishable) {
         try {

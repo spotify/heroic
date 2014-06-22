@@ -13,7 +13,7 @@ public class SemanticCallbackReporter implements CallbackReporter {
     private final SemanticHeroicTimer timer;
     private final Meter cancel;
     private final Meter error;
-    private final Meter finish;
+    private final Meter resolved;
 
     @RequiredArgsConstructor
     private class SemanticContext implements Context {
@@ -27,7 +27,7 @@ public class SemanticCallbackReporter implements CallbackReporter {
 
         @Override
         public void resolved(Object result) throws Exception {
-            finish.mark();
+            resolved.mark();
             context.stop();
         }
 
@@ -42,7 +42,8 @@ public class SemanticCallbackReporter implements CallbackReporter {
         this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what", "timer")));
         this.cancel = registry.meter(id.tagged("what", "meter", "result", "cancel"));
         this.error = registry.meter(id.tagged("what", "meter", "result", "error"));
-        this.finish = registry.meter(id.tagged("what", "meter", "result", "finish"));
+        this.resolved = registry.meter(id.tagged("what", "meter", "result",
+                "resolved"));
     }
 
     @Override

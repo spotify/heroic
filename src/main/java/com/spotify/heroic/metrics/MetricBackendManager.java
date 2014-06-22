@@ -137,12 +137,13 @@ public class MetricBackendManager {
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
 
-        return findTimeSeries(criteria)
-                .transform(
-                        new RowGroupsTransformer(aggregationCache, aggregator,
-                                criteria.getRange()))
-                                .transform(new MetricGroupsTransformer(rounded))
-                                .register(reporter.reportQueryMetrics());
+        final RowGroupsTransformer transformer = new RowGroupsTransformer(
+                aggregationCache, aggregator,
+                criteria.getRange());
+
+        return findTimeSeries(criteria).transform(transformer)
+                .transform(new MetricGroupsTransformer(rounded))
+                .register(reporter.reportQueryMetrics());
     }
 
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,

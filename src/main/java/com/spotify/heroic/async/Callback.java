@@ -29,10 +29,15 @@ public interface Callback<T> {
         void finished() throws Exception;
     }
 
-    public static interface Handle<T> extends Cancellable {
+    public static interface Handle<T> {
+        void cancelled(CancelReason reason) throws Exception;
+
         void failed(Exception e) throws Exception;
 
         void resolved(T result) throws Exception;
+    }
+
+    public static interface ObjectHandle extends Handle<Object> {
     }
 
     /**
@@ -133,6 +138,8 @@ public interface Callback<T> {
      */
     public Callback<T> register(Handle<T> handle);
 
+    public Callback<T> register(ObjectHandle handle);
+
     /**
      * Register a function to be fired if this callback is finished (either cancelled or failed).
      *
@@ -143,8 +150,9 @@ public interface Callback<T> {
 
     /**
      * Register a function to be fired if this callback is cancelled.
-     *
-     * @param cancellable Function to be fired.
+     * 
+     * @param cancellable
+     *            Function to be fired.
      * @return This callback.
      */
     public Callback<T> register(Cancellable cancellable);

@@ -111,6 +111,9 @@ Callback<T> {
             this.cancelReason = reason;
         }
 
+        for (final Handle<T> handle : handlers)
+            callCancelled(handle);
+
         for (final Cancellable cancellable : cancellables)
             callCancelled(cancellable);
 
@@ -139,6 +142,12 @@ Callback<T> {
         }
 
         return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Callback<T> register(ObjectHandle handle) {
+        return register((Handle<T>) handle);
     }
 
     @Override
@@ -204,6 +213,14 @@ Callback<T> {
         }
     }
 
+    private void callCancelled(Handle<T> handle) {
+        try {
+            handle.cancelled(cancelReason);
+        } catch (final Exception e) {
+            log.error("Cancellable#cancelled(CancelReason): failed", e);
+        }
+    }
+
     @Override
     protected <C> Callback<C> newCallback() {
         return new ConcurrentCallback<C>();
@@ -215,7 +232,6 @@ Callback<T> {
                 return state;
 
             handlers.add(handle);
-            cancellables.add(handle);
         }
 
         return State.READY;

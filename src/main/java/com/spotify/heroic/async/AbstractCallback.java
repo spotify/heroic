@@ -179,7 +179,8 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void resolved(C result) throws Exception {}
+            public void resolved(C result) throws Exception {
+            }
         });
 
         return callback;

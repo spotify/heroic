@@ -28,7 +28,7 @@ public class SemanticHeroicReporter implements HeroicReporter {
 
     @Override
     public MetricBackendReporter newMetricBackend(String context) {
-        return new SemanticBackendReporter(registry, context);
+        return new SemanticMetricBackendReporter(registry, context);
     }
 
     @Override
