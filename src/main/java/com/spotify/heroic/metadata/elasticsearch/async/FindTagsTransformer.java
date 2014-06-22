@@ -16,13 +16,13 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
-import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 
 @RequiredArgsConstructor
 public class FindTagsTransformer implements
-        Callback.DeferredTransformer<FindKeys, FindTags> {
+        Callback.DeferredTransformer<FindTagKeys, FindTags> {
     private final Executor executor;
     private final Client client;
     private final String index;
@@ -32,7 +32,7 @@ public class FindTagsTransformer implements
     private final Set<String> excludes;
 
     @Override
-    public Callback<FindTags> transform(FindKeys result) throws Exception {
+    public Callback<FindTags> transform(FindTagKeys result) throws Exception {
         final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
         for (final String key : result.getKeys()) {

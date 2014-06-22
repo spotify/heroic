@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import lombok.Getter;
@@ -47,6 +48,7 @@ public class MetricBackendManager {
     private final long maxAggregationMagnitude;
 
     @Inject
+    @Nullable
     private AggregationCache aggregationCache;
 
     @Inject
@@ -82,20 +84,21 @@ public class MetricBackendManager {
             }
         }
 
-        writes.add(metadata.write(timeSerie));
+        if (metadata.isReady())
+            writes.add(metadata.write(timeSerie));
 
         return ConcurrentCallback.newReduce(writes,
                 new Callback.Reducer<WriteResponse, WriteResponse>() {
 
-                    @Override
-                    public WriteResponse resolved(
-                            Collection<WriteResponse> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public WriteResponse resolved(
+                    Collection<WriteResponse> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        return new WriteResponse();
-                    }
-                });
+                return new WriteResponse();
+            }
+        });
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(
@@ -138,8 +141,8 @@ public class MetricBackendManager {
                 .transform(
                         new RowGroupsTransformer(aggregationCache, aggregator,
                                 criteria.getRange()))
-                .transform(new MetricGroupsTransformer(rounded))
-                .register(reporter.reportQueryMetrics());
+                                .transform(new MetricGroupsTransformer(rounded))
+                                .register(reporter.reportQueryMetrics());
     }
 
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
@@ -189,7 +192,7 @@ public class MetricBackendManager {
 
         return ConcurrentCallback.newReduce(backendRequests,
                 Reducers.<TimeSerie> joinSets()).register(
-                reporter.reportGetAllRows());
+                        reporter.reportGetAllRows());
     }
 
     /**
@@ -301,7 +304,7 @@ public class MetricBackendManager {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -320,6 +323,6 @@ public class MetricBackendManager {
 
         return ConcurrentCallback.newReduce(queries,
                 Reducers.<FindTimeSeries.Result> list()).register(
-                reporter.reportFindTimeSeries());
+                        reporter.reportFindTimeSeries());
     }
 }

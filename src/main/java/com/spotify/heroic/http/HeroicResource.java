@@ -2,6 +2,7 @@ package com.spotify.heroic.http;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,8 +35,13 @@ import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
 import org.glassfish.jersey.media.sse.SseFeature;
 
+import com.google.common.io.BaseEncoding;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.http.model.DecodeRowKeyRequest;
+import com.spotify.heroic.http.model.DecodeRowKeyResponse;
+import com.spotify.heroic.http.model.EncodeRowKeyRequest;
+import com.spotify.heroic.http.model.EncodeRowKeyResponse;
 import com.spotify.heroic.http.model.KeysResponse;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
@@ -56,6 +62,8 @@ import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
+import com.spotify.heroic.metrics.heroic.MetricsRowKey;
+import com.spotify.heroic.metrics.heroic.MetricsRowKeySerializer;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
@@ -66,6 +74,7 @@ import com.spotify.heroic.model.WriteResponse;
 @Slf4j
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class HeroicResource {
     @Inject
     private MetricBackendManager metrics;
@@ -94,7 +103,6 @@ public class HeroicResource {
 
     @POST
     @Path("/metrics-stream")
-    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response makeMetricsStream(MetricsRequest query,
             @Context UriInfo info) {
@@ -137,7 +145,7 @@ public class HeroicResource {
                                 .getGroups());
                         final MetricsResponse entity = new MetricsResponse(
                                 result.getQueryRange(), data, groups
-                                        .getStatistics());
+                                .getStatistics());
                         final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                         builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -197,7 +205,6 @@ public class HeroicResource {
 
     @POST
     @Path("/write")
-    @Consumes(MediaType.APPLICATION_JSON)
     public void writeMetrics(@Suspended final AsyncResponse response,
             WriteMetricsRequest write) {
         log.info("Write: {}", write);
@@ -222,7 +229,6 @@ public class HeroicResource {
 
     @POST
     @Path("/metrics")
-    @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(@Suspended final AsyncResponse response,
             MetricsRequest query) throws MetricQueryException {
         log.info("Query: " + query);
@@ -297,7 +303,6 @@ public class HeroicResource {
 
     @POST
     @Path("/tags")
-    @Consumes(MediaType.APPLICATION_JSON)
     public void tags(@Suspended final AsyncResponse response, TagsRequest query)
             throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
@@ -314,19 +319,18 @@ public class HeroicResource {
                 response,
                 metadataBackend.findTags(timeSeriesQuery, query.getInclude(),
                         query.getExclude()).transform(
-                        new Callback.Transformer<FindTags, TagsResponse>() {
-                            @Override
-                            public TagsResponse transform(FindTags result)
-                                    throws Exception {
-                                return new TagsResponse(result.getTags(),
-                                        result.getSize());
-                            }
-                        }));
+                                new Callback.Transformer<FindTags, TagsResponse>() {
+                                    @Override
+                                    public TagsResponse transform(FindTags result)
+                                            throws Exception {
+                                        return new TagsResponse(result.getTags(),
+                                                result.getSize());
+                                    }
+                                }));
     }
 
     @POST
     @Path("/keys")
-    @Consumes(MediaType.APPLICATION_JSON)
     public void keys(@Suspended final AsyncResponse response,
             TimeSeriesRequest query) throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
@@ -352,7 +356,6 @@ public class HeroicResource {
 
     @POST
     @Path("/timeseries")
-    @Consumes(MediaType.APPLICATION_JSON)
     public void getTimeSeries(@Suspended final AsyncResponse response,
             TimeSeriesRequest query) throws MetadataQueryException {
         if (!metadataBackend.isReady()) {
@@ -368,19 +371,64 @@ public class HeroicResource {
         metadataResult(
                 response,
                 metadataBackend
-                        .findTimeSeries(timeSeriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-                                    @Override
-                                    public TimeSeriesResponse transform(
-                                            FindTimeSeries result)
+                .findTimeSeries(timeSeriesQuery)
+                .transform(
+                        new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
+                            @Override
+                            public TimeSeriesResponse transform(
+                                    FindTimeSeries result)
                                             throws Exception {
-                                        return new TimeSeriesResponse(
-                                                new ArrayList<TimeSerie>(result
-                                                        .getTimeSeries()),
+                                return new TimeSeriesResponse(
+                                        new ArrayList<TimeSerie>(result
+                                                .getTimeSeries()),
                                                 result.getSize());
-                                    }
-                                }));
+                            }
+                        }));
+    }
+
+    /**
+     * Encode/Decode functions, helpful when interacting with cassandra through
+     * cqlsh.
+     */
+
+    @POST
+    @Path("/decode/row-key")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response decodeRowKey(final DecodeRowKeyRequest request) {
+        String data = request.getData();
+
+        if (data.substring(0, 2).equals("0x"))
+            data = data.substring(2, data.length());
+
+        data = data.toUpperCase();
+
+        final byte[] bytes = BaseEncoding.base16().decode(data);
+        final ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        final MetricsRowKey rowKey = MetricsRowKeySerializer.get()
+                .fromByteBuffer(buffer);
+        return Response
+                .status(Response.Status.OK)
+                .entity(new DecodeRowKeyResponse(rowKey.getTimeSerie(),
+                        rowKey.getBase())).build();
+    }
+
+    @POST
+    @Path("/encode/row-key")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response encodeRowKey(final EncodeRowKeyRequest request) {
+        final MetricsRowKey rowKey = new MetricsRowKey(request.getTimeSerie(),
+                request.getBase());
+        final ByteBuffer buffer = MetricsRowKeySerializer.get().toByteBuffer(
+                rowKey);
+
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+
+        final String data = "0x"
+                + BaseEncoding.base16().encode(bytes).toLowerCase();
+        return Response
+                .status(Response.Status.OK)
+                .entity(new EncodeRowKeyResponse(data)).build();
     }
 
     private <T> void metadataResult(final AsyncResponse response,

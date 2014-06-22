@@ -1,6 +1,8 @@
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.CallbackReporter;
+import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
@@ -8,9 +10,13 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 public class SemanticMetadataBackendReporter implements MetadataBackendReporter {
     private final CallbackReporter refresh;
     private final CallbackReporter findTags;
+    private final CallbackReporter findTagKeys;
     private final CallbackReporter findTimeSeries;
     private final CallbackReporter findKeys;
     private final CallbackReporter write;
+
+    private final Meter writeCacheHit;
+    private final Meter writeCacheMiss;
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
             String context) {
@@ -20,12 +26,18 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
                 "refresh"));
         findTags = new SemanticCallbackReporter(registry, id.tagged(
                 "operation", "find-tags"));
+        findTagKeys = new SemanticCallbackReporter(registry, id.tagged(
+                "operation", "find-tag-keys"));
         findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
                 "operation", "find-time-series"));
         findKeys = new SemanticCallbackReporter(registry, id.tagged(
                 "operation", "find-keys"));
         write = new SemanticCallbackReporter(registry, id.tagged("operation",
                 "write"));
+
+        final MetricId cache = id.resolve("write-cache");
+        writeCacheHit = registry.meter(cache.tagged("what", "hit"));
+        writeCacheMiss = registry.meter(cache.tagged("what", "miss"));
     }
 
     @Override
@@ -36,6 +48,11 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     @Override
     public CallbackReporter.Context reportFindTags() {
         return findTags.setup();
+    }
+
+    @Override
+    public Context reportFindTagKeys() {
+        return findTagKeys.setup();
     }
 
     @Override
@@ -51,5 +68,15 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     @Override
     public CallbackReporter.Context reportWrite() {
         return write.setup();
+    }
+
+    @Override
+    public void reportWriteCacheHit() {
+        writeCacheHit.mark();
+    }
+
+    @Override
+    public void reportWriteCacheMiss() {
+        writeCacheMiss.mark();
     }
 }

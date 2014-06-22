@@ -8,10 +8,10 @@ import com.netflix.astyanax.serializers.LongSerializer;
 import com.spotify.heroic.cache.cassandra.model.TimeSerieSerializer;
 import com.spotify.heroic.model.TimeSerie;
 
-public class DataPointsRowKeySerializer extends AbstractSerializer<DataPointsRowKey> {
-    public static final DataPointsRowKeySerializer instance = new DataPointsRowKeySerializer();
+public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
+    public static final MetricsRowKeySerializer instance = new MetricsRowKeySerializer();
 
-    public static DataPointsRowKeySerializer get() {
+    public static MetricsRowKeySerializer get() {
         return instance;
     }
 
@@ -21,7 +21,7 @@ public class DataPointsRowKeySerializer extends AbstractSerializer<DataPointsRow
             .get();
 
     @Override
-    public ByteBuffer toByteBuffer(DataPointsRowKey rowKey) {
+    public ByteBuffer toByteBuffer(MetricsRowKey rowKey) {
         final Composite composite = new Composite();
         composite.addComponent(rowKey.getTimeSerie(), timeSerieSerializer);
         composite.addComponent(rowKey.getBase(), longSerializer);
@@ -29,10 +29,10 @@ public class DataPointsRowKeySerializer extends AbstractSerializer<DataPointsRow
     }
 
     @Override
-    public DataPointsRowKey fromByteBuffer(ByteBuffer byteBuffer) {
+    public MetricsRowKey fromByteBuffer(ByteBuffer byteBuffer) {
         final Composite composite = Composite.fromByteBuffer(byteBuffer);
         final TimeSerie timeSerie = composite.get(0, timeSerieSerializer);
         final Long base = composite.get(1, longSerializer);
-        return new DataPointsRowKey(timeSerie, base);
+        return new MetricsRowKey(timeSerie, base);
     }
 }

@@ -28,6 +28,7 @@ import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
+import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.StoredMetricsQueries;
@@ -74,11 +75,18 @@ public class Main extends GuiceServletContextListener {
 
         final List<Module> modules = new ArrayList<Module>();
         final StoredMetricsQueries storedMetricsQueries = new StoredMetricsQueries();
+        final AggregationCache cache = config.getAggregationCache();
 
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
-                bind(AggregationCache.class).toInstance(config.getAggregationCache());
+                if (cache == null) {
+                    bind(AggregationCache.class).toProvider(
+                            Providers.of((AggregationCache) null));
+                } else {
+                    bind(AggregationCache.class).toInstance(cache);
+                }
+
                 bind(MetricBackendManager.class).toInstance(new MetricBackendManager(reporter.newMetricBackendManager(null), config.getMaxAggregationMagnitude()));
                 bind(MetadataBackendManager.class).toInstance(new MetadataBackendManager(reporter.newMetadataBackendManager(null)));
                 bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
@@ -161,8 +169,10 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        final FastForwardReporter ffwd = FastForwardReporter.forRegistry(registry)
-                .schedule(TimeUnit.MINUTES, 5).prefix(MetricId.build("heroic").tagged("service", "heroic")).build();
+        final FastForwardReporter ffwd = FastForwardReporter
+                .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
+                .prefix(MetricId.build("heroic").tagged("service", "heroic"))
+                .build();
         ffwd.start();
 
         if (config == null) {

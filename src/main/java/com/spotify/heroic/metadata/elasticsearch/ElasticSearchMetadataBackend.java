@@ -1,10 +1,12 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -33,8 +35,10 @@ import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.elasticsearch.async.FindKeysResolver;
+import com.spotify.heroic.metadata.elasticsearch.async.FindTagKeysResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindTagsTransformer;
 import com.spotify.heroic.metadata.elasticsearch.async.FindTimeSeriesResolver;
+import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -50,6 +54,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     public static final String TAGS_VALUE = "tags.value";
     public static final String TAGS_KEY = "tags.key";
     public static final String TAGS = "tags";
+    public static final String KEY = "key";
 
     /**
      * 
@@ -69,7 +74,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
-                    .size()]);
+                                                                 .size()]);
             final Executor executor = Executors.newFixedThreadPool(10);
             return new ElasticSearchMetadataBackend(reporter, seeds,
                     clusterName, executor);
@@ -85,6 +90,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
     private Node node;
     private Client client;
+
+    /**
+     * prevent unnecessary writes if entry is already in cache. Integer is the
+     * hashCode of the timeSerie.
+     */
+    private final Set<Integer> writeCache = Collections
+            .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     @Override
     @PostConstruct
@@ -103,14 +115,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     @Override
     public Callback<FindTags> findTags(final TimeSerieQuery query,
             final Set<String> includes, final Set<String> excludes)
-            throws MetadataQueryException {
+                    throws MetadataQueryException {
         if (node == null)
             throw new MetadataQueryException("Node not started");
 
-        return findKeys(query).transform(
+        return findTagKeys(query).transform(
                 new FindTagsTransformer(executor, client, index, type, query,
                         includes, excludes))
-                .register(reporter.reportFindTags());
+                        .register(reporter.reportFindTags());
     }
 
     @Override
@@ -126,6 +138,18 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                 .register(reporter.reportFindTimeSeries());
     }
 
+    public Callback<FindTagKeys> findTagKeys(final TimeSerieQuery query)
+            throws MetadataQueryException {
+        if (node == null)
+            throw new MetadataQueryException("Node not started");
+
+        final QueryBuilder builder = toQueryBuilder(query);
+
+        return ConcurrentCallback.newResolve(executor,
+                new FindTagKeysResolver(client, index, type, builder))
+                .register(reporter.reportFindTagKeys());
+    }
+
     @Override
     public Callback<FindKeys> findKeys(final TimeSerieQuery query)
             throws MetadataQueryException {
@@ -136,7 +160,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
         return ConcurrentCallback.newResolve(executor,
                 new FindKeysResolver(client, index, type, builder)).register(
-                reporter.reportFindTimeSeries());
+                        reporter.reportFindKeys());
     }
 
     @Override
@@ -144,23 +168,33 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
             throws MetadataQueryException {
         if (node == null)
             throw new MetadataQueryException("Node not started");
+
+        if (writeCache.contains(timeSerie)) {
+            reporter.reportWriteCacheHit();
+            return new ResolvedCallback<WriteResponse>(new WriteResponse());
+        }
+
+        reporter.reportWriteCacheMiss();
+
         final Map<String, Object> source = fromTimeSerie(timeSerie);
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<WriteResponse>() {
-                    @Override
-                    public WriteResponse resolve() throws Exception {
-                        final String id = Integer.toHexString(timeSerie
-                                .hashCode());
+            @Override
+            public WriteResponse resolve() throws Exception {
+                final String id = Integer.toHexString(timeSerie
+                        .hashCode());
 
-                        final ListenableActionFuture<IndexResponse> future = client
-                                .prepareIndex().setIndex(index).setType(type)
-                                .setId(id).setSource(source).execute();
+                final ListenableActionFuture<IndexResponse> future = client
+                        .prepareIndex().setIndex(index).setType(type)
+                        .setId(id).setSource(source).execute();
 
-                        future.get();
-                        return new WriteResponse();
-                    }
-                }).register(reporter.reportWrite());
+                future.get();
+
+                writeCache.add(timeSerie.hashCode());
+                return new WriteResponse();
+            }
+        }).register(reporter.reportWrite());
     }
 
     @Override
@@ -170,7 +204,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
     @Override
     public boolean isReady() {
-        return true;
+        return node != null;
     }
 
     public static QueryBuilder toQueryBuilder(final TimeSerieQuery query) {
@@ -192,9 +226,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                 builder.must(QueryBuilders.nestedQuery(
                         TAGS,
                         QueryBuilders
-                                .boolQuery()
-                                .must(QueryBuilders.termQuery(TAGS_KEY,
-                                        entry.getKey()))
+                        .boolQuery()
+                        .must(QueryBuilders.termQuery(TAGS_KEY,
+                                entry.getKey()))
                                 .must(QueryBuilders.termQuery(TAGS_VALUE,
                                         entry.getValue()))));
             }
@@ -247,7 +281,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-                .get("tags");
+        .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (Map<String, String> entry : attributes) {

@@ -6,7 +6,6 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.cache.cassandra.model.TimeSerieSerializer;
 import com.spotify.heroic.model.TimeSerie;
 
 public class TimeSerieSerializerTest {
@@ -33,7 +32,8 @@ public class TimeSerieSerializerTest {
     @Test
     public void testStoreSomeValues() throws Exception {
         final Map<String, String> tags = new HashMap<String, String>();
-        tags.put("foo", "bar");
+        tags.put("a", "b");
+        tags.put("b", "c");
         final TimeSerie timeSerie = new TimeSerie("baz", tags);
         Assert.assertEquals(timeSerie, roundTrip(timeSerie));
     }

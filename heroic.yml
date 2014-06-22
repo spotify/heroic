@@ -30,20 +30,22 @@ metadataBackends:
     seeds:
       - localhost:9300
 
-cache:
-  !in-memory-cache {}
+#cache:
+#  !in-memory-cache {}
 # cassandra-cache uses the schema located at "docs/aggregation-schema.cql"
 #  !cassandra-cache
 #    keyspace: aggregations
 #    seeds: localhost:9160
 
-#consumers:
-#  - !kafka-consumer
-#    schema: com.spotify.heroic.consumer.schemas.Spotify100
-#    topics:
-#      - "metrics-lon3"
-#    config:
-#      group.id: heroic
-#      zookeeper.connect: lon3-kafkazookeeper-a1.lon3.spotify.net,lon3-kafkazookeeper-a2.lon3.spotify.net,lon3-kafkazookeeper-a3.lon3.spotify.net/kafka-monitoring
-#      auto.offset.reset: smallest
-#      auto.commit.enable: false
+consumers:
+  - !kafka-consumer
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics-lon2"
+      - "metrics-lon3"
+      - "metrics-lon4"
+    config:
+      group.id: heroic
+      zookeeper.connect: lon3-kafkazookeeper-a1.lon3.spotify.net,lon3-kafkazookeeper-a2.lon3.spotify.net,lon3-kafkazookeeper-a3.lon3.spotify.net/kafka-monitoring
+      auto.offset.reset: smallest
+      auto.commit.enable: false

@@ -6,9 +6,15 @@ public interface MetadataBackendReporter {
 
     public CallbackReporter.Context reportFindTags();
 
+    public CallbackReporter.Context reportFindTagKeys();
+
     public CallbackReporter.Context reportFindTimeSeries();
 
     public CallbackReporter.Context reportFindKeys();
 
     public CallbackReporter.Context reportWrite();
+
+    public void reportWriteCacheHit();
+
+    public void reportWriteCacheMiss();
 }

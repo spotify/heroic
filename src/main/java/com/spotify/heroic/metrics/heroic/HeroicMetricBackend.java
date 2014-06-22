@@ -96,7 +96,14 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
          */
         @Getter
         @Setter
-        private int threads = 20;
+        private int readThreads = 20;
+
+        /**
+         * Threads dedicated to asynchronous request handling.
+         */
+        @Getter
+        @Setter
+        private int writeThreads = 20;
 
         @Override
         public MetricBackend build(String context,
@@ -105,18 +112,22 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Map<String, String> attributes = Utils.toMap(context,
                     this.tags);
-            final Executor executor = Executors.newFixedThreadPool(threads);
-            return new HeroicMetricBackend(reporter, executor, keyspace, seeds,
+            final Executor readExecutor = Executors
+                    .newFixedThreadPool(readThreads);
+            final Executor writeExecutor = Executors
+                    .newFixedThreadPool(writeThreads);
+            return new HeroicMetricBackend(reporter, readExecutor,
+                    writeExecutor, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
 
-    private static final ColumnFamily<DataPointsRowKey, Integer> METRICS_CF = new ColumnFamily<DataPointsRowKey, Integer>(
-            "metrics", DataPointsRowKeySerializer.get(),
-            IntegerSerializer.get());
+    private static final ColumnFamily<MetricsRowKey, Long> METRICS_CF = new ColumnFamily<MetricsRowKey, Long>(
+            "metrics", MetricsRowKeySerializer.get(), LongSerializer.get());
 
     private final MetricBackendReporter reporter;
-    private final Executor executor;
+    private final Executor readExecutor;
+    private final Executor writeExecutor;
     private final String keyspaceName;
     private final String seeds;
     private final int maxConnectionsPerHost;
@@ -179,9 +190,10 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
         for (final Map.Entry<Long, List<DataPoint>> batch : batches.entrySet()) {
             final long base = batch.getKey();
-            final DataPointsRowKey rowKey = new DataPointsRowKey(timeSerie,
+            final MetricsRowKey rowKey = new MetricsRowKey(timeSerie,
                     base);
-            callbacks.add(write(rowKey, batch.getValue()));
+            callbacks.add(write(rowKey, batch.getValue()).register(
+                    reporter.reportSingleWrite()));
         }
 
         return ConcurrentCallback.newReduce(callbacks,
@@ -197,7 +209,7 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
                 return new WriteResponse();
             }
-        });
+        }).register(reporter.reportWriteBatch());
     }
 
     /**
@@ -212,9 +224,9 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
      * @return
      */
     @SuppressWarnings("unused")
-    private Callback<Integer> writeCQL(final DataPointsRowKey rowKey,
+    private Callback<Integer> writeCQL(final MetricsRowKey rowKey,
             final List<DataPoint> datapoints) {
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(readExecutor,
                 new Callback.Resolver<Integer>() {
             @Override
             public Integer resolve() throws Exception {
@@ -223,7 +235,7 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
                     .withCql(INSERT_METRICS_CQL)
                     .asPreparedStatement()
                     .withByteBufferValue(rowKey,
-                            DataPointsRowKeySerializer.get())
+                            MetricsRowKeySerializer.get())
                             .withByteBufferValue(d.getTimestamp(),
                                     LongSerializer.get())
                                     .withByteBufferValue(d.getValue(),
@@ -244,20 +256,19 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
      * @param datapoints
      * @return
      */
-    private Callback<Integer> write(final DataPointsRowKey rowKey,
+    private Callback<Integer> write(final MetricsRowKey rowKey,
             final List<DataPoint> datapoints) {
         final MutationBatch mutation = keyspace.prepareMutationBatch()
                 .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
-        final ColumnListMutation<Integer> m = mutation.withRow(METRICS_CF,
+        final ColumnListMutation<Long> m = mutation.withRow(METRICS_CF,
                 rowKey);
 
         for (final DataPoint d : datapoints) {
-            long key = d.getTimestamp() % DataPointsRowKey.MAX_WIDTH;
-            m.putColumn((int) key, d.getValue());
+            m.putColumn(d.getTimestamp(), d.getValue());
         }
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(writeExecutor,
                 new Callback.Resolver<Integer>() {
             @Override
             public Integer resolve() throws Exception {
@@ -287,35 +298,26 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     private Callback<FetchDataPoints.Result> buildQuery(
             final TimeSerie timeSerie, long base, final DateRange range) {
         final DateRange newRange = range.modify(base, base
-                + DataPointsRowKey.MAX_WIDTH - 1);
+                + MetricsRowKey.MAX_WIDTH - 1);
 
         if (newRange.isEmpty())
             return null;
 
-        final DataPointsRowKey key = new DataPointsRowKey(timeSerie, base);
+        final MetricsRowKey key = new MetricsRowKey(timeSerie, base);
 
-        long start = newRange.getStart() % DataPointsRowKey.MAX_WIDTH;
-        long end = newRange.getEnd() % DataPointsRowKey.MAX_WIDTH;
-
-        if (start > end) {
-            log.error(newRange.toString() + ": start > end = {} > {}", start,
-                    end);
-            return null;
-        }
-
-        final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
+        final RowQuery<MetricsRowKey, Long> dataQuery = keyspace
                 .prepareQuery(METRICS_CF)
                 .getRow(key)
                 .autoPaginate(true)
                 .withColumnRange(
-                        new RangeBuilder().setStart((int) start)
-                        .setEnd((int) end).build());
+                        new RangeBuilder().setStart(newRange.getStart())
+                        .setEnd(newRange.getEnd()).build());
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(readExecutor,
                 new Callback.Resolver<FetchDataPoints.Result>() {
             @Override
             public Result resolve() throws Exception {
-                final OperationResult<ColumnList<Integer>> result = dataQuery
+                final OperationResult<ColumnList<Long>> result = dataQuery
                         .execute();
                 final List<DataPoint> datapoints = buildDataPoints(key,
                         result);
@@ -383,13 +385,13 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         return new FailedCallback<Long>(new Exception("not implemented"));
     }
 
-    private static List<DataPoint> buildDataPoints(final DataPointsRowKey key,
-            final OperationResult<ColumnList<Integer>> result) {
+    private static List<DataPoint> buildDataPoints(final MetricsRowKey key,
+            final OperationResult<ColumnList<Long>> result) {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-        for (final Column<Integer> column : result.getResult()) {
-            datapoints.add(new DataPoint(key.getBase()
-                    + ((long) column.getName()), column.getDoubleValue()));
+        for (final Column<Long> column : result.getResult()) {
+            datapoints.add(new DataPoint(column.getName(), column
+                    .getDoubleValue()));
         }
 
         return datapoints;
@@ -415,18 +417,18 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     }
 
     private static long buildBase(long timestamp) {
-        return timestamp - timestamp % DataPointsRowKey.MAX_WIDTH;
+        return timestamp - timestamp % MetricsRowKey.MAX_WIDTH;
     }
 
     private static List<Long> buildBases(DateRange range) {
         final List<Long> bases = new ArrayList<Long>();
 
         final long start = range.getStart() - range.getStart()
-                % DataPointsRowKey.MAX_WIDTH;
+                % MetricsRowKey.MAX_WIDTH;
         final long end = range.getEnd() - range.getEnd()
-                % DataPointsRowKey.MAX_WIDTH + DataPointsRowKey.MAX_WIDTH;
+                % MetricsRowKey.MAX_WIDTH + MetricsRowKey.MAX_WIDTH;
 
-        for (long i = start; i < end; i += DataPointsRowKey.MAX_WIDTH) {
+        for (long i = start; i < end; i += MetricsRowKey.MAX_WIDTH) {
             bases.add(i);
         }
 

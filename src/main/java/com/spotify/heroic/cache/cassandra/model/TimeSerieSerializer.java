@@ -2,6 +2,7 @@ package com.spotify.heroic.cache.cassandra.model;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
@@ -27,7 +28,8 @@ public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
         final Composite composite = new Composite();
 
         composite.addComponent(obj.getKey(), keySerializer);
-        composite.addComponent(obj.getTags(), tagsSerializer);
+        composite.addComponent(new TreeMap<String, String>(obj.getTags()),
+                tagsSerializer);
 
         return composite.serialize();
     }
