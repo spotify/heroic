@@ -1,7 +1,6 @@
 package com.spotify.heroic.metrics.heroic;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +36,6 @@ import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.injection.Startable;
@@ -184,29 +182,29 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     @Override
     public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
-        final Map<Long, List<DataPoint>> batches = buildBatches(datapoints);
+        final MutationBatch mutation = keyspace.prepareMutationBatch()
+                .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
-        final List<Callback<Integer>> callbacks = new ArrayList<Callback<Integer>>();
+        final Map<Long, ColumnListMutation<Long>> batches = new HashMap<Long, ColumnListMutation<Long>>();
 
-        for (final Map.Entry<Long, List<DataPoint>> batch : batches.entrySet()) {
-            final long base = batch.getKey();
-            final MetricsRowKey rowKey = new MetricsRowKey(timeSerie,
-                    base);
-            callbacks.add(write(rowKey, batch.getValue()).register(
-                    reporter.reportSingleWrite()));
+        for (final DataPoint d : datapoints) {
+            final long base = buildBase(d.getTimestamp());
+            ColumnListMutation<Long> m = batches.get(base);
+
+            if (m == null) {
+                final MetricsRowKey rowKey = new MetricsRowKey(timeSerie, base);
+                m = mutation.withRow(METRICS_CF, rowKey);
+                batches.put(base, m);
+            }
+
+            m.putColumn(d.getTimestamp(), d.getValue());
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<Integer, WriteResponse>() {
+        return ConcurrentCallback.newResolve(writeExecutor,
+                new Callback.Resolver<WriteResponse>() {
             @Override
-            public WriteResponse resolved(Collection<Integer> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
-                            throws Exception {
-                for (Exception e : errors) {
-                    log.error("Failed to write", e);
-                }
-
+            public WriteResponse resolve() throws Exception {
+                mutation.execute();
                 return new WriteResponse();
             }
         }).register(reporter.reportWriteBatch());
@@ -242,37 +240,6 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
                                             DoubleSerializer.get()).execute();
                 }
 
-                return datapoints.size();
-            }
-        });
-    }
-
-    /**
-     * The thrift batch mutation write function.
-     * 
-     * Use this since it will help with performance.
-     * 
-     * @param rowKey
-     * @param datapoints
-     * @return
-     */
-    private Callback<Integer> write(final MetricsRowKey rowKey,
-            final List<DataPoint> datapoints) {
-        final MutationBatch mutation = keyspace.prepareMutationBatch()
-                .setConsistencyLevel(ConsistencyLevel.CL_ANY);
-
-        final ColumnListMutation<Long> m = mutation.withRow(METRICS_CF,
-                rowKey);
-
-        for (final DataPoint d : datapoints) {
-            m.putColumn(d.getTimestamp(), d.getValue());
-        }
-
-        return ConcurrentCallback.newResolve(writeExecutor,
-                new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                mutation.execute();
                 return datapoints.size();
             }
         });
@@ -395,25 +362,6 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         }
 
         return datapoints;
-    }
-
-    private static Map<Long, List<DataPoint>> buildBatches(
-            final List<DataPoint> datapoints) {
-        final Map<Long, List<DataPoint>> batches = new HashMap<Long, List<DataPoint>>();
-
-        for (final DataPoint d : datapoints) {
-            final long base = buildBase(d.getTimestamp());
-            List<DataPoint> batch = batches.get(base);
-
-            if (batch == null) {
-                batch = new ArrayList<DataPoint>();
-                batches.put(base, batch);
-            }
-
-            batch.add(d);
-        }
-
-        return batches;
     }
 
     private static long buildBase(long timestamp) {

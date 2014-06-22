@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ConcurrentCallback<T> extends AbstractCallback<T> implements
-        Callback<T> {
+Callback<T> {
     private List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private List<Cancellable> cancellables = new LinkedList<Cancellable>();
     private List<Finishable> finishables = new LinkedList<Finishable>();
