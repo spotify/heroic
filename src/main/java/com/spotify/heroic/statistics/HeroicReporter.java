@@ -12,4 +12,6 @@ public interface HeroicReporter {
     AggregationCacheBackendReporter newAggregationCacheBackend(String context);
 
     MetadataBackendReporter newMetadataBackend(String context);
+
+    ConsumerReporter newConsumerReporter(String context);
 }

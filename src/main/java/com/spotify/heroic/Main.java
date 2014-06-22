@@ -29,6 +29,7 @@ import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.StoredMetricsQueries;
 import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.injection.Stoppable;
@@ -96,6 +97,14 @@ public class Main extends GuiceServletContextListener {
                     }
                 }
 
+                {
+                    final Multibinder<Consumer> bindings = Multibinder
+                            .newSetBinder(binder(), Consumer.class);
+                    for (final Consumer consumer : config.getConsumers()) {
+                        bindings.addBinding().toInstance(consumer);
+                    }
+                }
+
                 bindListener(new IsSubclassOf(Startable.class), new TypeListener() {
                     @Override
                     public <I> void hear(TypeLiteral<I> type,
@@ -147,7 +156,7 @@ public class Main extends GuiceServletContextListener {
         try {
             config = HeroicConfig.parse(Paths.get(configPath), reporter);
         } catch (ValidationException | IOException e) {
-            log.error("Invalid configuration file: " + configPath);
+            log.error("Invalid configuration file: " + configPath, e);
             System.exit(1);
             return;
         }

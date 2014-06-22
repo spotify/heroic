@@ -21,7 +21,7 @@ backends:
 #    seeds: sjc1-kairosdbcassandra-a1.spotify.net:9160,sjc1-kairosdbcassandra-a2.spotify.net:9160,sjc1-kairosdbcassandra-a3.spotify.net:9160
   - !heroic-backend
     tags:
-      site: sto
+      site: lon
     seeds: localhost:9160
 
 metadataBackends:
@@ -36,3 +36,14 @@ cache:
 #  !cassandra-cache
 #    keyspace: aggregations
 #    seeds: localhost:9160
+
+#consumers:
+#  - !kafka-consumer
+#    schema: com.spotify.heroic.consumer.schemas.Spotify100
+#    topics:
+#      - "metrics-lon3"
+#    config:
+#      group.id: heroic
+#      zookeeper.connect: lon3-kafkazookeeper-a1.lon3.spotify.net,lon3-kafkazookeeper-a2.lon3.spotify.net,lon3-kafkazookeeper-a3.lon3.spotify.net/kafka-monitoring
+#      auto.offset.reset: smallest
+#      auto.commit.enable: false

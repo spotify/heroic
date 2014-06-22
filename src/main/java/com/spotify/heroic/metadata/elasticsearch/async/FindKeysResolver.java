@@ -36,8 +36,9 @@ public class FindKeysResolver implements Callback.Resolver<FindKeys> {
         }
 
         {
-            final AggregationBuilder<?> terms = AggregationBuilders.terms(
-                    "terms").field(ElasticSearchMetadataBackend.TAGS_KEY);
+            final AggregationBuilder<?> terms = AggregationBuilders
+                    .terms("terms")
+                    .field(ElasticSearchMetadataBackend.TAGS_KEY).size(0);
             final AggregationBuilder<?> nested = AggregationBuilders
                     .nested("nested").path(ElasticSearchMetadataBackend.TAGS)
                     .subAggregation(terms);

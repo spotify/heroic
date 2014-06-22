@@ -164,6 +164,19 @@
       </exclusions>
     </dependency>
 
+    <!-- used by: com.spotify.heroic.consumer.kafka -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_2.10</artifactId>
+      <version>0.8.1.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- used by com.spotify.heroic.metadata.elasticsearch
          TODO: break out -->
     <dependency>

@@ -8,11 +8,10 @@ import lombok.Setter;
 
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
+import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 public class HeroicConfigYAML {
@@ -23,6 +22,10 @@ public class HeroicConfigYAML {
     @Getter
     @Setter
     private List<MetadataBackend.YAML> metadataBackends;
+
+    @Getter
+    @Setter
+    private List<Consumer.YAML> consumers;
 
     @Getter
     @Setter
@@ -62,10 +65,27 @@ public class HeroicConfigYAML {
         return backends;
     }
 
+    private List<Consumer> setupConsumers(String context,
+            HeroicReporter reporter) throws ValidationException {
+
+        List<Consumer> consumers = new ArrayList<Consumer>();
+
+        int i = 0;
+
+        for (Consumer.YAML consumer : Utils.toList("consumers",
+                this.consumers)) {
+            consumers.add(consumer.build("consumers[" + i++ + "]",
+                    reporter.newConsumerReporter(context)));
+        }
+
+        return consumers;
+    }
+
     public HeroicConfig build(HeroicReporter reporter)
             throws ValidationException {
         final List<MetricBackend> metricBackends = setupMetricBackends("backends", reporter);
         final List<MetadataBackend> metadataBackends = setupMetadataBackends("metadataBackends", reporter);
+        final List<Consumer> consumers = setupConsumers("consumers", reporter);
 
         if (metadataBackends.isEmpty()) {
             metadataBackends.add(new InMemoryMetadataBackend(reporter.newMetadataBackend(null)));
@@ -80,8 +100,8 @@ public class HeroicConfigYAML {
             cache = new AggregationCache(reporter.newAggregationCache(null), backend);
         }
 
-        final MetricBackendManager metrics = new MetricBackendManager(reporter.newMetricBackendManager(null), maxAggregationMagnitude);
-        final MetadataBackendManager metadata = new MetadataBackendManager(reporter.newMetadataBackendManager(null));
-        return new HeroicConfig(metricBackends, maxAggregationMagnitude, metadataBackends, cache);
+        return new HeroicConfig(metricBackends, metadataBackends, consumers,
+                cache,
+                maxAggregationMagnitude);
     }
 }

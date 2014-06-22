@@ -1,11 +1,11 @@
 {
   "properties": {
-    "key": { "type": "string" },
+    "key": { "type": "string", "index": "not_analyzed" },
     "tags": {
       "type": "nested",
       "properties": {
-        "value": { "type": "string" },
-        "key": { "type": "string" }
+        "value": { "type": "string", "index": "not_analyzed" },
+        "key": { "type": "string", "index": "not_analyzed" }
       }
     }
   }

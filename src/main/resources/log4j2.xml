@@ -12,6 +12,9 @@
     <Logger name="org.elasticsearch" level="INFO" additivity="false">
       <AppenderRef ref="primary" />
     </Logger>
+    <Logger name="kafka.consumer" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
     <Root level="WARN">
       <AppenderRef ref="primary" />
     </Root>

@@ -1,5 +1,6 @@
 package com.spotify.heroic.yaml;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -66,6 +67,45 @@ public final class Utils {
             return new ArrayList<T>();
 
         return list;
+    }
+
+    public static <T> T instance(String context, String className,
+            Class<T> expectedType) throws ValidationException {
+        final Class<?> clazz;
+
+        try {
+            clazz = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            throw new ValidationException(context + ": No such class: "
+                    + className, e);
+        }
+
+        if (!expectedType.isAssignableFrom(clazz)) {
+            throw new ValidationException(context
+                    + ": Class is not subtype of: "
+                    + expectedType.getCanonicalName());
+        }
+
+        @SuppressWarnings("unchecked")
+        final Class<T> target = (Class<T>) clazz;
+
+        final Constructor<T> constructor;
+
+        try {
+            constructor = target.getConstructor();
+        } catch (NoSuchMethodException | SecurityException e) {
+            throw new ValidationException(context
+                    + ": Cannot find empty constructor for class: "
+                    + target.getCanonicalName(), e);
+        }
+
+        try {
+            return constructor.newInstance();
+        } catch (IllegalArgumentException | ReflectiveOperationException e) {
+            throw new ValidationException(context
+                    + ": Failed to create instance of class: "
+                    + target.getCanonicalName(), e);
+        }
     }
 
     public static TypeDescription makeType(Class<?> clazz) {

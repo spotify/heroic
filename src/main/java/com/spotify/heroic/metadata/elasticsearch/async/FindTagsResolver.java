@@ -34,20 +34,21 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
     @Override
     public FindTags resolve() throws Exception {
         final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSearchType("count");
+                .setTypes(type).setSearchType("count").setSize(0);
 
         if (query != null) {
             request.setQuery(query);
         }
 
         {
-            final AggregationBuilder<?> terms = AggregationBuilders.terms(
-                    "terms").field(ElasticSearchMetadataBackend.TAGS_VALUE);
+            final AggregationBuilder<?> terms = AggregationBuilders
+                    .terms("terms")
+                    .field(ElasticSearchMetadataBackend.TAGS_VALUE).size(0);
             final AggregationBuilder<?> filter = AggregationBuilders
                     .filter("filter")
                     .filter(FilterBuilders.termFilter(
                             ElasticSearchMetadataBackend.TAGS_KEY, key))
-                    .subAggregation(terms);
+                            .subAggregation(terms);
             final AggregationBuilder<?> aggregation = AggregationBuilders
                     .nested("nested").path(ElasticSearchMetadataBackend.TAGS)
                     .subAggregation(filter);

@@ -16,6 +16,8 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
+import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.consumer.kafka.KafkaConsumer;
 import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
@@ -33,21 +35,25 @@ public class HeroicConfig {
     private final List<MetricBackend> metricBackends;
 
     @Getter
-    private final long maxAggregationMagnitude;
+    private final List<MetadataBackend> metadataBackends;
 
     @Getter
-    private final List<MetadataBackend> metadataBackends;
+    private final List<Consumer> consumers;
 
     @Getter
     private final AggregationCache aggregationCache;
 
+    @Getter
+    private final long maxAggregationMagnitude;
+
     private static final TypeDescription[] TYPES = new TypeDescription[] {
-            Utils.makeType(HeroicMetricBackend.YAML.class),
-            Utils.makeType(KairosMetricBackend.YAML.class),
-            Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-            Utils.makeType(CassandraCache.YAML.class),
-            Utils.makeType(InMemoryMetadataBackend.YAML.class),
-            Utils.makeType(ElasticSearchMetadataBackend.YAML.class) };
+        Utils.makeType(HeroicMetricBackend.YAML.class),
+        Utils.makeType(KairosMetricBackend.YAML.class),
+        Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+        Utils.makeType(CassandraCache.YAML.class),
+        Utils.makeType(InMemoryMetadataBackend.YAML.class),
+        Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
+        Utils.makeType(KafkaConsumer.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
@@ -65,8 +71,9 @@ public class HeroicConfig {
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
         metadataBackends.add(new InMemoryMetadataBackend(reporter
                 .newMetadataBackend(null)));
-        return new HeroicConfig(metricBackends, MAX_AGGREGATION_MAGNITUDE,
-                metadataBackends, cache);
+        final List<Consumer> consumers = new ArrayList<Consumer>();
+        return new HeroicConfig(metricBackends, metadataBackends, consumers,
+                cache, MAX_AGGREGATION_MAGNITUDE);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)
