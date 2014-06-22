@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.aggregator.Aggregator;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
@@ -20,7 +20,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
-    private final Aggregator.Session session;
+    private final Aggregation.Session session;
 
     @Override
     public void resolved(Callback<FetchDataPoints.Result> callback,
@@ -42,7 +42,7 @@ public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDat
 
     @Override
     public MetricGroups resolved(int successful, int failed, int cancelled) {
-        final Aggregator.Result result = session.result();
+        final Aggregation.Result result = session.result();
 
         final Statistics stat = new Statistics();
         stat.setAggregator(result.getStatistics());

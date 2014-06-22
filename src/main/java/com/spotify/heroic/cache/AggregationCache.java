@@ -5,7 +5,7 @@ import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.aggregator.AggregatorGroup;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -28,11 +28,11 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private static final class BackendCacheGetHandle implements
-            Callback.Handle<CacheBackendGetResult> {
+    Callback.Handle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final TimeSerieSlice slice;
-        private final AggregatorGroup aggregator;
+        private final AggregationGroup aggregation;
 
         @Override
         public void cancelled(CancelReason reason) throws Exception {
@@ -46,7 +46,7 @@ public class AggregationCache {
 
         @Override
         public void resolved(CacheBackendGetResult result) throws Exception {
-            final long width = aggregator.getWidth();
+            final long width = aggregation.getWidth();
 
             final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
             final List<DataPoint> datapoints = new ArrayList<DataPoint>();
@@ -54,7 +54,7 @@ public class AggregationCache {
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(slice);
-                callback.resolve(new CacheQueryResult(slice, aggregator,
+                callback.resolve(new CacheQueryResult(slice, aggregation,
                         datapoints, misses));
                 reporter.reportGetMisses(misses.size());
                 return;
@@ -84,13 +84,13 @@ public class AggregationCache {
                 misses.add(slice.modify(expected, end));
 
             reporter.reportGetMisses(misses.size());
-            callback.resolve(new CacheQueryResult(slice, aggregator, datapoints, misses));
+            callback.resolve(new CacheQueryResult(slice, aggregation, datapoints, misses));
         }
     }
 
     @RequiredArgsConstructor
     private final class BackendCachePutHandle implements
-            Callback.Handle<CacheBackendPutResult> {
+    Callback.Handle<CacheBackendPutResult> {
         private final Callback<CachePutResult> callback;
 
         @Override
@@ -111,13 +111,14 @@ public class AggregationCache {
     }
 
     public Callback<CacheQueryResult> get(TimeSerieSlice slice,
-            final AggregatorGroup aggregator) {
-        final CacheBackendKey key = new CacheBackendKey(slice.getTimeSerie(), aggregator.getAggregationGroup());
+            final AggregationGroup aggregation) {
+        final CacheBackendKey key = new CacheBackendKey(slice.getTimeSerie(),
+                aggregation);
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
         final DateRange range = slice.getRange();
 
         try {
-            backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, slice, aggregator));
+            backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, slice, aggregation));
         } catch (AggregationCacheException e) {
             callback.fail(e);
         }
@@ -126,8 +127,8 @@ public class AggregationCache {
     }
 
     public Callback<CachePutResult> put(TimeSerie timeSerie,
-            AggregatorGroup aggregator, List<DataPoint> datapoints) {
-        final CacheBackendKey key = new CacheBackendKey(timeSerie, aggregator.getAggregationGroup());
+            AggregationGroup aggregation, List<DataPoint> datapoints) {
+        final CacheBackendKey key = new CacheBackendKey(timeSerie, aggregation);
         final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
         try {

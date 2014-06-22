@@ -358,7 +358,7 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
         for (final Column<Long> column : result.getResult()) {
             datapoints.add(new DataPoint(column.getName(), column
-                    .getDoubleValue()));
+                    .getDoubleValue(), Float.NaN));
         }
 
         return datapoints;

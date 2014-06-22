@@ -18,7 +18,7 @@ import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 final class CachePutResolver implements
-        Callback.Resolver<CacheBackendPutResult> {
+Callback.Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
@@ -35,6 +35,16 @@ final class CachePutResolver implements
         final long columnWidth = width * CassandraCache.WIDTH;
 
         for (final DataPoint d : datapoints) {
+            final double value = d.getValue();
+            final float p = d.getP();
+
+            if (Double.isNaN(value))
+                continue;
+
+            /* datapoint has no backing in reality, don't cache. */
+            if (Float.isNaN(p))
+                continue;
+
             int index = (int)((d.getTimestamp() % columnWidth) / width);
             long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
             final CacheKey key = new CacheKey(timeSerie, aggregation, base);
@@ -47,8 +57,8 @@ final class CachePutResolver implements
     private void doPut(CacheKey key, Integer dataOffset, DataPoint dataPoint)
             throws ConnectionException {
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
-                .asPreparedStatement().withByteBufferValue(key, cacheKeySerializer)
-                .withIntegerValue(dataOffset)
-                .withDoubleValue(dataPoint.getValue()).execute();
+        .asPreparedStatement().withByteBufferValue(key, cacheKeySerializer)
+        .withIntegerValue(dataOffset)
+        .withDoubleValue(dataPoint.getValue()).execute();
     }
 }

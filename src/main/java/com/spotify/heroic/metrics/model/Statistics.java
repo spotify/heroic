@@ -8,7 +8,7 @@ import lombok.Setter;
 public class Statistics {
     @RequiredArgsConstructor
     public static final class Aggregator {
-        public static final Aggregator EMPTY = new Aggregator(0, 0);
+        public static final Aggregator EMPTY = new Aggregator(0, 0, 0);
 
         @Getter
         private final long sampleSize;
@@ -16,8 +16,13 @@ public class Statistics {
         @Getter
         private final long outOfBounds;
 
+        @Getter
+        private final long uselessScan;
+
         public Aggregator merge(Aggregator other) {
-            return new Aggregator(this.sampleSize + other.sampleSize, this.outOfBounds + other.outOfBounds);
+            return new Aggregator(this.sampleSize + other.sampleSize,
+                    this.outOfBounds + other.outOfBounds, this.uselessScan
+                    + other.uselessScan);
         }
     }
 

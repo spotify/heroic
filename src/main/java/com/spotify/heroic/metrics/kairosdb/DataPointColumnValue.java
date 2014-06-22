@@ -6,7 +6,7 @@ class DataPointColumnValue {
     public static final byte FLOAT_VALUE = 0x1;
     public static final byte DOUBLE_VALUE = 0x2;
 
-    public static long toLong(ByteBuffer byteBuffer) {
+    public static Double toLong(ByteBuffer byteBuffer) {
         long ret = 0L;
 
         while (byteBuffer.hasRemaining()) {
@@ -15,7 +15,7 @@ class DataPointColumnValue {
             ret |= (b & 0xFF);
         }
 
-        return (ret);
+        return ((Long) ret).doubleValue();
     }
 
     public static double toDouble(ByteBuffer byteBuffer) {

@@ -85,7 +85,7 @@ public class Spotify100 implements ConsumerSchema {
 
         final TimeSerie timeSerie = new TimeSerie(event.getKey(), tags);
         final DataPoint datapoint = new DataPoint(event.getTime(),
-                event.getValue());
+                event.getValue(), Float.NaN);
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
         datapoints.add(datapoint);
 

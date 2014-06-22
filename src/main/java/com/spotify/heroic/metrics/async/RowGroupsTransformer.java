@@ -7,8 +7,8 @@ import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.aggregator.Aggregator;
-import com.spotify.heroic.aggregator.AggregatorGroup;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
@@ -22,9 +22,9 @@ import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
 public final class RowGroupsTransformer implements
-        Callback.DeferredTransformer<List<FindTimeSeries.Result>, MetricGroups> {
+Callback.DeferredTransformer<List<FindTimeSeries.Result>, MetricGroups> {
     private final AggregationCache cache;
-    private final AggregatorGroup aggregator;
+    private final AggregationGroup aggregation;
     private final DateRange range;
 
     @Override
@@ -61,7 +61,7 @@ public final class RowGroupsTransformer implements
                     }
                 };
 
-                callbacks.add(cache.get(slice, aggregator).transform(
+                callbacks.add(cache.get(slice, aggregation).transform(
                         transformer));
             }
         }
@@ -87,7 +87,8 @@ public final class RowGroupsTransformer implements
 
     private Callback<MetricGroups> executeSingle(TimeSerieSlice slice,
             MetricBackend backend, Set<TimeSerie> timeSeries) {
-        final Aggregator.Session session = aggregator.session(slice.getRange());
+        final Aggregation.Session session = aggregation
+                .session(slice.getRange());
 
         final Callback<MetricGroups> partial = new ConcurrentCallback<MetricGroups>();
         final Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> reducer;

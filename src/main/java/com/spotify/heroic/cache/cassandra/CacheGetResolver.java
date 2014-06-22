@@ -25,7 +25,7 @@ import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 public final class CacheGetResolver implements
-        Callback.Resolver<CacheBackendGetResult> {
+Callback.Resolver<CacheBackendGetResult> {
     static final String CQL_QUERY = "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
@@ -34,6 +34,7 @@ public final class CacheGetResolver implements
     private final CacheBackendKey key;
     private final DateRange range;
 
+    @Override
     public CacheBackendGetResult resolve() throws Exception {
         return new CacheBackendGetResult(key, doGetRow());
     }
@@ -62,6 +63,7 @@ public final class CacheGetResolver implements
                 final ColumnList<String> columns = row.getColumns();
                 final int offset = columns.getColumnByIndex(0).getIntegerValue();
                 final double value = columns.getColumnByIndex(1).getDoubleValue();
+                final float count = columns.getColumnByIndex(2).getFloatValue();
 
                 final long timestamp = getDataPointTimestamp(base,
                         columnWidth, offset);
@@ -69,7 +71,7 @@ public final class CacheGetResolver implements
                 if (timestamp < range.getStart())
                     continue;
 
-                datapoints.add(new DataPoint(timestamp, value));
+                datapoints.add(new DataPoint(timestamp, value, count));
             }
         }
 

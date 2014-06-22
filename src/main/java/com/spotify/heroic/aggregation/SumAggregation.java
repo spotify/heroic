@@ -3,22 +3,22 @@ package com.spotify.heroic.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.aggregator.SumAggregator;
-import com.spotify.heroic.model.Resolution;
+import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.Sampling;
 
 @JsonSerialize
-public class SumAggregation extends SumBucketAggregation {
-    public SumAggregation(Resolution sampling) {
+public class SumAggregation extends BucketAggregation {
+    public SumAggregation(Sampling sampling) {
         super(sampling);
     }
 
     @JsonCreator
-    public static SumAggregation create(@JsonProperty("sampling") Resolution sampling) {
+    public static SumAggregation create(@JsonProperty("sampling") Sampling sampling) {
         return new SumAggregation(sampling);
     }
 
     @Override
-    public SumAggregator build() {
-        return new SumAggregator(this, getSampling());
+    protected DataPoint build(Bucket bucket, float p) {
+        return new DataPoint(bucket.getTimestamp(), bucket.getValue(), p);
     }
 }

@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,14 +26,12 @@ import com.spotify.heroic.model.TimeSerie;
 @Slf4j
 @RequiredArgsConstructor
 final class MergeCacheMisses implements
-        Callback.Reducer<MetricGroups, MetricGroups> {
-    @RequiredArgsConstructor
+Callback.Reducer<MetricGroups, MetricGroups> {
+    @Data
     private static final class JoinResult {
-        @Getter
         private final Map<Long, DataPoint> resultSet;
-        @Getter
+        private final Map<Long, DataPoint> countSet;
         private final Map<TimeSerie, List<DataPoint>> cacheUpdates;
-        @Getter
         private final Statistics statistics;
     }
 
@@ -43,7 +42,7 @@ final class MergeCacheMisses implements
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
-            throws Exception {
+                    throws Exception {
 
         final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);
@@ -68,7 +67,7 @@ final class MergeCacheMisses implements
                 .entrySet()) {
             final TimeSerie timeSerie = update.getKey();
             final List<DataPoint> datapoints = update.getValue();
-            queries.add(cache.put(timeSerie, cacheResult.getAggregator(),
+            queries.add(cache.put(timeSerie, cacheResult.getAggregation(),
                     datapoints));
         }
 
@@ -79,6 +78,7 @@ final class MergeCacheMisses implements
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult.getResultSet().values());
         Collections.sort(datapoints);
+
         groups.add(new MetricGroup(timeSerie, datapoints));
         return groups;
     }
@@ -105,8 +105,11 @@ final class MergeCacheMisses implements
         int cacheConflicts = 0;
 
         final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
+        final Map<Long, DataPoint> countSet = new HashMap<Long, DataPoint>();
 
-        final AddCachedResults cached = addCachedResults(resultSet);
+        final AddCached cachedResults = addCached(resultSet,
+                cacheResult.getResult());
+
         Statistics statistics = new Statistics();
 
         for (final MetricGroups result : results) {
@@ -124,13 +127,14 @@ final class MergeCacheMisses implements
             }
         }
 
-        statistics.setCache(new Statistics.Cache(cacheConflicts, cached.getDuplicates(), cached.getHits()));
+        statistics.setCache(new Statistics.Cache(cacheConflicts, cachedResults
+                .getDuplicates(), cachedResults.getHits()));
 
-        return new JoinResult(resultSet, cacheUpdates, statistics);
+        return new JoinResult(resultSet, countSet, cacheUpdates, statistics);
     }
 
     @RequiredArgsConstructor
-    private static final class AddCachedResults {
+    private static final class AddCached {
         @Getter
         private final int duplicates;
         @Getter
@@ -142,11 +146,11 @@ final class MergeCacheMisses implements
      * @param resultGroups
      * @return
      */
-    private AddCachedResults addCachedResults(Map<Long, DataPoint> resultSet) {
+    private AddCached addCached(Map<Long, DataPoint> resultSet, List<DataPoint> datapoints) {
         int duplicates = 0;
         int hits = 0;
 
-        for (final DataPoint d : cacheResult.getResult()) {
+        for (final DataPoint d : datapoints) {
             if (resultSet.put(d.getTimestamp(), d) != null) {
                 duplicates += 1;
             } else {
@@ -154,6 +158,6 @@ final class MergeCacheMisses implements
             }
         }
 
-        return new AddCachedResults(duplicates, hits);
+        return new AddCached(duplicates, hits);
     }
 }

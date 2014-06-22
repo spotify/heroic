@@ -3,7 +3,6 @@ package com.spotify.heroic.model;
 import java.io.IOException;
 
 import lombok.Data;
-import lombok.Getter;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -38,37 +37,46 @@ public class DataPoint implements Comparable<DataPoint> {
 
             final Double value = p.readValueAs(Double.class);
 
-            return new DataPoint(timestamp, value);
+            return new DataPoint(timestamp, value, Float.NaN);
         }
     }
 
     public static class Serializer extends JsonSerializer<DataPoint> {
         @Override
-        public void serialize(DataPoint value, JsonGenerator g,
+        public void serialize(DataPoint d, JsonGenerator g,
                 SerializerProvider provider) throws IOException,
                 JsonProcessingException {
             g.writeStartArray();
-            g.writeNumber(value.getTimestamp());
-            g.writeNumber(value.getValue());
+            g.writeNumber(d.getTimestamp());
+
+            final double value = d.getValue();
+
+            if (Double.isNaN(value)) {
+                g.writeNull();
+            } else {
+                g.writeNumber(value);
+            }
+
+            float p = d.getP();
+
+            if (Float.isNaN(p)) {
+                g.writeNull();
+            } else {
+                g.writeNumber(p);
+            }
+
             g.writeEndArray();
         }
     }
 
-    @Getter
     private final long timestamp;
-
-    @Getter
     private final double value;
 
-    public DataPoint(long timestamp, double value) {
-        this.timestamp = timestamp;
-        this.value = value;
-    }
-
-    public DataPoint(long timestamp, long value) {
-        this.timestamp = timestamp;
-        this.value = value;
-    }
+    /**
+     * Indication that this is a correct value. Can be any positive number,
+     * should be compared to other numbers in the same timeserie.
+     */
+    private final float p;
 
     @Override
     public int compareTo(DataPoint o) {

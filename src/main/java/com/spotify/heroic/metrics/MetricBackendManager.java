@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.aggregator.AggregatorGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -123,9 +122,7 @@ public class MetricBackendManager {
             throw new MetricQueryException(
                     "Range start must come before its end");
 
-        final AggregatorGroup aggregator = aggregation.build();
-
-        final long memoryMagnitude = aggregator
+        final long memoryMagnitude = aggregation
                 .getCalculationMemoryMagnitude(range);
 
         if (memoryMagnitude > maxAggregationMagnitude) {
@@ -133,12 +130,12 @@ public class MetricBackendManager {
                     "This query would result in too many datapoints");
         }
 
-        final DateRange rounded = roundRange(aggregator, range);
+        final DateRange rounded = roundRange(aggregation, range);
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
 
         final RowGroupsTransformer transformer = new RowGroupsTransformer(
-                aggregationCache, aggregator,
+                aggregationCache, aggregation,
                 criteria.getRange());
 
         return findTimeSeries(criteria).transform(transformer)
@@ -158,10 +155,9 @@ public class MetricBackendManager {
             throw new MetricQueryException("'key' must be defined");
 
         final AggregationGroup aggregation = new AggregationGroup(definitions);
-        final AggregatorGroup aggregator = aggregation.build();
-
         final DateRange range = query.getRange().buildDateRange();
-        final DateRange rounded = roundRange(aggregator, range);
+        final DateRange rounded = roundRange(aggregation, range);
+
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
         final Callback<List<FindTimeSeries.Result>> rows = findTimeSeries(criteria);
@@ -171,10 +167,9 @@ public class MetricBackendManager {
         final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
-                final AggregatorGroup aggregator = aggregation.build();
                 log.info("streaming {} on {}", criteria, range);
                 return rows.transform(new RowGroupsTransformer(
-                        aggregationCache, aggregator, range));
+                        aggregationCache, aggregation, range));
             }
         };
 
@@ -203,7 +198,7 @@ public class MetricBackendManager {
      * @param query
      * @return
      */
-    private DateRange roundRange(AggregatorGroup aggregator, DateRange range) {
+    private DateRange roundRange(AggregationGroup aggregator, DateRange range) {
         final long hint = aggregator.getWidth();
 
         if (hint > 0) {

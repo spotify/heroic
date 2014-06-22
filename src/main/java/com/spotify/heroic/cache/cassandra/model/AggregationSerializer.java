@@ -11,7 +11,7 @@ import com.netflix.astyanax.serializers.ShortSerializer;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AverageAggregation;
 import com.spotify.heroic.aggregation.SumAggregation;
-import com.spotify.heroic.model.Resolution;
+import com.spotify.heroic.model.Sampling;
 
 /**
  * Serializes aggregation configurations.
@@ -27,7 +27,7 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
         T deserialize(Composite composite);
     }
 
-    private static final ResolutionSerializer resolutionSerializer = ResolutionSerializer.get();
+    private static final SamplingSerializer resolutionSerializer = SamplingSerializer.get();
     private static final ShortSerializer shortSerializer = ShortSerializer.get();
     private static final CompositeSerializer compositeSerializer = CompositeSerializer.get();
 
@@ -53,7 +53,7 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
 
             @Override
             public SumAggregation deserialize(Composite composite) {
-                final Resolution sampling = composite.get(0, resolutionSerializer);
+                final Sampling sampling = composite.get(0, resolutionSerializer);
                 return new SumAggregation(sampling);
             }
         });
@@ -66,7 +66,7 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
 
             @Override
             public AverageAggregation deserialize(Composite composite) {
-                final Resolution sampling = composite.get(0, resolutionSerializer);
+                final Sampling sampling = composite.get(0, resolutionSerializer);
                 return new AverageAggregation(sampling);
             }
         });

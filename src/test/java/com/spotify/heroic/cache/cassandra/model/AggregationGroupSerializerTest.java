@@ -9,12 +9,13 @@ import org.junit.Test;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregation.SumAggregation;
-import com.spotify.heroic.cache.cassandra.model.AggregationGroupSerializer;
-import com.spotify.heroic.model.Resolution;
+import com.spotify.heroic.model.Sampling;
 
 public class AggregationGroupSerializerTest {
     private static final AggregationGroupSerializer serializer = AggregationGroupSerializer.get();
-    private static final Resolution resolution = new Resolution(Resolution.DEFAULT_UNIT, Resolution.DEFAULT_VALUE);
+    private static final Sampling resolution = new Sampling(
+            Sampling.DEFAULT_VALUE,
+            Sampling.DEFAULT_VALUE);
 
     private AggregationGroup roundTrip(AggregationGroup aggregationGroup) {
         return serializer.fromByteBuffer(serializer.toByteBuffer(aggregationGroup));

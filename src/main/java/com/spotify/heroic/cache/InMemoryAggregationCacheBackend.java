@@ -90,10 +90,17 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
 
         for (final DataPoint d : datapoints) {
             final long timestamp = d.getTimestamp();
+            final double value = d.getValue();
+            final float p = d.getP();
 
-            if (timestamp % width != 0) {
+            if (Double.isNaN(value))
                 continue;
-            }
+
+            if (Float.isNaN(p))
+                continue;
+
+            if (timestamp % width != 0)
+                continue;
 
             entry.put(timestamp, d);
         }
