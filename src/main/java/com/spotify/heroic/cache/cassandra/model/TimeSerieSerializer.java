@@ -1,6 +1,7 @@
 package com.spotify.heroic.cache.cassandra.model;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -23,13 +24,30 @@ public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
         return instance;
     }
 
+    private static final Comparator<String> COMPARATOR = new Comparator<String>() {
+        public int compare(String a, String b) {
+            if (a == null || b == null) {
+                if (a == null)
+                    return -1;
+
+                if (b == null)
+                    return 1;
+
+                return 0;
+            }
+
+            return a.compareTo(b);
+        }
+    };
+
     @Override
     public ByteBuffer toByteBuffer(TimeSerie obj) {
         final Composite composite = new Composite();
+        final Map<String, String> tags = new TreeMap<String, String>(COMPARATOR);
+        tags.putAll(obj.getTags());
 
         composite.addComponent(obj.getKey(), keySerializer);
-        composite.addComponent(new TreeMap<String, String>(obj.getTags()),
-                tagsSerializer);
+        composite.addComponent(tags, tagsSerializer);
 
         return composite.serialize();
     }

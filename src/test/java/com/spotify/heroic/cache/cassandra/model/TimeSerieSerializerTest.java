@@ -1,5 +1,6 @@
 package com.spotify.heroic.cache.cassandra.model;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,7 +13,11 @@ public class TimeSerieSerializerTest {
     private static final TimeSerieSerializer serializer = TimeSerieSerializer.get();
 
     private TimeSerie roundTrip(TimeSerie timeSerie) {
-        return serializer.fromByteBuffer(serializer.toByteBuffer(timeSerie));
+        final ByteBuffer bb = serializer.toByteBuffer(timeSerie);
+        final TimeSerie after = serializer.fromByteBuffer(bb);
+        bb.rewind();
+        Assert.assertEquals(bb, serializer.toByteBuffer(after));
+        return after;
     }
 
     @Test
@@ -25,6 +30,16 @@ public class TimeSerieSerializerTest {
     public void testTagsWithNull() throws Exception {
         final Map<String, String> tags = new HashMap<String, String>();
         tags.put(null, null);
+        final TimeSerie timeSerie = new TimeSerie(null, tags);
+        Assert.assertEquals(timeSerie, roundTrip(timeSerie));
+    }
+
+    @Test
+    public void testTagsWithMixed() throws Exception {
+        final Map<String, String> tags = new HashMap<String, String>();
+        tags.put(null, null);
+        tags.put("foo", "bar");
+        tags.put("bar", null);
         final TimeSerie timeSerie = new TimeSerie(null, tags);
         Assert.assertEquals(timeSerie, roundTrip(timeSerie));
     }
