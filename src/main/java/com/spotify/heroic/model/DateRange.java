@@ -115,6 +115,10 @@ public class DateRange implements Comparable<DateRange> {
         return new DateRange(start, Math.max(end + extent, 0));
     }
 
+    public DateRange shift(long extent) {
+        return new DateRange(Math.max(start + extent, 0), Math.max(end + extent, 0));
+    }
+
     private static final FastDateFormat format = FastDateFormat
             .getInstance("yyyy-MM-dd HH:mm");
 

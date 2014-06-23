@@ -221,8 +221,7 @@ public class MetricBackendManager {
             return range;
 
         final Sampling sampling = aggregation.getSampling();
-        return range.rounded(sampling.getSize()).shiftStart(
-                -sampling.getExtent());
+        return range.rounded(sampling.getExtent()).rounded(sampling.getSize()).shiftStart(-sampling.getExtent());
     }
 
     private static final long INITIAL_DIFF = 3600 * 1000 * 6;

@@ -89,8 +89,7 @@ public class Spotify100 implements ConsumerSchema {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
         datapoints.add(datapoint);
 
-        consumer.getMetricBackendManager().write(timeSerie, datapoints)
-        .register(new Callback.Handle<WriteResponse>() {
+        consumer.getMetricBackendManager().write(timeSerie, datapoints).register(new Callback.Handle<WriteResponse>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 log.error("Write cancelled: " + reason);
