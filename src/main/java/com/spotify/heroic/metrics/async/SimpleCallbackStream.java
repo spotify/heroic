@@ -50,10 +50,10 @@ public final class SimpleCallbackStream implements Callback.StreamReducer<FetchD
         final List<DataPoint> datapoints = joinRawResults();
         final TimeSerie timeSerie = slice.getTimeSerie();
 
-        final Statistics statistics = new Statistics();
-        statistics.setRow(new Statistics.Row(successful, failed, cancelled));
-        statistics.setAggregator(new Statistics.Aggregator(datapoints.size(),
-                0, 0));
+        final Statistics statistics = Statistics.builder()
+                .row(new Statistics.Row(successful, failed, cancelled))
+                .aggregator(new Statistics.Aggregator(datapoints.size(), 0, 0))
+                .build();
 
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(timeSerie, datapoints));

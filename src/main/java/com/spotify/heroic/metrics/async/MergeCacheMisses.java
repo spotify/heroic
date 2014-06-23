@@ -110,7 +110,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
         final AddCached cachedResults = addCached(resultSet,
                 cacheResult.getResult());
 
-        Statistics statistics = new Statistics();
+        Statistics statistics = Statistics.EMPTY;
 
         for (final MetricGroups result : results) {
             statistics = statistics.merge(result.getStatistics());
@@ -127,10 +127,10 @@ Callback.Reducer<MetricGroups, MetricGroups> {
             }
         }
 
-        statistics.setCache(new Statistics.Cache(cacheConflicts, cachedResults
-                .getDuplicates(), cachedResults.getHits()));
-
-        return new JoinResult(resultSet, countSet, cacheUpdates, statistics);
+        return new JoinResult(resultSet, countSet, cacheUpdates, Statistics
+                .builder(statistics)
+                .cache(new Statistics.Cache(cacheConflicts, cachedResults
+                        .getDuplicates(), cachedResults.getHits())).build());
     }
 
     @RequiredArgsConstructor

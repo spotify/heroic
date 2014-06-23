@@ -44,9 +44,9 @@ public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDat
     public MetricGroups resolved(int successful, int failed, int cancelled) {
         final Aggregation.Result result = session.result();
 
-        final Statistics stat = new Statistics();
-        stat.setAggregator(result.getStatistics());
-        stat.setRow(new Statistics.Row(successful, failed, cancelled));
+        final Statistics stat = Statistics.builder()
+                .aggregator(result.getStatistics())
+                .row(new Statistics.Row(successful, failed, cancelled)).build();
 
         final TimeSerie timeSerie = slice.getTimeSerie();
 

@@ -1,22 +1,48 @@
 package com.spotify.heroic.metrics.model;
 
-import lombok.Getter;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 
-@RequiredArgsConstructor
+@Data
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class Statistics {
-    @RequiredArgsConstructor
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    public static final class Builder {
+        private Aggregator aggregator = Aggregator.EMPTY;
+        private Row row = Row.EMPTY;
+        private Cache cache = Cache.EMPTY;
+
+        public Builder aggregator(Aggregator aggregator) {
+            this.aggregator = aggregator;
+            return this;
+        }
+
+        public Builder row(Row row) {
+            this.row = row;
+            return this;
+        }
+
+        public Builder cache(Cache cache) {
+            this.cache = cache;
+            return this;
+        }
+
+        public Statistics build() {
+            return new Statistics(aggregator, row, cache);
+        }
+    }
+
+    @Data
     public static final class Aggregator {
         public static final Aggregator EMPTY = new Aggregator(0, 0, 0);
 
-        @Getter
         private final long sampleSize;
-
-        @Getter
         private final long outOfBounds;
 
-        @Getter
+        /* aggregator performed a useless index scan. */
         private final long uselessScan;
 
         public Aggregator merge(Aggregator other) {
@@ -26,44 +52,25 @@ public class Statistics {
         }
     }
 
+    @Data
     public static final class Row {
         public static final Row EMPTY = new Row(0, 0, 0);
 
-        @Getter
-        private final int total;
-
-        @Getter
         private final int failed;
-
-        @Getter
         private final int successful;
-
-        @Getter
         private final int cancelled;
-
-        public Row(int successful, int failed, int cancelled) {
-            this.total = successful + failed + cancelled;
-            this.successful = successful;
-            this.failed = failed;
-            this.cancelled = cancelled;
-        }
 
         public Row merge(Row other) {
             return new Row(this.successful + other.successful, this.failed + other.failed, this.cancelled + other.cancelled);
         }
     }
 
-    @RequiredArgsConstructor
+    @Data
     public static final class Cache {
         public static final Cache EMPTY = new Cache(0, 0, 0);
 
-        @Getter
         private final int hits;
-
-        @Getter
         private final int conflicts;
-
-        @Getter
         private final int duplicates;
 
         public Cache merge(Cache other) {
@@ -71,23 +78,23 @@ public class Statistics {
         }
     }
 
-    @Getter
-    @Setter
-    private Aggregator aggregator = Aggregator.EMPTY;
+    public static final Statistics EMPTY = new Statistics(Aggregator.EMPTY,
+            Row.EMPTY, Cache.EMPTY);
 
-    @Getter
-    @Setter
-    private Row row = Row.EMPTY;
-
-    @Getter
-    @Setter
-    private Cache cache = Cache.EMPTY;
+    private final Aggregator aggregator;
+    private final Row row;
+    private final Cache cache;
 
     public Statistics merge(Statistics other) {
-        final Statistics s = new Statistics();
-        s.setAggregator(aggregator.merge(other.aggregator));
-        s.setRow(row.merge(other.row));
-        s.setCache(cache.merge(other.cache));
-        return s;
+        return new Statistics(aggregator.merge(other.aggregator),
+                row.merge(other.row), cache.merge(other.cache));
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static Builder builder(final Statistics other) {
+        return new Builder(other.aggregator, other.row, other.cache);
     }
 }

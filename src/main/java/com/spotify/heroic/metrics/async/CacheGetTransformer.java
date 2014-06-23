@@ -45,8 +45,9 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
 
             groups.add(group);
 
-            final Statistics stat = new Statistics();
-            stat.setCache(new Statistics.Cache(datapoints.size(), 0, 0));
+            final Statistics stat = Statistics.builder()
+                    .cache(new Statistics.Cache(datapoints.size(), 0, 0))
+                    .build();
 
             return new ResolvedCallback<MetricGroups>(new MetricGroups(groups, stat));
         }

@@ -3,7 +3,6 @@ package com.spotify.heroic.aggregation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -23,7 +22,6 @@ public abstract class BucketAggregation implements Aggregation {
     protected static final class Bucket {
         @Getter
         private final long timestamp;
-
         private final AtomicInteger count = new AtomicInteger(0);
         private final AtomicDouble value = new AtomicDouble(0);
 
@@ -43,9 +41,9 @@ public abstract class BucketAggregation implements Aggregation {
 
     @RequiredArgsConstructor
     private static final class Session implements Aggregation.Session {
-        private final AtomicLong sampleSize = new AtomicLong(0);
-        private final AtomicLong outOfBounds = new AtomicLong(0);
-        private final AtomicLong uselessScan = new AtomicLong(0);
+        private long sampleSize = 0;
+        private long outOfBounds = 0;
+        private long uselessScan = 0;
 
         private final BucketAggregation aggregator;
         private final Bucket[] buckets;
@@ -68,7 +66,7 @@ public abstract class BucketAggregation implements Aggregation {
 
                 final int first = Math.max(0, (int) (offset / size));
                 final int last = Math.min((int) ((offset + extent) / size),
-                        buckets.length - 1);
+                        buckets.length);
 
                 if (first > last) {
                     ++outOfBounds;
@@ -76,21 +74,24 @@ public abstract class BucketAggregation implements Aggregation {
                 }
 
                 for (int i = first; i <= last; i++) {
-                    final long id = i * size;
+                    final long c = (i * size) - offset;
 
-                    if (Math.abs(id - offset) <= extent) {
-                        final Bucket bucket = buckets[i];
-                        bucket.value.addAndGet(d.getValue());
-                        bucket.count.incrementAndGet();
-                    } else {
+                    if (!(c < 0 && c <= extent)) {
                         ++uselessScan;
+                        continue;
                     }
+
+                    final Bucket bucket = buckets[i];
+                    bucket.value.addAndGet(d.getValue());
+                    bucket.count.incrementAndGet();
                 }
             }
 
-            this.outOfBounds.addAndGet(outOfBounds);
-            this.sampleSize.addAndGet(sampleSize);
-            this.uselessScan.addAndGet(uselessScan);
+            synchronized (this) {
+                this.outOfBounds += outOfBounds;
+                this.sampleSize += sampleSize;
+                this.uselessScan += uselessScan;
+            }
         }
 
         @Override
@@ -114,7 +115,7 @@ public abstract class BucketAggregation implements Aggregation {
             }
 
             final Statistics.Aggregator statistics = new Statistics.Aggregator(
-                    sampleSize.get(), outOfBounds.get(), uselessScan.get());
+                    sampleSize, outOfBounds, uselessScan);
 
             return new Result(result, statistics);
         }
@@ -153,6 +154,7 @@ public abstract class BucketAggregation implements Aggregation {
     @Override
     public Aggregation.Session session(DateRange range) {
         final long size = sampling.getSize();
+
         final long diff = range.diff();
         final long start = range.start();
         final long count = diff / size;
@@ -169,12 +171,11 @@ public abstract class BucketAggregation implements Aggregation {
         return sampling.getSize();
     }
 
-    private Bucket[] initializeBuckets(long count, long offset, long width) {
+    private Bucket[] initializeBuckets(long count, long offset, long size) {
         final Bucket[] buckets = new Bucket[(int) count];
 
-        for (long i = 0; i < count; i++) {
-            final long timestamp = offset + width * i + width;
-            buckets[(int) i] = new Bucket(timestamp);
+        for (int i = 0; i <= count; i++) {
+            buckets[i] = new Bucket(offset + size * i);
         }
 
         return buckets;
