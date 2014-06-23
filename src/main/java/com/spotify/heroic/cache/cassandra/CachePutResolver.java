@@ -19,7 +19,7 @@ import com.spotify.heroic.model.TimeSerie;
 @RequiredArgsConstructor
 final class CachePutResolver implements
 Callback.Resolver<CacheBackendPutResult> {
-    private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
+    private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value, data_p) VALUES(?, ?, ?, ?)";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
     private final Keyspace keyspace;
@@ -54,11 +54,12 @@ Callback.Resolver<CacheBackendPutResult> {
         return new CacheBackendPutResult();
     }
 
-    private void doPut(CacheKey key, Integer dataOffset, DataPoint dataPoint)
+    private void doPut(CacheKey key, Integer dataOffset, DataPoint d)
             throws ConnectionException {
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
         .asPreparedStatement().withByteBufferValue(key, cacheKeySerializer)
         .withIntegerValue(dataOffset)
-        .withDoubleValue(dataPoint.getValue()).execute();
+        .withDoubleValue(d.getValue())
+        .withFloatValue(d.getP()).execute();
     }
 }
