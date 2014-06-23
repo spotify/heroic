@@ -49,42 +49,34 @@ public class AggregationCache {
             final long width = aggregation.getSampling().getSize();
 
             final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
-            final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
             final List<DataPoint> cached = result.getDatapoints();
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(slice);
                 callback.resolve(new CacheQueryResult(slice, aggregation,
-                        datapoints, misses));
+                        cached, misses));
                 reporter.reportGetMisses(misses.size());
                 return;
             }
 
             final DateRange range = slice.getRange();
-            final long end = range.getEnd() - range.getEnd() % width;
-            long expected = range.getStart() - range.getStart() % width;
+            final long end = range.getEnd();
 
-            for (final DataPoint d : result.getDatapoints()) {
-                final long start = expected;
+            long current = range.getStart();
 
-                while (expected != d.getTimestamp() && expected < end) {
-                    expected += width;
-                }
+            for (final DataPoint d : cached) {
+                if (current + width != d.getTimestamp() && current < d.getTimestamp())
+                    misses.add(slice.modify(current, d.getTimestamp()));
 
-                if (expected != start)
-                    misses.add(slice.modify(start, expected));
-
-                if (expected == d.getTimestamp())
-                    datapoints.add(d);
-
-                expected += width;
+                current = d.getTimestamp();
             }
 
-            if (expected != end)
-                misses.add(slice.modify(expected, end));
+            if (current < end)
+                misses.add(slice.modify(current, end));
 
             reporter.reportGetMisses(misses.size());
-            callback.resolve(new CacheQueryResult(slice, aggregation, datapoints, misses));
+            callback.resolve(new CacheQueryResult(slice, aggregation, cached, misses));
         }
     }
 

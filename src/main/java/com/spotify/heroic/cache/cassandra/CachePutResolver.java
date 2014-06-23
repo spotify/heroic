@@ -33,7 +33,6 @@ Callback.Resolver<CacheBackendPutResult> {
         final TimeSerie timeSerie = key.getTimeSerie();
         final long size = aggregation.getSampling().getSize();
         final long columnWidth = size * CassandraCache.WIDTH;
-
         for (final DataPoint d : datapoints) {
             final double value = d.getValue();
             final float p = d.getP();

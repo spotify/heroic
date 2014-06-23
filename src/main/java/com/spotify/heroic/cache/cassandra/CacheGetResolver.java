@@ -63,7 +63,7 @@ Callback.Resolver<CacheBackendGetResult> {
                 final ColumnList<String> columns = row.getColumns();
                 final int offset = columns.getColumnByIndex(0).getIntegerValue();
                 final double value = columns.getColumnByIndex(1).getDoubleValue();
-                final float count = columns.getColumnByIndex(2).getFloatValue();
+                final float p = columns.getColumnByIndex(2).getFloatValue();
 
                 final long timestamp = getDataPointTimestamp(base, columnSize,
                         offset);
@@ -71,7 +71,7 @@ Callback.Resolver<CacheBackendGetResult> {
                 if (timestamp < range.getStart())
                     continue;
 
-                datapoints.add(new DataPoint(timestamp, value, count));
+                datapoints.add(new DataPoint(timestamp, value, p));
             }
         }
 
