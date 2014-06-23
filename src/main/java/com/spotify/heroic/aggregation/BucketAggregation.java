@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import com.google.common.util.concurrent.AtomicDouble;
@@ -18,7 +18,7 @@ import com.spotify.heroic.model.Sampling;
 @ToString(of={"sampling"})
 @EqualsAndHashCode(of={"sampling"})
 public abstract class BucketAggregation implements Aggregation {
-    @RequiredArgsConstructor
+    @Data
     protected static final class Bucket {
         private final long timestamp;
         private final AtomicInteger count = new AtomicInteger(0);
@@ -30,7 +30,7 @@ public abstract class BucketAggregation implements Aggregation {
         }
     }
 
-    @RequiredArgsConstructor
+    @Data
     private static final class Session implements Aggregation.Session {
         private long sampleSize = 0;
         private long outOfBounds = 0;
@@ -51,25 +51,22 @@ public abstract class BucketAggregation implements Aggregation {
             for (final DataPoint d : datapoints) {
                 ++sampleSize;
 
-                final long offset = d.getTimestamp() - this.offset;
+                final long first = d.getTimestamp();
+                final long last = first + extent;
 
-                final int first = Math.max(0, (int) (offset / size));
-                final int last = Math.min(buckets.length,
-                        (int) ((offset + extent) / size));
+                for (long start = first; start < last; start += size) {
+                    int i = (int)((start - offset) / size);
 
-                if (first > last) {
-                    ++outOfBounds;
-                    continue;
-                }
-
-                for (int i = first; i < last; i++) {
-                    final Bucket bucket = buckets[i];
-                    final long c = bucket.timestamp - d.getTimestamp();
-
-                    if (!(c >= 0 && c <= extent)) {
-                        ++uselessScan;
+                    if (i < 0 || i >= buckets.length)
                         continue;
-                    }
+
+                    final Bucket bucket = buckets[i];
+
+                    final long c = bucket.timestamp - first;
+
+                    // check that the current bucket is _within_ the extent.
+                    if (!(c >= 0 && c <= extent))
+                        continue;
 
                     bucket.value.addAndGet(d.getValue());
                     bucket.count.incrementAndGet();
