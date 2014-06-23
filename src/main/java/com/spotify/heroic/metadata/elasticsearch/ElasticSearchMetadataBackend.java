@@ -70,23 +70,31 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         @Setter
         private String clusterName = "elasticsearch";
 
+        @Getter
+        @Setter
+        private String index = "heroic";
+
+        @Getter
+        @Setter
+        private String type = "metadata";
+
         @Override
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
                                                                  .size()]);
             final Executor executor = Executors.newFixedThreadPool(10);
-            return new ElasticSearchMetadataBackend(reporter, seeds,
-                    clusterName, executor);
+            return new ElasticSearchMetadataBackend(executor, reporter, seeds,
+                    clusterName, index, type);
         }
     }
 
+    private final Executor executor;
     private final MetadataBackendReporter reporter;
     private final String[] seeds;
     private final String clusterName;
-    private final String index = "heroic";
-    private final String type = "metadata";
-    private final Executor executor;
+    private final String index;
+    private final String type;
 
     private Node node;
     private Client client;
