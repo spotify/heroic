@@ -28,7 +28,7 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private static final class BackendCacheGetHandle implements
-    Callback.Handle<CacheBackendGetResult> {
+            Callback.Handle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final TimeSerieSlice slice;
@@ -46,7 +46,7 @@ public class AggregationCache {
 
         @Override
         public void resolved(CacheBackendGetResult result) throws Exception {
-            final long width = aggregation.getWidth();
+            final long width = aggregation.getSampling().getSize();
 
             final List<TimeSerieSlice> misses = new ArrayList<TimeSerieSlice>();
             final List<DataPoint> datapoints = new ArrayList<DataPoint>();

@@ -26,13 +26,14 @@ import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
-import com.spotify.heroic.metrics.async.RowGroupsTransformer;
+import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
@@ -60,13 +61,6 @@ public class MetricBackendManager {
      * Used for deferring work to avoid deep stack traces.
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
-
-    private <T> List<T> defaultList(List<T> list) {
-        if (list == null)
-            return new ArrayList<T>();
-
-        return list;
-    }
 
     public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
@@ -109,8 +103,8 @@ public class MetricBackendManager {
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange().buildDateRange();
-        final AggregationGroup aggregation = new AggregationGroup(
-                defaultList(query.getAggregators()));
+
+        final AggregationGroup aggregation = buildAggregationGroup(query);
 
         if (key == null || key.isEmpty())
             throw new MetricQueryException("'key' must be defined");
@@ -122,19 +116,22 @@ public class MetricBackendManager {
             throw new MetricQueryException(
                     "Range start must come before its end");
 
-        final long memoryMagnitude = aggregation
-                .getCalculationMemoryMagnitude(range);
+        if (aggregation != null) {
+            final long memoryMagnitude = aggregation
+                    .getCalculationMemoryMagnitude(range);
 
-        if (memoryMagnitude > maxAggregationMagnitude) {
-            throw new MetricQueryException(
-                    "This query would result in too many datapoints");
+            if (memoryMagnitude > maxAggregationMagnitude) {
+                throw new MetricQueryException(
+                        "This query would result in too many datapoints");
+            }
         }
 
         final DateRange rounded = roundRange(aggregation, range);
+
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
 
-        final RowGroupsTransformer transformer = new RowGroupsTransformer(
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
                 aggregationCache, aggregation,
                 criteria.getRange());
 
@@ -143,23 +140,44 @@ public class MetricBackendManager {
                 .register(reporter.reportQueryMetrics());
     }
 
+    private AggregationGroup buildAggregationGroup(final MetricsRequest query) {
+        final List<Aggregation> aggregators = query.getAggregators();
+
+        if (aggregators == null || aggregators.isEmpty())
+            return null;
+
+        return new AggregationGroup(aggregators, aggregators.get(0)
+                .getSampling());
+    }
+
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
             MetricStream handle) throws MetricQueryException {
         final String key = query.getKey();
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
-        final List<Aggregation> definitions = defaultList(query
-                .getAggregators());
 
         if (key == null || key.isEmpty())
             throw new MetricQueryException("'key' must be defined");
 
-        final AggregationGroup aggregation = new AggregationGroup(definitions);
+        final AggregationGroup aggregation = buildAggregationGroup(query);
+
         final DateRange range = query.getRange().buildDateRange();
+
+        if (aggregation != null) {
+            final long memoryMagnitude = aggregation
+                    .getCalculationMemoryMagnitude(range);
+
+            if (memoryMagnitude > maxAggregationMagnitude) {
+                throw new MetricQueryException(
+                        "This query would result in too many datapoints");
+            }
+        }
+
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
+
         final Callback<List<FindTimeSeries.Result>> rows = findTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
@@ -168,13 +186,13 @@ public class MetricBackendManager {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
                 log.info("streaming {} on {}", criteria, range);
-                return rows.transform(new RowGroupsTransformer(
+                return rows.transform(new TimeSeriesTransformer(
                         aggregationCache, aggregation, range));
             }
         };
 
         streamChunks(callback, handle, streamingQuery, criteria,
-                rounded.withStart(rounded.end()), INITIAL_DIFF);
+                rounded.start(rounded.end()), INITIAL_DIFF);
 
         return callback.register(reporter.reportStreamMetrics());
     }
@@ -198,14 +216,13 @@ public class MetricBackendManager {
      * @param query
      * @return
      */
-    private DateRange roundRange(AggregationGroup aggregator, DateRange range) {
-        final long hint = aggregator.getWidth();
-
-        if (hint > 0) {
-            return range.roundToInterval(hint);
-        } else {
+    private DateRange roundRange(AggregationGroup aggregation, DateRange range) {
+        if (aggregation == null)
             return range;
-        }
+
+        final Sampling sampling = aggregation.getSampling();
+        return range.rounded(sampling.getSize()).shiftStart(
+                -sampling.getExtent());
     }
 
     private static final long INITIAL_DIFF = 3600 * 1000 * 6;
@@ -233,7 +250,7 @@ public class MetricBackendManager {
         final DateRange originalRange = original.getRange();
 
         // decrease the range for the current chunk.
-        final DateRange currentRange = lastRange.withStart(Math.max(
+        final DateRange currentRange = lastRange.start(Math.max(
                 lastRange.start() - window, originalRange.start()));
 
         final long then = System.currentTimeMillis();

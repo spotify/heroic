@@ -129,8 +129,8 @@ Callback.Reducer<MetricGroups, MetricGroups> {
 
         return new JoinResult(resultSet, countSet, cacheUpdates, Statistics
                 .builder(statistics)
-                .cache(new Statistics.Cache(cacheConflicts, cachedResults
-                        .getDuplicates(), cachedResults.getHits())).build());
+                .cache(new Statistics.Cache(cachedResults.getHits(),
+                        cacheConflicts, cachedResults.getDuplicates())).build());
     }
 
     @RequiredArgsConstructor

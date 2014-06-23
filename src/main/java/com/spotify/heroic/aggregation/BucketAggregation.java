@@ -48,12 +48,11 @@ public abstract class BucketAggregation implements Aggregation {
         private final BucketAggregation aggregator;
         private final Bucket[] buckets;
         private final long offset;
-        private final long count;
         private final long size;
         private final long extent;
 
         @Override
-        public void stream(Iterable<DataPoint> datapoints) {
+        public void update(final Iterable<DataPoint> datapoints) {
             long outOfBounds = 0;
             long sampleSize = 0;
             long uselessScan = 0;
@@ -61,12 +60,10 @@ public abstract class BucketAggregation implements Aggregation {
             for (final DataPoint d : datapoints) {
                 ++sampleSize;
 
-                final long timestamp = d.getTimestamp();
-                final long offset = timestamp - this.offset;
-
+                final long offset = d.getTimestamp() - this.offset;
                 final int first = Math.max(0, (int) (offset / size));
-                final int last = Math.min((int) ((offset + extent) / size),
-                        buckets.length);
+                final int last = Math.min(buckets.length,
+                        (int) ((offset + extent) / size));
 
                 if (first > last) {
                     ++outOfBounds;
@@ -76,7 +73,7 @@ public abstract class BucketAggregation implements Aggregation {
                 for (int i = first; i <= last; i++) {
                     final long c = (i * size) - offset;
 
-                    if (!(c < 0 && c <= extent)) {
+                    if (!(c >= 0 && c <= extent)) {
                         ++uselessScan;
                         continue;
                     }
@@ -96,7 +93,8 @@ public abstract class BucketAggregation implements Aggregation {
 
         @Override
         public Result result() {
-            final List<DataPoint> result = new ArrayList<DataPoint>((int) count);
+            final List<DataPoint> result = new ArrayList<DataPoint>(
+                    buckets.length);
 
             final float max = calculateMax();
 
@@ -161,18 +159,12 @@ public abstract class BucketAggregation implements Aggregation {
 
         long offset = start - (start % size);
 
-        final Bucket[] buckets = initializeBuckets(count, offset, size);
-        return new Session(this, buckets, offset, count, size,
-                sampling.getExtent());
+        final Bucket[] buckets = buildBuckets(count, offset, size);
+        return new Session(this, buckets, offset, size, sampling.getExtent());
     }
 
-    @Override
-    public long getWidth() {
-        return sampling.getSize();
-    }
-
-    private Bucket[] initializeBuckets(long count, long offset, long size) {
-        final Bucket[] buckets = new Bucket[(int) count];
+    private Bucket[] buildBuckets(long count, long offset, long size) {
+        final Bucket[] buckets = new Bucket[(int) count + 1];
 
         for (int i = 0; i <= count; i++) {
             buckets[i] = new Bucket(offset + size * i);

@@ -47,6 +47,10 @@ public class Sampling {
             size = TimeUnit.MILLISECONDS.convert(inputSize, unit);
         }
 
+        if (size <= 0)
+            throw new IllegalArgumentException(
+                    "'size' must be a positive value");
+
         return size;
     }
 
@@ -59,6 +63,10 @@ public class Sampling {
         } else {
             extent = TimeUnit.MILLISECONDS.convert(inputExtent, unit);
         }
+
+        if (extent <= 0)
+            throw new IllegalArgumentException(
+                    "'extent' must be a positive value");
 
         return extent;
     }

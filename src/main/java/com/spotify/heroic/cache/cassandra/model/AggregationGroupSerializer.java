@@ -9,15 +9,20 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
+import com.spotify.heroic.model.Sampling;
 
 /**
- * Serializer for AggregationGroup's.
- *
+ * Serializer for Aggregation Groups.
+ * 
  * @author udoprog
  */
 class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
-    private static final IntegerSerializer integerSerializer = IntegerSerializer.get();
-    private static final AggregationSerializer aggregationSerializer = AggregationSerializer.get();
+    private static final IntegerSerializer INTEGER_SERIALIZER = IntegerSerializer
+            .get();
+    private static final AggregationSerializer AGGREGATION_SERIALIZER = AggregationSerializer
+            .get();
+    private static final SamplingSerializer SAMPLING_SERIALIZER = SamplingSerializer
+            .get();
 
     private static final AggregationGroupSerializer instance = new AggregationGroupSerializer();
 
@@ -26,14 +31,15 @@ class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
     }
 
     @Override
-    public ByteBuffer toByteBuffer(AggregationGroup aggregationGroup) {
+    public ByteBuffer toByteBuffer(AggregationGroup obj) {
         final Composite composite = new Composite();
-        final List<Aggregation> aggregations = aggregationGroup.getAggregations();
+        final List<Aggregation> aggregations = obj.getAggregations();
 
-        composite.addComponent(aggregations.size(), integerSerializer);
+        composite.addComponent(aggregations.size(), INTEGER_SERIALIZER);
+        composite.addComponent(obj.getSampling(), SAMPLING_SERIALIZER);
 
         for (Aggregation aggregation : aggregations) {
-            composite.addComponent(aggregation, aggregationSerializer);
+            composite.addComponent(aggregation, AGGREGATION_SERIALIZER);
         }
 
         return composite.serialize();
@@ -42,14 +48,15 @@ class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
     @Override
     public AggregationGroup fromByteBuffer(ByteBuffer byteBuffer) {
         final Composite composite = Composite.fromByteBuffer(byteBuffer);
-        final int size = composite.get(0, integerSerializer);
+        final int size = composite.get(0, INTEGER_SERIALIZER);
+        final Sampling sampling = composite.get(1, SAMPLING_SERIALIZER);
 
         final List<Aggregation> aggregations = new ArrayList<Aggregation>(size);
 
         for (int i = 0; i < size; i++) {
-            aggregations.add(composite.get(1 + i, aggregationSerializer));
+            aggregations.add(composite.get(2 + i, AGGREGATION_SERIALIZER));
         }
 
-        return new AggregationGroup(aggregations);
+        return new AggregationGroup(aggregations, sampling);
     }
 }

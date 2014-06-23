@@ -3,16 +3,14 @@ package com.spotify.heroic.aggregation;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.Sampling;
 
-@ToString(of = { "aggregations" })
-@EqualsAndHashCode(of = { "aggregations" })
+@Data
 public class AggregationGroup {
     private static final class Session implements Aggregation.Session {
         private final Aggregation.Session first;
@@ -25,8 +23,8 @@ public class AggregationGroup {
         }
 
         @Override
-        public void stream(Iterable<DataPoint> datapoints) {
-            first.stream(datapoints);
+        public void update(Iterable<DataPoint> datapoints) {
+            first.update(datapoints);
         }
 
         @Override
@@ -36,7 +34,7 @@ public class AggregationGroup {
             Statistics.Aggregator statistics = firstResult.getStatistics();
 
             for (final Aggregation.Session session : rest) {
-                session.stream(datapoints);
+                session.update(datapoints);
                 final Aggregation.Result next = session.result();
                 datapoints = next.getResult();
                 statistics = statistics.merge(next.getStatistics());
@@ -46,30 +44,10 @@ public class AggregationGroup {
         }
     }
 
-    @Getter
     private final List<Aggregation> aggregations;
-
-    @Getter
-    private final long width;
-
-    public AggregationGroup(List<Aggregation> aggregations) {
-        this.aggregations = aggregations;
-        this.width = calculateWidth(aggregations);
-    }
-
-    private long calculateWidth(List<Aggregation> aggregations) {
-        if (aggregations.isEmpty())
-            return 0;
-
-        final Aggregation last = aggregations.get(aggregations.size() - 1);
-        return last.getSampling().getSize();
-    }
+    private final Sampling sampling;
 
     public Aggregation.Session session(DateRange range) {
-        if (aggregations.isEmpty()) {
-            return null;
-        }
-
         final Aggregation.Session first = aggregations.get(0).session(range);
         final List<Aggregation.Session> rest = new ArrayList<Aggregation.Session>();
 

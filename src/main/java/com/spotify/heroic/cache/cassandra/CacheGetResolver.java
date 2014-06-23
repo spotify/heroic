@@ -42,9 +42,9 @@ Callback.Resolver<CacheBackendGetResult> {
     private List<DataPoint> doGetRow() throws ConnectionException {
         final TimeSerie timeSerie = key.getTimeSerie();
         final AggregationGroup aggregationGroup = key.getAggregationGroup();
-        final long columnWidth = aggregationGroup.getWidth();
+        final long columnSize = aggregationGroup.getSampling().getSize();
 
-        final List<Long> bases = calculateBases(columnWidth);
+        final List<Long> bases = calculateBases(columnSize);
 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
@@ -65,8 +65,8 @@ Callback.Resolver<CacheBackendGetResult> {
                 final double value = columns.getColumnByIndex(1).getDoubleValue();
                 final float count = columns.getColumnByIndex(2).getFloatValue();
 
-                final long timestamp = getDataPointTimestamp(base,
-                        columnWidth, offset);
+                final long timestamp = getDataPointTimestamp(base, columnSize,
+                        offset);
 
                 if (timestamp < range.getStart())
                     continue;

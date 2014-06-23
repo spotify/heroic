@@ -186,6 +186,7 @@ Callback<T> {
             handle.resolved(result);
         } catch (final Exception e) {
             log.error("Handle#resolve(T): failed", e);
+            callFailed(handle);
         }
     }
 

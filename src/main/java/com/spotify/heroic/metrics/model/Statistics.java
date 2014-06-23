@@ -56,8 +56,8 @@ public class Statistics {
     public static final class Row {
         public static final Row EMPTY = new Row(0, 0, 0);
 
-        private final int failed;
         private final int successful;
+        private final int failed;
         private final int cancelled;
 
         public Row merge(Row other) {

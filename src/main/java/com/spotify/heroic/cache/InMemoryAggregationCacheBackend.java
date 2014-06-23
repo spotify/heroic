@@ -45,7 +45,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         final AggregationGroup aggregation = key.getAggregationGroup();
-        final long width = aggregation.getWidth();
+        final long width = aggregation.getSampling().getSize();
 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
@@ -81,7 +81,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         final AggregationGroup aggregator = key.getAggregationGroup();
-        final long width = aggregator.getWidth();
+        final long width = aggregator.getSampling().getSize();
 
         if (width == 0) {
             return new ResolvedCallback<CacheBackendPutResult>(

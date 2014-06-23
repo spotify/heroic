@@ -27,15 +27,13 @@ public interface Aggregation {
          * 
          * @param datapoints
          */
-        public void stream(Iterable<DataPoint> datapoints);
+        public void update(Iterable<DataPoint> datapoints);
 
         /**
          * Get the result of this aggregator.
          */
         public Result result();
     }
-
-    public Sampling getSampling();
 
     /**
      * Create an aggregation session.
@@ -45,13 +43,9 @@ public interface Aggregation {
     public Session session(DateRange range);
 
     /**
-     * Get a hint of how large the interval is that this aggregator will
-     * require.
-     * 
-     * @return 0 if no interval is used, otherwise a positive value indicating
-     *         the millisecond interval.
+     * Get a hint of the sampling this aggregation uses.
      */
-    public long getWidth();
+    public Sampling getSampling();
 
     /**
      * Get a guesstimate of how big of a memory the aggregation would need. This

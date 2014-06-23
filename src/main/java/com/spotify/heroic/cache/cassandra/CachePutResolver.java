@@ -31,8 +31,8 @@ Callback.Resolver<CacheBackendPutResult> {
     public CacheBackendPutResult resolve() throws Exception {
         final AggregationGroup aggregation = key.getAggregationGroup();
         final TimeSerie timeSerie = key.getTimeSerie();
-        final long width = aggregation.getWidth();
-        final long columnWidth = width * CassandraCache.WIDTH;
+        final long size = aggregation.getSampling().getSize();
+        final long columnWidth = size * CassandraCache.WIDTH;
 
         for (final DataPoint d : datapoints) {
             final double value = d.getValue();
@@ -45,7 +45,7 @@ Callback.Resolver<CacheBackendPutResult> {
             if (Float.isNaN(p))
                 continue;
 
-            int index = (int)((d.getTimestamp() % columnWidth) / width);
+            int index = (int)((d.getTimestamp() % columnWidth) / size);
             long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
             final CacheKey key = new CacheKey(timeSerie, aggregation, base);
             doPut(key, index, d);

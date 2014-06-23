@@ -25,7 +25,7 @@ public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDat
     @Override
     public void resolved(Callback<FetchDataPoints.Result> callback,
             FetchDataPoints.Result result) throws Exception {
-        session.stream(result.getDatapoints());
+        session.update(result.getDatapoints());
     }
 
     @Override

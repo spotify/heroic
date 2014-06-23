@@ -38,10 +38,18 @@ public class DateRange implements Comparable<DateRange> {
         return end - start;
     }
 
-    public DateRange roundToInterval(long interval) {
-        final long newStart = start - (start % interval);
-        final long newEnd = end - end % interval;
-        return new DateRange(newStart, newEnd);
+    /**
+     * Creates a range that is rounded to the specified interval.
+     * 
+     * @param interval
+     *            Interval to round to. Return same range if 0.
+     * @return Rounded date range.
+     */
+    public DateRange rounded(long interval) {
+        if (interval <= 0)
+            return this;
+
+        return new DateRange(start - start % interval, end - end % interval);
     }
 
     public boolean overlap(DateRange other) {
@@ -91,12 +99,20 @@ public class DateRange implements Comparable<DateRange> {
                 end));
     }
 
-    public DateRange withStart(long start) {
+    public DateRange start(long start) {
         return new DateRange(start, this.end);
     }
 
-    public DateRange withEnd(long end) {
+    public DateRange end(long end) {
         return new DateRange(this.start, end);
+    }
+
+    public DateRange shiftStart(long extent) {
+        return new DateRange(Math.max(start + extent, 0), end);
+    }
+
+    public DateRange shiftEnd(long extent) {
+        return new DateRange(start, Math.max(end + extent, 0));
     }
 
     private static final FastDateFormat format = FastDateFormat
@@ -107,6 +123,6 @@ public class DateRange implements Comparable<DateRange> {
         final Date start = new Date(this.start);
         final Date end = new Date(this.end);
         return "DateRange(start=" + format.format(start) + ", end="
-                + format.format(end) + ")";
+        + format.format(end) + ")";
     }
 }

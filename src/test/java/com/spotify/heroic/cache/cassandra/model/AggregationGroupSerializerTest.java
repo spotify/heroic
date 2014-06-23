@@ -23,7 +23,8 @@ public class AggregationGroupSerializerTest {
 
     @Test
     public void testEmpty() throws Exception {
-        final AggregationGroup aggregationGroup = new AggregationGroup(new ArrayList<Aggregation>());
+        final AggregationGroup aggregationGroup = new AggregationGroup(
+                new ArrayList<Aggregation>(), new Sampling(10, 20));
         Assert.assertEquals(aggregationGroup, roundTrip(aggregationGroup));
     }
 
@@ -32,7 +33,8 @@ public class AggregationGroupSerializerTest {
         final Aggregation aggregation = new SumAggregation(resolution);
         final List<Aggregation> aggregations = new ArrayList<Aggregation>();
         aggregations.add(aggregation);
-        final AggregationGroup aggregationGroup = new AggregationGroup(aggregations);
+        final AggregationGroup aggregationGroup = new AggregationGroup(
+                aggregations, new Sampling(10, 20));
         Assert.assertEquals(aggregationGroup, roundTrip(aggregationGroup));
     }
 }
