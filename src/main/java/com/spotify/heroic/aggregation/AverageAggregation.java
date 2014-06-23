@@ -16,8 +16,7 @@ public class AverageAggregation extends BucketAggregation {
     }
 
     @Override
-    protected DataPoint build(Bucket bucket, float p) {
-        return new DataPoint(bucket.getTimestamp(), bucket.getValue()
-                / bucket.getCount(), p);
+    protected DataPoint build(long timestamp, long count, double value, float p) {
+        return new DataPoint(count, value / count, p);
     }
 }
