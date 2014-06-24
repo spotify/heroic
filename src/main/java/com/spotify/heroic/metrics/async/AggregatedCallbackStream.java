@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.async.Callback;
@@ -16,9 +15,9 @@ import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
-@Slf4j
 @RequiredArgsConstructor
-public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+public class AggregatedCallbackStream implements
+        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
     private final Aggregation.Session session;
 
@@ -29,15 +28,13 @@ public class AggregatedCallbackStream implements Callback.StreamReducer<FetchDat
     }
 
     @Override
-    public void failed(Callback<FetchDataPoints.Result> callback, Exception error)
-            throws Exception {
-        log.error("Error encountered when processing request", error);
+    public void failed(Callback<FetchDataPoints.Result> callback,
+            Exception error) throws Exception {
     }
 
     @Override
-    public void cancelled(Callback<FetchDataPoints.Result> callback, CancelReason reason)
-            throws Exception {
-        log.error("Cancel encountered when processing request", reason);
+    public void cancelled(Callback<FetchDataPoints.Result> callback,
+            CancelReason reason) throws Exception {
     }
 
     @Override

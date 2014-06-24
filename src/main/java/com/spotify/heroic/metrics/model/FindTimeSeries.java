@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
@@ -24,14 +24,10 @@ public class FindTimeSeries {
     @Getter
     private final DateRange range;
 
-    @RequiredArgsConstructor
-    @ToString(of = { "groups", "backend" })
+    @Data
     public static class Result {
         @Getter
         private final Map<TimeSerie, Set<TimeSerie>> groups;
-
-        @Getter
-        private final MetricBackend backend;
     }
 
     public FindTimeSeries withRange(DateRange range) {

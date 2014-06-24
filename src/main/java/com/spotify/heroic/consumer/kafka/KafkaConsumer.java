@@ -104,19 +104,14 @@ public class KafkaConsumer implements Consumer {
         }
     }
 
-    private Map<String, Integer> makeStreamsMap() {
-        final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
-
-        for (final String topic : topics) {
-            streamsMap.put(topic, threadCount);
-        }
-
-        return streamsMap;
-    }
-
     @Override
     public void stop() throws Exception {
         connector.shutdown();
+    }
+
+    @Override
+    public boolean isReady() {
+        return true;
     }
 
     @Override
@@ -127,5 +122,15 @@ public class KafkaConsumer implements Consumer {
     @Override
     public MetricBackendManager getMetricBackendManager() {
         return metric;
+    }
+
+    private Map<String, Integer> makeStreamsMap() {
+        final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
+
+        for (final String topic : topics) {
+            streamsMap.put(topic, threadCount);
+        }
+
+        return streamsMap;
     }
 }

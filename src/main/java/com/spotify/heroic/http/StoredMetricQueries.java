@@ -9,7 +9,7 @@ import com.spotify.heroic.http.model.MetricsRequest;
  *
  * @author udoprog
  */
-public class StoredMetricsQueries {
+public class StoredMetricQueries {
     private final ConcurrentHashMap<String, MetricsRequest> storedQueries = new ConcurrentHashMap<String, MetricsRequest>();
 
     public void put(String id, MetricsRequest query) {

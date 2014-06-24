@@ -1,9 +1,9 @@
 package com.spotify.heroic.statistics;
 
 public interface HeroicReporter {
-    MetricBackendManagerReporter newMetricBackendManager(String context);
+    MetricBackendManagerReporter newMetricBackendManager();
 
-    MetadataBackendManagerReporter newMetadataBackendManager(String context);
+    MetadataBackendManagerReporter newMetadataBackendManager();
 
     AggregationCacheReporter newAggregationCache(String context);
 

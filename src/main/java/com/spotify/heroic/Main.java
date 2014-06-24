@@ -31,9 +31,9 @@ import com.google.inject.spi.TypeListener;
 import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.StoredMetricsQueries;
-import com.spotify.heroic.injection.Startable;
-import com.spotify.heroic.injection.Stoppable;
+import com.spotify.heroic.http.StoredMetricQueries;
+import com.spotify.heroic.injection.Delegator;
+import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -52,8 +52,7 @@ public class Main extends GuiceServletContextListener {
 
     public static Injector injector;
 
-    public static List<Startable> startable = new ArrayList<Startable>();
-    public static List<Stoppable> stoppable = new ArrayList<Stoppable>();
+    public static List<Lifecycle> managed = new ArrayList<Lifecycle>();
 
     @Override
     protected Injector getInjector() {
@@ -70,12 +69,24 @@ public class Main extends GuiceServletContextListener {
         }
     }
 
-    public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter) {
+    public static Injector setupInjector(final HeroicConfig config,
+            final HeroicReporter reporter) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
-        final StoredMetricsQueries storedMetricsQueries = new StoredMetricsQueries();
+        final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
         final AggregationCache cache = config.getAggregationCache();
+
+        final List<MetricBackend> metricBackends = config.getMetricBackends();
+        final List<MetadataBackend> metadataBackends = config
+                .getMetadataBackends();
+
+        final MetricBackendManager metric = new MetricBackendManager(
+                reporter.newMetricBackendManager(), metricBackends,
+                config.getMaxAggregationMagnitude());
+
+        final MetadataBackendManager metadata = new MetadataBackendManager(
+                reporter.newMetadataBackendManager(), metadataBackends);
 
         modules.add(new AbstractModule() {
             @Override
@@ -87,20 +98,17 @@ public class Main extends GuiceServletContextListener {
                     bind(AggregationCache.class).toInstance(cache);
                 }
 
-                bind(MetricBackendManager.class).toInstance(new MetricBackendManager(reporter.newMetricBackendManager(null), config.getMaxAggregationMagnitude()));
-                bind(MetadataBackendManager.class).toInstance(new MetadataBackendManager(reporter.newMetadataBackendManager(null)));
-                bind(StoredMetricsQueries.class).toInstance(storedMetricsQueries);
+                bind(MetricBackendManager.class).toInstance(metric);
+                bind(MetadataBackendManager.class).toInstance(metadata);
+                bind(StoredMetricQueries.class)
+                        .toInstance(storedMetricsQueries);
+
+                setupBackends(MetricBackend.class, metricBackends);
 
                 {
-                    final Multibinder<MetricBackend> bindings = Multibinder.newSetBinder(binder(), MetricBackend.class);
-                    for (final MetricBackend backend : config.getMetricBackends()) {
-                        bindings.addBinding().toInstance(backend);
-                    }
-                }
-
-                {
-                    final Multibinder<MetadataBackend> bindings = Multibinder.newSetBinder(binder(), MetadataBackend.class);
-                    for (final MetadataBackend backend : config.getMetadataBackends()) {
+                    final Multibinder<MetadataBackend> bindings = Multibinder
+                            .newSetBinder(binder(), MetadataBackend.class);
+                    for (final MetadataBackend backend : metadataBackends) {
                         bindings.addBinding().toInstance(backend);
                     }
                 }
@@ -113,31 +121,33 @@ public class Main extends GuiceServletContextListener {
                     }
                 }
 
-                bindListener(new IsSubclassOf(Startable.class), new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
+                bindListener(new IsSubclassOf(Lifecycle.class),
+                        new TypeListener() {
                             @Override
-                            public void afterInjection(Object i) {
-                                startable.add((Startable) i);
+                            public <I> void hear(TypeLiteral<I> type,
+                                    TypeEncounter<I> encounter) {
+                                encounter.register(new InjectionListener<I>() {
+                                    @Override
+                                    public void afterInjection(Object i) {
+                                        managed.add((Lifecycle) i);
+                                    }
+                                });
                             }
                         });
-                    }
-                });
+            }
 
-                bindListener(new IsSubclassOf(Stoppable.class), new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
-                            @Override
-                            public void afterInjection(Object i) {
-                                stoppable.add((Stoppable) i);
-                            }
-                        });
+            @SuppressWarnings("unchecked")
+            private <T> void setupBackends(Class<T> clazz, List<T> backends) {
+                final Multibinder<T> bindings = Multibinder.newSetBinder(
+                        binder(), clazz);
+                for (T backend : backends) {
+                    bindings.addBinding().toInstance(backend);
+
+                    while (backend instanceof Delegator) {
+                        backend = ((Delegator<T>) backend).delegate();
+                        bindings.addBinding().toInstance(backend);
                     }
-                });
+                }
             }
         });
 
@@ -184,7 +194,7 @@ public class Main extends GuiceServletContextListener {
         injector = setupInjector(config, reporter);
 
         /* fire startable handlers */
-        for (final Startable startable : Main.startable) {
+        for (final Lifecycle startable : Main.managed) {
             try {
                 startable.start();
             } catch (Exception e) {
@@ -251,11 +261,11 @@ public class Main extends GuiceServletContextListener {
         }
 
         /* fire Stoppable handlers */
-        for (final Stoppable stoppable : Main.stoppable) {
+        for (final Lifecycle stoppable : Main.managed) {
             try {
                 stoppable.stop();
             } catch (Exception e) {
-                log.error("Failed to stop {}", startable, e);
+                log.error("Failed to stop {}", stoppable, e);
             }
         }
 

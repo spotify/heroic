@@ -3,6 +3,7 @@ package com.spotify.heroic.metadata;
 import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -12,7 +13,7 @@ import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
-public interface MetadataBackend {
+public interface MetadataBackend extends Lifecycle {
     public static interface YAML {
         MetadataBackend build(String context, MetadataBackendReporter reporter)
                 throws ValidationException;

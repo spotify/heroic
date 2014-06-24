@@ -6,8 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.inject.Inject;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,17 +21,11 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
-@RequiredArgsConstructor
 @Slf4j
-/**
- * TODO: Do not ignore errors from individual backends.
- * @author udoprog
- */
+@RequiredArgsConstructor
 public class MetadataBackendManager {
     private final MetadataBackendManagerReporter reporter;
-
-    @Inject
-    private Set<MetadataBackend> backends;
+    private final List<MetadataBackend> backends;
 
     public Callback<WriteResponse> write(TimeSerie timeSerie) {
         final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();

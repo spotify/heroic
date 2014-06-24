@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +18,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.cache.AggregationCache;
@@ -28,6 +28,7 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
@@ -41,18 +42,13 @@ import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 @RequiredArgsConstructor
 @Slf4j
 public class MetricBackendManager {
-    @Getter
     private final MetricBackendManagerReporter reporter;
-
-    @Getter
+    private final List<MetricBackend> backends;
     private final long maxAggregationMagnitude;
 
     @Inject
     @Nullable
     private AggregationCache aggregationCache;
-
-    @Inject
-    private Set<MetricBackend> metricBackends;
 
     @Inject
     private MetadataBackendManager metadata;
@@ -62,36 +58,40 @@ public class MetricBackendManager {
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
+    interface BackendOperation {
+        void run(MetricBackend backend) throws Exception;
+    }
+
     public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
         final List<Callback<WriteResponse>> writes = new ArrayList<Callback<WriteResponse>>();
 
-        for (final MetricBackend backend : metricBackends) {
-            if (!backend.matches(timeSerie))
-                continue;
-
-            try {
+        with(timeSerie, new BackendOperation() {
+            @Override
+            public void run(MetricBackend backend) throws Exception {
                 writes.add(backend.write(timeSerie, datapoints));
-            } catch (final Exception e) {
-                log.error("Failed to query backend", e);
             }
-        }
+        });
 
         if (metadata.isReady())
             writes.add(metadata.write(timeSerie));
 
+        if (writes.isEmpty())
+            return new CancelledCallback<WriteResponse>(
+                    CancelReason.NO_BACKENDS_AVAILABLE);
+
         return ConcurrentCallback.newReduce(writes,
                 new Callback.Reducer<WriteResponse, WriteResponse>() {
 
-            @Override
-            public WriteResponse resolved(
-                    Collection<WriteResponse> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
+                    @Override
+                    public WriteResponse resolved(
+                            Collection<WriteResponse> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
                             throws Exception {
-                return new WriteResponse();
-            }
-        });
+                        return new WriteResponse();
+                    }
+                });
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(
@@ -132,22 +132,11 @@ public class MetricBackendManager {
                 rounded);
 
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, aggregation,
-                criteria.getRange());
+                aggregationCache, aggregation, criteria.getRange());
 
         return findTimeSeries(criteria).transform(transformer)
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
-    }
-
-    private AggregationGroup buildAggregationGroup(final MetricsRequest query) {
-        final List<Aggregation> aggregators = query.getAggregators();
-
-        if (aggregators == null || aggregators.isEmpty())
-            return null;
-
-        return new AggregationGroup(aggregators, aggregators.get(0)
-                .getSampling());
     }
 
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
@@ -178,7 +167,7 @@ public class MetricBackendManager {
         final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
                 rounded);
 
-        final Callback<List<FindTimeSeries.Result>> rows = findTimeSeries(criteria);
+        final Callback<List<GroupedTimeSeries>> rows = findTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -200,28 +189,16 @@ public class MetricBackendManager {
     public Callback<Set<TimeSerie>> getAllTimeSeries() {
         final List<Callback<Set<TimeSerie>>> backendRequests = new ArrayList<Callback<Set<TimeSerie>>>();
 
-        for (final MetricBackend backend : metricBackends) {
-            backendRequests.add(backend.getAllTimeSeries());
-        }
+        with(new BackendOperation() {
+            @Override
+            public void run(MetricBackend backend) throws Exception {
+                backendRequests.add(backend.getAllTimeSeries());
+            }
+        });
 
         return ConcurrentCallback.newReduce(backendRequests,
                 Reducers.<TimeSerie> joinSets()).register(
-                        reporter.reportGetAllRows());
-    }
-
-    /**
-     * Check if the query wants to hint at a specific interval. If that is the
-     * case, round the provided date to the specified interval.
-     * 
-     * @param query
-     * @return
-     */
-    private DateRange roundRange(AggregationGroup aggregation, DateRange range) {
-        if (aggregation == null)
-            return range;
-
-        final Sampling sampling = aggregation.getSampling();
-        return range.rounded(sampling.getExtent()).rounded(sampling.getSize()).shiftStart(-sampling.getExtent());
+                reporter.reportGetAllRows());
     }
 
     private static final long INITIAL_DIFF = 3600 * 1000 * 6;
@@ -316,25 +293,95 @@ public class MetricBackendManager {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                .register(reporter.reportStreamMetricsChunk());
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
 
-    private Callback<List<FindTimeSeries.Result>> findTimeSeries(
-            FindTimeSeries criteria) {
-        final List<Callback<FindTimeSeries.Result>> queries = new ArrayList<Callback<FindTimeSeries.Result>>();
+    /**
+     * Check if the query wants to hint at a specific interval. If that is the
+     * case, round the provided date to the specified interval.
+     * 
+     * @param query
+     * @return
+     */
+    private DateRange roundRange(AggregationGroup aggregation, DateRange range) {
+        if (aggregation == null)
+            return range;
 
-        for (final MetricBackend backend : metricBackends) {
+        final Sampling sampling = aggregation.getSampling();
+        return range.rounded(sampling.getExtent()).rounded(sampling.getSize())
+                .shiftStart(-sampling.getExtent());
+    }
+
+    /**
+     * Function used to execute a backend operation on eligible backends.
+     * 
+     * This will take care not to select disabled or unavailable backends.
+     */
+    private void with(final TimeSerie match, BackendOperation op) {
+        for (final MetricBackend backend : backends) {
+            if (match != null && !backend.matches(match))
+                continue;
+
+            if (!backend.isReady())
+                continue;
+
             try {
-                queries.add(backend.findTimeSeries(criteria));
-            } catch (final Exception e) {
-                log.error("Failed to query backend", e);
+                op.run(backend);
+            } catch (Exception e) {
+                log.error("Backend operation failed", e);
             }
         }
+    }
+
+    private void with(BackendOperation op) {
+        with(null, op);
+    }
+
+    /**
+     * Finds time series and associates the result with a specific bakend.
+     * 
+     * @param criteria
+     * @return
+     */
+    private Callback<List<GroupedTimeSeries>> findTimeSeries(
+            final FindTimeSeries criteria) {
+        final List<Callback<GroupedTimeSeries>> queries = new ArrayList<Callback<GroupedTimeSeries>>();
+
+        with(new BackendOperation() {
+            @Override
+            public void run(final MetricBackend backend) throws Exception {
+                Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries> transformer = new Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries>() {
+                    @Override
+                    public GroupedTimeSeries transform(FindTimeSeries.Result result)
+                            throws Exception {
+                        return new GroupedTimeSeries(
+                                result.getGroups(), backend);
+                    }
+                };
+
+                queries.add(backend.findTimeSeries(criteria).transform(
+                        transformer));
+            }
+        });
+
+        if (queries.isEmpty())
+            return new CancelledCallback<List<GroupedTimeSeries>>(
+                    CancelReason.NO_BACKENDS_AVAILABLE);
 
         return ConcurrentCallback.newReduce(queries,
-                Reducers.<FindTimeSeries.Result> list()).register(
-                        reporter.reportFindTimeSeries());
+                Reducers.<GroupedTimeSeries> list()).register(
+                reporter.reportFindTimeSeries());
+    }
+
+    private AggregationGroup buildAggregationGroup(final MetricsRequest query) {
+        final List<Aggregation> aggregators = query.getAggregators();
+
+        if (aggregators == null || aggregators.isEmpty())
+            return null;
+
+        return new AggregationGroup(aggregators, aggregators.get(0)
+                .getSampling());
     }
 }

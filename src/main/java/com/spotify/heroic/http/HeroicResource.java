@@ -83,7 +83,7 @@ public class HeroicResource {
     private MetadataBackendManager metadataBackend;
 
     @Inject
-    private StoredMetricsQueries storedQueries;
+    private StoredMetricQueries storedQueries;
 
     public static final class Message {
         @Getter

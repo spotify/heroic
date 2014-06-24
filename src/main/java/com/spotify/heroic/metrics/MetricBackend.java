@@ -3,7 +3,11 @@ package com.spotify.heroic.metrics;
 import java.util.List;
 import java.util.Set;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DataPoint;
@@ -13,10 +17,27 @@ import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
-public interface MetricBackend {
-    public static interface YAML {
-        MetricBackend build(String context, MetricBackendReporter reporter)
-                throws ValidationException;
+public interface MetricBackend extends Lifecycle {
+    public abstract class YAML {
+        private static final double DEFAULT_THRESHOLD = 10.0;
+        private static final long DEFAULT_COOLDOWN = 60000;
+
+        @Getter
+        @Setter
+        private double threshold = DEFAULT_THRESHOLD;
+
+        @Getter
+        @Setter
+        private long cooldown = DEFAULT_COOLDOWN;
+
+        public MetricBackend build(String context,
+                MetricBackendReporter reporter) throws ValidationException {
+            final MetricBackend delegate = buildDelegate(context, reporter);
+            return new DisablingMetricBackend(delegate, threshold, cooldown);
+        }
+
+        protected abstract MetricBackend buildDelegate(String context,
+                MetricBackendReporter reporter) throws ValidationException;
     }
 
     /**
@@ -90,4 +111,6 @@ public interface MetricBackend {
      */
     public Callback<Long> getColumnCount(final TimeSerie timeSerie,
             DateRange range);
+
+    public boolean isReady();
 }

@@ -12,18 +12,13 @@ import java.util.concurrent.Executors;
 import javax.inject.Inject;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import lombok.ToString;
 
-import com.netflix.astyanax.AstyanaxConfiguration;
-import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
@@ -33,15 +28,16 @@ import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
-import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
-import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
@@ -56,10 +52,10 @@ import com.spotify.heroic.yaml.ValidationException;
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@RequiredArgsConstructor
-@Slf4j
-public class HeroicMetricBackend implements MetricBackend, Startable {
-    public static class YAML implements MetricBackend.YAML {
+@ToString()
+public class HeroicMetricBackend extends CassandraMetricBackend implements
+        MetricBackend {
+    public static class YAML extends MetricBackend.YAML {
         public static final String TYPE = "!heroic-backend";
 
         /**
@@ -104,7 +100,7 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         private int writeThreads = 20;
 
         @Override
-        public MetricBackend build(String context,
+        public MetricBackend buildDelegate(String context,
                 MetricBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
@@ -115,8 +111,8 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
             final Executor writeExecutor = Executors
                     .newFixedThreadPool(writeThreads);
             return new HeroicMetricBackend(reporter, readExecutor,
-                    writeExecutor, keyspace, seeds,
-                    maxConnectionsPerHost, attributes);
+                    writeExecutor, keyspace, seeds, maxConnectionsPerHost,
+                    attributes);
         }
     }
 
@@ -126,51 +122,17 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     private final MetricBackendReporter reporter;
     private final Executor readExecutor;
     private final Executor writeExecutor;
-    private final String keyspaceName;
-    private final String seeds;
-    private final int maxConnectionsPerHost;
-    private final Map<String, String> backendTags;
-
-    private AstyanaxContext<Keyspace> context;
-    private Keyspace keyspace;
 
     @Inject
     private MetadataBackendManager metadata;
 
-    @Override
-    public boolean matches(final TimeSerie timeSerie) {
-        final Map<String, String> tags = timeSerie.getTags();
-
-        if ((tags == null || tags.isEmpty()) && !backendTags.isEmpty())
-            return false;
-
-        for (Map.Entry<String, String> entry : backendTags.entrySet()) {
-            if (!tags.get(entry.getKey()).equals(entry.getValue())) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    @Override
-    public void start() throws Exception {
-        log.info("Starting");
-
-        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
-
-        context = new AstyanaxContext.Builder()
-        .withConnectionPoolConfiguration(
-                new ConnectionPoolConfigurationImpl(
-                        "HeroicConnectionPool").setPort(9160)
-                        .setMaxConnsPerHost(maxConnectionsPerHost)
-                        .setSeeds(seeds)).forKeyspace(keyspaceName)
-                        .withAstyanaxConfiguration(config)
-                        .buildKeyspace(ThriftFamilyFactory.getInstance());
-
-        context.start();
-        keyspace = context.getClient();
+    public HeroicMetricBackend(MetricBackendReporter reporter,
+            Executor readExecutor, Executor writeExecutor, String keyspace,
+            String seeds, int maxConnectionsPerHost, Map<String, String> tags) {
+        super(keyspace, seeds, maxConnectionsPerHost, tags);
+        this.reporter = reporter;
+        this.readExecutor = readExecutor;
+        this.writeExecutor = writeExecutor;
     }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
@@ -182,6 +144,12 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     @Override
     public Callback<WriteResponse> write(final TimeSerie timeSerie,
             final List<DataPoint> datapoints) {
+        final Keyspace keyspace = keyspace();
+
+        if (keyspace == null)
+            return new CancelledCallback<WriteResponse>(
+                    CancelReason.BACKEND_DISABLED);
+
         final MutationBatch mutation = keyspace.prepareMutationBatch()
                 .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
@@ -202,12 +170,12 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
         return ConcurrentCallback.newResolve(writeExecutor,
                 new Callback.Resolver<WriteResponse>() {
-            @Override
-            public WriteResponse resolve() throws Exception {
-                mutation.execute();
-                return new WriteResponse();
-            }
-        }).register(reporter.reportWriteBatch());
+                    @Override
+                    public WriteResponse resolve() throws Exception {
+                        mutation.execute();
+                        return new WriteResponse();
+                    }
+                }).register(reporter.reportWriteBatch());
     }
 
     /**
@@ -224,25 +192,30 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
     @SuppressWarnings("unused")
     private Callback<Integer> writeCQL(final MetricsRowKey rowKey,
             final List<DataPoint> datapoints) {
+        final Keyspace keyspace = keyspace();
+
+        if (keyspace == null)
+            return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
+
         return ConcurrentCallback.newResolve(readExecutor,
                 new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                for (final DataPoint d : datapoints) {
-                    keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(d.getTimestamp(),
-                                    LongSerializer.get())
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            MetricsRowKeySerializer.get())
+                                    .withByteBufferValue(d.getTimestamp(),
+                                            LongSerializer.get())
                                     .withByteBufferValue(d.getValue(),
                                             DoubleSerializer.get()).execute();
-                }
+                        }
 
-                return datapoints.size();
-            }
-        });
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override
@@ -264,6 +237,12 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
 
     private Callback<FetchDataPoints.Result> buildQuery(
             final TimeSerie timeSerie, long base, final DateRange range) {
+        final Keyspace keyspace = keyspace();
+
+        if (keyspace == null)
+            return new CancelledCallback<FetchDataPoints.Result>(
+                    CancelReason.BACKEND_DISABLED);
+
         final DateRange newRange = range.modify(base, base
                 + MetricsRowKey.MAX_WIDTH - 1);
 
@@ -278,19 +257,19 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder().setStart(newRange.getStart())
-                        .setEnd(newRange.getEnd()).build());
+                                .setEnd(newRange.getEnd()).build());
 
         return ConcurrentCallback.newResolve(readExecutor,
                 new Callback.Resolver<FetchDataPoints.Result>() {
-            @Override
-            public Result resolve() throws Exception {
-                final OperationResult<ColumnList<Long>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = buildDataPoints(key,
-                        result);
-                return new FetchDataPoints.Result(datapoints, timeSerie);
-            }
-        });
+                    @Override
+                    public Result resolve() throws Exception {
+                        final OperationResult<ColumnList<Long>> result = dataQuery
+                                .execute();
+                        final List<DataPoint> datapoints = buildDataPoints(key,
+                                result);
+                        return new FetchDataPoints.Result(datapoints, timeSerie);
+                    }
+                });
     }
 
     @Override
@@ -302,43 +281,42 @@ public class HeroicMetricBackend implements MetricBackend, Startable {
         return metadata
                 .findTimeSeries(
                         new TimeSerieQuery(query.getKey(), filter, null))
-                        .transform(
-                                new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
-                                    @Override
-                                    public FindTimeSeries.Result transform(
-                                            com.spotify.heroic.metadata.model.FindTimeSeries result)
-                                                    throws Exception {
-                                        final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+                .transform(
+                        new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
+                            @Override
+                            public FindTimeSeries.Result transform(
+                                    com.spotify.heroic.metadata.model.FindTimeSeries result)
+                                    throws Exception {
+                                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
-                                        for (final TimeSerie timeSerie : result
-                                                .getTimeSeries()) {
-                                            final Map<String, String> tags = new HashMap<String, String>(
-                                                    filter);
+                                for (final TimeSerie timeSerie : result
+                                        .getTimeSeries()) {
+                                    final Map<String, String> tags = new HashMap<String, String>(
+                                            filter);
 
-                                            if (groupBy != null) {
-                                                for (final String group : groupBy) {
-                                                    tags.put(group, timeSerie.getTags()
-                                                            .get(group));
-                                                }
-                                            }
-
-                                            final TimeSerie key = timeSerie
-                                                    .withTags(tags);
-
-                                            Set<TimeSerie> group = groups.get(key);
-
-                                            if (group == null) {
-                                                group = new HashSet<TimeSerie>();
-                                                groups.put(key, group);
-                                            }
-
-                                            group.add(timeSerie);
+                                    if (groupBy != null) {
+                                        for (final String group : groupBy) {
+                                            tags.put(group, timeSerie.getTags()
+                                                    .get(group));
                                         }
-
-                                        return new FindTimeSeries.Result(groups,
-                                                HeroicMetricBackend.this);
                                     }
-                                });
+
+                                    final TimeSerie key = timeSerie
+                                            .withTags(tags);
+
+                                    Set<TimeSerie> group = groups.get(key);
+
+                                    if (group == null) {
+                                        group = new HashSet<TimeSerie>();
+                                        groups.put(key, group);
+                                    }
+
+                                    group.add(timeSerie);
+                                }
+
+                                return new FindTimeSeries.Result(groups);
+                            }
+                        });
     }
 
     @Override

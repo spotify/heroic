@@ -1,5 +1,8 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
+import java.net.InetAddress;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,8 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-
-import javax.annotation.PostConstruct;
+import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +22,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -29,9 +33,10 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
-import com.spotify.heroic.injection.Startable;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.elasticsearch.async.FindKeysResolver;
@@ -50,7 +55,7 @@ import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
 @Slf4j
-public class ElasticSearchMetadataBackend implements MetadataBackend, Startable {
+public class ElasticSearchMetadataBackend implements MetadataBackend {
     public static final String TAGS_VALUE = "tags.value";
     public static final String TAGS_KEY = "tags.key";
     public static final String TAGS = "tags";
@@ -78,15 +83,28 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
         @Setter
         private String type = "metadata";
 
+        @Getter
+        @Setter
+        private boolean nodeClient = false;
+
         @Override
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
-                                                                 .size()]);
+                    .size()]);
             final Executor executor = Executors.newFixedThreadPool(10);
             return new ElasticSearchMetadataBackend(executor, reporter, seeds,
-                    clusterName, index, type);
+                    clusterName, index, type, nodeClient);
         }
+    }
+
+    /**
+     * Common connection abstraction between Node and TransportClient.
+     */
+    private interface Connection {
+        Client client();
+
+        void close() throws Exception;
     }
 
     private final Executor executor;
@@ -95,9 +113,18 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     private final String clusterName;
     private final String index;
     private final String type;
+    private final boolean nodeClient;
 
-    private Node node;
-    private Client client;
+    private final AtomicReference<Connection> connection = new AtomicReference<Connection>();
+
+    public Client client() {
+        final Connection connection = this.connection.get();
+
+        if (connection == null)
+            return null;
+
+        return connection.client();
+    }
 
     /**
      * prevent unnecessary writes if entry is already in cache. Integer is the
@@ -107,37 +134,124 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     @Override
-    @PostConstruct
-    public void start() throws Exception {
-        log.info("Starting");
+    public synchronized void start() throws Exception {
+        if (this.connection.get() != null)
+            return;
 
+        final Connection connection;
+
+        if (nodeClient) {
+            log.info("Starting (Node Client)");
+            connection = setupNodeClient();
+        } else {
+            log.info("Starting (Transport Client)");
+            connection = setupTransportClient();
+        }
+
+        if (!this.connection.compareAndSet(null, connection))
+            connection.close();
+    }
+
+    @Override
+    public synchronized void stop() throws Exception {
+        final Connection connection = this.connection.get();
+
+        if (connection == null)
+            return;
+
+        if (this.connection.compareAndSet(connection, null))
+            connection.close();
+    }
+
+    private Connection setupNodeClient() throws UnknownHostException {
         final Settings settings = ImmutableSettings.builder()
+                .put("node.name", InetAddress.getLocalHost().getHostName())
                 .put("discovery.zen.ping.multicast.enabled", false)
                 .putArray("discovery.zen.ping.unicast.hosts", seeds).build();
+        final Node node = NodeBuilder.nodeBuilder().settings(settings)
+                .client(true).clusterName(clusterName).node();
+        final Client client = node.client();
 
-        this.node = NodeBuilder.nodeBuilder().settings(settings).client(true)
-                .clusterName(clusterName).node();
-        this.client = node.client();
+        return new Connection() {
+            @Override
+            public Client client() {
+                return client;
+            }
+
+            @Override
+            public void close() throws Exception {
+                node.close();
+            }
+        };
+    }
+
+    private Connection setupTransportClient() {
+        final Settings settings = ImmutableSettings.builder()
+                .put("cluster.name", clusterName).build();
+
+        final TransportClient client = new TransportClient(settings);
+
+        for (final String seed : seeds) {
+            final InetSocketTransportAddress transportAddress;
+
+            try {
+                transportAddress = parseInetSocketTransportAddress(seed);
+            } catch (Exception e) {
+                log.error("Invalid seed address: {}", seed, e);
+                continue;
+            }
+
+            client.addTransportAddress(transportAddress);
+        }
+
+        return new Connection() {
+            @Override
+            public Client client() {
+                return client;
+            }
+
+            @Override
+            public void close() throws Exception {
+                client.close();
+            }
+        };
+    }
+
+    private InetSocketTransportAddress parseInetSocketTransportAddress(
+            final String seed) throws URISyntaxException {
+        if (seed.contains(":")) {
+            final String parts[] = seed.split(":");
+            return new InetSocketTransportAddress(parts[0],
+                    Integer.valueOf(parts[1]));
+        }
+
+        return new InetSocketTransportAddress(seed, 9300);
     }
 
     @Override
     public Callback<FindTags> findTags(final TimeSerieQuery query,
             final Set<String> includes, final Set<String> excludes)
-                    throws MetadataQueryException {
-        if (node == null)
-            throw new MetadataQueryException("Node not started");
+            throws MetadataQueryException {
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<FindTags>(
+                    CancelReason.BACKEND_DISABLED);
 
         return findTagKeys(query).transform(
                 new FindTagsTransformer(executor, client, index, type, query,
                         includes, excludes))
-                        .register(reporter.reportFindTags());
+                .register(reporter.reportFindTags());
     }
 
     @Override
     public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query)
             throws MetadataQueryException {
-        if (node == null)
-            throw new MetadataQueryException("Node not started");
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<FindTimeSeries>(
+                    CancelReason.BACKEND_DISABLED);
 
         final QueryBuilder builder = toQueryBuilder(query);
 
@@ -148,8 +262,11 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
     public Callback<FindTagKeys> findTagKeys(final TimeSerieQuery query)
             throws MetadataQueryException {
-        if (node == null)
-            throw new MetadataQueryException("Node not started");
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<FindTagKeys>(
+                    CancelReason.BACKEND_DISABLED);
 
         final QueryBuilder builder = toQueryBuilder(query);
 
@@ -161,21 +278,27 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
     @Override
     public Callback<FindKeys> findKeys(final TimeSerieQuery query)
             throws MetadataQueryException {
-        if (node == null)
-            throw new MetadataQueryException("Node not started");
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<FindKeys>(
+                    CancelReason.BACKEND_DISABLED);
 
         final QueryBuilder builder = toQueryBuilder(query);
 
         return ConcurrentCallback.newResolve(executor,
                 new FindKeysResolver(client, index, type, builder)).register(
-                        reporter.reportFindKeys());
+                reporter.reportFindKeys());
     }
 
     @Override
     public Callback<WriteResponse> write(final TimeSerie timeSerie)
             throws MetadataQueryException {
-        if (node == null)
-            throw new MetadataQueryException("Node not started");
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<WriteResponse>(
+                    CancelReason.BACKEND_DISABLED);
 
         if (writeCache.contains(timeSerie)) {
             reporter.reportWriteCacheHit();
@@ -188,21 +311,21 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<WriteResponse>() {
-            @Override
-            public WriteResponse resolve() throws Exception {
-                final String id = Integer.toHexString(timeSerie
-                        .hashCode());
+                    @Override
+                    public WriteResponse resolve() throws Exception {
+                        final String id = Integer.toHexString(timeSerie
+                                .hashCode());
 
-                final ListenableActionFuture<IndexResponse> future = client
-                        .prepareIndex().setIndex(index).setType(type)
-                        .setId(id).setSource(source).execute();
+                        final ListenableActionFuture<IndexResponse> future = client
+                                .prepareIndex().setIndex(index).setType(type)
+                                .setId(id).setSource(source).execute();
 
-                future.get();
+                        future.get();
 
-                writeCache.add(timeSerie.hashCode());
-                return new WriteResponse();
-            }
-        }).register(reporter.reportWrite());
+                        writeCache.add(timeSerie.hashCode());
+                        return new WriteResponse();
+                    }
+                }).register(reporter.reportWrite());
     }
 
     @Override
@@ -212,7 +335,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
 
     @Override
     public boolean isReady() {
-        return node != null;
+        return client() != null;
     }
 
     public static QueryBuilder toQueryBuilder(final TimeSerieQuery query) {
@@ -234,9 +357,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
                 builder.must(QueryBuilders.nestedQuery(
                         TAGS,
                         QueryBuilders
-                        .boolQuery()
-                        .must(QueryBuilders.termQuery(TAGS_KEY,
-                                entry.getKey()))
+                                .boolQuery()
+                                .must(QueryBuilders.termQuery(TAGS_KEY,
+                                        entry.getKey()))
                                 .must(QueryBuilders.termQuery(TAGS_VALUE,
                                         entry.getValue()))));
             }
@@ -289,7 +412,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend, Startable 
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-        .get("tags");
+                .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (Map<String, String> entry : attributes) {

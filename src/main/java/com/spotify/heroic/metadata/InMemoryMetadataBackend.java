@@ -355,4 +355,12 @@ public class InMemoryMetadataBackend implements MetadataBackend {
     public synchronized boolean isReady() {
         return ready;
     }
+
+    @Override
+    public void start() throws Exception {
+    }
+
+    @Override
+    public void stop() throws Exception {
+    }
 }

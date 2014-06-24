@@ -15,10 +15,8 @@ public class SemanticMetricBackendManagerReporter implements
     private final CallbackReporter findRowGroups;
     private final CallbackReporter write;
 
-    public SemanticMetricBackendManagerReporter(
-            SemanticMetricRegistry registry, String context) {
-        final MetricId id = MetricId.build("metric-backend-manager").tagged(
-                "context", context);
+    public SemanticMetricBackendManagerReporter(SemanticMetricRegistry registry) {
+        final MetricId id = MetricId.build("metric-backend-manager");
         this.getAllRows = new SemanticCallbackReporter(registry, id.tagged(
                 "operation", "get-all-rows"));
         this.queryMetrics = new SemanticCallbackReporter(registry, id.tagged(

@@ -14,22 +14,23 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
-public final class TimeSeriesTransformer implements
-Callback.DeferredTransformer<List<FindTimeSeries.Result>, MetricGroups> {
+public final class TimeSeriesTransformer
+        implements
+        Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
     private final AggregationCache cache;
     private final AggregationGroup aggregation;
     private final DateRange range;
 
     @Override
-    public Callback<MetricGroups> transform(List<FindTimeSeries.Result> result)
-            throws Exception {
+    public Callback<MetricGroups> transform(
+            List<GroupedTimeSeries> result) throws Exception {
         if (cache == null || aggregation == null)
             return ConcurrentCallback.newReduce(execute(result),
                     new MergeMetricGroups());
@@ -39,15 +40,14 @@ Callback.DeferredTransformer<List<FindTimeSeries.Result>, MetricGroups> {
     }
 
     private List<Callback<MetricGroups>> execute(
-            final List<FindTimeSeries.Result> result) throws Exception {
+            final List<GroupedTimeSeries> result) throws Exception {
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
-        for (final FindTimeSeries.Result r : result) {
+        for (final GroupedTimeSeries r : result) {
             for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
                     .entrySet()) {
                 final TimeSerieSlice slice = entry.getKey().slice(range);
-                queries.add(buildLookup(r.getBackend(), slice,
-                        entry.getValue()));
+                queries.add(buildLookup(r.getBackend(), slice, entry.getValue()));
             }
         }
 
@@ -55,10 +55,10 @@ Callback.DeferredTransformer<List<FindTimeSeries.Result>, MetricGroups> {
     }
 
     private List<Callback<MetricGroups>> executeCached(
-            List<FindTimeSeries.Result> result) {
+            List<GroupedTimeSeries> result) {
         final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
-        for (final FindTimeSeries.Result r : result) {
+        for (final GroupedTimeSeries r : result) {
             final MetricBackend backend = r.getBackend();
 
             for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()

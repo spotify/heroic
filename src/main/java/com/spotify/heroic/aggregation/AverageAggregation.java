@@ -11,12 +11,13 @@ public class AverageAggregation extends BucketAggregation {
     }
 
     @JsonCreator
-    public static AverageAggregation create(@JsonProperty("sampling") Sampling sampling) {
+    public static AverageAggregation create(
+            @JsonProperty("sampling") Sampling sampling) {
         return new AverageAggregation(sampling);
     }
 
     @Override
     protected DataPoint build(long timestamp, long count, double value, float p) {
-        return new DataPoint(count, value / count, p);
+        return new DataPoint(timestamp, value / count, p);
     }
 }

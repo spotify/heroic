@@ -20,7 +20,8 @@ public class MetricBackendManagerTest {
 
     @Before
     public void before() {
-        this.manager = new MetricBackendManager(reporter, MAGNITUDE);
+        this.manager = new MetricBackendManager(reporter, metricBackends,
+                MAGNITUDE);
     }
 
     @Test(expected = MetricQueryException.class)

@@ -17,8 +17,13 @@ public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
     @Override
-    public MetricBackendManagerReporter newMetricBackendManager(String context) {
-        return new SemanticMetricBackendManagerReporter(registry, context);
+    public MetricBackendManagerReporter newMetricBackendManager() {
+        return new SemanticMetricBackendManagerReporter(registry);
+    }
+
+    @Override
+    public MetadataBackendManagerReporter newMetadataBackendManager() {
+        return new SemanticMetadataBackendManagerReporter(registry);
     }
 
     @Override
@@ -32,14 +37,9 @@ public class SemanticHeroicReporter implements HeroicReporter {
     }
 
     @Override
-    public AggregationCacheBackendReporter newAggregationCacheBackend(String context) {
-        return new SemanticAggregationCacheBackendReporter(registry, context);
-    }
-
-    @Override
-    public MetadataBackendManagerReporter newMetadataBackendManager(
+    public AggregationCacheBackendReporter newAggregationCacheBackend(
             String context) {
-        return new SemanticMetadataBackendManagerReporter(registry, context);
+        return new SemanticAggregationCacheBackendReporter(registry, context);
     }
 
     @Override
