@@ -1,7 +1,6 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +19,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.MergeWriteResponse;
 import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
@@ -80,18 +80,7 @@ public class MetricBackendManager {
             return new CancelledCallback<WriteResponse>(
                     CancelReason.NO_BACKENDS_AVAILABLE);
 
-        return ConcurrentCallback.newReduce(writes,
-                new Callback.Reducer<WriteResponse, WriteResponse>() {
-
-                    @Override
-                    public WriteResponse resolved(
-                            Collection<WriteResponse> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
-                            throws Exception {
-                        return new WriteResponse();
-                    }
-                });
+        return ConcurrentCallback.newReduce(writes, MergeWriteResponse.get());
     }
 
     public Callback<MetricsQueryResponse> queryMetrics(
@@ -354,10 +343,10 @@ public class MetricBackendManager {
             public void run(final MetricBackend backend) throws Exception {
                 Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries> transformer = new Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries>() {
                     @Override
-                    public GroupedTimeSeries transform(FindTimeSeries.Result result)
-                            throws Exception {
-                        return new GroupedTimeSeries(
-                                result.getGroups(), backend);
+                    public GroupedTimeSeries transform(
+                            FindTimeSeries.Result result) throws Exception {
+                        return new GroupedTimeSeries(result.getGroups(),
+                                backend);
                     }
                 };
 

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.MergeWriteResponse;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
@@ -38,21 +39,9 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<WriteResponse, WriteResponse>() {
-                    @Override
-                    public WriteResponse resolved(
-                            Collection<WriteResponse> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
-                            throws Exception {
-                        for (final Exception e : errors) {
-                            log.error("Failed to write", e);
-                        }
-
-                        return new WriteResponse();
-                    }
-                }).register(reporter.reportFindTags());
+        return ConcurrentCallback
+                .newReduce(callbacks, MergeWriteResponse.get()).register(
+                        reporter.reportFindTags());
     }
 
     public Callback<FindTags> findTags(final TimeSerieQuery query,

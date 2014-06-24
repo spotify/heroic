@@ -1,13 +1,18 @@
 package com.spotify.heroic.statistics.semantic;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetadataBackendReporter implements MetadataBackendReporter {
+    private final SemanticMetricRegistry registry;
+    private final MetricId id;
+
     private final CallbackReporter refresh;
     private final CallbackReporter findTags;
     private final CallbackReporter findTagKeys;
@@ -20,8 +25,9 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
             String context) {
-        final MetricId id = MetricId.build("metadata-backend").tagged(
-                "context", context);
+        this.registry = registry;
+        this.id = MetricId.build("metadata-backend").tagged("context", context);
+
         refresh = new SemanticCallbackReporter(registry, id.tagged("operation",
                 "refresh"));
         findTags = new SemanticCallbackReporter(registry, id.tagged(
@@ -78,5 +84,18 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     @Override
     public void reportWriteCacheMiss() {
         writeCacheMiss.mark();
+    }
+
+    @Override
+    public void newWriteThreadPool(final ThreadPoolProvider provider) {
+        final MetricId id = this.id.resolve("write-thread-pool");
+
+        registry.register(id.tagged("what", "size", "unit", "count"),
+                new Gauge<Integer>() {
+                    @Override
+                    public Integer getValue() {
+                        return provider.getQueueSize();
+                    }
+                });
     }
 }

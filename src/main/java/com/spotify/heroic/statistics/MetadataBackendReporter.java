@@ -1,6 +1,5 @@
 package com.spotify.heroic.statistics;
 
-
 public interface MetadataBackendReporter {
     public CallbackReporter.Context reportRefresh();
 
@@ -17,4 +16,6 @@ public interface MetadataBackendReporter {
     public void reportWriteCacheHit();
 
     public void reportWriteCacheMiss();
+
+    public void newWriteThreadPool(ThreadPoolProvider provider);
 }

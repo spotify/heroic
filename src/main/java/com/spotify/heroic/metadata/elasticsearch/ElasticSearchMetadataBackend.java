@@ -12,6 +12,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.Getter;
@@ -51,6 +54,7 @@ import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
@@ -87,14 +91,34 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         @Setter
         private boolean nodeClient = false;
 
+        @Getter
+        @Setter
+        private int writeThreads = 20;
+
+        @Getter
+        @Setter
+        private int writeQueueSize = 1000;
+
         @Override
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
                     .size()]);
             final Executor executor = Executors.newFixedThreadPool(10);
-            return new ElasticSearchMetadataBackend(executor, reporter, seeds,
-                    clusterName, index, type, nodeClient);
+
+            final ThreadPoolExecutor writeExecutor = new ThreadPoolExecutor(
+                    writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(writeQueueSize));
+
+            reporter.newWriteThreadPool(new ThreadPoolProvider() {
+                @Override
+                public int getQueueSize() {
+                    return writeExecutor.getQueue().size();
+                }
+            });
+
+            return new ElasticSearchMetadataBackend(executor, writeExecutor,
+                    reporter, seeds, clusterName, index, type, nodeClient);
         }
     }
 
@@ -108,6 +132,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     private final Executor executor;
+    private final ThreadPoolExecutor writeExecutor;
     private final MetadataBackendReporter reporter;
     private final String[] seeds;
     private final String clusterName;
@@ -302,14 +327,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         if (writeCache.contains(timeSerie)) {
             reporter.reportWriteCacheHit();
-            return new ResolvedCallback<WriteResponse>(new WriteResponse());
+            return new ResolvedCallback<WriteResponse>(new WriteResponse(1, 0));
         }
 
         reporter.reportWriteCacheMiss();
 
         final Map<String, Object> source = fromTimeSerie(timeSerie);
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(writeExecutor,
                 new Callback.Resolver<WriteResponse>() {
                     @Override
                     public WriteResponse resolve() throws Exception {
@@ -323,7 +348,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                         future.get();
 
                         writeCache.add(timeSerie.hashCode());
-                        return new WriteResponse();
+                        return new WriteResponse(1, 0);
                     }
                 }).register(reporter.reportWrite());
     }

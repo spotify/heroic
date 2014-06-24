@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
@@ -46,6 +49,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -99,17 +103,25 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         @Setter
         private int writeThreads = 20;
 
+        @Getter
+        @Setter
+        private int writeQueueSize = 1000;
+
         @Override
         public MetricBackend buildDelegate(String context,
                 MetricBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
+
             final Map<String, String> attributes = Utils.toMap(context,
                     this.tags);
             final Executor readExecutor = Executors
                     .newFixedThreadPool(readThreads);
-            final Executor writeExecutor = Executors
-                    .newFixedThreadPool(writeThreads);
+
+            final ThreadPoolExecutor writeExecutor = new ThreadPoolExecutor(
+                    writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>(writeQueueSize));
+
             return new HeroicMetricBackend(reporter, readExecutor,
                     writeExecutor, keyspace, seeds, maxConnectionsPerHost,
                     attributes);
@@ -121,18 +133,27 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
 
     private final MetricBackendReporter reporter;
     private final Executor readExecutor;
-    private final Executor writeExecutor;
+    private final ThreadPoolExecutor writeExecutor;
 
     @Inject
     private MetadataBackendManager metadata;
 
     public HeroicMetricBackend(MetricBackendReporter reporter,
-            Executor readExecutor, Executor writeExecutor, String keyspace,
-            String seeds, int maxConnectionsPerHost, Map<String, String> tags) {
+            Executor readExecutor, final ThreadPoolExecutor writeExecutor,
+            String keyspace, String seeds, int maxConnectionsPerHost,
+            Map<String, String> tags) {
         super(keyspace, seeds, maxConnectionsPerHost, tags);
+
         this.reporter = reporter;
         this.readExecutor = readExecutor;
         this.writeExecutor = writeExecutor;
+
+        reporter.newWriteThreadPool(new ThreadPoolProvider() {
+            @Override
+            public int getQueueSize() {
+                return writeExecutor.getQueue().size();
+            }
+        });
     }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
@@ -173,7 +194,7 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
                     @Override
                     public WriteResponse resolve() throws Exception {
                         mutation.execute();
-                        return new WriteResponse();
+                        return new WriteResponse(1, 0);
                     }
                 }).register(reporter.reportWriteBatch());
     }
