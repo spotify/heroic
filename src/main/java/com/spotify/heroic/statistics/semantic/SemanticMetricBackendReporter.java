@@ -12,6 +12,8 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
 public class SemanticMetricBackendReporter implements MetricBackendReporter {
+    private static final String COMPONENT = "metric-backend";
+
     private final SemanticMetricRegistry registry;
     private final MetricId id;
     private final CallbackReporter writeBatch;
@@ -20,10 +22,11 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
             String context) {
         this.registry = registry;
 
-        this.id = MetricId.build("metric-backend").tagged("context", context);
+        this.id = MetricId.build().tagged("context", context, "component",
+                COMPONENT);
 
-        this.writeBatch = new SemanticCallbackReporter(registry,
-                id.resolve("write-batch"));
+        this.writeBatch = new SemanticCallbackReporter(registry, id.tagged(
+                "what", "write-batch", "unit", Units.WRITES));
     }
 
     @Override
@@ -33,9 +36,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
     @Override
     public void newWriteThreadPool(final ThreadPoolProvider provider) {
-        final MetricId id = this.id.resolve("write-thread-pool");
-
-        registry.register(id.tagged("what", "size", "unit", "count"),
+        registry.register(
+                id.tagged("what", "write-thread-pool-size", "unit", Units.SIZE),
                 new Gauge<Integer>() {
                     @Override
                     public Integer getValue() {

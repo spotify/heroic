@@ -45,6 +45,8 @@ import com.spotify.heroic.yaml.ValidationException;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
+import com.spotify.metrics.jvm.GarbageCollectorMetricSet;
+import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
 public class Main extends GuiceServletContextListener {
@@ -179,11 +181,7 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        final FastForwardReporter ffwd = FastForwardReporter
-                .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
-                .prefix(MetricId.build("heroic").tagged("service", "heroic"))
-                .build();
-        ffwd.start();
+        setupReporter(registry);
 
         if (config == null) {
             log.error("No configuration, shutting down");
@@ -270,5 +268,20 @@ public class Main extends GuiceServletContextListener {
         }
 
         System.exit(0);
+    }
+
+    private static void setupReporter(final SemanticMetricRegistry registry) {
+        final MetricId id = MetricId.build("heroic");
+        final MetricId jvm = id.resolve("jvm");
+
+        registry.register(jvm, new ThreadStatesMetricSet());
+        registry.register(jvm, new GarbageCollectorMetricSet());
+        registry.register(jvm, new ThreadStatesMetricSet());
+
+        final FastForwardReporter ffwd = FastForwardReporter
+                .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
+                .prefix(id.tagged("service", "heroic")).build();
+
+        ffwd.start();
     }
 }

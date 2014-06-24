@@ -59,42 +59,57 @@ public interface Callback<T> {
          * Implement to trigger on one resolved.
          */
         void resolved(Callback<C> callback, C result) throws Exception;
+
         /**
          * Implement to trigger on one failed.
          */
         void failed(Callback<C> callback, Exception error) throws Exception;
+
         /**
          * Implement to trigger on one cancelled.
          */
-        void cancelled(Callback<C> callback, CancelReason reason) throws Exception;
+        void cancelled(Callback<C> callback, CancelReason reason)
+                throws Exception;
+
         /**
          * Implement to fire when all callbacks have been resolved.
          */
         R resolved(int successful, int failed, int cancelled) throws Exception;
     }
+
     /**
-     * Convenience class that can be used to extend and implement only a subset of the functionality of {@link StreamReducer}.
-     *
-     * Note: {@link StreamReducer#resolved(int, int, int)} is the minimal required implementation since it is not provided here.
-     *
+     * Convenience class that can be used to extend and implement only a subset
+     * of the functionality of {@link StreamReducer}.
+     * 
+     * Note: {@link StreamReducer#resolved(int, int, int)} is the minimal
+     * required implementation since it is not provided here.
+     * 
      * @author udoprog
      */
-    public static abstract class DefaultStreamReducer<C, R> implements StreamReducer<C, R> {
+    public static abstract class DefaultStreamReducer<C, R> implements
+            StreamReducer<C, R> {
         /**
          * Override to trigger on one resolved.
          */
         @Override
-        public void resolved(Callback<C> callback, C result) throws Exception { }
+        public void resolved(Callback<C> callback, C result) throws Exception {
+        }
+
         /**
          * Override to trigger on one failed.
          */
         @Override
-        public void failed(Callback<C> callback, Exception error) throws Exception { }
+        public void failed(Callback<C> callback, Exception error)
+                throws Exception {
+        }
+
         /**
          * Override to trigger on one cancelled.
          */
         @Override
-        public void cancelled(Callback<C> callback, CancelReason reason) throws Exception { }
+        public void cancelled(Callback<C> callback, CancelReason reason)
+                throws Exception {
+        }
     }
 
     public static interface DeferredTransformer<C, R> {
@@ -110,30 +125,40 @@ public interface Callback<T> {
     }
 
     public Callback<T> cancel(CancelReason reason);
+
     public Callback<T> fail(Exception error);
+
     public Callback<T> resolve(T result);
 
     /**
-     * Resolve this callback asynchronously using the resolver.
-     * This is a common pattern which is provided because the implementation details are important.
-     *
-     * 1. Since anything scheduled on an executor is viable for execution 'later', the callback might have already been resolved or cancelled.
-     *    It is therefore important to check {@link #isReady()} before calling the resolved.
-     * 2. Since the resolver might throw an exception, it is important that this exception is caught and that the callback is marked as 'failed' appropriately.
-     *
-     * If you are willing to ensure these two behaviours, the Executor can be used directly.
-     *
-     * @param executor Executor to schedule the resolver task on.
-     * @param resolver The resolver to use for resolving this callback.
+     * Resolve this callback asynchronously using the resolver. This is a common
+     * pattern which is provided because the implementation details are
+     * important.
+     * 
+     * 1. Since anything scheduled on an executor is viable for execution
+     * 'later', the callback might have already been resolved or cancelled. It
+     * is therefore important to check {@link #isReady()} before calling the
+     * resolved. 2. Since the resolver might throw an exception, it is important
+     * that this exception is caught and that the callback is marked as 'failed'
+     * appropriately.
+     * 
+     * If you are willing to ensure these two behaviours, the Executor can be
+     * used directly.
+     * 
+     * @param executor
+     *            Executor to schedule the resolver task on.
+     * @param resolver
+     *            The resolver to use for resolving this callback.
      * @return This callback.
      */
     public Callback<T> resolve(Executor executor, Resolver<T> resolver);
 
     /**
-     * Register functions to be fired for any of the possible events for a callback.
-     * These are; cancelled, failed or resolved.
-     *
-     * @param handle Contains functions to be fired.
+     * Register functions to be fired for any of the possible events for a
+     * callback. These are; cancelled, failed or resolved.
+     * 
+     * @param handle
+     *            Contains functions to be fired.
      * @return This callback.
      */
     public Callback<T> register(Handle<T> handle);
@@ -141,9 +166,11 @@ public interface Callback<T> {
     public Callback<T> register(ObjectHandle handle);
 
     /**
-     * Register a function to be fired if this callback is finished (either cancelled or failed).
-     *
-     * @param finishable Function to be fired.
+     * Register a function to be fired if this callback is finished (either
+     * cancelled or failed).
+     * 
+     * @param finishable
+     *            Function to be fired.
      * @return This callback.
      */
     public Callback<T> register(Finishable finishable);
@@ -186,88 +213,118 @@ public interface Callback<T> {
      * The group will be connected to this callback in that it's result will
      * finish this callback and any cancellations of this callback will cancel
      * the entire group.
-     *
-     * <pre>
-     * {@code
-     * final List<Callback<Integer>> callbacks = buildCallbacks();
-     * final Callback<Double> callback = new ConcurrentCallback<Double>();
-     *
-     * callback.reduce(callbacks, new Callback.Reducer<Integer, Double>(){
-     *   Double resolved(Collection<Integer> results, Collection<Exception> errors, Collection<CancelReason> cancelled) throws Exception {
-     *     double result = 0;
-     *
-     *     for (final Integer part : results) {
-     *       result += part.doubleValue();
-     *     }
-     *
-     *     return result;
-     *   }
-     * });
-     * }
-     * </pre>
-     *
-     * @param callbacks Collection of callbacks to reduce.
-     * @param reducer Function responsible for reducing the collection into a single object.
-     * @return A new callback with the generic value <T>.
-     */
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final Reducer<C, T> reducer);
-
-    /**
-     * Resolve the value of a callback using a collection of callbacks.
-     * Similar to {@link #reduce(List, Reducer)} but using the {@link StreamReducer} to receive results as they arrive.
-     * The benefit of a streamed approach is that intermittent results do not have to be kept in memory.
      * 
-     * The group will be connected to this callback in that it's result will finish this callback.
-     * Any cancellations of this callback will cancel the entire collection of callbacks.
-     *
      * <pre>
-     * {@code
-     * final List<Callback<Integer>> callbacks = buildCallbacks();
-     * final Callback<Double> callback = new ConcurrentCallback<Double>();
-     *
-     * callback.reduce(callbacks, new Callback.StreamReducer<Integer, Double>() {
-     *   final AtomicDouble value = new AtomicDouble(0);
-     *
-     *   void finish(Callback<Integer> callback, Integer result) throws Exception {
-     *     value.addAndGet(result.doubleValue());
-     *   }
-     *
-     *   void failed(Callback<Integer> callback, Exception error) throws Exception {
-     *   }
-     *
-     *   void cancel(Callback<Integer> callback, CancelReason reason) throws Exception {
-     *   }
-     *
-     *   Double resolved(int successful, int failed, int cancelled) throws Exception {
-     *     return result.get();
-     *   }
-     * });
+     * {
+     *     &#064;code
+     *     final List&lt;Callback&lt;Integer&gt;&gt; callbacks = buildCallbacks();
+     *     final Callback&lt;Double&gt; callback = new ConcurrentCallback&lt;Double&gt;();
+     * 
+     *     callback.reduce(callbacks, new Callback.Reducer&lt;Integer, Double&gt;() {
+     *         Double resolved(Collection&lt;Integer&gt; results,
+     *                 Collection&lt;Exception&gt; errors, Collection&lt;CancelReason&gt; cancelled)
+     *                 throws Exception {
+     *             double result = 0;
+     * 
+     *             for (final Integer part : results) {
+     *                 result += part.doubleValue();
+     *             }
+     * 
+     *             return result;
+     *         }
+     *     });
      * }
      * </pre>
-     *
-     * @param callbacks Collection of callbacks to reduce.
-     * @param reducer Function responsible for reducing the collection into a single object.
+     * 
+     * @param callbacks
+     *            Collection of callbacks to reduce.
+     * @param reducer
+     *            Function responsible for reducing the collection into a single
+     *            object.
      * @return A new callback with the generic value <T>.
      */
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final StreamReducer<C, T> reducer);
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
+            final Reducer<C, T> reducer);
 
     /**
-     * Transforms the value of one callback into another using a transformer function.
-     *
+     * Resolve the value of a callback using a collection of callbacks. Similar
+     * to {@link #reduce(List, Reducer)} but using the {@link StreamReducer} to
+     * receive results as they arrive. The benefit of a streamed approach is
+     * that intermittent results do not have to be kept in memory.
+     * 
+     * The group will be connected to this callback in that it's result will
+     * finish this callback. Any cancellations of this callback will cancel the
+     * entire collection of callbacks.
+     * 
      * <pre>
-     * {@code
-     * final Callback<Integer> callback = new ConcurrentCallback<Integer>();
-     * callback.transform(new Transformer<Integer, Double>() {
-     *   void transform(Integer result, Callback<Double> callback) throws Exception {
-     *     callback.finish(result.doubleValue());
-     *   }
-     * });
+     * {
+     *     &#064;code
+     *     final List&lt;Callback&lt;Integer&gt;&gt; callbacks = buildCallbacks();
+     *     final Callback&lt;Double&gt; callback = new ConcurrentCallback&lt;Double&gt;();
+     * 
+     *     callback.reduce(callbacks, new Callback.StreamReducer&lt;Integer, Double&gt;() {
+     *         final AtomicDouble value = new AtomicDouble(0);
+     * 
+     *         void finish(Callback&lt;Integer&gt; callback, Integer result)
+     *                 throws Exception {
+     *             value.addAndGet(result.doubleValue());
+     *         }
+     * 
+     *         void failed(Callback&lt;Integer&gt; callback, Exception error)
+     *                 throws Exception {
+     *         }
+     * 
+     *         void cancel(Callback&lt;Integer&gt; callback, CancelReason reason)
+     *                 throws Exception {
+     *         }
+     * 
+     *         Double resolved(int successful, int failed, int cancelled)
+     *                 throws Exception {
+     *             return result.get();
+     *         }
+     *     });
      * }
      * </pre>
-     *
-     * @param transformer The function to use when transforming the value.
+     * 
+     * @param callbacks
+     *            Collection of callbacks to reduce.
+     * @param reducer
+     *            Function responsible for reducing the collection into a single
+     *            object.
+     * @return A new callback with the generic value <T>.
+     */
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
+            final StreamReducer<C, T> reducer);
+
+    /**
+     * Transforms the value of one callback into another using a transformer
+     * function.
+     * 
+     * <pre>
+     * {
+     *     &#064;code
+     *     final Callback&lt;Integer&gt; callback = new ConcurrentCallback&lt;Integer&gt;();
+     *     callback.transform(new Transformer&lt;Integer, Double&gt;() {
+     *         void transform(Integer result, Callback&lt;Double&gt; callback)
+     *                 throws Exception {
+     *             callback.finish(result.doubleValue());
+     *         }
+     *     });
+     * }
+     * </pre>
+     * 
+     * @param transformer
+     *            The function to use when transforming the value.
      * @return A callback of type <C> which resolves with the transformed value.
      */
     public <C> Callback<C> transform(DeferredTransformer<T, C> transformer);
+
     public <C> Callback<C> transform(Transformer<T, C> transformer);
+
+    /**
+     * Block until result is available.
+     * 
+     * @return The result of this callback being resolved.
+     */
+    public T get() throws InterruptedException, Exception;
 }

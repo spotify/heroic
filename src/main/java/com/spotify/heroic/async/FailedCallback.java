@@ -35,12 +35,14 @@ public class FailedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.Reducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
+            Callback.Reducer<C, T> reducer) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
+            StreamReducer<C, T> reducer) {
         return this;
     }
 
@@ -98,5 +100,10 @@ public class FailedCallback<T> implements Callback<T> {
     @Override
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
         return this;
+    }
+
+    @Override
+    public T get() throws InterruptedException, Exception {
+        throw error;
     }
 }

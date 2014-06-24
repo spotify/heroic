@@ -10,17 +10,22 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
 public class SemanticConsumerReporter implements ConsumerReporter {
+    private static final String COMPONENT = "consumer";
+
     private final Meter messageIn;
     private final Meter messageError;
     private final Histogram messageSize;
 
     public SemanticConsumerReporter(SemanticMetricRegistry registry,
             String context) {
-        final MetricId id = MetricId.build("consumer").tagged("context",
-                context);
-        messageIn = registry.meter(id.resolve("message-in"));
-        messageError = registry.meter(id.resolve("message-error"));
-        messageSize = registry.histogram(id.resolve("message-size"));
+        final MetricId id = MetricId.build().tagged("context", context,
+                "component", COMPONENT);
+        messageIn = registry.meter(id.tagged("what", "message-in", "unit",
+                "messages"));
+        messageError = registry.meter(id.tagged("what", "message-error",
+                "unit", "messages"));
+        messageSize = registry.histogram(id.tagged("what", "message-size",
+                "unit", "messages"));
     }
 
     @Override

@@ -8,6 +8,8 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetricBackendManagerReporter implements
         MetricBackendManagerReporter {
+    private static final String COMPONENT = "metric-backend-manager";
+
     private final CallbackReporter getAllRows;
     private final CallbackReporter queryMetrics;
     private final CallbackReporter streamMetrics;
@@ -16,19 +18,21 @@ public class SemanticMetricBackendManagerReporter implements
     private final CallbackReporter write;
 
     public SemanticMetricBackendManagerReporter(SemanticMetricRegistry registry) {
-        final MetricId id = MetricId.build("metric-backend-manager");
+        final MetricId id = MetricId.build().tagged("component", COMPONENT);
+
         this.getAllRows = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "get-all-rows"));
+                "what", "get-all-rows", "unit", Units.READS));
         this.queryMetrics = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "query-metrics"));
+                "what", "query-metrics", "unit", Units.READS));
         this.streamMetrics = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "stream-metrics"));
+                "what", "stream-metrics", "unit", Units.READS));
         this.streamMetricsChunk = new SemanticCallbackReporter(registry,
-                id.tagged("operation", "stream-metrics-chunk"));
+                id.tagged("operation", "stream-metrics-chunk", "unit",
+                        Units.READS));
         this.findRowGroups = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-row-groups"));
-        this.write = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "write"));
+                "what", "find-row-groups", "unit", Units.LOOKUPS));
+        this.write = new SemanticCallbackReporter(registry, id.tagged("what",
+                "write", "unit", Units.WRITES));
     }
 
     @Override

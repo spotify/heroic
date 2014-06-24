@@ -100,4 +100,9 @@ public class CancelledCallback<T> implements Callback<T> {
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
         return this;
     }
+
+    @Override
+    public T get() throws InterruptedException, Exception {
+        throw new CancelledException(reason);
+    }
 }

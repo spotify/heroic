@@ -8,6 +8,8 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetadataBackendManagerReporter implements
         MetadataBackendManagerReporter {
+    private static final String COMPONENT = "metadata-backend-manager";
+
     private final CallbackReporter refresh;
     private final CallbackReporter findTags;
     private final CallbackReporter findTimeSeries;
@@ -15,15 +17,16 @@ public class SemanticMetadataBackendManagerReporter implements
 
     public SemanticMetadataBackendManagerReporter(
             SemanticMetricRegistry registry) {
-        final MetricId id = MetricId.build("metadata-backend-manager");
-        refresh = new SemanticCallbackReporter(registry, id.tagged("operation",
-                "refresh"));
-        findTags = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-tags"));
+        final MetricId id = MetricId.build().tagged("component", COMPONENT);
+
+        refresh = new SemanticCallbackReporter(registry, id.tagged("what",
+                "refresh", "unit", Units.REFRESHES));
+        findTags = new SemanticCallbackReporter(registry, id.tagged("what",
+                "find-tags", "unit", Units.LOOKUPS));
         findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-time-series"));
-        findKeys = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-keys"));
+                "what", "find-time-series", "unit", Units.LOOKUPS));
+        findKeys = new SemanticCallbackReporter(registry, id.tagged("what",
+                "find-keys", "unit", Units.LOOKUPS));
     }
 
     @Override

@@ -71,13 +71,11 @@ public class Spotify100 implements ConsumerSchema {
 
         if (event.getTime() == null)
             throw new ConsumerSchemaException("'" + TIME
-                    + "' field must be defined: "
-                    + message);
+                    + "' field must be defined: " + message);
 
         if (event.getKey() == null)
             throw new ConsumerSchemaException("'" + KEY
-                    + "' field must be defined: "
-                    + message);
+                    + "' field must be defined: " + message);
 
         final Map<String, String> tags = new HashMap<String, String>(
                 event.getAttributes());
@@ -89,20 +87,28 @@ public class Spotify100 implements ConsumerSchema {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
         datapoints.add(datapoint);
 
-        consumer.getMetricBackendManager().write(timeSerie, datapoints).register(new Callback.Handle<WriteResponse>() {
-            @Override
-            public void cancelled(CancelReason reason) throws Exception {
-                log.error("Write cancelled: " + reason);
-            }
+        final Callback<WriteResponse> callback = consumer
+                .getMetricBackendManager().write(timeSerie, datapoints)
+                .register(new Callback.Handle<WriteResponse>() {
+                    @Override
+                    public void cancelled(CancelReason reason) throws Exception {
+                        log.error("Write cancelled: " + reason);
+                    }
 
-            @Override
-            public void failed(Exception e) throws Exception {
-                log.error("Write failed", e);
-            }
+                    @Override
+                    public void failed(Exception e) throws Exception {
+                        log.error("Write failed", e);
+                    }
 
-            @Override
-            public void resolved(WriteResponse result) throws Exception {
-            }
-        });
+                    @Override
+                    public void resolved(WriteResponse result) throws Exception {
+                    }
+                });
+
+        try {
+            callback.get();
+        } catch (Exception e) {
+            throw new ConsumerSchemaException("Failed to write", e);
+        }
     }
 }

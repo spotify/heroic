@@ -56,7 +56,7 @@ public class AggregationCache {
                 misses.add(slice);
                 callback.resolve(new CacheQueryResult(slice, aggregation,
                         cached, misses));
-                reporter.reportGetMisses(misses.size());
+                reporter.reportGetMiss(misses.size());
                 return;
             }
 
@@ -75,7 +75,7 @@ public class AggregationCache {
             if (current < end)
                 misses.add(slice.modify(current, end));
 
-            reporter.reportGetMisses(misses.size());
+            reporter.reportGetMiss(misses.size());
             callback.resolve(new CacheQueryResult(slice, aggregation, cached, misses));
         }
     }

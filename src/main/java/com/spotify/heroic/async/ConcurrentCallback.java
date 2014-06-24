@@ -2,6 +2,7 @@ package com.spotify.heroic.async;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ConcurrentCallback<T> extends AbstractCallback<T> implements
-Callback<T> {
+        Callback<T> {
     private List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private List<Cancellable> cancellables = new LinkedList<Cancellable>();
     private List<Finishable> finishables = new LinkedList<Finishable>();
@@ -292,5 +293,30 @@ Callback<T> {
     public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
             final StreamReducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
+    }
+
+    @Override
+    public T get() throws InterruptedException, Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        register(new Finishable() {
+            @Override
+            public void finished() throws Exception {
+                latch.countDown();
+            }
+        });
+
+        latch.await();
+
+        switch (state) {
+        case CANCELLED:
+            throw new CancelledException(cancelReason);
+        case FAILED:
+            throw error;
+        case RESOLVED:
+            return result;
+        default:
+            throw new IllegalStateException(state.toString());
+        }
     }
 }

@@ -11,8 +11,8 @@ import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticCallbackReporter implements CallbackReporter {
     private final SemanticHeroicTimer timer;
-    private final Meter cancel;
-    private final Meter error;
+    private final Meter cancelled;
+    private final Meter failed;
     private final Meter resolved;
 
     @RequiredArgsConstructor
@@ -21,7 +21,7 @@ public class SemanticCallbackReporter implements CallbackReporter {
 
         @Override
         public void failed(Exception e) throws Exception {
-            error.mark();
+            failed.mark();
             context.stop();
         }
 
@@ -33,17 +33,19 @@ public class SemanticCallbackReporter implements CallbackReporter {
 
         @Override
         public void cancelled(CancelReason reason) throws Exception {
-            cancel.mark();
+            cancelled.mark();
             context.stop();
         }
     }
 
     public SemanticCallbackReporter(SemanticMetricRegistry registry, MetricId id) {
-        this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what", "timer")));
-        this.cancel = registry.meter(id.tagged("what", "meter", "result", "cancel"));
-        this.error = registry.meter(id.tagged("what", "meter", "result", "error"));
-        this.resolved = registry.meter(id.tagged("what", "meter", "result",
-                "resolved"));
+        this.timer = new SemanticHeroicTimer(registry.timer(id));
+        this.cancelled = registry.meter(id.tagged("unit",
+                Units.CANCELS));
+        this.failed = registry
+                .meter(id.tagged("unit", Units.FAILURES));
+        this.resolved = registry.meter(id.tagged("unit",
+                Units.RESOLVES));
     }
 
     @Override

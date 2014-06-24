@@ -10,6 +10,8 @@ import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetadataBackendReporter implements MetadataBackendReporter {
+    private static final String COMPONENT = "metadata-backend";
+
     private final SemanticMetricRegistry registry;
     private final MetricId id;
 
@@ -26,24 +28,25 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
             String context) {
         this.registry = registry;
-        this.id = MetricId.build("metadata-backend").tagged("context", context);
+        this.id = MetricId.build().tagged("context", context, "component",
+                COMPONENT);
 
-        refresh = new SemanticCallbackReporter(registry, id.tagged("operation",
-                "refresh"));
-        findTags = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-tags"));
-        findTagKeys = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-tag-keys"));
+        refresh = new SemanticCallbackReporter(registry, id.tagged("what",
+                "refresh", "unit", Units.REFRESHES));
+        findTags = new SemanticCallbackReporter(registry, id.tagged("what",
+                "find-tags", "unit", Units.LOOKUPS));
+        findTagKeys = new SemanticCallbackReporter(registry, id.tagged("what",
+                "find-tag-keys", "unit", Units.LOOKUPS));
         findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-time-series"));
-        findKeys = new SemanticCallbackReporter(registry, id.tagged(
-                "operation", "find-keys"));
-        write = new SemanticCallbackReporter(registry, id.tagged("operation",
-                "write"));
-
-        final MetricId cache = id.resolve("write-cache");
-        writeCacheHit = registry.meter(cache.tagged("what", "hit"));
-        writeCacheMiss = registry.meter(cache.tagged("what", "miss"));
+                "what", "find-time-series", "unit", Units.LOOKUPS));
+        findKeys = new SemanticCallbackReporter(registry, id.tagged("what",
+                "find-keys", "unit", Units.LOOKUPS));
+        write = new SemanticCallbackReporter(registry, id.tagged("what",
+                "write", "unit", Units.WRITES));
+        writeCacheHit = registry.meter(id.tagged("what", "write-cache", "unit",
+                Units.HITS));
+        writeCacheMiss = registry.meter(id.tagged("what", "write-cache",
+                "unit", Units.MISSES));
     }
 
     @Override
@@ -88,9 +91,8 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     @Override
     public void newWriteThreadPool(final ThreadPoolProvider provider) {
-        final MetricId id = this.id.resolve("write-thread-pool");
-
-        registry.register(id.tagged("what", "size", "unit", "count"),
+        registry.register(
+                id.tagged("what", "write-thread-pool-size", "unit", Units.SIZE),
                 new Gauge<Integer>() {
                     @Override
                     public Integer getValue() {
