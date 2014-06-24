@@ -17,6 +17,7 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
+import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -276,7 +277,7 @@ public class Main extends GuiceServletContextListener {
 
         registry.register(jvm, new ThreadStatesMetricSet());
         registry.register(jvm, new GarbageCollectorMetricSet());
-        registry.register(jvm, new ThreadStatesMetricSet());
+        registry.register(jvm, new MemoryUsageGaugeSet());
 
         final FastForwardReporter ffwd = FastForwardReporter
                 .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
