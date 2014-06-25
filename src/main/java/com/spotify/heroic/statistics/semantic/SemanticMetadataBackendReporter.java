@@ -32,21 +32,21 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
                 COMPONENT);
 
         refresh = new SemanticCallbackReporter(registry, id.tagged("what",
-                "refresh", "unit", Units.REFRESHES));
+                "refresh", "unit", Units.REFRESH));
         findTags = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-tags", "unit", Units.LOOKUPS));
+                "find-tags", "unit", Units.LOOKUP));
         findTagKeys = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-tag-keys", "unit", Units.LOOKUPS));
+                "find-tag-keys", "unit", Units.LOOKUP));
         findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "find-time-series", "unit", Units.LOOKUPS));
+                "what", "find-time-series", "unit", Units.LOOKUP));
         findKeys = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-keys", "unit", Units.LOOKUPS));
+                "find-keys", "unit", Units.LOOKUP));
         write = new SemanticCallbackReporter(registry, id.tagged("what",
-                "write", "unit", Units.WRITES));
-        writeCacheHit = registry.meter(id.tagged("what", "write-cache", "unit",
-                Units.HITS));
-        writeCacheMiss = registry.meter(id.tagged("what", "write-cache",
-                "unit", Units.MISSES));
+                "write", "unit", Units.WRITE));
+        writeCacheHit = registry.meter(id.tagged("what", "write-cache-hit",
+                "unit", Units.HIT));
+        writeCacheMiss = registry.meter(id.tagged("what", "write-cache-miss",
+                "unit", Units.MISS));
     }
 
     @Override
@@ -92,7 +92,7 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     @Override
     public void newWriteThreadPool(final ThreadPoolProvider provider) {
         registry.register(
-                id.tagged("what", "write-thread-pool-size", "unit", Units.SIZE),
+                id.tagged("what", "write-thread-pool-size", "unit", Units.BYTE),
                 new Gauge<Integer>() {
                     @Override
                     public Integer getValue() {

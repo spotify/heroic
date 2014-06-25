@@ -20,13 +20,13 @@ public class SemanticMetadataBackendManagerReporter implements
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
 
         refresh = new SemanticCallbackReporter(registry, id.tagged("what",
-                "refresh", "unit", Units.REFRESHES));
+                "refresh", "unit", Units.REFRESH));
         findTags = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-tags", "unit", Units.LOOKUPS));
+                "find-tags", "unit", Units.LOOKUP));
         findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "find-time-series", "unit", Units.LOOKUPS));
+                "what", "find-time-series", "unit", Units.LOOKUP));
         findKeys = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-keys", "unit", Units.LOOKUPS));
+                "find-keys", "unit", Units.LOOKUP));
     }
 
     @Override

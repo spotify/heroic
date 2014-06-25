@@ -69,6 +69,7 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteEntry;
 import com.spotify.heroic.model.WriteResponse;
 
 @Slf4j
@@ -209,10 +210,13 @@ public class HeroicResource {
             WriteMetricsRequest write) {
         log.info("Write: {}", write);
 
-        Callback<WriteResponse> callback = metrics.write(write.getTimeSerie(),
-                write.getDatapoints());
+        final WriteEntry entry = new WriteEntry(
+                write.getTimeSerie(), write.getData());
 
-        handleAsyncResume(response, callback, METRICS);
+        final List<WriteEntry> writes = new ArrayList<WriteEntry>();
+        writes.add(entry);
+
+        handleAsyncResume(response, metrics.write(writes), METRICS);
     }
 
     private static final Resume<MetricsQueryResponse, MetricsResponse> WRITE_METRICS = new Resume<MetricsQueryResponse, MetricsResponse>() {
@@ -241,7 +245,7 @@ public class HeroicResource {
 
     /**
      * Helper function to correctly wire up async response management.
-     * 
+     *
      * @param response
      *            The async response object.
      * @param callback

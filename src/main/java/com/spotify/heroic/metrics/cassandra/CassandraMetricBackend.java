@@ -18,10 +18,10 @@ import com.spotify.heroic.model.TimeSerie;
 /**
  * A partial and generic backend implementation for cassandra-based metric
  * backends.
- * 
+ *
  * The keyspace should be accessed using the
  * {@link CassandraMetricBackend#keyspace} method.
- * 
+ *
  * @author udoprog
  */
 @RequiredArgsConstructor

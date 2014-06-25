@@ -11,6 +11,9 @@ public class CancelReason {
     public static final CancelReason NO_BACKENDS_AVAILABLE = new CancelReason(
             "No backends available");
 
+    public static final CancelReason NOT_SUPPORTED = new CancelReason(
+            "Operation not supported");
+
     @Getter
     private final String message;
 

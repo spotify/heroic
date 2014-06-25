@@ -23,11 +23,11 @@ public class SemanticAggregationCacheReporter implements
                 "component", COMPONENT);
 
         this.get = new SemanticCallbackReporter(registry, id.tagged("what",
-                "get", "unit", Units.READS));
+                "get", "unit", Units.READ));
         this.put = new SemanticCallbackReporter(registry, id.tagged("what",
-                "put", "unit", Units.WRITES));
+                "put", "unit", Units.WRITE));
         getMiss = registry.histogram(id.tagged("what", "get-miss", "unit",
-                Units.MISSES));
+                Units.MISS));
     }
 
     @Override

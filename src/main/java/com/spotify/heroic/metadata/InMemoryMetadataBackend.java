@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.async.Transformers;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -35,12 +35,12 @@ import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * An in-memory implementation of MetadataBackend.
- * 
+ *
  * This causes MetricBackends to have support iteration of their backends
  * (through {@link MetricBackend#getAllTimeSeries()} because it requests all
  * available time-series and builds a (sort of) efficient in-memory index of
  * them.
- * 
+ *
  * @author udoprog
  */
 @RequiredArgsConstructor
@@ -126,7 +126,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * com.spotify.heroic.backend.MetadataBackend#findTags(com.spotify.heroic
      * .backend.TimeSerieMatcher, java.util.Set, java.util.Set)
@@ -166,7 +166,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * com.spotify.heroic.backend.MetadataBackend#findTimeSeries(com.spotify
      * .heroic.backend.TimeSerieMatcher)
@@ -189,7 +189,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * com.spotify.heroic.backend.MetadataBackend#findKeys(com.spotify.heroic
      * .backend.TimeSerieMatcher)
@@ -212,8 +212,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     @Override
     public Callback<WriteResponse> write(TimeSerie timeSerie) {
-        return new FailedCallback<WriteResponse>(new Exception(
-                "writes are not supported"));
+        return new CancelledCallback<WriteResponse>(CancelReason.NOT_SUPPORTED);
     }
 
     private static Iterable<TimeSerie> filter(final List<TimeSerie> series,
@@ -228,7 +227,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /**
      * Build index by tag.
-     * 
+     *
      * @param timeSeries
      * @return
      */
@@ -255,7 +254,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /**
      * Build index by key.
-     * 
+     *
      * @param timeseries
      * @return
      */
@@ -279,7 +278,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /**
      * Attempt to find the best match among multiple candidate time series.
-     * 
+     *
      * @param key
      *            Key to match for.
      * @param filter
@@ -350,7 +349,7 @@ public class InMemoryMetadataBackend implements MetadataBackend {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see com.spotify.heroic.backend.MetadataBackend#isReady()
      */
     @Override

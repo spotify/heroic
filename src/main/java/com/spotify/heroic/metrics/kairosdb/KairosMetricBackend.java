@@ -42,6 +42,7 @@ import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteEntry;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
@@ -49,18 +50,18 @@ import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * The data access layer for accessing KairosDB schema in Cassandra.
- * 
+ *
  * @author mehrdad
  */
 @ToString()
 public class KairosMetricBackend extends CassandraMetricBackend implements
-        MetricBackend {
+MetricBackend {
     private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
             + "column1 > ? AND column1 < ?";
 
     @RequiredArgsConstructor
     private static final class RowCountTransformer implements
-            Callback.Resolver<Long> {
+    Callback.Resolver<Long> {
         private final Keyspace keyspace;
         private final DateRange range;
         private final DataPointsRowKey row;
@@ -206,50 +207,50 @@ public class KairosMetricBackend extends CassandraMetricBackend implements
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                                .setStart((int) startTime,
-                                        IntegerSerializer.get())
+                        .setStart((int) startTime,
+                                IntegerSerializer.get())
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<FetchDataPoints.Result>() {
-                    @Override
-                    public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Integer>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(
-                                rowKey, result);
-                        return new FetchDataPoints.Result(datapoints, timeSerie);
-                    }
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = buildDataPoints(
+                        rowKey, result);
+                return new FetchDataPoints.Result(datapoints, timeSerie);
+            }
 
-                    private List<DataPoint> buildDataPoints(
-                            final DataPointsRowKey rowKey,
-                            final OperationResult<ColumnList<Integer>> result) {
-                        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+            private List<DataPoint> buildDataPoints(
+                    final DataPointsRowKey rowKey,
+                    final OperationResult<ColumnList<Integer>> result) {
+                final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-                        for (final Column<Integer> column : result.getResult()) {
-                            datapoints.add(fromColumn(rowKey, column));
-                        }
+                for (final Column<Integer> column : result.getResult()) {
+                    datapoints.add(fromColumn(rowKey, column));
+                }
 
-                        return datapoints;
-                    }
+                return datapoints;
+            }
 
-                    private DataPoint fromColumn(DataPointsRowKey rowKey,
-                            Column<Integer> column) {
-                        final int name = column.getName();
-                        final long timestamp = DataPointColumnKey.toTimeStamp(
-                                rowKey.getTimestamp(), name);
-                        final ByteBuffer bytes = column.getByteBufferValue();
+            private DataPoint fromColumn(DataPointsRowKey rowKey,
+                    Column<Integer> column) {
+                final int name = column.getName();
+                final long timestamp = DataPointColumnKey.toTimeStamp(
+                        rowKey.getTimestamp(), name);
+                final ByteBuffer bytes = column.getByteBufferValue();
 
-                        if (DataPointColumnKey.isLong(name))
-                            return new DataPoint(timestamp,
-                                    DataPointColumnValue.toLong(bytes),
-                                    Float.NaN);
+                if (DataPointColumnKey.isLong(name))
+                    return new DataPoint(timestamp,
+                            DataPointColumnValue.toLong(bytes),
+                            Float.NaN);
 
-                        return new DataPoint(timestamp, DataPointColumnValue
-                                .toDouble(bytes), Float.NaN);
-                    }
-                });
+                return new DataPoint(timestamp, DataPointColumnValue
+                        .toDouble(bytes), Float.NaN);
+            }
+        });
     }
 
     @Override
@@ -271,20 +272,20 @@ public class KairosMetricBackend extends CassandraMetricBackend implements
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<Long, Long>() {
-                    @Override
-                    public Long resolved(Collection<Long> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public Long resolved(Collection<Long> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        long value = 0;
+                long value = 0;
 
-                        for (long result : results) {
-                            value += result;
-                        }
+                for (long result : results) {
+                    value += result;
+                }
 
-                        return value;
-                    }
-                });
+                return value;
+            }
+        });
     }
 
     @Override
@@ -310,55 +311,55 @@ public class KairosMetricBackend extends CassandraMetricBackend implements
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                                .setStart(startKey,
-                                        DataPointsRowKey.Serializer.get())
+                        .setStart(startKey,
+                                DataPointsRowKey.Serializer.get())
                                 .setEnd(endKey,
                                         DataPointsRowKey.Serializer.get())
-                                .build());
+                                        .build());
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<FindTimeSeries.Result>() {
-                    @Override
-                    public FindTimeSeries.Result resolve() throws Exception {
-                        final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
-                                .execute();
+            @Override
+            public FindTimeSeries.Result resolve() throws Exception {
+                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
+                        .execute();
 
-                        final Map<TimeSerie, Set<TimeSerie>> rowGroups = new HashMap<TimeSerie, Set<TimeSerie>>();
+                final Map<TimeSerie, Set<TimeSerie>> rowGroups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
-                        final ColumnList<DataPointsRowKey> columns = result
-                                .getResult();
+                final ColumnList<DataPointsRowKey> columns = result
+                        .getResult();
 
-                        for (final Column<DataPointsRowKey> column : columns) {
-                            final DataPointsRowKey rowKey = column.getName();
-                            final Map<String, String> rowTags = rowKey
-                                    .getTags();
+                for (final Column<DataPointsRowKey> column : columns) {
+                    final DataPointsRowKey rowKey = column.getName();
+                    final Map<String, String> rowTags = rowKey
+                            .getTags();
 
-                            final Map<String, String> tags = new HashMap<String, String>(
-                                    filter);
+                    final Map<String, String> tags = new HashMap<String, String>(
+                            filter);
 
-                            if (groupBy != null) {
-                                for (final String group : groupBy) {
-                                    tags.put(group, rowTags.get(group));
-                                }
-                            }
-
-                            final TimeSerie timeSerie = new TimeSerie(key, tags);
-
-                            Set<TimeSerie> timeSeries = rowGroups
-                                    .get(timeSerie);
-
-                            if (timeSeries == null) {
-                                timeSeries = new HashSet<TimeSerie>();
-                                rowGroups.put(timeSerie, timeSeries);
-                            }
-
-                            timeSeries.add(new TimeSerie(
-                                    rowKey.getMetricName(), rowKey.getTags()));
+                    if (groupBy != null) {
+                        for (final String group : groupBy) {
+                            tags.put(group, rowTags.get(group));
                         }
-
-                        return new FindTimeSeries.Result(rowGroups);
                     }
-                });
+
+                    final TimeSerie timeSerie = new TimeSerie(key, tags);
+
+                    Set<TimeSerie> timeSeries = rowGroups
+                            .get(timeSerie);
+
+                    if (timeSeries == null) {
+                        timeSeries = new HashSet<TimeSerie>();
+                        rowGroups.put(timeSerie, timeSeries);
+                    }
+
+                    timeSeries.add(new TimeSerie(
+                            rowKey.getMetricName(), rowKey.getTags()));
+                }
+
+                return new FindTimeSeries.Result(rowGroups);
+            }
+        });
     }
 
     @Override
@@ -374,28 +375,28 @@ public class KairosMetricBackend extends CassandraMetricBackend implements
 
         return ConcurrentCallback.newResolve(executor,
                 new Callback.Resolver<Set<TimeSerie>>() {
-                    @Override
-                    public Set<TimeSerie> resolve() throws Exception {
-                        final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
-                        final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
-                                .execute();
+            @Override
+            public Set<TimeSerie> resolve() throws Exception {
+                final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
+                final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
+                        .execute();
 
-                        final Rows<String, DataPointsRowKey> rows = result
-                                .getResult();
+                final Rows<String, DataPointsRowKey> rows = result
+                        .getResult();
 
-                        for (final Row<String, DataPointsRowKey> row : rows) {
-                            for (final Column<DataPointsRowKey> column : row
-                                    .getColumns()) {
-                                final DataPointsRowKey rowKey = column
-                                        .getName();
-                                timeSeries.add(new TimeSerie(rowKey
-                                        .getMetricName(), rowKey.getTags()));
-                            }
-                        }
-
-                        return timeSeries;
+                for (final Row<String, DataPointsRowKey> row : rows) {
+                    for (final Column<DataPointsRowKey> column : row
+                            .getColumns()) {
+                        final DataPointsRowKey rowKey = column
+                                .getName();
+                        timeSeries.add(new TimeSerie(rowKey
+                                .getMetricName(), rowKey.getTags()));
                     }
-                });
+                }
+
+                return timeSeries;
+            }
+        });
     }
 
     private static List<Long> buildBases(DateRange range) {
@@ -424,8 +425,13 @@ public class KairosMetricBackend extends CassandraMetricBackend implements
     }
 
     @Override
-    public Callback<WriteResponse> write(TimeSerie timeSerie,
-            List<DataPoint> datapoint) {
+    public Callback<WriteResponse> write(WriteEntry write) {
+        return new FailedCallback<WriteResponse>(new Exception(
+                "not implemented"));
+    }
+
+    @Override
+    public Callback<WriteResponse> write(Collection<WriteEntry> writes) {
         return new FailedCallback<WriteResponse>(new Exception(
                 "not implemented"));
     }

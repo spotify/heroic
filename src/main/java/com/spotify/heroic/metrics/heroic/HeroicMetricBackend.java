@@ -1,22 +1,19 @@
 package com.spotify.heroic.metrics.heroic;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
@@ -37,6 +34,7 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -47,9 +45,9 @@ import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteEntry;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -57,8 +55,9 @@ import com.spotify.heroic.yaml.ValidationException;
  * MetricBackend for Heroic cassandra datastore.
  */
 @ToString()
+@Slf4j
 public class HeroicMetricBackend extends CassandraMetricBackend implements
-        MetricBackend {
+MetricBackend {
     public static class YAML extends MetricBackend.YAML {
         public static final String TYPE = "!heroic-backend";
 
@@ -76,7 +75,7 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         private String keyspace = "heroic";
 
         /**
-         * 
+         *
          */
         @Getter
         @Setter
@@ -95,6 +94,10 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         @Getter
         @Setter
         private int readThreads = 20;
+
+        @Getter
+        @Setter
+        private int readQueueSize = 40;
 
         /**
          * Threads dedicated to asynchronous request handling.
@@ -115,16 +118,14 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
 
             final Map<String, String> attributes = Utils.toMap(context,
                     this.tags);
-            final Executor readExecutor = Executors
-                    .newFixedThreadPool(readThreads);
 
-            final ThreadPoolExecutor writeExecutor = new ThreadPoolExecutor(
-                    writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(writeQueueSize));
+            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
+                    .readThreads(readThreads).readQueueSize(readQueueSize)
+                    .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
+                    .build();
 
-            return new HeroicMetricBackend(reporter, readExecutor,
-                    writeExecutor, keyspace, seeds, maxConnectionsPerHost,
-                    attributes);
+            return new HeroicMetricBackend(reporter, pools, keyspace, seeds,
+                    maxConnectionsPerHost, attributes);
         }
     }
 
@@ -132,28 +133,18 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
             "metrics", MetricsRowKeySerializer.get(), LongSerializer.get());
 
     private final MetricBackendReporter reporter;
-    private final Executor readExecutor;
-    private final ThreadPoolExecutor writeExecutor;
+    private final ReadWriteThreadPools pools;
 
     @Inject
     private MetadataBackendManager metadata;
 
     public HeroicMetricBackend(MetricBackendReporter reporter,
-            Executor readExecutor, final ThreadPoolExecutor writeExecutor,
-            String keyspace, String seeds, int maxConnectionsPerHost,
-            Map<String, String> tags) {
+            ReadWriteThreadPools pools, String keyspace, String seeds,
+            int maxConnectionsPerHost, Map<String, String> tags) {
         super(keyspace, seeds, maxConnectionsPerHost, tags);
 
         this.reporter = reporter;
-        this.readExecutor = readExecutor;
-        this.writeExecutor = writeExecutor;
-
-        reporter.newWriteThreadPool(new ThreadPoolProvider() {
-            @Override
-            public int getQueueSize() {
-                return writeExecutor.getQueue().size();
-            }
-        });
+        this.pools = pools;
     }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
@@ -163,8 +154,14 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
     private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp, data_value) VALUES (?, ?, ?)";
 
     @Override
-    public Callback<WriteResponse> write(final TimeSerie timeSerie,
-            final List<DataPoint> datapoints) {
+    public Callback<WriteResponse> write(WriteEntry write) {
+        final Collection<WriteEntry> writes = new ArrayList<WriteEntry>();
+        writes.add(write);
+        return write(writes);
+    }
+
+    @Override
+    public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
@@ -174,38 +171,44 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         final MutationBatch mutation = keyspace.prepareMutationBatch()
                 .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
-        final Map<Long, ColumnListMutation<Long>> batches = new HashMap<Long, ColumnListMutation<Long>>();
+        final Map<MetricsRowKey, ColumnListMutation<Long>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Long>>();
 
-        for (final DataPoint d : datapoints) {
-            final long base = buildBase(d.getTimestamp());
-            ColumnListMutation<Long> m = batches.get(base);
+        for (final WriteEntry write : writes) {
+            for (final DataPoint d : write.getData()) {
+                final long base = buildBase(d.getTimestamp());
+                final MetricsRowKey rowKey = new MetricsRowKey(
+                        write.getTimeSerie(), base);
 
-            if (m == null) {
-                final MetricsRowKey rowKey = new MetricsRowKey(timeSerie, base);
-                m = mutation.withRow(METRICS_CF, rowKey);
-                batches.put(base, m);
+                ColumnListMutation<Long> m = batches.get(rowKey);
+
+                if (m == null) {
+                    m = mutation.withRow(METRICS_CF, rowKey);
+                    batches.put(rowKey, m);
+                }
+
+                m.putColumn(d.getTimestamp(), d.getValue());
             }
-
-            m.putColumn(d.getTimestamp(), d.getValue());
         }
 
-        return ConcurrentCallback.newResolve(writeExecutor,
+        final int count = writes.size();
+
+        return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResponse>() {
-                    @Override
-                    public WriteResponse resolve() throws Exception {
-                        mutation.execute();
-                        return new WriteResponse(1, 0);
-                    }
-                }).register(reporter.reportWriteBatch());
+            @Override
+            public WriteResponse resolve() throws Exception {
+                mutation.execute();
+                return new WriteResponse(1, 0, 0);
+            }
+        }).register(reporter.reportWriteBatch());
     }
 
     /**
      * CQL3 implementation for insertions.
-     * 
+     *
      * TODO: I cannot figure out how to get batch insertions to work. Until
      * then, THIS IS NOT an option because it will murder performance in its
      * sleep and steal its cookies.
-     * 
+     *
      * @param rowKey
      * @param datapoints
      * @return
@@ -218,25 +221,25 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         if (keyspace == null)
             return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
 
-        return ConcurrentCallback.newResolve(readExecutor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-                    @Override
-                    public Integer resolve() throws Exception {
-                        for (final DataPoint d : datapoints) {
-                            keyspace.prepareQuery(CQL3_CF)
-                                    .withCql(INSERT_METRICS_CQL)
-                                    .asPreparedStatement()
-                                    .withByteBufferValue(rowKey,
-                                            MetricsRowKeySerializer.get())
-                                    .withByteBufferValue(d.getTimestamp(),
-                                            LongSerializer.get())
+            @Override
+            public Integer resolve() throws Exception {
+                for (final DataPoint d : datapoints) {
+                    keyspace.prepareQuery(CQL3_CF)
+                    .withCql(INSERT_METRICS_CQL)
+                    .asPreparedStatement()
+                    .withByteBufferValue(rowKey,
+                            MetricsRowKeySerializer.get())
+                            .withByteBufferValue(d.getTimestamp(),
+                                    LongSerializer.get())
                                     .withByteBufferValue(d.getValue(),
                                             DoubleSerializer.get()).execute();
-                        }
+                }
 
-                        return datapoints.size();
-                    }
-                });
+                return datapoints.size();
+            }
+        });
     }
 
     @Override
@@ -278,19 +281,19 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder().setStart(newRange.getStart())
-                                .setEnd(newRange.getEnd()).build());
+                        .setEnd(newRange.getEnd()).build());
 
-        return ConcurrentCallback.newResolve(readExecutor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
-                    @Override
-                    public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Long>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(key,
-                                result);
-                        return new FetchDataPoints.Result(datapoints, timeSerie);
-                    }
-                });
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Long>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = buildDataPoints(key,
+                        result);
+                return new FetchDataPoints.Result(datapoints, timeSerie);
+            }
+        });
     }
 
     @Override
@@ -299,45 +302,43 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         final Map<String, String> filter = query.getFilter();
         final List<String> groupBy = query.getGroupBy();
 
-        return metadata
-                .findTimeSeries(
-                        new TimeSerieQuery(query.getKey(), filter, null))
-                .transform(
-                        new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
-                            @Override
-                            public FindTimeSeries.Result transform(
-                                    com.spotify.heroic.metadata.model.FindTimeSeries result)
-                                    throws Exception {
-                                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+        Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result> transformer = new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
+            @Override
+            public FindTimeSeries.Result transform(
+                    com.spotify.heroic.metadata.model.FindTimeSeries result)
+                            throws Exception {
+                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
-                                for (final TimeSerie timeSerie : result
-                                        .getTimeSeries()) {
-                                    final Map<String, String> tags = new HashMap<String, String>(
-                                            filter);
+                for (final TimeSerie timeSerie : result.getTimeSeries()) {
+                    final Map<String, String> tags = new HashMap<String, String>(
+                            filter);
 
-                                    if (groupBy != null) {
-                                        for (final String group : groupBy) {
-                                            tags.put(group, timeSerie.getTags()
-                                                    .get(group));
-                                        }
-                                    }
+                    if (groupBy != null) {
+                        for (final String group : groupBy) {
+                            tags.put(group, timeSerie.getTags().get(group));
+                        }
+                    }
 
-                                    final TimeSerie key = timeSerie
-                                            .withTags(tags);
+                    final TimeSerie key = timeSerie.withTags(tags);
 
-                                    Set<TimeSerie> group = groups.get(key);
+                    Set<TimeSerie> group = groups.get(key);
 
-                                    if (group == null) {
-                                        group = new HashSet<TimeSerie>();
-                                        groups.put(key, group);
-                                    }
+                    if (group == null) {
+                        group = new HashSet<TimeSerie>();
+                        groups.put(key, group);
+                    }
 
-                                    group.add(timeSerie);
-                                }
+                    group.add(timeSerie);
+                }
 
-                                return new FindTimeSeries.Result(groups);
-                            }
-                        });
+                return new FindTimeSeries.Result(groups);
+            }
+        };
+
+        final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getKey(),
+                filter, null);
+
+        return metadata.findTimeSeries(metaQuery).transform(transformer);
     }
 
     @Override
@@ -349,6 +350,17 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
     @Override
     public Callback<Long> getColumnCount(TimeSerie timeSerie, DateRange range) {
         return new FailedCallback<Long>(new Exception("not implemented"));
+    }
+
+    @Override
+    public void stop() {
+        try {
+            super.stop();
+        } catch (Exception e) {
+            log.error("Failed to stop", e);
+        }
+
+        pools.stop();
     }
 
     private static List<DataPoint> buildDataPoints(final MetricsRowKey key,

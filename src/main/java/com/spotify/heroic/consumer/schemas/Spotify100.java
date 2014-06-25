@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +14,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteEntry;
 import com.spotify.heroic.model.WriteResponse;
 
 @Slf4j
@@ -30,6 +31,9 @@ public class Spotify100 implements ConsumerSchema {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     public static final String SCHEMA_VERSION = "1.0.0";
+
+    private final AtomicReference<ConcurrentLinkedQueue<WriteEntry>> buffer = new AtomicReference<ConcurrentLinkedQueue<WriteEntry>>(
+            new ConcurrentLinkedQueue<WriteEntry>());
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -84,31 +88,34 @@ public class Spotify100 implements ConsumerSchema {
         final TimeSerie timeSerie = new TimeSerie(event.getKey(), tags);
         final DataPoint datapoint = new DataPoint(event.getTime(),
                 event.getValue(), Float.NaN);
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-        datapoints.add(datapoint);
+        final List<DataPoint> data = new ArrayList<DataPoint>();
+        data.add(datapoint);
 
-        final Callback<WriteResponse> callback = consumer
-                .getMetricBackendManager().write(timeSerie, datapoints)
-                .register(new Callback.Handle<WriteResponse>() {
-                    @Override
-                    public void cancelled(CancelReason reason) throws Exception {
-                        log.error("Write cancelled: " + reason);
-                    }
+        final WriteEntry entry = new WriteEntry(timeSerie, data);
 
-                    @Override
-                    public void failed(Exception e) throws Exception {
-                        log.error("Write failed", e);
-                    }
+        final ConcurrentLinkedQueue<WriteEntry> buffer = this.buffer.get();
 
-                    @Override
-                    public void resolved(WriteResponse result) throws Exception {
-                    }
-                });
+        buffer.add(entry);
+
+        if (buffer.size() < 1000)
+            return;
+
+        final boolean updated = this.buffer.compareAndSet(buffer,
+                new ConcurrentLinkedQueue<WriteEntry>());
+
+        if (!updated)
+            return;
+
+        log.debug("Flushing: {}", buffer.size());
+
+        final WriteResponse response;
 
         try {
-            callback.get();
+            response = consumer.getMetricBackendManager().write(buffer).get();
         } catch (Exception e) {
             throw new ConsumerSchemaException("Failed to write", e);
         }
+
+        log.info("Write successful: {}", response);
     }
 }

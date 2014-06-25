@@ -12,12 +12,12 @@ import com.spotify.heroic.model.TimeSerie;
 @Data
 public class WriteMetricsRequest {
     private final TimeSerie timeSerie;
-    private final List<DataPoint> datapoints;
+    private final List<DataPoint> data;
 
     @JsonCreator
     public static WriteMetricsRequest create(
             @JsonProperty("timeSerie") TimeSerie timeSerie,
-            @JsonProperty("datapoints") List<DataPoint> datapoints) {
-        return new WriteMetricsRequest(timeSerie, datapoints);
+            @JsonProperty("data") List<DataPoint> data) {
+        return new WriteMetricsRequest(timeSerie, data);
     }
 }

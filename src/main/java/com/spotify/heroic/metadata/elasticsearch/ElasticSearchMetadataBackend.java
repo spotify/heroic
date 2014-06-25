@@ -10,11 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.Getter;
@@ -40,6 +35,7 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.elasticsearch.async.FindKeysResolver;
@@ -54,7 +50,6 @@ import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
@@ -66,7 +61,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     public static final String KEY = "key";
 
     /**
-     * 
+     *
      */
     public static class YAML implements MetadataBackend.YAML {
         public static String TYPE = "!elasticsearch-metadata";
@@ -93,6 +88,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         @Getter
         @Setter
+        private int readThreads = 20;
+
+        @Getter
+        @Setter
+        private int readQueueSize = 20;
+
+        @Getter
+        @Setter
         private int writeThreads = 20;
 
         @Getter
@@ -104,21 +107,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
                     .size()]);
-            final Executor executor = Executors.newFixedThreadPool(10);
 
-            final ThreadPoolExecutor writeExecutor = new ThreadPoolExecutor(
-                    writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(writeQueueSize));
+            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
+                    .readThreads(readThreads).readQueueSize(readQueueSize)
+                    .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
+                    .build();
 
-            reporter.newWriteThreadPool(new ThreadPoolProvider() {
-                @Override
-                public int getQueueSize() {
-                    return writeExecutor.getQueue().size();
-                }
-            });
-
-            return new ElasticSearchMetadataBackend(executor, writeExecutor,
-                    reporter, seeds, clusterName, index, type, nodeClient);
+            return new ElasticSearchMetadataBackend(pools, reporter, seeds,
+                    clusterName, index, type, nodeClient);
         }
     }
 
@@ -131,8 +127,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         void close() throws Exception;
     }
 
-    private final Executor executor;
-    private final ThreadPoolExecutor writeExecutor;
+    private final ReadWriteThreadPools pools;
     private final MetadataBackendReporter reporter;
     private final String[] seeds;
     private final String clusterName;
@@ -264,9 +259,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                     CancelReason.BACKEND_DISABLED);
 
         return findTagKeys(query).transform(
-                new FindTagsTransformer(executor, client, index, type, query,
-                        includes, excludes))
-                .register(reporter.reportFindTags());
+                new FindTagsTransformer(pools.read(), client, index, type,
+                        query, includes, excludes)).register(
+                reporter.reportFindTags());
     }
 
     @Override
@@ -280,7 +275,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         final QueryBuilder builder = toQueryBuilder(query);
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new FindTimeSeriesResolver(client, index, type, builder))
                 .register(reporter.reportFindTimeSeries());
     }
@@ -295,7 +290,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         final QueryBuilder builder = toQueryBuilder(query);
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new FindTagKeysResolver(client, index, type, builder))
                 .register(reporter.reportFindTagKeys());
     }
@@ -311,7 +306,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         final QueryBuilder builder = toQueryBuilder(query);
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new FindKeysResolver(client, index, type, builder)).register(
                 reporter.reportFindKeys());
     }
@@ -327,14 +322,15 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         if (writeCache.contains(timeSerie)) {
             reporter.reportWriteCacheHit();
-            return new ResolvedCallback<WriteResponse>(new WriteResponse(1, 0));
+            return new ResolvedCallback<WriteResponse>(new WriteResponse(1, 0,
+                    0));
         }
 
         reporter.reportWriteCacheMiss();
 
         final Map<String, Object> source = fromTimeSerie(timeSerie);
 
-        return ConcurrentCallback.newResolve(writeExecutor,
+        return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResponse>() {
                     @Override
                     public WriteResponse resolve() throws Exception {
@@ -348,7 +344,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                         future.get();
 
                         writeCache.add(timeSerie.hashCode());
-                        return new WriteResponse(1, 0);
+                        return new WriteResponse(1, 0, 0);
                     }
                 }).register(reporter.reportWrite());
     }

@@ -104,7 +104,7 @@ public class Main extends GuiceServletContextListener {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
+                .toInstance(storedMetricsQueries);
 
                 setupBackends(MetricBackend.class, metricBackends);
 
@@ -126,17 +126,17 @@ public class Main extends GuiceServletContextListener {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((Lifecycle) i);
-                                    }
-                                });
+                            public void afterInjection(Object i) {
+                                managed.add((Lifecycle) i);
                             }
                         });
+                    }
+                });
             }
 
             @SuppressWarnings("unchecked")
@@ -159,7 +159,7 @@ public class Main extends GuiceServletContextListener {
         return Guice.createInjector(modules);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         final String configPath;
 
         if (args.length < 1) {
@@ -246,26 +246,35 @@ public class Main extends GuiceServletContextListener {
                     log.error("Server shutdown failed", e);
                 }
 
+                log.info("Firing stop handles");
+
+                /* fire Stoppable handlers */
+                for (final Lifecycle stoppable : Main.managed) {
+                    try {
+                        stoppable.stop();
+                    } catch (Exception e) {
+                        log.error("Failed to stop {}", stoppable, e);
+                    }
+                }
+
                 log.warn("Bye Bye!");
                 latch.countDown();
             }
         });
 
+        hook.setDaemon(true);
+
         Runtime.getRuntime().addShutdownHook(hook);
+
+        System.out.println("Enter to exit...");
+        System.in.read();
+
+        hook.start();
 
         try {
             latch.await();
         } catch (InterruptedException e) {
             log.error("Shutdown interrupted", e);
-        }
-
-        /* fire Stoppable handlers */
-        for (final Lifecycle stoppable : Main.managed) {
-            try {
-                stoppable.stop();
-            } catch (Exception e) {
-                log.error("Failed to stop {}", stoppable, e);
-            }
         }
 
         System.exit(0);

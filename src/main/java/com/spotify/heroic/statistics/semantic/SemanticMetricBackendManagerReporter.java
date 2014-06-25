@@ -21,18 +21,18 @@ public class SemanticMetricBackendManagerReporter implements
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
 
         this.getAllRows = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "get-all-rows", "unit", Units.READS));
+                "what", "get-all-rows", "unit", Units.READ));
         this.queryMetrics = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "query-metrics", "unit", Units.READS));
+                "what", "query-metrics", "unit", Units.READ));
         this.streamMetrics = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "stream-metrics", "unit", Units.READS));
+                "what", "stream-metrics", "unit", Units.READ));
         this.streamMetricsChunk = new SemanticCallbackReporter(registry,
                 id.tagged("operation", "stream-metrics-chunk", "unit",
-                        Units.READS));
+                        Units.READ));
         this.findRowGroups = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "find-row-groups", "unit", Units.LOOKUPS));
+                "what", "find-row-groups", "unit", Units.LOOKUP));
         this.write = new SemanticCallbackReporter(registry, id.tagged("what",
-                "write", "unit", Units.WRITES));
+                "write", "unit", Units.WRITE));
     }
 
     @Override

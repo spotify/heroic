@@ -1,6 +1,7 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -13,15 +14,15 @@ import com.spotify.heroic.injection.DisablingLifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.WriteEntry;
 import com.spotify.heroic.model.WriteResponse;
 
 /**
  * A metric backend facade that learns about failures in the upstream backend
  * and 'disables' itself accordingly.
- * 
+ *
  * @author udoprog
  */
 @Slf4j
@@ -42,13 +43,21 @@ public class DisablingMetricBackend extends DisablingLifecycle<MetricBackend>
 
     @SuppressWarnings("unchecked")
     @Override
-    public Callback<WriteResponse> write(TimeSerie timeSerie,
-            List<DataPoint> datapoints) {
+    public Callback<WriteResponse> write(WriteEntry write) {
         if (checkDisabled())
             return (Callback<WriteResponse>) DISABLED;
 
-        return delegate().write(timeSerie, datapoints).register(
-                this.<WriteResponse> learner());
+        return delegate().write(write).register(this.<WriteResponse> learner());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Callback<WriteResponse> write(Collection<WriteEntry> writes) {
+        if (checkDisabled())
+            return (Callback<WriteResponse>) DISABLED;
+
+        return delegate().write(writes)
+                .register(this.<WriteResponse> learner());
     }
 
     @Override

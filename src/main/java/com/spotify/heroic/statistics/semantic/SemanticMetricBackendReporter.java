@@ -26,7 +26,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
                 COMPONENT);
 
         this.writeBatch = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "write-batch", "unit", Units.WRITES));
+                "what", "write-batch", "unit", Units.WRITE));
     }
 
     @Override
@@ -37,7 +37,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     @Override
     public void newWriteThreadPool(final ThreadPoolProvider provider) {
         registry.register(
-                id.tagged("what", "write-thread-pool-size", "unit", Units.SIZE),
+                id.tagged("what", "write-thread-pool-size", "unit", Units.BYTE),
                 new Gauge<Integer>() {
                     @Override
                     public Integer getValue() {
