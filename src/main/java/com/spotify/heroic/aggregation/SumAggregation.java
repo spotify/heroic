@@ -13,7 +13,8 @@ public class SumAggregation extends BucketAggregation {
     }
 
     @JsonCreator
-    public static SumAggregation create(@JsonProperty("sampling") Sampling sampling) {
+    public static SumAggregation create(
+            @JsonProperty("sampling") Sampling sampling) {
         return new SumAggregation(sampling);
     }
 

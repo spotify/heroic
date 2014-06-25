@@ -289,7 +289,9 @@ public class InMemoryMetadataBackend implements MetadataBackend {
      */
     private List<TimeSerie> findBestMatch(String key, Map<String, String> filter) {
         List<TimeSerie> smallest = null;
+        @SuppressWarnings("unused")
         Map.Entry<String, String> matchedTag = null;
+        @SuppressWarnings("unused")
         String matchedKey = null;
 
         if (filter != null) {

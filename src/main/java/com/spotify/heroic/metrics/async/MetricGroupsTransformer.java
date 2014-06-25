@@ -8,7 +8,8 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 
 @RequiredArgsConstructor
-public class MetricGroupsTransformer implements Callback.Transformer<MetricGroups, MetricsQueryResponse> {
+public class MetricGroupsTransformer implements
+        Callback.Transformer<MetricGroups, MetricsQueryResponse> {
     private final DateRange rounded;
 
     @Override

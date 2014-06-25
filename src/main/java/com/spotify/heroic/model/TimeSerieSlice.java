@@ -119,8 +119,7 @@ public class TimeSerieSlice {
             }
 
             if (tail.range.start() > end) {
-                final DateRange range = new DateRange(first
-                        .range.start(), end);
+                final DateRange range = new DateRange(first.range.start(), end);
                 joined.add(new TimeSerieSlice(first.getTimeSerie(), range));
                 return tail;
             }

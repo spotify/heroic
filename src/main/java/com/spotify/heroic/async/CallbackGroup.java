@@ -35,7 +35,8 @@ public class CallbackGroup<T> implements Callback.Cancellable {
         @Override
         public void resolved(T result) throws Exception {
             if (result == null)
-                throw new NullPointerException("CallbackGroup cannot handle null results (due to using a Queue for storing results)");
+                throw new NullPointerException(
+                        "CallbackGroup cannot handle null results (due to using a Queue for storing results)");
 
             results.add(result);
             CallbackGroup.this.checkIn();

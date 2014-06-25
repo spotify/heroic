@@ -25,9 +25,10 @@ import com.spotify.heroic.model.TimeSerie;
 
 @RequiredArgsConstructor
 public final class CacheGetResolver implements
-Callback.Resolver<CacheBackendGetResult> {
+        Callback.Resolver<CacheBackendGetResult> {
     static final String CQL_QUERY = "SELECT data_offset, data_value, data_p FROM aggregations_1200 WHERE aggregation_key = ?";
-    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
+    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer
+            .get();
 
     private final Keyspace keyspace;
     private final ColumnFamily<Integer, String> columnFamily;
@@ -49,20 +50,24 @@ Callback.Resolver<CacheBackendGetResult> {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         for (long base : bases) {
-            final CacheKey cacheKey = new CacheKey(timeSerie, aggregationGroup, base);
+            final CacheKey cacheKey = new CacheKey(timeSerie, aggregationGroup,
+                    base);
 
             final OperationResult<CqlResult<Integer, String>> op = keyspace
                     .prepareQuery(columnFamily).withCql(CQL_QUERY)
                     .asPreparedStatement()
-                    .withByteBufferValue(cacheKey, cacheKeySerializer).execute();
+                    .withByteBufferValue(cacheKey, cacheKeySerializer)
+                    .execute();
 
             final CqlResult<Integer, String> result = op.getResult();
             final Rows<Integer, String> rows = result.getRows();
 
             for (final Row<Integer, String> row : rows) {
                 final ColumnList<String> columns = row.getColumns();
-                final int offset = columns.getColumnByIndex(0).getIntegerValue();
-                final double value = columns.getColumnByIndex(1).getDoubleValue();
+                final int offset = columns.getColumnByIndex(0)
+                        .getIntegerValue();
+                final double value = columns.getColumnByIndex(1)
+                        .getDoubleValue();
                 final float p = columns.getColumnByIndex(2).getFloatValue();
 
                 final long timestamp = getDataPointTimestamp(base, columnSize,

@@ -34,7 +34,8 @@ class DataPointsRowKey {
             byte[] metricName = dataPointsRowKey.getMetricName().getBytes(UTF8);
             size += metricName.length;
             size++; // Add one for null at end of string
-            byte[] tagString = generateTagString(new TreeMap<String, String>(dataPointsRowKey.getTags()))
+            byte[] tagString = generateTagString(
+                    new TreeMap<String, String>(dataPointsRowKey.getTags()))
                     .getBytes(UTF8);
             size += tagString.length;
 

@@ -21,16 +21,15 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 @RequiredArgsConstructor
-public final class TimeSeriesTransformer
-        implements
+public final class TimeSeriesTransformer implements
         Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
     private final AggregationCache cache;
     private final AggregationGroup aggregation;
     private final DateRange range;
 
     @Override
-    public Callback<MetricGroups> transform(
-            List<GroupedTimeSeries> result) throws Exception {
+    public Callback<MetricGroups> transform(List<GroupedTimeSeries> result)
+            throws Exception {
         if (cache == null || aggregation == null)
             return ConcurrentCallback.newReduce(execute(result),
                     new MergeMetricGroups());

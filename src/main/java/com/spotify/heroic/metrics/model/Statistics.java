@@ -48,7 +48,7 @@ public class Statistics {
         public Aggregator merge(Aggregator other) {
             return new Aggregator(this.sampleSize + other.sampleSize,
                     this.outOfBounds + other.outOfBounds, this.uselessScan
-                    + other.uselessScan);
+                            + other.uselessScan);
         }
     }
 
@@ -61,7 +61,8 @@ public class Statistics {
         private final int cancelled;
 
         public Row merge(Row other) {
-            return new Row(this.successful + other.successful, this.failed + other.failed, this.cancelled + other.cancelled);
+            return new Row(this.successful + other.successful, this.failed
+                    + other.failed, this.cancelled + other.cancelled);
         }
     }
 
@@ -74,7 +75,8 @@ public class Statistics {
         private final int duplicates;
 
         public Cache merge(Cache other) {
-            return new Cache(this.hits + other.hits, this.conflicts + other.conflicts, this.duplicates + other.duplicates);
+            return new Cache(this.hits + other.hits, this.conflicts
+                    + other.conflicts, this.duplicates + other.duplicates);
         }
     }
 

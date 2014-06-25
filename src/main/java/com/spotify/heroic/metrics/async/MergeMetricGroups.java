@@ -19,13 +19,14 @@ import com.spotify.heroic.metrics.model.Statistics;
  */
 @Slf4j
 public final class MergeMetricGroups implements
-Callback.Reducer<MetricGroups, MetricGroups> {
+        Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
-                    throws Exception {
+            throws Exception {
         if (!errors.isEmpty()) {
-            log.error("There were {} error(s) when quering for metrics", errors.size());
+            log.error("There were {} error(s) when quering for metrics",
+                    errors.size());
 
             int i = 0;
 

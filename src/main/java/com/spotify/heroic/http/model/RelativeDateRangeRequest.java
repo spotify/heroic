@@ -12,8 +12,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.model.DateRange;
 
-@ToString(of = {"unit", "value"})
-@EqualsAndHashCode(of={"unit", "value"})
+@ToString(of = { "unit", "value" })
+@EqualsAndHashCode(of = { "unit", "value" })
 @RequiredArgsConstructor
 public class RelativeDateRangeRequest implements DateRangeRequest {
     public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
@@ -26,7 +26,9 @@ public class RelativeDateRangeRequest implements DateRangeRequest {
     private final long value;
 
     @JsonCreator
-    public static RelativeDateRangeRequest create(@JsonProperty("unit") TimeUnit unit, @JsonProperty("value") Long value) {
+    public static RelativeDateRangeRequest create(
+            @JsonProperty("unit") TimeUnit unit,
+            @JsonProperty("value") Long value) {
         if (unit == null)
             unit = DEFAULT_UNIT;
 
@@ -37,8 +39,7 @@ public class RelativeDateRangeRequest implements DateRangeRequest {
     }
 
     private long start(final Date now) {
-        return now.getTime()
-                - TimeUnit.MILLISECONDS.convert(value, unit);
+        return now.getTime() - TimeUnit.MILLISECONDS.convert(value, unit);
     }
 
     private long end(final Date now) {

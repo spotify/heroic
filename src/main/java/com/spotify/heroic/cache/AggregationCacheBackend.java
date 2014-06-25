@@ -18,7 +18,8 @@ import com.spotify.heroic.yaml.ValidationException;
  */
 public interface AggregationCacheBackend {
     public static interface YAML {
-        AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter)
+        AggregationCacheBackend build(String context,
+                AggregationCacheBackendReporter reporter)
                 throws ValidationException;
     }
 
@@ -32,8 +33,8 @@ public interface AggregationCacheBackend {
      *         null values to indicate that entries are missing.
      * @throws AggregationCacheException
      */
-    public Callback<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
-            throws AggregationCacheException;
+    public Callback<CacheBackendGetResult> get(CacheBackendKey key,
+            DateRange range) throws AggregationCacheException;
 
     /**
      * Put a new entry into the aggregation cache.
@@ -50,5 +51,6 @@ public interface AggregationCacheBackend {
      *             An early throw exception, if the backend is unable to prepare
      *             the request.
      */
-    public Callback<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints) throws AggregationCacheException;
+    public Callback<CacheBackendPutResult> put(CacheBackendKey key,
+            List<DataPoint> datapoints) throws AggregationCacheException;
 }

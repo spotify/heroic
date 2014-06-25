@@ -10,12 +10,11 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.metadata.model.FindTags;
 
-public class FindTagsReducer implements
-        Callback.Reducer<FindTags, FindTags> {
+public class FindTagsReducer implements Callback.Reducer<FindTags, FindTags> {
     @Override
     public FindTags resolved(Collection<FindTags> results,
-            Collection<Exception> errors,
-            Collection<CancelReason> cancelled) throws Exception {
+            Collection<Exception> errors, Collection<CancelReason> cancelled)
+            throws Exception {
         return mergeFindTags(results);
     }
 
@@ -24,7 +23,8 @@ public class FindTagsReducer implements
         int size = 0;
 
         for (final FindTags findTags : results) {
-            for (Map.Entry<String, Set<String>> entry : findTags.getTags().entrySet()) {
+            for (Map.Entry<String, Set<String>> entry : findTags.getTags()
+                    .entrySet()) {
                 Set<String> entries = tags.get(entry.getKey());
 
                 if (entries == null) {

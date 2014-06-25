@@ -145,7 +145,7 @@ public class HeroicResource {
                                 .getGroups());
                         final MetricsResponse entity = new MetricsResponse(
                                 result.getQueryRange(), data, groups
-                                .getStatistics());
+                                        .getStatistics());
                         final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                         builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -319,14 +319,14 @@ public class HeroicResource {
                 response,
                 metadataBackend.findTags(timeSeriesQuery, query.getInclude(),
                         query.getExclude()).transform(
-                                new Callback.Transformer<FindTags, TagsResponse>() {
-                                    @Override
-                                    public TagsResponse transform(FindTags result)
-                                            throws Exception {
-                                        return new TagsResponse(result.getTags(),
-                                                result.getSize());
-                                    }
-                                }));
+                        new Callback.Transformer<FindTags, TagsResponse>() {
+                            @Override
+                            public TagsResponse transform(FindTags result)
+                                    throws Exception {
+                                return new TagsResponse(result.getTags(),
+                                        result.getSize());
+                            }
+                        }));
     }
 
     @POST
@@ -371,19 +371,19 @@ public class HeroicResource {
         metadataResult(
                 response,
                 metadataBackend
-                .findTimeSeries(timeSeriesQuery)
-                .transform(
-                        new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-                            @Override
-                            public TimeSeriesResponse transform(
-                                    FindTimeSeries result)
+                        .findTimeSeries(timeSeriesQuery)
+                        .transform(
+                                new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
+                                    @Override
+                                    public TimeSeriesResponse transform(
+                                            FindTimeSeries result)
                                             throws Exception {
-                                return new TimeSeriesResponse(
-                                        new ArrayList<TimeSerie>(result
-                                                .getTimeSeries()),
+                                        return new TimeSeriesResponse(
+                                                new ArrayList<TimeSerie>(result
+                                                        .getTimeSeries()),
                                                 result.getSize());
-                            }
-                        }));
+                                    }
+                                }));
     }
 
     /**
@@ -408,8 +408,8 @@ public class HeroicResource {
                 .fromByteBuffer(buffer);
         return Response
                 .status(Response.Status.OK)
-                .entity(new DecodeRowKeyResponse(rowKey.getTimeSerie(),
-                        rowKey.getBase())).build();
+                .entity(new DecodeRowKeyResponse(rowKey.getTimeSerie(), rowKey
+                        .getBase())).build();
     }
 
     @POST
@@ -426,8 +426,7 @@ public class HeroicResource {
 
         final String data = "0x"
                 + BaseEncoding.base16().encode(bytes).toLowerCase();
-        return Response
-                .status(Response.Status.OK)
+        return Response.status(Response.Status.OK)
                 .entity(new EncodeRowKeyResponse(data)).build();
     }
 

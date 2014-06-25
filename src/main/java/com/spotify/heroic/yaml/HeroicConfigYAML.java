@@ -39,13 +39,14 @@ public class HeroicConfigYAML {
     @Setter
     private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
 
-    private List<MetricBackend> setupMetricBackends(String context, HeroicReporter reporter)
-            throws ValidationException {
+    private List<MetricBackend> setupMetricBackends(String context,
+            HeroicReporter reporter) throws ValidationException {
         List<MetricBackend> backends = new ArrayList<MetricBackend>();
 
         int i = 0;
 
-        for (MetricBackend.YAML backend : Utils.toList("backends", this.backends)) {
+        for (MetricBackend.YAML backend : Utils.toList("backends",
+                this.backends)) {
             final String c = context + "[" + i++ + "]";
             backends.add(backend.build(c, reporter.newMetricBackend(c)));
         }
@@ -53,13 +54,14 @@ public class HeroicConfigYAML {
         return backends;
     }
 
-    private List<MetadataBackend> setupMetadataBackends(String context, HeroicReporter reporter)
-            throws ValidationException {
+    private List<MetadataBackend> setupMetadataBackends(String context,
+            HeroicReporter reporter) throws ValidationException {
         List<MetadataBackend> backends = new ArrayList<MetadataBackend>();
 
         int i = 0;
 
-        for (MetadataBackend.YAML backend : Utils.toList("metadataBackends", this.metadataBackends)) {
+        for (MetadataBackend.YAML backend : Utils.toList("metadataBackends",
+                this.metadataBackends)) {
             final String c = context + "[" + i++ + "]";
             backends.add(backend.build(c, reporter.newMetadataBackend(c)));
         }
@@ -74,8 +76,7 @@ public class HeroicConfigYAML {
 
         int i = 0;
 
-        for (Consumer.YAML consumer : Utils.toList("consumers",
-                this.consumers)) {
+        for (Consumer.YAML consumer : Utils.toList("consumers", this.consumers)) {
             final String c = context + "[" + i++ + "]";
             consumers.add(consumer.build(c, reporter.newConsumerReporter(c)));
         }
@@ -85,12 +86,15 @@ public class HeroicConfigYAML {
 
     public HeroicConfig build(HeroicReporter reporter)
             throws ValidationException {
-        final List<MetricBackend> metricBackends = setupMetricBackends("backends", reporter);
-        final List<MetadataBackend> metadataBackends = setupMetadataBackends("metadataBackends", reporter);
+        final List<MetricBackend> metricBackends = setupMetricBackends(
+                "backends", reporter);
+        final List<MetadataBackend> metadataBackends = setupMetadataBackends(
+                "metadataBackends", reporter);
         final List<Consumer> consumers = setupConsumers("consumers", reporter);
 
         if (metadataBackends.isEmpty()) {
-            metadataBackends.add(new InMemoryMetadataBackend(reporter.newMetadataBackend(null)));
+            metadataBackends.add(new InMemoryMetadataBackend(reporter
+                    .newMetadataBackend(null)));
         }
 
         final AggregationCache cache;
@@ -98,12 +102,13 @@ public class HeroicConfigYAML {
         if (this.cache == null) {
             cache = null;
         } else {
-            final AggregationCacheBackend backend = this.cache.build("cache", reporter.newAggregationCacheBackend(null));
-            cache = new AggregationCache(reporter.newAggregationCache(null), backend);
+            final AggregationCacheBackend backend = this.cache.build("cache",
+                    reporter.newAggregationCacheBackend(null));
+            cache = new AggregationCache(reporter.newAggregationCache(null),
+                    backend);
         }
 
         return new HeroicConfig(metricBackends, metadataBackends, consumers,
-                cache,
-                maxAggregationMagnitude);
+                cache, maxAggregationMagnitude);
     }
 }

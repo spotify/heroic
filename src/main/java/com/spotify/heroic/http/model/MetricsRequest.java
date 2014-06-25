@@ -17,7 +17,8 @@ import com.spotify.heroic.aggregation.AverageAggregation;
 import com.spotify.heroic.aggregation.SumAggregation;
 
 @ToString(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
-@EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
+@EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache",
+        "aggregators" })
 public class MetricsRequest {
     private static final DateRangeRequest DEFAULT_DATE_RANGE = new RelativeDateRangeRequest(
             TimeUnit.DAYS, 7);

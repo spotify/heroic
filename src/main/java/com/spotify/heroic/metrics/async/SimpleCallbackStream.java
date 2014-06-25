@@ -21,7 +21,8 @@ import com.spotify.heroic.model.TimeSerieSlice;
 
 @Slf4j
 @RequiredArgsConstructor
-public final class SimpleCallbackStream implements Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+public final class SimpleCallbackStream implements
+        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private final TimeSerieSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
@@ -33,14 +34,14 @@ public final class SimpleCallbackStream implements Callback.StreamReducer<FetchD
     }
 
     @Override
-    public void failed(Callback<FetchDataPoints.Result> callback, Exception error)
-            throws Exception {
+    public void failed(Callback<FetchDataPoints.Result> callback,
+            Exception error) throws Exception {
         log.error("Error encountered when processing request", error);
     }
 
     @Override
-    public void cancelled(Callback<FetchDataPoints.Result> callback, CancelReason reason)
-            throws Exception {
+    public void cancelled(Callback<FetchDataPoints.Result> callback,
+            CancelReason reason) throws Exception {
         log.error("Cancel encountered when processing request", reason);
     }
 

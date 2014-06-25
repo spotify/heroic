@@ -60,7 +60,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
     }
 
     private void handleError(Handle<T> handle, Callback<T> callback,
-    		Exception error) {
+            Exception error) {
         try {
             handle.error(callback, error);
         } catch (final Exception t) {

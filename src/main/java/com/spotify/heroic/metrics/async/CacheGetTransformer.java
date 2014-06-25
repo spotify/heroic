@@ -18,17 +18,20 @@ import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.TimeSerieSlice;
 
 /**
- * Common class for taking a cache query result and building up new queries for the missing 'slices'.
+ * Common class for taking a cache query result and building up new queries for
+ * the missing 'slices'.
  *
  * @author udoprog
  */
 @RequiredArgsConstructor
-public abstract class CacheGetTransformer implements Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
+public abstract class CacheGetTransformer implements
+        Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
     private final TimeSerie timeSerie;
     private final AggregationCache cache;
 
     @Override
-    public Callback<MetricGroups> transform(CacheQueryResult cacheResult) throws Exception {
+    public Callback<MetricGroups> transform(CacheQueryResult cacheResult)
+            throws Exception {
         final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
 
         for (final TimeSerieSlice slice : cacheResult.getMisses()) {
@@ -49,14 +52,17 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
                     .cache(new Statistics.Cache(datapoints.size(), 0, 0))
                     .build();
 
-            return new ResolvedCallback<MetricGroups>(new MetricGroups(groups, stat));
+            return new ResolvedCallback<MetricGroups>(new MetricGroups(groups,
+                    stat));
         }
 
         /**
          * Merge with queried data.
          */
-        return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(cache, timeSerie, cacheResult));
+        return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(
+                cache, timeSerie, cacheResult));
     }
 
-    public abstract Callback<MetricGroups> cacheMiss(TimeSerieSlice slice) throws Exception;
+    public abstract Callback<MetricGroups> cacheMiss(TimeSerieSlice slice)
+            throws Exception;
 }

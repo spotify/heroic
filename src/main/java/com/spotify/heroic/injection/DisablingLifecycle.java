@@ -1,4 +1,4 @@
-package com.spotify.heroic;
+package com.spotify.heroic.injection;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -8,19 +8,17 @@ import lombok.extern.slf4j.Slf4j;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.injection.Delegator;
-import com.spotify.heroic.injection.Lifecycle;
 
 /**
  * A metric backend facade that learns about failures in the upstream backend
  * and 'disables' itself accordingly.
- * 
+ *
  * @author udoprog
  */
 @RequiredArgsConstructor
 @Slf4j
 public class DisablingLifecycle<T extends Lifecycle> implements Delegator<T>,
-        Lifecycle {
+Lifecycle {
     private final T delegate;
     private final double threshold;
     private final long cooldownPeriod;

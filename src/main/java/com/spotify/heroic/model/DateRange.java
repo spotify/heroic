@@ -116,7 +116,8 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     public DateRange shift(long extent) {
-        return new DateRange(Math.max(start + extent, 0), Math.max(end + extent, 0));
+        return new DateRange(Math.max(start + extent, 0), Math.max(
+                end + extent, 0));
     }
 
     private static final FastDateFormat format = FastDateFormat
@@ -127,6 +128,6 @@ public class DateRange implements Comparable<DateRange> {
         final Date start = new Date(this.start);
         final Date end = new Date(this.end);
         return "DateRange(start=" + format.format(start) + ", end="
-        + format.format(end) + ")";
+                + format.format(end) + ")";
     }
 }

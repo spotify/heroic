@@ -29,8 +29,7 @@ import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
-public class CassandraCache implements
-        AggregationCacheBackend {
+public class CassandraCache implements AggregationCacheBackend {
     public static final int WIDTH = 1200;
 
     public static class YAML implements AggregationCacheBackend.YAML {
@@ -65,12 +64,14 @@ public class CassandraCache implements
         private int threads = 20;
 
         @Override
-        public AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter) throws ValidationException {
+        public AggregationCacheBackend build(String context,
+                AggregationCacheBackendReporter reporter)
+                throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Executor executor = Executors.newFixedThreadPool(threads);
-            return new CassandraCache(reporter, executor,
-                    seeds, keyspace, maxConnectionsPerHost);
+            return new CassandraCache(reporter, executor, seeds, keyspace,
+                    maxConnectionsPerHost);
         }
     }
 
@@ -106,16 +107,16 @@ public class CassandraCache implements
     }
 
     @Override
-    public Callback<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range)
-            throws AggregationCacheException {
-        return ConcurrentCallback.newResolve(
-                executor, new CacheGetResolver(keyspace, CQL3_CF, key, range));
+    public Callback<CacheBackendGetResult> get(final CacheBackendKey key,
+            DateRange range) throws AggregationCacheException {
+        return ConcurrentCallback.newResolve(executor, new CacheGetResolver(
+                keyspace, CQL3_CF, key, range));
     }
 
     @Override
     public Callback<CacheBackendPutResult> put(final CacheBackendKey key,
             final List<DataPoint> datapoints) throws AggregationCacheException {
-        return ConcurrentCallback.newResolve(
-                executor, new CachePutResolver( keyspace, CQL3_CF, key, datapoints));
+        return ConcurrentCallback.newResolve(executor, new CachePutResolver(
+                keyspace, CQL3_CF, key, datapoints));
     }
 }

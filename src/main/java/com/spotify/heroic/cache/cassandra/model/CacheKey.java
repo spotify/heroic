@@ -30,7 +30,8 @@ public class CacheKey {
     @Getter
     private final long base;
 
-    public CacheKey(TimeSerie timeSerie, AggregationGroup aggregationGroup, long base) {
+    public CacheKey(TimeSerie timeSerie, AggregationGroup aggregationGroup,
+            long base) {
         this.timeSerie = timeSerie;
         this.aggregationGroup = aggregationGroup;
         this.base = base;

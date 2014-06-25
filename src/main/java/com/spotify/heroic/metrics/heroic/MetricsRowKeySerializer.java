@@ -17,8 +17,7 @@ public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
 
     private static final TimeSerieSerializer timeSerieSerializer = TimeSerieSerializer
             .get();
-    private static final LongSerializer longSerializer = LongSerializer
-            .get();
+    private static final LongSerializer longSerializer = LongSerializer.get();
 
     @Override
     public ByteBuffer toByteBuffer(MetricsRowKey rowKey) {

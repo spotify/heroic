@@ -48,7 +48,7 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
                     .filter("filter")
                     .filter(FilterBuilders.termFilter(
                             ElasticSearchMetadataBackend.TAGS_KEY, key))
-                            .subAggregation(terms);
+                    .subAggregation(terms);
             final AggregationBuilder<?> aggregation = AggregationBuilders
                     .nested("nested").path(ElasticSearchMetadataBackend.TAGS)
                     .subAggregation(filter);
@@ -66,8 +66,7 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
         {
             final Aggregations aggregations = response.getAggregations();
             final Nested tags = (Nested) aggregations.get("nested");
-            final Filter filter = (Filter) tags.getAggregations().get(
-                    "filter");
+            final Filter filter = (Filter) tags.getAggregations().get("filter");
             terms = (Terms) filter.getAggregations().get("terms");
         }
 

@@ -2,8 +2,8 @@ package com.spotify.heroic.metadata;
 
 import java.util.Set;
 
-import com.spotify.heroic.DisablingLifecycle;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.injection.DisablingLifecycle;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;

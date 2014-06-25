@@ -24,16 +24,19 @@ import com.spotify.heroic.model.Sampling;
 class AggregationSerializer extends AbstractSerializer<Aggregation> {
     public interface Serializer<T> {
         void serialize(Composite composite, T value);
+
         T deserialize(Composite composite);
     }
 
-    private static final SamplingSerializer resolutionSerializer = SamplingSerializer.get();
-    private static final ShortSerializer shortSerializer = ShortSerializer.get();
-    private static final CompositeSerializer compositeSerializer = CompositeSerializer.get();
+    private static final SamplingSerializer resolutionSerializer = SamplingSerializer
+            .get();
+    private static final ShortSerializer shortSerializer = ShortSerializer
+            .get();
+    private static final CompositeSerializer compositeSerializer = CompositeSerializer
+            .get();
 
     private static final Map<Class<? extends Aggregation>, Short> T_TO_ID = new HashMap<Class<? extends Aggregation>, Short>();
-    private static final Map<Short, Serializer<? extends Aggregation>> SERIALIZERS =
-            new HashMap<Short, Serializer<? extends Aggregation>>();
+    private static final Map<Short, Serializer<? extends Aggregation>> SERIALIZERS = new HashMap<Short, Serializer<? extends Aggregation>>();
 
     private static final short SUM_AGGREGATION = 0x0001;
     private static final short AVERAGE_AGGREGATION = 0x0002;
@@ -48,28 +51,34 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
         SERIALIZERS.put(SUM_AGGREGATION, new Serializer<SumAggregation>() {
             @Override
             public void serialize(Composite composite, SumAggregation value) {
-                composite.addComponent(value.getSampling(), resolutionSerializer);
+                composite.addComponent(value.getSampling(),
+                        resolutionSerializer);
             }
 
             @Override
             public SumAggregation deserialize(Composite composite) {
-                final Sampling sampling = composite.get(0, resolutionSerializer);
+                final Sampling sampling = composite
+                        .get(0, resolutionSerializer);
                 return new SumAggregation(sampling);
             }
         });
 
-        SERIALIZERS.put(AVERAGE_AGGREGATION, new Serializer<AverageAggregation>() {
-            @Override
-            public void serialize(Composite composite, AverageAggregation value) {
-                composite.addComponent(value.getSampling(), resolutionSerializer);
-            }
+        SERIALIZERS.put(AVERAGE_AGGREGATION,
+                new Serializer<AverageAggregation>() {
+                    @Override
+                    public void serialize(Composite composite,
+                            AverageAggregation value) {
+                        composite.addComponent(value.getSampling(),
+                                resolutionSerializer);
+                    }
 
-            @Override
-            public AverageAggregation deserialize(Composite composite) {
-                final Sampling sampling = composite.get(0, resolutionSerializer);
-                return new AverageAggregation(sampling);
-            }
-        });
+                    @Override
+                    public AverageAggregation deserialize(Composite composite) {
+                        final Sampling sampling = composite.get(0,
+                                resolutionSerializer);
+                        return new AverageAggregation(sampling);
+                    }
+                });
     }
 
     @Override
@@ -78,13 +87,13 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
         final Short typeId = T_TO_ID.get(obj.getClass());
 
         if (typeId == null) {
-            throw new RuntimeException(
-                    "Type is not a serializable aggregate: "
-                            + obj.getClass());
+            throw new RuntimeException("Type is not a serializable aggregate: "
+                    + obj.getClass());
         }
 
         @SuppressWarnings("unchecked")
-        final Serializer<Aggregation> serializer = (Serializer<Aggregation>)SERIALIZERS.get(typeId);
+        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) SERIALIZERS
+                .get(typeId);
 
         final Composite aggregation = new Composite();
         serializer.serialize(aggregation, obj);
@@ -102,7 +111,8 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
         final Composite aggregation = composite.get(1, compositeSerializer);
 
         @SuppressWarnings("unchecked")
-        final Serializer<Aggregation> serializer = (Serializer<Aggregation>)SERIALIZERS.get(typeId);
+        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) SERIALIZERS
+                .get(typeId);
 
         return serializer.deserialize(aggregation);
     }

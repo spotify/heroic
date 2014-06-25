@@ -36,13 +36,11 @@ public class TagsRequest {
     private final Set<String> exclude;
 
     @JsonCreator
-    public static TagsRequest create(
-            @JsonProperty("matchKey") String matchKey,
+    public static TagsRequest create(@JsonProperty("matchKey") String matchKey,
             @JsonProperty("matchTags") Map<String, String> matchTags,
             @JsonProperty("hasTags") Set<String> hasTags,
             @JsonProperty("include") Set<String> include,
-            @JsonProperty("exclude") Set<String> exclude)
-    {
+            @JsonProperty("exclude") Set<String> exclude) {
         return new TagsRequest(matchKey, matchTags, hasTags, include, exclude);
     }
 }

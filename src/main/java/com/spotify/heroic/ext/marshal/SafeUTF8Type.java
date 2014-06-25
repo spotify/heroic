@@ -46,7 +46,8 @@ public class SafeUTF8Type extends AbstractType<String> {
         }
 
         if (value.isEmpty()) {
-            final ByteBuffer buffer = ByteBuffer.allocate(1).put(IS_EMPTY_STRING);
+            final ByteBuffer buffer = ByteBuffer.allocate(1).put(
+                    IS_EMPTY_STRING);
             buffer.rewind();
             return buffer;
         }

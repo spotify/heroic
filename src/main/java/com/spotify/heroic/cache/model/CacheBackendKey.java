@@ -7,7 +7,6 @@ import lombok.ToString;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.model.TimeSerie;
 
-
 @ToString(of = { "timeSerie", "aggregationGroup" })
 @EqualsAndHashCode(of = { "timeSerie", "aggregationGroup" })
 public class CacheBackendKey {

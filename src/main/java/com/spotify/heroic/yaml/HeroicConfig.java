@@ -47,13 +47,13 @@ public class HeroicConfig {
     private final long maxAggregationMagnitude;
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
-        Utils.makeType(HeroicMetricBackend.YAML.class),
-        Utils.makeType(KairosMetricBackend.YAML.class),
-        Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-        Utils.makeType(CassandraCache.YAML.class),
-        Utils.makeType(InMemoryMetadataBackend.YAML.class),
-        Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
-        Utils.makeType(KafkaConsumer.YAML.class) };
+            Utils.makeType(HeroicMetricBackend.YAML.class),
+            Utils.makeType(KairosMetricBackend.YAML.class),
+            Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+            Utils.makeType(CassandraCache.YAML.class),
+            Utils.makeType(InMemoryMetadataBackend.YAML.class),
+            Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
+            Utils.makeType(KafkaConsumer.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {

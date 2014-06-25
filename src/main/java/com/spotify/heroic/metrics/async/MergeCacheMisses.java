@@ -26,7 +26,7 @@ import com.spotify.heroic.model.TimeSerie;
 @Slf4j
 @RequiredArgsConstructor
 final class MergeCacheMisses implements
-Callback.Reducer<MetricGroups, MetricGroups> {
+        Callback.Reducer<MetricGroups, MetricGroups> {
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
@@ -42,7 +42,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
-                    throws Exception {
+            throws Exception {
 
         final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);
@@ -52,7 +52,9 @@ Callback.Reducer<MetricGroups, MetricGroups> {
         if (statistics.getRow().getFailed() == 0) {
             updateCache(joinResults.getCacheUpdates());
         } else {
-            log.warn("Not updating cache because failed requests is non-zero: {}", statistics);
+            log.warn(
+                    "Not updating cache because failed requests is non-zero: {}",
+                    statistics);
         }
 
         return new MetricGroups(groups, joinResults.getStatistics());
@@ -74,9 +76,11 @@ Callback.Reducer<MetricGroups, MetricGroups> {
         return queries;
     }
 
-    private List<MetricGroup> buildDataPointGroups(MergeCacheMisses.JoinResult joinResult) {
+    private List<MetricGroup> buildDataPointGroups(
+            MergeCacheMisses.JoinResult joinResult) {
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult.getResultSet().values());
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>(joinResult
+                .getResultSet().values());
         Collections.sort(datapoints);
 
         groups.add(new MetricGroup(timeSerie, datapoints));
@@ -84,8 +88,8 @@ Callback.Reducer<MetricGroups, MetricGroups> {
     }
 
     /**
-     * Use a map from <code>{tags -> {long -> DataPoint}}</code> to
-     * deduplicate overlapping datapoints.
+     * Use a map from <code>{tags -> {long -> DataPoint}}</code> to deduplicate
+     * overlapping datapoints.
      * 
      * These overlaps are called 'cache duplicates', which mean that we've
      * somehow managed to fetch duplicate entries from one of.
@@ -95,11 +99,11 @@ Callback.Reducer<MetricGroups, MetricGroups> {
      * <li>The raw backends.</li>
      * </ul>
      * 
-     * While this contributes to unnecessary overhead, it's not the end of
-     * the world. These duplicates are reported as cacheDuplicates in
-     * RowStatistics.
+     * While this contributes to unnecessary overhead, it's not the end of the
+     * world. These duplicates are reported as cacheDuplicates in RowStatistics.
      */
-    private MergeCacheMisses.JoinResult joinResults(Collection<MetricGroups> results) {
+    private MergeCacheMisses.JoinResult joinResults(
+            Collection<MetricGroups> results) {
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
         int cacheConflicts = 0;
@@ -140,13 +144,15 @@ Callback.Reducer<MetricGroups, MetricGroups> {
         @Getter
         private final int hits;
     }
+
     /**
      * Add the results previously retrieved from cache.
      * 
      * @param resultGroups
      * @return
      */
-    private AddCached addCached(Map<Long, DataPoint> resultSet, List<DataPoint> datapoints) {
+    private AddCached addCached(Map<Long, DataPoint> resultSet,
+            List<DataPoint> datapoints) {
         int duplicates = 0;
         int hits = 0;
 

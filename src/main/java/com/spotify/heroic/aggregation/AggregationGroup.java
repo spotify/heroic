@@ -63,7 +63,7 @@ public class AggregationGroup {
      * Get a guesstimate of how big of a memory all aggregations would need.
      * This is for the invoker to make the decision whether or not to execute
      * the aggregation.
-     * 
+     *
      * @return
      */
     public long getCalculationMemoryMagnitude(DateRange range) {

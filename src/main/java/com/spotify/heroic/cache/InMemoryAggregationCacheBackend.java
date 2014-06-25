@@ -17,7 +17,8 @@ import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
- * A reference aggregation cache implementation to allow for easier testing of application logic.
+ * A reference aggregation cache implementation to allow for easier testing of
+ * application logic.
  *
  * @author udoprog
  */
@@ -26,7 +27,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         public static final String TYPE = "!in-memory-cache";
 
         @Override
-        public AggregationCacheBackend build(String context, AggregationCacheBackendReporter reporter)
+        public AggregationCacheBackend build(String context,
+                AggregationCacheBackendReporter reporter)
                 throws ValidationException {
             return new InMemoryAggregationCacheBackend();
         }
@@ -35,7 +37,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     public Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
 
     @Override
-    public synchronized Callback<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
+    public synchronized Callback<CacheBackendGetResult> get(
+            CacheBackendKey key, DateRange range)
             throws AggregationCacheException {
         Map<Long, DataPoint> entry = cache.get(key);
 
@@ -71,8 +74,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     }
 
     @Override
-    public synchronized Callback<CacheBackendPutResult> put(CacheBackendKey key,
-            List<DataPoint> datapoints) throws AggregationCacheException {
+    public synchronized Callback<CacheBackendPutResult> put(
+            CacheBackendKey key, List<DataPoint> datapoints)
+            throws AggregationCacheException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {

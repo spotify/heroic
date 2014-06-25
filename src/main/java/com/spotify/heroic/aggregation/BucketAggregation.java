@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.metrics.model.Statistics;
@@ -15,8 +12,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 
-@ToString(of={"sampling"})
-@EqualsAndHashCode(of={"sampling"})
+@Data
 public abstract class BucketAggregation implements Aggregation {
     @Data
     protected static final class Bucket {
@@ -55,7 +51,7 @@ public abstract class BucketAggregation implements Aggregation {
                 final long last = first + extent;
 
                 for (long start = first; start < last; start += size) {
-                    int i = (int)((start - offset) / size);
+                    int i = (int) ((start - offset) / size);
 
                     if (i < 0 || i >= buckets.length)
                         continue;
@@ -122,7 +118,6 @@ public abstract class BucketAggregation implements Aggregation {
         }
     }
 
-    @Getter
     private final Sampling sampling;
 
     public BucketAggregation(Sampling sampling) {

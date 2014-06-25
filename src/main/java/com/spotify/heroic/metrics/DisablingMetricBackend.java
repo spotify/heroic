@@ -6,10 +6,10 @@ import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.DisablingLifecycle;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
+import com.spotify.heroic.injection.DisablingLifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.FindTimeSeries;

@@ -66,7 +66,8 @@ public class AggregationCache {
             long current = range.getStart();
 
             for (final DataPoint d : cached) {
-                if (current + width != d.getTimestamp() && current < d.getTimestamp())
+                if (current + width != d.getTimestamp()
+                        && current < d.getTimestamp())
                     misses.add(slice.modify(current, d.getTimestamp()));
 
                 current = d.getTimestamp();
@@ -76,13 +77,14 @@ public class AggregationCache {
                 misses.add(slice.modify(current, end));
 
             reporter.reportGetMiss(misses.size());
-            callback.resolve(new CacheQueryResult(slice, aggregation, cached, misses));
+            callback.resolve(new CacheQueryResult(slice, aggregation, cached,
+                    misses));
         }
     }
 
     @RequiredArgsConstructor
     private final class BackendCachePutHandle implements
-    Callback.Handle<CacheBackendPutResult> {
+            Callback.Handle<CacheBackendPutResult> {
         private final Callback<CachePutResult> callback;
 
         @Override
@@ -96,8 +98,7 @@ public class AggregationCache {
         }
 
         @Override
-        public void resolved(CacheBackendPutResult result)
-                throws Exception {
+        public void resolved(CacheBackendPutResult result) throws Exception {
             callback.resolve(new CachePutResult());
         }
     }
@@ -110,7 +111,9 @@ public class AggregationCache {
         final DateRange range = slice.getRange();
 
         try {
-            backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, slice, aggregation));
+            backend.get(key, range).register(
+                    new BackendCacheGetHandle(reporter, callback, slice,
+                            aggregation));
         } catch (AggregationCacheException e) {
             callback.fail(e);
         }
@@ -124,7 +127,9 @@ public class AggregationCache {
         final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
         try {
-            backend.put(key, datapoints).register(new BackendCachePutHandle(callback)).register(reporter.reportPut());
+            backend.put(key, datapoints)
+                    .register(new BackendCachePutHandle(callback))
+                    .register(reporter.reportPut());
         } catch (AggregationCacheException e) {
             callback.fail(e);
         }
