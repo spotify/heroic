@@ -68,15 +68,18 @@ public class Statistics {
 
     @Data
     public static final class Cache {
-        public static final Cache EMPTY = new Cache(0, 0, 0);
+        public static final Cache EMPTY = new Cache(0, 0, 0, 0, 0);
 
         private final int hits;
         private final int conflicts;
-        private final int duplicates;
+        private final int cacheConflicts;
+        private final int cachedNans;
+        private final int realNans;
 
         public Cache merge(Cache other) {
-            return new Cache(this.hits + other.hits, this.conflicts
-                    + other.conflicts, this.duplicates + other.duplicates);
+            return new Cache(this.hits + other.hits,
+                this.conflicts + other.conflicts, this.cacheConflicts + other.cacheConflicts,
+                this.cachedNans + other.cachedNans, this.realNans + other.realNans);
         }
     }
 

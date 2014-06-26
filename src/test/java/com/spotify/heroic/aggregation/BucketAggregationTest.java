@@ -33,9 +33,8 @@ public class BucketAggregationTest {
     public BucketAggregation setup(Sampling sampling) {
         return new BucketAggregation(sampling) {
             @Override
-            protected DataPoint build(long timestamp, long count, double value,
-                    float p) {
-                return new DataPoint(timestamp, value, p);
+            protected DataPoint build(long timestamp, long count, double value) {
+                return new DataPoint(timestamp, value);
             }
         };
     }
@@ -46,9 +45,9 @@ public class BucketAggregationTest {
         final Aggregation.Session session = a
                 .session(new DateRange(1000, 3000));
         session.update(build()
-                .add(new DataPoint(1000, 50.0, Float.NaN))
-                .add(new DataPoint(1000, 50.0, Float.NaN))
-                .add(new DataPoint(2000, 50.0, Float.NaN)).result());
+                .add(new DataPoint(1000, 50.0))
+                .add(new DataPoint(1000, 50.0))
+                .add(new DataPoint(2000, 50.0)).result());
 
         final Result result = session.result();
 
@@ -57,8 +56,8 @@ public class BucketAggregationTest {
 
         final List<DataPoint> d = result.getResult();
         Assert.assertEquals(2, d.size());
-        Assert.assertEquals(new DataPoint(2000, 100.0, 1.0f), d.get(0));
-        Assert.assertEquals(new DataPoint(3000, 50.0, 0.5f),
+        Assert.assertEquals(new DataPoint(2000, 100.0), d.get(0));
+        Assert.assertEquals(new DataPoint(3000, 50.0),
                 d.get(1));
     }
 
@@ -68,9 +67,9 @@ public class BucketAggregationTest {
         final Aggregation.Session session = a
                 .session(new DateRange(1000, 3000));
         session.update(build()
-                .add(new DataPoint(1000, 50.0, Float.NaN))
-                .add(new DataPoint(2499, 50.0, Float.NaN))
-                .add(new DataPoint(2500, 50.0, Float.NaN)).result());
+                .add(new DataPoint(1000, 50.0))
+                .add(new DataPoint(2499, 50.0))
+                .add(new DataPoint(2500, 50.0)).result());
 
         final Result result = session.result();
 
@@ -79,8 +78,8 @@ public class BucketAggregationTest {
 
         final List<DataPoint> d = result.getResult();
         Assert.assertEquals(2, d.size());
-        Assert.assertEquals(new DataPoint(2000, Double.NaN, Float.NaN), d.get(0));
-        Assert.assertEquals(new DataPoint(3000, 50.0, 1.0f), d.get(1));
+        Assert.assertEquals(new DataPoint(2000, Double.NaN), d.get(0));
+        Assert.assertEquals(new DataPoint(3000, 50.0), d.get(1));
     }
 
     @Test
@@ -89,9 +88,9 @@ public class BucketAggregationTest {
         final Aggregation.Session session = a
                 .session(new DateRange(1000, 3000));
         session.update(build()
-                .add(new DataPoint(999, 50.0, Float.NaN))
-                .add(new DataPoint(999, 50.0, Float.NaN))
-                .add(new DataPoint(2598, 50.0, Float.NaN)).result());
+                .add(new DataPoint(999, 50.0))
+                .add(new DataPoint(999, 50.0))
+                .add(new DataPoint(2598, 50.0)).result());
 
         final Result result = session.result();
 
@@ -100,7 +99,7 @@ public class BucketAggregationTest {
 
         final List<DataPoint> d = result.getResult();
         Assert.assertEquals(2, d.size());
-        Assert.assertEquals(new DataPoint(1998, Double.NaN, Float.NaN), d.get(0));
-        Assert.assertEquals(new DataPoint(2997, 50.0, 1.0f), d.get(1));
+        Assert.assertEquals(new DataPoint(1998, Double.NaN), d.get(0));
+        Assert.assertEquals(new DataPoint(2997, 50.0), d.get(1));
     }
 }

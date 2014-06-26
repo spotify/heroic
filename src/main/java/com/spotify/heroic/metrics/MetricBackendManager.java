@@ -264,6 +264,7 @@ public class MetricBackendManager {
                 final Statistics s = result.getStatistics();
                 final Statistics.Cache cache = s.getCache();
 
+                // ignore queries where parts of it is cached.
                 if (cache.getHits() != 0) {
                     return window;
                 }

@@ -37,7 +37,7 @@ public class DataPoint implements Comparable<DataPoint> {
 
             final Double value = p.readValueAs(Double.class);
 
-            return new DataPoint(timestamp, value, Float.NaN);
+            return new DataPoint(timestamp, value);
         }
     }
 
@@ -57,26 +57,12 @@ public class DataPoint implements Comparable<DataPoint> {
                 g.writeNumber(value);
             }
 
-            float p = d.getP();
-
-            if (Float.isNaN(p)) {
-                g.writeNull();
-            } else {
-                g.writeNumber(p);
-            }
-
             g.writeEndArray();
         }
     }
 
     private final long timestamp;
     private final double value;
-
-    /**
-     * Indication that this is a correct value. Can be any positive number,
-     * should be compared to other numbers in the same timeserie.
-     */
-    private final float p;
 
     @Override
     public int compareTo(DataPoint o) {

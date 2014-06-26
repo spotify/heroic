@@ -81,17 +81,15 @@ public abstract class BucketAggregation implements Aggregation {
             final List<DataPoint> result = new ArrayList<DataPoint>(
                     buckets.length);
 
-            final float max = calculateMax();
-
             for (final Bucket bucket : buckets) {
                 final long count = bucket.count.get();
                 final DataPoint d;
 
                 if (count == 0) {
-                    d = new DataPoint(bucket.timestamp, Double.NaN, Float.NaN);
+                    d = new DataPoint(bucket.timestamp, Double.NaN);
                 } else {
                     d = aggregator.build(bucket.timestamp, count,
-                            bucket.value.get(), calculateP(count, max));
+                            bucket.value.get());
                 }
 
                 result.add(d);
@@ -101,20 +99,6 @@ public abstract class BucketAggregation implements Aggregation {
                     sampleSize, outOfBounds, uselessScan);
 
             return new Result(result, statistics);
-        }
-
-        private float calculateP(float count, float max) {
-            return ((float) Math.round((count / max) * 100)) / 100;
-        }
-
-        private float calculateMax() {
-            int max = 0;
-
-            for (final Bucket bucket : buckets) {
-                max = Math.max(max, bucket.count.get());
-            }
-
-            return max;
         }
     }
 
@@ -157,5 +141,5 @@ public abstract class BucketAggregation implements Aggregation {
     }
 
     abstract protected DataPoint build(long timestamp, long count,
-            double value, float p);
+            double value);
 }

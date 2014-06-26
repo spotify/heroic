@@ -30,7 +30,6 @@ final class MergeCacheMisses implements
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
-        private final Map<Long, DataPoint> countSet;
         private final Map<TimeSerie, List<DataPoint>> cacheUpdates;
         private final Statistics statistics;
     }
@@ -107,9 +106,9 @@ final class MergeCacheMisses implements
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
         int cacheConflicts = 0;
+        int nans = 0;
 
         final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
-        final Map<Long, DataPoint> countSet = new HashMap<Long, DataPoint>();
 
         final AddCached cachedResults = addCached(resultSet,
                 cacheResult.getResult());
@@ -121,8 +120,13 @@ final class MergeCacheMisses implements
 
             for (final MetricGroup group : result.getGroups()) {
                 for (final DataPoint d : group.getDatapoints()) {
+                    if (Double.isNaN(d.getValue())) {
+                        ++nans;
+                        continue;
+                    }
+
                     if (resultSet.put(d.getTimestamp(), d) != null) {
-                        cacheConflicts += 1;
+                        ++cacheConflicts;
                     }
                 }
 
@@ -131,18 +135,21 @@ final class MergeCacheMisses implements
             }
         }
 
-        return new JoinResult(resultSet, countSet, cacheUpdates, Statistics
+        return new JoinResult(resultSet, cacheUpdates, Statistics
                 .builder(statistics)
                 .cache(new Statistics.Cache(cachedResults.getHits(),
-                        cacheConflicts, cachedResults.getDuplicates())).build());
+                        cacheConflicts, cachedResults.getConflicts(),
+                        cachedResults.getNans(), nans)).build());
     }
 
     @RequiredArgsConstructor
     private static final class AddCached {
         @Getter
-        private final int duplicates;
+        private final int conflicts;
         @Getter
         private final int hits;
+        @Getter
+        private final int nans;
     }
 
     /**
@@ -153,17 +160,23 @@ final class MergeCacheMisses implements
      */
     private AddCached addCached(Map<Long, DataPoint> resultSet,
             List<DataPoint> datapoints) {
-        int duplicates = 0;
+        int conflicts = 0;
         int hits = 0;
+        int nans = 0;
 
         for (final DataPoint d : datapoints) {
+            if (Double.isNaN(d.getValue())) {
+                ++nans;
+                continue;
+            }
+
             if (resultSet.put(d.getTimestamp(), d) != null) {
-                duplicates += 1;
+                ++conflicts;
             } else {
-                hits += 1;
+                ++hits;
             }
         }
 
-        return new AddCached(duplicates, hits);
+        return new AddCached(conflicts, hits, nans);
     }
 }

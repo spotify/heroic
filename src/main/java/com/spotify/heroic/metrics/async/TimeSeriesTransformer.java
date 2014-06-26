@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -94,8 +96,14 @@ public final class TimeSeriesTransformer implements
         final DateRange range = modifiedRange(slice);
 
         for (final TimeSerie serie : series) {
+            if (!backend.matches(serie))
+                continue;
+
             callbacks.addAll(backend.query(serie, range));
         }
+
+        if (callbacks.isEmpty())
+            return new CancelledCallback<MetricGroups>(CancelReason.BACKEND_MISMATCH);
 
         return ConcurrentCallback.newReduce(callbacks, buildReducer(slice));
     }

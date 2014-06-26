@@ -8,6 +8,9 @@ public class CancelReason {
     public static final CancelReason BACKEND_DISABLED = new CancelReason(
             "Backend disabled");
 
+    public static final CancelReason BACKEND_MISMATCH = new CancelReason(
+        "Backend does not match");
+
     public static final CancelReason NO_BACKENDS_AVAILABLE = new CancelReason(
             "No backends available");
 

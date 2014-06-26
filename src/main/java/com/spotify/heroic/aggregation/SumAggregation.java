@@ -19,7 +19,7 @@ public class SumAggregation extends BucketAggregation {
     }
 
     @Override
-    protected DataPoint build(long timestamp, long count, double value, float p) {
-        return new DataPoint(timestamp, value, p);
+    protected DataPoint build(long timestamp, long count, double value) {
+        return new DataPoint(timestamp, value);
     }
 }

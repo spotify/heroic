@@ -194,6 +194,10 @@ MetricBackend {
             return new CancelledCallback<FetchDataPoints.Result>(
                     CancelReason.BACKEND_DISABLED);
 
+        if (!matches(timeSerie))
+          return new CancelledCallback<FetchDataPoints.Result>(
+              CancelReason.BACKEND_MISMATCH);
+
         final DataPointsRowKey rowKey = new DataPointsRowKey(
                 timeSerie.getKey(), base, timeSerie.getTags());
         final DateRange rowRange = new DateRange(base, base
@@ -251,11 +255,10 @@ MetricBackend {
 
                 if (DataPointColumnKey.isLong(name))
                     return new DataPoint(timestamp,
-                            DataPointColumnValue.toLong(bytes),
-                            Float.NaN);
+                            DataPointColumnValue.toLong(bytes));
 
                 return new DataPoint(timestamp, DataPointColumnValue
-                        .toDouble(bytes), Float.NaN);
+                        .toDouble(bytes));
             }
         });
     }

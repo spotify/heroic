@@ -62,6 +62,9 @@ class DataPointsRowKey {
         }
 
         private String escape(String value) {
+          if (value == null)
+              return null;
+
           value = value.replace(":", "_");
           return value.replace("=", "_");
         }
