@@ -54,11 +54,16 @@ class DataPointsRowKey {
             final StringBuilder buffer = new StringBuilder();
 
             for (Map.Entry<String, String> entry : tags.entrySet()) {
-                buffer.append(entry.getKey()).append("=")
-                        .append(entry.getValue()).append(":");
+                buffer.append(escape(entry.getKey())).append("=")
+                        .append(escape(entry.getValue())).append(":");
             }
 
             return buffer.toString();
+        }
+
+        private String escape(String value) {
+          value = value.replace(":", "_");
+          return value.replace("=", "_");
         }
 
         private Map<String, String> parseTags(byte[] tagsBuffer) {
