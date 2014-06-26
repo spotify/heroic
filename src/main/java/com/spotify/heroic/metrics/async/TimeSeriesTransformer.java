@@ -2,6 +2,7 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -43,7 +44,7 @@ public final class TimeSeriesTransformer implements
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
+            for (final Map.Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
                     .entrySet()) {
                 final TimeSerieSlice slice = entry.getKey().slice(range);
                 queries.add(buildLookup(r.getBackend(), slice, entry.getValue()));
@@ -90,14 +91,21 @@ public final class TimeSeriesTransformer implements
             final TimeSerieSlice slice, final Set<TimeSerie> series) {
         final List<Callback<FetchDataPoints.Result>> callbacks = new ArrayList<Callback<FetchDataPoints.Result>>();
 
-        final DateRange range = slice.getRange().shiftStart(
-                -aggregation.getSampling().getExtent());
+        final DateRange range = modifiedRange(slice);
 
         for (final TimeSerie serie : series) {
             callbacks.addAll(backend.query(serie, range));
         }
 
         return ConcurrentCallback.newReduce(callbacks, buildReducer(slice));
+    }
+
+    private DateRange modifiedRange(final TimeSerieSlice slice) {
+      if (aggregation == null)
+        return slice.getRange();
+
+      return slice.getRange().shiftStart(
+              -aggregation.getSampling().getExtent());
     }
 
     private Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> buildReducer(

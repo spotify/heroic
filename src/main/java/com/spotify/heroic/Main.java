@@ -266,10 +266,12 @@ public class Main extends GuiceServletContextListener {
 
         Runtime.getRuntime().addShutdownHook(hook);
 
+        /*
         System.out.println("Enter to exit...");
         System.in.read();
 
         hook.start();
+        */
 
         try {
             latch.await();

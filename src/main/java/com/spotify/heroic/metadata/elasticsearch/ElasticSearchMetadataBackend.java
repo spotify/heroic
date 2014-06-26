@@ -92,7 +92,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         @Getter
         @Setter
-        private int readQueueSize = 20;
+        private int readQueueSize = 10000;
 
         @Getter
         @Setter
@@ -100,7 +100,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         @Getter
         @Setter
-        private int writeQueueSize = 1000;
+        private int writeQueueSize = 10000;
 
         @Override
         public MetadataBackend build(String context,

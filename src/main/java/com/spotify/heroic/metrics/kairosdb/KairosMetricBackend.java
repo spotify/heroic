@@ -11,6 +11,8 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import javax.inject.Inject;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -34,6 +36,8 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
@@ -149,6 +153,9 @@ MetricBackend {
 
     private final MetricBackendReporter reporter;
     private final Executor executor;
+
+    @Inject
+    private MetadataBackendManager metadata;
 
     public KairosMetricBackend(MetricBackendReporter reporter,
             Executor executor, String keyspace, String seeds,
@@ -291,75 +298,46 @@ MetricBackend {
     @Override
     public Callback<FindTimeSeries.Result> findTimeSeries(
             final FindTimeSeries query) {
-        final Keyspace keyspace = keyspace();
+      final Map<String, String> filter = query.getFilter();
+      final List<String> groupBy = query.getGroupBy();
 
-        if (keyspace == null)
-            return new CancelledCallback<FindTimeSeries.Result>(
-                    CancelReason.BACKEND_DISABLED);
+      Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result> transformer = new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
+          @Override
+          public FindTimeSeries.Result transform(
+                  com.spotify.heroic.metadata.model.FindTimeSeries result)
+                          throws Exception {
+              final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
-        final String key = query.getKey();
-        final DateRange range = query.getRange();
-        final Map<String, String> filter = query.getFilter();
-        final List<String> groupBy = query.getGroupBy();
+              for (final TimeSerie timeSerie : result.getTimeSeries()) {
+                  final Map<String, String> tags = new HashMap<String, String>(
+                          filter);
 
-        final DataPointsRowKey startKey = rowKeyStart(range.start(), key);
-        final DataPointsRowKey endKey = rowKeyEnd(range.end(), key);
+                  if (groupBy != null) {
+                      for (final String group : groupBy) {
+                          tags.put(group, timeSerie.getTags().get(group));
+                      }
+                  }
 
-        final RowQuery<String, DataPointsRowKey> rowQuery = keyspace
-                .prepareQuery(ROW_KEY_INDEX_CF)
-                .getRow(key)
-                .autoPaginate(true)
-                .withColumnRange(
-                        new RangeBuilder()
-                        .setStart(startKey,
-                                DataPointsRowKey.Serializer.get())
-                                .setEnd(endKey,
-                                        DataPointsRowKey.Serializer.get())
-                                        .build());
+                  final TimeSerie key = timeSerie.withTags(tags);
 
-        return ConcurrentCallback.newResolve(executor,
-                new Callback.Resolver<FindTimeSeries.Result>() {
-            @Override
-            public FindTimeSeries.Result resolve() throws Exception {
-                final OperationResult<ColumnList<DataPointsRowKey>> result = rowQuery
-                        .execute();
+                  Set<TimeSerie> group = groups.get(key);
 
-                final Map<TimeSerie, Set<TimeSerie>> rowGroups = new HashMap<TimeSerie, Set<TimeSerie>>();
+                  if (group == null) {
+                      group = new HashSet<TimeSerie>();
+                      groups.put(key, group);
+                  }
 
-                final ColumnList<DataPointsRowKey> columns = result
-                        .getResult();
+                  group.add(timeSerie);
+              }
 
-                for (final Column<DataPointsRowKey> column : columns) {
-                    final DataPointsRowKey rowKey = column.getName();
-                    final Map<String, String> rowTags = rowKey
-                            .getTags();
+              return new FindTimeSeries.Result(groups);
+          }
+      };
 
-                    final Map<String, String> tags = new HashMap<String, String>(
-                            filter);
+      final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getKey(),
+              filter, null);
 
-                    if (groupBy != null) {
-                        for (final String group : groupBy) {
-                            tags.put(group, rowTags.get(group));
-                        }
-                    }
-
-                    final TimeSerie timeSerie = new TimeSerie(key, tags);
-
-                    Set<TimeSerie> timeSeries = rowGroups
-                            .get(timeSerie);
-
-                    if (timeSeries == null) {
-                        timeSeries = new HashSet<TimeSerie>();
-                        rowGroups.put(timeSerie, timeSeries);
-                    }
-
-                    timeSeries.add(new TimeSerie(
-                            rowKey.getMetricName(), rowKey.getTags()));
-                }
-
-                return new FindTimeSeries.Result(rowGroups);
-            }
-        });
+      return metadata.findTimeSeries(metaQuery).transform(transformer);
     }
 
     @Override
