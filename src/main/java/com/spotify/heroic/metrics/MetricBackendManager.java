@@ -376,7 +376,7 @@ public class MetricBackendManager {
      */
     private Callback<List<GroupedTimeSeries>> findTimeSeries(
             final FindTimeSeries criteria) {
-        final List<Callback<List<GroupedTimeSeries>>> queries = new ArrayList<Callback<List<GroupedTimeSeries>>>();
+        final List<Callback<List<GroupedTimeSeries>>> queries = new ArrayList<>();
 
         with(new BackendOperation() {
             @Override
@@ -419,8 +419,7 @@ public class MetricBackendManager {
                 final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
                 for (final TimeSerie timeSerie : result.getTimeSeries()) {
-                    final Map<String, String> tags = new HashMap<String, String>(
-                            query.getGroup());
+                    final Map<String, String> tags = new HashMap<>(query.getGroup());
 
                     if (groupBy != null) {
                         for (final String group : groupBy) {
@@ -433,7 +432,7 @@ public class MetricBackendManager {
                     Set<TimeSerie> group = groups.get(key);
 
                     if (group == null) {
-                        group = new HashSet<TimeSerie>();
+                        group = new HashSet<>();
                         groups.put(key, group);
                     }
 
