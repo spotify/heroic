@@ -7,6 +7,7 @@ import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.statistics.ThreadPoolProvider;
+import com.spotify.heroic.statistics.ThreadPoolsReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
@@ -35,14 +36,7 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
-    public void newWriteThreadPool(final ThreadPoolProvider provider) {
-        registry.register(
-                id.tagged("what", "write-thread-pool-size", "unit", Units.BYTE),
-                new Gauge<Integer>() {
-                    @Override
-                    public Integer getValue() {
-                        return provider.getQueueSize();
-                    }
-                });
+    public ThreadPoolsReporter newThreadPoolsReporter() {
+        return new SemanticThreadPoolsReporter(registry, id);
     }
 }

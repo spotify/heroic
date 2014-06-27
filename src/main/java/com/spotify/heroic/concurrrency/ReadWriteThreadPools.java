@@ -6,6 +6,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.spotify.heroic.statistics.NullThreadPoolsReporter;
+import com.spotify.heroic.statistics.ThreadPoolReporterProvider;
+import com.spotify.heroic.statistics.ThreadPoolsReporter;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +37,8 @@ public class ReadWriteThreadPools {
 
         private int writeQueueSize = 1000;
 
+        private ThreadPoolsReporter reporter = new NullThreadPoolsReporter();
+
         public Config readThreads(int i) {
             this.readThreads = i;
             return this;
@@ -53,6 +59,11 @@ public class ReadWriteThreadPools {
             return this;
         }
 
+        public Config reporter(ThreadPoolsReporter reporter) {
+            this.reporter = reporter;
+            return this;
+        }
+
         public ReadWriteThreadPools build() {
             final ThreadPoolExecutor readExecutor = new ThreadPoolExecutor(
                     readThreads, readThreads, 0L, TimeUnit.MILLISECONDS,
@@ -62,7 +73,21 @@ public class ReadWriteThreadPools {
                     writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<Runnable>(writeQueueSize));
 
-            return new ReadWriteThreadPools(readExecutor, writeExecutor);
+            final ThreadPoolsReporter.Context readContext = reporter.newThreadPoolContext("read", new ThreadPoolReporterProvider() {
+                @Override
+                public long getQueueSize() {
+                    return readExecutor.getQueue().size();
+                }
+            });
+
+            final ThreadPoolsReporter.Context writeContext = reporter.newThreadPoolContext("write", new ThreadPoolReporterProvider() {
+                @Override
+                public long getQueueSize() {
+                    return readExecutor.getQueue().size();
+                }
+            });
+
+            return new ReadWriteThreadPools(readExecutor, writeExecutor, readContext, writeContext);
         }
     }
 
@@ -72,6 +97,8 @@ public class ReadWriteThreadPools {
 
     private final ThreadPoolExecutor read;
     private final ThreadPoolExecutor write;
+    private final ThreadPoolsReporter.Context readContext;
+    private final ThreadPoolsReporter.Context writeContext;
 
     public Executor read() {
         return read;
@@ -84,6 +111,9 @@ public class ReadWriteThreadPools {
     public void stop() {
         read.shutdown();
         write.shutdown();
+
+        readContext.stop();
+        writeContext.stop();
 
         try {
             read.awaitTermination(120, TimeUnit.SECONDS);

@@ -39,10 +39,11 @@ public class SemanticCallbackReporter implements CallbackReporter {
     }
 
     public SemanticCallbackReporter(SemanticMetricRegistry registry, MetricId id) {
-        this.timer = new SemanticHeroicTimer(registry.timer(id));
-        this.cancelled = registry.meter(id.tagged("unit", Units.CANCEL));
-        this.failed = registry.meter(id.tagged("unit", Units.FAILURE));
-        this.resolved = registry.meter(id.tagged("unit", Units.RESOLVE));
+        final String what = id.getTags().get("what");
+        this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what", what + "-latency")));
+        this.cancelled = registry.meter(id.tagged("what", what + "-cancel-rate", "unit", Units.CANCEL));
+        this.failed = registry.meter(id.tagged("what", what + "-failure-rate", "unit", Units.FAILURE));
+        this.resolved = registry.meter(id.tagged("what", what + "-resolve-rate", "unit", Units.RESOLVE));
     }
 
     @Override

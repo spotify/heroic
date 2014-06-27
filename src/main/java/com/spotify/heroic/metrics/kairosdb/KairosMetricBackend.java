@@ -35,6 +35,7 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
@@ -125,7 +126,14 @@ MetricBackend {
          */
         @Getter
         @Setter
-        private int threads = 20;
+        private int readThreads = 20;
+
+        /**
+         * Threads dedicated to asynchronous request handling.
+         */
+        @Getter
+        @Setter
+        private int readQueueSize = 10000;
 
         @Override
         public MetricBackend buildDelegate(String context,
@@ -134,8 +142,8 @@ MetricBackend {
             Utils.notEmpty(context + ".seeds", this.seeds);
             final Map<String, String> attributes = Utils.toMap(context,
                     this.attributes);
-            final Executor executor = Executors.newFixedThreadPool(threads);
-            return new KairosMetricBackend(reporter, executor, keyspace, seeds,
+            final ReadWriteThreadPools pools = ReadWriteThreadPools.config().reporter(reporter.newThreadPoolsReporter()).readThreads(readThreads).readQueueSize(readQueueSize).build();
+            return new KairosMetricBackend(reporter, pools, keyspace, seeds,
                     maxConnectionsPerHost, attributes);
         }
     }
@@ -149,17 +157,17 @@ MetricBackend {
             DataPointsRowKey.Serializer.get());
 
     private final MetricBackendReporter reporter;
-    private final Executor executor;
+    private final ReadWriteThreadPools pools;
 
     @Inject
     private MetadataBackendManager metadata;
 
     public KairosMetricBackend(MetricBackendReporter reporter,
-            Executor executor, String keyspace, String seeds,
+            ReadWriteThreadPools pools, String keyspace, String seeds,
             int maxConnectionsPerHost, Map<String, String> tags) {
         super(keyspace, seeds, maxConnectionsPerHost, tags);
         this.reporter = reporter;
-        this.executor = executor;
+        this.pools = pools;
     }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
@@ -220,7 +228,7 @@ MetricBackend {
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
-        return ConcurrentCallback.newResolve(executor,
+        return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
             @Override
             public Result resolve() throws Exception {
@@ -273,7 +281,7 @@ MetricBackend {
         for (long base : buildBases(range)) {
             final DataPointsRowKey row = new DataPointsRowKey(
                     timeSerie.getKey(), base, timeSerie.getTags());
-            callbacks.add(ConcurrentCallback.newResolve(executor,
+            callbacks.add(ConcurrentCallback.newResolve(pools.read(),
                     new RowCountTransformer(keyspace, range, row)));
         }
 
