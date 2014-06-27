@@ -283,12 +283,11 @@ public class Main extends GuiceServletContextListener {
     }
 
     private static void setupReporter(final SemanticMetricRegistry registry) {
-        final MetricId id = MetricId.build("heroic");
-        final MetricId jvm = id.resolve("jvm");
+        final MetricId id = MetricId.build("jvm");
 
-        registry.register(jvm, new ThreadStatesMetricSet());
-        registry.register(jvm, new GarbageCollectorMetricSet());
-        registry.register(jvm, new MemoryUsageGaugeSet());
+        registry.register(id, new ThreadStatesMetricSet());
+        registry.register(id, new GarbageCollectorMetricSet());
+        registry.register(id, new MemoryUsageGaugeSet());
 
         final FastForwardReporter ffwd = FastForwardReporter
                 .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
