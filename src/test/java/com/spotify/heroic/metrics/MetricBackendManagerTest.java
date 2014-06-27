@@ -15,13 +15,14 @@ public class MetricBackendManagerTest {
     private List<MetricBackend> metricBackends;
 
     private static final long MAGNITUDE = 42;
+    private static final boolean UPDATE_METADATA = false;
 
     private MetricBackendManager manager;
 
     @Before
     public void before() {
         this.manager = new MetricBackendManager(reporter, metricBackends,
-                MAGNITUDE);
+                MAGNITUDE, UPDATE_METADATA);
     }
 
     @Test(expected = MetricQueryException.class)

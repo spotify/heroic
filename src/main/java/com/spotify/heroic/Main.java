@@ -86,7 +86,7 @@ public class Main extends GuiceServletContextListener {
 
         final MetricBackendManager metric = new MetricBackendManager(
                 reporter.newMetricBackendManager(), metricBackends,
-                config.getMaxAggregationMagnitude());
+                config.getMaxAggregationMagnitude(), config.isUpdateMetadata());
 
         final MetadataBackendManager metadata = new MetadataBackendManager(
                 reporter.newMetadataBackendManager(), metadataBackends);

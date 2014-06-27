@@ -81,8 +81,13 @@ public class WriteBufferedMetricBackend implements MetricBackend,
     }
 
     @Override
-    public boolean matches(TimeSerie timeSerie) {
-        return delegate.matches(timeSerie);
+    public TimeSerie getPartition() {
+        return delegate().getPartition();
+    }
+
+    @Override
+    public boolean matchesPartition(TimeSerie timeSerie) {
+        return delegate().matchesPartition(timeSerie);
     }
 
     @Override
@@ -133,12 +138,6 @@ public class WriteBufferedMetricBackend implements MetricBackend,
     @Override
     public List<Callback<Result>> query(TimeSerie timeSerie, DateRange range) {
         return delegate.query(timeSerie, range);
-    }
-
-    @Override
-    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
-            throws MetricQueryException {
-        return delegate.findTimeSeries(query);
     }
 
     @Override

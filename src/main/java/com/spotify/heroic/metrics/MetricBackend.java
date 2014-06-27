@@ -41,14 +41,8 @@ public interface MetricBackend extends Lifecycle {
                 MetricBackendReporter reporter) throws ValidationException;
     }
 
-    /**
-     * Indicate if the specified time series matches this backend.
-     *
-     * @param timeSerie
-     * @return Return <code>true</code> if the specified time series is expected
-     *         to be found in this backend. Else <code>false</code>
-     */
-    public boolean matches(final TimeSerie timeSerie);
+    public boolean matchesPartition(TimeSerie match);
+    public TimeSerie getPartition();
 
     /**
      * Execute a single write.
@@ -85,24 +79,6 @@ public interface MetricBackend extends Lifecycle {
      */
     public List<Callback<FetchDataPoints.Result>> query(
             final TimeSerie timeSerie, final DateRange range);
-
-    /**
-     * Find a rows by a group specification.
-     *
-     * @param key
-     *            Only return rows matching this key.
-     * @param range
-     *            Filter on the specified date range.
-     * @param filter
-     *            Filter on the specified tags.
-     * @param groupBy
-     *            Tags to group by, the order specified will result in the way
-     *            the groups are returned.
-     * @return An asynchronous handler resulting in a FindRowsResult.
-     * @throws QueryException
-     */
-    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
-            throws MetricQueryException;
 
     /**
      * Gets all available rows

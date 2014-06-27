@@ -187,11 +187,19 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
             handle.resolved(result);
         } catch (final Exception e) {
             log.error("Handle#resolve(T): failed", e);
-            callFailed(handle);
+            callFailed(handle, e);
         }
     }
 
     private void callFailed(Handle<T> handle) {
+        try {
+            handle.failed(error);
+        } catch (final Exception e) {
+            log.error("Handle#failed(Exception): failed", e);
+        }
+    }
+
+    private void callFailed(Handle<T> handle, Exception error) {
         try {
             handle.failed(error);
         } catch (final Exception e) {

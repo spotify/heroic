@@ -297,51 +297,6 @@ MetricBackend {
     }
 
     @Override
-    public Callback<FindTimeSeries.Result> findTimeSeries(
-            final FindTimeSeries query) {
-        final Map<String, String> filter = query.getFilter();
-        final List<String> groupBy = query.getGroupBy();
-
-        Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result> transformer = new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
-            @Override
-            public FindTimeSeries.Result transform(
-                    com.spotify.heroic.metadata.model.FindTimeSeries result)
-                            throws Exception {
-                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
-
-                for (final TimeSerie timeSerie : result.getTimeSeries()) {
-                    final Map<String, String> tags = new HashMap<String, String>(
-                            filter);
-
-                    if (groupBy != null) {
-                        for (final String group : groupBy) {
-                            tags.put(group, timeSerie.getTags().get(group));
-                        }
-                    }
-
-                    final TimeSerie key = timeSerie.withTags(tags);
-
-                    Set<TimeSerie> group = groups.get(key);
-
-                    if (group == null) {
-                        group = new HashSet<TimeSerie>();
-                        groups.put(key, group);
-                    }
-
-                    group.add(timeSerie);
-                }
-
-                return new FindTimeSeries.Result(groups);
-            }
-        };
-
-        final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getKey(),
-                filter, null);
-
-        return metadata.findTimeSeries(metaQuery).transform(transformer);
-    }
-
-    @Override
     public Callback<Set<TimeSerie>> getAllTimeSeries() {
         return new FailedCallback<Set<TimeSerie>>(new Exception(
                 "not implemented"));

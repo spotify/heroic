@@ -46,11 +46,8 @@ public final class TimeSeriesTransformer implements
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            for (final Map.Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
-                    .entrySet()) {
-                final TimeSerieSlice slice = entry.getKey().slice(range);
-                queries.add(buildLookup(r.getBackend(), slice, entry.getValue()));
-            }
+            final TimeSerieSlice slice = r.getKey().slice(range);
+            queries.add(buildLookup(r.getBackend(), slice, r.getSeries()));
         }
 
         return queries;
@@ -61,13 +58,7 @@ public final class TimeSeriesTransformer implements
         final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            final MetricBackend backend = r.getBackend();
-
-            for (Entry<TimeSerie, Set<TimeSerie>> entry : r.getGroups()
-                    .entrySet()) {
-                callbacks.add(buildCachedLookup(backend, entry.getKey(),
-                        entry.getValue()));
-            }
+            callbacks.add(buildCachedLookup(r.getBackend(), r.getKey(), r.getSeries()));
         }
 
         return callbacks;
@@ -96,8 +87,9 @@ public final class TimeSeriesTransformer implements
         final DateRange range = modifiedRange(slice);
 
         for (final TimeSerie serie : series) {
-            if (!backend.matches(serie))
+            if (!backend.matchesPartition(serie)) {
                 continue;
+            }
 
             callbacks.addAll(backend.query(serie, range));
         }

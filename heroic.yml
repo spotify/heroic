@@ -44,9 +44,9 @@ metadataBackends:
 cache:
 #  !in-memory-cache {}
 #  cassandra-cache uses the schema located at "docs/aggregation-schema.cql"
-#  !cassandra-cache
-#  keyspace: aggregations
-#  seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
+  !cassandra-cache
+  keyspace: aggregations
+  seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
 
 #consumers:
 #  - !kafka-consumer

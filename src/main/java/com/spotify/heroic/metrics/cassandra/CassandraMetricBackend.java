@@ -38,16 +38,38 @@ public abstract class CassandraMetricBackend implements MetricBackend {
     private final AtomicReference<Keyspace> keyspace = new AtomicReference<Keyspace>();
 
     @Override
-    public boolean matches(final TimeSerie timeSerie) {
-        final Map<String, String> tags = timeSerie.getTags();
+    public TimeSerie getPartition() {
+        return new TimeSerie(null, backendTags);
+    }
+
+    /**
+     * Does a partition key for a backend match the specified one.
+     *
+     * This is used to determine where to route queries and writes.
+     *
+     * @param match The partition to match.
+     * @param partition Partition key of the backend.
+     * @return <code>true</code> if there is a match, <code>false</code> otherwise.
+     */
+    @Override
+    public boolean matchesPartition(TimeSerie match) {
+        final Map<String, String> tags = match.getTags();
 
         if ((tags == null || tags.isEmpty()) && !backendTags.isEmpty())
             return false;
 
         for (Map.Entry<String, String> entry : backendTags.entrySet()) {
-            if (!tags.get(entry.getKey()).equals(entry.getValue())) {
+            final String value = tags.get(entry.getKey());
+
+            if (value == null) {
+                if (entry.getValue() == null)
+                    continue;
+
                 return false;
             }
+
+            if (!value.equals(entry.getValue()))
+                return false;
         }
 
         return true;

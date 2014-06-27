@@ -37,8 +37,13 @@ public class DisablingMetricBackend extends DisablingLifecycle<MetricBackend>
     }
 
     @Override
-    public boolean matches(TimeSerie timeSerie) {
-        return delegate().matches(timeSerie);
+    public TimeSerie getPartition() {
+        return delegate().getPartition();
+    }
+
+    @Override
+    public boolean matchesPartition(TimeSerie timeSerie) {
+        return delegate().matchesPartition(timeSerie);
     }
 
     @SuppressWarnings("unchecked")
@@ -95,17 +100,6 @@ public class DisablingMetricBackend extends DisablingLifecycle<MetricBackend>
         }
 
         return callbacks;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Callback<FindTimeSeries.Result> findTimeSeries(FindTimeSeries query)
-            throws MetricQueryException {
-        if (checkDisabled())
-            return (Callback<FindTimeSeries.Result>) DISABLED;
-
-        return delegate().findTimeSeries(query).register(
-                this.<FindTimeSeries.Result> learner());
     }
 
     @SuppressWarnings("unchecked")

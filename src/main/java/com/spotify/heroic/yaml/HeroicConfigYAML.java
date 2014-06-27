@@ -39,6 +39,10 @@ public class HeroicConfigYAML {
     @Setter
     private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
 
+    @Getter
+    @Setter
+    private boolean updateMetadata = HeroicConfig.UPDATE_METADATA;
+
     private List<MetricBackend> setupMetricBackends(String context,
             HeroicReporter reporter) throws ValidationException {
         List<MetricBackend> backends = new ArrayList<MetricBackend>();
@@ -109,6 +113,6 @@ public class HeroicConfigYAML {
         }
 
         return new HeroicConfig(metricBackends, metadataBackends, consumers,
-                cache, maxAggregationMagnitude);
+                cache, maxAggregationMagnitude, updateMetadata);
     }
 }

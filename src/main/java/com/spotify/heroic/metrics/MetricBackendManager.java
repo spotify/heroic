@@ -2,6 +2,8 @@ package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,9 +28,11 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
 import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.FindTimeSeries.Result;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
@@ -46,6 +50,7 @@ public class MetricBackendManager {
     private final MetricBackendManagerReporter reporter;
     private final List<MetricBackend> backends;
     private final long maxAggregationMagnitude;
+    private final boolean updateMetadata;
 
     @Inject
     @Nullable
@@ -60,7 +65,7 @@ public class MetricBackendManager {
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
     interface BackendOperation {
-        void run(MetricBackend backend) throws Exception;
+        void run(int disabled, MetricBackend backend) throws Exception;
     }
 
     public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
@@ -68,14 +73,17 @@ public class MetricBackendManager {
 
         with(new BackendOperation() {
             @Override
-            public void run(MetricBackend backend) throws Exception {
+            public void run(int disabled, MetricBackend backend) throws Exception {
                 callbacks.add(backend.write(writes));
             }
         });
 
-        for (final WriteEntry entry : writes) {
-            if (metadata.isReady())
-                callbacks.add(metadata.write(entry.getTimeSerie()));
+        // Send new time series to metadata backends.
+        if (updateMetadata) {
+            for (final WriteEntry entry : writes) {
+                if (metadata.isReady())
+                    callbacks.add(metadata.write(entry.getTimeSerie()));
+            }
         }
 
         if (callbacks.isEmpty())
@@ -120,7 +128,7 @@ public class MetricBackendManager {
 
         final DateRange rounded = roundRange(aggregation, range);
 
-        final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
+        final FindTimeSeries criteria = new FindTimeSeries(key, tags, tags, groupBy,
                 rounded);
 
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
@@ -156,17 +164,21 @@ public class MetricBackendManager {
 
         final DateRange rounded = roundRange(aggregation, range);
 
-        final FindTimeSeries criteria = new FindTimeSeries(key, tags, groupBy,
+        final FindTimeSeries criteria = new FindTimeSeries(key, tags, tags, groupBy,
                 rounded);
 
         final Callback<List<GroupedTimeSeries>> rows = findTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
+        final String streamId = Integer.toHexString(criteria.hashCode());
+
+        log.info("{}: streaming {}", streamId, criteria);
+
         final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
-                log.info("streaming {} on {}", criteria, range);
+                log.info("{}: streaming {}", streamId, range);
                 return rows.transform(new TimeSeriesTransformer(
                         aggregationCache, aggregation, range));
             }
@@ -175,7 +187,12 @@ public class MetricBackendManager {
         streamChunks(callback, handle, streamingQuery, criteria,
                 rounded.start(rounded.end()), INITIAL_DIFF);
 
-        return callback.register(reporter.reportStreamMetrics());
+        return callback.register(reporter.reportStreamMetrics()).register(new Callback.Finishable() {
+            @Override
+            public void finished() throws Exception {
+                log.info("{}: done streaming", streamId);
+            }
+        });
     }
 
     public Callback<Set<TimeSerie>> getAllTimeSeries() {
@@ -183,7 +200,7 @@ public class MetricBackendManager {
 
         with(new BackendOperation() {
             @Override
-            public void run(MetricBackend backend) throws Exception {
+            public void run(int disabled, MetricBackend backend) throws Exception {
                 backendRequests.add(backend.getAllTimeSeries());
             }
         });
@@ -308,28 +325,47 @@ public class MetricBackendManager {
     }
 
     /**
+     * Shorthand for running the operation on all available partitions.
+     * @param op
+     */
+    private void with(BackendOperation op) {
+        with(null, op);
+    }
+
+    /**
      * Function used to execute a backend operation on eligible backends.
      *
      * This will take care not to select disabled or unavailable backends.
      */
     private void with(final TimeSerie match, BackendOperation op) {
-        for (final MetricBackend backend : backends) {
-            if (match != null && !backend.matches(match))
-                continue;
+        final List<MetricBackend> alive = new ArrayList<MetricBackend>();
 
-            if (!backend.isReady())
+        // Keep track of disabled partitions.
+        // This will have implications on;
+        // 1) If the result if an operation can be cached or not.
+        int disabled = 0;
+
+        for (final MetricBackend backend : backends) {
+            if (!backend.isReady()) {
+                ++disabled;
                 continue;
+            }
+
+            alive.add(backend);
+        }
+
+        for (final MetricBackend backend : alive) {
+            if (match != null && !backend.matchesPartition(match)) {
+                ++disabled;
+                continue;
+            }
 
             try {
-                op.run(backend);
+                op.run(disabled, backend);
             } catch (Exception e) {
                 log.error("Backend operation failed", e);
             }
         }
-    }
-
-    private void with(BackendOperation op) {
-        with(null, op);
     }
 
     /**
@@ -340,32 +376,78 @@ public class MetricBackendManager {
      */
     private Callback<List<GroupedTimeSeries>> findTimeSeries(
             final FindTimeSeries criteria) {
-        final List<Callback<GroupedTimeSeries>> queries = new ArrayList<Callback<GroupedTimeSeries>>();
+        final List<Callback<List<GroupedTimeSeries>>> queries = new ArrayList<Callback<List<GroupedTimeSeries>>>();
 
         with(new BackendOperation() {
             @Override
-            public void run(final MetricBackend backend) throws Exception {
-                Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries> transformer = new Callback.Transformer<FindTimeSeries.Result, GroupedTimeSeries>() {
-                    @Override
-                    public GroupedTimeSeries transform(
-                            FindTimeSeries.Result result) throws Exception {
-                        return new GroupedTimeSeries(result.getGroups(),
-                                backend);
-                    }
-                };
+            public void run(final int disabled, final MetricBackend backend) throws Exception {
+                final TimeSerie partition = backend.getPartition();
+                final Map<String, String> filter = new HashMap<String, String>(criteria.getFilter());
+                filter.putAll(partition.getTags());
 
-                queries.add(backend.findTimeSeries(criteria).transform(
-                        transformer));
+                // do not cache results if any backends are disabled.
+                final boolean noCache = disabled > 0;
+
+                queries.add(findAllTimeSeries(criteria.withFilter(filter)).transform(new Callback.Transformer<FindTimeSeries.Result, List<GroupedTimeSeries>>() {
+                    @Override
+                    public List<GroupedTimeSeries> transform(final FindTimeSeries.Result result) throws Exception {
+                        final List<GroupedTimeSeries> grouped = new ArrayList<>();
+
+                        for (Map.Entry<TimeSerie, Set<TimeSerie>> entry : result.getGroups().entrySet()) {
+                            final TimeSerie key = entry.getKey();
+                            grouped.add(new GroupedTimeSeries(key, backend, entry.getValue(), noCache));
+                        }
+
+                        return grouped;
+                    }
+                }));
             }
         });
 
-        if (queries.isEmpty())
-            return new CancelledCallback<List<GroupedTimeSeries>>(
-                    CancelReason.NO_BACKENDS_AVAILABLE);
+        return ConcurrentCallback.newReduce(queries, Reducers.<GroupedTimeSeries>joinLists()).register(reporter.reportFindTimeSeries());
+    }
 
-        return ConcurrentCallback.newReduce(queries,
-                Reducers.<GroupedTimeSeries> list()).register(
-                        reporter.reportFindTimeSeries());
+    public Callback<FindTimeSeries.Result> findAllTimeSeries(final FindTimeSeries query) {
+        final Map<String, String> filter = query.getFilter();
+        final List<String> groupBy = query.getGroupBy();
+
+        Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result> transformer = new Callback.Transformer<com.spotify.heroic.metadata.model.FindTimeSeries, FindTimeSeries.Result>() {
+            @Override
+            public FindTimeSeries.Result transform(
+                    com.spotify.heroic.metadata.model.FindTimeSeries result)
+                            throws Exception {
+                final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+
+                for (final TimeSerie timeSerie : result.getTimeSeries()) {
+                    final Map<String, String> tags = new HashMap<String, String>(
+                            query.getGroup());
+
+                    if (groupBy != null) {
+                        for (final String group : groupBy) {
+                            tags.put(group, timeSerie.getTags().get(group));
+                        }
+                    }
+
+                    final TimeSerie key = timeSerie.withTags(tags);
+
+                    Set<TimeSerie> group = groups.get(key);
+
+                    if (group == null) {
+                        group = new HashSet<TimeSerie>();
+                        groups.put(key, group);
+                    }
+
+                    group.add(timeSerie);
+                }
+
+                return new FindTimeSeries.Result(groups);
+            }
+        };
+
+        final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getKey(),
+                filter, null);
+
+        return metadata.findTimeSeries(metaQuery).transform(transformer);
     }
 
     private AggregationGroup buildAggregationGroup(final MetricsRequest query) {

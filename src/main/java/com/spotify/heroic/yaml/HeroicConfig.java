@@ -29,6 +29,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 @RequiredArgsConstructor
 public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
+    public static final boolean UPDATE_METADATA = false;
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
 
     @Getter
@@ -45,6 +46,9 @@ public class HeroicConfig {
 
     @Getter
     private final long maxAggregationMagnitude;
+
+    @Getter
+    private final boolean updateMetadata;
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
             Utils.makeType(HeroicMetricBackend.YAML.class),
@@ -73,7 +77,7 @@ public class HeroicConfig {
                 .newMetadataBackend(null)));
         final List<Consumer> consumers = new ArrayList<Consumer>();
         return new HeroicConfig(metricBackends, metadataBackends, consumers,
-                cache, MAX_AGGREGATION_MAGNITUDE);
+                cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

@@ -20,6 +20,8 @@ public class FindTimeSeries {
     @Getter
     private final Map<String, String> filter;
     @Getter
+    private final Map<String, String> group;
+    @Getter
     private final List<String> groupBy;
     @Getter
     private final DateRange range;
@@ -31,6 +33,10 @@ public class FindTimeSeries {
     }
 
     public FindTimeSeries withRange(DateRange range) {
-        return new FindTimeSeries(key, filter, groupBy, range);
+        return new FindTimeSeries(key, filter, group, groupBy, range);
+    }
+
+    public FindTimeSeries withFilter(Map<String, String> filter) {
+        return new FindTimeSeries(key, filter, group, groupBy, range);
     }
 }

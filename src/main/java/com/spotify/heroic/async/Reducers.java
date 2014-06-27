@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.spotify.heroic.async.Callback.Reducer;
+
 /**
  * Gives access to static common reducers.
  * 
@@ -60,6 +62,30 @@ public final class Reducers {
     @SuppressWarnings("unchecked")
     public static <T> Callback.Reducer<Set<T>, Set<T>> joinSets() {
         return (JoinSets<T>) JOIN_SETS;
+    }
+
+    private interface JoinLists<T> extends Callback.Reducer<List<T>, List<T>> {
+    }
+
+    private static final JoinLists<Object> JOIN_LISTS = new JoinLists<Object>() {
+        @Override
+        public List<Object> resolved(Collection<List<Object>> results,
+                Collection<Exception> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            final List<Object> list = new ArrayList<Object>();
+
+            for (final List<Object> part : results) {
+                list.addAll(part);
+            }
+
+            return list;
+        }
+
+    };
+
+    @SuppressWarnings("unchecked")
+    public static <T> Callback.Reducer<List<T>, List<T>> joinLists() {
+        return (JoinLists<T>) JOIN_LISTS;
     }
 
     private static final Callback.Reducer<Object, Void> TO_VOID = new Callback.Reducer<Object, Void>() {
