@@ -18,7 +18,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.injection.Delegator;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -138,11 +138,6 @@ public class WriteBufferedMetricBackend implements MetricBackend,
     @Override
     public List<Callback<Result>> query(TimeSerie timeSerie, DateRange range) {
         return delegate.query(timeSerie, range);
-    }
-
-    @Override
-    public Callback<Set<TimeSerie>> getAllTimeSeries() {
-        return delegate.getAllTimeSeries();
     }
 
     @Override

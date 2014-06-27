@@ -3,7 +3,6 @@ package com.spotify.heroic.metrics.kairosdb;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +36,10 @@ import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -298,43 +295,6 @@ MetricBackend {
         });
     }
 
-    @Override
-    public Callback<Set<TimeSerie>> getAllTimeSeries() {
-        final Keyspace keyspace = keyspace();
-
-        if (keyspace == null)
-            return new CancelledCallback<Set<TimeSerie>>(
-                    CancelReason.BACKEND_DISABLED);
-
-        final AllRowsQuery<String, DataPointsRowKey> rowQuery = keyspace
-                .prepareQuery(ROW_KEY_INDEX_CF).getAllRows();
-
-        return ConcurrentCallback.newResolve(executor,
-                new Callback.Resolver<Set<TimeSerie>>() {
-            @Override
-            public Set<TimeSerie> resolve() throws Exception {
-                final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
-                final OperationResult<Rows<String, DataPointsRowKey>> result = rowQuery
-                        .execute();
-
-                final Rows<String, DataPointsRowKey> rows = result
-                        .getResult();
-
-                for (final Row<String, DataPointsRowKey> row : rows) {
-                    for (final Column<DataPointsRowKey> column : row
-                            .getColumns()) {
-                        final DataPointsRowKey rowKey = column
-                                .getName();
-                        timeSeries.add(new TimeSerie(rowKey
-                                .getMetricName(), rowKey.getTags()));
-                    }
-                }
-
-                return timeSeries;
-            }
-        });
-    }
-
     private static List<Long> buildBases(DateRange range) {
         final List<Long> bases = new ArrayList<Long>();
 
@@ -348,16 +308,6 @@ MetricBackend {
         }
 
         return bases;
-    }
-
-    private static DataPointsRowKey rowKeyStart(long start, String key) {
-        final long timeBucket = DataPointsRowKey.getTimeBucket(start);
-        return new DataPointsRowKey(key, timeBucket);
-    }
-
-    private static DataPointsRowKey rowKeyEnd(long end, String key) {
-        final long timeBucket = DataPointsRowKey.getTimeBucket(end);
-        return new DataPointsRowKey(key, timeBucket + 1);
     }
 
     @Override

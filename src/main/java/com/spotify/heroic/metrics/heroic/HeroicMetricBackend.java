@@ -41,7 +41,7 @@ import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
+import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -294,12 +294,6 @@ MetricBackend {
                 return new FetchDataPoints.Result(datapoints, timeSerie);
             }
         });
-    }
-
-    @Override
-    public Callback<Set<TimeSerie>> getAllTimeSeries() {
-        return new FailedCallback<Set<TimeSerie>>(new Exception(
-                "not implemented"));
     }
 
     @Override

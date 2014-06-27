@@ -2,8 +2,6 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
@@ -17,7 +15,6 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
-import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;

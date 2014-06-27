@@ -9,7 +9,6 @@ import lombok.Setter;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -95,11 +94,6 @@ public class HeroicConfigYAML {
         final List<MetadataBackend> metadataBackends = setupMetadataBackends(
                 "metadataBackends", reporter);
         final List<Consumer> consumers = setupConsumers("consumers", reporter);
-
-        if (metadataBackends.isEmpty()) {
-            metadataBackends.add(new InMemoryMetadataBackend(reporter
-                    .newMetadataBackend(null)));
-        }
 
         final AggregationCache cache;
 

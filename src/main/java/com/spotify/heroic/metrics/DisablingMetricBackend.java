@@ -13,7 +13,6 @@ import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.injection.DisablingLifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteEntry;
@@ -100,16 +99,6 @@ public class DisablingMetricBackend extends DisablingLifecycle<MetricBackend>
         }
 
         return callbacks;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Callback<Set<TimeSerie>> getAllTimeSeries() {
-        if (checkDisabled())
-            return (Callback<Set<TimeSerie>>) DISABLED;
-
-        return delegate().getAllTimeSeries().register(
-                this.<Set<TimeSerie>> learner());
     }
 
     @SuppressWarnings("unchecked")

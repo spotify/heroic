@@ -18,7 +18,6 @@ import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
-import com.spotify.heroic.metadata.InMemoryMetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
@@ -55,7 +54,6 @@ public class HeroicConfig {
             Utils.makeType(KairosMetricBackend.YAML.class),
             Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
             Utils.makeType(CassandraCache.YAML.class),
-            Utils.makeType(InMemoryMetadataBackend.YAML.class),
             Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
             Utils.makeType(KafkaConsumer.YAML.class) };
 
@@ -73,8 +71,6 @@ public class HeroicConfig {
                 new InMemoryAggregationCacheBackend());
         final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
-        metadataBackends.add(new InMemoryMetadataBackend(reporter
-                .newMetadataBackend(null)));
         final List<Consumer> consumers = new ArrayList<Consumer>();
         return new HeroicConfig(metricBackends, metadataBackends, consumers,
                 cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA);

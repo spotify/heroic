@@ -10,7 +10,6 @@ import lombok.Setter;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
-import com.spotify.heroic.metrics.model.FindTimeSeries;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteEntry;
@@ -79,13 +78,6 @@ public interface MetricBackend extends Lifecycle {
      */
     public List<Callback<FetchDataPoints.Result>> query(
             final TimeSerie timeSerie, final DateRange range);
-
-    /**
-     * Gets all available rows
-     *
-     * @return An asynchronous handler resulting in a {@link GetAllTimeSeries}
-     */
-    public Callback<Set<TimeSerie>> getAllTimeSeries();
 
     /**
      * Gets the total number of columns that are in the given rows
