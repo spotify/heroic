@@ -2,6 +2,7 @@ package com.spotify.heroic.aggregation;
 
 import java.util.List;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -11,11 +12,9 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 
 public interface Aggregation {
-    @RequiredArgsConstructor
+    @Data
     public static class Result {
-        @Getter
         private final List<DataPoint> result;
-        @Getter
         private final Statistics.Aggregator statistics;
     }
 

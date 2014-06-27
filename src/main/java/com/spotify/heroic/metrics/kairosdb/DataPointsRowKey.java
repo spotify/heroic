@@ -65,7 +65,8 @@ class DataPointsRowKey {
           if (value == null)
               return null;
 
-          value = value.replace(":", "_");
+          value = value.replace(":", ".");
+          value = value.replace(" ", "_");
           return value.replace("=", "_");
         }
 

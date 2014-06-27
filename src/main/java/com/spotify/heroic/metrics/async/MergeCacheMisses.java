@@ -120,11 +120,6 @@ final class MergeCacheMisses implements
 
             for (final MetricGroup group : result.getGroups()) {
                 for (final DataPoint d : group.getDatapoints()) {
-                    if (Double.isNaN(d.getValue())) {
-                        ++nans;
-                        continue;
-                    }
-
                     if (resultSet.put(d.getTimestamp(), d) != null) {
                         ++cacheConflicts;
                     }
