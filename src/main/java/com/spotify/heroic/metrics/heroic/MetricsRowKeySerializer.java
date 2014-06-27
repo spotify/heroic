@@ -11,13 +11,13 @@ import com.spotify.heroic.model.TimeSerie;
 public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     public static final MetricsRowKeySerializer instance = new MetricsRowKeySerializer();
 
-    public static MetricsRowKeySerializer get() {
-        return instance;
-    }
-
     private static final TimeSerieSerializer timeSerieSerializer = TimeSerieSerializer
             .get();
     private static final LongSerializer longSerializer = LongSerializer.get();
+
+    public static MetricsRowKeySerializer get() {
+        return instance;
+    }
 
     @Override
     public ByteBuffer toByteBuffer(MetricsRowKey rowKey) {
@@ -33,5 +33,31 @@ public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
         final TimeSerie timeSerie = composite.get(0, timeSerieSerializer);
         final Long base = composite.get(1, longSerializer);
         return new MetricsRowKey(timeSerie, base);
+    }
+
+    public static long getBaseTimestamp(long timestamp) {
+        return timestamp - timestamp % MetricsRowKey.MAX_WIDTH;
+    }
+
+    public static int calculateColumnKey(long timestamp) {
+        final long shift = (long) Integer.MAX_VALUE + 1; // This is because
+                                                         // column key ranges
+                                                         // from
+                                                         // Integer.MIN_VALUE to
+                                                         // Integer.MAX_VALUE
+        timestamp = timestamp + shift;
+        return (int) (timestamp - MetricsRowKeySerializer
+                .getBaseTimestamp(timestamp));
+    }
+
+    public static long calculateAbsoluteTimestamp(long base, int columnKey) {
+        final long shift = (long) Integer.MAX_VALUE + 1;// This is because
+                                                        // column key ranges
+                                                        // from
+                                                        // Integer.MIN_VALUE to
+                                                        // Integer.MAX_VALUE
+
+        final long timestamp = base + columnKey + shift;
+        return timestamp;
     }
 }

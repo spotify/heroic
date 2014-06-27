@@ -7,21 +7,12 @@ import com.spotify.heroic.model.TimeSerie;
 
 @Data
 public class MetricsRowKey {
-    public static final long MAX_WIDTH = 4294967296L;
-    public static final long MAX_BITSET = 0xffffffffL;
-
+    public static final long MAX_WIDTH = (long) Integer.MAX_VALUE
+            - (long) Integer.MIN_VALUE + 1; // This makes it platform
+                                            // independent, rather than
+                                            // calculating it with pow(2, 32)
     @Getter
     private final TimeSerie timeSerie;
     @Getter
     private final long base;
-
-    /**
-     * Get the time bucket associated with the specified date.
-     * 
-     * @param date
-     * @return The bucket for the specified date.
-     */
-    public static long getTimeBucket(long date) {
-        return date - (date % MAX_WIDTH);
-    }
 }
