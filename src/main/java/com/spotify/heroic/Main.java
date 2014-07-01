@@ -283,7 +283,7 @@ public class Main extends GuiceServletContextListener {
     }
 
     private static void setupReporter(final SemanticMetricRegistry registry) {
-        final MetricId id = MetricId.build("jvm");
+        final MetricId id = MetricId.build("heroic");
 
         registry.register(id, new ThreadStatesMetricSet());
         registry.register(id, new GarbageCollectorMetricSet());
