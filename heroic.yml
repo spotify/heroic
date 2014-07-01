@@ -37,9 +37,9 @@ metadataBackends:
     index: meta
     type: meta
     seeds:
-      - lon2-heroex-a1.lon.spotify.net
       - lon2-heroex-a2.lon2.spotify.net
       - lon2-heroex-a3.lon.spotify.net
+      - lon2-heroex-a4.lon2.spotify.net
 
 cache:
 #  !in-memory-cache {}
