@@ -199,11 +199,11 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
 
     /**
      * CQL3 implementation for insertions.
-     * 
+     *
      * TODO: I cannot figure out how to get batch insertions to work. Until
      * then, THIS IS NOT an option because it will murder performance in its
      * sleep and steal its cookies.
-     * 
+     *
      * @param rowKey
      * @param datapoints
      * @return
