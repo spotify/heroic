@@ -3,10 +3,8 @@ package com.spotify.heroic.metrics.heroic;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -26,7 +24,6 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
-import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.async.Callback;
@@ -36,12 +33,10 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -57,7 +52,7 @@ import com.spotify.heroic.yaml.ValidationException;
 @ToString()
 @Slf4j
 public class HeroicMetricBackend extends CassandraMetricBackend implements
-MetricBackend {
+        MetricBackend {
     public static class YAML extends MetricBackend.YAML {
         public static final String TYPE = "!heroic-backend";
 
@@ -129,8 +124,8 @@ MetricBackend {
         }
     }
 
-    private static final ColumnFamily<MetricsRowKey, Long> METRICS_CF = new ColumnFamily<MetricsRowKey, Long>(
-            "metrics", MetricsRowKeySerializer.get(), LongSerializer.get());
+    private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
+            "metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
 
     private final MetricBackendReporter reporter;
     private final ReadWriteThreadPools pools;
@@ -151,7 +146,7 @@ MetricBackend {
             .newColumnFamily("Cql3CF", IntegerSerializer.get(),
                     StringSerializer.get());
 
-    private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp, data_value) VALUES (?, ?, ?)";
+    private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
     @Override
     public Callback<WriteResponse> write(WriteEntry write) {
@@ -171,35 +166,35 @@ MetricBackend {
         final MutationBatch mutation = keyspace.prepareMutationBatch()
                 .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
-        final Map<MetricsRowKey, ColumnListMutation<Long>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Long>>();
+        final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
         for (final WriteEntry write : writes) {
             for (final DataPoint d : write.getData()) {
-                final long base = buildBase(d.getTimestamp());
+                final long base = MetricsRowKeySerializer.getBaseTimestamp(d
+                        .getTimestamp());
                 final MetricsRowKey rowKey = new MetricsRowKey(
                         write.getTimeSerie(), base);
 
-                ColumnListMutation<Long> m = batches.get(rowKey);
+                ColumnListMutation<Integer> m = batches.get(rowKey);
 
                 if (m == null) {
                     m = mutation.withRow(METRICS_CF, rowKey);
                     batches.put(rowKey, m);
                 }
 
-                m.putColumn(d.getTimestamp(), d.getValue());
+                m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d
+                        .getTimestamp()), d.getValue());
             }
         }
 
-        final int count = writes.size();
-
         return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResponse>() {
-            @Override
-            public WriteResponse resolve() throws Exception {
-                mutation.execute();
-                return new WriteResponse(1, 0, 0);
-            }
-        }).register(reporter.reportWriteBatch());
+                    @Override
+                    public WriteResponse resolve() throws Exception {
+                        mutation.execute();
+                        return new WriteResponse(1, 0, 0);
+                    }
+                }).register(reporter.reportWriteBatch());
     }
 
     /**
@@ -223,23 +218,26 @@ MetricBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                for (final DataPoint d : datapoints) {
-                    keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(d.getTimestamp(),
-                                    LongSerializer.get())
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            MetricsRowKeySerializer.get())
+                                    .withByteBufferValue(
+                                            MetricsRowKeySerializer
+                                                    .calculateColumnKey(d
+                                                            .getTimestamp()),
+                                            IntegerSerializer.get())
                                     .withByteBufferValue(d.getValue(),
                                             DoubleSerializer.get()).execute();
-                }
+                        }
 
-                return datapoints.size();
-            }
-        });
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override
@@ -247,7 +245,7 @@ MetricBackend {
             final TimeSerie timeSerie, final DateRange range) {
         final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
 
-        for (long base : buildBases(range)) {
+        for (final long base : buildBases(range)) {
             final Callback<Result> partial = buildQuery(timeSerie, base, range);
 
             if (partial == null)
@@ -275,25 +273,31 @@ MetricBackend {
 
         final MetricsRowKey key = new MetricsRowKey(timeSerie, base);
 
-        final RowQuery<MetricsRowKey, Long> dataQuery = keyspace
+        final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(METRICS_CF)
                 .getRow(key)
                 .autoPaginate(true)
                 .withColumnRange(
-                        new RangeBuilder().setStart(newRange.getStart())
-                        .setEnd(newRange.getEnd()).build());
+                        new RangeBuilder()
+                                .setStart(
+                                        MetricsRowKeySerializer
+                                                .calculateColumnKey(newRange
+                                                        .getStart()))
+                                .setEnd(MetricsRowKeySerializer
+                                        .calculateColumnKey(newRange.getEnd()))
+                                .build());
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
-            @Override
-            public Result resolve() throws Exception {
-                final OperationResult<ColumnList<Long>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = buildDataPoints(key,
-                        result);
-                return new FetchDataPoints.Result(datapoints, timeSerie);
-            }
-        });
+                    @Override
+                    public Result resolve() throws Exception {
+                        final OperationResult<ColumnList<Integer>> result = dataQuery
+                                .execute();
+                        final List<DataPoint> datapoints = buildDataPoints(key,
+                                result);
+                        return new FetchDataPoints.Result(datapoints, timeSerie);
+                    }
+                });
     }
 
     @Override
@@ -305,7 +309,7 @@ MetricBackend {
     public void stop() {
         try {
             super.stop();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to stop", e);
         }
 
@@ -313,30 +317,28 @@ MetricBackend {
     }
 
     private static List<DataPoint> buildDataPoints(final MetricsRowKey key,
-            final OperationResult<ColumnList<Long>> result) {
+            final OperationResult<ColumnList<Integer>> result) {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-        for (final Column<Long> column : result.getResult()) {
-            datapoints.add(new DataPoint(column.getName(), column
-                    .getDoubleValue()));
+        for (final Column<Integer> column : result.getResult()) {
+            datapoints.add(new DataPoint(
+                    MetricsRowKeySerializer.calculateAbsoluteTimestamp(
+                            key.getBase(), column.getName()), column
+                            .getDoubleValue()));
         }
 
         return datapoints;
     }
 
-    private static long buildBase(long timestamp) {
-        return timestamp - timestamp % MetricsRowKey.MAX_WIDTH;
-    }
-
     private static List<Long> buildBases(DateRange range) {
         final List<Long> bases = new ArrayList<Long>();
 
-        final long start = range.getStart() - range.getStart()
-                % MetricsRowKey.MAX_WIDTH;
-        final long end = range.getEnd() - range.getEnd()
-                % MetricsRowKey.MAX_WIDTH + MetricsRowKey.MAX_WIDTH;
+        final long start = MetricsRowKeySerializer.getBaseTimestamp(range
+                .getStart());
+        final long end = MetricsRowKeySerializer.getBaseTimestamp(range
+                .getEnd());
 
-        for (long i = start; i < end; i += MetricsRowKey.MAX_WIDTH) {
+        for (long i = start; i <= end; i += MetricsRowKey.MAX_WIDTH) {
             bases.add(i);
         }
 

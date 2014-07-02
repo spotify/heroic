@@ -7,21 +7,19 @@ import com.spotify.heroic.model.TimeSerie;
 
 @Data
 public class MetricsRowKey {
-    public static final long MAX_WIDTH = 4294967296L;
-    public static final long MAX_BITSET = 0xffffffffL;
+    /**
+     * This constant represents the maximum row width of the metrics column
+     * family. It equals the amount of numbers that can be represented by
+     * Integer. Since the column name is the timestamp offset, having an integer
+     * as column offset indicates that we can fit about 49 days of data into one
+     * row. We do not assume that Integers are 32 bits. This makes it possible
+     * to work even if it's not 32 bits.
+     */
+    public static final long MAX_WIDTH = (long) Integer.MAX_VALUE
+            - (long) Integer.MIN_VALUE + 1;
 
     @Getter
     private final TimeSerie timeSerie;
     @Getter
     private final long base;
-
-    /**
-     * Get the time bucket associated with the specified date.
-     * 
-     * @param date
-     * @return The bucket for the specified date.
-     */
-    public static long getTimeBucket(long date) {
-        return date - (date % MAX_WIDTH);
-    }
 }

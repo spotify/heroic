@@ -36,7 +36,8 @@ public class DataPoint implements Comparable<DataPoint> {
                 throw c.mappingException("Expected float (value)");
 
             final Double value = p.readValueAs(Double.class);
-
+            if (p.nextToken() != JsonToken.END_ARRAY)
+                throw c.mappingException("Expected end of array");
             return new DataPoint(timestamp, value);
         }
     }
