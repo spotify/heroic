@@ -1,6 +1,7 @@
 package com.spotify.heroic.statistics.semantic;
 
 import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
@@ -22,8 +23,13 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     private final CallbackReporter findKeys;
     private final CallbackReporter write;
 
+    private final Meter writeSuccess;
+    private final Meter writeFailure;
+
     private final Meter writeCacheHit;
     private final Meter writeCacheMiss;
+
+    private final Histogram writeBatchDuration;
 
     public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
             String context) {
@@ -47,6 +53,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
                 "unit", Units.HIT));
         writeCacheMiss = registry.meter(id.tagged("what", "write-cache-miss",
                 "unit", Units.MISS));
+        writeSuccess = registry.meter(id.tagged("what", "write-success",
+                "unit", Units.WRITE));
+        writeFailure = registry.meter(id.tagged("what", "write-failure",
+                "unit", Units.FAILURE));
+        writeBatchDuration = registry.histogram(id.tagged("what",
+                "write-bulk-duration", "unit", Units.MILLISECOND));
     }
 
     @Override
@@ -99,5 +111,20 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
                         return provider.getQueueSize();
                     }
                 });
+    }
+
+    @Override
+    public void reportWriteSuccess(long n) {
+        writeSuccess.mark(n);
+    }
+
+    @Override
+    public void reportWriteFailure(long n) {
+        writeFailure.mark(n);
+    }
+
+    @Override
+    public void reportWriteBatchDuration(long millis) {
+        writeBatchDuration.update(millis);
     }
 }

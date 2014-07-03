@@ -17,5 +17,23 @@ public interface MetadataBackendReporter {
 
     public void reportWriteCacheMiss();
 
+    /**
+     * report number of successful operations in a batch
+     * 
+     * @param n
+     *            number of successes
+     */
+    public void reportWriteSuccess(long n);
+
+    /**
+     * report number of failed operations in a batch
+     * 
+     * @param n
+     *            number of failures
+     */
+    public void reportWriteFailure(long n);
+
+    public void reportWriteBatchDuration(long millis);
+
     public void newWriteThreadPool(ThreadPoolProvider provider);
 }

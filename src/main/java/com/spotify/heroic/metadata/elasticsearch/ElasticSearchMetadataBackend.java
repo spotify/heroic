@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -17,13 +18,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import org.elasticsearch.action.ListenableActionFuture;
-import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.bulk.BulkProcessor.Builder;
+import org.elasticsearch.action.bulk.BulkProcessor.Listener;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.unit.ByteSizeValue;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -102,11 +110,23 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         @Setter
         private int writeQueueSize = 10000;
 
+        @Getter
+        @Setter
+        private int writeBulkActions = 1000;
+
+        @Getter
+        @Setter
+        private Long writeBulkFlushInterval = null;
+
+        @Getter
+        @Setter
+        private int concurrentBulkRequests = 5;
+
         @Override
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
-                    .size()]);
+                                                                 .size()]);
 
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
@@ -114,7 +134,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                     .build();
 
             return new ElasticSearchMetadataBackend(pools, reporter, seeds,
-                    clusterName, index, type, nodeClient);
+                    clusterName, index, type, nodeClient, writeBulkActions,
+                    writeBulkFlushInterval, concurrentBulkRequests);
         }
     }
 
@@ -134,8 +155,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private final String index;
     private final String type;
     private final boolean nodeClient;
+    private final int bulkActions;
+    private final Long dumpInterval;
+    private final int concurrentBulkRequests;
 
     private final AtomicReference<Connection> connection = new AtomicReference<Connection>();
+    private final AtomicReference<BulkProcessor> bulkProcessor = new AtomicReference<BulkProcessor>();
 
     public Client client() {
         final Connection connection = this.connection.get();
@@ -158,6 +183,11 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (this.connection.get() != null)
             return;
 
+        initializeConnection();
+        initializeBulkProcessor();
+    }
+
+    private void initializeConnection() throws UnknownHostException, Exception {
         final Connection connection;
 
         if (nodeClient) {
@@ -170,6 +200,56 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         if (!this.connection.compareAndSet(null, connection))
             connection.close();
+    }
+
+    private void initializeBulkProcessor() {
+        final Client client = client();
+        final Builder builder = BulkProcessor.builder(client, new Listener() {
+
+            @Override
+            public void beforeBulk(long executionId, BulkRequest request) {
+            }
+
+            @Override
+            public void afterBulk(long executionId, BulkRequest request,
+                    Throwable failure) {
+                reporter.reportWriteFailure(request.numberOfActions());
+                log.error(
+                        "An error occured during Elasticsearch bulk execution.",
+                        failure);
+            }
+
+            @Override
+            public void afterBulk(long executionId, BulkRequest request,
+                    BulkResponse response) {
+                reporter.reportWriteBatchDuration(response.getTookInMillis());
+                final int all = response.getItems().length;
+                if(!response.hasFailures()) {
+                    reporter.reportWriteSuccess(all);
+                    return;
+                }
+                final BulkItemResponse[] responses = response.getItems();
+                int failures = 0;
+                for (final BulkItemResponse r : responses) {
+                    if (r.isFailed()) {
+                        failures++;
+                    }
+                }
+                reporter.reportWriteFailure(failures);
+                reporter.reportWriteSuccess(all - failures);
+            }
+        });
+
+        builder.setConcurrentRequests(concurrentBulkRequests);
+        if (dumpInterval != null) {
+            builder.setFlushInterval(new TimeValue(dumpInterval));
+        }
+        builder.setBulkSize(new ByteSizeValue(-1)); // Disable bulk size
+        builder.setBulkActions(bulkActions);
+        final BulkProcessor bulkProcessor = builder.build();
+        if (!this.bulkProcessor.compareAndSet(null, bulkProcessor))
+            bulkProcessor.close();
+
     }
 
     @Override
@@ -216,7 +296,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
             try {
                 transportAddress = parseInetSocketTransportAddress(seed);
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 log.error("Invalid seed address: {}", seed, e);
                 continue;
             }
@@ -251,7 +331,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     @Override
     public Callback<FindTags> findTags(final TimeSerieQuery query,
             final Set<String> includes, final Set<String> excludes)
-            throws MetadataQueryException {
+                    throws MetadataQueryException {
         final Client client = client();
 
         if (client == null)
@@ -261,7 +341,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return findTagKeys(query).transform(
                 new FindTagsTransformer(pools.read(), client, index, type,
                         query, includes, excludes)).register(
-                reporter.reportFindTags());
+                                reporter.reportFindTags());
     }
 
     @Override
@@ -308,11 +388,17 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindKeysResolver(client, index, type, builder)).register(
-                reporter.reportFindKeys());
+                        reporter.reportFindKeys());
     }
 
     @Override
     public Callback<WriteResponse> write(final TimeSerie timeSerie)
+            throws MetadataQueryException {
+        return writeBatch(Arrays.asList(timeSerie));
+    }
+
+    @Override
+    public Callback<WriteResponse> writeBatch(final List<TimeSerie> timeSeries)
             throws MetadataQueryException {
         final Client client = client();
 
@@ -320,33 +406,29 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<WriteResponse>(
                     CancelReason.BACKEND_DISABLED);
 
-        if (writeCache.contains(timeSerie)) {
-            reporter.reportWriteCacheHit();
-            return new ResolvedCallback<WriteResponse>(new WriteResponse(1, 0,
-                    0));
-        }
-
-        reporter.reportWriteCacheMiss();
-
-        final Map<String, Object> source = fromTimeSerie(timeSerie);
-
         return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResponse>() {
-                    @Override
-                    public WriteResponse resolve() throws Exception {
-                        final String id = Integer.toHexString(timeSerie
-                                .hashCode());
-
-                        final ListenableActionFuture<IndexResponse> future = client
-                                .prepareIndex().setIndex(index).setType(type)
-                                .setId(id).setSource(source).execute();
-
-                        future.get();
-
-                        writeCache.add(timeSerie.hashCode());
-                        return new WriteResponse(1, 0, 0);
+            @Override
+            public WriteResponse resolve() throws Exception {
+                for (final TimeSerie timeSerie : timeSeries) {
+                    if (writeCache.contains(timeSerie.hashCode())) {
+                        reporter.reportWriteCacheHit();
+                        continue;
                     }
-                }).register(reporter.reportWrite());
+
+                    reporter.reportWriteCacheMiss();
+
+                    final Map<String, Object> source = fromTimeSerie(timeSerie);
+                    final IndexRequest request = client.prepareIndex()
+                            .setIndex(index).setType(type)
+                            .setSource(source).request();
+                    bulkProcessor.get().add(request);
+
+                    writeCache.add(timeSerie.hashCode());
+                }
+                return new WriteResponse(timeSeries.size(), 0, 0);
+            }
+        }).register(reporter.reportWrite());
     }
 
     @Override
@@ -372,15 +454,15 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
          * On empty, match nothing (hopefully).
          */
         if (query.getMatchTags() != null) {
-            for (Map.Entry<String, String> entry : query.getMatchTags()
+            for (final Map.Entry<String, String> entry : query.getMatchTags()
                     .entrySet()) {
                 any = true;
                 builder.must(QueryBuilders.nestedQuery(
                         TAGS,
                         QueryBuilders
-                                .boolQuery()
-                                .must(QueryBuilders.termQuery(TAGS_KEY,
-                                        entry.getKey()))
+                        .boolQuery()
+                        .must(QueryBuilders.termQuery(TAGS_KEY,
+                                entry.getKey()))
                                 .must(QueryBuilders.termQuery(TAGS_VALUE,
                                         entry.getValue()))));
             }
@@ -390,7 +472,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
          * On empty, match nothing.
          */
         if (query.getHasTags() != null) {
-            for (String key : query.getHasTags()) {
+            for (final String key : query.getHasTags()) {
                 any = true;
                 builder.must(QueryBuilders.nestedQuery(TAGS,
                         QueryBuilders.termQuery(TAGS_KEY, key)));
@@ -433,10 +515,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-                .get("tags");
+        .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
-        for (Map<String, String> entry : attributes) {
+        for (final Map<String, String> entry : attributes) {
             final String key = entry.get("key");
             final String value = entry.get("value");
             tags.put(key, value);
