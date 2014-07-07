@@ -160,7 +160,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private final int concurrentBulkRequests;
 
     private final AtomicReference<Connection> connection = new AtomicReference<Connection>();
-    private final AtomicReference<BulkProcessor> bulkProcessor = new AtomicReference<BulkProcessor>();
+    private final AtomicReference<BulkProcessor> bulkProcessorRef = new AtomicReference<BulkProcessor>();
 
     public Client client() {
         final Connection connection = this.connection.get();
@@ -204,6 +204,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     private void initializeBulkProcessor() {
         final Client client = client();
+        if (client == null)
+            return;
+
         final Builder builder = BulkProcessor.builder(client, new Listener() {
 
             @Override
@@ -247,15 +250,28 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         builder.setBulkSize(new ByteSizeValue(-1)); // Disable bulk size
         builder.setBulkActions(bulkActions);
         final BulkProcessor bulkProcessor = builder.build();
-        if (!this.bulkProcessor.compareAndSet(null, bulkProcessor))
+        if (!this.bulkProcessorRef.compareAndSet(null, bulkProcessor))
             bulkProcessor.close();
 
     }
 
     @Override
     public synchronized void stop() throws Exception {
-        final Connection connection = this.connection.get();
+        stopBulkProcessor();
+        stopConnection();
+    }
 
+    private void stopBulkProcessor() {
+        final BulkProcessor bulkProcessor = this.bulkProcessorRef.get();
+        if (bulkProcessor == null)
+            return;
+
+        if (this.bulkProcessorRef.compareAndSet(bulkProcessor, null))
+            bulkProcessor.close();
+    }
+
+    private void stopConnection() throws Exception {
+        final Connection connection = this.connection.get();
         if (connection == null)
             return;
 
@@ -401,8 +417,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     public Callback<WriteResponse> writeBatch(final List<TimeSerie> timeSeries)
             throws MetadataQueryException {
         final Client client = client();
-
-        if (client == null)
+        final BulkProcessor bulkProcessor = this.bulkProcessorRef.get();
+        if (client == null || bulkProcessor == null)
             return new CancelledCallback<WriteResponse>(
                     CancelReason.BACKEND_DISABLED);
 
@@ -422,7 +438,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                     final IndexRequest request = client.prepareIndex()
                             .setIndex(index).setType(type)
                             .setSource(source).request();
-                    bulkProcessor.get().add(request);
+                    bulkProcessor.add(request);
 
                     writeCache.add(timeSerie.hashCode());
                 }
@@ -438,7 +454,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     @Override
     public boolean isReady() {
-        return client() != null;
+        return client() != null && bulkProcessorRef.get() != null;
     }
 
     public static QueryBuilder toQueryBuilder(final TimeSerieQuery query) {
