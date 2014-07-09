@@ -40,6 +40,9 @@ metadataBackends:
       - lon2-heroex-a2.lon2.spotify.net
       - lon2-heroex-a3.lon.spotify.net
       - lon2-heroex-a4.lon2.spotify.net
+    writeBulkActions: 2000
+    writeBulkFlushInterval: 10000
+    concurrentBulkRequests: 5
 
 cache:
 #  !in-memory-cache {}

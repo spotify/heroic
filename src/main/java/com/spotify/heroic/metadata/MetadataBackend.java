@@ -1,5 +1,6 @@
 package com.spotify.heroic.metadata;
 
+import java.util.List;
 import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
@@ -22,9 +23,12 @@ public interface MetadataBackend extends Lifecycle {
     public Callback<WriteResponse> write(TimeSerie timeSerie)
             throws MetadataQueryException;
 
+    public Callback<WriteResponse> writeBatch(List<TimeSerie> timeSeries)
+            throws MetadataQueryException;
+
     public Callback<FindTags> findTags(TimeSerieQuery matcher,
             Set<String> include, Set<String> exclude)
-            throws MetadataQueryException;
+                    throws MetadataQueryException;
 
     public Callback<FindTimeSeries> findTimeSeries(TimeSerieQuery matcher)
             throws MetadataQueryException;
@@ -34,5 +38,6 @@ public interface MetadataBackend extends Lifecycle {
 
     public Callback<Void> refresh();
 
+    @Override
     public boolean isReady();
 }

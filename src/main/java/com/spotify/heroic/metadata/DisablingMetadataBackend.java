@@ -1,5 +1,6 @@
 package com.spotify.heroic.metadata;
 
+import java.util.List;
 import java.util.Set;
 
 import com.spotify.heroic.async.Callback;
@@ -18,7 +19,7 @@ import com.spotify.heroic.model.WriteResponse;
  * @author udoprog
  */
 public class DisablingMetadataBackend extends
-        DisablingLifecycle<MetadataBackend> implements MetadataBackend {
+DisablingLifecycle<MetadataBackend> implements MetadataBackend {
     public DisablingMetadataBackend(MetadataBackend delegate, double threshold,
             long cooldownPeriod) {
         super(delegate, threshold, cooldownPeriod);
@@ -32,9 +33,16 @@ public class DisablingMetadataBackend extends
     }
 
     @Override
+    public Callback<WriteResponse> writeBatch(List<TimeSerie> timeSeries)
+            throws MetadataQueryException {
+        return delegate().writeBatch(timeSeries).register(
+                this.<WriteResponse> learner());
+    }
+
+    @Override
     public Callback<FindTags> findTags(TimeSerieQuery matcher,
             Set<String> include, Set<String> exclude)
-            throws MetadataQueryException {
+                    throws MetadataQueryException {
         return delegate().findTags(matcher, include, exclude).register(
                 this.<FindTags> learner());
     }

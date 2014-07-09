@@ -12,4 +12,5 @@ final class Units {
     public static final String HIT = "hit";
     public static final String MISS = "miss";
     public static final String BYTE = "B";
+    public static final String MILLISECOND = "ms";
 }
