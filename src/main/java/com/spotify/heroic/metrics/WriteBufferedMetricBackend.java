@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.Lock;
@@ -18,7 +17,6 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.injection.Delegator;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
-import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
@@ -78,16 +76,6 @@ public class WriteBufferedMetricBackend implements MetricBackend,
     @Override
     public MetricBackend delegate() {
         return delegate;
-    }
-
-    @Override
-    public TimeSerie getPartition() {
-        return delegate().getPartition();
-    }
-
-    @Override
-    public boolean matchesPartition(TimeSerie timeSerie) {
-        return delegate().matchesPartition(timeSerie);
     }
 
     @Override

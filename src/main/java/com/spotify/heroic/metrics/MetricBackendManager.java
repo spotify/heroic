@@ -339,11 +339,6 @@ public class MetricBackendManager {
         }
 
         for (final MetricBackend backend : alive) {
-            if (match != null && !backend.matchesPartition(match)) {
-                ++disabled;
-                continue;
-            }
-
             try {
                 op.run(disabled, backend);
             } catch (Exception e) {
@@ -360,37 +355,29 @@ public class MetricBackendManager {
      */
     private Callback<List<GroupedTimeSeries>> findTimeSeries(
             final FindTimeSeriesCriteria criteria) {
-        final List<Callback<List<GroupedTimeSeries>>> queries = new ArrayList<>();
-
-        with(new BackendOperation() {
+        final Callback<List<GroupedTimeSeries>> query = findAllTimeSeries(criteria).transform(new Callback.Transformer<FindTimeSeriesGroups, List<GroupedTimeSeries>>() {
             @Override
-            public void run(final int disabled, final MetricBackend backend) throws Exception {
-                final TimeSerie partition = backend.getPartition();
+            public List<GroupedTimeSeries> transform(final FindTimeSeriesGroups result) throws Exception {
+                final List<GroupedTimeSeries> grouped = new ArrayList<>();
 
-                // only replace filters which are not already specified.
-                final FindTimeSeriesCriteria backendCriteria = criteria.overlapFilter(partition.getTags());
-
-                // do not cache results if any backends are disabled or unavailable,
-                // because that would contribute to messed up results.
-                final boolean noCache = disabled > 0;
-
-                queries.add(findAllTimeSeries(backendCriteria).transform(new Callback.Transformer<FindTimeSeriesGroups, List<GroupedTimeSeries>>() {
+                with(new BackendOperation() {
                     @Override
-                    public List<GroupedTimeSeries> transform(final FindTimeSeriesGroups result) throws Exception {
-                        final List<GroupedTimeSeries> grouped = new ArrayList<>();
+                    public void run(final int disabled, final MetricBackend backend) throws Exception {
+                        // do not cache results if any backends are disabled or unavailable,
+                        // because that would contribute to messed up results.
+                        final boolean noCache = disabled > 0;
 
                         for (Map.Entry<TimeSerie, Set<TimeSerie>> entry : result.getGroups().entrySet()) {
-                            final TimeSerie key = entry.getKey();
-                            grouped.add(new GroupedTimeSeries(key, backend, entry.getValue(), noCache));
+                            grouped.add(new GroupedTimeSeries(entry.getKey(), backend, entry.getValue(), noCache));
                         }
-
-                        return grouped;
                     }
-                }));
+                });
+
+                return grouped;
             }
         });
 
-        return ConcurrentCallback.newReduce(queries, Reducers.<GroupedTimeSeries>joinLists()).register(reporter.reportFindTimeSeries());
+        return query.register(reporter.reportFindTimeSeries());
     }
 
     public Callback<FindTimeSeriesGroups> findAllTimeSeries(final FindTimeSeriesCriteria query) {

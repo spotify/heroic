@@ -2,7 +2,6 @@ package com.spotify.heroic.metrics;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -39,9 +38,6 @@ public interface MetricBackend extends Lifecycle {
         protected abstract MetricBackend buildDelegate(String context,
                 MetricBackendReporter reporter) throws ValidationException;
     }
-
-    public boolean matchesPartition(TimeSerie match);
-    public TimeSerie getPartition();
 
     /**
      * Execute a single write.

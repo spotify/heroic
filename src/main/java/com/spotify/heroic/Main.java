@@ -31,6 +31,7 @@ import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
 import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.StoredMetricQueries;
 import com.spotify.heroic.injection.Delegator;
@@ -91,6 +92,8 @@ public class Main extends GuiceServletContextListener {
         final MetadataBackendManager metadata = new MetadataBackendManager(
                 reporter.newMetadataBackendManager(), metadataBackends);
 
+        final ClusterManager cluster = config.getCluster();
+
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
@@ -103,8 +106,8 @@ public class Main extends GuiceServletContextListener {
 
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
-                bind(StoredMetricQueries.class)
-                .toInstance(storedMetricsQueries);
+                bind(StoredMetricQueries.class).toInstance(storedMetricsQueries);
+                bind(ClusterManager.class).toInstance(cluster);
 
                 setupBackends(MetricBackend.class, metricBackends);
 
@@ -182,7 +185,7 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
-        setupReporter(registry);
+        final FastForwardReporter ffwd = setupReporter(registry);
 
         if (config == null) {
             log.error("No configuration, shutting down");
@@ -226,6 +229,14 @@ public class Main extends GuiceServletContextListener {
             return;
         }
 
+        try {
+            scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
+        } catch (final SchedulerException e) {
+            log.error("Failed to schedule initial cluster refresh", e);
+            System.exit(1);
+            return;
+        }
+
         final CountDownLatch latch = new CountDownLatch(1);
 
         final Thread hook = new Thread(new Runnable() {
@@ -257,12 +268,12 @@ public class Main extends GuiceServletContextListener {
                     }
                 }
 
+                ffwd.stop();
+
                 log.warn("Bye Bye!");
                 latch.countDown();
             }
         });
-
-        hook.setDaemon(true);
 
         Runtime.getRuntime().addShutdownHook(hook);
 
@@ -282,7 +293,7 @@ public class Main extends GuiceServletContextListener {
         System.exit(0);
     }
 
-    private static void setupReporter(final SemanticMetricRegistry registry) {
+    private static FastForwardReporter setupReporter(final SemanticMetricRegistry registry) throws IOException {
         final MetricId gauges = MetricId.build();
 
         registry.register(gauges, new ThreadStatesMetricSet());
@@ -294,5 +305,7 @@ public class Main extends GuiceServletContextListener {
                 .prefix(MetricId.build("heroic").tagged("service", "heroic")).build();
 
         ffwd.start();
+
+        return ffwd;
     }
 }

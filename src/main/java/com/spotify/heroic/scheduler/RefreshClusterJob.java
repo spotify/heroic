@@ -8,17 +8,22 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.cluster.ClusterManager;
 
 @Slf4j
-public class RefreshTagsJob implements Job {
+public class RefreshClusterJob implements Job {
     @Inject
-    private MetadataBackendManager metadata;
+    private ClusterManager cluster;
 
     @Override
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-        log.info("Refreshing tags");
-        metadata.refresh();
+        log.info("Refreshing cluster");
+
+        try {
+            cluster.refresh();
+        } catch (Exception e) {
+            log.error("Refresh failed", e);
+        }
     }
 }

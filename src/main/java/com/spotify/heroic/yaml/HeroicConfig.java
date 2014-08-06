@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,8 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.discovery.StaticListDiscovery;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -30,6 +33,9 @@ public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
     public static final boolean UPDATE_METADATA = false;
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
+
+    @Getter
+    private final ClusterManager cluster;
 
     @Getter
     private final List<MetricBackend> metricBackends;
@@ -55,7 +61,8 @@ public class HeroicConfig {
             Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
             Utils.makeType(CassandraCache.YAML.class),
             Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
-            Utils.makeType(KafkaConsumer.YAML.class) };
+            Utils.makeType(KafkaConsumer.YAML.class),
+            Utils.makeType(StaticListDiscovery.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
@@ -69,10 +76,11 @@ public class HeroicConfig {
         final AggregationCache cache = new AggregationCache(
                 reporter.newAggregationCache(null),
                 new InMemoryAggregationCacheBackend());
+        final ClusterManager cluster = new ClusterManager(null, UUID.randomUUID(), null);
         final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
         final List<Consumer> consumers = new ArrayList<Consumer>();
-        return new HeroicConfig(metricBackends, metadataBackends, consumers,
+        return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
                 cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA);
     }
 

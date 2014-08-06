@@ -2,11 +2,9 @@ package com.spotify.heroic.statistics.semantic;
 
 import lombok.RequiredArgsConstructor;
 
-import com.codahale.metrics.Gauge;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.statistics.ThreadPoolsReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;

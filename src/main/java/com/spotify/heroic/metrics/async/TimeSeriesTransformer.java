@@ -85,10 +85,6 @@ public final class TimeSeriesTransformer implements
         final DateRange range = modifiedRange(slice);
 
         for (final TimeSerie serie : series) {
-            if (!backend.matchesPartition(serie)) {
-                continue;
-            }
-
             callbacks.addAll(backend.query(serie, range));
         }
 

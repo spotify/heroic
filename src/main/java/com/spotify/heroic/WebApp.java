@@ -14,6 +14,7 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.spotify.heroic.http.CustomExceptionMapper;
 import com.spotify.heroic.http.HeroicExceptionMapper;
 import com.spotify.heroic.http.HeroicResource;
+import com.spotify.heroic.http.RPCResource;
 import com.spotify.heroic.http.UnrecognizedPropertyExceptionMapper;
 
 @Slf4j
@@ -30,6 +31,7 @@ public class WebApp extends ResourceConfig {
 
         // Resources.
         register(HeroicResource.class);
+        register(RPCResource.class);
 
         GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 

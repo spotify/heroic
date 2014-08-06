@@ -27,7 +27,7 @@ public class SemanticMetricBackendManagerReporter implements
         this.streamMetrics = new SemanticCallbackReporter(registry, id.tagged(
                 "what", "stream-metrics", "unit", Units.READ));
         this.streamMetricsChunk = new SemanticCallbackReporter(registry,
-                id.tagged("operation", "stream-metrics-chunk", "unit",
+                id.tagged("what", "stream-metrics-chunk", "unit",
                         Units.READ));
         this.findRowGroups = new SemanticCallbackReporter(registry, id.tagged(
                 "what", "find-row-groups", "unit", Units.LOOKUP));

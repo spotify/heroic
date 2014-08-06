@@ -4,15 +4,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.Data;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
 
-@RequiredArgsConstructor
-@ToString(of = { "key", "range", "filter", "groupBy" })
+@Data
 public class FindTimeSeriesCriteria {
     @Getter
     private final String key;

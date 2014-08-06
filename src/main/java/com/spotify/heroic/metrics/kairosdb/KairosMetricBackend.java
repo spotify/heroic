@@ -3,12 +3,8 @@ package com.spotify.heroic.metrics.kairosdb;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
@@ -23,9 +19,6 @@ import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.AllRowsQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -108,13 +101,6 @@ MetricBackend {
         private String keyspace = "kairosdb";
 
         /**
-         * Attributes passed into the Astyanax driver for configuration.
-         */
-        @Getter
-        @Setter
-        private Map<String, String> attributes;
-
-        /**
          * Max connections per host in the cassandra cluster.
          */
         @Getter
@@ -140,11 +126,9 @@ MetricBackend {
                 MetricBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
-            final Map<String, String> attributes = Utils.toMap(context,
-                    this.attributes);
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config().reporter(reporter.newThreadPoolsReporter()).readThreads(readThreads).readQueueSize(readQueueSize).build();
             return new KairosMetricBackend(reporter, pools, keyspace, seeds,
-                    maxConnectionsPerHost, attributes);
+                    maxConnectionsPerHost);
         }
     }
 
@@ -164,8 +148,8 @@ MetricBackend {
 
     public KairosMetricBackend(MetricBackendReporter reporter,
             ReadWriteThreadPools pools, String keyspace, String seeds,
-            int maxConnectionsPerHost, Map<String, String> tags) {
-        super(keyspace, seeds, maxConnectionsPerHost, tags);
+            int maxConnectionsPerHost) {
+        super(keyspace, seeds, maxConnectionsPerHost);
         this.reporter = reporter;
         this.pools = pools;
     }
@@ -198,10 +182,6 @@ MetricBackend {
         if (keyspace == null)
             return new CancelledCallback<FetchDataPoints.Result>(
                     CancelReason.BACKEND_DISABLED);
-
-        if (!matchesPartition(timeSerie))
-            return new CancelledCallback<FetchDataPoints.Result>(
-                    CancelReason.BACKEND_MISMATCH);
 
         final DataPointsRowKey rowKey = new DataPointsRowKey(
                 timeSerie.getKey(), base, timeSerie.getTags());

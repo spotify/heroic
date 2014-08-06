@@ -8,12 +8,17 @@ import lombok.Setter;
 
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
+import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 public class HeroicConfigYAML {
+    @Getter
+    @Setter
+    private ClusterManager.YAML cluster;
+
     @Getter
     @Setter
     private List<MetricBackend.YAML> backends;
@@ -89,6 +94,8 @@ public class HeroicConfigYAML {
 
     public HeroicConfig build(HeroicReporter reporter)
             throws ValidationException {
+        final ClusterManager cluster = this.cluster.build("cluster");
+
         final List<MetricBackend> metricBackends = setupMetricBackends(
                 "backends", reporter);
         final List<MetadataBackend> metadataBackends = setupMetadataBackends(
@@ -106,7 +113,7 @@ public class HeroicConfigYAML {
                     backend);
         }
 
-        return new HeroicConfig(metricBackends, metadataBackends, consumers,
+        return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
                 cache, maxAggregationMagnitude, updateMetadata);
     }
 }

@@ -15,6 +15,15 @@ import java.util.Map;
 import org.yaml.snakeyaml.TypeDescription;
 
 public final class Utils {
+    public static <T> T notNull(String context, T object)
+            throws ValidationException {
+        if (object == null)
+            throw new ValidationException(context
+                    + ": must be defined");
+
+        return object;
+    }
+
     public static void notEmpty(String context, String string)
             throws ValidationException {
         if (string == null || string.isEmpty())
@@ -29,6 +38,15 @@ public final class Utils {
                     + ": must be a non-empty list");
 
         return list;
+    }
+
+    public static Map<String, String> notEmpty(String context, Map<String, String> map)
+            throws ValidationException {
+        if (map == null || map.isEmpty())
+            throw new ValidationException(context
+                    + ": must be a non-empty map");
+
+        return map;
     }
 
     public static URI toURI(String context, String url)

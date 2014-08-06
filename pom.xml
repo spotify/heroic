@@ -159,8 +159,8 @@
          TODO: break out -->
     <dependency>
       <groupId>com.spotify.metrics</groupId>
-      <artifactId>semantic-metrics</artifactId>
-      <version>0.0.8</version>
+      <artifactId>semantic-metrics-ffwd-reporter</artifactId>
+      <version>0.0.9</version>
       <exclusions>
         <exclusion>
           <groupId>org.slf4j</groupId>

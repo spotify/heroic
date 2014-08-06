@@ -3,7 +3,6 @@ package com.spotify.heroic.metrics;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,16 +32,6 @@ public class DisablingMetricBackend extends DisablingLifecycle<MetricBackend>
     public DisablingMetricBackend(MetricBackend delegate, double threshold,
             long cooldownPeriod) {
         super(delegate, threshold, cooldownPeriod);
-    }
-
-    @Override
-    public TimeSerie getPartition() {
-        return delegate().getPartition();
-    }
-
-    @Override
-    public boolean matchesPartition(TimeSerie timeSerie) {
-        return delegate().matchesPartition(timeSerie);
     }
 
     @SuppressWarnings("unchecked")

@@ -70,13 +70,6 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
         private String keyspace = "heroic";
 
         /**
-         *
-         */
-        @Getter
-        @Setter
-        private Map<String, String> tags;
-
-        /**
          * Max connections per host in the cassandra cluster.
          */
         @Getter
@@ -111,16 +104,13 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
 
-            final Map<String, String> attributes = Utils.toMap(context,
-                    this.tags);
-
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
                     .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
                     .build();
 
             return new HeroicMetricBackend(reporter, pools, keyspace, seeds,
-                    maxConnectionsPerHost, attributes);
+                    maxConnectionsPerHost);
         }
     }
 
@@ -135,8 +125,8 @@ public class HeroicMetricBackend extends CassandraMetricBackend implements
 
     public HeroicMetricBackend(MetricBackendReporter reporter,
             ReadWriteThreadPools pools, String keyspace, String seeds,
-            int maxConnectionsPerHost, Map<String, String> tags) {
-        super(keyspace, seeds, maxConnectionsPerHost, tags);
+            int maxConnectionsPerHost) {
+        super(keyspace, seeds, maxConnectionsPerHost);
 
         this.reporter = reporter;
         this.pools = pools;
