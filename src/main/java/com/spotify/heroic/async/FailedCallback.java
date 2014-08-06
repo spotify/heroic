@@ -5,6 +5,13 @@ import java.util.concurrent.Executor;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A callback which has already been resolved as 'failed'.
+ *
+ * @author udoprog
+ *
+ * @param <T>
+ */
 @Slf4j
 public class FailedCallback<T> implements Callback<T> {
     private final Exception error;
@@ -103,7 +110,7 @@ public class FailedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public T get() throws InterruptedException, Exception {
-        throw error;
+    public T get() throws FailedException {
+        throw new FailedException(error);
     }
 }

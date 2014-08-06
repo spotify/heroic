@@ -8,6 +8,14 @@ import java.util.concurrent.Executor;
  * Interface for asynchronous callbacks with the ability to subscribe to
  * interesting events.
  *
+ * The available events are.
+ * 
+ * <ul>
+ *   <li>resolved, for when a callback has been resolved with a value.</li>
+ *   <li>failed, for when a callback failed to resolve because of an exception.</li>
+ *   <li>cancelled, for when a callback will not resolve, with a reason {@link CancelReason}.</li>
+ * </ul>
+ *
  * @author udoprog
  *
  * @param <T>
@@ -137,14 +145,13 @@ public interface Callback<T> {
      *
      * 1. Since anything scheduled on an executor is viable for execution
      * 'later', the callback might have already been resolved or cancelled. It
-     * is therefore important to check {@link #isReady()} before calling the
-     * resolved.
+     * is therefore important to check {@link #isReady()} before calling {@link #resolve(T)}.
      *
-     * 2. Since the resolver might throw an exception, it is important that this
-     * exception is caught and that the callback is marked as 'failed'
-     * appropriately.
+     * 2. Since the resolving context might throw an exception, it is important that this
+     * caught and that the callback is marked as 'failed'
+     * appropriately by calling {@link #fail(Exception)}.
      *
-     * If you are willing to ensure these two behaviours, the Executor can be
+     * If you are willing to ensure these two behaviors, the Executor can be
      * used directly.
      *
      * @param executor
@@ -157,7 +164,9 @@ public interface Callback<T> {
 
     /**
      * Register functions to be fired for any of the possible events for a
-     * callback. These are; cancelled, failed or resolved.
+     * callback.
+     * 
+     * These events are; cancelled, failed or resolved.
      *
      * @param handle
      *            Contains functions to be fired.
@@ -165,6 +174,14 @@ public interface Callback<T> {
      */
     public Callback<T> register(Handle<T> handle);
 
+    /**
+     * Same as {@link #register(Handle<T>)}, but for Handle<Object> types which
+     * don't care for the result of the operation, only the events that happens.
+     *
+     * @param handle
+     *           Contains functions to be fired.
+     * @return This callback.
+     */
     public Callback<T> register(ObjectHandle handle);
 
     /**
@@ -212,6 +229,10 @@ public interface Callback<T> {
     /**
      * Resolve the value of a callback using a collection of callbacks.
      *
+     * <pre>
+     * List<Callback<C>> - *using reducer* -> Callback<T> (this)
+     * </pre>
+     *
      * The group will be connected to this callback in that it's result will
      * finish this callback and any cancellations of this callback will cancel
      * the entire group.
@@ -245,6 +266,10 @@ public interface Callback<T> {
      * to {@link #reduce(List, Reducer)} but using the {@link StreamReducer} to
      * receive results as they arrive. The benefit of a streamed approach is
      * that intermittent results do not have to be kept in memory.
+     *
+     * <pre>
+     * List<Callback<C>> - *using stream reducer* -> Callback<T> (this)
+     * </pre>
      *
      * The group will be connected to this callback in that it's result will
      * finish this callback. Any cancellations of this callback will cancel the
@@ -291,6 +316,13 @@ public interface Callback<T> {
      * transformer function.
      *
      * <pre>
+     * Callback<T> (this) - *using deferred transformer* -> Callback<C>
+     * </pre>
+     *
+     * A deferred transformer is expected to return a compatible callback that
+     * when resolved will resolve the callback that this function returns.
+     *
+     * <pre>
      * {@code
      *   Callback<Integer> first = asyncOperation();
      * 
@@ -313,6 +345,10 @@ public interface Callback<T> {
     /**
      * Transforms the value of this callback into another type using a
      * transformer function.
+     * 
+     * <pre>
+     * Callback<T> (this) - *using transformer* -> Callback<C>
+     * </pre>
      *
      * Use this if the transformation performed does not require any more async
      * operations.
@@ -340,6 +376,7 @@ public interface Callback<T> {
      * Block until result is available.
      *
      * @return The result of this callback being resolved.
+     * @throws Exception If the callback being resolved threw an exception.
      */
-    public T get() throws InterruptedException, Exception;
+    public T get() throws InterruptedException, CancelledException, FailedException;
 }

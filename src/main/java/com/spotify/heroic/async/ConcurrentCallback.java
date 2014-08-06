@@ -19,11 +19,13 @@ import lombok.extern.slf4j.Slf4j;
  * 
  * <h1>Example</h1>
  * 
- * {@code Callback<Integer> callback = new ConcurrentCallback<Integer>();
- * 
- * new Thread(new Runnable() callback.finish(12); }).start();
- * 
- * callback.listen(new Callback.Handle<T>() { ... }); }
+ * <pre>
+ * {@code
+ *     Callback<Integer> callback = new ConcurrentCallback<Integer>();
+ *     new Thread(new Runnable() callback.resolve(12); }).start();
+ *     callback.listen(new Callback.Handle<T>() { ... });
+ * }
+ * </pre>
  * 
  * <h1>Synchronized functions.</h3>
  * 
@@ -31,8 +33,9 @@ import lombok.extern.slf4j.Slf4j;
  * <code>state</code>: state, error, cancelReason, result, handlers,
  * cancellables, and finishables.
  * 
- * rule b) No callback must be invoked in a synchronized block since that will
- * result in deadlocks.
+ * rule b) No other callback must be invoked in a synchronized block since that
+ * could result in deadlocks because _this_ callback could be part of another
+ * callbacks chain.
  * 
  * @author udoprog
  * 
@@ -304,7 +307,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     @Override
-    public T get() throws InterruptedException, Exception {
+    public T get() throws InterruptedException, CancelledException, FailedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
         register(new Finishable() {
@@ -320,7 +323,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
         case CANCELLED:
             throw new CancelledException(cancelReason);
         case FAILED:
-            throw error;
+            throw new FailedException(error);
         case RESOLVED:
             return result;
         default:

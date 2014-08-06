@@ -1,15 +1,17 @@
-package com.spotify.heroic.async;
+package com.spotify.heroic.metrics.async;
 
 import java.util.Collection;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
+import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Callback.Reducer;
 import com.spotify.heroic.model.WriteResponse;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class MergeWriteResponse implements
-Callback.Reducer<WriteResponse, WriteResponse> {
+public class MergeWriteResponse implements Callback.Reducer<WriteResponse, WriteResponse> {
     private static final MergeWriteResponse instance = new MergeWriteResponse();
 
     public static MergeWriteResponse get() {

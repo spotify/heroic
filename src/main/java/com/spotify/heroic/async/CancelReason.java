@@ -1,15 +1,17 @@
 package com.spotify.heroic.async;
 
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 
-@ToString(of = { "message" })
+@Data
 public class CancelReason {
+    /**
+     * TODO: move these to the module in which they are used!
+     */
     public static final CancelReason BACKEND_DISABLED = new CancelReason(
             "Backend disabled");
 
     public static final CancelReason BACKEND_MISMATCH = new CancelReason(
-        "Backend does not match");
+            "Backend does not match");
 
     public static final CancelReason NO_BACKENDS_AVAILABLE = new CancelReason(
             "No backends available");
@@ -17,10 +19,5 @@ public class CancelReason {
     public static final CancelReason NOT_SUPPORTED = new CancelReason(
             "Operation not supported");
 
-    @Getter
     private final String message;
-
-    public CancelReason(String message) {
-        this.message = message;
-    }
 }

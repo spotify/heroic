@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Gives access to static common reducers.
- * 
+ * Gives access to static common reducers to reduce overhead for common tasks.
+ *
  * @author udoprog
  */
 public final class Reducers {

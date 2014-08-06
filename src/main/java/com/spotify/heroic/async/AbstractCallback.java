@@ -5,18 +5,18 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
- * Provide some simple common implementations of a callback.
+ * Provide some common implementations of a callback.
  *
  * @author udoprog
  *
  * @param <T>
  *            The value type of the callback.
  */
-public abstract class AbstractCallback<T> implements Callback<T> {
+abstract class AbstractCallback<T> implements Callback<T> {
     @Override
     public <C> Callback<T> reduce(List<Callback<C>> queries,
             final Reducer<C, T> reducer) {
-        final CallbackGroup.Handle<C> handle = new CallbackGroup.Handle<C>() {
+        final CallbackReducer.Handle<C> handle = new CallbackReducer.Handle<C>() {
             @Override
             public void done(Collection<C> results,
                     Collection<Exception> errors,
@@ -33,13 +33,13 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
         };
 
-        return register(new CallbackGroup<C>(queries, handle));
+        return register(new CallbackReducer<C>(queries, handle));
     }
 
     @Override
     public <C> Callback<T> reduce(List<Callback<C>> queries,
             final StreamReducer<C, T> reducer) {
-        final CallbackStream.Handle<C> handle = new CallbackStream.Handle<C>() {
+        final CallbackStreamReducer.Handle<C> handle = new CallbackStreamReducer.Handle<C>() {
             @Override
             public void finish(Callback<C> callback, C result) throws Exception {
                 reducer.resolved(callback, result);
@@ -72,7 +72,7 @@ public abstract class AbstractCallback<T> implements Callback<T> {
             }
         };
 
-        return register(new CallbackStream<C>(queries, handle));
+        return register(new CallbackStreamReducer<C>(queries, handle));
     }
 
     @Override

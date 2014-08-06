@@ -5,6 +5,13 @@ import java.util.concurrent.Executor;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A callback which has already been resolved as 'resolved'.
+ *
+ * @author udoprog
+ *
+ * @param <T>
+ */
 @Slf4j
 public class ResolvedCallback<T> implements Callback<T> {
     private final T value;
@@ -111,7 +118,7 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public T get() throws InterruptedException, Exception {
+    public T get() {
         return value;
     }
 }

@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -49,8 +48,7 @@ import com.spotify.heroic.yaml.ValidationException;
  * @author mehrdad
  */
 @ToString()
-public class KairosMetricBackend extends CassandraMetricBackend implements
-MetricBackend {
+public class KairosMetricBackend extends CassandraMetricBackend implements MetricBackend {
     private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
             + "column1 > ? AND column1 < ?";
 

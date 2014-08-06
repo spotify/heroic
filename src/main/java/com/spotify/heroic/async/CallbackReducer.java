@@ -9,8 +9,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link Callback#reduce(List, Callback.Reducer)}.
+ *
+ * @author udoprog
+ *
+ * @param <T>
+ */
 @Slf4j
-public class CallbackGroup<T> implements Callback.Cancellable {
+class CallbackReducer<T> implements Callback.Cancellable {
     public static interface Handle<T> {
         void done(Collection<T> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception;
@@ -29,7 +36,7 @@ public class CallbackGroup<T> implements Callback.Cancellable {
         @Override
         public void failed(Exception e) throws Exception {
             errors.add(e);
-            CallbackGroup.this.checkIn();
+            CallbackReducer.this.checkIn();
         }
 
         @Override
@@ -39,17 +46,17 @@ public class CallbackGroup<T> implements Callback.Cancellable {
                         "CallbackGroup cannot handle null results (due to using a Queue for storing results)");
 
             results.add(result);
-            CallbackGroup.this.checkIn();
+            CallbackReducer.this.checkIn();
         }
 
         @Override
         public void cancelled(CancelReason reason) throws Exception {
             cancelled.add(reason);
-            CallbackGroup.this.checkIn();
+            CallbackReducer.this.checkIn();
         }
     };
 
-    public CallbackGroup(Collection<Callback<T>> callbacks, Handle<T> handle) {
+    public CallbackReducer(Collection<Callback<T>> callbacks, Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
         this.callbacks = new ArrayList<Callback<T>>(callbacks);
         this.handle = handle;

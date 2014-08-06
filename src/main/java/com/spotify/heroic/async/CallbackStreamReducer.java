@@ -7,8 +7,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Implementation of {@link Callback#reduce(List, Callback.StreamReducer)}.
+ *
+ * @author udoprog
+ *
+ * @param <T>
+ */
 @Slf4j
-public class CallbackStream<T> implements Callback.Cancellable {
+class CallbackStreamReducer<T> implements Callback.Cancellable {
     public static interface Handle<T> {
         void finish(Callback<T> callback, T result) throws Exception;
 
@@ -25,7 +32,7 @@ public class CallbackStream<T> implements Callback.Cancellable {
     private final AtomicInteger failed = new AtomicInteger();
     private final AtomicInteger cancelled = new AtomicInteger();
 
-    public CallbackStream(Collection<Callback<T>> callbacks,
+    public CallbackStreamReducer(Collection<Callback<T>> callbacks,
             final Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
         this.callbacks = new ArrayList<Callback<T>>(callbacks);
@@ -36,21 +43,21 @@ public class CallbackStream<T> implements Callback.Cancellable {
                 public void failed(Exception e) throws Exception {
                     failed.incrementAndGet();
                     handleError(handle, callback, e);
-                    CallbackStream.this.check(handle);
+                    CallbackStreamReducer.this.check(handle);
                 }
 
                 @Override
                 public void resolved(T result) throws Exception {
                     successful.incrementAndGet();
                     handleFinish(handle, callback, result);
-                    CallbackStream.this.check(handle);
+                    CallbackStreamReducer.this.check(handle);
                 }
 
                 @Override
                 public void cancelled(CancelReason reason) throws Exception {
                     cancelled.incrementAndGet();
                     handleCancel(handle, callback, reason);
-                    CallbackStream.this.check(handle);
+                    CallbackStreamReducer.this.check(handle);
                 }
             });
         }
