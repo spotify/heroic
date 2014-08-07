@@ -14,10 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.FailedCallback;
-import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.ClusterNodeLogHandle;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryReducer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
@@ -51,21 +48,15 @@ public class ClusterManager {
 
     private final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
 
-    public final Callback<NodeRegistryEntry> findNode(
+    public final NodeRegistryEntry findNode(
             final Map<String, String> tags) {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
-            return new CancelledCallback<>(REGISTRY_NOT_READY);
+            throw new IllegalStateException("Registry not ready");
         }
 
-        final NodeRegistryEntry entry = registry.findEntry(tags);
-
-        if (entry == null) {
-            return new FailedCallback<>(new Exception("node not found"));
-        }
-
-        return new ResolvedCallback<>(entry);
+        return registry.findEntry(tags);
     }
 
     public Callback<Void> refresh() throws Exception {

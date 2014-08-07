@@ -1,13 +1,12 @@
-package com.spotify.heroic.http.model;
+package com.spotify.heroic.http.rpc.model;
 
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import lombok.Data;
 
 @Data
 public class ClusterMetadataResponse {

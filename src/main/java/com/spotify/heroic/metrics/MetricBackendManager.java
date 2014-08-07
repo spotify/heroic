@@ -2,8 +2,10 @@ package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -20,10 +22,13 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.Reducers;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.model.MetricsQueryResponse;
 import com.spotify.heroic.http.model.MetricsRequest;
+import com.spotify.heroic.http.rpc.model.RpcQueryRequest;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
@@ -57,6 +62,9 @@ public class MetricBackendManager {
 
     @Inject
     private MetadataBackendManager metadata;
+
+    @Inject
+    private ClusterManager cluster;
 
     /**
      * Used for deferring work to avoid deep stack traces.
@@ -133,7 +141,7 @@ public class MetricBackendManager {
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
                 aggregationCache, aggregation, criteria.getRange());
 
-        return findTimeSeries(criteria).transform(transformer)
+        return findAndRouteTimeSeries(criteria).transform(transformer)
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
     }
@@ -166,7 +174,7 @@ public class MetricBackendManager {
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(key, tags, tags, groupBy,
                 rounded);
 
-        final Callback<List<GroupedTimeSeries>> rows = findTimeSeries(criteria);
+        final Callback<List<GroupedTimeSeries>> rows = findAndRouteTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -244,7 +252,7 @@ public class MetricBackendManager {
                 try {
                     handle.stream(callback, new MetricsQueryResponse(
                             originalRange, result));
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     callback.fail(e);
                     return;
                 }
@@ -276,7 +284,7 @@ public class MetricBackendManager {
                     return window;
                 }
 
-                double factor = ((Long) QUERY_THRESHOLD).doubleValue()
+                final double factor = ((Long) QUERY_THRESHOLD).doubleValue()
                         / ((Long) diff).doubleValue();
                 return (long) (window * factor);
             }
@@ -341,37 +349,45 @@ public class MetricBackendManager {
         for (final MetricBackend backend : alive) {
             try {
                 op.run(disabled, backend);
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 log.error("Backend operation failed", e);
             }
         }
     }
 
     /**
-     * Finds time series and associates the result with a specific bakend.
-     *
+     * Finds time series and routing the query to a specific remote Heroic
+     * instance.
+     * 
      * @param criteria
      * @return
      */
-    private Callback<List<GroupedTimeSeries>> findTimeSeries(
+    private Callback<List<GroupedTimeSeries>> findAndRouteTimeSeries(
             final FindTimeSeriesCriteria criteria) {
         final Callback<List<GroupedTimeSeries>> query = findAllTimeSeries(criteria).transform(new Callback.Transformer<FindTimeSeriesGroups, List<GroupedTimeSeries>>() {
             @Override
             public List<GroupedTimeSeries> transform(final FindTimeSeriesGroups result) throws Exception {
-                final List<GroupedTimeSeries> grouped = new ArrayList<>();
+                final List<GroupedTimeSeries> grouped = new ArrayList<GroupedTimeSeries>();
 
-                with(new BackendOperation() {
-                    @Override
-                    public void run(final int disabled, final MetricBackend backend) throws Exception {
-                        // do not cache results if any backends are disabled or unavailable,
-                        // because that would contribute to messed up results.
-                        final boolean noCache = disabled > 0;
-
-                        for (Map.Entry<TimeSerie, Set<TimeSerie>> entry : result.getGroups().entrySet()) {
-                            grouped.add(new GroupedTimeSeries(entry.getKey(), backend, entry.getValue(), noCache));
-                        }
+                for (final Entry<TimeSerie, Set<TimeSerie>> group : result.getGroups().entrySet()) {
+                    final Set<TimeSerie> timeseries = group
+                            .getValue();
+                    if (timeseries.isEmpty()) {
+                        continue;
                     }
-                });
+                    final Set<Map<String, String>> tagsSet = new HashSet<>();
+                                    NodeRegistryEntry node = null;
+                    for (final TimeSerie timeSerie : timeseries) {
+                                        node = cluster.findNode(timeSerie
+                                                .getTags());
+                                        tagsSet.add(node.getMetadata()
+                                                .getTags());
+                    }
+                    if (tagsSet.size() != 1) {
+                        throw new IllegalArgumentException(
+                                "You are not allowed to perform global aggregate!");
+                    }
+                }
 
                 return grouped;
             }
@@ -394,5 +410,36 @@ public class MetricBackendManager {
 
         return new AggregationGroup(aggregators, aggregators.get(0)
                 .getSampling());
+    }
+
+    public Callback<MetricsQueryResponse> rpcQueryMetrics(RpcQueryRequest query) {
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
+                aggregationCache, query.getAggregationGroup(), query.getRange());
+
+        return groupTimeseries(query.getKey(), query.getTimeseries())
+                .transform(transformer)
+                .transform(new MetricGroupsTransformer(query.getRange()))
+                .register(reporter.reportQueryMetrics());
+    }
+
+    private Callback<List<GroupedTimeSeries>> groupTimeseries(
+            final TimeSerie key,
+            final Set<TimeSerie> timeseries) {
+        final List<GroupedTimeSeries> grouped = new ArrayList<>();
+
+        with(new BackendOperation() {
+            @Override
+            public void run(final int disabled, final MetricBackend backend)
+                    throws Exception {
+                // do not cache results if any backends are disabled or
+                // unavailable,
+                // because that would contribute to messed up results.
+                final boolean noCache = disabled > 0;
+
+                grouped.add(new GroupedTimeSeries(key, backend, timeseries,
+                        noCache));
+            }
+        });
+        return new ResolvedCallback<List<GroupedTimeSeries>>(grouped);
     }
 }
