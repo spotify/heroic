@@ -3,7 +3,6 @@ package com.spotify.heroic.http;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -23,9 +22,10 @@ public class RPCResource {
     private ClusterManager cluster;
 
     @GET
-    @Path("/_meta")
-    public Response shutdown() {
-        final ClusterMetadataResponse metadata = new ClusterMetadataResponse(cluster.getNodeId(), cluster.getNodeTags());
+    @Path("/metadata")
+    public Response getMetadata() {
+        final ClusterMetadataResponse metadata = new ClusterMetadataResponse(
+                cluster.getLocalNodeId(), cluster.getLocalNodeTags());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
 }

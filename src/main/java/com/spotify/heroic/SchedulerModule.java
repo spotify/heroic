@@ -14,7 +14,7 @@ public class SchedulerModule extends QuartzModule {
      * Schedule to trigger the job every 15 minutes
      */
     private static final String REFRESH_TAGS_SCHEDULE = "0 0 * * * ?";
-    private static final String REFRESH_CLUSTER_SCHEDULE = "0 0 * * * ?";
+    private static final String REFRESH_CLUSTER_SCHEDULE = "*/10 * * * * ?";
 
     @Override
     protected void schedule() {

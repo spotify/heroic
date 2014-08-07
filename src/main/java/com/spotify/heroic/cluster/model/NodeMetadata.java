@@ -7,7 +7,6 @@ import lombok.Data;
 
 @Data
 public class NodeMetadata {
-    private final String node;
     private final UUID id;
     private final Map<String, String> tags;
 }

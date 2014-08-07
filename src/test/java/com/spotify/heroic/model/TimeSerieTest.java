@@ -7,8 +7,6 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.model.TimeSerie;
-
 public class TimeSerieTest {
     @Test
     public void testEquality() throws Exception {
@@ -23,10 +21,16 @@ public class TimeSerieTest {
         final TimeSerie b = new TimeSerie("foo", new HashMap<String, String>());
         Assert.assertEquals(a.hashCode(), b.hashCode());
 
-        Set<TimeSerie> series = new HashSet<TimeSerie>();
+        final Set<TimeSerie> series = new HashSet<TimeSerie>();
         series.add(a);
         series.add(b);
 
         Assert.assertEquals(1, series.size());
+    }
+
+    @Test
+    public void testStringEqual() {
+        final String a = "a";
+        Assert.assertFalse(a.equals(null));
     }
 }

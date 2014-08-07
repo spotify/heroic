@@ -199,7 +199,7 @@ public class Main extends GuiceServletContextListener {
         for (final Lifecycle startable : Main.managed) {
             try {
                 startable.start();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 log.error("Failed to start {}", startable, e);
                 System.exit(1);
             }
@@ -263,7 +263,7 @@ public class Main extends GuiceServletContextListener {
                 for (final Lifecycle stoppable : Main.managed) {
                     try {
                         stoppable.stop();
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         log.error("Failed to stop {}", stoppable, e);
                     }
                 }
@@ -282,11 +282,11 @@ public class Main extends GuiceServletContextListener {
         System.in.read();
 
         hook.start();
-        */
+         */
 
         try {
             latch.await();
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             log.error("Shutdown interrupted", e);
         }
 

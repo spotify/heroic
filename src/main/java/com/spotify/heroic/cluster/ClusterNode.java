@@ -1,13 +1,41 @@
 package com.spotify.heroic.cluster;
 
-import java.util.Map;
-import java.util.UUID;
+import java.net.URI;
+import java.util.concurrent.Executor;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
 
 import lombok.Data;
 
+import org.glassfish.jersey.client.ClientConfig;
+
+import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.http.model.ClusterMetadataResponse;
+
 @Data
 public class ClusterNode {
-    private final UUID id;
-    private final String node;
-    private final Map<String, String> tags;
+    private final URI url;
+    private final Executor executor;
+    private final ClientConfig config;
+
+    public Callback<NodeMetadata> getMetadata() {
+        final Client client = ClientBuilder.newClient(config);
+
+        return ConcurrentCallback.newResolve(
+                executor, new Callback.Resolver<NodeMetadata>() {
+                    @Override
+                    public NodeMetadata resolve() throws Exception {
+                        final WebTarget target = client.target(url).path("rpc")
+                                .path("metadata");
+                        final ClusterMetadataResponse response = target
+                                .request().get(ClusterMetadataResponse.class);
+                        return new NodeMetadata(response
+                                .getId(), response.getTags());
+                    }
+                });
+    }
 }
