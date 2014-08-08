@@ -19,6 +19,7 @@ import com.spotify.heroic.cluster.async.ClusterNodeLogHandle;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryReducer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -82,8 +83,19 @@ public class ClusterManager {
                             callbacks.add(transform);
                         }
                         return ConcurrentCallback.newReduce(callbacks,
-                                new NodeRegistryEntryReducer(registry));
+                                new NodeRegistryEntryReducer(registry, result
+                                        .size()));
                     }
                 });
+    }
+
+    public Statistics.Rpc getStatistics() {
+        final NodeRegistry registry = this.registry.get();
+
+        if (registry == null) {
+            throw new IllegalStateException("Registry not ready");
+        }
+        return new Statistics.Rpc(0, 0, registry.getOnlineNodes(),
+                registry.getOfflineNodes());
     }
 }

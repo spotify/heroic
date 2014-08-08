@@ -17,6 +17,7 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 public final class NodeRegistryEntryReducer implements
 Callback.Reducer<NodeRegistryEntry, Void> {
     private final AtomicReference<NodeRegistry> registry;
+    private final int totalNodes;
 
     @Override
     public Void resolved(
@@ -25,7 +26,7 @@ Callback.Reducer<NodeRegistryEntry, Void> {
             Collection<CancelReason> cancelled)
                     throws Exception {
         log.info("Updating cluster registry with: {}", results);
-        registry.set(new NodeRegistry(new ArrayList<>(results)));
+        registry.set(new NodeRegistry(new ArrayList<>(results), totalNodes));
         return null;
     }
 }

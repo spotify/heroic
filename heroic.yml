@@ -1,5 +1,6 @@
 # vim: sw=2 tabstop=2
 
+port: 8080
 maxAggregationMagnitude: 400000
 
 cluster:
@@ -14,8 +15,6 @@ backends:
   - !kairosdb-backend
     seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
 #  - !heroic-backend
-#    tags:
-#      site: lon
 #    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
 #  - !heroic-backend
 #    tags:

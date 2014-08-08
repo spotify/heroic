@@ -46,6 +46,10 @@ public class HeroicConfigYAML {
     @Getter
     @Setter
     private boolean updateMetadata = HeroicConfig.UPDATE_METADATA;
+    
+    @Getter
+    @Setter
+    private int port = HeroicConfig.DEFAULT_PORT;
 
     private List<MetricBackend> setupMetricBackends(String context,
             HeroicReporter reporter) throws ValidationException {
@@ -114,6 +118,6 @@ public class HeroicConfigYAML {
         }
 
         return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
-                cache, maxAggregationMagnitude, updateMetadata);
+                cache, maxAggregationMagnitude, updateMetadata, port);
     }
 }

@@ -12,6 +12,7 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 @Data
 public class NodeRegistry {
     private final List<NodeRegistryEntry> entries;
+    private final int totalNodes;
     private static final Random random = new Random(System.currentTimeMillis());
 
     /**
@@ -33,5 +34,13 @@ public class NodeRegistry {
             return null;
 
         return matches.get(random.nextInt(matches.size()));
+    }
+
+    public int getOnlineNodes() {
+        return entries.size();
+    }
+
+    public int getOfflineNodes() {
+        return totalNodes - entries.size();
     }
 }

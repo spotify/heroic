@@ -33,6 +33,7 @@ public class HeroicConfig {
     public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
     public static final boolean UPDATE_METADATA = false;
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
+    public static final int DEFAULT_PORT = 8080;
 
     @Getter
     private final ClusterManager cluster;
@@ -55,14 +56,17 @@ public class HeroicConfig {
     @Getter
     private final boolean updateMetadata;
 
+    @Getter
+    private final int port;
+
     private static final TypeDescription[] TYPES = new TypeDescription[] {
-            Utils.makeType(HeroicMetricBackend.YAML.class),
-            Utils.makeType(KairosMetricBackend.YAML.class),
-            Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-            Utils.makeType(CassandraCache.YAML.class),
-            Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
-            Utils.makeType(KafkaConsumer.YAML.class),
-            Utils.makeType(StaticListDiscovery.YAML.class) };
+        Utils.makeType(HeroicMetricBackend.YAML.class),
+        Utils.makeType(KairosMetricBackend.YAML.class),
+        Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+        Utils.makeType(CassandraCache.YAML.class),
+        Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
+        Utils.makeType(KafkaConsumer.YAML.class),
+        Utils.makeType(StaticListDiscovery.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
@@ -81,7 +85,8 @@ public class HeroicConfig {
         final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
         final List<Consumer> consumers = new ArrayList<Consumer>();
         return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
-                cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA);
+                cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA,
+                DEFAULT_PORT);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

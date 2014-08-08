@@ -41,6 +41,7 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
 import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metrics.model.Statistics.Rpc;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
@@ -90,7 +91,7 @@ public class MetricBackendManager {
                         throws Exception {
             final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
 
-            for (RemoteGroupedTimeSeries group : grouped) {
+            for (final RemoteGroupedTimeSeries group : grouped) {
                 final RpcQueryRequest request = new RpcQueryRequest(
                         group.getKey(), group.getSeries(),
                         rounded, aggregation);
@@ -98,7 +99,7 @@ public class MetricBackendManager {
                         .query(request));
             }
 
-            Callback.Reducer<MetricGroups, MetricGroups> reducer = new Callback.Reducer<MetricGroups, MetricGroups>() {
+            final Callback.Reducer<MetricGroups, MetricGroups> reducer = new Callback.Reducer<MetricGroups, MetricGroups>() {
                 @Override
                 public MetricGroups resolved(
                         Collection<MetricGroups> results,
@@ -110,7 +111,10 @@ public class MetricBackendManager {
                     }
 
                     final List<MetricGroup> groups = new ArrayList<>();
-                    Statistics statistics = Statistics.EMPTY;
+                    Statistics statistics = Statistics.builder()
+                            .rpc(new Rpc(results.size(), errors.size(), 0, 0)
+                                    .merge(cluster.getStatistics()))
+                            .build();
 
                     for (final MetricGroups metricGroups : results) {
                         groups.addAll(metricGroups.getGroups());
