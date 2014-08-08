@@ -113,7 +113,7 @@ public class MetricBackendManager {
                     final List<MetricGroup> groups = new ArrayList<>();
                     Statistics statistics = Statistics.builder()
                             .rpc(new Rpc(results.size(), errors.size(), 0, 0)
-                                    .merge(cluster.getStatistics()))
+                            .merge(cluster.getStatistics()))
                             .build();
 
                     for (final MetricGroups metricGroups : results) {
@@ -303,8 +303,10 @@ public class MetricBackendManager {
             }
         };
 
+        long chunk = rounded.diff() / RANGE_FACTOR;
+
         streamChunks(callback, handle, streamingQuery, criteria,
-                rounded.start(rounded.end()), INITIAL_DIFF);
+                rounded.start(rounded.end()), chunk, chunk);
 
         return callback.register(reporter.reportStreamMetrics()).register(
                 new Callback.Finishable() {
@@ -315,8 +317,7 @@ public class MetricBackendManager {
                 });
     }
 
-    private static final long INITIAL_DIFF = 3600 * 1000 * 6;
-    private static final long QUERY_THRESHOLD = 10 * 1000;
+    private static final long RANGE_FACTOR = 20;
 
     public static interface StreamingQuery {
         public Callback<MetricGroups> query(final DateRange range);
@@ -336,14 +337,12 @@ public class MetricBackendManager {
     private void streamChunks(final Callback<StreamMetricsResult> callback,
             final MetricStream handle, final StreamingQuery query,
             final FindTimeSeriesCriteria original, final DateRange lastRange,
-            final long window) {
+            final long chunk, final long window) {
         final DateRange originalRange = original.getRange();
 
         // decrease the range for the current chunk.
         final DateRange currentRange = lastRange.start(Math.max(
                 lastRange.start() - window, originalRange.start()));
-
-        final long then = System.currentTimeMillis();
 
         final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
             @Override
@@ -375,31 +374,8 @@ public class MetricBackendManager {
                     return;
                 }
 
-                final long nextWindow = calculateNextWindow(then, result,
-                        window);
                 streamChunks(callback, handle, query, original, currentRange,
-                        nextWindow);
-            }
-
-            private long calculateNextWindow(long then, MetricGroups result,
-                    long window) {
-                final Statistics s = result.getStatistics();
-                final Statistics.Cache cache = s.getCache();
-
-                // ignore queries where parts of it is cached.
-                if (cache.getHits() != 0) {
-                    return window;
-                }
-
-                final long diff = System.currentTimeMillis() - then;
-
-                if (diff >= QUERY_THRESHOLD) {
-                    return window;
-                }
-
-                final double factor = ((Long) QUERY_THRESHOLD).doubleValue()
-                        / ((Long) diff).doubleValue();
-                return (long) (window * factor);
+                        chunk, window + chunk);
             }
         };
 
