@@ -26,12 +26,15 @@ public class StaticListDiscovery implements ClusterDiscovery {
     public static final class YAML implements ClusterDiscovery.YAML {
         public static final String TYPE = "!static-list-discovery";
 
+        public int threadPoolSize = 100;
+
         public List<String> nodes = new ArrayList<String>();
 
         @Override
         public ClusterDiscovery build(String context)
                 throws ValidationException {
-            final Executor executor = Executors.newFixedThreadPool(10);
+            final Executor executor = Executors
+                    .newFixedThreadPool(threadPoolSize);
 
             final ClientConfig clientConfig = new ClientConfig();
             clientConfig.register(JacksonJsonProvider.class);
@@ -62,9 +65,11 @@ public class StaticListDiscovery implements ClusterDiscovery {
     @Override
     public Callback<Collection<ClusterNode>> getNodes() {
         final List<ClusterNode> clusterNodes = new ArrayList<>();
+
         for (final URI n : nodes) {
-            clusterNodes.add(new ClusterNode(n, executor, config));
+            clusterNodes.add(new ClusterNode(n, config, executor));
         }
+
         return new ResolvedCallback<Collection<ClusterNode>>(clusterNodes);
     }
 }

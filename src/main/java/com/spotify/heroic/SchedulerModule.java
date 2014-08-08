@@ -8,7 +8,7 @@ import com.spotify.heroic.scheduler.RefreshClusterJob;
 public class SchedulerModule extends QuartzModule {
     private final String refreshClusterSchedule;
 
-    public SchedulerModule(String refreshClusterSchedule) {
+    public SchedulerModule(final String refreshClusterSchedule) {
         super();
         this.refreshClusterSchedule = refreshClusterSchedule;
     }

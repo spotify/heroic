@@ -34,7 +34,7 @@ public class HeroicConfig {
     public static final boolean UPDATE_METADATA = false;
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
     public static final int DEFAULT_PORT = 8080;
-    public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "*/10 * * * * ?";
+    public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
 
     @Getter
     private final ClusterManager cluster;

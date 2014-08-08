@@ -10,6 +10,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 
 import lombok.Data;
+import lombok.ToString;
 
 import org.glassfish.jersey.client.ClientConfig;
 
@@ -21,10 +22,11 @@ import com.spotify.heroic.http.rpc.model.RpcQueryRequest;
 import com.spotify.heroic.metrics.model.MetricGroups;
 
 @Data
+@ToString(of = "url")
 public class ClusterNode {
     private final URI url;
-    private final Executor executor;
     private final ClientConfig config;
+    private final Executor executor;
 
     private final class GetMetadataResolver implements
     Callback.Resolver<NodeMetadata> {

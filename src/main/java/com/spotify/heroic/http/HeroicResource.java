@@ -107,6 +107,8 @@ public class HeroicResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response makeMetricsStream(MetricsRequest query,
             @Context UriInfo info) {
+        log.info("POST /metrics-stream: {}", query);
+
         final String id = Integer.toHexString(query.hashCode());
         storedQueries.put(id, query);
         final URI location = info.getBaseUriBuilder()
@@ -120,6 +122,8 @@ public class HeroicResource {
     @Produces(SseFeature.SERVER_SENT_EVENTS)
     public EventOutput getMetricsStream(@PathParam("id") String id)
             throws WebApplicationException, MetricQueryException {
+        log.info("GET /metrics-stream/{}", id);
+
         final MetricsRequest query = storedQueries.get(id);
 
         if (query == null) {
@@ -146,7 +150,7 @@ public class HeroicResource {
                                 .getGroups());
                         final MetricsResponse entity = new MetricsResponse(
                                 result.getQueryRange(), data, groups
-                                        .getStatistics());
+                                .getStatistics());
                         final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                         builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -208,7 +212,7 @@ public class HeroicResource {
     @Path("/write")
     public void writeMetrics(@Suspended final AsyncResponse response,
             WriteMetricsRequest write) {
-        log.info("Write: {}", write);
+        log.info("POST /write: {}", write);
 
         final WriteEntry entry = new WriteEntry(
                 write.getTimeSerie(), write.getData());
@@ -235,7 +239,7 @@ public class HeroicResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
             MetricsRequest query) throws MetricQueryException {
-        log.info("Query: " + query);
+        log.info("POST /metrics: {}", query);
 
         final Callback<MetricsQueryResponse> callback = metrics
                 .queryMetrics(query);
@@ -323,14 +327,14 @@ public class HeroicResource {
                 response,
                 metadataBackend.findTags(timeSeriesQuery, query.getInclude(),
                         query.getExclude()).transform(
-                        new Callback.Transformer<FindTags, TagsResponse>() {
-                            @Override
-                            public TagsResponse transform(FindTags result)
-                                    throws Exception {
-                                return new TagsResponse(result.getTags(),
-                                        result.getSize());
-                            }
-                        }));
+                                new Callback.Transformer<FindTags, TagsResponse>() {
+                                    @Override
+                                    public TagsResponse transform(FindTags result)
+                                            throws Exception {
+                                        return new TagsResponse(result.getTags(),
+                                                result.getSize());
+                                    }
+                                }));
     }
 
     @POST
@@ -375,19 +379,19 @@ public class HeroicResource {
         metadataResult(
                 response,
                 metadataBackend
-                        .findTimeSeries(timeSeriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-                                    @Override
-                                    public TimeSeriesResponse transform(
-                                            FindTimeSeries result)
+                .findTimeSeries(timeSeriesQuery)
+                .transform(
+                        new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
+                            @Override
+                            public TimeSeriesResponse transform(
+                                    FindTimeSeries result)
                                             throws Exception {
-                                        return new TimeSeriesResponse(
-                                                new ArrayList<TimeSerie>(result
-                                                        .getTimeSeries()),
+                                return new TimeSeriesResponse(
+                                        new ArrayList<TimeSerie>(result
+                                                .getTimeSeries()),
                                                 result.getSize());
-                                    }
-                                }));
+                            }
+                        }));
     }
 
     /**
