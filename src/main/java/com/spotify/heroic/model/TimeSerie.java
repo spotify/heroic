@@ -13,17 +13,6 @@ public class TimeSerie {
     private final String key;
     private final Map<String, String> tags;
 
-    public TimeSerie(String key, Map<String, String> tags) {
-        this.key = key;
-        this.tags = tags;
-    }
-
-    @JsonCreator
-    public static TimeSerie create(@JsonProperty("key") String key,
-            @JsonProperty("tags") Map<String, String> tags) {
-        return new TimeSerie(key, tags);
-    }
-
     public TimeSerieSlice slice(DateRange range) {
         return new TimeSerieSlice(this, range);
     }
@@ -40,6 +29,13 @@ public class TimeSerie {
     }
 
     public TimeSerie withTags(Map<String, String> tags) {
+        return new TimeSerie(key, tags);
+    }
+
+    @JsonCreator
+    public static TimeSerie create(
+            @JsonProperty(value = "key", required = true) String key,
+            @JsonProperty(value = "tags", required = true) Map<String, String> tags) {
         return new TimeSerie(key, tags);
     }
 }

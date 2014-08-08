@@ -105,10 +105,14 @@ public class MetricBackendManager {
                         Collection<Exception> errors,
                         Collection<CancelReason> cancelled)
                                 throws Exception {
+                    for (final Exception e : errors) {
+                        log.error("Remote request failed", e);
+                    }
+
                     final List<MetricGroup> groups = new ArrayList<>();
                     Statistics statistics = Statistics.EMPTY;
 
-                    for (MetricGroups metricGroups : results) {
+                    for (final MetricGroups metricGroups : results) {
                         groups.addAll(metricGroups.getGroups());
                         statistics = statistics
                                 .merge(metricGroups
@@ -124,7 +128,8 @@ public class MetricBackendManager {
         }
     }
 
-    private final class FindAndRouteTransformer implements
+    private final class FindAndRouteTransformer
+    implements
     Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
         @Override
         public List<RemoteGroupedTimeSeries> transform(
@@ -152,9 +157,14 @@ public class MetricBackendManager {
                 }
 
                 for (final TimeSerie timeSerie : timeseries) {
-                    if (!node.getMetadata().matches(timeSerie.getTags()))
+                    if (!node.getMetadata().matches(timeSerie.getTags())) {
+                        log.error(
+                                "TimeSeries {} does not belong to node {}, this is possibly a global aggregate!",
+                                timeSerie, node);
+
                         throw new IllegalArgumentException(
                                 "You are not allowed to perform global aggregate!");
+                    }
                 }
 
                 grouped.add(new RemoteGroupedTimeSeries(group.getKey(), group
@@ -479,7 +489,7 @@ public class MetricBackendManager {
     }
 
     private AggregationGroup buildAggregationGroup(final MetricsRequest query) {
-        final List<Aggregation> aggregators = query.getAggregators();
+        final List<Aggregation> aggregators = query.makeAggregators();
 
         if (aggregators == null || aggregators.isEmpty())
             return null;

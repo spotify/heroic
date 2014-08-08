@@ -10,19 +10,15 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AverageAggregation;
-import com.spotify.heroic.aggregation.SumAggregation;
 
 @ToString(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
 @EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache",
-        "aggregators" })
+"aggregators" })
 public class MetricsRequest {
     private static final DateRangeRequest DEFAULT_DATE_RANGE = new RelativeDateRangeRequest(
             TimeUnit.DAYS, 7);
-    private static final List<Aggregation> EMPTY_AGGREGATIONS = new ArrayList<Aggregation>();
+    private static final List<AggregationRequest> EMPTY_AGGREGATIONS = new ArrayList<>();
 
     @Getter
     private final String key = null;
@@ -40,9 +36,16 @@ public class MetricsRequest {
     private final boolean noCache = false;
 
     @Getter
-    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-    @JsonSubTypes({
-            @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),
-            @JsonSubTypes.Type(value = AverageAggregation.class, name = "average") })
-    private final List<Aggregation> aggregators = EMPTY_AGGREGATIONS;
+    private final List<AggregationRequest> aggregators = EMPTY_AGGREGATIONS;
+
+    public List<Aggregation> makeAggregators() {
+        final List<Aggregation> aggregators = new ArrayList<>(
+                this.aggregators.size());
+
+        for (final AggregationRequest aggregation : this.aggregators) {
+            aggregators.add(aggregation.makeAggregation());
+        }
+
+        return aggregators;
+    }
 }

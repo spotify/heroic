@@ -2,7 +2,6 @@ package com.spotify.heroic.http.rpc.model;
 
 import java.util.Set;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

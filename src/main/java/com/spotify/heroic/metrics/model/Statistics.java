@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 @Data
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class Statistics {
@@ -48,7 +51,15 @@ public class Statistics {
         public Aggregator merge(Aggregator other) {
             return new Aggregator(this.sampleSize + other.sampleSize,
                     this.outOfBounds + other.outOfBounds, this.uselessScan
-                            + other.uselessScan);
+                    + other.uselessScan);
+        }
+
+        @JsonCreator
+        public static Aggregator create(
+                @JsonProperty(value = "sampleSize", required = true) Integer sampleSize,
+                @JsonProperty(value = "outOfBounds", required = true) Integer outOfBounds,
+                @JsonProperty(value = "uselessScan", required = true) Integer uselessScan) {
+            return new Aggregator(sampleSize, outOfBounds, uselessScan);
         }
     }
 
@@ -64,6 +75,15 @@ public class Statistics {
             return new Row(this.successful + other.successful, this.failed
                     + other.failed, this.cancelled + other.cancelled);
         }
+
+        @JsonCreator
+        public static Row create(
+                @JsonProperty(value = "successful", required = true) Integer successful,
+                @JsonProperty(value = "failed", required = true) Integer failed,
+                @JsonProperty(value = "cancelled", required = true) Integer cancelled
+                ) {
+            return new Row(successful, failed, cancelled);
+        }
     }
 
     @Data
@@ -78,8 +98,19 @@ public class Statistics {
 
         public Cache merge(Cache other) {
             return new Cache(this.hits + other.hits,
-                this.conflicts + other.conflicts, this.cacheConflicts + other.cacheConflicts,
-                this.cachedNans + other.cachedNans, this.realNans + other.realNans);
+                    this.conflicts + other.conflicts, this.cacheConflicts + other.cacheConflicts,
+                    this.cachedNans + other.cachedNans, this.realNans + other.realNans);
+        }
+
+        @JsonCreator
+        public static Cache create(
+                @JsonProperty(value = "hits", required = true) Integer hits,
+                @JsonProperty(value = "conflicts", required = true) Integer conflicts,
+                @JsonProperty(value = "cacheConflicts", required = true) Integer cacheConflicts,
+                @JsonProperty(value = "cachedNans", required = true) Integer cachedNans,
+                @JsonProperty(value = "realNans", required = true) Integer realNans
+                ) {
+            return new Cache(hits, conflicts, cacheConflicts, cachedNans, realNans);
         }
     }
 
@@ -101,5 +132,13 @@ public class Statistics {
 
     public static Builder builder(final Statistics other) {
         return new Builder(other.aggregator, other.row, other.cache);
+    }
+
+    @JsonCreator
+    public static Statistics create(
+            @JsonProperty(value = "aggregator", required = true) Aggregator aggregator,
+            @JsonProperty(value = "row", required = true) Row row,
+            @JsonProperty(value = "cache", required = true) Cache cache) {
+        return new Statistics(aggregator, row, cache);
     }
 }

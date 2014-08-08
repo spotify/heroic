@@ -6,7 +6,9 @@ import lombok.Data;
 
 import org.apache.commons.lang.time.FastDateFormat;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
 public class DateRange implements Comparable<DateRange> {
@@ -129,5 +131,13 @@ public class DateRange implements Comparable<DateRange> {
         final Date end = new Date(this.end);
         return "DateRange(start=" + format.format(start) + ", end="
                 + format.format(end) + ")";
+    }
+
+    @JsonCreator
+    public static DateRange create(
+            @JsonProperty(value = "start", required = true) Long start,
+            @JsonProperty(value = "end", required = true) Long end)
+    {
+        return new DateRange(start, end);
     }
 }

@@ -4,11 +4,16 @@ import java.util.List;
 
 import lombok.Data;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(value = SumAggregation.class, name = "sum"),
+        @JsonSubTypes.Type(value = AverageAggregation.class, name = "average") })
 public interface Aggregation {
     @Data
     public static class Result {
@@ -19,9 +24,9 @@ public interface Aggregation {
     public interface Session {
         /**
          * Stream datapoints into this aggregator.
-         * 
+         *
          * Must be thread-safe.
-         * 
+         *
          * @param datapoints
          */
         public void update(Iterable<DataPoint> datapoints);
@@ -34,7 +39,7 @@ public interface Aggregation {
 
     /**
      * Create an aggregation session.
-     * 
+     *
      * @return
      */
     public Session session(DateRange range);
@@ -48,7 +53,7 @@ public interface Aggregation {
      * Get a guesstimate of how big of a memory the aggregation would need. This
      * is for the invoker to make the decision whether or not to execute the
      * aggregation.
-     * 
+     *
      * @return
      */
     public long getCalculationMemoryMagnitude(DateRange range);
