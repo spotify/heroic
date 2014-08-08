@@ -157,7 +157,7 @@ public class Main extends GuiceServletContextListener {
             }
         });
 
-        modules.add(new SchedulerModule());
+        modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
 
         return Guice.createInjector(modules);
     }
@@ -221,14 +221,6 @@ public class Main extends GuiceServletContextListener {
         }
 
         final Scheduler scheduler = injector.getInstance(Scheduler.class);
-
-        try {
-            scheduler.triggerJob(SchedulerModule.REFRESH_TAGS);
-        } catch (final SchedulerException e) {
-            log.error("Failed to schedule initial tags refresh", e);
-            System.exit(1);
-            return;
-        }
 
         try {
             scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);

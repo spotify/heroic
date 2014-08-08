@@ -34,6 +34,7 @@ public class HeroicConfig {
     public static final boolean UPDATE_METADATA = false;
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
     public static final int DEFAULT_PORT = 8080;
+    public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "*/10 * * * * ?";
 
     @Getter
     private final ClusterManager cluster;
@@ -58,6 +59,9 @@ public class HeroicConfig {
 
     @Getter
     private final int port;
+
+    @Getter
+    private final String refreshClusterSchedule;
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
         Utils.makeType(HeroicMetricBackend.YAML.class),
@@ -86,7 +90,7 @@ public class HeroicConfig {
         final List<Consumer> consumers = new ArrayList<Consumer>();
         return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
                 cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA,
-                DEFAULT_PORT);
+                DEFAULT_PORT, DEFAULT_REFRESH_CLUSTER_SCHEDULE);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

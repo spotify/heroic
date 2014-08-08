@@ -46,10 +46,14 @@ public class HeroicConfigYAML {
     @Getter
     @Setter
     private boolean updateMetadata = HeroicConfig.UPDATE_METADATA;
-    
+
     @Getter
     @Setter
     private int port = HeroicConfig.DEFAULT_PORT;
+
+    @Getter
+    @Setter
+    private String refreshClusterSchedule = HeroicConfig.DEFAULT_REFRESH_CLUSTER_SCHEDULE;
 
     private List<MetricBackend> setupMetricBackends(String context,
             HeroicReporter reporter) throws ValidationException {
@@ -117,7 +121,8 @@ public class HeroicConfigYAML {
                     backend);
         }
 
-        return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
-                cache, maxAggregationMagnitude, updateMetadata, port);
+        return new HeroicConfig(cluster, metricBackends, metadataBackends,
+                consumers, cache, maxAggregationMagnitude, updateMetadata,
+                port, refreshClusterSchedule);
     }
 }
