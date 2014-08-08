@@ -27,17 +27,31 @@ public class DataPoint implements Comparable<DataPoint> {
             if (p.getCurrentToken() != JsonToken.START_ARRAY)
                 throw c.mappingException("Expected start of array");
 
-            if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
-                throw c.mappingException("Expected int (timestamp)");
+            final Long timestamp;
 
-            final Long timestamp = p.readValueAs(Long.class);
+            {
+                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
+                    throw c.mappingException("Expected int (timestamp)");
 
-            if (p.nextToken() != JsonToken.VALUE_NUMBER_FLOAT)
-                throw c.mappingException("Expected float (value)");
+                timestamp = p.readValueAs(Long.class);
+            }
 
-            final Double value = p.readValueAs(Double.class);
+            final Double value;
+
+            switch (p.nextToken()) {
+                case VALUE_NUMBER_FLOAT:
+                    value = p.readValueAs(Double.class);
+                    break;
+                case VALUE_NULL:
+                    value = Double.NaN;
+                    break;
+                default:
+                    throw c.mappingException("Expected float (value)");
+            }
+
             if (p.nextToken() != JsonToken.END_ARRAY)
                 throw c.mappingException("Expected end of array");
+
             return new DataPoint(timestamp, value);
         }
     }

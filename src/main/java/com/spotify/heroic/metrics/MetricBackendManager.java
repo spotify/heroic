@@ -156,7 +156,7 @@ public class MetricBackendManager {
                         .findNode(one.getTags());
 
                 if (node == null) {
-                    log.warn("No matching node found for {}", group.getKey());
+                    log.warn("No matching node in group {} found for {}", group.getKey(), one.getTags());
                     continue;
                 }
 

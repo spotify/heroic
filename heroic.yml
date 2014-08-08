@@ -5,22 +5,21 @@ maxAggregationMagnitude: 400000
 
 cluster:
   tags:
-    site: sto
+    site: local
   discovery:
     !static-list-discovery
     nodes:
-      - http://localhost:8080
+      - http://ash2-heroic-a1:8080
+      - http://ash2-heroic-a2:8080
+      - http://ash2-heroic-a3:8080
+      - http://sjc1-heroic-a1:8080
+      - http://sjc1-heroic-a2:8080
+      - http://sjc1-heroic-a3:8080
+      - http://sto1-heroic-a1:8080
+      - http://sto1-heroic-a2:8080
+      - http://sto1-heroic-a3:8080
 
-backends:
-  - !kairosdb-backend
-    seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
-#  - !heroic-backend
-#    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
-#  - !heroic-backend
-#    tags:
-#      site: lon
-#    seeds: localhost:9160
-
+backends: []
 
 metadataBackends:
   - !elasticsearch-metadata
