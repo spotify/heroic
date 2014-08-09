@@ -1,52 +1,79 @@
 # Querying for Metrics
 
-## Objects
+This details the API endpoints that are used for querying for data out of Heroic.
+
+## POST /metrics
+
+The simplest query method, will return a [MetricsResponse](#metricsresponse) object when successful.
+
++ Response 200 (application/json) [MetricsResponse](#metricsresponse)
++ Response 500 (application/json) [ErrorMessage](#errormessage)
+
+# Types
 
 ### DateRange
-```
-{
-  "start": <number>
-  "end": <number>
-}
-```
 
 A date range, starting at __start__ milliseconds from the unich epoch and ending at __end__ milliseconds from the unix epoch.
 
-#### Example
-
+###### Structure
+```javascript
+{
+  /**
+   * Starting timestamp in milliseconds from the unix epoch.
+   */
+  "start": <number>,
+  /**
+   * Ending timestamp in milliseconds from the unix epoch.
+   */
+  "end": <number>,
+}
 ```
+
+###### Example
+
+```javascript
 {"start": 1300000000000, "end": 1400000000000}
 ```
 
 ### DataPoint
-```
-[<number>, <number>]
-```
 
 A datapoint is represented as an array with two elements.
 The __first__ element is the timestamp which is milliseconds from the unix epoch.
 The __second__ element is the value.
 
-#### Example
-
+###### Structure
+```javascript
+[<number>, <number>]
 ```
+
+###### Example
+
+```javascript
 [1300000000000, 42.0]
 ```
 
 ### Statistics
-```
+
+###### Structure
+```javascript
 {
   "aggregator": {
-    # How many original datapoints were involved to perform the required
-    # aggregates.
+    /**
+     * How many original datapoints were involved to perform the required
+     * aggregates.
+     */
     "sampleSize": <number>,
-    # How many original datapoints were out of bounds for the specified
-    # aggregate.
-    # This indicates that heroic has queried unecessary data from the backends.
+    /**
+     * How many original datapoints were out of bounds for the specified
+     * aggregate.
+     * This indicates that heroic has queried unecessary data from the backends.
+     */
     "outOfBounds": <number>,
   },
   "row": {
-    # How many successful database row was loaded into heroic.
+    /**
+     * How many successful database row was loaded into heroic.
+     */
     "successful": <number>,
     # How many database rows failed to be loaded by heroic.
     "failed": <number>,
@@ -92,37 +119,38 @@ If any of these are true, an error should be displayed to the user telling them
 that the time series they are seeing is probably inconsistent.
 
 ### MetricsResponse
-```
-{
-  # The date range that was queries.
-  "range": <DateRange>,
-  # An array of results.
-  "result": [{
-    # An unique hash for this specific time series.
-    "hash": <string>,
-    # The key of the time series.
-    "key": <string>,
-    # The tags of the time series.
-    "tags": {<string>: <string>, ...},
-    # An array of datapoints.
-    "values": [<DataPoint>, ...],
-  }, ...],
-  # Statistics about the current query.
-  # This field should be inspected for errors which will have caused the result
-  # to be inconsistent.
-  "statistics": <Statistics>
-```
 
 The result of a query.
 
-#### Example
+###### Structure
+```javascript
+{
+  /**
+   * The date range that was queries.
+   */
+  "range": <DateRange>,
+  /**
+   * An array of results.
+   */
+  "result": [{
+    /* An unique hash for this specific time series. */
+    "hash": <string>,
+    /* The key of the time series. */
+    "key": <string>,
+    /* The tags of the time series. */
+    "tags": {<string>: <string>, ...},
+    /* An array of datapoints. */
+    "values": [<DataPoint>, ...],
+  }, ...],
+  /**
+   * Statistics about the current query.
+   * This field should be inspected for errors which will have caused the result
+   * to be inconsistent.
+   */
+  "statistics": <Statistics>,
+```
+
+###### Example
 ```
 TODO: Make example
 ```
-
-## POST /metrics
-
-The simplest query method, will typically return a __MetricsResponse__ object.
-
-+ Response 200 (application/json) __MetricsResponse__
-+ Response 500 (application/json) __ErrorMessage__
