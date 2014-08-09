@@ -106,7 +106,6 @@ final class MergeCacheMisses implements
         final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
 
         int cacheConflicts = 0;
-        int nans = 0;
 
         final Map<Long, DataPoint> resultSet = new HashMap<Long, DataPoint>();
 
@@ -134,7 +133,7 @@ final class MergeCacheMisses implements
                 .builder(statistics)
                 .cache(new Statistics.Cache(cachedResults.getHits(),
                         cacheConflicts, cachedResults.getConflicts(),
-                        cachedResults.getNans(), nans)).build());
+                        cachedResults.getNans())).build());
     }
 
     @RequiredArgsConstructor

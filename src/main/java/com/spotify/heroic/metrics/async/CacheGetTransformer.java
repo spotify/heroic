@@ -49,7 +49,7 @@ public abstract class CacheGetTransformer implements
             groups.add(group);
 
             final Statistics stat = Statistics.builder()
-                    .cache(new Statistics.Cache(datapoints.size(), 0, 0, 0, 0))
+                    .cache(new Statistics.Cache(datapoints.size(), 0, 0, 0))
                     .build();
 
             return new ResolvedCallback<MetricGroups>(new MetricGroups(groups,

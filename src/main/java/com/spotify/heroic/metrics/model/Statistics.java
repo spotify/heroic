@@ -94,18 +94,17 @@ public class Statistics {
 
     @Data
     public static final class Cache {
-        public static final Cache EMPTY = new Cache(0, 0, 0, 0, 0);
+        public static final Cache EMPTY = new Cache(0, 0, 0, 0);
 
         private final int hits;
         private final int conflicts;
         private final int cacheConflicts;
         private final int cachedNans;
-        private final int realNans;
 
         public Cache merge(Cache other) {
             return new Cache(this.hits + other.hits,
                     this.conflicts + other.conflicts, this.cacheConflicts + other.cacheConflicts,
-                    this.cachedNans + other.cachedNans, this.realNans + other.realNans);
+                    this.cachedNans + other.cachedNans);
         }
 
         @JsonCreator
@@ -113,10 +112,9 @@ public class Statistics {
                 @JsonProperty(value = "hits", required = true) Integer hits,
                 @JsonProperty(value = "conflicts", required = true) Integer conflicts,
                 @JsonProperty(value = "cacheConflicts", required = true) Integer cacheConflicts,
-                @JsonProperty(value = "cachedNans", required = true) Integer cachedNans,
-                @JsonProperty(value = "realNans", required = true) Integer realNans
+                @JsonProperty(value = "cachedNans", required = true) Integer cachedNans
                 ) {
-            return new Cache(hits, conflicts, cacheConflicts, cachedNans, realNans);
+            return new Cache(hits, conflicts, cacheConflicts, cachedNans);
         }
     }
 
