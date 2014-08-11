@@ -217,31 +217,17 @@ public class MetricBackendManager {
             throw new MetricQueryException("Query must be defined");
 
         final String key = query.getKey();
-        final List<String> groupBy = query.getGroupBy();
-        final Map<String, String> tags = query.getTags();
         final DateRange range = query.getRange().buildDateRange();
-
         final AggregationGroup aggregation = buildAggregationGroup(query);
 
-        if (key == null || key.isEmpty())
-            throw new MetricQueryException("'key' must be defined");
-
-        if (range == null)
-            throw new MetricQueryException("Range must be specified");
-
-        if (!(range.start() < range.end()))
-            throw new MetricQueryException(
-                    "Range start must come before its end");
-
-        if (aggregation != null) {
-            final long memoryMagnitude = aggregation
-                    .getCalculationMemoryMagnitude(range);
-
-            if (memoryMagnitude > maxAggregationMagnitude) {
-                throw new MetricQueryException(
-                        "This query would result in too many datapoints");
-            }
+        try {
+        	validateRequest(key, range, aggregation);
+        } catch(Exception e) {
+        	return new FailedCallback<>(e);
         }
+        
+        final List<String> groupBy = query.getGroupBy();
+        final Map<String, String> tags = query.getTags();
 
         final DateRange rounded = roundRange(aggregation, range);
 
@@ -258,12 +244,11 @@ public class MetricBackendManager {
 
     public Callback<StreamMetricsResult> streamMetrics(MetricsRequest query,
             MetricStream handle) throws MetricQueryException {
+        if (query == null)
+            throw new MetricQueryException("Query must be defined");
+
         final String key = query.getKey();
-        final List<String> groupBy = query.getGroupBy();
-        final Map<String, String> tags = query.getTags();
-
         final DateRange range = query.getRange().buildDateRange();
-
         final AggregationGroup aggregation = buildAggregationGroup(query);
 
         try {
@@ -271,6 +256,9 @@ public class MetricBackendManager {
         } catch(Exception e) {
         	return new FailedCallback<>(e);
         }
+
+        final List<String> groupBy = query.getGroupBy();
+        final Map<String, String> tags = query.getTags();
 
         final DateRange rounded = roundRange(aggregation, range);
 
@@ -303,12 +291,21 @@ public class MetricBackendManager {
                 rounded.start(rounded.end()), chunk, chunk);
 
         return callback.register(reporter.reportStreamMetrics()).register(
-                new Callback.Finishable() {
-                    @Override
-                    public void finished() throws Exception {
-                        log.info("{}: done streaming", streamId);
-                    }
-                });
+        		new Callback.Finishable() {
+        			@Override
+        			public void finished() throws Exception {
+        				log.info("{}: done streaming", streamId);
+        			}
+        		});
+    }
+
+    public Callback<MetricGroups> rpcQueryMetrics(RpcQueryRequest query) {
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
+                aggregationCache, query.getAggregationGroup(), query.getRange());
+
+        return groupTimeseries(query.getKey(), query.getTimeseries())
+                .transform(transformer)
+                .register(reporter.reportRpcQueryMetrics());
     }
 
 	private void validateRequest(final String key, final DateRange range,
@@ -325,6 +322,13 @@ public class MetricBackendManager {
                         "This query would result in too many datapoints");
             }
         }
+
+        if (range == null)
+            throw new MetricQueryException("Range must be specified");
+
+        if (!(range.start() < range.end()))
+            throw new MetricQueryException(
+                    "Range start must come before its end");
 	}
 
     private static final long RANGE_FACTOR = 20;
@@ -336,13 +340,6 @@ public class MetricBackendManager {
     /**
      * Streaming implementation that backs down in time in DIFF ms for each
      * invocation.
-     *
-     * @param callback
-     * @param aggregation
-     * @param handle
-     * @param query
-     * @param original
-     * @param last
      */
     private void streamChunks(final Callback<StreamMetricsResult> callback,
             final MetricStream handle, final StreamingQuery query,
@@ -469,7 +466,7 @@ public class MetricBackendManager {
                 .register(reporter.reportFindTimeSeries());
     }
 
-    public Callback<FindTimeSeriesGroups> findAllTimeSeries(
+    private Callback<FindTimeSeriesGroups> findAllTimeSeries(
             final FindTimeSeriesCriteria query) {
         final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getKey(),
                 query.getFilter(), null);
@@ -486,15 +483,6 @@ public class MetricBackendManager {
 
         return new AggregationGroup(aggregators, aggregators.get(0)
                 .getSampling());
-    }
-
-    public Callback<MetricGroups> rpcQueryMetrics(RpcQueryRequest query) {
-        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, query.getAggregationGroup(), query.getRange());
-
-        return groupTimeseries(query.getKey(), query.getTimeseries())
-                .transform(transformer)
-                .register(reporter.reportQueryMetrics());
     }
 
     private Callback<List<GroupedTimeSeries>> groupTimeseries(

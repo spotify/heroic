@@ -89,9 +89,9 @@ public class ClusterManager {
     public Statistics.Rpc getStatistics() {
         final NodeRegistry registry = this.registry.get();
 
-        if (registry == null) {
+        if (registry == null)
             throw new IllegalStateException("Registry not ready");
-        }
+
         return new Statistics.Rpc(0, 0, registry.getOnlineNodes(),
                 registry.getOfflineNodes());
     }

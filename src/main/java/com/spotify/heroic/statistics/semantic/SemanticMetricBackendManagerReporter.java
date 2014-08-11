@@ -12,6 +12,7 @@ public class SemanticMetricBackendManagerReporter implements
 
     private final CallbackReporter getAllRows;
     private final CallbackReporter queryMetrics;
+    private final CallbackReporter rpcQueryMetrics;
     private final CallbackReporter streamMetrics;
     private final CallbackReporter streamMetricsChunk;
     private final CallbackReporter findRowGroups;
@@ -24,6 +25,8 @@ public class SemanticMetricBackendManagerReporter implements
                 "what", "get-all-rows", "unit", Units.READ));
         this.queryMetrics = new SemanticCallbackReporter(registry, id.tagged(
                 "what", "query-metrics", "unit", Units.READ));
+        this.rpcQueryMetrics = new SemanticCallbackReporter(registry, id.tagged(
+                "what", "rpc-query-metrics", "unit", Units.READ));
         this.streamMetrics = new SemanticCallbackReporter(registry, id.tagged(
                 "what", "stream-metrics", "unit", Units.READ));
         this.streamMetricsChunk = new SemanticCallbackReporter(registry,
@@ -64,4 +67,9 @@ public class SemanticMetricBackendManagerReporter implements
     public Context reportWrite() {
         return write.setup();
     }
+
+	@Override
+	public Context reportRpcQueryMetrics() {
+		return rpcQueryMetrics.setup();
+	}
 }
