@@ -3,6 +3,7 @@ package com.spotify.heroic.http.rpc.model;
 import java.util.Set;
 
 import lombok.Data;
+import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -11,6 +12,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
 @Data
+@ToString(of={"key", "range", "aggregationGroup"})
 public class RpcQueryRequest {
     private final TimeSerie key;
     private final Set<TimeSerie> timeseries;

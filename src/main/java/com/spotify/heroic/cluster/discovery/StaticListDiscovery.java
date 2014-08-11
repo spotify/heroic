@@ -9,7 +9,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import org.glassfish.jersey.client.ClientConfig;
 
@@ -20,7 +19,6 @@ import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.yaml.ValidationException;
 
-@Slf4j
 @RequiredArgsConstructor
 public class StaticListDiscovery implements ClusterDiscovery {
     public static final class YAML implements ClusterDiscovery.YAML {

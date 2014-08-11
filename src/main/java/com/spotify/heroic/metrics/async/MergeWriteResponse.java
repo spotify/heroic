@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.Callback.Reducer;
 import com.spotify.heroic.model.WriteResponse;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)

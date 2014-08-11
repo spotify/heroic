@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
@@ -93,6 +94,7 @@ public class Statistics {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown=true)
     public static final class Cache {
         public static final Cache EMPTY = new Cache(0, 0, 0, 0);
 

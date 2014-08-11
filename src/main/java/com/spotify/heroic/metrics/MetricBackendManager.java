@@ -21,6 +21,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
@@ -261,21 +262,14 @@ public class MetricBackendManager {
         final List<String> groupBy = query.getGroupBy();
         final Map<String, String> tags = query.getTags();
 
-        if (key == null || key.isEmpty())
-            throw new MetricQueryException("'key' must be defined");
+        final DateRange range = query.getRange().buildDateRange();
 
         final AggregationGroup aggregation = buildAggregationGroup(query);
 
-        final DateRange range = query.getRange().buildDateRange();
-
-        if (aggregation != null) {
-            final long memoryMagnitude = aggregation
-                    .getCalculationMemoryMagnitude(range);
-
-            if (memoryMagnitude > maxAggregationMagnitude) {
-                throw new MetricQueryException(
-                        "This query would result in too many datapoints");
-            }
+        try {
+        	validateRequest(key, range, aggregation);
+        } catch(Exception e) {
+        	return new FailedCallback<>(e);
         }
 
         final DateRange rounded = roundRange(aggregation, range);
@@ -294,7 +288,7 @@ public class MetricBackendManager {
         final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
             public Callback<MetricGroups> query(DateRange range) {
-                log.info("{}: streaming {}", streamId, range);
+                log.info("{}: streaming chunk {}", streamId, range);
 
                 final RemoteTimeSeriesTransformer transformer = new RemoteTimeSeriesTransformer(
                         range, aggregation);
@@ -316,6 +310,22 @@ public class MetricBackendManager {
                     }
                 });
     }
+
+	private void validateRequest(final String key, final DateRange range,
+			final AggregationGroup aggregation) throws MetricQueryException {
+		if (key == null || key.isEmpty())
+            throw new MetricQueryException("'key' must be defined");
+
+        if (aggregation != null) {
+            final long memoryMagnitude = aggregation
+                    .getCalculationMemoryMagnitude(range);
+
+            if (memoryMagnitude > maxAggregationMagnitude) {
+                throw new MetricQueryException(
+                        "This query would result in too many datapoints");
+            }
+        }
+	}
 
     private static final long RANGE_FACTOR = 20;
 

@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.async.ClusterNodeLogHandle;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryReducer;
@@ -37,8 +36,6 @@ public class ClusterManager {
             return new ClusterManager(discovery, UUID.randomUUID(), tags);
         }
     }
-
-    private static final CancelReason REGISTRY_NOT_READY = new CancelReason("registry is not ready yet");
 
     private final ClusterDiscovery discovery;
 

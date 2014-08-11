@@ -3,12 +3,14 @@ package com.spotify.heroic.metadata.elasticsearch.async;
 import java.util.Iterator;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilder;
 
+@Slf4j
 @RequiredArgsConstructor
 public class PaginatingSearchResponseIterable implements
         Iterable<SearchResponse> {
@@ -22,7 +24,7 @@ public class PaginatingSearchResponseIterable implements
         return new Iterator<SearchResponse>() {
             private SearchResponse next;
             private int from = 0;
-            private final int size = 100;
+            private final int size = 100000;
 
             @Override
             public boolean hasNext() {
@@ -30,17 +32,19 @@ public class PaginatingSearchResponseIterable implements
                         .prepareSearch(index).setTypes(type).setFrom(from)
                         .setSize(size);
 
-                if (query != null) {
+                if (query != null)
                     request.setQuery(query);
-                }
 
                 final SearchResponse next = request.get();
 
                 if (next.getHits().getHits().length == 0)
                     return false;
 
+                log.info("Loaded SearchResponse {}-{}", from, from + size);
+                
                 this.from += this.size;
                 this.next = next;
+
                 return true;
             }
 
