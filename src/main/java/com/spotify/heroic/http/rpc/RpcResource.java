@@ -14,9 +14,8 @@ import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.http.ErrorMessage;
+import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.model.ClusterMetadataResponse;
 import com.spotify.heroic.http.rpc.model.RpcQueryRequest;
 import com.spotify.heroic.metrics.MetricBackendManager;
@@ -43,34 +42,21 @@ public class RpcResource {
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
 
+    private static final HttpAsyncUtils.Resume<MetricGroups, MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, MetricGroups>() {
+		@Override
+		public MetricGroups resume(MetricGroups value) throws Exception {
+			return value;
+		}
+    };
+
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             RpcQueryRequest query) {
         log.info("POST /rpc/query: {}", query);
 
-        metrics.rpcQueryMetrics(query).register(
-                new Callback.Handle<MetricGroups>() {
-                    @Override
-                    public void cancelled(CancelReason reason) throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.GATEWAY_TIMEOUT)
-                                .entity(new ErrorMessage("Request cancelled: "
-                                        + reason)).build());
-                    }
+        final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(query);
 
-                    @Override
-                    public void failed(Exception e) throws Exception {
-                        response.resume(Response
-                                .status(Response.Status.INTERNAL_SERVER_ERROR)
-                                .entity(new ErrorMessage(e.toString())).build());
-                    }
-
-                    @Override
-                    public void resolved(MetricGroups result) throws Exception {
-                        response.resume(Response.status(Response.Status.OK)
-                                .entity(result).build());
-                    }
-                });
+		HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 }

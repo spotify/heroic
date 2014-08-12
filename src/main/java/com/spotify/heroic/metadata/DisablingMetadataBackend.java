@@ -16,6 +16,8 @@ import com.spotify.heroic.model.WriteResponse;
  * A metric backend facade that learns about failures in the upstream backend
  * and 'disables' itself accordingly.
  * 
+ * TODO: Remove since not used or make configurable?
+ * 
  * @author udoprog
  */
 public class DisablingMetadataBackend extends

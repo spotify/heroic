@@ -21,10 +21,23 @@ public interface MetricBackend extends Lifecycle {
         private static final double DEFAULT_THRESHOLD = 10.0;
         private static final long DEFAULT_COOLDOWN = 60000;
 
+        /**
+         * Disable this backend if too many errors are being reported by it.
+         */
+        @Getter
+        @Setter
+        private boolean disableOnFailures = false;
+
+        /**
+         * How many errors per minute that are acceptable.
+         */
         @Getter
         @Setter
         private double threshold = DEFAULT_THRESHOLD;
 
+        /**
+         * The cooldown period in milliseconds.
+         */
         @Getter
         @Setter
         private long cooldown = DEFAULT_COOLDOWN;
@@ -32,7 +45,11 @@ public interface MetricBackend extends Lifecycle {
         public MetricBackend build(String context,
                 MetricBackendReporter reporter) throws ValidationException {
             final MetricBackend delegate = buildDelegate(context, reporter);
-            return new DisablingMetricBackend(delegate, threshold, cooldown);
+            
+            if (disableOnFailures)
+            	return new DisablingMetricBackend(delegate, threshold, cooldown);
+
+            return delegate;
         }
 
         protected abstract MetricBackend buildDelegate(String context,
