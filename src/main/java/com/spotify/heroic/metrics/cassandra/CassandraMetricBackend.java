@@ -3,6 +3,7 @@ package com.spotify.heroic.metrics.cassandra;
 import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import com.netflix.astyanax.AstyanaxConfiguration;
@@ -22,52 +23,53 @@ import com.spotify.heroic.metrics.MetricBackend;
  *
  * @author udoprog
  */
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
+@ToString(of = { "keyspaceName", "seeds", "maxConnectionsPerHost" })
 public abstract class CassandraMetricBackend implements MetricBackend {
-    private final String keyspaceName;
-    private final String seeds;
-    private final int maxConnectionsPerHost;
+	private final String keyspaceName;
+	private final String seeds;
+	private final int maxConnectionsPerHost;
 
-    private AstyanaxContext<Keyspace> context;
-    // could be volatile, but this asserts that a request has to fetch-and-store
-    // the keyspace _once_ in the context for which it is valid.
-    private final AtomicReference<Keyspace> keyspace = new AtomicReference<Keyspace>();
+	private AstyanaxContext<Keyspace> context;
+	// could be volatile, but this asserts that a request has to fetch-and-store
+	// the keyspace _once_ in the context for which it is valid.
+	private final AtomicReference<Keyspace> keyspace = new AtomicReference<Keyspace>();
 
-    @Override
-    public boolean isReady() {
-        return keyspace() != null;
-    }
+	@Override
+	public boolean isReady() {
+		return keyspace() != null;
+	}
 
-    protected Keyspace keyspace() {
-        return keyspace.get();
-    }
+	protected Keyspace keyspace() {
+		return keyspace.get();
+	}
 
-    @Override
-    public void start() throws Exception {
-        log.info("Starting: {}", this);
+	@Override
+	public void start() throws Exception {
+		log.info("Starting: {}", this);
 
-        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-                .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
+		final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
+		.setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
 
-        context = new AstyanaxContext.Builder()
-                .withConnectionPoolConfiguration(
-                        new ConnectionPoolConfigurationImpl(
-                                "HeroicConnectionPool").setPort(9160)
-                                .setMaxConnsPerHost(maxConnectionsPerHost)
-                                .setSeeds(seeds)).forKeyspace(keyspaceName)
-                .withAstyanaxConfiguration(config)
-                .buildKeyspace(ThriftFamilyFactory.getInstance());
+		context = new AstyanaxContext.Builder()
+		.withConnectionPoolConfiguration(
+				new ConnectionPoolConfigurationImpl(
+						"HeroicConnectionPool").setPort(9160)
+						.setMaxConnsPerHost(maxConnectionsPerHost)
+						.setSeeds(seeds)).forKeyspace(keyspaceName)
+						.withAstyanaxConfiguration(config)
+						.buildKeyspace(ThriftFamilyFactory.getInstance());
 
-        context.start();
-        keyspace.set(context.getClient());
-    }
+		context.start();
+		keyspace.set(context.getClient());
+	}
 
-    @Override
-    public void stop() throws Exception {
-        log.info("Stopping: {}", this);
+	@Override
+	public void stop() throws Exception {
+		log.info("Stopping: {}", this);
 
-        context.shutdown();
-        keyspace.set(null);
-    }
+		context.shutdown();
+		keyspace.set(null);
+	}
 }

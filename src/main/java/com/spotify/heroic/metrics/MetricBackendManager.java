@@ -58,6 +58,8 @@ public class MetricBackendManager {
     private final List<MetricBackend> backends;
     private final long maxAggregationMagnitude;
     private final boolean updateMetadata;
+    private final int groupLimit;
+    private final int groupLoadLimit;
 
     @Inject
     @Nullable
@@ -142,8 +144,15 @@ public class MetricBackendManager {
                         throws Exception {
             final List<RemoteGroupedTimeSeries> grouped = new ArrayList<>();
 
-            for (final Entry<TimeSerie, Set<TimeSerie>> group : result
-                    .getGroups().entrySet()) {
+            final Map<TimeSerie, Set<TimeSerie>> groups = result
+                    .getGroups();
+
+            if (groups.size() > groupLimit)
+            	throw new IllegalArgumentException(
+            			"The current query is too heavy! (More than " + groupLimit + 
+            			" timeseries would be sent to your browser).");
+
+			for (final Entry<TimeSerie, Set<TimeSerie>> group : groups.entrySet()) {
                 final Set<TimeSerie> timeseries = group
                         .getValue();
 
@@ -161,15 +170,15 @@ public class MetricBackendManager {
                     continue;
                 }
 
-                for (final TimeSerie timeSerie : timeseries) {
-                    if (!node.getMetadata().matches(timeSerie.getTags())) {
-                        log.error(
-                                "TimeSeries {} does not belong to node {}, this is possibly a global aggregate!",
-                                timeSerie, node);
+                if (timeseries.size() > groupLoadLimit)
+                	throw new IllegalArgumentException(
+                			"The current query is too heavy! (More than " + groupLoadLimit + 
+                			" original time series would be loaded from Cassandra).");
 
+                for (final TimeSerie timeSerie : timeseries) {
+                    if (!node.getMetadata().matches(timeSerie.getTags()))
                         throw new IllegalArgumentException(
-                                "You are not allowed to perform global aggregate!");
-                    }
+                                "The current query is too heavy! (Global aggregation not permitted)");
                 }
 
                 grouped.add(new RemoteGroupedTimeSeries(group.getKey(), group

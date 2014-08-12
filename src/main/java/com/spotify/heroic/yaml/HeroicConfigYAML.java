@@ -3,8 +3,7 @@ package com.spotify.heroic.yaml;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
@@ -14,115 +13,90 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metrics.MetricBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
+@Data
 public class HeroicConfigYAML {
-    @Getter
-    @Setter
-    private ClusterManager.YAML cluster;
+	private ClusterManager.YAML cluster;
+	private List<MetricBackend.YAML> backends;
+	private List<MetadataBackend.YAML> metadataBackends;
+	private List<Consumer.YAML> consumers;
+	private AggregationCacheBackend.YAML cache;
+	private long maxAggregationMagnitude = HeroicConfig.MAX_AGGREGATION_MAGNITUDE;
+	private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
+	private boolean updateMetadata = HeroicConfig.UPDATE_METADATA;
+	private int port = HeroicConfig.DEFAULT_PORT;
+	private String refreshClusterSchedule = HeroicConfig.DEFAULT_REFRESH_CLUSTER_SCHEDULE;
+	private int groupLimit = HeroicConfig.DEFAULT_GROUP_LIMIT;
+	private int groupLoadLimit = HeroicConfig.DEFAULT_GROUP_LOAD_LIMIT;
 
-    @Getter
-    @Setter
-    private List<MetricBackend.YAML> backends;
+	private List<MetricBackend> setupMetricBackends(String context,
+			HeroicReporter reporter) throws ValidationException {
+		final List<MetricBackend> backends = new ArrayList<MetricBackend>();
 
-    @Getter
-    @Setter
-    private List<MetadataBackend.YAML> metadataBackends;
+		int i = 0;
 
-    @Getter
-    @Setter
-    private List<Consumer.YAML> consumers;
+		for (final MetricBackend.YAML backend : Utils.toList("backends",
+				this.backends)) {
+			final String c = context + "[" + i++ + "]";
+			backends.add(backend.build(c, reporter.newMetricBackend(c)));
+		}
 
-    @Getter
-    @Setter
-    private AggregationCacheBackend.YAML cache;
+		return backends;
+	}
 
-    @Getter
-    @Setter
-    private long maxAggregationMagnitude = HeroicConfig.MAX_AGGREGATION_MAGNITUDE;
+	private List<MetadataBackend> setupMetadataBackends(String context,
+			HeroicReporter reporter) throws ValidationException {
+		final List<MetadataBackend> backends = new ArrayList<MetadataBackend>();
 
-    @Getter
-    @Setter
-    private long maxQueriableDataPoints = HeroicConfig.MAX_QUERIABLE_DATA_POINTS;
+		int i = 0;
 
-    @Getter
-    @Setter
-    private boolean updateMetadata = HeroicConfig.UPDATE_METADATA;
+		for (final MetadataBackend.YAML backend : Utils.toList(
+				"metadataBackends", this.metadataBackends)) {
+			final String c = context + "[" + i++ + "]";
+			backends.add(backend.build(c, reporter.newMetadataBackend(c)));
+		}
 
-    @Getter
-    @Setter
-    private int port = HeroicConfig.DEFAULT_PORT;
+		return backends;
+	}
 
-    @Getter
-    @Setter
-    private String refreshClusterSchedule = HeroicConfig.DEFAULT_REFRESH_CLUSTER_SCHEDULE;
+	private List<Consumer> setupConsumers(String context,
+			HeroicReporter reporter) throws ValidationException {
 
-    private List<MetricBackend> setupMetricBackends(String context,
-            HeroicReporter reporter) throws ValidationException {
-        List<MetricBackend> backends = new ArrayList<MetricBackend>();
+		final List<Consumer> consumers = new ArrayList<Consumer>();
 
-        int i = 0;
+		int i = 0;
 
-        for (MetricBackend.YAML backend : Utils.toList("backends",
-                this.backends)) {
-            final String c = context + "[" + i++ + "]";
-            backends.add(backend.build(c, reporter.newMetricBackend(c)));
-        }
+		for (final Consumer.YAML consumer : Utils.toList("consumers",
+				this.consumers)) {
+			final String c = context + "[" + i++ + "]";
+			consumers.add(consumer.build(c, reporter.newConsumerReporter(c)));
+		}
 
-        return backends;
-    }
+		return consumers;
+	}
 
-    private List<MetadataBackend> setupMetadataBackends(String context,
-            HeroicReporter reporter) throws ValidationException {
-        List<MetadataBackend> backends = new ArrayList<MetadataBackend>();
+	public HeroicConfig build(HeroicReporter reporter)
+			throws ValidationException {
+		final ClusterManager cluster = this.cluster.build("cluster");
 
-        int i = 0;
+		final List<MetricBackend> metricBackends = setupMetricBackends(
+				"backends", reporter);
+		final List<MetadataBackend> metadataBackends = setupMetadataBackends(
+				"metadataBackends", reporter);
+		final List<Consumer> consumers = setupConsumers("consumers", reporter);
 
-        for (MetadataBackend.YAML backend : Utils.toList("metadataBackends",
-                this.metadataBackends)) {
-            final String c = context + "[" + i++ + "]";
-            backends.add(backend.build(c, reporter.newMetadataBackend(c)));
-        }
+		final AggregationCache cache;
 
-        return backends;
-    }
+		if (this.cache == null) {
+			cache = null;
+		} else {
+			final AggregationCacheBackend backend = this.cache.build("cache",
+					reporter.newAggregationCacheBackend(null));
+			cache = new AggregationCache(reporter.newAggregationCache(null),
+					backend);
+		}
 
-    private List<Consumer> setupConsumers(String context,
-            HeroicReporter reporter) throws ValidationException {
-
-        List<Consumer> consumers = new ArrayList<Consumer>();
-
-        int i = 0;
-
-        for (Consumer.YAML consumer : Utils.toList("consumers", this.consumers)) {
-            final String c = context + "[" + i++ + "]";
-            consumers.add(consumer.build(c, reporter.newConsumerReporter(c)));
-        }
-
-        return consumers;
-    }
-
-    public HeroicConfig build(HeroicReporter reporter)
-            throws ValidationException {
-        final ClusterManager cluster = this.cluster.build("cluster");
-
-        final List<MetricBackend> metricBackends = setupMetricBackends(
-                "backends", reporter);
-        final List<MetadataBackend> metadataBackends = setupMetadataBackends(
-                "metadataBackends", reporter);
-        final List<Consumer> consumers = setupConsumers("consumers", reporter);
-
-        final AggregationCache cache;
-
-        if (this.cache == null) {
-            cache = null;
-        } else {
-            final AggregationCacheBackend backend = this.cache.build("cache",
-                    reporter.newAggregationCacheBackend(null));
-            cache = new AggregationCache(reporter.newAggregationCache(null),
-                    backend);
-        }
-
-        return new HeroicConfig(cluster, metricBackends, metadataBackends,
-                consumers, cache, maxAggregationMagnitude, updateMetadata,
-                port, refreshClusterSchedule);
-    }
+		return new HeroicConfig(cluster, metricBackends, metadataBackends,
+				consumers, cache, maxAggregationMagnitude, updateMetadata,
+				port, refreshClusterSchedule, groupLimit, groupLoadLimit);
+	}
 }

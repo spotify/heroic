@@ -35,6 +35,8 @@ public class HeroicConfig {
     public static final long MAX_QUERIABLE_DATA_POINTS = 100000;
     public static final int DEFAULT_PORT = 8080;
     public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
+    public static final int DEFAULT_GROUP_LIMIT = 500;
+    public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
 
     @Getter
     private final ClusterManager cluster;
@@ -63,6 +65,12 @@ public class HeroicConfig {
     @Getter
     private final String refreshClusterSchedule;
 
+    @Getter
+    private final int groupLimit;
+
+    @Getter
+    private final int groupLoadLimit;
+
     private static final TypeDescription[] TYPES = new TypeDescription[] {
         Utils.makeType(HeroicMetricBackend.YAML.class),
         Utils.makeType(KairosMetricBackend.YAML.class),
@@ -90,7 +98,9 @@ public class HeroicConfig {
         final List<Consumer> consumers = new ArrayList<Consumer>();
         return new HeroicConfig(cluster, metricBackends, metadataBackends, consumers,
                 cache, MAX_AGGREGATION_MAGNITUDE, UPDATE_METADATA,
-                DEFAULT_PORT, DEFAULT_REFRESH_CLUSTER_SCHEDULE);
+                DEFAULT_PORT, DEFAULT_REFRESH_CLUSTER_SCHEDULE,
+                DEFAULT_GROUP_LIMIT,
+                DEFAULT_GROUP_LOAD_LIMIT);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

@@ -9,6 +9,7 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.search.SearchHit;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,10 +38,12 @@ public class PaginatingSearchResponseIterable implements
 
                 final SearchResponse next = request.get();
 
-                if (next.getHits().getHits().length == 0)
+                SearchHit[] hits = next.getHits().getHits();
+
+				if (hits.length == 0)
                     return false;
 
-                log.info("Loaded SearchResponse {}-{}", from, from + size);
+                log.info("Loaded SearchResponse {}-{}", from, from + hits.length);
                 
                 this.from += this.size;
                 this.next = next;

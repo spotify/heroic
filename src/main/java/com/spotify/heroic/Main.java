@@ -4,16 +4,23 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.servlet.DispatcherType;
 import javax.ws.rs.core.UriBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.grizzly.servlet.FilterRegistration;
+import org.glassfish.grizzly.servlet.ServletRegistration;
+import org.glassfish.grizzly.servlet.WebappContext;
+import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.servlet.ServletContainer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
@@ -25,6 +32,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.AbstractMatcher;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
@@ -43,7 +51,6 @@ import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
-import com.spotify.heroic.yaml.ValidationException;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
@@ -51,254 +58,291 @@ import com.spotify.metrics.jvm.GarbageCollectorMetricSet;
 import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
-public class Main extends GuiceServletContextListener {
-    public static final String DEFAULT_CONFIG = "heroic.yml";
+public class Main {
+	public static final String DEFAULT_CONFIG = "heroic.yml";
 
-    public static Injector injector;
+	public static Injector injector;
 
-    public static List<Lifecycle> managed = new ArrayList<Lifecycle>();
+	public static List<Lifecycle> managed = new ArrayList<Lifecycle>();
 
-    @Override
-    protected Injector getInjector() {
-        return injector;
-    }
+	public static final GuiceServletContextListener LISTENER = new GuiceServletContextListener() {
+		@Override
+		protected Injector getInjector() {
+			return injector;
+		}
+	};
 
-    @RequiredArgsConstructor
-    private static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
-        private final Class<?> clazz;
+	@RequiredArgsConstructor
+	private static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
+		private final Class<?> clazz;
 
-        @Override
-        public boolean matches(TypeLiteral<?> t) {
-            return clazz.isAssignableFrom(t.getRawType());
-        }
-    }
+		@Override
+		public boolean matches(TypeLiteral<?> t) {
+			return clazz.isAssignableFrom(t.getRawType());
+		}
+	}
 
-    public static Injector setupInjector(final HeroicConfig config,
-            final HeroicReporter reporter) {
-        log.info("Building Guice Injector");
+	public static Injector setupInjector(final HeroicConfig config,
+			final HeroicReporter reporter) {
+		log.info("Building Guice Injector");
 
-        final List<Module> modules = new ArrayList<Module>();
-        final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
-        final AggregationCache cache = config.getAggregationCache();
+		final List<Module> modules = new ArrayList<Module>();
+		final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
+		final AggregationCache cache = config.getAggregationCache();
 
-        final List<MetricBackend> metricBackends = config.getMetricBackends();
-        final List<MetadataBackend> metadataBackends = config
-                .getMetadataBackends();
+		final List<MetricBackend> metricBackends = config.getMetricBackends();
+		final List<MetadataBackend> metadataBackends = config
+				.getMetadataBackends();
 
-        final MetricBackendManager metric = new MetricBackendManager(
-                reporter.newMetricBackendManager(), metricBackends,
-                config.getMaxAggregationMagnitude(), config.isUpdateMetadata());
+		final MetricBackendManager metric = new MetricBackendManager(
+				reporter.newMetricBackendManager(), metricBackends,
+				config.getMaxAggregationMagnitude(), config.isUpdateMetadata(),
+				config.getGroupLimit(), config.getGroupLoadLimit());
 
-        final MetadataBackendManager metadata = new MetadataBackendManager(
-                reporter.newMetadataBackendManager(), metadataBackends);
+		final MetadataBackendManager metadata = new MetadataBackendManager(
+				reporter.newMetadataBackendManager(), metadataBackends);
 
-        final ClusterManager cluster = config.getCluster();
+		final ClusterManager cluster = config.getCluster();
 
-        modules.add(new AbstractModule() {
-            @Override
-            protected void configure() {
-                if (cache == null) {
-                    bind(AggregationCache.class).toProvider(
-                            Providers.of((AggregationCache) null));
-                } else {
-                    bind(AggregationCache.class).toInstance(cache);
-                }
+		modules.add(new AbstractModule() {
+			@Override
+			protected void configure() {
+				if (cache == null) {
+					bind(AggregationCache.class).toProvider(
+							Providers.of((AggregationCache) null));
+				} else {
+					bind(AggregationCache.class).toInstance(cache);
+				}
 
-                bind(MetricBackendManager.class).toInstance(metric);
-                bind(MetadataBackendManager.class).toInstance(metadata);
-                bind(StoredMetricQueries.class).toInstance(storedMetricsQueries);
-                bind(ClusterManager.class).toInstance(cluster);
+				bind(MetricBackendManager.class).toInstance(metric);
+				bind(MetadataBackendManager.class).toInstance(metadata);
+				bind(StoredMetricQueries.class)
+						.toInstance(storedMetricsQueries);
+				bind(ClusterManager.class).toInstance(cluster);
 
-                setupBackends(MetricBackend.class, metricBackends);
+				setupBackends(MetricBackend.class, metricBackends);
 
-                {
-                    final Multibinder<MetadataBackend> bindings = Multibinder
-                            .newSetBinder(binder(), MetadataBackend.class);
-                    for (final MetadataBackend backend : metadataBackends) {
-                        bindings.addBinding().toInstance(backend);
-                    }
-                }
+				{
+					final Multibinder<MetadataBackend> bindings = Multibinder
+							.newSetBinder(binder(), MetadataBackend.class);
+					for (final MetadataBackend backend : metadataBackends) {
+						bindings.addBinding().toInstance(backend);
+					}
+				}
 
-                {
-                    final Multibinder<Consumer> bindings = Multibinder
-                            .newSetBinder(binder(), Consumer.class);
-                    for (final Consumer consumer : config.getConsumers()) {
-                        bindings.addBinding().toInstance(consumer);
-                    }
-                }
+				{
+					final Multibinder<Consumer> bindings = Multibinder
+							.newSetBinder(binder(), Consumer.class);
+					for (final Consumer consumer : config.getConsumers()) {
+						bindings.addBinding().toInstance(consumer);
+					}
+				}
 
-                bindListener(new IsSubclassOf(Lifecycle.class),
-                        new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
-                            @Override
-                            public void afterInjection(Object i) {
-                                managed.add((Lifecycle) i);
-                            }
-                        });
-                    }
-                });
-            }
+				bindListener(new IsSubclassOf(Lifecycle.class),
+						new TypeListener() {
+							@Override
+							public <I> void hear(TypeLiteral<I> type,
+									TypeEncounter<I> encounter) {
+								encounter.register(new InjectionListener<I>() {
+									@Override
+									public void afterInjection(Object i) {
+										managed.add((Lifecycle) i);
+									}
+								});
+							}
+						});
+			}
 
-            @SuppressWarnings("unchecked")
-            private <T> void setupBackends(Class<T> clazz, List<T> backends) {
-                final Multibinder<T> bindings = Multibinder.newSetBinder(
-                        binder(), clazz);
-                for (T backend : backends) {
-                    bindings.addBinding().toInstance(backend);
+			@SuppressWarnings("unchecked")
+			private <T> void setupBackends(Class<T> clazz, List<T> backends) {
+				final Multibinder<T> bindings = Multibinder.newSetBinder(
+						binder(), clazz);
+				for (T backend : backends) {
+					bindings.addBinding().toInstance(backend);
 
-                    while (backend instanceof Delegator) {
-                        backend = ((Delegator<T>) backend).delegate();
-                        bindings.addBinding().toInstance(backend);
-                    }
-                }
-            }
-        });
+					while (backend instanceof Delegator) {
+						backend = ((Delegator<T>) backend).delegate();
+						bindings.addBinding().toInstance(backend);
+					}
+				}
+			}
+		});
 
-        modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
+		modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
 
-        return Guice.createInjector(modules);
-    }
+		return Guice.createInjector(modules);
+	}
 
-    public static void main(String[] args) throws IOException {
-        final String configPath;
+	public static void main(String[] args) throws Exception {
+		final String configPath;
 
-        if (args.length < 1) {
-            configPath = DEFAULT_CONFIG;
-        } else {
-            configPath = args[0];
-        }
+		if (args.length < 1) {
+			configPath = DEFAULT_CONFIG;
+		} else {
+			configPath = args[0];
+		}
 
-        final HeroicConfig config;
+		final SemanticMetricRegistry registry = new SemanticMetricRegistry();
+		final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        final SemanticMetricRegistry registry = new SemanticMetricRegistry();
-        final HeroicReporter reporter = new SemanticHeroicReporter(registry);
+		final HeroicConfig config = setupConfig(configPath, reporter);
 
-        log.info("Loading configuration from: {}", configPath);
-        try {
-            config = HeroicConfig.parse(Paths.get(configPath), reporter);
-        } catch (ValidationException | IOException e) {
-            log.error("Invalid configuration file: " + configPath, e);
-            System.exit(1);
-            return;
-        }
+		injector = setupInjector(config, reporter);
 
-        final FastForwardReporter ffwd = setupReporter(registry);
+		/* fire startable handlers */
+		if (!startLifecycle()) {
+			log.info("Failed to start all lifecycle components");
+			System.exit(1);
+			return;
+		}
 
-        if (config == null) {
-            log.error("No configuration, shutting down");
-            System.exit(1);
-            return;
-        }
+		final HttpServer server = setupHttpServer(config);
+		final FastForwardReporter ffwd = setupReporter(registry);
 
-        injector = setupInjector(config, reporter);
+		final Scheduler scheduler = injector.getInstance(Scheduler.class);
+		scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
 
-        /* fire startable handlers */
-        for (final Lifecycle startable : Main.managed) {
-            try {
-                startable.start();
-            } catch (final Exception e) {
-                log.error("Failed to start {}", startable, e);
-                System.exit(1);
-            }
-        }
+		final CountDownLatch latch = new CountDownLatch(1);
 
-        final GrizzlyServer grizzlyServer = new GrizzlyServer();
-        final HttpServer server;
+		Runtime.getRuntime().addShutdownHook(
+				new Thread(setupShutdownHook(ffwd, server, scheduler, latch)));
 
-        final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
-                .port(config.getPort())
-                .build();
+		latch.await();
+		System.exit(0);
+	}
 
-        try {
-            server = grizzlyServer.start(baseUri);
-        } catch (final IOException e) {
-            log.error("Failed to start grizzly server", e);
-            System.exit(1);
-            return;
-        }
+	/**
+	 * Start the lifecycle of all managed components.
+	 */
+	private static boolean startLifecycle() {
+		boolean ok = true;
 
-        final Scheduler scheduler = injector.getInstance(Scheduler.class);
+		for (final Lifecycle startable : Main.managed) {
+			log.info("Starting: {}", startable);
 
-        try {
-            scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
-        } catch (final SchedulerException e) {
-            log.error("Failed to schedule initial cluster refresh", e);
-            System.exit(1);
-            return;
-        }
+			try {
+				startable.start();
+			} catch (final Exception e) {
+				log.error("Failed to start {}", startable, e);
+				ok = false;
+			}
+		}
 
-        final CountDownLatch latch = new CountDownLatch(1);
+		return ok;
+	}
 
-        final Thread hook = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                log.warn("Shutting down scheduler");
+	private static boolean stopLifecycle() {
+		boolean ok = true;
 
-                try {
-                    scheduler.shutdown(true);
-                } catch (final SchedulerException e) {
-                    log.error("Scheduler shutdown failed", e);
-                }
+		/* fire Stoppable handlers */
+		for (final Lifecycle stoppable : Main.managed) {
+			log.info("Stopping: {}", stoppable);
 
-                try {
-                    log.warn("Waiting for server to shutdown");
-                    server.shutdown().get(30, TimeUnit.SECONDS);
-                } catch (final Exception e) {
-                    log.error("Server shutdown failed", e);
-                }
+			try {
+				stoppable.stop();
+			} catch (final Exception e) {
+				log.error("Failed to stop {}", stoppable, e);
+				ok = false;
+			}
+		}
 
-                log.info("Firing stop handles");
+		return ok;
+	}
 
-                /* fire Stoppable handlers */
-                for (final Lifecycle stoppable : Main.managed) {
-                    try {
-                        stoppable.stop();
-                    } catch (final Exception e) {
-                        log.error("Failed to stop {}", stoppable, e);
-                    }
-                }
+	private static HeroicConfig setupConfig(final String configPath,
+			final HeroicReporter reporter) throws Exception {
+		log.info("Loading configuration from: {}", configPath);
 
-                ffwd.stop();
+		final HeroicConfig config = HeroicConfig.parse(Paths.get(configPath),
+				reporter);
 
-                log.warn("Bye Bye!");
-                latch.countDown();
-            }
-        });
+		if (config == null) {
+			throw new Exception(
+					"INTERNAL ERROR: No configuration, shutting down");
+		}
 
-        Runtime.getRuntime().addShutdownHook(hook);
+		return config;
+	}
 
-        /*
-        System.out.println("Enter to exit...");
-        System.in.read();
+	private static HttpServer setupHttpServer(final HeroicConfig config)
+			throws IOException {
+		log.info("Starting grizzly http server...");
 
-        hook.start();
-         */
+		final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
+				.port(config.getPort()).build();
 
-        try {
-            latch.await();
-        } catch (final InterruptedException e) {
-            log.error("Shutdown interrupted", e);
-        }
+		final WebappContext context = new WebappContext("Guice Webapp sample",
+				"");
 
-        System.exit(0);
-    }
+		context.addListener(Main.LISTENER);
 
-    private static FastForwardReporter setupReporter(final SemanticMetricRegistry registry) throws IOException {
-        final MetricId gauges = MetricId.build();
+		// Initialize and register Jersey ServletContainer
+		final ServletRegistration servletRegistration = context.addServlet(
+				"ServletContainer", ServletContainer.class);
+		servletRegistration.addMapping("/*");
+		servletRegistration.setInitParameter("javax.ws.rs.Application",
+				WebApp.class.getName());
 
-        registry.register(gauges, new ThreadStatesMetricSet());
-        registry.register(gauges, new GarbageCollectorMetricSet());
-        registry.register(gauges, new MemoryUsageGaugeSet());
+		// Initialize and register GuiceFilter
+		final FilterRegistration registration = context.addFilter(
+				"GuiceFilter", GuiceFilter.class);
+		registration.addMappingForUrlPatterns(
+				EnumSet.allOf(DispatcherType.class), "/*");
 
-        final FastForwardReporter ffwd = FastForwardReporter
-                .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
-                .prefix(MetricId.build("heroic").tagged("service", "heroic")).build();
+		final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
+				baseUri, false);
 
-        ffwd.start();
+		context.deploy(server);
 
-        return ffwd;
-    }
+		return server;
+	}
+
+	private static FastForwardReporter setupReporter(
+			final SemanticMetricRegistry registry) throws IOException {
+		final MetricId gauges = MetricId.build();
+
+		registry.register(gauges, new ThreadStatesMetricSet());
+		registry.register(gauges, new GarbageCollectorMetricSet());
+		registry.register(gauges, new MemoryUsageGaugeSet());
+
+		final FastForwardReporter ffwd = FastForwardReporter
+				.forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
+				.prefix(MetricId.build("heroic").tagged("service", "heroic"))
+				.build();
+
+		ffwd.start();
+
+		return ffwd;
+	}
+
+	private static Runnable setupShutdownHook(final FastForwardReporter ffwd,
+			final HttpServer server, final Scheduler scheduler,
+			final CountDownLatch latch) {
+		return new Runnable() {
+			@Override
+			public void run() {
+				log.warn("Shutting down scheduler");
+
+				try {
+					scheduler.shutdown(true);
+				} catch (final SchedulerException e) {
+					log.error("Scheduler shutdown failed", e);
+				}
+
+				try {
+					log.warn("Waiting for server to shutdown");
+					server.shutdown().get(30, TimeUnit.SECONDS);
+				} catch (final Exception e) {
+					log.error("Server shutdown failed", e);
+				}
+
+				stopLifecycle();
+
+				ffwd.stop();
+
+				log.warn("Bye Bye!");
+				latch.countDown();
+			}
+		};
+	}
 }
