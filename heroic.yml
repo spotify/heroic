@@ -18,7 +18,9 @@ cluster:
       - http://sto1-heroic-a1:8080
       - http://sto1-heroic-a2:8080
       - http://sto1-heroic-a3:8080
-      - http://localhost:8080
+      - http://lon3-heroic-a1:8080
+      - http://lon3-heroic-a2:8080
+      - http://lon3-heroic-a3:8080
 
 backends: []
 
