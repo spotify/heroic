@@ -117,7 +117,7 @@ public class Main {
 				bind(MetricBackendManager.class).toInstance(metric);
 				bind(MetadataBackendManager.class).toInstance(metadata);
 				bind(StoredMetricQueries.class)
-						.toInstance(storedMetricsQueries);
+				.toInstance(storedMetricsQueries);
 				bind(ClusterManager.class).toInstance(cluster);
 
 				setupBackends(MetricBackend.class, metricBackends);
@@ -140,17 +140,17 @@ public class Main {
 
 				bindListener(new IsSubclassOf(Lifecycle.class),
 						new TypeListener() {
+					@Override
+					public <I> void hear(TypeLiteral<I> type,
+							TypeEncounter<I> encounter) {
+						encounter.register(new InjectionListener<I>() {
 							@Override
-							public <I> void hear(TypeLiteral<I> type,
-									TypeEncounter<I> encounter) {
-								encounter.register(new InjectionListener<I>() {
-									@Override
-									public void afterInjection(Object i) {
-										managed.add((Lifecycle) i);
-									}
-								});
+							public void afterInjection(Object i) {
+								managed.add((Lifecycle) i);
 							}
 						});
+					}
+				});
 			}
 
 			@SuppressWarnings("unchecked")
@@ -198,6 +198,8 @@ public class Main {
 
 		final HttpServer server = setupHttpServer(config);
 		final FastForwardReporter ffwd = setupReporter(registry);
+
+		server.start();
 
 		final Scheduler scheduler = injector.getInstance(Scheduler.class);
 		scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
