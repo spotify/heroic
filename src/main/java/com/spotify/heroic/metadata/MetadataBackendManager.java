@@ -25,137 +25,136 @@ import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 @Slf4j
 @RequiredArgsConstructor
 public class MetadataBackendManager {
-    private final MetadataBackendManagerReporter reporter;
-    private final List<MetadataBackend> backends;
+	private final MetadataBackendManagerReporter reporter;
+	private final List<MetadataBackend> backends;
 
-    public Callback<WriteResponse> write(TimeSerie timeSerie) {
-        final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
+	public Callback<WriteResponse> write(TimeSerie timeSerie) {
+		final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
 
-        for (final MetadataBackend backend : backends) {
-            try {
-                callbacks.add(backend.write(timeSerie));
-            } catch (MetadataQueryException e) {
-                log.error("Failed to write to backend", e);
-            }
-        }
+		for (final MetadataBackend backend : backends) {
+			try {
+				callbacks.add(backend.write(timeSerie));
+			} catch (final MetadataQueryException e) {
+				log.error("Failed to write to backend", e);
+			}
+		}
 
-        return ConcurrentCallback
-                .newReduce(callbacks, MergeWriteResponse.get()).register(
-                        reporter.reportFindTags());
-    }
+		return ConcurrentCallback
+				.newReduce(callbacks, MergeWriteResponse.get()).register(
+						reporter.reportFindTags());
+	}
 
-    public Callback<FindTags> findTags(final TimeSerieQuery query,
-            Set<String> include, Set<String> exclude) {
-        final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
+	public Callback<FindTags> findTags(final TimeSerieQuery query) {
+		final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
-        for (final MetadataBackend backend : backends) {
-            try {
-                callbacks.add(backend.findTags(query, include, exclude));
-            } catch (MetadataQueryException e) {
-                log.error("Failed to query backend", e);
-            }
-        }
+		for (final MetadataBackend backend : backends) {
+			try {
+				callbacks.add(backend.findTags(query));
+			} catch (final MetadataQueryException e) {
+				log.error("Failed to query backend", e);
+			}
+		}
 
-        return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer())
-                .register(reporter.reportFindTags());
-    }
+		return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer())
+				.register(reporter.reportFindTags());
+	}
 
-    public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query) {
-        final List<Callback<FindTimeSeries>> callbacks = new ArrayList<Callback<FindTimeSeries>>();
+	public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query) {
+		final List<Callback<FindTimeSeries>> callbacks = new ArrayList<Callback<FindTimeSeries>>();
 
-        for (final MetadataBackend backend : backends) {
-            try {
-                callbacks.add(backend.findTimeSeries(query));
-            } catch (MetadataQueryException e) {
-                log.error("Failed to query backend", e);
-            }
-        }
+		for (final MetadataBackend backend : backends) {
+			try {
+				callbacks.add(backend.findTimeSeries(query));
+			} catch (final MetadataQueryException e) {
+				log.error("Failed to query backend", e);
+			}
+		}
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
-                    @Override
-                    public FindTimeSeries resolved(
-                            Collection<FindTimeSeries> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
-                            throws Exception {
-                        return mergeFindTimeSeries(results);
-                    }
+		return ConcurrentCallback.newReduce(callbacks,
+				new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
+					@Override
+					public FindTimeSeries resolved(
+							Collection<FindTimeSeries> results,
+							Collection<Exception> errors,
+							Collection<CancelReason> cancelled)
+							throws Exception {
+						return mergeFindTimeSeries(results);
+					}
 
-                    private FindTimeSeries mergeFindTimeSeries(
-                            Collection<FindTimeSeries> results) {
-                        final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
-                        int size = 0;
+					private FindTimeSeries mergeFindTimeSeries(
+							Collection<FindTimeSeries> results) {
+						final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
+						int size = 0;
 
-                        for (final FindTimeSeries findTimeSeries : results) {
-                            timeSeries.addAll(findTimeSeries.getTimeSeries());
-                            size += findTimeSeries.getSize();
-                        }
+						for (final FindTimeSeries findTimeSeries : results) {
+							timeSeries.addAll(findTimeSeries.getTimeSeries());
+							size += findTimeSeries.getSize();
+						}
 
-                        return new FindTimeSeries(timeSeries, size);
-                    }
-                }).register(reporter.reportFindTimeSeries());
-    }
+						return new FindTimeSeries(timeSeries, size);
+					}
+				}).register(reporter.reportFindTimeSeries());
+	}
 
-    public Callback<FindKeys> findKeys(final TimeSerieQuery query) {
-        final List<Callback<FindKeys>> callbacks = new ArrayList<Callback<FindKeys>>();
+	public Callback<FindKeys> findKeys(final TimeSerieQuery query) {
+		final List<Callback<FindKeys>> callbacks = new ArrayList<Callback<FindKeys>>();
 
-        for (final MetadataBackend backend : backends) {
-            try {
-                callbacks.add(backend.findKeys(query));
-            } catch (MetadataQueryException e) {
-                log.error("Failed to query backend", e);
-            }
-        }
+		for (final MetadataBackend backend : backends) {
+			try {
+				callbacks.add(backend.findKeys(query));
+			} catch (final MetadataQueryException e) {
+				log.error("Failed to query backend", e);
+			}
+		}
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<FindKeys, FindKeys>() {
-                    @Override
-                    public FindKeys resolved(Collection<FindKeys> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
-                            throws Exception {
-                        return mergeFindKeys(results);
-                    }
+		return ConcurrentCallback.newReduce(callbacks,
+				new Callback.Reducer<FindKeys, FindKeys>() {
+					@Override
+					public FindKeys resolved(Collection<FindKeys> results,
+							Collection<Exception> errors,
+							Collection<CancelReason> cancelled)
+							throws Exception {
+						return mergeFindKeys(results);
+					}
 
-                    private FindKeys mergeFindKeys(Collection<FindKeys> results) {
-                        final Set<String> keys = new HashSet<String>();
-                        int size = 0;
+					private FindKeys mergeFindKeys(Collection<FindKeys> results) {
+						final Set<String> keys = new HashSet<String>();
+						int size = 0;
 
-                        for (final FindKeys findKeys : results) {
-                            keys.addAll(findKeys.getKeys());
-                            size += findKeys.getSize();
-                        }
+						for (final FindKeys findKeys : results) {
+							keys.addAll(findKeys.getKeys());
+							size += findKeys.getSize();
+						}
 
-                        return new FindKeys(keys, size);
-                    }
-                }).register(reporter.reportFindKeys());
-    }
+						return new FindKeys(keys, size);
+					}
+				}).register(reporter.reportFindKeys());
+	}
 
-    public Callback<Boolean> refresh() {
-        final List<Callback<Void>> callbacks = new ArrayList<Callback<Void>>();
+	public Callback<Boolean> refresh() {
+		final List<Callback<Void>> callbacks = new ArrayList<Callback<Void>>();
 
-        for (final MetadataBackend backend : backends) {
-            callbacks.add(backend.refresh());
-        }
+		for (final MetadataBackend backend : backends) {
+			callbacks.add(backend.refresh());
+		}
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.DefaultStreamReducer<Void, Boolean>() {
-                    @Override
-                    public Boolean resolved(int successful, int failed,
-                            int cancelled) throws Exception {
-                        return failed == 0 && cancelled == 0;
-                    }
-                }).register(reporter.reportRefresh());
-    }
+		return ConcurrentCallback.newReduce(callbacks,
+				new Callback.DefaultStreamReducer<Void, Boolean>() {
+					@Override
+					public Boolean resolved(int successful, int failed,
+							int cancelled) throws Exception {
+						return failed == 0 && cancelled == 0;
+					}
+				}).register(reporter.reportRefresh());
+	}
 
-    public boolean isReady() {
-        boolean ready = true;
+	public boolean isReady() {
+		boolean ready = true;
 
-        for (MetadataBackend backend : backends) {
-            ready = ready && backend.isReady();
-        }
+		for (final MetadataBackend backend : backends) {
+			ready = ready && backend.isReady();
+		}
 
-        return ready;
-    }
+		return ready;
+	}
 }

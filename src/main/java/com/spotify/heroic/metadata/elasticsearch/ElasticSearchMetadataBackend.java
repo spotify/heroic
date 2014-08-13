@@ -32,9 +32,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
@@ -57,6 +56,12 @@ import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.TimeSerie;
 import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.filter.AndFilter;
+import com.spotify.heroic.model.filter.Filter;
+import com.spotify.heroic.model.filter.HasTagFilter;
+import com.spotify.heroic.model.filter.MatchKeyFilter;
+import com.spotify.heroic.model.filter.MatchTagFilter;
+import com.spotify.heroic.model.filter.OrFilter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
@@ -94,7 +99,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 		public MetadataBackend build(String context,
 				MetadataBackendReporter reporter) throws ValidationException {
 			final String[] seeds = this.seeds.toArray(new String[this.seeds
-			                                                     .size()]);
+					.size()]);
 
 			final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
 					.readThreads(readThreads).readQueueSize(readQueueSize)
@@ -313,9 +318,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 	}
 
 	@Override
-	public Callback<FindTags> findTags(final TimeSerieQuery query,
-			final Set<String> includes, final Set<String> excludes)
-					throws MetadataQueryException {
+	public Callback<FindTags> findTags(final TimeSerieQuery query)
+			throws MetadataQueryException {
 		final Client client = client();
 
 		if (client == null)
@@ -324,8 +328,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
 		return findTagKeys(query).transform(
 				new FindTagsTransformer(pools.read(), client, index, type,
-						query, includes, excludes)).register(
-								reporter.reportFindTags());
+						query.getFilter())).register(reporter.reportFindTags());
 	}
 
 	@Override
@@ -337,10 +340,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 			return new CancelledCallback<FindTimeSeries>(
 					CancelReason.BACKEND_DISABLED);
 
-		final QueryBuilder builder = toQueryBuilder(query);
+		final FilterBuilder filter = convertFilter(query.getFilter());
 
 		return ConcurrentCallback.newResolve(pools.read(),
-				new FindTimeSeriesResolver(client, index, type, builder))
+				new FindTimeSeriesResolver(client, index, type, filter))
 				.register(reporter.reportFindTimeSeries());
 	}
 
@@ -352,11 +355,11 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 			return new CancelledCallback<FindTagKeys>(
 					CancelReason.BACKEND_DISABLED);
 
-		final QueryBuilder builder = toQueryBuilder(query);
+		final FilterBuilder filter = convertFilter(query.getFilter());
 
 		return ConcurrentCallback.newResolve(pools.read(),
-				new FindTagKeysResolver(client, index, type, builder))
-				.register(reporter.reportFindTagKeys());
+				new FindTagKeysResolver(client, index, type, filter)).register(
+						reporter.reportFindTagKeys());
 	}
 
 	@Override
@@ -368,11 +371,11 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 			return new CancelledCallback<FindKeys>(
 					CancelReason.BACKEND_DISABLED);
 
-		final QueryBuilder builder = toQueryBuilder(query);
+		final FilterBuilder filter = convertFilter(query.getFilter());
 
 		return ConcurrentCallback.newResolve(pools.read(),
-				new FindKeysResolver(client, index, type, builder)).register(
-						reporter.reportFindKeys());
+				new FindKeysResolver(client, index, type, filter)).register(
+				reporter.reportFindKeys());
 	}
 
 	@Override
@@ -392,27 +395,27 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
 		return ConcurrentCallback.newResolve(pools.write(),
 				new Callback.Resolver<WriteResponse>() {
-			@Override
-			public WriteResponse resolve() throws Exception {
-				for (final TimeSerie timeSerie : timeSeries) {
-					if (writeCache.contains(timeSerie.hashCode())) {
-						reporter.reportWriteCacheHit();
-						continue;
+					@Override
+					public WriteResponse resolve() throws Exception {
+						for (final TimeSerie timeSerie : timeSeries) {
+							if (writeCache.contains(timeSerie.hashCode())) {
+								reporter.reportWriteCacheHit();
+								continue;
+							}
+
+							reporter.reportWriteCacheMiss();
+
+							final Map<String, Object> source = fromTimeSerie(timeSerie);
+							final IndexRequest request = client.prepareIndex()
+									.setIndex(index).setType(type)
+									.setSource(source).request();
+							bulkProcessor.add(request);
+
+							writeCache.add(timeSerie.hashCode());
+						}
+						return new WriteResponse(timeSeries.size(), 0, 0);
 					}
-
-					reporter.reportWriteCacheMiss();
-
-					final Map<String, Object> source = fromTimeSerie(timeSerie);
-					final IndexRequest request = client.prepareIndex()
-							.setIndex(index).setType(type)
-							.setSource(source).request();
-					bulkProcessor.add(request);
-
-					writeCache.add(timeSerie.hashCode());
-				}
-				return new WriteResponse(timeSeries.size(), 0, 0);
-			}
-		}).register(reporter.reportWrite());
+				}).register(reporter.reportWrite());
 	}
 
 	@Override
@@ -425,48 +428,60 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 		return client() != null && bulkProcessorRef.get() != null;
 	}
 
-	public static QueryBuilder toQueryBuilder(final TimeSerieQuery query) {
-		boolean any = false;
-		final BoolQueryBuilder builder = QueryBuilders.boolQuery();
-
-		if (query.getMatchKey() != null) {
-			any = true;
-			builder.must(QueryBuilders.termQuery("key", query.getMatchKey()));
-		}
-
-		/**
-		 * On empty, match nothing (hopefully).
-		 */
-		if (query.getMatchTags() != null) {
-			for (final Map.Entry<String, String> entry : query.getMatchTags()
-					.entrySet()) {
-				any = true;
-				builder.must(QueryBuilders.nestedQuery(
-						TAGS,
-						QueryBuilders
-						.boolQuery()
-						.must(QueryBuilders.termQuery(TAGS_KEY,
-								entry.getKey()))
-								.must(QueryBuilders.termQuery(TAGS_VALUE,
-										entry.getValue()))));
-			}
-		}
-
-		/**
-		 * On empty, match nothing.
-		 */
-		if (query.getHasTags() != null) {
-			for (final String key : query.getHasTags()) {
-				any = true;
-				builder.must(QueryBuilders.nestedQuery(TAGS,
-						QueryBuilders.termQuery(TAGS_KEY, key)));
-			}
-		}
-
-		if (!any)
+	public static FilterBuilder convertFilter(final Filter filter) {
+		if (filter == null)
 			return null;
 
-		return builder;
+		if (filter instanceof AndFilter) {
+			final AndFilter and = (AndFilter) filter;
+			final List<FilterBuilder> filters = new ArrayList<>(and
+					.getStatements().size());
+
+			for (final Filter stmt : and.getStatements())
+				filters.add(convertFilter(stmt));
+
+			return FilterBuilders.andFilter(filters
+					.toArray(new FilterBuilder[0]));
+		}
+
+		if (filter instanceof OrFilter) {
+			final OrFilter or = (OrFilter) filter;
+			final List<FilterBuilder> filters = new ArrayList<>(or
+					.getStatements().size());
+
+			for (final Filter stmt : or.getStatements())
+				filters.add(convertFilter(stmt));
+
+			return FilterBuilders.orFilter(filters
+					.toArray(new FilterBuilder[0]));
+		}
+
+		if (filter instanceof MatchTagFilter) {
+			final MatchTagFilter matchTag = (MatchTagFilter) filter;
+
+			return FilterBuilders.nestedFilter(
+					TAGS,
+					FilterBuilders
+					.boolFilter()
+					.must(FilterBuilders.termFilter(TAGS_KEY,
+							matchTag.getTag()))
+							.must(FilterBuilders.termFilter(TAGS_VALUE,
+									matchTag.getValue())));
+		}
+
+		if (filter instanceof HasTagFilter) {
+			final HasTagFilter hasTag = (HasTagFilter) filter;
+			return FilterBuilders.nestedFilter(TAGS,
+					FilterBuilders.termFilter(TAGS_KEY, hasTag.getTag()));
+		}
+
+		if (filter instanceof MatchKeyFilter) {
+			final MatchKeyFilter matchKey = (MatchKeyFilter) filter;
+			return FilterBuilders.termFilter(KEY, matchKey.getValue());
+		}
+
+		throw new IllegalArgumentException("Invalid filter statement: "
+				+ filter);
 	}
 
 	public static Map<String, Object> fromTimeSerie(TimeSerie timeSerie) {
@@ -499,7 +514,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 			final Map<String, Object> source) {
 		@SuppressWarnings("unchecked")
 		final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-		.get("tags");
+				.get("tags");
 		final Map<String, String> tags = new HashMap<String, String>();
 
 		for (final Map<String, String> entry : attributes) {

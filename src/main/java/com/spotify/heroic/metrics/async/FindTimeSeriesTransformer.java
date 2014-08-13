@@ -19,35 +19,36 @@ import com.spotify.heroic.model.TimeSerie;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class FindTimeSeriesTransformer implements Callback.Transformer<FindTimeSeries, FindTimeSeriesGroups> {
-    private final Map<String, String> groupKey;
-    private final List<String> groupBy;
+public class FindTimeSeriesTransformer implements
+		Callback.Transformer<FindTimeSeries, FindTimeSeriesGroups> {
+	private final List<String> groupBy;
 
-    @Override
-    public FindTimeSeriesGroups transform(final FindTimeSeries result) throws Exception {
-        final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+	@Override
+	public FindTimeSeriesGroups transform(final FindTimeSeries result)
+			throws Exception {
+		final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
 
-        for (final TimeSerie timeSerie : result.getTimeSeries()) {
-            final Map<String, String> tags = new HashMap<>(groupKey);
+		for (final TimeSerie timeSerie : result.getTimeSeries()) {
+			final Map<String, String> tags = new HashMap<>();
 
-            if (groupBy != null) {
-                for (final String group : groupBy) {
-                    tags.put(group, timeSerie.getTags().get(group));
-                }
-            }
+			if (groupBy != null) {
+				for (final String group : groupBy) {
+					tags.put(group, timeSerie.getTags().get(group));
+				}
+			}
 
-            final TimeSerie key = timeSerie.withTags(tags);
+			final TimeSerie key = timeSerie.withTags(tags);
 
-            Set<TimeSerie> group = groups.get(key);
+			Set<TimeSerie> group = groups.get(key);
 
-            if (group == null) {
-                group = new HashSet<>();
-                groups.put(key, group);
-            }
+			if (group == null) {
+				group = new HashSet<>();
+				groups.put(key, group);
+			}
 
-            group.add(timeSerie);
-        }
+			group.add(timeSerie);
+		}
 
-        return new FindTimeSeriesGroups(groups);
-    }
+		return new FindTimeSeriesGroups(groups);
+	}
 };

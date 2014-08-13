@@ -1,16 +1,13 @@
 package com.spotify.heroic.metadata.elasticsearch.async;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
 import lombok.RequiredArgsConstructor;
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -18,61 +15,77 @@ import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
+import com.spotify.heroic.model.filter.AndFilter;
+import com.spotify.heroic.model.filter.Filter;
+import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @RequiredArgsConstructor
 public class FindTagsTransformer implements
-        Callback.DeferredTransformer<FindTagKeys, FindTags> {
-    private final Executor executor;
-    private final Client client;
-    private final String index;
-    private final String type;
-    private final TimeSerieQuery query;
-    private final Set<String> includes;
-    private final Set<String> excludes;
+Callback.DeferredTransformer<FindTagKeys, FindTags> {
+	private final Executor executor;
+	private final Client client;
+	private final String index;
+	private final String type;
+	private final Filter filter;
 
-    @Override
-    public Callback<FindTags> transform(FindTagKeys result) throws Exception {
-        final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
+	@Override
+	public Callback<FindTags> transform(FindTagKeys result) throws Exception {
+		final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
-        for (final String key : result.getKeys()) {
-            if (includes != null && !includes.contains(key))
-                continue;
+		for (final String key : result.getKeys()) {
+			callbacks.add(findSingle(key));
+		}
 
-            if (excludes != null && excludes.contains(key))
-                continue;
+		return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer());
+	}
 
-            callbacks.add(findSingle(key));
-        }
+	/**
+	 * Finds a single set of tags, excluding any criteria for this specific set
+	 * of tags.
+	 */
+	private Callback<FindTags> findSingle(final String key) {
+		final Filter filter = removeKeyFromFilter(this.filter, key);
 
-        return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer());
-    }
+		final FilterBuilder builder = ElasticSearchMetadataBackend
+				.convertFilter(filter);
 
-    /**
-     * Finds a single set of tags, excluding any criteria for this specific set
-     * of tags.
-     * 
-     * @param matcher
-     * @param key
-     * @return
-     */
-    private Callback<FindTags> findSingle(final String key) {
-        final TimeSerieQuery newQuery;
+		return ConcurrentCallback.newResolve(executor, new FindTagsResolver(
+				client, index, type, builder, key));
+	}
 
-        if (query.getMatchTags() == null) {
-            newQuery = query;
-        } else {
-            final Map<String, String> newMatchTags = new HashMap<String, String>(
-                    query.getMatchTags());
-            newMatchTags.remove(key);
-            newQuery = new TimeSerieQuery(query.getMatchKey(), newMatchTags,
-                    query.getHasTags());
-        }
+	private Filter removeKeyFromFilter(Filter filter, String key) {
+		if (filter == null)
+			return null;
 
-        final QueryBuilder builder = ElasticSearchMetadataBackend
-                .toQueryBuilder(newQuery);
+		if (filter instanceof AndFilter) {
+			final AndFilter and = (AndFilter) filter;
 
-        return ConcurrentCallback.newResolve(executor, new FindTagsResolver(
-                client, index, type, builder, key));
-    }
+			final List<Filter> statements = new ArrayList<Filter>();
+
+			for (final Filter f : and.getStatements()) {
+				final Filter n = removeKeyFromFilter(f, key);
+
+				if (n == null)
+					continue;
+
+				statements.add(n);
+			}
+
+			if (statements.isEmpty())
+				return null;
+
+			return new AndFilter(statements).optimize();
+		}
+
+		if (filter instanceof MatchTagFilter) {
+			final MatchTagFilter matchTag = (MatchTagFilter) filter;
+
+			if (matchTag.getTag().equals(key))
+				return null;
+
+			return matchTag.optimize();
+		}
+
+		return filter;
+	}
 }

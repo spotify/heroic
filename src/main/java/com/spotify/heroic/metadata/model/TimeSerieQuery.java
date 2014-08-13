@@ -1,13 +1,10 @@
 package com.spotify.heroic.metadata.model;
 
-import java.util.Map;
-import java.util.Set;
-
 import lombok.Data;
+
+import com.spotify.heroic.model.filter.Filter;
 
 @Data
 public class TimeSerieQuery {
-    private final String matchKey;
-    private final Map<String, String> matchTags;
-    private final Set<String> hasTags;
+	private final Filter filter;
 }

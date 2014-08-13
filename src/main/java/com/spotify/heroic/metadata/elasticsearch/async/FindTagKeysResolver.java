@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -21,46 +22,46 @@ import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 
 @RequiredArgsConstructor
 public class FindTagKeysResolver implements Callback.Resolver<FindTagKeys> {
-    private final Client client;
-    private final String index;
-    private final String type;
-    private final QueryBuilder query;
+	private final Client client;
+	private final String index;
+	private final String type;
+	private final FilterBuilder filter;
 
-    @Override
-    public FindTagKeys resolve() throws Exception {
-        final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSearchType("count");
+	@Override
+	public FindTagKeys resolve() throws Exception {
+		final SearchRequestBuilder request = client.prepareSearch(index)
+				.setTypes(type).setSearchType("count");
 
-        if (query != null) {
-            request.setQuery(query);
-        }
+		if (filter != null)
+			request.setQuery(QueryBuilders.filteredQuery(
+					QueryBuilders.matchAllQuery(), filter));
 
-        {
-            final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms")
-                    .field(ElasticSearchMetadataBackend.TAGS_KEY).size(0);
-            final AggregationBuilder<?> nested = AggregationBuilders
-                    .nested("nested").path(ElasticSearchMetadataBackend.TAGS)
-                    .subAggregation(terms);
-            request.addAggregation(nested);
-        }
+		{
+			final AggregationBuilder<?> terms = AggregationBuilders
+					.terms("terms")
+					.field(ElasticSearchMetadataBackend.TAGS_KEY).size(0);
+			final AggregationBuilder<?> nested = AggregationBuilders
+					.nested("nested").path(ElasticSearchMetadataBackend.TAGS)
+					.subAggregation(terms);
+			request.addAggregation(nested);
+		}
 
-        final SearchResponse response = request.get();
+		final SearchResponse response = request.get();
 
-        final Terms terms;
+		final Terms terms;
 
-        {
-            final Aggregations aggregations = response.getAggregations();
-            final Nested attributes = (Nested) aggregations.get("nested");
-            terms = (Terms) attributes.getAggregations().get("terms");
-        }
+		{
+			final Aggregations aggregations = response.getAggregations();
+			final Nested attributes = (Nested) aggregations.get("nested");
+			terms = (Terms) attributes.getAggregations().get("terms");
+		}
 
-        final Set<String> keys = new HashSet<String>();
+		final Set<String> keys = new HashSet<String>();
 
-        for (final Terms.Bucket bucket : terms.getBuckets()) {
-            keys.add(bucket.getKey());
-        }
+		for (final Terms.Bucket bucket : terms.getBuckets()) {
+			keys.add(bucket.getKey());
+		}
 
-        return new FindTagKeys(keys, keys.size());
-    }
+		return new FindTagKeys(keys, keys.size());
+	}
 }

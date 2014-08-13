@@ -96,7 +96,7 @@ public class HeroicConfigYAML {
 		}
 
 		return new HeroicConfig(cluster, metricBackends, metadataBackends,
-				consumers, cache, maxAggregationMagnitude, updateMetadata,
-				port, refreshClusterSchedule, groupLimit, groupLoadLimit);
+				consumers, cache, updateMetadata, port, refreshClusterSchedule,
+				groupLimit, groupLoadLimit);
 	}
 }

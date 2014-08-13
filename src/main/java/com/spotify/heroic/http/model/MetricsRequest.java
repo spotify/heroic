@@ -6,46 +6,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.model.filter.Filter;
 
-@ToString(of = { "key", "tags", "groupBy", "range", "noCache", "aggregators" })
-@EqualsAndHashCode(of = { "key", "tags", "groupBy", "range", "noCache",
-"aggregators" })
+@Data
 public class MetricsRequest {
-    private static final DateRangeRequest DEFAULT_DATE_RANGE = new RelativeDateRangeRequest(
-            TimeUnit.DAYS, 7);
-    private static final List<AggregationRequest> EMPTY_AGGREGATIONS = new ArrayList<>();
+	private static final DateRangeRequest DEFAULT_DATE_RANGE = new RelativeDateRangeRequest(
+			TimeUnit.DAYS, 7);
+	private static final List<AggregationRequest> EMPTY_AGGREGATIONS = new ArrayList<>();
 
-    @Getter
-    private final String key = null;
+	private final String key = null;
+	private final Map<String, String> tags = new HashMap<String, String>();
+	private final Filter filter = null;
+	private final List<String> groupBy = new ArrayList<String>();
+	private final DateRangeRequest range = DEFAULT_DATE_RANGE;
+	private final boolean noCache = false;
+	private final List<AggregationRequest> aggregators = EMPTY_AGGREGATIONS;
 
-    @Getter
-    private final Map<String, String> tags = new HashMap<String, String>();
+	public List<Aggregation> makeAggregators() {
+		if (this.aggregators == null)
+			return null;
 
-    @Getter
-    private final List<String> groupBy = new ArrayList<String>();
+		final List<Aggregation> aggregators = new ArrayList<>(
+				this.aggregators.size());
 
-    @Getter
-    private final DateRangeRequest range = DEFAULT_DATE_RANGE;
+		for (final AggregationRequest aggregation : this.aggregators) {
+			aggregators.add(aggregation.makeAggregation());
+		}
 
-    @Getter
-    private final boolean noCache = false;
-
-    @Getter
-    private final List<AggregationRequest> aggregators = EMPTY_AGGREGATIONS;
-
-    public List<Aggregation> makeAggregators() {
-        final List<Aggregation> aggregators = new ArrayList<>(
-                this.aggregators.size());
-
-        for (final AggregationRequest aggregation : this.aggregators) {
-            aggregators.add(aggregation.makeAggregation());
-        }
-
-        return aggregators;
-    }
+		return aggregators;
+	}
 }
