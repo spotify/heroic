@@ -4,12 +4,57 @@ This details the API endpoints that are used for querying for data out of Heroic
 
 ## POST /metrics
 
-The simplest query method, will return a [MetricsResponse](#metricsresponse) object when successful.
+The simplest query method, expects a [MetricsRequest](#metricsrequest), and will return a [MetricsResponse](#metricsresponse) object when successful.
 
 + Response 200 (application/json) [MetricsResponse](#metricsresponse)
 + Response 500 (application/json) [ErrorMessage](#errormessage)
 
 # Types
+
+### DateRangeRequest
+
+Defines a DateRange, but with a much more flexible format.
+
+Has the following types.
+
++ AbsoluteDateRangeRequest - Queries an absolute time range.
++ RelativeDateRangeRequest - Queries a time range which is relative to the current time.
+
+###### Structure (AbsoluteDateRangeRequest)
+```javascript
+{
+  "type": "absolute",
+  /**
+   * Starting timestamp in milliseconds from the unix epoch.
+   */
+  "start": <number>,
+  /**
+   * Ending timestamp in milliseconds from the unix epoch.
+   */
+  "end": <number>,
+}
+```
+
+###### Structure (RelativeDateRangeRequest)
+```javascript
+{
+  "type": "absolute",
+  /**
+   * Unit to use for 'value'.
+   */
+  "unit": <"MILLISECONDS"|"SECONDS"|"MINUTES"|"HOURS"|"DAYS"|"WEEKS"|"MONTHS">
+  /**
+   * How many 'unit' timespans back in time this date starts.
+   */
+  "value": <number>,
+}
+```
+
+###### Example
+
+```javascript
+{"start": 1300000000000, "end": 1400000000000}
+```
 
 ### DateRange
 
@@ -75,29 +120,49 @@ The __second__ element is the value.
      * How many successful database row was loaded into heroic.
      */
     "successful": <number>,
-    # How many database rows failed to be loaded by heroic.
+    /**
+     * How many database rows failed to be loaded by heroic.
+     */
     "failed": <number>,
-    # How many row fetches were cancelled.
+    /**
+     * How many row fetches were cancelled.
+     */
     "cancelled": <number>,
   },
   "cache": {
-    # How many resulting data points could be fetched from cache.
+    /**
+     * How many resulting data points could be fetched from cache.
+     */
     "hits": <number>,
-    # How many cached data points conflicted with each other.
+    /**
+     * How many cached data points conflicted with each other.
+     */
     "conflicts": <number>,
-    # How many calculated data points conflicted with the ones from cache.
+    /**
+     * How many calculated data points conflicted with the ones from cache.
+     */
     "cacheConflicts": <number>,
-    # How many cached NaN's that were loaded.
+    /**
+     * How many cached NaN's that were loaded.
+     */
     "cachedNans": <number>,
   },
   "rpc": {
-    # How many successful RPC requests were executed for this query.
+    /**
+     * How many successful RPC requests were executed for this query.
+     */
     "successful": <number>,
-    # How many failed RPC requests.
+    /**
+     * How many failed RPC requests.
+     */
     "failed": <number>,
-    # How many cluster nodes were considered online during the query.
+    /**
+     * How many cluster nodes were considered online during the query.
+     */
     "onlineNodes": <number>,
-    # How many cluster nodes were considered offline during the query.
+    /**
+     * How many cluster nodes were considered offline during the query.
+     */
     "offlineNodes": <number>,
   },
 }
@@ -117,6 +182,41 @@ be considered an error.
 
 If any of these are true, an error should be displayed to the user telling them
 that the time series they are seeing is probably inconsistent.
+
+### FilterStatement
+
+###### Structure
+
+```javascript
+[<"and"|"or"|"="|"+"|"key">, ..]
+```
+
+### MetricsRequest
+
+A request for metrics.
+
+###### Structure
+
+```javascript
+{
+  /**
+   * A statement used to filter down the selected time series.
+   */
+  "filter": <FilterStatement>,
+  /**
+   * A list of tags which will be used to group the result.
+   */
+  "groupBy": [<string>, ..],
+  /**
+   * The time range for which to query.
+   */
+  "range": <DateRangeRequest>,
+  /**
+   * The chain of aggregators to use for this request.
+   */
+  "aggregators": [<AggregatorRequest>, ..]
+}
+```
 
 ### MetricsResponse
 
