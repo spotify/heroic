@@ -14,6 +14,7 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
     private final Meter messageIn;
     private final Meter messageError;
+    private final Meter consumerSchemaError;
     private final Histogram messageSize;
 
     public SemanticConsumerReporter(SemanticMetricRegistry registry,
@@ -21,11 +22,13 @@ public class SemanticConsumerReporter implements ConsumerReporter {
         final MetricId id = MetricId.build().tagged("context", context,
                 "component", COMPONENT);
         messageIn = registry.meter(id.tagged("what", "message-in", "unit",
-                "messages"));
+                Units.MESSAGE));
         messageError = registry.meter(id.tagged("what", "message-error",
-                "unit", "messages"));
+                "unit", Units.FAILURE));
+        consumerSchemaError = registry.meter(id.tagged("what",
+                "consumer-schema-error", "unit", Units.FAILURE));
         messageSize = registry.histogram(id.tagged("what", "message-size",
-                "unit", "messages"));
+                "unit", Units.BYTE));
     }
 
     @Override
@@ -37,5 +40,10 @@ public class SemanticConsumerReporter implements ConsumerReporter {
     @Override
     public void reportMessageError() {
         messageError.mark();
+    }
+
+    @Override
+    public void reportConsumerSchemaError() {
+        consumerSchemaError.mark();
     }
 }

@@ -3,6 +3,7 @@ package com.spotify.heroic.statistics.semantic;
 final class Units {
     public static final String REFRESH = "refresh";
     public static final String READ = "read";
+    public static final String MESSAGE = "message";
     public static final String WRITE = "write";
     public static final String COUNT = "count";
     public static final String LOOKUP = "lookup";

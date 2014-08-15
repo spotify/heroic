@@ -37,7 +37,7 @@ public class Spotify100 implements ConsumerSchema {
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Event {
+    public static class Metric {
         private final String version;
         private final String key;
         private final String host;
@@ -46,48 +46,53 @@ public class Spotify100 implements ConsumerSchema {
         private final Double value;
 
         @JsonCreator
-        public static Event create(@JsonProperty("version") String version,
+        public static Metric create(@JsonProperty("version") String version,
                 @JsonProperty("key") String key,
                 @JsonProperty("host") String host,
                 @JsonProperty("time") Long time,
                 @JsonProperty("attributes") Map<String, String> attributes,
                 @JsonProperty("value") Double value) {
-            return new Event(version, key, host, time, attributes, value);
+            return new Metric(version, key, host, time, attributes, value);
         }
     }
 
     @Override
     public void consume(Consumer consumer, byte[] message)
             throws ConsumerSchemaException {
-        final Event event;
+        final Metric metric;
 
         try {
-            event = mapper.readValue(message, Event.class);
+            metric = mapper.readValue(message, Metric.class);
         } catch (final Exception e) {
-            throw new ConsumerSchemaException("Received invalid event", e);
+            throw new ConsumerSchemaException("Received invalid metric", e);
+        }
+        if (metric.getValue() == null) {
+            throw new ConsumerSchemaException(
+                    "Metric must have a value but this metric has a null value: "
+                            + metric);
         }
 
-        if (event.getVersion() == null
-                || !SCHEMA_VERSION.equals(event.getVersion()))
+        if (metric.getVersion() == null
+                || !SCHEMA_VERSION.equals(metric.getVersion()))
             throw new ConsumerSchemaException(String.format(
-                    "Invalid version {}, expected {}", event.getVersion(),
+                    "Invalid version {}, expected {}", metric.getVersion(),
                     SCHEMA_VERSION));
 
-        if (event.getTime() == null)
+        if (metric.getTime() == null)
             throw new ConsumerSchemaException("'" + TIME
                     + "' field must be defined: " + message);
 
-        if (event.getKey() == null)
+        if (metric.getKey() == null)
             throw new ConsumerSchemaException("'" + KEY
                     + "' field must be defined: " + message);
 
         final Map<String, String> tags = new HashMap<String, String>(
-                event.getAttributes());
-        tags.put(HOST, event.getHost());
+                metric.getAttributes());
+        tags.put(HOST, metric.getHost());
 
-        final TimeSerie timeSerie = new TimeSerie(event.getKey(), tags);
-        final DataPoint datapoint = new DataPoint(event.getTime(),
-                event.getValue());
+        final TimeSerie timeSerie = new TimeSerie(metric.getKey(), tags);
+        final DataPoint datapoint = new DataPoint(metric.getTime(),
+                metric.getValue());
         final List<DataPoint> data = new ArrayList<DataPoint>();
         data.add(datapoint);
 
@@ -112,7 +117,7 @@ public class Spotify100 implements ConsumerSchema {
 
         try {
             response = consumer.getMetricBackendManager().write(buffer).get();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new ConsumerSchemaException("Failed to write", e);
         }
 
