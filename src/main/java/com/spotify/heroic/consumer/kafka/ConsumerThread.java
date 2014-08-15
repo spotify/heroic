@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
+import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 @RequiredArgsConstructor
@@ -22,7 +23,7 @@ public final class ConsumerThread implements Runnable {
     public void run() {
         try {
             guardedRun();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to consume message", e);
         }
     }
@@ -30,13 +31,16 @@ public final class ConsumerThread implements Runnable {
     private void guardedRun() throws Exception {
         log.info("Consuming from topic: {}", topic);
 
-        for (MessageAndMetadata<byte[], byte[]> m : stream) {
+        for (final MessageAndMetadata<byte[], byte[]> m : stream) {
             final byte[] body = m.message();
             reporter.reportMessageSize(body.length);
 
             try {
                 schema.consume(consumer, body);
-            } catch (Exception e) {
+            } catch (final ConsumerSchemaException e) {
+                // Do not log
+                reporter.reportConsumerSchemaError();
+            } catch (final Exception e) {
                 log.error("Failed to consume", e);
                 reporter.reportMessageError();
             }

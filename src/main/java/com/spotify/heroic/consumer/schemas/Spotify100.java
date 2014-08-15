@@ -63,13 +63,13 @@ public class Spotify100 implements ConsumerSchema {
 
         try {
             metric = mapper.readValue(message, Metric.class);
-            if (metric.getValue() == null) {
-                throw new ConsumerSchemaException(
-                        "Metric must have a value but this metric has a null value: "
-                                + metric);
-            }
         } catch (final Exception e) {
             throw new ConsumerSchemaException("Received invalid metric", e);
+        }
+        if (metric.getValue() == null) {
+            throw new ConsumerSchemaException(
+                    "Metric must have a value but this metric has a null value: "
+                            + metric);
         }
 
         if (metric.getVersion() == null
