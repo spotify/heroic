@@ -50,269 +50,270 @@ import com.spotify.heroic.yaml.ValidationException;
 @Slf4j
 public class HeroicMetricBackend extends CassandraMetricBackend implements
 MetricBackend {
-	@Data
-	@EqualsAndHashCode(callSuper = true)
-	public static class YAML extends MetricBackend.YAML {
-		public static final String TYPE = "!heroic-backend";
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    public static class YAML extends MetricBackend.YAML {
+        public static final String TYPE = "!heroic-backend";
 
-		/**
-		 * Cassandra seed nodes.
-		 */
-		private String seeds;
+        /**
+         * Cassandra seed nodes.
+         */
+        private String seeds;
 
-		/**
-		 * Cassandra keyspace for heroic.
-		 */
-		private String keyspace = "heroic";
+        /**
+         * Cassandra keyspace for heroic.
+         */
+        private String keyspace = "heroic";
 
-		/**
-		 * Max connections per host in the cassandra cluster.
-		 */
-		private int maxConnectionsPerHost = 20;
+        /**
+         * Max connections per host in the cassandra cluster.
+         */
+        private int maxConnectionsPerHost = 20;
 
-		/**
-		 * Threads dedicated to asynchronous request handling.
-		 */
-		private int readThreads = 20;
-		private int readQueueSize = 40;
+        /**
+         * Threads dedicated to asynchronous request handling.
+         */
+        private int readThreads = 20;
+        private int readQueueSize = 40;
 
-		/**
-		 * Threads dedicated to asynchronous request handling.
-		 */
-		private int writeThreads = 20;
-		private int writeQueueSize = 1000;
+        /**
+         * Threads dedicated to asynchronous request handling.
+         */
+        private int writeThreads = 20;
+        private int writeQueueSize = 1000;
 
-		@Override
-		public MetricBackend buildDelegate(String context,
-				MetricBackendReporter reporter) throws ValidationException {
-			Utils.notEmpty(context + ".keyspace", this.keyspace);
-			Utils.notEmpty(context + ".seeds", this.seeds);
+        @Override
+        public MetricBackend buildDelegate(String context,
+                MetricBackendReporter reporter) throws ValidationException {
+            Utils.notEmpty(context + ".keyspace", this.keyspace);
+            Utils.notEmpty(context + ".seeds", this.seeds);
 
-			final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
-					.readThreads(readThreads).readQueueSize(readQueueSize)
-					.writeThreads(writeThreads).writeQueueSize(writeQueueSize)
-					.build();
+            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
+                    .readThreads(readThreads).readQueueSize(readQueueSize)
+                    .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
+                    .build();
 
-			return new HeroicMetricBackend(reporter, pools, keyspace, seeds,
-					maxConnectionsPerHost);
-		}
-	}
+            return new HeroicMetricBackend(reporter, pools, keyspace, seeds,
+                    maxConnectionsPerHost);
+        }
+    }
 
-	private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
-			"metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
+    private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
+            "metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
 
-	private final MetricBackendReporter reporter;
-	private final ReadWriteThreadPools pools;
+    private final MetricBackendReporter reporter;
+    private final ReadWriteThreadPools pools;
 
-	public HeroicMetricBackend(MetricBackendReporter reporter,
-			ReadWriteThreadPools pools, String keyspace, String seeds,
-			int maxConnectionsPerHost) {
-		super(keyspace, seeds, maxConnectionsPerHost);
+    public HeroicMetricBackend(MetricBackendReporter reporter,
+            ReadWriteThreadPools pools, String keyspace, String seeds,
+            int maxConnectionsPerHost) {
+        super(keyspace, seeds, maxConnectionsPerHost);
 
-		this.reporter = reporter;
-		this.pools = pools;
-	}
+        this.reporter = reporter;
+        this.pools = pools;
+    }
 
-	private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
-			.newColumnFamily("Cql3CF", IntegerSerializer.get(),
-					StringSerializer.get());
+    private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
+            .newColumnFamily("Cql3CF", IntegerSerializer.get(),
+                    StringSerializer.get());
 
-	private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
+    private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
-	@Override
-	public Callback<WriteResponse> write(WriteEntry write) {
-		final Collection<WriteEntry> writes = new ArrayList<WriteEntry>();
-		writes.add(write);
-		return write(writes);
-	}
+    @Override
+    public Callback<WriteResponse> write(WriteEntry write) {
+        final Collection<WriteEntry> writes = new ArrayList<WriteEntry>();
+        writes.add(write);
+        return write(writes);
+    }
 
-	@Override
-	public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
-		final Keyspace keyspace = keyspace();
+    @Override
+    public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
+        final Keyspace keyspace = keyspace();
 
-		if (keyspace == null)
-			return new CancelledCallback<WriteResponse>(
-					CancelReason.BACKEND_DISABLED);
+        if (keyspace == null)
+            return new CancelledCallback<WriteResponse>(
+                    CancelReason.BACKEND_DISABLED);
 
-		final MutationBatch mutation = keyspace.prepareMutationBatch()
-				.setConsistencyLevel(ConsistencyLevel.CL_ANY);
+        final MutationBatch mutation = keyspace.prepareMutationBatch()
+                .setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
-		final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
+        final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
-		for (final WriteEntry write : writes) {
-			for (final DataPoint d : write.getData()) {
-				final long base = MetricsRowKeySerializer.getBaseTimestamp(d
-						.getTimestamp());
-				final MetricsRowKey rowKey = new MetricsRowKey(
-						write.getTimeSerie(), base);
+        for (final WriteEntry write : writes) {
+            for (final DataPoint d : write.getData()) {
+                final long base = MetricsRowKeySerializer.getBaseTimestamp(d
+                        .getTimestamp());
+                final MetricsRowKey rowKey = new MetricsRowKey(
+                        write.getTimeSerie(), base);
 
-				ColumnListMutation<Integer> m = batches.get(rowKey);
+                ColumnListMutation<Integer> m = batches.get(rowKey);
 
-				if (m == null) {
-					m = mutation.withRow(METRICS_CF, rowKey);
-					batches.put(rowKey, m);
-				}
+                if (m == null) {
+                    m = mutation.withRow(METRICS_CF, rowKey);
+                    batches.put(rowKey, m);
+                }
 
-				m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d
-						.getTimestamp()), d.getValue());
-			}
-		}
+                m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d
+                        .getTimestamp()), d.getValue());
+            }
+        }
 
-		return ConcurrentCallback.newResolve(pools.write(),
-				new Callback.Resolver<WriteResponse>() {
-			@Override
-			public WriteResponse resolve() throws Exception {
-				mutation.execute();
-				return new WriteResponse(1, 0, 0);
-			}
-		}).register(reporter.reportWriteBatch());
-	}
+        final Callback.Resolver<WriteResponse> resolver = new Callback.Resolver<WriteResponse>() {
+            @Override
+            public WriteResponse resolve() throws Exception {
+                mutation.execute();
+                return new WriteResponse(1);
+            }
+        };
+        return ConcurrentCallback.newResolve(pools.write(),
+                resolver).register(reporter.reportWriteBatch());
+    }
 
-	/**
-	 * CQL3 implementation for insertions.
-	 *
-	 * TODO: I cannot figure out how to get batch insertions to work. Until
-	 * then, THIS IS NOT an option because it will murder performance in its
-	 * sleep and steal its cookies.
-	 *
-	 * @param rowKey
-	 * @param datapoints
-	 * @return
-	 */
-	@SuppressWarnings("unused")
-	private Callback<Integer> writeCQL(final MetricsRowKey rowKey,
-			final List<DataPoint> datapoints) {
-		final Keyspace keyspace = keyspace();
+    /**
+     * CQL3 implementation for insertions.
+     *
+     * TODO: I cannot figure out how to get batch insertions to work. Until
+     * then, THIS IS NOT an option because it will murder performance in its
+     * sleep and steal its cookies.
+     *
+     * @param rowKey
+     * @param datapoints
+     * @return
+     */
+    @SuppressWarnings("unused")
+    private Callback<Integer> writeCQL(final MetricsRowKey rowKey,
+            final List<DataPoint> datapoints) {
+        final Keyspace keyspace = keyspace();
 
-		if (keyspace == null)
-			return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
+        if (keyspace == null)
+            return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
 
-		return ConcurrentCallback.newResolve(pools.read(),
-				new Callback.Resolver<Integer>() {
-			@Override
-			public Integer resolve() throws Exception {
-				for (final DataPoint d : datapoints) {
-					keyspace.prepareQuery(CQL3_CF)
-					.withCql(INSERT_METRICS_CQL)
-					.asPreparedStatement()
-					.withByteBufferValue(rowKey,
-							MetricsRowKeySerializer.get())
-							.withByteBufferValue(
-									MetricsRowKeySerializer
-									.calculateColumnKey(d
-											.getTimestamp()),
-											IntegerSerializer.get())
-											.withByteBufferValue(d.getValue(),
-													DoubleSerializer.get()).execute();
-				}
+        return ConcurrentCallback.newResolve(pools.read(),
+                new Callback.Resolver<Integer>() {
+            @Override
+            public Integer resolve() throws Exception {
+                for (final DataPoint d : datapoints) {
+                    keyspace.prepareQuery(CQL3_CF)
+                    .withCql(INSERT_METRICS_CQL)
+                    .asPreparedStatement()
+                    .withByteBufferValue(rowKey,
+                            MetricsRowKeySerializer.get())
+                            .withByteBufferValue(
+                                    MetricsRowKeySerializer
+                                    .calculateColumnKey(d
+                                            .getTimestamp()),
+                                            IntegerSerializer.get())
+                                            .withByteBufferValue(d.getValue(),
+                                                    DoubleSerializer.get()).execute();
+                }
 
-				return datapoints.size();
-			}
-		});
-	}
+                return datapoints.size();
+            }
+        });
+    }
 
-	@Override
-	public List<Callback<FetchDataPoints.Result>> query(
-			final TimeSerie timeSerie, final DateRange range) {
-		final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
+    @Override
+    public List<Callback<FetchDataPoints.Result>> query(
+            final TimeSerie timeSerie, final DateRange range) {
+        final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
 
-		for (final long base : buildBases(range)) {
-			final Callback<Result> partial = buildQuery(timeSerie, base, range);
+        for (final long base : buildBases(range)) {
+            final Callback<Result> partial = buildQuery(timeSerie, base, range);
 
-			if (partial == null)
-				continue;
+            if (partial == null)
+                continue;
 
-			queries.add(partial);
-		}
+            queries.add(partial);
+        }
 
-		return queries;
-	}
+        return queries;
+    }
 
-	private Callback<FetchDataPoints.Result> buildQuery(
-			final TimeSerie timeSerie, long base, final DateRange range) {
-		final Keyspace keyspace = keyspace();
+    private Callback<FetchDataPoints.Result> buildQuery(
+            final TimeSerie timeSerie, long base, final DateRange range) {
+        final Keyspace keyspace = keyspace();
 
-		if (keyspace == null)
-			return new CancelledCallback<FetchDataPoints.Result>(
-					CancelReason.BACKEND_DISABLED);
+        if (keyspace == null)
+            return new CancelledCallback<FetchDataPoints.Result>(
+                    CancelReason.BACKEND_DISABLED);
 
-		final DateRange newRange = range.modify(base, base
-				+ MetricsRowKey.MAX_WIDTH - 1);
+        final DateRange newRange = range.modify(base, base
+                + MetricsRowKey.MAX_WIDTH - 1);
 
-		if (newRange.isEmpty())
-			return null;
+        if (newRange.isEmpty())
+            return null;
 
-		final MetricsRowKey key = new MetricsRowKey(timeSerie, base);
+        final MetricsRowKey key = new MetricsRowKey(timeSerie, base);
 
-		final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
-				.prepareQuery(METRICS_CF)
-				.getRow(key)
-				.autoPaginate(true)
-				.withColumnRange(
-						new RangeBuilder()
-						.setStart(
-								MetricsRowKeySerializer
-								.calculateColumnKey(newRange
-										.getStart()))
-										.setEnd(MetricsRowKeySerializer
-												.calculateColumnKey(newRange.getEnd()))
-												.build());
+        final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
+                .prepareQuery(METRICS_CF)
+                .getRow(key)
+                .autoPaginate(true)
+                .withColumnRange(
+                        new RangeBuilder()
+                        .setStart(
+                                MetricsRowKeySerializer
+                                .calculateColumnKey(newRange
+                                        .getStart()))
+                                        .setEnd(MetricsRowKeySerializer
+                                                .calculateColumnKey(newRange.getEnd()))
+                                                .build());
 
-		return ConcurrentCallback.newResolve(pools.read(),
-				new Callback.Resolver<FetchDataPoints.Result>() {
-			@Override
-			public Result resolve() throws Exception {
-				final OperationResult<ColumnList<Integer>> result = dataQuery
-						.execute();
-				final List<DataPoint> datapoints = buildDataPoints(key,
-						result);
-				return new FetchDataPoints.Result(datapoints, timeSerie);
-			}
-		});
-	}
+        return ConcurrentCallback.newResolve(pools.read(),
+                new Callback.Resolver<FetchDataPoints.Result>() {
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = buildDataPoints(key,
+                        result);
+                return new FetchDataPoints.Result(datapoints, timeSerie);
+            }
+        });
+    }
 
-	@Override
-	public Callback<Long> getColumnCount(TimeSerie timeSerie, DateRange range) {
-		return new FailedCallback<Long>(new Exception("not implemented"));
-	}
+    @Override
+    public Callback<Long> getColumnCount(TimeSerie timeSerie, DateRange range) {
+        return new FailedCallback<Long>(new Exception("not implemented"));
+    }
 
-	@Override
-	public void stop() {
-		try {
-			super.stop();
-		} catch (final Exception e) {
-			log.error("Failed to stop", e);
-		}
+    @Override
+    public void stop() {
+        try {
+            super.stop();
+        } catch (final Exception e) {
+            log.error("Failed to stop", e);
+        }
 
-		pools.stop();
-	}
+        pools.stop();
+    }
 
-	private static List<DataPoint> buildDataPoints(final MetricsRowKey key,
-			final OperationResult<ColumnList<Integer>> result) {
-		final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+    private static List<DataPoint> buildDataPoints(final MetricsRowKey key,
+            final OperationResult<ColumnList<Integer>> result) {
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-		for (final Column<Integer> column : result.getResult()) {
-			datapoints.add(new DataPoint(
-					MetricsRowKeySerializer.calculateAbsoluteTimestamp(
-							key.getBase(), column.getName()), column
-							.getDoubleValue()));
-		}
+        for (final Column<Integer> column : result.getResult()) {
+            datapoints.add(new DataPoint(
+                    MetricsRowKeySerializer.calculateAbsoluteTimestamp(
+                            key.getBase(), column.getName()), column
+                            .getDoubleValue()));
+        }
 
-		return datapoints;
-	}
+        return datapoints;
+    }
 
-	private static List<Long> buildBases(DateRange range) {
-		final List<Long> bases = new ArrayList<Long>();
+    private static List<Long> buildBases(DateRange range) {
+        final List<Long> bases = new ArrayList<Long>();
 
-		final long start = MetricsRowKeySerializer.getBaseTimestamp(range
-				.getStart());
-		final long end = MetricsRowKeySerializer.getBaseTimestamp(range
-				.getEnd());
+        final long start = MetricsRowKeySerializer.getBaseTimestamp(range
+                .getStart());
+        final long end = MetricsRowKeySerializer.getBaseTimestamp(range
+                .getEnd());
 
-		for (long i = start; i <= end; i += MetricsRowKey.MAX_WIDTH) {
-			bases.add(i);
-		}
+        for (long i = start; i <= end; i += MetricsRowKey.MAX_WIDTH) {
+            bases.add(i);
+        }
 
-		return bases;
-	}
+        return bases;
+    }
 }

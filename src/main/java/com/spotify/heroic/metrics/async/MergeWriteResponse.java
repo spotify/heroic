@@ -21,8 +21,7 @@ public class MergeWriteResponse implements Callback.Reducer<WriteResponse, Write
     public WriteResponse resolved(Collection<WriteResponse> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
                     throws Exception {
-        WriteResponse response = new WriteResponse(0, errors.size(),
-                cancelled.size());
+        WriteResponse response = new WriteResponse(0, errors, cancelled);
 
         for (final WriteResponse result : results) {
             response = response.merge(result);
