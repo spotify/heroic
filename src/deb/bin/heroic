@@ -2,7 +2,8 @@
 
 SHARE="/usr/share/heroic"
 JAR=$(echo $SHARE/heroic-*.jar)
-JVMARGS="/etc/heroic/heroic.jvmargs"
+DEFAULT_JVMARGS="/etc/heroic/heroic.jvmargs"
+JVMARGS=${2-$DEFAULT_JVMARGS}
 
 
 if [[ ! -f $JAR ]]; then

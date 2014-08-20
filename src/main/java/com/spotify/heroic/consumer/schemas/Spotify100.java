@@ -121,6 +121,10 @@ public class Spotify100 implements ConsumerSchema {
             throw new ConsumerSchemaException("Failed to write", e);
         }
 
-        log.info("Write successful: {}", response);
+        if (!response.getFailed().isEmpty()) {
+            for (final Exception failure : response.getFailed()) {
+                log.error("Write failed", failure);
+            }
+        }
     }
 }
