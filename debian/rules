@@ -2,7 +2,7 @@
 
 MAVEN_HOME=debian/maven_home
 JAVA_HOME=/usr/lib/jvm/default-java
-MVN=mvn3 -D maven.test.skip=true -D user.home=$(MAVEN_HOME) -s debian/settings.xml
+MVN=mvn -D maven.test.skip=true -D user.home=$(MAVEN_HOME) -s debian/settings.xml
 
 %:
 	dh $@
