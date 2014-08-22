@@ -1,2 +1,3 @@
 src/deb/bin/heroic usr/bin
+src/deb/bin/heroic-status usr/bin
 target/heroic.jar usr/share/heroic
