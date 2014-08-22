@@ -15,7 +15,7 @@ import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
-public interface MetricBackend extends Lifecycle {
+public interface Backend extends Lifecycle {
 	@Data
 	public abstract class YAML {
 		private static final double DEFAULT_THRESHOLD = 10.0;
@@ -36,17 +36,12 @@ public interface MetricBackend extends Lifecycle {
 		 */
 		private long cooldown = DEFAULT_COOLDOWN;
 
-		public MetricBackend build(String context,
+		public Backend build(String context,
 				MetricBackendReporter reporter) throws ValidationException {
-			final MetricBackend delegate = buildDelegate(context, reporter);
-
-			if (disableOnFailures)
-				return new DisablingMetricBackend(delegate, threshold, cooldown);
-
-			return delegate;
+			return buildDelegate(context, reporter);
 		}
 
-		protected abstract MetricBackend buildDelegate(String context,
+		protected abstract Backend buildDelegate(String context,
 				MetricBackendReporter reporter) throws ValidationException;
 	}
 

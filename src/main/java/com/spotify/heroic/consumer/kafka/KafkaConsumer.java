@@ -55,6 +55,8 @@ public class KafkaConsumer implements Consumer {
 	private final ConsumerReporter reporter;
 	private final ConsumerSchema schema;
 
+	private volatile boolean running = false;
+
 	@Inject
 	private MetadataBackendManager metadata;
 
@@ -65,7 +67,10 @@ public class KafkaConsumer implements Consumer {
 	private ConsumerConnector connector;
 
 	@Override
-	public void start() throws Exception {
+	public synchronized void start() throws Exception {
+		if (running)
+			throw new IllegalStateException("Kafka consumer already running");
+
 		log.info("Starting");
 
 		final Properties properties = new Properties();
@@ -91,16 +96,22 @@ public class KafkaConsumer implements Consumer {
 						this, schema));
 			}
 		}
+
+		this.running = true;
 	}
 
 	@Override
-	public void stop() throws Exception {
+	public synchronized void stop() throws Exception {
+		if (!running)
+			throw new IllegalStateException("Kafka consumer not running");
+
 		connector.shutdown();
+		this.running = false;
 	}
 
 	@Override
 	public boolean isReady() {
-		return true;
+		return running;
 	}
 
 	@Override

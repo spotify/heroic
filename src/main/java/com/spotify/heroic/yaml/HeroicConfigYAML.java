@@ -10,13 +10,13 @@ import com.spotify.heroic.cache.AggregationCacheBackend;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @Data
 public class HeroicConfigYAML {
 	private ClusterManager.YAML cluster;
-	private List<MetricBackend.YAML> backends;
+	private List<Backend.YAML> backends;
 	private List<MetadataBackend.YAML> metadataBackends;
 	private List<Consumer.YAML> consumers;
 	private AggregationCacheBackend.YAML cache;
@@ -28,13 +28,13 @@ public class HeroicConfigYAML {
 	private int groupLimit = HeroicConfig.DEFAULT_GROUP_LIMIT;
 	private int groupLoadLimit = HeroicConfig.DEFAULT_GROUP_LOAD_LIMIT;
 
-	private List<MetricBackend> setupMetricBackends(String context,
+	private List<Backend> setupMetricBackends(String context,
 			HeroicReporter reporter) throws ValidationException {
-		final List<MetricBackend> backends = new ArrayList<MetricBackend>();
+		final List<Backend> backends = new ArrayList<Backend>();
 
 		int i = 0;
 
-		for (final MetricBackend.YAML backend : Utils.toList("backends",
+		for (final Backend.YAML backend : Utils.toList("backends",
 				this.backends)) {
 			final String c = context + "[" + i++ + "]";
 			backends.add(backend.build(c, reporter.newMetricBackend(c)));
@@ -78,7 +78,7 @@ public class HeroicConfigYAML {
 			throws ValidationException {
 		final ClusterManager cluster = this.cluster.build("cluster");
 
-		final List<MetricBackend> metricBackends = setupMetricBackends(
+		final List<Backend> metricBackends = setupMetricBackends(
 				"backends", reporter);
 		final List<MetadataBackend> metadataBackends = setupMetadataBackends(
 				"metadataBackends", reporter);

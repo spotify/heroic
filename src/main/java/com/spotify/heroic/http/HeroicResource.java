@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -37,6 +38,8 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.model.DecodeRowKeyRequest;
 import com.spotify.heroic.http.model.DecodeRowKeyResponse;
 import com.spotify.heroic.http.model.EncodeRowKeyRequest;
@@ -52,12 +55,19 @@ import com.spotify.heroic.http.model.TimeSeriesRequest;
 import com.spotify.heroic.http.model.TimeSeriesResponse;
 import com.spotify.heroic.http.model.WriteMetricsRequest;
 import com.spotify.heroic.http.model.WriteMetricsResponse;
+import com.spotify.heroic.http.model.status.BackendStatusResponse;
+import com.spotify.heroic.http.model.status.ClusterStatusResponse;
+import com.spotify.heroic.http.model.status.ConsumerStatusResponse;
+import com.spotify.heroic.http.model.status.MetadataBackendStatusResponse;
+import com.spotify.heroic.http.model.status.StatusResponse;
+import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
+import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
@@ -85,10 +95,22 @@ public class HeroicResource {
 	private MetricBackendManager metrics;
 
 	@Inject
-	private MetadataBackendManager metadataBackend;
+	private MetadataBackendManager metadata;
 
 	@Inject
 	private StoredMetricQueries storedQueries;
+
+	@Inject
+	private Set<Consumer> consumers;
+
+	@Inject
+	private Set<Backend> backends;
+
+	@Inject
+	private Set<MetadataBackend> metadataBackends;
+
+	@Inject
+	private ClusterManager cluster;
 
 	public static final class Message {
 		@Getter
@@ -97,6 +119,76 @@ public class HeroicResource {
 		public Message(String message) {
 			this.message = message;
 		}
+	}
+
+	@GET
+	@Path("/status")
+	public Response status() {
+		final ConsumerStatusResponse consumers = buildConsumerStatus();
+		final BackendStatusResponse backends = buildBackendStatus();
+		final MetadataBackendStatusResponse metadataBackends = buildMetadataBackendStatus();
+
+		final ClusterStatusResponse cluster = buildClusterStatus();
+
+		final boolean allOk = consumers.isOk() && backends.isOk()
+				&& metadataBackends.isOk() && cluster.isOk();
+
+		final StatusResponse response = new StatusResponse(allOk, consumers,
+				backends, metadataBackends, cluster);
+
+		return Response.status(Response.Status.OK).entity(response).build();
+	}
+
+	private ClusterStatusResponse buildClusterStatus() {
+		final ClusterManager.Statistics s = cluster.getStatistics();
+
+		final ClusterStatusResponse cluster;
+
+		if (s == null)
+			return new ClusterStatusResponse(false, 0, 0);
+
+		return new ClusterStatusResponse(s.getOfflineNodes() == 0,
+				s.getOnlineNodes(), s.getOfflineNodes());
+	}
+
+	private BackendStatusResponse buildBackendStatus() {
+		final int available = backends.size();
+
+		int ready = 0;
+
+		for (final Backend backend : backends) {
+			if (backend.isReady())
+				ready += 1;
+		}
+
+		return new BackendStatusResponse(available == ready, available, ready);
+	}
+
+	private ConsumerStatusResponse buildConsumerStatus() {
+		final int available = consumers.size();
+
+		int ready = 0;
+
+		for (final Consumer consumer : consumers) {
+			if (consumer.isReady())
+				ready += 1;
+		}
+
+		return new ConsumerStatusResponse(available == ready, available, ready);
+	}
+
+	private MetadataBackendStatusResponse buildMetadataBackendStatus() {
+		final int available = metadataBackends.size();
+
+		int ready = 0;
+
+		for (final MetadataBackend metadata : metadataBackends) {
+			if (metadata.isReady())
+				ready += 1;
+		}
+
+		return new MetadataBackendStatusResponse(available == ready, available,
+				ready);
 	}
 
 	@POST
@@ -300,7 +392,7 @@ public class HeroicResource {
 	@Path("/tags")
 	public void tags(@Suspended final AsyncResponse response,
 			TimeSeriesRequest query) throws MetadataQueryException {
-		if (!metadataBackend.isReady()) {
+		if (!metadata.isReady()) {
 			response.resume(Response
 					.status(Response.Status.SERVICE_UNAVAILABLE)
 					.entity(new ErrorMessage("Cache is not ready")).build());
@@ -313,22 +405,24 @@ public class HeroicResource {
 
 		final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(filter);
 
-		metadataResult(response, metadataBackend.findTags(timeSeriesQuery)
-				.transform(new Callback.Transformer<FindTags, TagsResponse>() {
-					@Override
-					public TagsResponse transform(FindTags result)
-							throws Exception {
-						return new TagsResponse(result.getTags(), result
-								.getSize());
-					}
-				}));
+		metadataResult(
+				response,
+				metadata.findTags(timeSeriesQuery).transform(
+						new Callback.Transformer<FindTags, TagsResponse>() {
+							@Override
+							public TagsResponse transform(FindTags result)
+									throws Exception {
+								return new TagsResponse(result.getTags(),
+										result.getSize());
+							}
+						}));
 	}
 
 	@POST
 	@Path("/keys")
 	public void keys(@Suspended final AsyncResponse response,
 			TimeSeriesRequest query) throws MetadataQueryException {
-		if (!metadataBackend.isReady()) {
+		if (!metadata.isReady()) {
 			response.resume(Response
 					.status(Response.Status.SERVICE_UNAVAILABLE)
 					.entity(new ErrorMessage("Cache is not ready")).build());
@@ -341,22 +435,24 @@ public class HeroicResource {
 
 		final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(filter);
 
-		metadataResult(response, metadataBackend.findKeys(timeSeriesQuery)
-				.transform(new Callback.Transformer<FindKeys, KeysResponse>() {
-					@Override
-					public KeysResponse transform(FindKeys result)
-							throws Exception {
-						return new KeysResponse(result.getKeys(), result
-								.getSize());
-					}
-				}));
+		metadataResult(
+				response,
+				metadata.findKeys(timeSeriesQuery).transform(
+						new Callback.Transformer<FindKeys, KeysResponse>() {
+							@Override
+							public KeysResponse transform(FindKeys result)
+									throws Exception {
+								return new KeysResponse(result.getKeys(),
+										result.getSize());
+							}
+						}));
 	}
 
 	@POST
 	@Path("/timeseries")
 	public void getTimeSeries(@Suspended final AsyncResponse response,
 			TimeSeriesRequest query) throws MetadataQueryException {
-		if (!metadataBackend.isReady()) {
+		if (!metadata.isReady()) {
 			response.resume(Response
 					.status(Response.Status.SERVICE_UNAVAILABLE)
 					.entity(new ErrorMessage("Cache is not ready")).build());
@@ -375,20 +471,19 @@ public class HeroicResource {
 
 		metadataResult(
 				response,
-				metadataBackend
-						.findTimeSeries(timeSeriesQuery)
-						.transform(
-								new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-									@Override
-									public TimeSeriesResponse transform(
-											FindTimeSeries result)
+				metadata.findTimeSeries(timeSeriesQuery)
+				.transform(
+						new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
+							@Override
+							public TimeSeriesResponse transform(
+									FindTimeSeries result)
 											throws Exception {
-										return new TimeSeriesResponse(
-												new ArrayList<TimeSerie>(result
-														.getTimeSeries()),
+								return new TimeSeriesResponse(
+										new ArrayList<TimeSerie>(result
+												.getTimeSeries()),
 												result.getSize());
-									}
-								}));
+							}
+						}));
 	}
 
 	/**

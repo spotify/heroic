@@ -26,8 +26,8 @@ import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
-import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.cassandra.CassandraMetricBackend;
+import com.spotify.heroic.metrics.Backend;
+import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
@@ -45,14 +45,13 @@ import com.spotify.heroic.yaml.ValidationException;
  * @author mehrdad
  */
 @ToString(of = {}, callSuper = true)
-public class KairosMetricBackend extends CassandraMetricBackend implements
-MetricBackend {
+public class KairosBackend extends CassandraBackend implements Backend {
 	private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
 			+ "column1 > ? AND column1 < ?";
 
 	@RequiredArgsConstructor
 	private static final class RowCountTransformer implements
-	Callback.Resolver<Long> {
+			Callback.Resolver<Long> {
 		private final Keyspace keyspace;
 		private final DateRange range;
 		private final DataPointsRowKey row;
@@ -82,7 +81,7 @@ MetricBackend {
 
 	@Data
 	@EqualsAndHashCode(callSuper = true)
-	public static class YAML extends MetricBackend.YAML {
+	public static class YAML extends Backend.YAML {
 		public static final String TYPE = "!kairosdb-backend";
 
 		/**
@@ -111,7 +110,7 @@ MetricBackend {
 		private int readQueueSize = 10000;
 
 		@Override
-		public MetricBackend buildDelegate(String context,
+		public Backend buildDelegate(String context,
 				MetricBackendReporter reporter) throws ValidationException {
 			Utils.notEmpty(context + ".keyspace", this.keyspace);
 			Utils.notEmpty(context + ".seeds", this.seeds);
@@ -119,7 +118,7 @@ MetricBackend {
 					.reporter(reporter.newThreadPoolsReporter())
 					.readThreads(readThreads).readQueueSize(readQueueSize)
 					.build();
-			return new KairosMetricBackend(pools, keyspace, seeds,
+			return new KairosBackend(pools, keyspace, seeds,
 					maxConnectionsPerHost);
 		}
 	}
@@ -130,7 +129,7 @@ MetricBackend {
 
 	private final ReadWriteThreadPools pools;
 
-	public KairosMetricBackend(ReadWriteThreadPools pools, String keyspace,
+	public KairosBackend(ReadWriteThreadPools pools, String keyspace,
 			String seeds, int maxConnectionsPerHost) {
 		super(keyspace, seeds, maxConnectionsPerHost);
 		this.pools = pools;
@@ -185,49 +184,49 @@ MetricBackend {
 				.autoPaginate(true)
 				.withColumnRange(
 						new RangeBuilder()
-						.setStart((int) startTime,
-								IntegerSerializer.get())
+								.setStart((int) startTime,
+										IntegerSerializer.get())
 								.setEnd((int) endTime, IntegerSerializer.get())
 								.build());
 
 		return ConcurrentCallback.newResolve(pools.read(),
 				new Callback.Resolver<FetchDataPoints.Result>() {
-			@Override
-			public Result resolve() throws Exception {
-				final OperationResult<ColumnList<Integer>> result = dataQuery
-						.execute();
-				final List<DataPoint> datapoints = buildDataPoints(
-						rowKey, result);
-				return new FetchDataPoints.Result(datapoints, timeSerie);
-			}
+					@Override
+					public Result resolve() throws Exception {
+						final OperationResult<ColumnList<Integer>> result = dataQuery
+								.execute();
+						final List<DataPoint> datapoints = buildDataPoints(
+								rowKey, result);
+						return new FetchDataPoints.Result(datapoints, timeSerie);
+					}
 
-			private List<DataPoint> buildDataPoints(
-					final DataPointsRowKey rowKey,
-					final OperationResult<ColumnList<Integer>> result) {
-				final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+					private List<DataPoint> buildDataPoints(
+							final DataPointsRowKey rowKey,
+							final OperationResult<ColumnList<Integer>> result) {
+						final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-				for (final Column<Integer> column : result.getResult()) {
-					datapoints.add(fromColumn(rowKey, column));
-				}
+						for (final Column<Integer> column : result.getResult()) {
+							datapoints.add(fromColumn(rowKey, column));
+						}
 
-				return datapoints;
-			}
+						return datapoints;
+					}
 
-			private DataPoint fromColumn(DataPointsRowKey rowKey,
-					Column<Integer> column) {
-				final int name = column.getName();
-				final long timestamp = DataPointColumnKey.toTimeStamp(
-						rowKey.getTimestamp(), name);
-				final ByteBuffer bytes = column.getByteBufferValue();
+					private DataPoint fromColumn(DataPointsRowKey rowKey,
+							Column<Integer> column) {
+						final int name = column.getName();
+						final long timestamp = DataPointColumnKey.toTimeStamp(
+								rowKey.getTimestamp(), name);
+						final ByteBuffer bytes = column.getByteBufferValue();
 
-				if (DataPointColumnKey.isLong(name))
-					return new DataPoint(timestamp,
-							DataPointColumnValue.toLong(bytes));
+						if (DataPointColumnKey.isLong(name))
+							return new DataPoint(timestamp,
+									DataPointColumnValue.toLong(bytes));
 
-				return new DataPoint(timestamp, DataPointColumnValue
-						.toDouble(bytes));
-			}
-		});
+						return new DataPoint(timestamp, DataPointColumnValue
+								.toDouble(bytes));
+					}
+				});
 	}
 
 	@Override
@@ -249,20 +248,20 @@ MetricBackend {
 
 		return ConcurrentCallback.newReduce(callbacks,
 				new Callback.Reducer<Long, Long>() {
-			@Override
-			public Long resolved(Collection<Long> results,
-					Collection<Exception> errors,
-					Collection<CancelReason> cancelled)
+					@Override
+					public Long resolved(Collection<Long> results,
+							Collection<Exception> errors,
+							Collection<CancelReason> cancelled)
 							throws Exception {
-				long value = 0;
+						long value = 0;
 
-				for (final long result : results) {
-					value += result;
-				}
+						for (final long result : results) {
+							value += result;
+						}
 
-				return value;
-			}
-		});
+						return value;
+					}
+				});
 	}
 
 	private static List<Long> buildBases(DateRange range) {

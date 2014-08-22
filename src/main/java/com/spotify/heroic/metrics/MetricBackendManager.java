@@ -39,7 +39,6 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
 import com.spotify.heroic.metrics.model.Statistics;
-import com.spotify.heroic.metrics.model.Statistics.Rpc;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
@@ -53,7 +52,7 @@ import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 @Slf4j
 public class MetricBackendManager {
 	private final MetricBackendManagerReporter reporter;
-	private final List<MetricBackend> backends;
+	private final List<Backend> backends;
 	private final boolean updateMetadata;
 	private final int groupLimit;
 	private final int groupLoadLimit;
@@ -74,8 +73,8 @@ public class MetricBackendManager {
 	private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
 	private final class RemoteTimeSeriesTransformer
-			implements
-			Callback.DeferredTransformer<List<RemoteGroupedTimeSeries>, MetricGroups> {
+	implements
+	Callback.DeferredTransformer<List<RemoteGroupedTimeSeries>, MetricGroups> {
 		private final DateRange rounded;
 		private final AggregationGroup aggregation;
 
@@ -105,11 +104,22 @@ public class MetricBackendManager {
 						log.error("Remote request failed", e);
 					}
 
+					final ClusterManager.Statistics clusterStatistics = cluster
+							.getStatistics();
+					final Statistics.Rpc rpc;
+
+					if (clusterStatistics != null) {
+						rpc = new Statistics.Rpc(results.size(), errors.size(),
+								clusterStatistics.getOnlineNodes(),
+								clusterStatistics.getOfflineNodes(), true);
+					} else {
+						rpc = new Statistics.Rpc(results.size(), errors.size(),
+								0, 0, false);
+					}
+
 					final List<MetricGroup> groups = new ArrayList<>();
-					Statistics statistics = Statistics
-							.builder()
-							.rpc(new Rpc(results.size(), errors.size(), 0, 0)
-									.merge(cluster.getStatistics())).build();
+					Statistics statistics = Statistics.builder().rpc(rpc)
+							.build();
 
 					for (final MetricGroups metricGroups : results) {
 						groups.addAll(metricGroups.getGroups());
@@ -126,8 +136,8 @@ public class MetricBackendManager {
 	}
 
 	private final class FindAndRouteTransformer
-			implements
-			Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
+	implements
+	Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
 		@Override
 		public List<RemoteGroupedTimeSeries> transform(
 				final FindTimeSeriesGroups result) throws Exception {
@@ -179,7 +189,7 @@ public class MetricBackendManager {
 	}
 
 	interface BackendOperation {
-		void run(int disabled, MetricBackend backend) throws Exception;
+		void run(int disabled, Backend backend) throws Exception;
 	}
 
 	public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
@@ -187,8 +197,7 @@ public class MetricBackendManager {
 
 		with(new BackendOperation() {
 			@Override
-			public void run(int disabled, MetricBackend backend)
-					throws Exception {
+			public void run(int disabled, Backend backend) throws Exception {
 				callbacks.add(backend.write(writes));
 			}
 		});
@@ -228,7 +237,7 @@ public class MetricBackendManager {
 	public Callback<StreamMetricsResult> streamMetrics(final Filter filter,
 			final List<String> groupBy, final DateRange range,
 			final AggregationGroup aggregation, MetricStream handle)
-					throws MetricQueryException {
+			throws MetricQueryException {
 		final DateRange rounded = roundRange(aggregation, range);
 
 		final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -337,7 +346,7 @@ public class MetricBackendManager {
 			@Override
 			public void run() {
 				query.query(currentRange).register(callbackHandle)
-						.register(reporter.reportStreamMetricsChunk());
+				.register(reporter.reportStreamMetricsChunk());
 			}
 		});
 	}
@@ -373,14 +382,14 @@ public class MetricBackendManager {
 	 * This will take care not to select disabled or unavailable backends.
 	 */
 	private void with(final TimeSerie match, BackendOperation op) {
-		final List<MetricBackend> alive = new ArrayList<MetricBackend>();
+		final List<Backend> alive = new ArrayList<Backend>();
 
 		// Keep track of disabled partitions.
 		// This will have implications on;
 		// 1) If the result if an operation can be cached or not.
 		int disabled = 0;
 
-		for (final MetricBackend backend : backends) {
+		for (final Backend backend : backends) {
 			if (!backend.isReady()) {
 				++disabled;
 				continue;
@@ -389,7 +398,7 @@ public class MetricBackendManager {
 			alive.add(backend);
 		}
 
-		for (final MetricBackend backend : alive) {
+		for (final Backend backend : alive) {
 			try {
 				op.run(disabled, backend);
 			} catch (final Exception e) {
@@ -409,7 +418,7 @@ public class MetricBackendManager {
 			final FindTimeSeriesCriteria criteria) {
 		return findAllTimeSeries(criteria).transform(
 				new FindAndRouteTransformer()).register(
-				reporter.reportFindTimeSeries());
+						reporter.reportFindTimeSeries());
 	}
 
 	private Callback<FindTimeSeriesGroups> findAllTimeSeries(
@@ -426,7 +435,7 @@ public class MetricBackendManager {
 
 		with(new BackendOperation() {
 			@Override
-			public void run(final int disabled, final MetricBackend backend)
+			public void run(final int disabled, final Backend backend)
 					throws Exception {
 				// do not cache results if any backends are disabled or
 				// unavailable,

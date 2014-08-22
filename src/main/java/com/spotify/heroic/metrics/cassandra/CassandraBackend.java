@@ -12,21 +12,21 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
-import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.Backend;
 
 /**
  * A partial and generic backend implementation for cassandra-based metric
  * backends.
  *
  * The keyspace should be accessed using the
- * {@link CassandraMetricBackend#keyspace} method.
+ * {@link CassandraBackend#keyspace} method.
  *
  * @author udoprog
  */
 @Slf4j
 @RequiredArgsConstructor
 @ToString(of = { "keyspaceName", "seeds", "maxConnectionsPerHost" })
-public abstract class CassandraMetricBackend implements MetricBackend {
+public abstract class CassandraBackend implements Backend {
 	private final String keyspaceName;
 	private final String seeds;
 	private final int maxConnectionsPerHost;

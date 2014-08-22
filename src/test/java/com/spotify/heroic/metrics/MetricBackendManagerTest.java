@@ -11,7 +11,7 @@ public class MetricBackendManagerTest {
 	@Mock
 	private MetricBackendManagerReporter reporter;
 	@Mock
-	private List<MetricBackend> metricBackends;
+	private List<Backend> metricBackends;
 
 	private static final boolean UPDATE_METADATA = false;
 	private static final int GROUP_LIMIT = 42;

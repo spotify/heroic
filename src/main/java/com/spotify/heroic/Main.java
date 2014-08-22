@@ -42,11 +42,10 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.StoredMetricQueries;
-import com.spotify.heroic.injection.Delegator;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
@@ -90,7 +89,7 @@ public class Main {
 		final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
 		final AggregationCache cache = config.getAggregationCache();
 
-		final List<MetricBackend> metricBackends = config.getMetricBackends();
+		final List<Backend> metricBackends = config.getMetricBackends();
 		final List<MetadataBackend> metadataBackends = config
 				.getMetadataBackends();
 
@@ -120,23 +119,9 @@ public class Main {
 						.toInstance(storedMetricsQueries);
 				bind(ClusterManager.class).toInstance(cluster);
 
-				setupBackends(MetricBackend.class, metricBackends);
-
-				{
-					final Multibinder<MetadataBackend> bindings = Multibinder
-							.newSetBinder(binder(), MetadataBackend.class);
-					for (final MetadataBackend backend : metadataBackends) {
-						bindings.addBinding().toInstance(backend);
-					}
-				}
-
-				{
-					final Multibinder<Consumer> bindings = Multibinder
-							.newSetBinder(binder(), Consumer.class);
-					for (final Consumer consumer : config.getConsumers()) {
-						bindings.addBinding().toInstance(consumer);
-					}
-				}
+				multiBind(metricBackends, Backend.class);
+				multiBind(metadataBackends, MetadataBackend.class);
+				multiBind(config.getConsumers(), Consumer.class);
 
 				bindListener(new IsSubclassOf(Lifecycle.class),
 						new TypeListener() {
@@ -153,15 +138,11 @@ public class Main {
 						});
 			}
 
-			@SuppressWarnings("unchecked")
-			private <T> void setupBackends(Class<T> clazz, List<T> backends) {
-				final Multibinder<T> bindings = Multibinder.newSetBinder(
-						binder(), clazz);
-				for (T backend : backends) {
-					bindings.addBinding().toInstance(backend);
-
-					while (backend instanceof Delegator) {
-						backend = ((Delegator<T>) backend).delegate();
+			private <T> void multiBind(final List<T> binds, Class<T> clazz) {
+				{
+					final Multibinder<T> bindings = Multibinder.newSetBinder(
+							binder(), clazz);
+					for (final T backend : binds) {
 						bindings.addBinding().toInstance(backend);
 					}
 				}

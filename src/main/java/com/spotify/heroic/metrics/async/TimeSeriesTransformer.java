@@ -13,7 +13,7 @@ import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.metrics.MetricBackend;
+import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -63,7 +63,7 @@ public final class TimeSeriesTransformer implements
     }
 
     private Callback<MetricGroups> buildCachedLookup(
-            final MetricBackend backend, final TimeSerie timeSerie,
+            final Backend backend, final TimeSerie timeSerie,
             final Set<TimeSerie> timeSeries) {
         final CacheGetTransformer transformer = new CacheGetTransformer(
                 timeSerie, cache) {
@@ -78,7 +78,7 @@ public final class TimeSeriesTransformer implements
                 transformer);
     }
 
-    private Callback<MetricGroups> buildLookup(final MetricBackend backend,
+    private Callback<MetricGroups> buildLookup(final Backend backend,
             final TimeSerieSlice slice, final Set<TimeSerie> series) {
         final List<Callback<FetchDataPoints.Result>> callbacks = new ArrayList<Callback<FetchDataPoints.Result>>();
 

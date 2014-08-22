@@ -23,9 +23,9 @@ import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
-import com.spotify.heroic.metrics.MetricBackend;
-import com.spotify.heroic.metrics.heroic.HeroicMetricBackend;
-import com.spotify.heroic.metrics.kairosdb.KairosMetricBackend;
+import com.spotify.heroic.metrics.Backend;
+import com.spotify.heroic.metrics.heroic.HeroicBackend;
+import com.spotify.heroic.metrics.kairosdb.KairosBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
@@ -42,7 +42,7 @@ public class HeroicConfig {
 	private final ClusterManager cluster;
 
 	@Getter
-	private final List<MetricBackend> metricBackends;
+	private final List<Backend> metricBackends;
 
 	@Getter
 	private final List<MetadataBackend> metadataBackends;
@@ -69,8 +69,8 @@ public class HeroicConfig {
 	private final int groupLoadLimit;
 
 	private static final TypeDescription[] TYPES = new TypeDescription[] {
-		Utils.makeType(HeroicMetricBackend.YAML.class),
-		Utils.makeType(KairosMetricBackend.YAML.class),
+		Utils.makeType(HeroicBackend.YAML.class),
+		Utils.makeType(KairosBackend.YAML.class),
 		Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
 		Utils.makeType(CassandraCache.YAML.class),
 		Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
@@ -91,7 +91,7 @@ public class HeroicConfig {
 				new InMemoryAggregationCacheBackend());
 		final ClusterManager cluster = new ClusterManager(null,
 				UUID.randomUUID(), null);
-		final List<MetricBackend> metricBackends = new ArrayList<MetricBackend>();
+		final List<Backend> metricBackends = new ArrayList<Backend>();
 		final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
 		final List<Consumer> consumers = new ArrayList<Consumer>();
 		return new HeroicConfig(cluster, metricBackends, metadataBackends,
