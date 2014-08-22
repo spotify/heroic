@@ -1,15 +1,39 @@
+The following sections document API endpoints for heroic.
+
+Go to [API Structure Documentation](api-structure-docs.md) for information on how to read it.
+
 # Querying for Metrics
 
 This details the API endpoints that are used for querying for data out of Heroic.
 
-## POST /metrics
+### GET /status
+
+Query for the status of a heroic instance.
+
++ Response 200 (application/json) [TODO](#todo)
+
+### POST /metrics [MetricsRequest](#metricsrequest)
 
 The simplest query method, expects a [MetricsRequest](#metricsrequest), and will return a [MetricsResponse](#metricsresponse) object when successful.
 
 + Response 200 (application/json) [MetricsResponse](#metricsresponse)
 + Response 500 (application/json) [ErrorMessage](#errormessage)
 
+### GET /rpc/metadata
+
+Internal RPC endpoint to query for a nodes metadata.
+
++ Response 200 (application/json) [MetadataResponse](#metadataresponse)
+
+### POST /rpc/query [TODO](#todo)
+
+Internal RPC endpoint to perform a remote query.
+
++ Response 200 (application/json) [TODO](#todo)
+
 # Types
+
+The following are structure documentation for all available types in the API.
 
 ### DateRangeRequest
 
@@ -20,40 +44,34 @@ Has the following types.
 + AbsoluteDateRangeRequest - Queries an absolute time range.
 + RelativeDateRangeRequest - Queries a time range which is relative to the current time.
 
-###### Structure (AbsoluteDateRangeRequest)
-```javascript
-{
-  "type": "absolute",
-  /**
-   * Starting timestamp in milliseconds from the unix epoch.
-   */
-  "start": <number>,
-  /**
-   * Ending timestamp in milliseconds from the unix epoch.
-   */
-  "end": <number>,
-}
+###### Structure
+```yml
+AbsoluteDateRangeRequest:
+  type: required "absolute"
+  # Starting timestamp in milliseconds from the unix epoch.
+  start: required Number
+  # Ending timestamp in milliseconds from the unix epoch.
+  end: required Number
+
+RelativeDateRangeRequest:
+  type: required "absolute"
+  # Unit to use for 'value'.
+  unit: required "MILLISECONDS"|"SECONDS"|"MINUTES"|"HOURS"|"DAYS"|"WEEKS"|"MONTHS"
+  # How many 'unit' timespans back in time this date starts.
+  value: required Number
+
+DateRangeRequest:
+  AbsoluteDateRangeRequest | RelativeDateRangeRequest
 ```
 
-###### Structure (RelativeDateRangeRequest)
-```javascript
-{
-  "type": "absolute",
-  /**
-   * Unit to use for 'value'.
-   */
-  "unit": <"MILLISECONDS"|"SECONDS"|"MINUTES"|"HOURS"|"DAYS"|"WEEKS"|"MONTHS">
-  /**
-   * How many 'unit' timespans back in time this date starts.
-   */
-  "value": <number>,
-}
+###### Examples
+
+```json
+{"type": "absolute", "start": 1300000000000, "end": 1400000000000}
 ```
 
-###### Example
-
-```javascript
-{"start": 1300000000000, "end": 1400000000000}
+```json
+{"type": "relative", "unit": "HOURS", "value": 8}
 ```
 
 ### DateRange
@@ -61,22 +79,17 @@ Has the following types.
 A date range, starting at __start__ milliseconds from the unich epoch and ending at __end__ milliseconds from the unix epoch.
 
 ###### Structure
-```javascript
-{
-  /**
-   * Starting timestamp in milliseconds from the unix epoch.
-   */
-  "start": <number>,
-  /**
-   * Ending timestamp in milliseconds from the unix epoch.
-   */
-  "end": <number>,
-}
+```yml
+DateRange:
+  # Starting timestamp in milliseconds from the unix epoch.
+  start: required Number
+  # Ending timestamp in milliseconds from the unix epoch.
+  end: required Number
 ```
 
 ###### Example
 
-```javascript
+```json
 {"start": 1300000000000, "end": 1400000000000}
 ```
 
@@ -87,85 +100,62 @@ The __first__ element is the timestamp which is milliseconds from the unix epoch
 The __second__ element is the value.
 
 ###### Structure
-```javascript
-[<number>, <number>]
+```
+DataPoint: [Number, Number]
 ```
 
 ###### Example
 
-```javascript
+```json
 [1300000000000, 42.0]
 ```
 
 ### Statistics
 
+Comprehensive statistics about the executed query.
+
+This object contains tons of valuable information that should be analyzed on each request to get an idea of how __valid__ the result is.
+
 ###### Structure
-```javascript
-{
-  "aggregator": {
-    /**
-     * How many original datapoints were involved to perform the required
-     * aggregates.
-     */
-    "sampleSize": <number>,
-    /**
-     * How many original datapoints were out of bounds for the specified
-     * aggregate.
-     * This indicates that heroic has queried unecessary data from the backends.
-     */
-    "outOfBounds": <number>,
-  },
-  "row": {
-    /**
-     * How many successful database row was loaded into heroic.
-     */
-    "successful": <number>,
-    /**
-     * How many database rows failed to be loaded by heroic.
-     */
-    "failed": <number>,
-    /**
-     * How many row fetches were cancelled.
-     */
-    "cancelled": <number>,
-  },
-  "cache": {
-    /**
-     * How many resulting data points could be fetched from cache.
-     */
-    "hits": <number>,
-    /**
-     * How many cached data points conflicted with each other.
-     */
-    "conflicts": <number>,
-    /**
-     * How many calculated data points conflicted with the ones from cache.
-     */
-    "cacheConflicts": <number>,
-    /**
-     * How many cached NaN's that were loaded.
-     */
-    "cachedNans": <number>,
-  },
-  "rpc": {
-    /**
-     * How many successful RPC requests were executed for this query.
-     */
-    "successful": <number>,
-    /**
-     * How many failed RPC requests.
-     */
-    "failed": <number>,
-    /**
-     * How many cluster nodes were considered online during the query.
-     */
-    "onlineNodes": <number>,
-    /**
-     * How many cluster nodes were considered offline during the query.
-     */
-    "offlineNodes": <number>,
-  },
-}
+```yml
+Statistics:
+  # Aggregator statistics for a query.
+  aggregator:
+    #  How many original datapoints were involved to perform the required
+    # aggregates.
+    sampleSize: required Number
+    # How many original datapoints were out of bounds for the specified
+    # aggregate.
+    # This indicates that heroic has queried unecessary data from the backends.
+    outOfBounds: required Number
+  # Cassandra row statistics for a query.
+  row:
+    # How many successful database row was loaded into heroic.
+    successful: required Number
+    # How many database rows failed to be loaded by heroic.
+    failed: required Number
+    # How many row fetches were cancelled.
+    cancelled: required Number
+  # Cache statistics for a query.
+  cache:
+    # How many resulting data points could be fetched from cache.
+    hits: required Number
+    # How many cached data points conflicted with each other.
+    conflicts: required Number
+    # How many calculated data points conflicted with the ones from cache.
+    cacheConflicts: required Number
+    # How many cached NaN's that were loaded.
+    cachedNans: required Number
+  # RPC statistics for a query.
+  rpc:
+    # How many successful RPC requests were executed for this query.
+    successful: required Number
+    # How many failed RPC requests.
+    failed: required Number
+    # How many cluster nodes were considered online during the query.
+    onlineNodes: required Number
+    # How many cluster nodes were considered offline during the query.
+    offlineNodes: required Number
 ```
 
 This statistics object is useful for determining the correctness of the query.
@@ -183,12 +173,75 @@ be considered an error.
 If any of these are true, an error should be displayed to the user telling them
 that the time series they are seeing is probably inconsistent.
 
+###### Example
+
+```json
+{
+  "aggregator": {
+    "sampleSize": 100,
+    "outOfBounds": 0
+  },
+  "row": {
+    "successful": 10,
+    "failed": 0,
+    "cancelled": 0
+  },
+  "cache": {
+    "hits": 100,
+    "conflicts": 0,
+    "cacheConflicts": 0,
+    "cachedNans": 0
+  },
+  "rpc": {
+    "successful": 3,
+    "failed": 0,
+    "onlineNodes": 12,
+    "offlineNodes": 0
+  }
+}
+```
+
 ### FilterStatement
+
+A filter statement is a recursive structure that allows you to define a filter for which time series should be selected for a specific query.
 
 ###### Structure
 
-```javascript
-[<"and"|"or"|"="|"+"|"key">, ..]
+```yml
+# Root filter statement.
+FilterStatement: AndFilter | OrFilter | NotFilter | MatchKeyFilter | MatchTagFilter | HasTagFilter
+
+# Match only if all child filter statements match.
+AndFilter: ["and", FilterStatement, ..]
+
+# Match if any child filter statements match.
+OrFilter: ["or", FilterStatement, ..]
+
+# Match if child filter statement does not match.
+NotFilter: ["not", FilterStatement]
+
+# Match if a time series has the specified key.
+MatchKeyFilter: ["key", String]
+
+# Match if a time series has the specified tag and value combination.
+MatchTagFilter: ["=", String, String]
+
+# Match if a time series has the specified tag.
+HasTagFilter: ["+", String]
+```
+
+###### Example
+
+The following example will select time series that the key is either <code>foo</code> or <code>bar</code>, the <code>host</code> tag is set to <code>foo.example.com</code>, the <code>role</code> tag is set to <code>example</code>, a tag called <code>site</code> is present, and that the <code>site</code> tag is _not_ equal to <code>lon</code>. 
+
+```json
+["and",
+  ["or", ["key", "foo"], ["key", "bar"]],
+  ["=", "host", "foo.example.com"],
+  ["=", "role", "example"],
+  ["+", "site"],
+  ["not", ["=", "site", "lon"]]
+]
 ```
 
 ### MetricsRequest
@@ -197,24 +250,35 @@ A request for metrics.
 
 ###### Structure
 
-```javascript
+```yml
+MetricsRequest:
+  # The time range for which to query.
+  range: required DateRangeRequest
+  # The key to query for
+  key: required String
+  # A statement used to filter down the selected time series.
+  filter: optional FilterStatement
+  # A list of tags which will be used to group the result.
+  groupBy: optional [String, ..]
+  # The chain of aggregators to use for this request.
+  aggregators: optional [AggregatorRequest, ..]
+  # Match the exact set of tags specified (will deprecated in favor of only "filter").
+  tags: optional {String: String, ..}
+  # Match that the specified tag names are present (will deprecated in favor of only "filter").
+  hasTags: optional [String, ..]
+```
+
+###### Example
+
+```json
 {
-  /**
-   * A statement used to filter down the selected time series.
-   */
-  "filter": <FilterStatement>,
-  /**
-   * A list of tags which will be used to group the result.
-   */
-  "groupBy": [<string>, ..],
-  /**
-   * The time range for which to query.
-   */
-  "range": <DateRangeRequest>,
-  /**
-   * The chain of aggregators to use for this request.
-   */
-  "aggregators": [<AggregatorRequest>, ..]
+  "range": {"type": "relative"},
+  "key": "foo",
+  "filter": ["key", "foo"],
+  "groupBy": ["site"],
+  "aggregators": [],
+  "tags": {"foo": "bar"},
+  "hasTags": ["role"]
 }
 ```
 
@@ -223,34 +287,45 @@ A request for metrics.
 The result of a query.
 
 ###### Structure
-```javascript
-{
-  /**
-   * The date range that was queries.
-   */
-  "range": <DateRange>,
-  /**
-   * An array of results.
-   */
-  "result": [{
-    /* An unique hash for this specific time series. */
-    "hash": <string>,
-    /* The key of the time series. */
-    "key": <string>,
-    /* The tags of the time series. */
-    "tags": {<string>: <string>, ...},
-    /* An array of datapoints. */
-    "values": [<DataPoint>, ...],
-  }, ...],
-  /**
-   * Statistics about the current query.
-   * This field should be inspected for errors which will have caused the result
-   * to be inconsistent.
-   */
-  "statistics": <Statistics>,
+```yml
+MetricsResponse:
+  # The range which this result contains.
+  range: required DateRange
+  # An array of results.
+  result: required [ResultGroup, ..]
+  # Statistics about the current query.
+  # This field should be inspected for errors which will have caused the result
+  # to be inconsistent.
+  statistics: required Statistics
+  
+ResultGroup:
+  # An unique hash for this specific time series.
+  hash: required String
+  # The key of the time series.
+  key: required String
+  # The tags of the time series group (only for groupBy).
+  # If groupBy for the request is empty, this will be an empty object.
+  tags: required {String: String, ..}
+  # An array of data points.
+  values: required [DataPoint, ..]
 ```
 
 ###### Example
-```
-TODO: Make example
+```json
+{
+  "result": [
+    {
+      "hash": "deadbeef",
+      "tags": {"foo": "bar"},
+      "values": [[1300000000000, 42.0]]
+    },
+    {
+      "hash": "beefdead",
+      "tags": {"foo": "baz"},
+      "values": [[1300000000000, 42.0]]
+    }
+  ],
+  "range": ...,
+  "statistics": ...
+}
 ```
