@@ -10,7 +10,7 @@ import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.WriteEntry;
+import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.ValidationException;
@@ -51,7 +51,7 @@ public interface Backend extends Lifecycle {
 	 * @param write
 	 * @return
 	 */
-	public Callback<WriteResponse> write(WriteEntry write);
+	public Callback<WriteResponse> write(WriteMetric write);
 
 	/**
 	 * Write a collection of datapoints for a specific time series.
@@ -62,7 +62,7 @@ public interface Backend extends Lifecycle {
 	 *            Datapoints to write.
 	 * @return A callback indicating if the write was successful or not.
 	 */
-	public Callback<WriteResponse> write(Collection<WriteEntry> writes);
+	public Callback<WriteResponse> write(Collection<WriteMetric> writes);
 
 	/**
 	 * Query for data points that is part of the specified list of rows and

@@ -37,7 +37,7 @@ import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.WriteEntry;
+import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
@@ -119,14 +119,14 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 	private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
 	@Override
-	public Callback<WriteResponse> write(WriteEntry write) {
-		final Collection<WriteEntry> writes = new ArrayList<WriteEntry>();
+	public Callback<WriteResponse> write(WriteMetric write) {
+		final Collection<WriteMetric> writes = new ArrayList<WriteMetric>();
 		writes.add(write);
 		return write(writes);
 	}
 
 	@Override
-	public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
+	public Callback<WriteResponse> write(final Collection<WriteMetric> writes) {
 		final Keyspace keyspace = keyspace();
 
 		if (keyspace == null)
@@ -138,7 +138,7 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
 		final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
-		for (final WriteEntry write : writes) {
+		for (final WriteMetric write : writes) {
 			for (final DataPoint d : write.getData()) {
 				final long base = MetricsRowKeySerializer.getBaseTimestamp(d
 						.getTimestamp());
@@ -157,13 +157,16 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 			}
 		}
 
+		final int size = writes.size();
+
 		final Callback.Resolver<WriteResponse> resolver = new Callback.Resolver<WriteResponse>() {
 			@Override
 			public WriteResponse resolve() throws Exception {
 				mutation.execute();
-				return new WriteResponse(1);
+				return new WriteResponse(size);
 			}
 		};
+
 		return ConcurrentCallback.newResolve(pools.write(), resolver).register(
 				reporter.reportWriteBatch());
 	}
@@ -189,26 +192,26 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
 		return ConcurrentCallback.newResolve(pools.read(),
 				new Callback.Resolver<Integer>() {
-					@Override
-					public Integer resolve() throws Exception {
-						for (final DataPoint d : datapoints) {
-							keyspace.prepareQuery(CQL3_CF)
-									.withCql(INSERT_METRICS_CQL)
-									.asPreparedStatement()
-									.withByteBufferValue(rowKey,
-											MetricsRowKeySerializer.get())
-									.withByteBufferValue(
-											MetricsRowKeySerializer
-													.calculateColumnKey(d
-															.getTimestamp()),
+			@Override
+			public Integer resolve() throws Exception {
+				for (final DataPoint d : datapoints) {
+					keyspace.prepareQuery(CQL3_CF)
+					.withCql(INSERT_METRICS_CQL)
+					.asPreparedStatement()
+					.withByteBufferValue(rowKey,
+							MetricsRowKeySerializer.get())
+							.withByteBufferValue(
+									MetricsRowKeySerializer
+									.calculateColumnKey(d
+											.getTimestamp()),
 											IntegerSerializer.get())
-									.withByteBufferValue(d.getValue(),
-											DoubleSerializer.get()).execute();
-						}
+											.withByteBufferValue(d.getValue(),
+													DoubleSerializer.get()).execute();
+				}
 
-						return datapoints.size();
-					}
-				});
+				return datapoints.size();
+			}
+		});
 	}
 
 	@Override
@@ -250,25 +253,25 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 				.autoPaginate(true)
 				.withColumnRange(
 						new RangeBuilder()
-								.setStart(
-										MetricsRowKeySerializer
-												.calculateColumnKey(newRange
-														.getStart()))
-								.setEnd(MetricsRowKeySerializer
-										.calculateColumnKey(newRange.getEnd()))
-								.build());
+						.setStart(
+								MetricsRowKeySerializer
+								.calculateColumnKey(newRange
+										.getStart()))
+										.setEnd(MetricsRowKeySerializer
+												.calculateColumnKey(newRange.getEnd()))
+												.build());
 
 		return ConcurrentCallback.newResolve(pools.read(),
 				new Callback.Resolver<FetchDataPoints.Result>() {
-					@Override
-					public Result resolve() throws Exception {
-						final OperationResult<ColumnList<Integer>> result = dataQuery
-								.execute();
-						final List<DataPoint> datapoints = buildDataPoints(key,
-								result);
-						return new FetchDataPoints.Result(datapoints, timeSerie);
-					}
-				});
+			@Override
+			public Result resolve() throws Exception {
+				final OperationResult<ColumnList<Integer>> result = dataQuery
+						.execute();
+				final List<DataPoint> datapoints = buildDataPoints(key,
+						result);
+				return new FetchDataPoints.Result(datapoints, timeSerie);
+			}
+		});
 	}
 
 	@Override

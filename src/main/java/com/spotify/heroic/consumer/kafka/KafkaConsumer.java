@@ -17,10 +17,17 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledException;
+import com.spotify.heroic.async.FailedException;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
+import com.spotify.heroic.consumer.WriteBatcher;
+import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.model.WriteMetric;
+import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -56,6 +63,8 @@ public class KafkaConsumer implements Consumer {
 	private final ConsumerSchema schema;
 
 	private volatile boolean running = false;
+
+	private final WriteBatcher batcher = new WriteBatcher();
 
 	@Inject
 	private MetadataBackendManager metadata;
@@ -132,5 +141,48 @@ public class KafkaConsumer implements Consumer {
 		}
 
 		return streamsMap;
+	}
+
+	@Override
+	public void write(WriteMetric entry) throws WriteException {
+		final List<WriteMetric> flush = batcher.write(entry);
+
+		if (flush == null) {
+			return;
+		}
+
+		WriteResponse result;
+
+		try {
+			result = metric.write(flush).get();
+		} catch (final InterruptedException e) {
+			throw new WriteException("Write batch interrupted", e);
+		} catch (final CancelledException e) {
+			throw new WriteException("Write batch cancelled: " + e.getReason(),
+					e);
+		} catch (final FailedException e) {
+			throw new WriteException("Write batch failed: " + e.getCause());
+		}
+
+		log.info(String
+				.format("Write batch finished (successful=%d, cancelled=%d, failed=%d)",
+						result.getSuccessful(), result.getCancelled().size(),
+						result.getFailed().size()));
+
+		for (final CancelReason reason : result.getCancelled()) {
+			log.error("Write cancelled: " + reason);
+		}
+
+		for (final Exception e : result.getFailed()) {
+			log.error("Write failed", e);
+		}
+
+		final int failCount = result.getCancelled().size()
+				+ result.getFailed().size();
+
+		if (failCount != 0) {
+			throw new WriteException(
+					"Some writes either failed or were cancelled.");
+		}
 	}
 }

@@ -5,7 +5,7 @@ import java.util.Collection;
 import lombok.Data;
 
 @Data
-public final class WriteEntry {
+public final class WriteMetric {
     private final TimeSerie timeSerie;
     private final Collection<DataPoint> data;
 }

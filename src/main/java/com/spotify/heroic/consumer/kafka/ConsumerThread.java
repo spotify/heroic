@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
-import com.spotify.heroic.consumer.ConsumerSchemaException;
+import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 @RequiredArgsConstructor
@@ -37,7 +37,7 @@ public final class ConsumerThread implements Runnable {
 
 			try {
 				schema.consume(consumer, body);
-			} catch (final ConsumerSchemaException e) {
+			} catch (final SchemaValidationException e) {
 				reporter.reportConsumerSchemaError();
 			} catch (final Exception e) {
 				log.error("Failed to consume", e);

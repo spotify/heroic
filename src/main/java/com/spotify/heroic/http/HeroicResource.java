@@ -79,7 +79,7 @@ import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.WriteEntry;
+import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.model.filter.AndFilter;
 import com.spotify.heroic.model.filter.Filter;
@@ -366,10 +366,10 @@ public class HeroicResource {
 			WriteMetricsRequest write) {
 		log.info("POST /write: {}", write);
 
-		final WriteEntry entry = new WriteEntry(write.getTimeSerie(),
+		final WriteMetric entry = new WriteMetric(write.getTimeSerie(),
 				write.getData());
 
-		final List<WriteEntry> writes = new ArrayList<WriteEntry>();
+		final List<WriteMetric> writes = new ArrayList<WriteMetric>();
 		writes.add(entry);
 
 		HttpAsyncUtils.handleAsyncResume(response, metrics.write(writes),

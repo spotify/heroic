@@ -43,7 +43,7 @@ import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.WriteEntry;
+import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
@@ -192,7 +192,7 @@ public class MetricBackendManager {
 		void run(int disabled, Backend backend) throws Exception;
 	}
 
-	public Callback<WriteResponse> write(final Collection<WriteEntry> writes) {
+	public Callback<WriteResponse> write(final Collection<WriteMetric> writes) {
 		final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
 
 		with(new BackendOperation() {
@@ -204,7 +204,7 @@ public class MetricBackendManager {
 
 		// Send new time series to metadata backends.
 		if (updateMetadata) {
-			for (final WriteEntry entry : writes) {
+			for (final WriteMetric entry : writes) {
 				if (metadata.isReady())
 					callbacks.add(metadata.write(entry.getTimeSerie()));
 			}
