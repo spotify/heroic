@@ -5,9 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-import lombok.Getter;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import org.yaml.snakeyaml.TypeDescription;
@@ -29,6 +28,7 @@ import com.spotify.heroic.metrics.kairosdb.KairosBackend;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
+@Data
 public class HeroicConfig {
 	public static final long MAX_AGGREGATION_MAGNITUDE = 300000;
 	public static final boolean UPDATE_METADATA = false;
@@ -38,34 +38,15 @@ public class HeroicConfig {
 	public static final int DEFAULT_GROUP_LIMIT = 500;
 	public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
 
-	@Getter
 	private final ClusterManager cluster;
-
-	@Getter
 	private final List<Backend> metricBackends;
-
-	@Getter
 	private final List<MetadataBackend> metadataBackends;
-
-	@Getter
 	private final List<Consumer> consumers;
-
-	@Getter
 	private final AggregationCache aggregationCache;
-
-	@Getter
 	private final boolean updateMetadata;
-
-	@Getter
 	private final int port;
-
-	@Getter
 	private final String refreshClusterSchedule;
-
-	@Getter
 	private final int groupLimit;
-
-	@Getter
 	private final int groupLoadLimit;
 
 	private static final TypeDescription[] TYPES = new TypeDescription[] {
@@ -89,8 +70,7 @@ public class HeroicConfig {
 		final AggregationCache cache = new AggregationCache(
 				reporter.newAggregationCache(null),
 				new InMemoryAggregationCacheBackend());
-		final ClusterManager cluster = new ClusterManager(null,
-				UUID.randomUUID(), null);
+		final ClusterManager cluster = null;
 		final List<Backend> metricBackends = new ArrayList<Backend>();
 		final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
 		final List<Consumer> consumers = new ArrayList<Consumer>();

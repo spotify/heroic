@@ -76,10 +76,16 @@ public class HeroicConfigYAML {
 
 	public HeroicConfig build(HeroicReporter reporter)
 			throws ValidationException {
-		final ClusterManager cluster = this.cluster.build("cluster");
+		final ClusterManager cluster;
 
-		final List<Backend> metricBackends = setupMetricBackends(
-				"backends", reporter);
+		if (this.cluster != null) {
+			cluster = this.cluster.build("cluster");
+		} else {
+			cluster = null;
+		}
+
+		final List<Backend> metricBackends = setupMetricBackends("backends",
+				reporter);
 		final List<MetadataBackend> metadataBackends = setupMetadataBackends(
 				"metadataBackends", reporter);
 		final List<Consumer> consumers = setupConsumers("consumers", reporter);

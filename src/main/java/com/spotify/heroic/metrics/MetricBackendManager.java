@@ -65,6 +65,7 @@ public class MetricBackendManager {
 	private MetadataBackendManager metadata;
 
 	@Inject
+	@Nullable
 	private ClusterManager cluster;
 
 	/**
@@ -87,6 +88,10 @@ public class MetricBackendManager {
 		@Override
 		public Callback<MetricGroups> transform(
 				List<RemoteGroupedTimeSeries> grouped) throws Exception {
+			if (cluster == null)
+				throw new IllegalStateException(
+						"Service is not configured as a cluster");
+
 			final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
 
 			for (final RemoteGroupedTimeSeries group : grouped) {

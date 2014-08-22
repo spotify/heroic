@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -110,6 +111,7 @@ public class HeroicResource {
 	private Set<MetadataBackend> metadataBackends;
 
 	@Inject
+	@Nullable
 	private ClusterManager cluster;
 
 	public static final class Message {
@@ -140,6 +142,9 @@ public class HeroicResource {
 	}
 
 	private ClusterStatusResponse buildClusterStatus() {
+		if (cluster == null)
+			return null;
+
 		final ClusterManager.Statistics s = cluster.getStatistics();
 
 		final ClusterStatusResponse cluster;
