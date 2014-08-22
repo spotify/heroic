@@ -19,25 +19,25 @@ import com.spotify.heroic.http.rpc.RpcResource;
 
 @Slf4j
 public class WebApp extends ResourceConfig {
-    @Inject
-    public WebApp(ServiceLocator serviceLocator) {
-        log.info("Setting up Web Application");
+	@Inject
+	public WebApp(ServiceLocator serviceLocator) {
+		log.info("Setting up Web Application");
 
-        register(JacksonJsonProvider.class);
-        register(HeroicExceptionMapper.class);
-        register(UnrecognizedPropertyExceptionMapper.class);
-        register(CustomExceptionMapper.class);
-        register(SseFeature.class);
+		register(JacksonJsonProvider.class);
+		register(HeroicExceptionMapper.class);
+		register(UnrecognizedPropertyExceptionMapper.class);
+		register(CustomExceptionMapper.class);
+		register(SseFeature.class);
 
-        // Resources.
-        register(HeroicResource.class);
-        register(RpcResource.class);
+		// Resources.
+		register(HeroicResource.class);
+		register(RpcResource.class);
 
-        GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
+		GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 
-        final GuiceIntoHK2Bridge bridge = serviceLocator
-                .getService(GuiceIntoHK2Bridge.class);
+		final GuiceIntoHK2Bridge bridge = serviceLocator
+				.getService(GuiceIntoHK2Bridge.class);
 
-        bridge.bridgeGuiceInjector(Main.injector);
-    }
+		bridge.bridgeGuiceInjector(Main.injector);
+	}
 }

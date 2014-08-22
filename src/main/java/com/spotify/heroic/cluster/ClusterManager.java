@@ -1,111 +1,71 @@
 package com.spotify.heroic.cluster;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.cluster.async.ClusterNodeLogHandle;
-import com.spotify.heroic.cluster.async.NodeRegistryEntryReducer;
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.yaml.Utils;
-import com.spotify.heroic.yaml.ValidationException;
 
-@Slf4j
-@RequiredArgsConstructor
-public class ClusterManager {
-	@Data
-	public static final class YAML {
-		private ClusterDiscovery.YAML discovery;
-		private Map<String, String> tags = new HashMap<String, String>();
-
-		public ClusterManager build(String context) throws ValidationException {
-			Utils.notNull(context + ".discovery", discovery);
-			Utils.notEmpty(context + ".tags", tags);
-			final ClusterDiscovery discovery = this.discovery.build(context
-					+ ".discovery");
-			return new ClusterManager(discovery, UUID.randomUUID(), tags);
-		}
-	}
-
+public interface ClusterManager {
 	@Data
 	public static final class Statistics {
 		private final int onlineNodes;
 		private final int offlineNodes;
 	}
 
-	private final ClusterDiscovery discovery;
+	/**
+	 * Sooo, why invent another null value?
+	 *
+	 * Mainly because GuiceIntoHK2Bridge does not support injection of null
+	 * values in resources.
+	 *
+	 * @author udoprog
+	 */
+	public static final class Null implements ClusterManager {
+		private static final CancelReason NOT_ENABLED = new CancelReason(
+				"cluster manager not enabled");
 
-	@Getter
-	private final UUID localNodeId;
-	@Getter
-	private final Map<String, String> localNodeTags;
-
-	private final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
-
-	public final NodeRegistryEntry findNode(final Map<String, String> tags) {
-		final NodeRegistry registry = this.registry.get();
-
-		if (registry == null) {
-			throw new IllegalStateException("Registry not ready");
+		private Null() {
 		}
 
-		return registry.findEntry(tags);
+		@Override
+		public UUID getLocalNodeId() {
+			throw new NullPointerException();
+		}
+
+		@Override
+		public Map<String, String> getLocalNodeTags() {
+			throw new NullPointerException();
+		}
+
+		@Override
+		public NodeRegistryEntry findNode(Map<String, String> tags) {
+			throw new NullPointerException();
+		}
+
+		@Override
+		public Callback<Void> refresh() {
+			throw new NullPointerException();
+		}
+
+		@Override
+		public Statistics getStatistics() {
+			throw new NullPointerException();
+		}
 	}
 
-	public Callback<Void> refresh() throws Exception {
-		log.info("Cluster refresh in progress");
-		final Callback<Collection<ClusterNode>> callback = discovery.getNodes();
-		return callback
-				.transform(new Callback.DeferredTransformer<Collection<ClusterNode>, Void>() {
-					@Override
-					public Callback<Void> transform(
-							Collection<ClusterNode> result) throws Exception {
-						final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>();
+	public static final ClusterManager NULL = new Null();
 
-						for (final ClusterNode clusterNode : result) {
-							final Callback<NodeRegistryEntry> transform = clusterNode
-									.getMetadata()
-									.transform(
-											new Callback.Transformer<NodeMetadata, NodeRegistryEntry>() {
-												@Override
-												public NodeRegistryEntry transform(
-														NodeMetadata result)
-														throws Exception {
-													return new NodeRegistryEntry(
-															clusterNode, result);
-												}
-											});
-							transform.register(new ClusterNodeLogHandle(
-									clusterNode));
-							callbacks.add(transform);
-						}
-						return ConcurrentCallback.newReduce(
-								callbacks,
-								new NodeRegistryEntryReducer(registry, result
-										.size()));
-					}
-				});
-	}
+	public UUID getLocalNodeId();
 
-	public Statistics getStatistics() {
-		final NodeRegistry registry = this.registry.get();
+	public Map<String, String> getLocalNodeTags();
 
-		if (registry == null)
-			return null;
+	public NodeRegistryEntry findNode(final Map<String, String> tags);
 
-		return new Statistics(registry.getOnlineNodes(),
-				registry.getOfflineNodes());
-	}
+	public Callback<Void> refresh();
+
+	public Statistics getStatistics();
 }

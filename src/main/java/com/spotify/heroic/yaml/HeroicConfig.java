@@ -50,13 +50,13 @@ public class HeroicConfig {
 	private final int groupLoadLimit;
 
 	private static final TypeDescription[] TYPES = new TypeDescription[] {
-		Utils.makeType(HeroicBackend.YAML.class),
-		Utils.makeType(KairosBackend.YAML.class),
-		Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-		Utils.makeType(CassandraCache.YAML.class),
-		Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
-		Utils.makeType(KafkaConsumer.YAML.class),
-		Utils.makeType(StaticListDiscovery.YAML.class) };
+			Utils.makeType(HeroicBackend.YAML.class),
+			Utils.makeType(KairosBackend.YAML.class),
+			Utils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+			Utils.makeType(CassandraCache.YAML.class),
+			Utils.makeType(ElasticSearchMetadataBackend.YAML.class),
+			Utils.makeType(KafkaConsumer.YAML.class),
+			Utils.makeType(StaticListDiscovery.YAML.class) };
 
 	private static final class CustomConstructor extends Constructor {
 		public CustomConstructor() {
@@ -70,7 +70,7 @@ public class HeroicConfig {
 		final AggregationCache cache = new AggregationCache(
 				reporter.newAggregationCache(null),
 				new InMemoryAggregationCacheBackend());
-		final ClusterManager cluster = null;
+		final ClusterManager cluster = ClusterManager.NULL;
 		final List<Backend> metricBackends = new ArrayList<Backend>();
 		final List<MetadataBackend> metadataBackends = new ArrayList<MetadataBackend>();
 		final List<Consumer> consumers = new ArrayList<Consumer>();

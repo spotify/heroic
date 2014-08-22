@@ -1,6 +1,5 @@
 package com.spotify.heroic.http.rpc;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -29,7 +28,6 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 @Consumes(MediaType.APPLICATION_JSON)
 public class RpcResource {
 	@Inject
-	@Nullable
 	private ClusterManager cluster;
 
 	@Inject
@@ -40,7 +38,7 @@ public class RpcResource {
 	public Response getMetadata() {
 		log.info("GET /rpc/metadata");
 
-		if (cluster == null) {
+		if (cluster == ClusterManager.NULL) {
 			return Response
 					.status(Response.Status.NOT_IMPLEMENTED)
 					.entity(new ErrorMessage(

@@ -62,11 +62,10 @@ public class MetricBackendManager {
 	private AggregationCache aggregationCache;
 
 	@Inject
-	private MetadataBackendManager metadata;
+	private ClusterManager cluster;
 
 	@Inject
-	@Nullable
-	private ClusterManager cluster;
+	private MetadataBackendManager metadata;
 
 	/**
 	 * Used for deferring work to avoid deep stack traces.
@@ -88,7 +87,7 @@ public class MetricBackendManager {
 		@Override
 		public Callback<MetricGroups> transform(
 				List<RemoteGroupedTimeSeries> grouped) throws Exception {
-			if (cluster == null)
+			if (cluster == ClusterManager.NULL)
 				throw new IllegalStateException(
 						"Service is not configured as a cluster");
 

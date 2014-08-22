@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -27,7 +26,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import lombok.Getter;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import org.glassfish.jersey.media.sse.EventOutput;
@@ -111,16 +110,11 @@ public class HeroicResource {
 	private Set<MetadataBackend> metadataBackends;
 
 	@Inject
-	@Nullable
 	private ClusterManager cluster;
 
+	@Data
 	public static final class Message {
-		@Getter
 		private final String message;
-
-		public Message(String message) {
-			this.message = message;
-		}
 	}
 
 	@GET
@@ -142,15 +136,13 @@ public class HeroicResource {
 	}
 
 	private ClusterStatusResponse buildClusterStatus() {
-		if (cluster == null)
-			return null;
+		if (cluster == ClusterManager.NULL)
+			return new ClusterStatusResponse(true, 0, 0);
 
 		final ClusterManager.Statistics s = cluster.getStatistics();
 
-		final ClusterStatusResponse cluster;
-
 		if (s == null)
-			return new ClusterStatusResponse(false, 0, 0);
+			return new ClusterStatusResponse(true, 0, 0);
 
 		return new ClusterStatusResponse(s.getOfflineNodes() == 0,
 				s.getOnlineNodes(), s.getOfflineNodes());

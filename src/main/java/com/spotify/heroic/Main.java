@@ -89,17 +89,14 @@ public class Main {
 		final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
 		final AggregationCache cache = config.getAggregationCache();
 
-		final List<Backend> metricBackends = config.getMetricBackends();
-		final List<MetadataBackend> metadataBackends = config
-				.getMetadataBackends();
-
 		final MetricBackendManager metric = new MetricBackendManager(
-				reporter.newMetricBackendManager(), metricBackends,
+				reporter.newMetricBackendManager(), config.getMetricBackends(),
 				config.isUpdateMetadata(), config.getGroupLimit(),
 				config.getGroupLoadLimit());
 
 		final MetadataBackendManager metadata = new MetadataBackendManager(
-				reporter.newMetadataBackendManager(), metadataBackends);
+				reporter.newMetadataBackendManager(),
+				config.getMetadataBackends());
 
 		final ClusterManager cluster = config.getCluster();
 
@@ -113,29 +110,30 @@ public class Main {
 					bind(AggregationCache.class).toInstance(cache);
 				}
 
+				bind(ClusterManager.class).toInstance(cluster);
 				bind(MetricBackendManager.class).toInstance(metric);
 				bind(MetadataBackendManager.class).toInstance(metadata);
 				bind(StoredMetricQueries.class)
-						.toInstance(storedMetricsQueries);
+				.toInstance(storedMetricsQueries);
 				bind(ClusterManager.class).toInstance(cluster);
 
-				multiBind(metricBackends, Backend.class);
-				multiBind(metadataBackends, MetadataBackend.class);
+				multiBind(config.getMetricBackends(), Backend.class);
+				multiBind(config.getMetadataBackends(), MetadataBackend.class);
 				multiBind(config.getConsumers(), Consumer.class);
 
 				bindListener(new IsSubclassOf(Lifecycle.class),
 						new TypeListener() {
+					@Override
+					public <I> void hear(TypeLiteral<I> type,
+							TypeEncounter<I> encounter) {
+						encounter.register(new InjectionListener<I>() {
 							@Override
-							public <I> void hear(TypeLiteral<I> type,
-									TypeEncounter<I> encounter) {
-								encounter.register(new InjectionListener<I>() {
-									@Override
-									public void afterInjection(Object i) {
-										managed.add((Lifecycle) i);
-									}
-								});
+							public void afterInjection(Object i) {
+								managed.add((Lifecycle) i);
 							}
 						});
+					}
+				});
 			}
 
 			private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -258,6 +256,8 @@ public class Main {
 				"");
 
 		context.addListener(Main.LISTENER);
+		context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
+		.addMappingForUrlPatterns(null, "/*");
 
 		// Initialize and register Jersey ServletContainer
 		final ServletRegistration servletRegistration = context.addServlet(
