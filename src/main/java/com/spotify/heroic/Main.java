@@ -15,6 +15,9 @@ import javax.ws.rs.core.UriBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.servlet.FilterRegistration;
 import org.glassfish.grizzly.servlet.ServletRegistration;
@@ -186,8 +189,9 @@ public class Main {
 		final CountDownLatch latch = new CountDownLatch(1);
 
 		Runtime.getRuntime().addShutdownHook(
-				new Thread(setupShutdownHook(ffwd, server, scheduler, latch)));
+				setupShutdownHook(ffwd, server, scheduler, latch));
 
+		log.info("Heroic was Successfully Started");
 		latch.await();
 		System.exit(0);
 	}
@@ -298,14 +302,15 @@ public class Main {
 		return ffwd;
 	}
 
-	private static Runnable setupShutdownHook(final FastForwardReporter ffwd,
+	private static Thread setupShutdownHook(final FastForwardReporter ffwd,
 			final HttpServer server, final Scheduler scheduler,
 			final CountDownLatch latch) {
-		return new Runnable() {
+		return new Thread() {
 			@Override
 			public void run() {
-				log.warn("Shutting down scheduler");
+				log.info("Shutting down Heroic");
 
+				log.info("Shutting down scheduler");
 				try {
 					scheduler.shutdown(true);
 				} catch (final SchedulerException e) {
@@ -313,17 +318,26 @@ public class Main {
 				}
 
 				try {
-					log.warn("Waiting for server to shutdown");
+					log.info("Waiting for server to shutdown");
 					server.shutdown().get(30, TimeUnit.SECONDS);
 				} catch (final Exception e) {
 					log.error("Server shutdown failed", e);
 				}
 
+				log.info("Stopping all life cycles");
 				stopLifecycle();
 
+				log.info("Stopping fast forward reporter");
 				ffwd.stop();
 
-				log.warn("Bye Bye!");
+				if (LogManager.getContext() instanceof LoggerContext) {
+					log.info("Shutting down log4j2, Bye Bye!");
+					Configurator.shutdown((LoggerContext) LogManager
+							.getContext());
+				} else {
+					log.warn("Unable to shutdown log4j2, Bye Bye!");
+				}
+
 				latch.countDown();
 			}
 		};
