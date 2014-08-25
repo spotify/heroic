@@ -9,7 +9,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -56,7 +56,7 @@ public interface Backend extends Lifecycle {
     /**
      * Write a collection of datapoints for a specific time series.
      *
-     * @param timeSerie
+     * @param series
      *            Time serie to write to.
      * @param data
      *            Datapoints to write.
@@ -79,7 +79,7 @@ public interface Backend extends Lifecycle {
      * @throws QueryException
      */
     public List<Callback<FetchDataPoints.Result>> query(
-            final TimeSerie timeSerie, final DateRange range);
+            final Series series, final DateRange range);
 
     /**
      * Gets the total number of columns that are in the given rows
@@ -87,7 +87,7 @@ public interface Backend extends Lifecycle {
      * @param rows
      * @return
      */
-    public Callback<Long> getColumnCount(final TimeSerie timeSerie,
+    public Callback<Long> getColumnCount(final Series series,
             DateRange range);
 
     @Override

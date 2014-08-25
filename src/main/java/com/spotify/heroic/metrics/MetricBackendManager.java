@@ -24,8 +24,7 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.model.MetricsQueryResponse;
-import com.spotify.heroic.http.rpc.model.RpcQueryRequest;
+import com.spotify.heroic.http.rpc.model.RpcQueryBody;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
@@ -37,12 +36,13 @@ import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.model.filter.Filter;
@@ -73,8 +73,8 @@ public class MetricBackendManager {
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
     private final class RemoteTimeSeriesTransformer
-            implements
-            Callback.DeferredTransformer<List<RemoteGroupedTimeSeries>, MetricGroups> {
+    implements
+    Callback.DeferredTransformer<List<RemoteGroupedTimeSeries>, MetricGroups> {
         private final DateRange rounded;
         private final AggregationGroup aggregation;
 
@@ -94,8 +94,8 @@ public class MetricBackendManager {
             final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
 
             for (final RemoteGroupedTimeSeries group : grouped) {
-                final RpcQueryRequest request = new RpcQueryRequest(
-                        group.getKey(), group.getSeries(), rounded, aggregation);
+                final RpcQueryBody request = new RpcQueryBody(group.getKey(),
+                        group.getSeries(), rounded, aggregation);
                 callbacks.add(group.getNode().query(request));
             }
 
@@ -140,14 +140,14 @@ public class MetricBackendManager {
     }
 
     private final class FindAndRouteTransformer
-            implements
-            Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
+    implements
+    Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
         @Override
         public List<RemoteGroupedTimeSeries> transform(
                 final FindTimeSeriesGroups result) throws Exception {
             final List<RemoteGroupedTimeSeries> grouped = new ArrayList<>();
 
-            final Map<TimeSerie, Set<TimeSerie>> groups = result.getGroups();
+            final Map<Series, Set<Series>> groups = result.getGroups();
 
             if (groups.size() > groupLimit)
                 throw new IllegalArgumentException(
@@ -155,14 +155,13 @@ public class MetricBackendManager {
                                 + groupLimit
                                 + " timeseries would be sent to your browser).");
 
-            for (final Entry<TimeSerie, Set<TimeSerie>> group : groups
-                    .entrySet()) {
-                final Set<TimeSerie> timeseries = group.getValue();
+            for (final Entry<Series, Set<Series>> group : groups.entrySet()) {
+                final Set<Series> timeseries = group.getValue();
 
                 if (timeseries.isEmpty())
                     continue;
 
-                final TimeSerie one = timeseries.iterator().next();
+                final Series one = timeseries.iterator().next();
 
                 final NodeRegistryEntry node = cluster.findNode(one.getTags());
 
@@ -178,8 +177,8 @@ public class MetricBackendManager {
                                     + groupLoadLimit
                                     + " original time series would be loaded from Cassandra).");
 
-                for (final TimeSerie timeSerie : timeseries) {
-                    if (!node.getMetadata().matches(timeSerie.getTags()))
+                for (final Series series : timeseries) {
+                    if (!node.getMetadata().matches(series.getTags()))
                         throw new IllegalArgumentException(
                                 "The current query is too heavy! (Global aggregation not permitted)");
                 }
@@ -210,7 +209,7 @@ public class MetricBackendManager {
         if (updateMetadata) {
             for (final WriteMetric entry : writes) {
                 if (metadata.isReady())
-                    callbacks.add(metadata.write(entry.getTimeSerie()));
+                    callbacks.add(metadata.write(entry.getSeries()));
             }
         }
 
@@ -222,7 +221,7 @@ public class MetricBackendManager {
                 .newReduce(callbacks, MergeWriteResponse.get());
     }
 
-    public Callback<MetricsQueryResponse> queryMetrics(final Filter filter,
+    public Callback<QueryMetricsResult> queryMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation) throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
@@ -241,7 +240,7 @@ public class MetricBackendManager {
     public Callback<StreamMetricsResult> streamMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -281,7 +280,7 @@ public class MetricBackendManager {
                 });
     }
 
-    public Callback<MetricGroups> rpcQueryMetrics(RpcQueryRequest query) {
+    public Callback<MetricGroups> rpcQueryMetrics(RpcQueryBody query) {
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
                 aggregationCache, query.getAggregationGroup(), query.getRange());
 
@@ -328,7 +327,7 @@ public class MetricBackendManager {
                     return;
 
                 try {
-                    handle.stream(callback, new MetricsQueryResponse(
+                    handle.stream(callback, new QueryMetricsResult(
                             originalRange, result));
                 } catch (final Exception e) {
                     callback.fail(e);
@@ -350,7 +349,7 @@ public class MetricBackendManager {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -385,7 +384,7 @@ public class MetricBackendManager {
      *
      * This will take care not to select disabled or unavailable backends.
      */
-    private void with(final TimeSerie match, BackendOperation op) {
+    private void with(final Series match, BackendOperation op) {
         final List<Backend> alive = new ArrayList<Backend>();
 
         // Keep track of disabled partitions.
@@ -422,7 +421,7 @@ public class MetricBackendManager {
             final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer()).register(
-                reporter.reportFindTimeSeries());
+                        reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
@@ -433,8 +432,8 @@ public class MetricBackendManager {
         return metadata.findTimeSeries(metaQuery).transform(transformer);
     }
 
-    private Callback<List<GroupedTimeSeries>> groupTimeseries(
-            final TimeSerie key, final Set<TimeSerie> timeseries) {
+    private Callback<List<GroupedTimeSeries>> groupTimeseries(final Series key,
+            final Set<Series> timeseries) {
         final List<GroupedTimeSeries> grouped = new ArrayList<>();
 
         with(new BackendOperation() {

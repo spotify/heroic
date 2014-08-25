@@ -12,13 +12,13 @@ import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
-import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.SeriesSlice;
 
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
-    private final TimeSerieSlice slice;
+Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+    private final SeriesSlice slice;
     private final Aggregation.Session session;
 
     @Override
@@ -45,10 +45,10 @@ public class AggregatedCallbackStream implements
                 .aggregator(result.getStatistics())
                 .row(new Statistics.Row(successful, failed, cancelled)).build();
 
-        final TimeSerie timeSerie = slice.getTimeSerie();
+        final Series series = slice.getSeries();
 
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
-        groups.add(new MetricGroup(timeSerie, result.getResult()));
+        groups.add(new MetricGroup(series, result.getResult()));
 
         return new MetricGroups(groups, stat);
     }

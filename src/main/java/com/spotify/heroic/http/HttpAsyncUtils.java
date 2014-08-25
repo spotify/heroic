@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.http.model.MessageResponse;
 
 @Slf4j
 public final class HttpAsyncUtils {
@@ -34,7 +35,7 @@ public final class HttpAsyncUtils {
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
                         .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new ErrorMessage("Request cancelled: " + reason))
+                        .entity(new MessageResponse("Request cancelled: " + reason))
                         .build());
             }
 

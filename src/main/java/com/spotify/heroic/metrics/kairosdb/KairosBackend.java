@@ -32,7 +32,7 @@ import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -141,11 +141,11 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
     @Override
     public List<Callback<FetchDataPoints.Result>> query(
-            final TimeSerie timeSerie, final DateRange range) {
+            final Series series, final DateRange range) {
         final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
 
         for (final long base : buildBases(range)) {
-            final Callback<Result> partial = buildQuery(timeSerie, base, range);
+            final Callback<Result> partial = buildQuery(series, base, range);
 
             if (partial == null)
                 continue;
@@ -157,7 +157,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
     }
 
     private Callback<FetchDataPoints.Result> buildQuery(
-            final TimeSerie timeSerie, long base, DateRange queryRange) {
+            final Series series, long base, DateRange queryRange) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
@@ -165,7 +165,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
                     CancelReason.BACKEND_DISABLED);
 
         final DataPointsRowKey rowKey = new DataPointsRowKey(
-                timeSerie.getKey(), base, timeSerie.getTags());
+                series.getKey(), base, series.getTags());
         final DateRange rowRange = new DateRange(base, base
                 + DataPointsRowKey.MAX_WIDTH);
         final DateRange range = queryRange.modify(rowRange);
@@ -197,7 +197,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
                                 .execute();
                         final List<DataPoint> datapoints = buildDataPoints(
                                 rowKey, result);
-                        return new FetchDataPoints.Result(datapoints, timeSerie);
+                        return new FetchDataPoints.Result(datapoints, series);
                     }
 
                     private List<DataPoint> buildDataPoints(
@@ -230,7 +230,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
     }
 
     @Override
-    public Callback<Long> getColumnCount(final TimeSerie timeSerie,
+    public Callback<Long> getColumnCount(final Series series,
             final DateRange range) {
         final Keyspace keyspace = keyspace();
 
@@ -241,7 +241,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         for (final long base : buildBases(range)) {
             final DataPointsRowKey row = new DataPointsRowKey(
-                    timeSerie.getKey(), base, timeSerie.getTags());
+                    series.getKey(), base, series.getTags());
             callbacks.add(ConcurrentCallback.newResolve(pools.read(),
                     new RowCountTransformer(keyspace, range, row)));
         }

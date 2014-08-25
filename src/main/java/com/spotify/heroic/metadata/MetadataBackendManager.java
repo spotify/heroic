@@ -18,7 +18,7 @@ import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.MergeWriteResponse;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
@@ -28,12 +28,12 @@ public class MetadataBackendManager {
     private final MetadataBackendManagerReporter reporter;
     private final List<MetadataBackend> backends;
 
-    public Callback<WriteResponse> write(TimeSerie timeSerie) {
+    public Callback<WriteResponse> write(Series series) {
         final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.write(timeSerie));
+                callbacks.add(backend.write(series));
             } catch (final MetadataQueryException e) {
                 log.error("Failed to write to backend", e);
             }
@@ -72,28 +72,28 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
-                    @Override
-                    public FindTimeSeries resolved(
-                            Collection<FindTimeSeries> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public FindTimeSeries resolved(
+                    Collection<FindTimeSeries> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        return mergeFindTimeSeries(results);
-                    }
+                return mergeFindTimeSeries(results);
+            }
 
-                    private FindTimeSeries mergeFindTimeSeries(
-                            Collection<FindTimeSeries> results) {
-                        final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
-                        int size = 0;
+            private FindTimeSeries mergeFindTimeSeries(
+                    Collection<FindTimeSeries> results) {
+                final Set<Series> series = new HashSet<Series>();
+                int size = 0;
 
-                        for (final FindTimeSeries findTimeSeries : results) {
-                            timeSeries.addAll(findTimeSeries.getTimeSeries());
-                            size += findTimeSeries.getSize();
-                        }
+                for (final FindTimeSeries findTimeSeries : results) {
+                    series.addAll(findTimeSeries.getSeries());
+                    size += findTimeSeries.getSize();
+                }
 
-                        return new FindTimeSeries(timeSeries, size);
-                    }
-                }).register(reporter.reportFindTimeSeries());
+                return new FindTimeSeries(series, size);
+            }
+        }).register(reporter.reportFindTimeSeries());
     }
 
     public Callback<FindKeys> findKeys(final TimeSerieQuery query) {
@@ -109,26 +109,26 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<FindKeys, FindKeys>() {
-                    @Override
-                    public FindKeys resolved(Collection<FindKeys> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public FindKeys resolved(Collection<FindKeys> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        return mergeFindKeys(results);
-                    }
+                return mergeFindKeys(results);
+            }
 
-                    private FindKeys mergeFindKeys(Collection<FindKeys> results) {
-                        final Set<String> keys = new HashSet<String>();
-                        int size = 0;
+            private FindKeys mergeFindKeys(Collection<FindKeys> results) {
+                final Set<String> keys = new HashSet<String>();
+                int size = 0;
 
-                        for (final FindKeys findKeys : results) {
-                            keys.addAll(findKeys.getKeys());
-                            size += findKeys.getSize();
-                        }
+                for (final FindKeys findKeys : results) {
+                    keys.addAll(findKeys.getKeys());
+                    size += findKeys.getSize();
+                }
 
-                        return new FindKeys(keys, size);
-                    }
-                }).register(reporter.reportFindKeys());
+                return new FindKeys(keys, size);
+            }
+        }).register(reporter.reportFindKeys());
     }
 
     public Callback<Boolean> refresh() {
@@ -140,12 +140,12 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.DefaultStreamReducer<Void, Boolean>() {
-                    @Override
-                    public Boolean resolved(int successful, int failed,
-                            int cancelled) throws Exception {
-                        return failed == 0 && cancelled == 0;
-                    }
-                }).register(reporter.reportRefresh());
+            @Override
+            public Boolean resolved(int successful, int failed,
+                    int cancelled) throws Exception {
+                return failed == 0 && cancelled == 0;
+            }
+        }).register(reporter.reportRefresh());
     }
 
     public boolean isReady() {

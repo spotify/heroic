@@ -18,8 +18,8 @@ import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.SeriesSlice;
 
 @RequiredArgsConstructor
 public final class TimeSeriesTransformer implements
@@ -44,7 +44,7 @@ public final class TimeSeriesTransformer implements
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            final TimeSerieSlice slice = r.getKey().slice(range);
+            final SeriesSlice slice = r.getKey().slice(range);
             queries.add(buildLookup(r.getBackend(), slice, r.getSeries()));
         }
 
@@ -64,27 +64,27 @@ public final class TimeSeriesTransformer implements
     }
 
     private Callback<MetricGroups> buildCachedLookup(final Backend backend,
-            final TimeSerie timeSerie, final Set<TimeSerie> timeSeries) {
-        final CacheGetTransformer transformer = new CacheGetTransformer(
-                timeSerie, cache) {
+            final Series series, final Set<Series> seriesSet) {
+        final CacheGetTransformer transformer = new CacheGetTransformer(series,
+                cache) {
             @Override
-            public Callback<MetricGroups> cacheMiss(TimeSerieSlice slice)
+            public Callback<MetricGroups> cacheMiss(SeriesSlice slice)
                     throws Exception {
-                return buildLookup(backend, slice, timeSeries);
+                return buildLookup(backend, slice, seriesSet);
             }
         };
 
-        return cache.get(timeSerie.slice(range), aggregation).transform(
+        return cache.get(series.slice(range), aggregation).transform(
                 transformer);
     }
 
     private Callback<MetricGroups> buildLookup(final Backend backend,
-            final TimeSerieSlice slice, final Set<TimeSerie> series) {
+            final SeriesSlice slice, final Set<Series> series) {
         final List<Callback<FetchDataPoints.Result>> callbacks = new ArrayList<Callback<FetchDataPoints.Result>>();
 
         final DateRange range = modifiedRange(slice);
 
-        for (final TimeSerie serie : series) {
+        for (final Series serie : series) {
             callbacks.addAll(backend.query(serie, range));
         }
 
@@ -95,7 +95,7 @@ public final class TimeSeriesTransformer implements
         return ConcurrentCallback.newReduce(callbacks, buildReducer(slice));
     }
 
-    private DateRange modifiedRange(final TimeSerieSlice slice) {
+    private DateRange modifiedRange(final SeriesSlice slice) {
         if (aggregation == null)
             return slice.getRange();
 
@@ -104,7 +104,7 @@ public final class TimeSeriesTransformer implements
     }
 
     private Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> buildReducer(
-            TimeSerieSlice slice) {
+            SeriesSlice slice) {
         if (aggregation == null)
             return new SimpleCallbackStream(slice);
 

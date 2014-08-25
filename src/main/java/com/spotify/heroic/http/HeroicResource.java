@@ -2,12 +2,11 @@ package com.spotify.heroic.http;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -33,52 +32,36 @@ import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
 import org.glassfish.jersey.media.sse.SseFeature;
 
-import com.google.common.io.BaseEncoding;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.model.DecodeRowKeyRequest;
-import com.spotify.heroic.http.model.DecodeRowKeyResponse;
-import com.spotify.heroic.http.model.EncodeRowKeyRequest;
-import com.spotify.heroic.http.model.EncodeRowKeyResponse;
-import com.spotify.heroic.http.model.KeysResponse;
-import com.spotify.heroic.http.model.MetricsQuery;
-import com.spotify.heroic.http.model.MetricsQueryResponse;
-import com.spotify.heroic.http.model.MetricsRequest;
-import com.spotify.heroic.http.model.MetricsResponse;
-import com.spotify.heroic.http.model.MetricsStreamResponse;
-import com.spotify.heroic.http.model.TagsResponse;
-import com.spotify.heroic.http.model.TimeSeriesRequest;
-import com.spotify.heroic.http.model.TimeSeriesResponse;
-import com.spotify.heroic.http.model.WriteMetricsRequest;
-import com.spotify.heroic.http.model.WriteMetricsResponse;
-import com.spotify.heroic.http.model.status.BackendStatusResponse;
-import com.spotify.heroic.http.model.status.ClusterStatusResponse;
-import com.spotify.heroic.http.model.status.ConsumerStatusResponse;
-import com.spotify.heroic.http.model.status.MetadataBackendStatusResponse;
-import com.spotify.heroic.http.model.status.StatusResponse;
-import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.http.model.IdResponse;
+import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.model.metadata.KeysResponse;
+import com.spotify.heroic.http.model.metadata.TagsResponse;
+import com.spotify.heroic.http.model.metadata.SeriesQuery;
+import com.spotify.heroic.http.model.metadata.SeriesResponse;
+import com.spotify.heroic.http.model.query.MetricsQuery;
+import com.spotify.heroic.http.model.query.MetricsResponse;
+import com.spotify.heroic.http.model.write.WriteMetrics;
+import com.spotify.heroic.http.model.write.WriteMetricsResponse;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
-import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
-import com.spotify.heroic.metrics.heroic.MetricsRowKey;
-import com.spotify.heroic.metrics.heroic.MetricsRowKeySerializer;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.model.filter.AndFilter;
@@ -91,6 +74,26 @@ import com.spotify.heroic.model.filter.MatchTagFilter;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class HeroicResource {
+    public static class StoredMetricQueries {
+        private final ConcurrentHashMap<String, StoredQuery> storedQueries = new ConcurrentHashMap<>();
+
+        public void put(String id, StoredQuery query) {
+            storedQueries.put(id, query);
+        }
+
+        public StoredQuery get(String id) {
+            return storedQueries.get(id);
+        }
+    }
+
+    @Data
+    public static class StoredQuery {
+        private final Filter filter;
+        private final List<String> groupBy;
+        private final DateRange range;
+        private final AggregationGroup aggregation;
+    }
+
     @Inject
     private MetricBackendManager metrics;
 
@@ -100,92 +103,9 @@ public class HeroicResource {
     @Inject
     private StoredMetricQueries storedQueries;
 
-    @Inject
-    private Set<Consumer> consumers;
-
-    @Inject
-    private Set<Backend> backends;
-
-    @Inject
-    private Set<MetadataBackend> metadataBackends;
-
-    @Inject
-    private ClusterManager cluster;
-
     @Data
     public static final class Message {
         private final String message;
-    }
-
-    @GET
-    @Path("/status")
-    public Response status() {
-        final ConsumerStatusResponse consumers = buildConsumerStatus();
-        final BackendStatusResponse backends = buildBackendStatus();
-        final MetadataBackendStatusResponse metadataBackends = buildMetadataBackendStatus();
-
-        final ClusterStatusResponse cluster = buildClusterStatus();
-
-        final boolean allOk = consumers.isOk() && backends.isOk()
-                && metadataBackends.isOk() && cluster.isOk();
-
-        final StatusResponse response = new StatusResponse(allOk, consumers,
-                backends, metadataBackends, cluster);
-
-        return Response.status(Response.Status.OK).entity(response).build();
-    }
-
-    private ClusterStatusResponse buildClusterStatus() {
-        if (cluster == ClusterManager.NULL)
-            return new ClusterStatusResponse(true, 0, 0);
-
-        final ClusterManager.Statistics s = cluster.getStatistics();
-
-        if (s == null)
-            return new ClusterStatusResponse(true, 0, 0);
-
-        return new ClusterStatusResponse(s.getOfflineNodes() == 0,
-                s.getOnlineNodes(), s.getOfflineNodes());
-    }
-
-    private BackendStatusResponse buildBackendStatus() {
-        final int available = backends.size();
-
-        int ready = 0;
-
-        for (final Backend backend : backends) {
-            if (backend.isReady())
-                ready += 1;
-        }
-
-        return new BackendStatusResponse(available == ready, available, ready);
-    }
-
-    private ConsumerStatusResponse buildConsumerStatus() {
-        final int available = consumers.size();
-
-        int ready = 0;
-
-        for (final Consumer consumer : consumers) {
-            if (consumer.isReady())
-                ready += 1;
-        }
-
-        return new ConsumerStatusResponse(available == ready, available, ready);
-    }
-
-    private MetadataBackendStatusResponse buildMetadataBackendStatus() {
-        final int available = metadataBackends.size();
-
-        int ready = 0;
-
-        for (final MetadataBackend metadata : metadataBackends) {
-            if (metadata.isReady())
-                ready += 1;
-        }
-
-        return new MetadataBackendStatusResponse(available == ready, available,
-                ready);
     }
 
     @POST
@@ -198,12 +118,12 @@ public class HeroicResource {
     @POST
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
-            MetricsRequest query) throws MetricQueryException {
-        final MetricsQuery q = makeMetricsQuery(query);
+            MetricsQuery query) throws MetricQueryException {
+        final StoredQuery q = makeMetricsQuery(query);
 
         log.info("POST /metrics: {}", q);
 
-        final Callback<MetricsQueryResponse> callback = metrics
+        final Callback<QueryMetricsResult> callback = metrics
                 .queryMetrics(q.getFilter(), q.getGroupBy(), q.getRange(),
                         q.getAggregation());
 
@@ -215,9 +135,9 @@ public class HeroicResource {
     @POST
     @Path("/metrics-stream")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(MetricsRequest query,
+    public Response makeMetricsStream(MetricsQuery query,
             @Context UriInfo info) throws MetricQueryException {
-        final MetricsQuery q = makeMetricsQuery(query);
+        final StoredQuery q = makeMetricsQuery(query);
 
         log.info("POST /metrics-stream: {}", q);
 
@@ -226,11 +146,11 @@ public class HeroicResource {
 
         final URI location = info.getBaseUriBuilder()
                 .path("/metrics-stream/" + id).build();
-        final MetricsStreamResponse entity = new MetricsStreamResponse(id);
-        return Response.created(location).entity(entity).build();
+        return Response.created(location).entity(new IdResponse<String>(id))
+                .build();
     }
 
-    private MetricsQuery makeMetricsQuery(MetricsRequest query)
+    private StoredQuery makeMetricsQuery(MetricsQuery query)
             throws MetricQueryException {
         if (query == null)
             throw new MetricQueryException("Query must be defined");
@@ -264,7 +184,7 @@ public class HeroicResource {
             throw new MetricQueryException(
                     "Filter must not be empty when querying");
 
-        final MetricsQuery stored = new MetricsQuery(filter, groupBy, range,
+        final StoredQuery stored = new StoredQuery(filter, groupBy, range,
                 aggregation);
 
         return stored;
@@ -277,7 +197,7 @@ public class HeroicResource {
             throws WebApplicationException, MetricQueryException {
         log.info("GET /metrics-stream/{}", id);
 
-        final MetricsQuery q = storedQueries.get(id);
+        final StoredQuery q = storedQueries.get(id);
 
         if (q == null)
             throw new NotFoundException("No such stored query: " + id);
@@ -289,14 +209,14 @@ public class HeroicResource {
         final MetricStream handle = new MetricStream() {
             @Override
             public void stream(Callback<StreamMetricsResult> callback,
-                    MetricsQueryResponse result) throws Exception {
+                    QueryMetricsResult result) throws Exception {
                 if (eventOutput.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
                     return;
                 }
 
                 final MetricGroups groups = result.getMetricGroups();
-                final Map<TimeSerie, List<DataPoint>> data = makeData(groups
+                final Map<Series, List<DataPoint>> data = makeData(groups
                         .getGroups());
                 final MetricsResponse entity = new MetricsResponse(
                         result.getQueryRange(), data, groups.getStatistics());
@@ -317,13 +237,13 @@ public class HeroicResource {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 sendEvent(eventOutput, "cancel",
-                        new ErrorMessage(reason.getMessage()));
+                        new MessageResponse(reason.getMessage()));
             }
 
             @Override
             public void failed(Exception e) throws Exception {
                 sendEvent(eventOutput, "error",
-                        new ErrorMessage(e.getMessage()));
+                        new MessageResponse(e.getMessage()));
             }
 
             @Override
@@ -360,10 +280,10 @@ public class HeroicResource {
     @POST
     @Path("/write")
     public void writeMetrics(@Suspended final AsyncResponse response,
-            WriteMetricsRequest write) {
+            WriteMetrics write) {
         log.info("POST /write: {}", write);
 
-        final WriteMetric entry = new WriteMetric(write.getTimeSerie(),
+        final WriteMetric entry = new WriteMetric(write.getSeries(),
                 write.getData());
 
         final List<WriteMetric> writes = new ArrayList<WriteMetric>();
@@ -373,12 +293,12 @@ public class HeroicResource {
                 METRICS);
     }
 
-    private static final HttpAsyncUtils.Resume<MetricsQueryResponse, MetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<MetricsQueryResponse, MetricsResponse>() {
+    private static final HttpAsyncUtils.Resume<QueryMetricsResult, MetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<QueryMetricsResult, MetricsResponse>() {
         @Override
-        public MetricsResponse resume(MetricsQueryResponse result)
+        public MetricsResponse resume(QueryMetricsResult result)
                 throws Exception {
             final MetricGroups groups = result.getMetricGroups();
-            final Map<TimeSerie, List<DataPoint>> data = makeData(groups
+            final Map<Series, List<DataPoint>> data = makeData(groups
                     .getGroups());
             return new MetricsResponse(result.getQueryRange(), data,
                     groups.getStatistics());
@@ -388,11 +308,11 @@ public class HeroicResource {
     @POST
     @Path("/tags")
     public void tags(@Suspended final AsyncResponse response,
-            TimeSeriesRequest query) throws MetadataQueryException {
+            SeriesQuery query) throws MetadataQueryException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new MessageResponse("Cache is not ready")).build());
             return;
         }
 
@@ -400,11 +320,11 @@ public class HeroicResource {
 
         log.info("/tags: {} {}", query, filter);
 
-        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(filter);
+        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
 
         metadataResult(
                 response,
-                metadata.findTags(timeSeriesQuery).transform(
+                metadata.findTags(seriesQuery).transform(
                         new Callback.Transformer<FindTags, TagsResponse>() {
                             @Override
                             public TagsResponse transform(FindTags result)
@@ -418,11 +338,11 @@ public class HeroicResource {
     @POST
     @Path("/keys")
     public void keys(@Suspended final AsyncResponse response,
-            TimeSeriesRequest query) throws MetadataQueryException {
+            SeriesQuery query) throws MetadataQueryException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new MessageResponse("Cache is not ready")).build());
             return;
         }
 
@@ -430,11 +350,11 @@ public class HeroicResource {
 
         log.info("/keys: {} {}", query, filter);
 
-        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(filter);
+        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
 
         metadataResult(
                 response,
-                metadata.findKeys(timeSeriesQuery).transform(
+                metadata.findKeys(seriesQuery).transform(
                         new Callback.Transformer<FindKeys, KeysResponse>() {
                             @Override
                             public KeysResponse transform(FindKeys result)
@@ -448,11 +368,11 @@ public class HeroicResource {
     @POST
     @Path("/timeseries")
     public void getTimeSeries(@Suspended final AsyncResponse response,
-            TimeSeriesRequest query) throws MetadataQueryException {
+            SeriesQuery query) throws MetadataQueryException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new MessageResponse("Cache is not ready")).build());
             return;
         }
 
@@ -464,67 +384,23 @@ public class HeroicResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final TimeSerieQuery timeSeriesQuery = new TimeSerieQuery(filter);
+        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
 
         metadataResult(
                 response,
-                metadata.findTimeSeries(timeSeriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindTimeSeries, TimeSeriesResponse>() {
-                                    @Override
-                                    public TimeSeriesResponse transform(
-                                            FindTimeSeries result)
+                metadata.findTimeSeries(seriesQuery)
+                .transform(
+                        new Callback.Transformer<FindTimeSeries, SeriesResponse>() {
+                            @Override
+                            public SeriesResponse transform(
+                                    FindTimeSeries result)
                                             throws Exception {
-                                        return new TimeSeriesResponse(
-                                                new ArrayList<TimeSerie>(result
-                                                        .getTimeSeries()),
-                                                result.getSize());
-                                    }
-                                }));
-    }
-
-    /**
-     * Encode/Decode functions, helpful when interacting with cassandra through
-     * cqlsh.
-     */
-
-    @POST
-    @Path("/decode/row-key")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response decodeRowKey(final DecodeRowKeyRequest request) {
-        String data = request.getData();
-
-        if (data.substring(0, 2).equals("0x"))
-            data = data.substring(2, data.length());
-
-        data = data.toUpperCase();
-
-        final byte[] bytes = BaseEncoding.base16().decode(data);
-        final ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        final MetricsRowKey rowKey = MetricsRowKeySerializer.get()
-                .fromByteBuffer(buffer);
-        return Response
-                .status(Response.Status.OK)
-                .entity(new DecodeRowKeyResponse(rowKey.getTimeSerie(), rowKey
-                        .getBase())).build();
-    }
-
-    @POST
-    @Path("/encode/row-key")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response encodeRowKey(final EncodeRowKeyRequest request) {
-        final MetricsRowKey rowKey = new MetricsRowKey(request.getTimeSerie(),
-                request.getBase());
-        final ByteBuffer buffer = MetricsRowKeySerializer.get().toByteBuffer(
-                rowKey);
-
-        final byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-
-        final String data = "0x"
-                + BaseEncoding.base16().encode(bytes).toLowerCase();
-        return Response.status(Response.Status.OK)
-                .entity(new EncodeRowKeyResponse(data)).build();
+                                return new SeriesResponse(
+                                        new ArrayList<Series>(result
+                                                .getSeries()), result
+                                                .getSize());
+                            }
+                        }));
     }
 
     /**
@@ -536,7 +412,7 @@ public class HeroicResource {
      * @param query
      * @return
      */
-    private Filter buildFilter(MetricsRequest query) {
+    private Filter buildFilter(MetricsQuery query) {
         final List<Filter> statements = new ArrayList<>();
 
         if (query.getTags() != null && !query.getTags().isEmpty()) {
@@ -569,8 +445,8 @@ public class HeroicResource {
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
                         .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new ErrorMessage("Request cancelled: " + reason))
-                        .build());
+                        .entity(new MessageResponse("Request cancelled: "
+                                + reason)).build());
             }
 
             @Override
@@ -588,12 +464,12 @@ public class HeroicResource {
         });
     }
 
-    private static Map<TimeSerie, List<DataPoint>> makeData(
+    private static Map<Series, List<DataPoint>> makeData(
             List<MetricGroup> groups) {
-        final Map<TimeSerie, List<DataPoint>> data = new HashMap<TimeSerie, List<DataPoint>>();
+        final Map<Series, List<DataPoint>> data = new HashMap<Series, List<DataPoint>>();
 
         for (final MetricGroup group : groups) {
-            data.put(group.getTimeSerie(), group.getDatapoints());
+            data.put(group.getSeries(), group.getDatapoints());
         }
 
         return data;

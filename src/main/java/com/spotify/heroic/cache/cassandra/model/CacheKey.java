@@ -5,10 +5,10 @@ import lombok.Getter;
 import lombok.ToString;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
-@ToString(of = { "timeSerie", "aggregationGroup", "base" })
-@EqualsAndHashCode(of = { "timeSerie", "aggregationGroup", "base" })
+@ToString(of = { "series", "aggregationGroup", "base" })
+@EqualsAndHashCode(of = { "series", "aggregationGroup", "base" })
 public class CacheKey {
     public static final int VERSION = 1;
 
@@ -16,7 +16,7 @@ public class CacheKey {
      * Includes key and tags.
      */
     @Getter
-    private final TimeSerie timeSerie;
+    private final Series series;
 
     /**
      * Always includes sampling.
@@ -30,9 +30,9 @@ public class CacheKey {
     @Getter
     private final long base;
 
-    public CacheKey(TimeSerie timeSerie, AggregationGroup aggregationGroup,
+    public CacheKey(Series series, AggregationGroup aggregationGroup,
             long base) {
-        this.timeSerie = timeSerie;
+        this.series = series;
         this.aggregationGroup = aggregationGroup;
         this.base = base;
     }

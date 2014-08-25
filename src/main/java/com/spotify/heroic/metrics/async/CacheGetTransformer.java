@@ -14,8 +14,8 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.SeriesSlice;
 
 /**
  * Common class for taking a cache query result and building up new queries for
@@ -26,7 +26,7 @@ import com.spotify.heroic.model.TimeSerieSlice;
 @RequiredArgsConstructor
 public abstract class CacheGetTransformer implements
         Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
-    private final TimeSerie timeSerie;
+    private final Series series;
     private final AggregationCache cache;
 
     @Override
@@ -34,7 +34,7 @@ public abstract class CacheGetTransformer implements
             throws Exception {
         final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
 
-        for (final TimeSerieSlice slice : cacheResult.getMisses()) {
+        for (final SeriesSlice slice : cacheResult.getMisses()) {
             missQueries.add(cacheMiss(slice));
         }
 
@@ -43,7 +43,7 @@ public abstract class CacheGetTransformer implements
          */
         if (missQueries.isEmpty()) {
             final List<DataPoint> datapoints = cacheResult.getResult();
-            final MetricGroup group = new MetricGroup(timeSerie, datapoints);
+            final MetricGroup group = new MetricGroup(series, datapoints);
             final List<MetricGroup> groups = new ArrayList<MetricGroup>();
 
             groups.add(group);
@@ -60,9 +60,9 @@ public abstract class CacheGetTransformer implements
          * Merge with queried data.
          */
         return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(
-                cache, timeSerie, cacheResult));
+                cache, series, cacheResult));
     }
 
-    public abstract Callback<MetricGroups> cacheMiss(TimeSerieSlice slice)
+    public abstract Callback<MetricGroups> cacheMiss(SeriesSlice slice)
             throws Exception;
 }

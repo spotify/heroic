@@ -44,7 +44,7 @@ import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.StoredMetricQueries;
+import com.spotify.heroic.http.HeroicResource.StoredMetricQueries;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
@@ -117,7 +117,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
+                .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
                 multiBind(config.getMetricBackends(), Backend.class);
@@ -126,17 +126,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((Lifecycle) i);
-                                    }
-                                });
+                            public void afterInjection(Object i) {
+                                managed.add((Lifecycle) i);
                             }
                         });
+                    }
+                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -261,7 +261,7 @@ public class Main {
 
         context.addListener(Main.LISTENER);
         context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
-                .addMappingForUrlPatterns(null, "/*");
+        .addMappingForUrlPatterns(null, "/*");
 
         // Initialize and register Jersey ServletContainer
         final ServletRegistration servletRegistration = context.addServlet(

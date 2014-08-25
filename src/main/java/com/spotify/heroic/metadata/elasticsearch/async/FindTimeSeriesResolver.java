@@ -13,7 +13,7 @@ import org.elasticsearch.search.SearchHit;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public class FindTimeSeriesResolver implements
@@ -25,18 +25,18 @@ public class FindTimeSeriesResolver implements
 
     @Override
     public FindTimeSeries resolve() throws Exception {
-        final Set<TimeSerie> timeSeries = new HashSet<TimeSerie>();
+        final Set<Series> series = new HashSet<Series>();
 
         final Iterable<SearchResponse> responses = new PaginatingSearchResponse(
                 client, index, type, filter);
 
         for (final SearchResponse response : responses) {
             for (final SearchHit hit : response.getHits()) {
-                timeSeries.add(ElasticSearchMetadataBackend.toTimeSerie(hit
+                series.add(ElasticSearchMetadataBackend.toTimeSerie(hit
                         .getSource()));
             }
         }
 
-        return new FindTimeSeries(timeSeries, timeSeries.size());
+        return new FindTimeSeries(series, series.size());
     }
 }

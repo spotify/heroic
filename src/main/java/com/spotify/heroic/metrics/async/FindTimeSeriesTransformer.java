@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 /**
  * Transforms a metadata time series result with a metrics time serie result.
@@ -20,33 +20,33 @@ import com.spotify.heroic.model.TimeSerie;
  */
 @RequiredArgsConstructor
 public class FindTimeSeriesTransformer implements
-        Callback.Transformer<FindTimeSeries, FindTimeSeriesGroups> {
+Callback.Transformer<FindTimeSeries, FindTimeSeriesGroups> {
     private final List<String> groupBy;
 
     @Override
     public FindTimeSeriesGroups transform(final FindTimeSeries result)
             throws Exception {
-        final Map<TimeSerie, Set<TimeSerie>> groups = new HashMap<TimeSerie, Set<TimeSerie>>();
+        final Map<Series, Set<Series>> groups = new HashMap<Series, Set<Series>>();
 
-        for (final TimeSerie timeSerie : result.getTimeSeries()) {
+        for (final Series series : result.getSeries()) {
             final Map<String, String> tags = new HashMap<>();
 
             if (groupBy != null) {
                 for (final String group : groupBy) {
-                    tags.put(group, timeSerie.getTags().get(group));
+                    tags.put(group, series.getTags().get(group));
                 }
             }
 
-            final TimeSerie key = timeSerie.withTags(tags);
+            final Series key = series.withTags(tags);
 
-            Set<TimeSerie> group = groups.get(key);
+            Set<Series> group = groups.get(key);
 
             if (group == null) {
                 group = new HashSet<>();
                 groups.put(key, group);
             }
 
-            group.add(timeSerie);
+            group.add(series);
         }
 
         return new FindTimeSeriesGroups(groups);

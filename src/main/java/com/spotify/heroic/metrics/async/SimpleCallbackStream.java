@@ -16,14 +16,14 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerie;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.SeriesSlice;
 
 @Slf4j
 @RequiredArgsConstructor
 public final class SimpleCallbackStream implements
-        Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
-    private final TimeSerieSlice slice;
+Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+    private final SeriesSlice slice;
 
     private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
 
@@ -49,7 +49,7 @@ public final class SimpleCallbackStream implements
     public MetricGroups resolved(int successful, int failed, int cancelled)
             throws Exception {
         final List<DataPoint> datapoints = joinRawResults();
-        final TimeSerie timeSerie = slice.getTimeSerie();
+        final Series series = slice.getSeries();
 
         final Statistics statistics = Statistics.builder()
                 .row(new Statistics.Row(successful, failed, cancelled))
@@ -57,7 +57,7 @@ public final class SimpleCallbackStream implements
                 .build();
 
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
-        groups.add(new MetricGroup(timeSerie, datapoints));
+        groups.add(new MetricGroup(series, datapoints));
 
         return new MetricGroups(groups, statistics);
     }

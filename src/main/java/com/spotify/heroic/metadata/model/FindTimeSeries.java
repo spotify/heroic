@@ -5,12 +5,12 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public class FindTimeSeries {
     @Getter
-    private final Set<TimeSerie> timeSeries;
+    private final Set<Series> series;
 
     @Getter
     private final int size;

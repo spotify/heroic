@@ -3,7 +3,7 @@ package com.spotify.heroic.metrics.heroic;
 import lombok.Data;
 import lombok.Getter;
 
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @Data
 public class MetricsRowKey {
@@ -19,7 +19,7 @@ public class MetricsRowKey {
             - (long) Integer.MIN_VALUE + 1;
 
     @Getter
-    private final TimeSerie timeSerie;
+    private final Series series;
     @Getter
     private final long base;
 }

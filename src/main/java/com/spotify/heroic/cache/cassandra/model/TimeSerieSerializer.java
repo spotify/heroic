@@ -10,9 +10,9 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
 import com.spotify.heroic.ext.marshal.SafeUTF8Type;
 import com.spotify.heroic.ext.serializers.SafeStringSerializer;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
-public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
+public class TimeSerieSerializer extends AbstractSerializer<Series> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer
             .get();
     private static final MapSerializer<String, String> tagsSerializer = new MapSerializer<String, String>(
@@ -41,7 +41,7 @@ public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
     };
 
     @Override
-    public ByteBuffer toByteBuffer(TimeSerie obj) {
+    public ByteBuffer toByteBuffer(Series obj) {
         final Composite composite = new Composite();
         final Map<String, String> tags = new TreeMap<String, String>(COMPARATOR);
         tags.putAll(obj.getTags());
@@ -53,12 +53,12 @@ public class TimeSerieSerializer extends AbstractSerializer<TimeSerie> {
     }
 
     @Override
-    public TimeSerie fromByteBuffer(ByteBuffer byteBuffer) {
+    public Series fromByteBuffer(ByteBuffer byteBuffer) {
         final Composite composite = Composite.fromByteBuffer(byteBuffer);
 
         final String key = composite.get(0, keySerializer);
         final Map<String, String> tags = composite.get(1, tagsSerializer);
 
-        return new TimeSerie(key, tags);
+        return new Series(key, tags);
     }
 }

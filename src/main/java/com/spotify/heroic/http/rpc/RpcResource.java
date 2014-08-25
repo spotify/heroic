@@ -15,10 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.http.ErrorMessage;
 import com.spotify.heroic.http.HttpAsyncUtils;
-import com.spotify.heroic.http.rpc.model.ClusterMetadataResponse;
-import com.spotify.heroic.http.rpc.model.RpcQueryRequest;
+import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.rpc.model.RpcMetadata;
+import com.spotify.heroic.http.rpc.model.RpcQueryBody;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 
@@ -41,11 +41,11 @@ public class RpcResource {
         if (cluster == ClusterManager.NULL) {
             return Response
                     .status(Response.Status.NOT_IMPLEMENTED)
-                    .entity(new ErrorMessage(
+                    .entity(new MessageResponse(
                             "service is not configured as a cluster")).build();
         }
 
-        final ClusterMetadataResponse metadata = new ClusterMetadataResponse(
+        final RpcMetadata metadata = new RpcMetadata(
                 cluster.getLocalNodeId(), cluster.getLocalNodeTags());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
@@ -60,7 +60,7 @@ public class RpcResource {
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
-            RpcQueryRequest query) {
+            RpcQueryBody query) {
         log.info("POST /rpc/query: {}", query);
 
         final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(query);

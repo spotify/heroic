@@ -21,27 +21,27 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @Slf4j
 @RequiredArgsConstructor
 final class MergeCacheMisses implements
-        Callback.Reducer<MetricGroups, MetricGroups> {
+Callback.Reducer<MetricGroups, MetricGroups> {
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
-        private final Map<TimeSerie, List<DataPoint>> cacheUpdates;
+        private final Map<Series, List<DataPoint>> cacheUpdates;
         private final Statistics statistics;
     }
 
     private final AggregationCache cache;
-    private final TimeSerie timeSerie;
+    private final Series series;
     private final CacheQueryResult cacheResult;
 
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
-            throws Exception {
+                    throws Exception {
 
         final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);
@@ -60,15 +60,15 @@ final class MergeCacheMisses implements
     }
 
     private List<Callback<CachePutResult>> updateCache(
-            Map<TimeSerie, List<DataPoint>> cacheUpdates) {
-        List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(
+            Map<Series, List<DataPoint>> cacheUpdates) {
+        final List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(
                 cacheUpdates.size());
 
-        for (Map.Entry<TimeSerie, List<DataPoint>> update : cacheUpdates
+        for (final Map.Entry<Series, List<DataPoint>> update : cacheUpdates
                 .entrySet()) {
-            final TimeSerie timeSerie = update.getKey();
+            final Series series = update.getKey();
             final List<DataPoint> datapoints = update.getValue();
-            queries.add(cache.put(timeSerie, cacheResult.getAggregation(),
+            queries.add(cache.put(series, cacheResult.getAggregation(),
                     datapoints));
         }
 
@@ -82,28 +82,28 @@ final class MergeCacheMisses implements
                 .getResultSet().values());
         Collections.sort(datapoints);
 
-        groups.add(new MetricGroup(timeSerie, datapoints));
+        groups.add(new MetricGroup(series, datapoints));
         return groups;
     }
 
     /**
      * Use a map from <code>{tags -> {long -> DataPoint}}</code> to deduplicate
      * overlapping datapoints.
-     * 
+     *
      * These overlaps are called 'cache duplicates', which mean that we've
      * somehow managed to fetch duplicate entries from one of.
-     * 
+     *
      * <ul>
      * <li>The cache backend.</li>
      * <li>The raw backends.</li>
      * </ul>
-     * 
+     *
      * While this contributes to unnecessary overhead, it's not the end of the
      * world. These duplicates are reported as cacheDuplicates in RowStatistics.
      */
     private MergeCacheMisses.JoinResult joinResults(
             Collection<MetricGroups> results) {
-        final Map<TimeSerie, List<DataPoint>> cacheUpdates = new HashMap<TimeSerie, List<DataPoint>>();
+        final Map<Series, List<DataPoint>> cacheUpdates = new HashMap<Series, List<DataPoint>>();
 
         int cacheConflicts = 0;
 
@@ -124,7 +124,7 @@ final class MergeCacheMisses implements
                     }
                 }
 
-                cacheUpdates.put(cacheResult.getSlice().getTimeSerie(),
+                cacheUpdates.put(cacheResult.getSlice().getSeries(),
                         group.getDatapoints());
             }
         }
@@ -148,7 +148,7 @@ final class MergeCacheMisses implements
 
     /**
      * Add the results previously retrieved from cache.
-     * 
+     *
      * @param resultGroups
      * @return
      */

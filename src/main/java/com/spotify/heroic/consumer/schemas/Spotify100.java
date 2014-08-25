@@ -18,7 +18,7 @@ import com.spotify.heroic.consumer.exceptions.SchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
 import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 
 public class Spotify100 implements ConsumerSchema {
@@ -85,14 +85,14 @@ public class Spotify100 implements ConsumerSchema {
                 metric.getAttributes());
         tags.put(HOST, metric.getHost());
 
-        final TimeSerie timeSerie = new TimeSerie(metric.getKey(), tags);
+        final Series series = new Series(metric.getKey(), tags);
         final DataPoint datapoint = new DataPoint(metric.getTime(),
                 metric.getValue());
         final List<DataPoint> data = new ArrayList<DataPoint>();
         data.add(datapoint);
 
         try {
-            consumer.write(new WriteMetric(timeSerie, data));
+            consumer.write(new WriteMetric(series, data));
         } catch (final WriteException e) {
             throw new FatalSchemaException("write failed", e);
         }

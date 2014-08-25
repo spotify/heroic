@@ -36,7 +36,7 @@ import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -143,7 +143,7 @@ public class HeroicBackend extends CassandraBackend implements Backend {
                 final long base = MetricsRowKeySerializer.getBaseTimestamp(d
                         .getTimestamp());
                 final MetricsRowKey rowKey = new MetricsRowKey(
-                        write.getTimeSerie(), base);
+                        write.getSeries(), base);
 
                 ColumnListMutation<Integer> m = batches.get(rowKey);
 
@@ -192,35 +192,35 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-                    @Override
-                    public Integer resolve() throws Exception {
-                        for (final DataPoint d : datapoints) {
-                            keyspace.prepareQuery(CQL3_CF)
-                                    .withCql(INSERT_METRICS_CQL)
-                                    .asPreparedStatement()
-                                    .withByteBufferValue(rowKey,
-                                            MetricsRowKeySerializer.get())
-                                    .withByteBufferValue(
-                                            MetricsRowKeySerializer
-                                                    .calculateColumnKey(d
-                                                            .getTimestamp()),
+            @Override
+            public Integer resolve() throws Exception {
+                for (final DataPoint d : datapoints) {
+                    keyspace.prepareQuery(CQL3_CF)
+                    .withCql(INSERT_METRICS_CQL)
+                    .asPreparedStatement()
+                    .withByteBufferValue(rowKey,
+                            MetricsRowKeySerializer.get())
+                            .withByteBufferValue(
+                                    MetricsRowKeySerializer
+                                    .calculateColumnKey(d
+                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                    .withByteBufferValue(d.getValue(),
-                                            DoubleSerializer.get()).execute();
-                        }
+                                            .withByteBufferValue(d.getValue(),
+                                                    DoubleSerializer.get()).execute();
+                }
 
-                        return datapoints.size();
-                    }
-                });
+                return datapoints.size();
+            }
+        });
     }
 
     @Override
-    public List<Callback<FetchDataPoints.Result>> query(
-            final TimeSerie timeSerie, final DateRange range) {
+    public List<Callback<FetchDataPoints.Result>> query(final Series series,
+            final DateRange range) {
         final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
 
         for (final long base : buildBases(range)) {
-            final Callback<Result> partial = buildQuery(timeSerie, base, range);
+            final Callback<Result> partial = buildQuery(series, base, range);
 
             if (partial == null)
                 continue;
@@ -231,8 +231,8 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         return queries;
     }
 
-    private Callback<FetchDataPoints.Result> buildQuery(
-            final TimeSerie timeSerie, long base, final DateRange range) {
+    private Callback<FetchDataPoints.Result> buildQuery(final Series series,
+            long base, final DateRange range) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
@@ -245,7 +245,7 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         if (newRange.isEmpty())
             return null;
 
-        final MetricsRowKey key = new MetricsRowKey(timeSerie, base);
+        final MetricsRowKey key = new MetricsRowKey(series, base);
 
         final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(METRICS_CF)
@@ -253,29 +253,29 @@ public class HeroicBackend extends CassandraBackend implements Backend {
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                                .setStart(
-                                        MetricsRowKeySerializer
-                                                .calculateColumnKey(newRange
-                                                        .getStart()))
-                                .setEnd(MetricsRowKeySerializer
-                                        .calculateColumnKey(newRange.getEnd()))
-                                .build());
+                        .setStart(
+                                MetricsRowKeySerializer
+                                .calculateColumnKey(newRange
+                                        .getStart()))
+                                        .setEnd(MetricsRowKeySerializer
+                                                .calculateColumnKey(newRange.getEnd()))
+                                                .build());
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
-                    @Override
-                    public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Integer>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(key,
-                                result);
-                        return new FetchDataPoints.Result(datapoints, timeSerie);
-                    }
-                });
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = buildDataPoints(key,
+                        result);
+                return new FetchDataPoints.Result(datapoints, series);
+            }
+        });
     }
 
     @Override
-    public Callback<Long> getColumnCount(TimeSerie timeSerie, DateRange range) {
+    public Callback<Long> getColumnCount(Series series, DateRange range) {
         return new FailedCallback<Long>(new Exception("not implemented"));
     }
 

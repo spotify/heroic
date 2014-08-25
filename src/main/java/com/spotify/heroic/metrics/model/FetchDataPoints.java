@@ -8,24 +8,24 @@ import lombok.ToString;
 
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
-@ToString(of = { "timeSerie", "range" })
+@ToString(of = { "series", "range" })
 public class FetchDataPoints {
     @Getter
-    private final TimeSerie timeSerie;
+    private final Series series;
 
     @Getter
     private final DateRange range;
 
     @RequiredArgsConstructor
-    @ToString(of = { "datapoints", "timeSerie" })
+    @ToString(of = { "datapoints", "series" })
     public static class Result {
         @Getter
         private final List<DataPoint> datapoints;
 
         @Getter
-        private final TimeSerie timeSerie;
+        private final Series series;
     }
 }

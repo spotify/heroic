@@ -54,7 +54,7 @@ import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResponse;
 import com.spotify.heroic.model.filter.AndFilter;
 import com.spotify.heroic.model.filter.Filter;
@@ -146,7 +146,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     /**
      * prevent unnecessary writes if entry is already in cache. Integer is the
-     * hashCode of the timeSerie.
+     * hashCode of the series.
      */
     private final Set<Integer> writeCache = Collections
             .newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
@@ -379,13 +379,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<WriteResponse> write(final TimeSerie timeSerie)
+    public Callback<WriteResponse> write(final Series series)
             throws MetadataQueryException {
-        return writeBatch(Arrays.asList(timeSerie));
+        return writeBatch(Arrays.asList(series));
     }
 
     @Override
-    public Callback<WriteResponse> writeBatch(final List<TimeSerie> timeSeries)
+    public Callback<WriteResponse> writeBatch(final List<Series> series)
             throws MetadataQueryException {
         final Client client = client();
         final BulkProcessor bulkProcessor = this.bulkProcessorRef.get();
@@ -397,23 +397,23 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                 new Callback.Resolver<WriteResponse>() {
                     @Override
                     public WriteResponse resolve() throws Exception {
-                        for (final TimeSerie timeSerie : timeSeries) {
-                            if (writeCache.contains(timeSerie.hashCode())) {
+                        for (final Series series : series) {
+                            if (writeCache.contains(series.hashCode())) {
                                 reporter.reportWriteCacheHit();
                                 continue;
                             }
 
                             reporter.reportWriteCacheMiss();
 
-                            final Map<String, Object> source = fromTimeSerie(timeSerie);
+                            final Map<String, Object> source = fromTimeSerie(series);
                             final IndexRequest request = client.prepareIndex()
                                     .setIndex(index).setType(type)
                                     .setSource(source).request();
                             bulkProcessor.add(request);
 
-                            writeCache.add(timeSerie.hashCode());
+                            writeCache.add(series.hashCode());
                         }
-                        return new WriteResponse(timeSeries.size());
+                        return new WriteResponse(series.size());
                     }
                 }).register(reporter.reportWrite());
     }
@@ -484,10 +484,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                 + filter);
     }
 
-    public static Map<String, Object> fromTimeSerie(TimeSerie timeSerie) {
+    public static Map<String, Object> fromTimeSerie(Series series) {
         final Map<String, Object> source = new HashMap<String, Object>();
-        source.put("key", timeSerie.getKey());
-        source.put("tags", buildTags(timeSerie.getTags()));
+        source.put("key", series.getKey());
+        source.put("tags", buildTags(series.getTags()));
         return source;
     }
 
@@ -504,10 +504,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return tags;
     }
 
-    public static TimeSerie toTimeSerie(Map<String, Object> source) {
+    public static Series toTimeSerie(Map<String, Object> source) {
         final Map<String, String> tags = extractTags(source);
         final String key = (String) source.get("key");
-        return new TimeSerie(key, tags);
+        return new Series(key, tags);
     }
 
     public static Map<String, String> extractTags(

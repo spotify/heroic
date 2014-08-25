@@ -5,13 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import com.spotify.heroic.metrics.Backend;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
-@ToString(of = { "backend", "timeSerie" })
+@ToString(of = { "backend", "series" })
 public final class RowGroup {
     @Getter
     private final Backend backend;
     @Getter
-    private final TimeSerie timeSerie;
+    private final Series series;
 }

@@ -14,11 +14,11 @@ import com.spotify.heroic.cache.cassandra.model.CacheKeySerializer;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 final class CachePutResolver implements
-        Callback.Resolver<CacheBackendPutResult> {
+Callback.Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer
             .get();
@@ -31,7 +31,7 @@ final class CachePutResolver implements
     @Override
     public CacheBackendPutResult resolve() throws Exception {
         final AggregationGroup aggregation = key.getAggregationGroup();
-        final TimeSerie timeSerie = key.getTimeSerie();
+        final Series series = key.getSeries();
         final long size = aggregation.getSampling().getSize();
         final long columnWidth = size * CassandraCache.WIDTH;
         for (final DataPoint d : datapoints) {
@@ -40,9 +40,9 @@ final class CachePutResolver implements
             if (Double.isNaN(value))
                 continue;
 
-            int index = (int) ((d.getTimestamp() % columnWidth) / size);
-            long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
-            final CacheKey key = new CacheKey(timeSerie, aggregation, base);
+            final int index = (int) ((d.getTimestamp() % columnWidth) / size);
+            final long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
+            final CacheKey key = new CacheKey(series, aggregation, base);
             doPut(key, index, d);
         }
 
@@ -52,9 +52,9 @@ final class CachePutResolver implements
     private void doPut(CacheKey key, Integer dataOffset, DataPoint d)
             throws ConnectionException {
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
-                .asPreparedStatement()
-                .withByteBufferValue(key, cacheKeySerializer)
-                .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
-                .execute();
+        .asPreparedStatement()
+        .withByteBufferValue(key, cacheKeySerializer)
+        .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
+        .execute();
     }
 }

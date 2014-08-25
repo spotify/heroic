@@ -10,18 +10,18 @@ import org.junit.Test;
 public class TimeSerieTest {
     @Test
     public void testEquality() throws Exception {
-        final TimeSerie a = new TimeSerie("foo", new HashMap<String, String>());
-        final TimeSerie b = new TimeSerie("foo", new HashMap<String, String>());
+        final Series a = new Series("foo", new HashMap<String, String>());
+        final Series b = new Series("foo", new HashMap<String, String>());
         Assert.assertEquals(a, b);
     }
 
     @Test
     public void testHashCode() throws Exception {
-        final TimeSerie a = new TimeSerie("foo", new HashMap<String, String>());
-        final TimeSerie b = new TimeSerie("foo", new HashMap<String, String>());
+        final Series a = new Series("foo", new HashMap<String, String>());
+        final Series b = new Series("foo", new HashMap<String, String>());
         Assert.assertEquals(a.hashCode(), b.hashCode());
 
-        final Set<TimeSerie> series = new HashSet<TimeSerie>();
+        final Set<Series> series = new HashSet<Series>();
         series.add(a);
         series.add(b);
 

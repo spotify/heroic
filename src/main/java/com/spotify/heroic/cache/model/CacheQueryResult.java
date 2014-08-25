@@ -7,11 +7,11 @@ import lombok.Getter;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.TimeSerieSlice;
+import com.spotify.heroic.model.SeriesSlice;
 
 @Data
 public class CacheQueryResult {
-    private final TimeSerieSlice slice;
+    private final SeriesSlice slice;
     private final AggregationGroup aggregation;
 
     /**
@@ -24,5 +24,5 @@ public class CacheQueryResult {
      * Cache misses that has to be queried and aggregated from raw storage.
      */
     @Getter
-    private final List<TimeSerieSlice> misses;
+    private final List<SeriesSlice> misses;
 }

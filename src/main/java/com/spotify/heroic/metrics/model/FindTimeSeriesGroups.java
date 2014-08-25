@@ -6,10 +6,10 @@ import java.util.Set;
 import lombok.Data;
 import lombok.Getter;
 
-import com.spotify.heroic.model.TimeSerie;
+import com.spotify.heroic.model.Series;
 
 @Data
 public class FindTimeSeriesGroups {
     @Getter
-    private final Map<TimeSerie, Set<TimeSerie>> groups;
+    private final Map<Series, Set<Series>> groups;
 }
