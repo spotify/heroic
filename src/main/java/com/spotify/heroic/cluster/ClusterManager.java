@@ -6,7 +6,6 @@ import java.util.UUID;
 import lombok.Data;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
 public interface ClusterManager {
@@ -25,9 +24,6 @@ public interface ClusterManager {
      * @author udoprog
      */
     public static final class Null implements ClusterManager {
-        private static final CancelReason NOT_ENABLED = new CancelReason(
-                "cluster manager not enabled");
-
         private Null() {
         }
 
