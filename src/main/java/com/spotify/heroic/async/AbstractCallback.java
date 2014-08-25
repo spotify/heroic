@@ -197,23 +197,23 @@ abstract class AbstractCallback<T> implements Callback<T> {
     public Callback<T> resolve(final Executor executor,
             final Resolver<T> resolver) {
         final Runnable runnable = new Runnable() {
-        	@Override
-        	public void run() {
-        		if (!AbstractCallback.this.isReady())
-        			return;
+            @Override
+            public void run() {
+                if (!AbstractCallback.this.isReady())
+                    return;
 
-        		try {
-        			AbstractCallback.this.resolve(resolver.resolve());
-        		} catch (Exception error) {
-        			AbstractCallback.this.fail(error);
-        		}
-        	}
+                try {
+                    AbstractCallback.this.resolve(resolver.resolve());
+                } catch (Exception error) {
+                    AbstractCallback.this.fail(error);
+                }
+            }
         };
 
         try {
-        	executor.execute(runnable);
-        } catch(Exception e) {
-			AbstractCallback.this.fail(e);
+            executor.execute(runnable);
+        } catch (Exception e) {
+            AbstractCallback.this.fail(e);
         }
 
         return this;

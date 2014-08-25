@@ -10,8 +10,8 @@ import com.spotify.heroic.model.filter.Filter;
 
 @Data
 public class MetricsQuery {
-	private final Filter filter;
-	private final List<String> groupBy;
-	private final DateRange range;
-	private final AggregationGroup aggregation;
+    private final Filter filter;
+    private final List<String> groupBy;
+    private final DateRange range;
+    private final AggregationGroup aggregation;
 }

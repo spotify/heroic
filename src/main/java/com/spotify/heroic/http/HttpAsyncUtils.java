@@ -54,9 +54,9 @@ public final class HttpAsyncUtils {
 
         HttpAsyncUtils.setupAsyncHandling(response, callback);
     }
-	
-	private static void setupAsyncHandling(final AsyncResponse response,
-			final Callback<?> callback) {
+
+    private static void setupAsyncHandling(final AsyncResponse response,
+            final Callback<?> callback) {
         response.setTimeoutHandler(new TimeoutHandler() {
             @Override
             public void handleTimeout(AsyncResponse asyncResponse) {
@@ -80,5 +80,5 @@ public final class HttpAsyncUtils {
                 callback.cancel(new CancelReason("Client disconnected"));
             }
         });
-	}
+    }
 }

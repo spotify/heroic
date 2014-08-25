@@ -99,7 +99,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         public MetadataBackend build(String context,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
-                                                                 .size()]);
+                    .size()]);
 
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
@@ -359,7 +359,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindTagKeysResolver(client, index, type, filter)).register(
-                        reporter.reportFindTagKeys());
+                reporter.reportFindTagKeys());
     }
 
     @Override
@@ -375,7 +375,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindKeysResolver(client, index, type, filter)).register(
-                        reporter.reportFindKeys());
+                reporter.reportFindKeys());
     }
 
     @Override
@@ -395,27 +395,27 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResponse>() {
-            @Override
-            public WriteResponse resolve() throws Exception {
-                for (final TimeSerie timeSerie : timeSeries) {
-                    if (writeCache.contains(timeSerie.hashCode())) {
-                        reporter.reportWriteCacheHit();
-                        continue;
-                    }
+                    @Override
+                    public WriteResponse resolve() throws Exception {
+                        for (final TimeSerie timeSerie : timeSeries) {
+                            if (writeCache.contains(timeSerie.hashCode())) {
+                                reporter.reportWriteCacheHit();
+                                continue;
+                            }
 
-                    reporter.reportWriteCacheMiss();
+                            reporter.reportWriteCacheMiss();
 
-                    final Map<String, Object> source = fromTimeSerie(timeSerie);
-                    final IndexRequest request = client.prepareIndex()
-                            .setIndex(index).setType(type)
-                            .setSource(source).request();
-                    bulkProcessor.add(request);
+                            final Map<String, Object> source = fromTimeSerie(timeSerie);
+                            final IndexRequest request = client.prepareIndex()
+                                    .setIndex(index).setType(type)
+                                    .setSource(source).request();
+                            bulkProcessor.add(request);
 
-                    writeCache.add(timeSerie.hashCode());
-                }
+                            writeCache.add(timeSerie.hashCode());
+                        }
                         return new WriteResponse(timeSeries.size());
-            }
-        }).register(reporter.reportWrite());
+                    }
+                }).register(reporter.reportWrite());
     }
 
     @Override
@@ -462,9 +462,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            matchTag.getTag()))
+                            .boolFilter()
+                            .must(FilterBuilders.termFilter(TAGS_KEY,
+                                    matchTag.getTag()))
                             .must(FilterBuilders.termFilter(TAGS_VALUE,
                                     matchTag.getValue())));
         }
@@ -514,7 +514,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-        .get("tags");
+                .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (final Map<String, String> entry : attributes) {

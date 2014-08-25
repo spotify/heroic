@@ -11,9 +11,10 @@ import java.util.concurrent.Executor;
  * The available events are.
  * 
  * <ul>
- *   <li>resolved, for when a callback has been resolved with a value.</li>
- *   <li>failed, for when a callback failed to resolve because of an exception.</li>
- *   <li>cancelled, for when a callback will not resolve, with a reason {@link CancelReason}.</li>
+ * <li>resolved, for when a callback has been resolved with a value.</li>
+ * <li>failed, for when a callback failed to resolve because of an exception.</li>
+ * <li>cancelled, for when a callback will not resolve, with a reason
+ * {@link CancelReason}.</li>
  * </ul>
  *
  * @author udoprog
@@ -95,7 +96,7 @@ public interface Callback<T> {
      * @author udoprog
      */
     public static abstract class DefaultStreamReducer<C, R> implements
-    StreamReducer<C, R> {
+            StreamReducer<C, R> {
         /**
          * Override to trigger on one resolved.
          */
@@ -145,10 +146,11 @@ public interface Callback<T> {
      *
      * 1. Since anything scheduled on an executor is viable for execution
      * 'later', the callback might have already been resolved or cancelled. It
-     * is therefore important to check {@link #isReady()} before calling {@link #resolve(T)}.
+     * is therefore important to check {@link #isReady()} before calling
+     * {@link #resolve(T)}.
      *
-     * 2. Since the resolving context might throw an exception, it is important that this
-     * caught and that the callback is marked as 'failed'
+     * 2. Since the resolving context might throw an exception, it is important
+     * that this caught and that the callback is marked as 'failed'
      * appropriately by calling {@link #fail(Exception)}.
      *
      * If you are willing to ensure these two behaviors, the Executor can be
@@ -179,7 +181,7 @@ public interface Callback<T> {
      * don't care for the result of the operation, only the events that happens.
      *
      * @param handle
-     *           Contains functions to be fired.
+     *            Contains functions to be fired.
      * @return This callback.
      */
     public Callback<T> register(ObjectHandle handle);
@@ -376,7 +378,9 @@ public interface Callback<T> {
      * Block until result is available.
      *
      * @return The result of this callback being resolved.
-     * @throws Exception If the callback being resolved threw an exception.
+     * @throws Exception
+     *             If the callback being resolved threw an exception.
      */
-    public T get() throws InterruptedException, CancelledException, FailedException;
+    public T get() throws InterruptedException, CancelledException,
+            FailedException;
 }

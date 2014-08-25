@@ -35,154 +35,154 @@ import com.spotify.heroic.yaml.ValidationException;
 @RequiredArgsConstructor
 @Slf4j
 public class KafkaConsumer implements Consumer {
-	@Data
-	public static class YAML implements Consumer.YAML {
-		public static final String TYPE = "!kafka-consumer";
+    @Data
+    public static class YAML implements Consumer.YAML {
+        public static final String TYPE = "!kafka-consumer";
 
-		private String schema = null;
-		private List<String> topics = new ArrayList<String>();
-		private int threadCount = 2;
-		private Map<String, String> config = new HashMap<String, String>();
+        private String schema = null;
+        private List<String> topics = new ArrayList<String>();
+        private int threadCount = 2;
+        private Map<String, String> config = new HashMap<String, String>();
 
-		@Override
-		public Consumer build(String context, ConsumerReporter reporter)
-				throws ValidationException {
-			final List<String> topics = Utils.notEmpty(context + ".topics",
-					this.topics);
-			final ConsumerSchema schema = Utils.instance(context + ".schema",
-					this.schema, ConsumerSchema.class);
-			return new KafkaConsumer(topics, threadCount, config, reporter,
-					schema);
-		}
-	}
+        @Override
+        public Consumer build(String context, ConsumerReporter reporter)
+                throws ValidationException {
+            final List<String> topics = Utils.notEmpty(context + ".topics",
+                    this.topics);
+            final ConsumerSchema schema = Utils.instance(context + ".schema",
+                    this.schema, ConsumerSchema.class);
+            return new KafkaConsumer(topics, threadCount, config, reporter,
+                    schema);
+        }
+    }
 
-	private final List<String> topics;
-	private final int threadCount;
-	private final Map<String, String> config;
-	private final ConsumerReporter reporter;
-	private final ConsumerSchema schema;
+    private final List<String> topics;
+    private final int threadCount;
+    private final Map<String, String> config;
+    private final ConsumerReporter reporter;
+    private final ConsumerSchema schema;
 
-	private volatile boolean running = false;
+    private volatile boolean running = false;
 
-	private final WriteBatcher batcher = new WriteBatcher();
+    private final WriteBatcher batcher = new WriteBatcher();
 
-	@Inject
-	private MetadataBackendManager metadata;
+    @Inject
+    private MetadataBackendManager metadata;
 
-	@Inject
-	private MetricBackendManager metric;
+    @Inject
+    private MetricBackendManager metric;
 
-	private Executor executor;
-	private ConsumerConnector connector;
+    private Executor executor;
+    private ConsumerConnector connector;
 
-	@Override
-	public synchronized void start() throws Exception {
-		if (running)
-			throw new IllegalStateException("Kafka consumer already running");
+    @Override
+    public synchronized void start() throws Exception {
+        if (running)
+            throw new IllegalStateException("Kafka consumer already running");
 
-		log.info("Starting");
+        log.info("Starting");
 
-		final Properties properties = new Properties();
-		properties.putAll(config);
+        final Properties properties = new Properties();
+        properties.putAll(config);
 
-		final ConsumerConfig config = new ConsumerConfig(properties);
-		connector = kafka.consumer.Consumer.createJavaConsumerConnector(config);
+        final ConsumerConfig config = new ConsumerConfig(properties);
+        connector = kafka.consumer.Consumer.createJavaConsumerConnector(config);
 
-		final Map<String, Integer> streamsMap = makeStreamsMap();
+        final Map<String, Integer> streamsMap = makeStreamsMap();
 
-		executor = Executors.newFixedThreadPool(topics.size() * threadCount);
+        executor = Executors.newFixedThreadPool(topics.size() * threadCount);
 
-		final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
-				.createMessageStreams(streamsMap);
+        final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
+                .createMessageStreams(streamsMap);
 
-		for (final Map.Entry<String, List<KafkaStream<byte[], byte[]>>> entry : streams
-				.entrySet()) {
-			final String topic = entry.getKey();
-			final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
+        for (final Map.Entry<String, List<KafkaStream<byte[], byte[]>>> entry : streams
+                .entrySet()) {
+            final String topic = entry.getKey();
+            final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
 
-			for (final KafkaStream<byte[], byte[]> stream : list) {
-				executor.execute(new ConsumerThread(reporter, topic, stream,
-						this, schema));
-			}
-		}
+            for (final KafkaStream<byte[], byte[]> stream : list) {
+                executor.execute(new ConsumerThread(reporter, topic, stream,
+                        this, schema));
+            }
+        }
 
-		this.running = true;
-	}
+        this.running = true;
+    }
 
-	@Override
-	public synchronized void stop() throws Exception {
-		if (!running)
-			throw new IllegalStateException("Kafka consumer not running");
+    @Override
+    public synchronized void stop() throws Exception {
+        if (!running)
+            throw new IllegalStateException("Kafka consumer not running");
 
-		connector.shutdown();
-		this.running = false;
-	}
+        connector.shutdown();
+        this.running = false;
+    }
 
-	@Override
-	public boolean isReady() {
-		return running;
-	}
+    @Override
+    public boolean isReady() {
+        return running;
+    }
 
-	@Override
-	public MetadataBackendManager getMetadataManager() {
-		return metadata;
-	}
+    @Override
+    public MetadataBackendManager getMetadataManager() {
+        return metadata;
+    }
 
-	@Override
-	public MetricBackendManager getMetricBackendManager() {
-		return metric;
-	}
+    @Override
+    public MetricBackendManager getMetricBackendManager() {
+        return metric;
+    }
 
-	private Map<String, Integer> makeStreamsMap() {
-		final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
+    private Map<String, Integer> makeStreamsMap() {
+        final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
 
-		for (final String topic : topics) {
-			streamsMap.put(topic, threadCount);
-		}
+        for (final String topic : topics) {
+            streamsMap.put(topic, threadCount);
+        }
 
-		return streamsMap;
-	}
+        return streamsMap;
+    }
 
-	@Override
-	public void write(WriteMetric entry) throws WriteException {
-		final List<WriteMetric> flush = batcher.write(entry);
+    @Override
+    public void write(WriteMetric entry) throws WriteException {
+        final List<WriteMetric> flush = batcher.write(entry);
 
-		if (flush == null) {
-			return;
-		}
+        if (flush == null) {
+            return;
+        }
 
-		WriteResponse result;
+        WriteResponse result;
 
-		try {
-			result = metric.write(flush).get();
-		} catch (final InterruptedException e) {
-			throw new WriteException("Write batch interrupted", e);
-		} catch (final CancelledException e) {
-			throw new WriteException("Write batch cancelled: " + e.getReason(),
-					e);
-		} catch (final FailedException e) {
-			throw new WriteException("Write batch failed: " + e.getCause());
-		}
+        try {
+            result = metric.write(flush).get();
+        } catch (final InterruptedException e) {
+            throw new WriteException("Write batch interrupted", e);
+        } catch (final CancelledException e) {
+            throw new WriteException("Write batch cancelled: " + e.getReason(),
+                    e);
+        } catch (final FailedException e) {
+            throw new WriteException("Write batch failed: " + e.getCause());
+        }
 
-		log.info(String
-				.format("Write batch finished (successful=%d, cancelled=%d, failed=%d)",
-						result.getSuccessful(), result.getCancelled().size(),
-						result.getFailed().size()));
+        log.info(String
+                .format("Write batch finished (successful=%d, cancelled=%d, failed=%d)",
+                        result.getSuccessful(), result.getCancelled().size(),
+                        result.getFailed().size()));
 
-		for (final CancelReason reason : result.getCancelled()) {
-			log.error("Write cancelled: " + reason);
-		}
+        for (final CancelReason reason : result.getCancelled()) {
+            log.error("Write cancelled: " + reason);
+        }
 
-		for (final Exception e : result.getFailed()) {
-			log.error("Write failed", e);
-		}
+        for (final Exception e : result.getFailed()) {
+            log.error("Write failed", e);
+        }
 
-		final int failCount = result.getCancelled().size()
-				+ result.getFailed().size();
+        final int failCount = result.getCancelled().size()
+                + result.getFailed().size();
 
-		if (failCount != 0) {
-			throw new WriteException(
-					"Some writes either failed or were cancelled.");
-		}
-	}
+        if (failCount != 0) {
+            throw new WriteException(
+                    "Some writes either failed or were cancelled.");
+        }
+    }
 }

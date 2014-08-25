@@ -7,13 +7,13 @@ package com.spotify.heroic.consumer.exceptions;
  * @author udoprog
  */
 public class FatalSchemaException extends SchemaException {
-	private static final long serialVersionUID = 7268983184508351773L;
+    private static final long serialVersionUID = 7268983184508351773L;
 
-	public FatalSchemaException(String message) {
-		super(message);
-	}
+    public FatalSchemaException(String message) {
+        super(message);
+    }
 
-	public FatalSchemaException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    public FatalSchemaException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

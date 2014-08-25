@@ -4,17 +4,17 @@ import lombok.Data;
 
 @Data
 public class MatchKeyFilter implements Filter {
-	public static final String OPERATOR = "key";
+    public static final String OPERATOR = "key";
 
-	private final String value;
+    private final String value;
 
-	@Override
-	public String toString() {
-		return "[" + OPERATOR + ", " + value + "]";
-	}
+    @Override
+    public String toString() {
+        return "[" + OPERATOR + ", " + value + "]";
+    }
 
-	@Override
-	public MatchKeyFilter optimize() {
-		return this;
-	}
+    @Override
+    public MatchKeyFilter optimize() {
+        return this;
+    }
 }

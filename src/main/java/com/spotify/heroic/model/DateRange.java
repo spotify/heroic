@@ -136,8 +136,7 @@ public class DateRange implements Comparable<DateRange> {
     @JsonCreator
     public static DateRange create(
             @JsonProperty(value = "start", required = true) Long start,
-            @JsonProperty(value = "end", required = true) Long end)
-    {
+            @JsonProperty(value = "end", required = true) Long end) {
         return new DateRange(start, end);
     }
 }

@@ -54,6 +54,7 @@ final class CachePutResolver implements
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
                 .asPreparedStatement()
                 .withByteBufferValue(key, cacheKeySerializer)
-                .withIntegerValue(dataOffset).withDoubleValue(d.getValue()).execute();
+                .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
+                .execute();
     }
 }

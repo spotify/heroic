@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class ClusterStatusResponse {
-	private final boolean ok;
-	private final int onlineNodes;
-	private final int offlineNodes;
+    private final boolean ok;
+    private final int onlineNodes;
+    private final int offlineNodes;
 }

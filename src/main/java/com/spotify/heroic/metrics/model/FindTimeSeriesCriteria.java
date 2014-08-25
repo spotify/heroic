@@ -9,11 +9,11 @@ import com.spotify.heroic.model.filter.Filter;
 
 @Data
 public class FindTimeSeriesCriteria {
-	private final Filter filter;
-	private final List<String> groupBy;
-	private final DateRange range;
+    private final Filter filter;
+    private final List<String> groupBy;
+    private final DateRange range;
 
-	public FindTimeSeriesCriteria withRange(DateRange range) {
-		return new FindTimeSeriesCriteria(filter, groupBy, range);
-	}
+    public FindTimeSeriesCriteria withRange(DateRange range) {
+        return new FindTimeSeriesCriteria(filter, groupBy, range);
+    }
 }

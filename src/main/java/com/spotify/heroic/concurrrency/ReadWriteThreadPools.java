@@ -73,21 +73,26 @@ public class ReadWriteThreadPools {
                     writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<Runnable>(writeQueueSize));
 
-            final ThreadPoolsReporter.Context readContext = reporter.newThreadPoolContext("read", new ThreadPoolReporterProvider() {
-                @Override
-                public long getQueueSize() {
-                    return readExecutor.getQueue().size();
-                }
-            });
+            final ThreadPoolsReporter.Context readContext = reporter
+                    .newThreadPoolContext("read",
+                            new ThreadPoolReporterProvider() {
+                                @Override
+                                public long getQueueSize() {
+                                    return readExecutor.getQueue().size();
+                                }
+                            });
 
-            final ThreadPoolsReporter.Context writeContext = reporter.newThreadPoolContext("write", new ThreadPoolReporterProvider() {
-                @Override
-                public long getQueueSize() {
-                    return readExecutor.getQueue().size();
-                }
-            });
+            final ThreadPoolsReporter.Context writeContext = reporter
+                    .newThreadPoolContext("write",
+                            new ThreadPoolReporterProvider() {
+                                @Override
+                                public long getQueueSize() {
+                                    return readExecutor.getQueue().size();
+                                }
+                            });
 
-            return new ReadWriteThreadPools(readExecutor, writeExecutor, readContext, writeContext);
+            return new ReadWriteThreadPools(readExecutor, writeExecutor,
+                    readContext, writeContext);
         }
     }
 

@@ -140,6 +140,5 @@ public abstract class BucketAggregation implements Aggregation {
         return buckets;
     }
 
-    abstract protected DataPoint build(long timestamp, long count,
-            double value);
+    abstract protected DataPoint build(long timestamp, long count, double value);
 }

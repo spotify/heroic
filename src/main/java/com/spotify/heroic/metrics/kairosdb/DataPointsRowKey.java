@@ -62,12 +62,12 @@ class DataPointsRowKey {
         }
 
         private String escape(String value) {
-          if (value == null)
-              return null;
+            if (value == null)
+                return null;
 
-          value = value.replace(":", ".");
-          value = value.replace(" ", "_");
-          return value.replace("=", "_");
+            value = value.replace(":", ".");
+            value = value.replace(" ", "_");
+            return value.replace("=", "_");
         }
 
         private Map<String, String> parseTags(byte[] tagsBuffer) {

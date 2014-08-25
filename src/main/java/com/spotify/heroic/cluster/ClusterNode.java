@@ -29,7 +29,7 @@ public class ClusterNode {
     private final Executor executor;
 
     private final class GetMetadataResolver implements
-    Callback.Resolver<NodeMetadata> {
+            Callback.Resolver<NodeMetadata> {
         private final Client client;
 
         private GetMetadataResolver(Client client) {
@@ -40,10 +40,9 @@ public class ClusterNode {
         public NodeMetadata resolve() throws Exception {
             final WebTarget target = client.target(url).path("rpc")
                     .path("metadata");
-            final ClusterMetadataResponse response = target
-                    .request().get(ClusterMetadataResponse.class);
-            return new NodeMetadata(response
-                    .getId(), response.getTags());
+            final ClusterMetadataResponse response = target.request().get(
+                    ClusterMetadataResponse.class);
+            return new NodeMetadata(response.getId(), response.getTags());
         }
     }
 
@@ -53,7 +52,7 @@ public class ClusterNode {
     }
 
     private final class QueryResolver implements
-    Callback.Resolver<MetricGroups> {
+            Callback.Resolver<MetricGroups> {
         private final RpcQueryRequest request;
         private final Client client;
 
@@ -73,7 +72,7 @@ public class ClusterNode {
     }
 
     public Callback<MetricGroups> query(final RpcQueryRequest request) {
-        return ConcurrentCallback.newResolve(executor, new QueryResolver(request,
-                ClientBuilder.newClient(config)));
+        return ConcurrentCallback.newResolve(executor, new QueryResolver(
+                request, ClientBuilder.newClient(config)));
     }
 }

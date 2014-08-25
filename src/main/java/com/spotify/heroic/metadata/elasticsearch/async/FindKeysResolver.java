@@ -19,37 +19,37 @@ import com.spotify.heroic.metadata.model.FindKeys;
 
 @RequiredArgsConstructor
 public class FindKeysResolver implements Callback.Resolver<FindKeys> {
-	private final Client client;
-	private final String index;
-	private final String type;
-	private final FilterBuilder filter;
+    private final Client client;
+    private final String index;
+    private final String type;
+    private final FilterBuilder filter;
 
-	@Override
-	public FindKeys resolve() throws Exception {
-		final SearchRequestBuilder request = client.prepareSearch(index)
-				.setTypes(type).setSearchType("count");
+    @Override
+    public FindKeys resolve() throws Exception {
+        final SearchRequestBuilder request = client.prepareSearch(index)
+                .setTypes(type).setSearchType("count");
 
-		if (filter != null) {
-			request.setPostFilter(filter);
-		}
+        if (filter != null) {
+            request.setPostFilter(filter);
+        }
 
-		{
-			final AggregationBuilder<?> terms = AggregationBuilders
-					.terms("terms").field(ElasticSearchMetadataBackend.KEY)
-					.size(0);
-			request.addAggregation(terms);
-		}
+        {
+            final AggregationBuilder<?> terms = AggregationBuilders
+                    .terms("terms").field(ElasticSearchMetadataBackend.KEY)
+                    .size(0);
+            request.addAggregation(terms);
+        }
 
-		final SearchResponse response = request.get();
+        final SearchResponse response = request.get();
 
-		final Terms terms = (Terms) response.getAggregations().get("terms");
+        final Terms terms = (Terms) response.getAggregations().get("terms");
 
-		final Set<String> keys = new HashSet<String>();
+        final Set<String> keys = new HashSet<String>();
 
-		for (final Terms.Bucket bucket : terms.getBuckets()) {
-			keys.add(bucket.getKey());
-		}
+        for (final Terms.Bucket bucket : terms.getBuckets()) {
+            keys.add(bucket.getKey());
+        }
 
-		return new FindKeys(keys, keys.size());
-	}
+        return new FindKeys(keys, keys.size());
+    }
 }

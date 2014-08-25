@@ -40,7 +40,8 @@ public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     }
 
     public static int calculateColumnKey(long timestamp) {
-        // This is because column key ranges from Integer.MIN_VALUE to Integer.MAX_VALUE
+        // This is because column key ranges from Integer.MIN_VALUE to
+        // Integer.MAX_VALUE
         final long shift = (long) Integer.MAX_VALUE + 1;
 
         timestamp = timestamp + shift;
@@ -49,7 +50,8 @@ public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     }
 
     public static long calculateAbsoluteTimestamp(long base, int columnKey) {
-        // This is because column key ranges from Integer.MIN_VALUE to Integer.MAX_VALUE
+        // This is because column key ranges from Integer.MIN_VALUE to
+        // Integer.MAX_VALUE
         final long shift = (long) Integer.MAX_VALUE + 1;
 
         final long timestamp = base + columnKey + shift;

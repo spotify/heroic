@@ -81,8 +81,7 @@ public class AggregationGroup {
     @JsonCreator
     public static AggregationGroup create(
             @JsonProperty(value = "aggregations", required = true) List<Aggregation> aggregations,
-            @JsonProperty(value = "sampling", required = true) Sampling sampling)
-    {
+            @JsonProperty(value = "sampling", required = true) Sampling sampling) {
         return new AggregationGroup(aggregations, sampling);
     }
 }

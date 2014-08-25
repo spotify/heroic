@@ -39,14 +39,14 @@ public class DataPoint implements Comparable<DataPoint> {
             final Double value;
 
             switch (p.nextToken()) {
-                case VALUE_NUMBER_FLOAT:
-                    value = p.readValueAs(Double.class);
-                    break;
-                case VALUE_NULL:
-                    value = Double.NaN;
-                    break;
-                default:
-                    throw c.mappingException("Expected float (value)");
+            case VALUE_NUMBER_FLOAT:
+                value = p.readValueAs(Double.class);
+                break;
+            case VALUE_NULL:
+                value = Double.NaN;
+                break;
+            default:
+                throw c.mappingException("Expected float (value)");
             }
 
             if (p.nextToken() != JsonToken.END_ARRAY)

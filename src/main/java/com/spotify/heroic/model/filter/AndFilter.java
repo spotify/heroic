@@ -9,47 +9,47 @@ import org.apache.commons.lang.StringUtils;
 
 @Data
 public class AndFilter implements Filter {
-	public static final String OPERATOR = "and";
+    public static final String OPERATOR = "and";
 
-	private final List<Filter> statements;
+    private final List<Filter> statements;
 
-	@Override
-	public String toString() {
-		final List<String> parts = new ArrayList<String>(statements.size() + 1);
-		parts.add(OPERATOR);
+    @Override
+    public String toString() {
+        final List<String> parts = new ArrayList<String>(statements.size() + 1);
+        parts.add(OPERATOR);
 
-		for (final Filter statement : statements) {
-			if (statement == null) {
-				parts.add("<null>");
-			} else {
-				parts.add(statement.toString());
-			}
-		}
+        for (final Filter statement : statements) {
+            if (statement == null) {
+                parts.add("<null>");
+            } else {
+                parts.add(statement.toString());
+            }
+        }
 
-		return "[" + StringUtils.join(parts, ", ") + "]";
-	}
+        return "[" + StringUtils.join(parts, ", ") + "]";
+    }
 
-	@Override
-	public Filter optimize() {
-		final List<Filter> statements = new ArrayList<Filter>(
-				this.statements.size());
+    @Override
+    public Filter optimize() {
+        final List<Filter> statements = new ArrayList<Filter>(
+                this.statements.size());
 
-		for (final Filter f : this.statements) {
-			if (f instanceof AndFilter) {
-				final AndFilter and = (AndFilter) f.optimize();
+        for (final Filter f : this.statements) {
+            if (f instanceof AndFilter) {
+                final AndFilter and = (AndFilter) f.optimize();
 
-				for (final Filter statement : and.getStatements())
-					statements.add(statement);
+                for (final Filter statement : and.getStatements())
+                    statements.add(statement);
 
-				continue;
-			}
+                continue;
+            }
 
-			statements.add(f.optimize());
-		}
+            statements.add(f.optimize());
+        }
 
-		if (statements.size() == 1)
-			return statements.get(0);
+        if (statements.size() == 1)
+            return statements.get(0);
 
-		return new AndFilter(statements);
-	}
+        return new AndFilter(statements);
+    }
 }

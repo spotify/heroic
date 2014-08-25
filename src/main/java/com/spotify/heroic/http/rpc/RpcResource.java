@@ -27,44 +27,44 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class RpcResource {
-	@Inject
-	private ClusterManager cluster;
+    @Inject
+    private ClusterManager cluster;
 
-	@Inject
-	private MetricBackendManager metrics;
+    @Inject
+    private MetricBackendManager metrics;
 
-	@GET
-	@Path("/metadata")
-	public Response getMetadata() {
-		log.info("GET /rpc/metadata");
+    @GET
+    @Path("/metadata")
+    public Response getMetadata() {
+        log.info("GET /rpc/metadata");
 
-		if (cluster == ClusterManager.NULL) {
-			return Response
-					.status(Response.Status.NOT_IMPLEMENTED)
-					.entity(new ErrorMessage(
-							"service is not configured as a cluster")).build();
-		}
+        if (cluster == ClusterManager.NULL) {
+            return Response
+                    .status(Response.Status.NOT_IMPLEMENTED)
+                    .entity(new ErrorMessage(
+                            "service is not configured as a cluster")).build();
+        }
 
-		final ClusterMetadataResponse metadata = new ClusterMetadataResponse(
-				cluster.getLocalNodeId(), cluster.getLocalNodeTags());
-		return Response.status(Response.Status.OK).entity(metadata).build();
-	}
+        final ClusterMetadataResponse metadata = new ClusterMetadataResponse(
+                cluster.getLocalNodeId(), cluster.getLocalNodeTags());
+        return Response.status(Response.Status.OK).entity(metadata).build();
+    }
 
-	private static final HttpAsyncUtils.Resume<MetricGroups, MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, MetricGroups>() {
-		@Override
-		public MetricGroups resume(MetricGroups value) throws Exception {
-			return value;
-		}
-	};
+    private static final HttpAsyncUtils.Resume<MetricGroups, MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, MetricGroups>() {
+        @Override
+        public MetricGroups resume(MetricGroups value) throws Exception {
+            return value;
+        }
+    };
 
-	@POST
-	@Path("/query")
-	public void query(@Suspended final AsyncResponse response,
-			RpcQueryRequest query) {
-		log.info("POST /rpc/query: {}", query);
+    @POST
+    @Path("/query")
+    public void query(@Suspended final AsyncResponse response,
+            RpcQueryRequest query) {
+        log.info("POST /rpc/query: {}", query);
 
-		final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(query);
+        final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(query);
 
-		HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
-	}
+        HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
+    }
 }

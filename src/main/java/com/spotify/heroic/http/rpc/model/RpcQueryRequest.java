@@ -12,7 +12,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeSerie;
 
 @Data
-@ToString(of={"key", "range", "aggregationGroup"})
+@ToString(of = { "key", "range", "aggregationGroup" })
 public class RpcQueryRequest {
     private final TimeSerie key;
     private final Set<TimeSerie> timeseries;
@@ -24,8 +24,7 @@ public class RpcQueryRequest {
             @JsonProperty(value = "key", required = true) TimeSerie key,
             @JsonProperty(value = "timeseries", required = true) Set<TimeSerie> timeseries,
             @JsonProperty(value = "range", required = true) DateRange range,
-            @JsonProperty(value = "aggregationGroup", required = true) AggregationGroup aggregationGroup)
-    {
+            @JsonProperty(value = "aggregationGroup", required = true) AggregationGroup aggregationGroup) {
         return new RpcQueryRequest(key, timeseries, range, aggregationGroup);
     }
 }

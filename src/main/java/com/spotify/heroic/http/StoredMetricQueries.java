@@ -10,13 +10,13 @@ import com.spotify.heroic.http.model.MetricsQuery;
  * @author udoprog
  */
 public class StoredMetricQueries {
-	private final ConcurrentHashMap<String, MetricsQuery> storedQueries = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MetricsQuery> storedQueries = new ConcurrentHashMap<>();
 
-	public void put(String id, MetricsQuery query) {
-		storedQueries.put(id, query);
-	}
+    public void put(String id, MetricsQuery query) {
+        storedQueries.put(id, query);
+    }
 
-	public MetricsQuery get(String id) {
-		return storedQueries.get(id);
-	}
+    public MetricsQuery get(String id) {
+        return storedQueries.get(id);
+    }
 }

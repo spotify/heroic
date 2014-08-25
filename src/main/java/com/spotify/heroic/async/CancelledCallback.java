@@ -109,7 +109,8 @@ public class CancelledCallback<T> implements Callback<T> {
     }
 
     @Override
-    public T get() throws InterruptedException, CancelledException, FailedException {
+    public T get() throws InterruptedException, CancelledException,
+            FailedException {
         throw new CancelledException(reason);
     }
 }

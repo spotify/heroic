@@ -7,7 +7,8 @@ import com.spotify.heroic.yaml.ValidationException;
 
 public interface ClusterDiscovery {
     public interface YAML {
-        public ClusterDiscovery build(String context) throws ValidationException;
+        public ClusterDiscovery build(String context)
+                throws ValidationException;
     }
 
     Callback<Collection<ClusterNode>> getNodes();

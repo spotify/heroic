@@ -22,59 +22,59 @@ import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
 public class StaticListDiscovery implements ClusterDiscovery {
-	@Data
-	public static final class YAML implements ClusterDiscovery.YAML {
-		public static final String TYPE = "!static-list-discovery";
+    @Data
+    public static final class YAML implements ClusterDiscovery.YAML {
+        public static final String TYPE = "!static-list-discovery";
 
-		private int threadPoolSize = 100;
-		private List<String> nodes = new ArrayList<String>();
+        private int threadPoolSize = 100;
+        private List<String> nodes = new ArrayList<String>();
 
-		@Override
-		public ClusterDiscovery build(String context)
-				throws ValidationException {
-			final Executor executor = Executors
-					.newFixedThreadPool(threadPoolSize);
+        @Override
+        public ClusterDiscovery build(String context)
+                throws ValidationException {
+            final Executor executor = Executors
+                    .newFixedThreadPool(threadPoolSize);
 
-			final ClientConfig clientConfig = new ClientConfig();
-			clientConfig.register(JacksonJsonProvider.class);
-			final List<URI> nodeUris = parseURIs(context + ".nodes");
+            final ClientConfig clientConfig = new ClientConfig();
+            clientConfig.register(JacksonJsonProvider.class);
+            final List<URI> nodeUris = parseURIs(context + ".nodes");
 
-			return new StaticListDiscovery(nodeUris, executor, clientConfig);
-		}
+            return new StaticListDiscovery(nodeUris, executor, clientConfig);
+        }
 
-		private List<URI> parseURIs(String context) throws ValidationException {
-			final List<URI> nodeUris = new ArrayList<URI>();
+        private List<URI> parseURIs(String context) throws ValidationException {
+            final List<URI> nodeUris = new ArrayList<URI>();
 
-			for (int i = 0; i < nodes.size(); i++) {
-				nodeUris.add(parseUri(context + "[" + i + "]", nodes.get(i)));
-			}
+            for (int i = 0; i < nodes.size(); i++) {
+                nodeUris.add(parseUri(context + "[" + i + "]", nodes.get(i)));
+            }
 
-			return nodeUris;
-		}
+            return nodeUris;
+        }
 
-		private URI parseUri(String context, final String n)
-				throws ValidationException {
-			try {
-				return new URI(n);
-			} catch (final URISyntaxException e) {
-				throw new ValidationException(context + ": Invalid URI: " + n,
-						e);
-			}
-		}
-	}
+        private URI parseUri(String context, final String n)
+                throws ValidationException {
+            try {
+                return new URI(n);
+            } catch (final URISyntaxException e) {
+                throw new ValidationException(context + ": Invalid URI: " + n,
+                        e);
+            }
+        }
+    }
 
-	private final List<URI> nodes;
-	private final Executor executor;
-	private final ClientConfig config;
+    private final List<URI> nodes;
+    private final Executor executor;
+    private final ClientConfig config;
 
-	@Override
-	public Callback<Collection<ClusterNode>> getNodes() {
-		final List<ClusterNode> clusterNodes = new ArrayList<>();
+    @Override
+    public Callback<Collection<ClusterNode>> getNodes() {
+        final List<ClusterNode> clusterNodes = new ArrayList<>();
 
-		for (final URI n : nodes) {
-			clusterNodes.add(new ClusterNode(n, config, executor));
-		}
+        for (final URI n : nodes) {
+            clusterNodes.add(new ClusterNode(n, config, executor));
+        }
 
-		return new ResolvedCallback<Collection<ClusterNode>>(clusterNodes);
-	}
+        return new ResolvedCallback<Collection<ClusterNode>>(clusterNodes);
+    }
 }

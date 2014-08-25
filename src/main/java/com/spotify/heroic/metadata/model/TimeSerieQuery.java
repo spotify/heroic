@@ -6,5 +6,5 @@ import com.spotify.heroic.model.filter.Filter;
 
 @Data
 public class TimeSerieQuery {
-	private final Filter filter;
+    private final Filter filter;
 }

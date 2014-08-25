@@ -12,21 +12,21 @@ import com.spotify.heroic.cluster.ClusterManager;
 
 @Slf4j
 public class RefreshClusterJob implements Job {
-	@Inject
-	private ClusterManager cluster;
+    @Inject
+    private ClusterManager cluster;
 
-	@Override
-	public void execute(JobExecutionContext context)
-			throws JobExecutionException {
-		if (cluster == ClusterManager.NULL)
-			return;
+    @Override
+    public void execute(JobExecutionContext context)
+            throws JobExecutionException {
+        if (cluster == ClusterManager.NULL)
+            return;
 
-		log.info("Refreshing cluster");
+        log.info("Refreshing cluster");
 
-		try {
-			cluster.refresh();
-		} catch (final Exception e) {
-			log.error("Refresh failed", e);
-		}
-	}
+        try {
+            cluster.refresh();
+        } catch (final Exception e) {
+            log.error("Refresh failed", e);
+        }
+    }
 }

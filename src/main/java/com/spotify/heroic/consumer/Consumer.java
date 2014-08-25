@@ -9,14 +9,14 @@ import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.yaml.ValidationException;
 
 public interface Consumer extends Lifecycle {
-	public interface YAML {
-		public Consumer build(String context, ConsumerReporter reporter)
-				throws ValidationException;
-	}
+    public interface YAML {
+        public Consumer build(String context, ConsumerReporter reporter)
+                throws ValidationException;
+    }
 
-	public MetadataBackendManager getMetadataManager();
+    public MetadataBackendManager getMetadataManager();
 
-	public MetricBackendManager getMetricBackendManager();
+    public MetricBackendManager getMetricBackendManager();
 
-	public void write(WriteMetric entry) throws WriteException;
+    public void write(WriteMetric entry) throws WriteException;
 }

@@ -15,54 +15,54 @@ import org.elasticsearch.search.SearchHit;
 @Slf4j
 @RequiredArgsConstructor
 public class PaginatingSearchResponse implements Iterable<SearchResponse> {
-	private final Client client;
-	private final String index;
-	private final String type;
-	private final FilterBuilder filter;
+    private final Client client;
+    private final String index;
+    private final String type;
+    private final FilterBuilder filter;
 
-	@Override
-	public Iterator<SearchResponse> iterator() {
-		return new Iterator<SearchResponse>() {
-			private SearchResponse next;
-			private int from = 0;
-			private final int size = 100000;
+    @Override
+    public Iterator<SearchResponse> iterator() {
+        return new Iterator<SearchResponse>() {
+            private SearchResponse next;
+            private int from = 0;
+            private final int size = 100000;
 
-			@Override
-			public boolean hasNext() {
-				final SearchRequestBuilder request = client
-						.prepareSearch(index).setTypes(type).setFrom(from)
-						.setSize(size);
+            @Override
+            public boolean hasNext() {
+                final SearchRequestBuilder request = client
+                        .prepareSearch(index).setTypes(type).setFrom(from)
+                        .setSize(size);
 
-				if (filter != null)
-					request.setQuery(QueryBuilders.filteredQuery(
-							QueryBuilders.matchAllQuery(), filter));
+                if (filter != null)
+                    request.setQuery(QueryBuilders.filteredQuery(
+                            QueryBuilders.matchAllQuery(), filter));
 
-				final SearchResponse next = request.get();
+                final SearchResponse next = request.get();
 
-				final SearchHit[] hits = next.getHits().getHits();
+                final SearchHit[] hits = next.getHits().getHits();
 
-				if (hits.length == 0)
-					return false;
+                if (hits.length == 0)
+                    return false;
 
-				log.info("Loaded SearchResponse {}-{}", from, from
-						+ hits.length);
+                log.info("Loaded SearchResponse {}-{}", from, from
+                        + hits.length);
 
-				this.from += this.size;
-				this.next = next;
+                this.from += this.size;
+                this.next = next;
 
-				return true;
-			}
+                return true;
+            }
 
-			@Override
-			public SearchResponse next() {
-				final SearchResponse next = this.next;
-				this.next = null;
-				return next;
-			}
+            @Override
+            public SearchResponse next() {
+                final SearchResponse next = this.next;
+                this.next = null;
+                return next;
+            }
 
-			@Override
-			public void remove() {
-			};
-		};
-	}
+            @Override
+            public void remove() {
+            };
+        };
+    }
 }

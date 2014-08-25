@@ -9,7 +9,7 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
 @Slf4j
 public final class ClusterNodeLogHandle implements
-Callback.Handle<NodeRegistryEntry> {
+        Callback.Handle<NodeRegistryEntry> {
     private final ClusterNode clusterNode;
 
     public ClusterNodeLogHandle(ClusterNode clusterNode) {
@@ -17,25 +17,18 @@ Callback.Handle<NodeRegistryEntry> {
     }
 
     @Override
-    public void cancelled(
-            CancelReason reason)
-                    throws Exception {
+    public void cancelled(CancelReason reason) throws Exception {
         log.warn("Cancelled to update metadata for " + clusterNode
                 + ". Reason: " + reason);
     }
 
     @Override
-    public void failed(Exception e)
-            throws Exception {
-        log.warn(
-                "Failed to update metadata for "
-                        + clusterNode, e);
+    public void failed(Exception e) throws Exception {
+        log.warn("Failed to update metadata for " + clusterNode, e);
     }
 
     @Override
-    public void resolved(
-            NodeRegistryEntry result)
-                    throws Exception {
+    public void resolved(NodeRegistryEntry result) throws Exception {
 
     }
 }

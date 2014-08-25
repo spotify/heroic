@@ -307,7 +307,8 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     @Override
-    public T get() throws InterruptedException, CancelledException, FailedException {
+    public T get() throws InterruptedException, CancelledException,
+            FailedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
         register(new Finishable() {

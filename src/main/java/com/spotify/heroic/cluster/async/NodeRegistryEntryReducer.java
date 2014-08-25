@@ -15,16 +15,14 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 @Slf4j
 @RequiredArgsConstructor
 public final class NodeRegistryEntryReducer implements
-Callback.Reducer<NodeRegistryEntry, Void> {
+        Callback.Reducer<NodeRegistryEntry, Void> {
     private final AtomicReference<NodeRegistry> registry;
     private final int totalNodes;
 
     @Override
-    public Void resolved(
-            Collection<NodeRegistryEntry> results,
-            Collection<Exception> errors,
-            Collection<CancelReason> cancelled)
-                    throws Exception {
+    public Void resolved(Collection<NodeRegistryEntry> results,
+            Collection<Exception> errors, Collection<CancelReason> cancelled)
+            throws Exception {
         log.info("Updating cluster registry with: {}", results);
         registry.set(new NodeRegistry(new ArrayList<>(results), totalNodes));
         return null;

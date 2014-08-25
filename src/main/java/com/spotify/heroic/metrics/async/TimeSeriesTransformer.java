@@ -56,15 +56,15 @@ public final class TimeSeriesTransformer implements
         final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            callbacks.add(buildCachedLookup(r.getBackend(), r.getKey(), r.getSeries()));
+            callbacks.add(buildCachedLookup(r.getBackend(), r.getKey(),
+                    r.getSeries()));
         }
 
         return callbacks;
     }
 
-    private Callback<MetricGroups> buildCachedLookup(
-            final Backend backend, final TimeSerie timeSerie,
-            final Set<TimeSerie> timeSeries) {
+    private Callback<MetricGroups> buildCachedLookup(final Backend backend,
+            final TimeSerie timeSerie, final Set<TimeSerie> timeSeries) {
         final CacheGetTransformer transformer = new CacheGetTransformer(
                 timeSerie, cache) {
             @Override
@@ -89,17 +89,18 @@ public final class TimeSeriesTransformer implements
         }
 
         if (callbacks.isEmpty())
-            return new CancelledCallback<MetricGroups>(CancelReason.BACKEND_MISMATCH);
+            return new CancelledCallback<MetricGroups>(
+                    CancelReason.BACKEND_MISMATCH);
 
         return ConcurrentCallback.newReduce(callbacks, buildReducer(slice));
     }
 
     private DateRange modifiedRange(final TimeSerieSlice slice) {
-      if (aggregation == null)
-        return slice.getRange();
+        if (aggregation == null)
+            return slice.getRange();
 
-      return slice.getRange().shiftStart(
-              -aggregation.getSampling().getExtent());
+        return slice.getRange().shiftStart(
+                -aggregation.getSampling().getExtent());
     }
 
     private Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> buildReducer(
