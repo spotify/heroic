@@ -11,7 +11,6 @@ JAVA_HOME=/usr/lib/jvm/default-java
 MVN=${MAVEN} -D maven.test.skip=true -D user.home=$(MAVEN_HOME) -s debian/settings.xml
 
 %:
-	env
 	dh $@
 
 override_dh_auto_clean:
