@@ -123,7 +123,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                .toInstance(storedMetricsQueries);
+                        .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
                 multiBind(config.getMetricBackends(), Backend.class);
@@ -132,17 +132,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public void afterInjection(Object i) {
-                                managed.add((Lifecycle) i);
+                            public <I> void hear(TypeLiteral<I> type,
+                                    TypeEncounter<I> encounter) {
+                                encounter.register(new InjectionListener<I>() {
+                                    @Override
+                                    public void afterInjection(Object i) {
+                                        managed.add((Lifecycle) i);
+                                    }
+                                });
                             }
                         });
-                    }
-                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -188,7 +188,7 @@ public class Main {
         final FastForwardReporter ffwd = setupReporter(registry);
 
         server.getServerConfiguration().getMonitoringConfig()
-                .getWebServerConfig().addProbes(buildProbe());
+        .getWebServerConfig().addProbes(buildProbe());
 
         server.start();
 
@@ -319,7 +319,7 @@ public class Main {
 
         context.addListener(Main.LISTENER);
         context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
-        .addMappingForUrlPatterns(null, "/*");
+                .addMappingForUrlPatterns(null, "/*");
 
         // Initialize and register Jersey ServletContainer
         final ServletRegistration servletReg = context.addServlet(

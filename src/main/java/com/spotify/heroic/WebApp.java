@@ -19,11 +19,11 @@ public class WebApp extends ResourceConfig {
     public WebApp(ServiceLocator serviceLocator) {
         log.info("Setting up Web Application");
 
-        register(JacksonJsonProvider.class);
         register(SseFeature.class);
 
         // Resources.
         packages(HeroicResource.class.getPackage().getName());
+        packages(JacksonJsonProvider.class.getPackage().getName());
 
         GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 
