@@ -1,7 +1,6 @@
 package com.spotify.heroic;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -10,7 +9,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
-import javax.ws.rs.core.UriBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,17 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.glassfish.grizzly.Connection;
-import org.glassfish.grizzly.http.server.HttpHandler;
-import org.glassfish.grizzly.http.server.HttpServer;
-import org.glassfish.grizzly.http.server.HttpServerFilter;
-import org.glassfish.grizzly.http.server.HttpServerProbe;
-import org.glassfish.grizzly.http.server.Request;
-import org.glassfish.grizzly.http.server.Response;
-import org.glassfish.grizzly.servlet.FilterRegistration;
-import org.glassfish.grizzly.servlet.ServletRegistration;
-import org.glassfish.grizzly.servlet.WebappContext;
-import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.Slf4jRequestLog;
+import org.eclipse.jetty.server.handler.HandlerCollection;
+import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
@@ -123,7 +117,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
+                .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
                 multiBind(config.getMetricBackends(), Backend.class);
@@ -132,17 +126,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((Lifecycle) i);
-                                    }
-                                });
+                            public void afterInjection(Object i) {
+                                managed.add((Lifecycle) i);
                             }
                         });
+                    }
+                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -184,11 +178,8 @@ public class Main {
             return;
         }
 
-        final HttpServer server = setupHttpServer(config);
+        final Server server = setupHttpServer(config);
         final FastForwardReporter ffwd = setupReporter(registry);
-
-        server.getServerConfiguration().getMonitoringConfig()
-        .getWebServerConfig().addProbes(buildProbe());
 
         server.start();
 
@@ -203,55 +194,6 @@ public class Main {
         log.info("Heroic was Successfully Started");
         latch.await();
         System.exit(0);
-    }
-
-    private static HttpServerProbe buildProbe() {
-        return new HttpServerProbe() {
-            @Override
-            public void onRequestReceiveEvent(HttpServerFilter filter,
-                    Connection connection, Request request) {
-                log.info("{}: {}", request.getMethod().toString(),
-                        request.getRequestURI());
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onRequestCompleteEvent(HttpServerFilter filter,
-                    Connection connection, Response response) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onRequestSuspendEvent(HttpServerFilter filter,
-                    Connection connection, Request request) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onRequestResumeEvent(HttpServerFilter filter,
-                    Connection connection, Request request) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onRequestTimeoutEvent(HttpServerFilter filter,
-                    Connection connection, Request request) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onRequestCancelEvent(HttpServerFilter filter,
-                    Connection connection, Request request) {
-                // TODO Auto-generated method stub
-            }
-
-            @Override
-            public void onBeforeServiceEvent(HttpServerFilter filter,
-                    Connection connection, Request request,
-                    HttpHandler httpHandler) {
-                // TODO Auto-generated method stub
-            }
-        };
     }
 
     /**
@@ -307,37 +249,68 @@ public class Main {
         return config;
     }
 
-    private static HttpServer setupHttpServer(final HeroicConfig config)
+    /*
+     * private static HttpServer setupHttpServer(final HeroicConfig config)
+     * throws IOException { log.info("Starting grizzly http server...");
+     * 
+     * final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
+     * .port(config.getPort()).build();
+     * 
+     * final WebappContext context = new WebappContext("Guice Webapp sample",
+     * "");
+     * 
+     * context.addListener(Main.LISTENER);
+     * context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
+     * .addMappingForUrlPatterns(null, "/*");
+     * 
+     * // Initialize and register Jersey ServletContainer final
+     * ServletRegistration servletReg = context.addServlet( "ServletContainer",
+     * ServletContainer.class); servletReg.addMapping("/*");
+     * servletReg.setInitParameter("javax.ws.rs.Application",
+     * WebApp.class.getName());
+     * 
+     * // Initialize and register GuiceFilter final FilterRegistration filterReg
+     * = context.addFilter("GuiceFilter", GuiceFilter.class);
+     * filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
+     * "/*");
+     * 
+     * final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
+     * baseUri, false);
+     * 
+     * context.deploy(server);
+     * 
+     * return server; }
+     */
+
+    private static Server setupHttpServer(final HeroicConfig config)
             throws IOException {
         log.info("Starting grizzly http server...");
 
-        final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
-                .port(config.getPort()).build();
+        final Server server = new Server(config.getPort());
 
-        final WebappContext context = new WebappContext("Guice Webapp sample",
-                "");
-
-        context.addListener(Main.LISTENER);
-        context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
-                .addMappingForUrlPatterns(null, "/*");
-
-        // Initialize and register Jersey ServletContainer
-        final ServletRegistration servletReg = context.addServlet(
-                "ServletContainer", ServletContainer.class);
-        servletReg.addMapping("/*");
-        servletReg.setInitParameter("javax.ws.rs.Application",
-                WebApp.class.getName());
+        final ServletContextHandler context = new ServletContextHandler(
+                ServletContextHandler.NO_SESSIONS);
+        context.setContextPath("/");
 
         // Initialize and register GuiceFilter
-        final FilterRegistration filterReg = context.addFilter("GuiceFilter",
-                GuiceFilter.class);
-        filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
-                "/*");
+        context.addFilter(GuiceFilter.class, "/*",
+                EnumSet.allOf(DispatcherType.class));
+        context.addEventListener(Main.LISTENER);
 
-        final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
-                baseUri, false);
+        // Initialize and register Jersey ServletContainer
+        final ServletHolder jerseyServlet = context.addServlet(
+                ServletContainer.class, "/*");
+        jerseyServlet.setInitOrder(1);
+        jerseyServlet.setInitParameter("javax.ws.rs.Application",
+                WebApp.class.getName());
 
-        context.deploy(server);
+        final RequestLogHandler requestLogHandler = new RequestLogHandler();
+
+        requestLogHandler.setRequestLog(new Slf4jRequestLog());
+
+        final HandlerCollection handlers = new HandlerCollection();
+        handlers.setHandlers(new Handler[] { context, requestLogHandler });
+        server.setHandler(handlers);
 
         return server;
     }
@@ -361,7 +334,7 @@ public class Main {
     }
 
     private static Thread setupShutdownHook(final FastForwardReporter ffwd,
-            final HttpServer server, final Scheduler scheduler,
+            final Server server, final Scheduler scheduler,
             final CountDownLatch latch) {
         return new Thread() {
             @Override
@@ -374,10 +347,10 @@ public class Main {
                 } catch (final SchedulerException e) {
                     log.error("Scheduler shutdown failed", e);
                 }
-
                 try {
                     log.info("Waiting for server to shutdown");
-                    server.shutdown().get(30, TimeUnit.SECONDS);
+                    server.stop();
+                    server.join();
                 } catch (final Exception e) {
                     log.error("Server shutdown failed", e);
                 }

@@ -13,7 +13,6 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.http.write.WriteMetrics;
 import com.spotify.heroic.http.write.WriteMetricsResponse;
@@ -21,7 +20,6 @@ import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;
 
-@Slf4j
 @Path("/write")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -45,8 +43,6 @@ public class WriteResource {
     @POST
     public void writeMetrics(@Suspended final AsyncResponse response,
             WriteMetrics write) {
-        log.info("POST /write: {}", write);
-
         final WriteMetric entry = new WriteMetric(write.getSeries(),
                 write.getData());
 

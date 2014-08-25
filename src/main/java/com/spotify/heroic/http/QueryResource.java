@@ -104,8 +104,6 @@ public class QueryResource {
             QueryMetricsBody query) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(query);
 
-        log.info("POST /metrics: {}", q);
-
         final Callback<QueryMetricsResult> callback = metrics
                 .queryMetrics(q.getFilter(), q.getGroupBy(), q.getRange(),
                         q.getAggregation());
@@ -118,11 +116,9 @@ public class QueryResource {
     @POST
     @Path("/metrics-stream")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(QueryMetricsBody query, @Context UriInfo info)
-            throws MetricQueryException {
+    public Response makeMetricsStream(QueryMetricsBody query,
+            @Context UriInfo info) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(query);
-
-        log.info("POST /metrics-stream: {}", q);
 
         final String id = Integer.toHexString(q.hashCode());
         storedQueries.put(id, q);
@@ -178,8 +174,6 @@ public class QueryResource {
     @Produces(SseFeature.SERVER_SENT_EVENTS)
     public EventOutput getMetricsStream(@PathParam("id") String id)
             throws WebApplicationException, MetricQueryException {
-        log.info("GET /metrics-stream/{}", id);
-
         final StoredQuery q = storedQueries.get(id);
 
         if (q == null)

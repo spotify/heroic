@@ -11,8 +11,6 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.http.model.MessageResponse;
@@ -21,7 +19,6 @@ import com.spotify.heroic.http.rpc.RpcQueryBody;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 
-@Slf4j
 @Path("/rpc")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -35,8 +32,6 @@ public class RpcResource {
     @GET
     @Path("/metadata")
     public Response getMetadata() {
-        log.info("GET /rpc/metadata");
-
         if (cluster == ClusterManager.NULL) {
             return Response
                     .status(Response.Status.NOT_IMPLEMENTED)
@@ -44,8 +39,8 @@ public class RpcResource {
                             "service is not configured as a cluster")).build();
         }
 
-        final RpcMetadata metadata = new RpcMetadata(
-                cluster.getLocalNodeId(), cluster.getLocalNodeTags());
+        final RpcMetadata metadata = new RpcMetadata(cluster.getLocalNodeId(),
+                cluster.getLocalNodeTags());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
 
@@ -60,8 +55,6 @@ public class RpcResource {
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             RpcQueryBody query) {
-        log.info("POST /rpc/query: {}", query);
-
         final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(query);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);

@@ -15,7 +15,10 @@
     <Logger name="kafka.consumer" level="INFO" additivity="false">
       <AppenderRef ref="primary" />
     </Logger>
-    <Root level="DEBUG">
+    <Logger name="org.eclipse.jetty.server.RequestLog" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Root level="WARN">
       <AppenderRef ref="primary" />
     </Root>
   </Loggers>
