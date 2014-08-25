@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.utils;
+package com.spotify.heroic.http;
 
 import java.nio.ByteBuffer;
 
@@ -11,6 +11,9 @@ import javax.ws.rs.core.Response;
 
 import com.google.common.io.BaseEncoding;
 import com.spotify.heroic.http.model.DataResponse;
+import com.spotify.heroic.http.utils.UtilsDecodeRowKeyQuery;
+import com.spotify.heroic.http.utils.UtilsEncodeRowKeyQuery;
+import com.spotify.heroic.http.utils.UtilsRowKeyResponse;
 import com.spotify.heroic.metrics.heroic.MetricsRowKey;
 import com.spotify.heroic.metrics.heroic.MetricsRowKeySerializer;
 
@@ -25,7 +28,7 @@ public class UtilsResource {
     @POST
     @Path("/decode-row-key")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response decodeRowKey(final DecodeRowKeyQuery request) {
+    public Response decodeRowKey(final UtilsDecodeRowKeyQuery request) {
         String data = request.getData();
 
         if (data.substring(0, 2).equals("0x"))
@@ -38,14 +41,14 @@ public class UtilsResource {
         final MetricsRowKey rowKey = MetricsRowKeySerializer.get()
                 .fromByteBuffer(buffer);
         return Response.status(Response.Status.OK)
-                .entity(new RowKey(rowKey.getSeries(), rowKey.getBase()))
+                .entity(new UtilsRowKeyResponse(rowKey.getSeries(), rowKey.getBase()))
                 .build();
     }
 
     @POST
     @Path("/encode-row-key")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response encodeRowKey(final EncodeRowKeyQuery request) {
+    public Response encodeRowKey(final UtilsEncodeRowKeyQuery request) {
         final MetricsRowKey rowKey = new MetricsRowKey(request.getSeries(),
                 request.getBase());
         final ByteBuffer buffer = MetricsRowKeySerializer.get().toByteBuffer(

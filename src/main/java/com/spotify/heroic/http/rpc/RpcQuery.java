@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc.model;
+package com.spotify.heroic.http.rpc;
 
 import java.util.List;
 

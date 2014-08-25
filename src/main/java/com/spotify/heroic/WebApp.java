@@ -12,11 +12,6 @@ import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.spotify.heroic.http.HeroicResource;
-import com.spotify.heroic.http.error.CustomExceptionMapper;
-import com.spotify.heroic.http.error.HeroicExceptionMapper;
-import com.spotify.heroic.http.error.UnrecognizedPropertyExceptionMapper;
-import com.spotify.heroic.http.rpc.RpcResource;
-import com.spotify.heroic.http.status.StatusResource;
 
 @Slf4j
 public class WebApp extends ResourceConfig {
@@ -25,15 +20,10 @@ public class WebApp extends ResourceConfig {
         log.info("Setting up Web Application");
 
         register(JacksonJsonProvider.class);
-        register(HeroicExceptionMapper.class);
-        register(UnrecognizedPropertyExceptionMapper.class);
-        register(CustomExceptionMapper.class);
         register(SseFeature.class);
 
         // Resources.
-        register(HeroicResource.class);
-        register(RpcResource.class);
-        register(StatusResource.class);
+        packages(HeroicResource.class.getPackage().getName());
 
         GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 
@@ -41,5 +31,6 @@ public class WebApp extends ResourceConfig {
                 .getService(GuiceIntoHK2Bridge.class);
 
         bridge.bridgeGuiceInjector(Main.injector);
+
     }
 }

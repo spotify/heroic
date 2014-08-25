@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.write;
+package com.spotify.heroic.http.write;
 
 import lombok.Data;
 

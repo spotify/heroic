@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.query;
+package com.spotify.heroic.http.query;
 
 import lombok.Data;
 
@@ -12,12 +12,12 @@ import com.spotify.heroic.aggregation.SumAggregation;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = AggregationQuery.Sum.class, name = "sum"),
-        @JsonSubTypes.Type(value = AggregationQuery.Average.class, name = "average") })
-public interface AggregationQuery {
+        @JsonSubTypes.Type(value = QueryAggregation.Sum.class, name = "sum"),
+        @JsonSubTypes.Type(value = QueryAggregation.Average.class, name = "average") })
+public interface QueryAggregation {
     @Data
-    public class Average implements AggregationQuery {
-        private final SamplingQuery sampling;
+    public class Average implements QueryAggregation {
+        private final QuerySampling sampling;
 
         @Override
         public Aggregation makeAggregation() {
@@ -26,14 +26,14 @@ public interface AggregationQuery {
 
         @JsonCreator
         public static Average create(
-                @JsonProperty(value = "sampling", required = true) SamplingQuery sampling) {
+                @JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
             return new Average(sampling);
         }
     }
 
     @Data
-    public class Sum implements AggregationQuery {
-        private final SamplingQuery sampling;
+    public class Sum implements QueryAggregation {
+        private final QuerySampling sampling;
 
         @Override
         public Aggregation makeAggregation() {
@@ -42,7 +42,7 @@ public interface AggregationQuery {
 
         @JsonCreator
         public static Sum create(
-                @JsonProperty(value = "sampling", required = true) SamplingQuery sampling) {
+                @JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
             return new Sum(sampling);
         }
     }

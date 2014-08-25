@@ -5,7 +5,7 @@ import lombok.Data;
 import com.spotify.heroic.model.Series;
 
 @Data
-public class RowKey {
+public class UtilsRowKeyResponse {
     private final Series series;
     private final long base;
 }

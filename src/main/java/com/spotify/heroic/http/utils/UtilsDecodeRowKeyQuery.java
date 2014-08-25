@@ -6,11 +6,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
-public class DecodeRowKeyQuery {
+public class UtilsDecodeRowKeyQuery {
     private final String data;
 
     @JsonCreator
-    public static DecodeRowKeyQuery create(@JsonProperty("data") String data) {
-        return new DecodeRowKeyQuery(data);
+    public static UtilsDecodeRowKeyQuery create(@JsonProperty("data") String data) {
+        return new UtilsDecodeRowKeyQuery(data);
     }
 }

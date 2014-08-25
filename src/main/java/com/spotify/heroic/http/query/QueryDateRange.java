@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.query;
+package com.spotify.heroic.http.query;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -13,11 +13,11 @@ import com.spotify.heroic.model.DateRange;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = DateRangeQuery.Absolute.class, name = "absolute"),
-        @JsonSubTypes.Type(value = DateRangeQuery.Relative.class, name = "relative") })
-public interface DateRangeQuery {
+        @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),
+        @JsonSubTypes.Type(value = QueryDateRange.Relative.class, name = "relative") })
+public interface QueryDateRange {
     @Data
-    static class Absolute implements DateRangeQuery {
+    static class Absolute implements QueryDateRange {
         private final long start;
         private final long end;
 
@@ -35,7 +35,7 @@ public interface DateRangeQuery {
     }
 
     @Data
-    static class Relative implements DateRangeQuery {
+    static class Relative implements QueryDateRange {
         public static final TimeUnit DEFAULT_UNIT = TimeUnit.DAYS;
         public static final long DEFAULT_VALUE = 1;
 

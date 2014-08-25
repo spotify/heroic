@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.query;
+package com.spotify.heroic.http.query;
 
 import java.util.concurrent.TimeUnit;
 
@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.model.Sampling;
 
 @Data
-public class SamplingQuery {
+public class QuerySampling {
     private static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
     public static final long DEFAULT_VALUE = TimeUnit.MILLISECONDS.convert(10,
             TimeUnit.MINUTES);
@@ -18,13 +18,13 @@ public class SamplingQuery {
     private final long extent;
 
     @JsonCreator
-    public static SamplingQuery create(@JsonProperty("unit") String unitName,
+    public static QuerySampling create(@JsonProperty("unit") String unitName,
             @JsonProperty("value") Long inputSize,
             @JsonProperty("extent") Long inputExtent) {
         final TimeUnit unit = parseUnitName(unitName);
         final long size = parseSize(inputSize, unit);
         final long extent = parseExtent(inputExtent, unit, size);
-        return new SamplingQuery(size, extent);
+        return new QuerySampling(size, extent);
     }
 
     private static TimeUnit parseUnitName(String unitName) {

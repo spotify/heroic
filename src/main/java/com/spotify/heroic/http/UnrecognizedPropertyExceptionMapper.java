@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.error;
+package com.spotify.heroic.http;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;

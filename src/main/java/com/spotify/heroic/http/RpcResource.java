@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc;
+package com.spotify.heroic.http;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -15,10 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.model.MessageResponse;
-import com.spotify.heroic.http.rpc.model.RpcMetadata;
-import com.spotify.heroic.http.rpc.model.RpcQueryBody;
+import com.spotify.heroic.http.rpc.RpcMetadata;
+import com.spotify.heroic.http.rpc.RpcQueryBody;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 

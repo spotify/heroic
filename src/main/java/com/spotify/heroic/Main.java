@@ -18,7 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.grizzly.http.server.HttpServerFilter;
+import org.glassfish.grizzly.http.server.HttpServerProbe;
+import org.glassfish.grizzly.http.server.Request;
+import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.grizzly.servlet.FilterRegistration;
 import org.glassfish.grizzly.servlet.ServletRegistration;
 import org.glassfish.grizzly.servlet.WebappContext;
@@ -44,7 +50,7 @@ import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.HeroicResource.StoredMetricQueries;
+import com.spotify.heroic.http.QueryResource.StoredMetricQueries;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
@@ -181,6 +187,9 @@ public class Main {
         final HttpServer server = setupHttpServer(config);
         final FastForwardReporter ffwd = setupReporter(registry);
 
+        server.getServerConfiguration().getMonitoringConfig()
+                .getWebServerConfig().addProbes(buildProbe());
+
         server.start();
 
         final Scheduler scheduler = injector.getInstance(Scheduler.class);
@@ -194,6 +203,55 @@ public class Main {
         log.info("Heroic was Successfully Started");
         latch.await();
         System.exit(0);
+    }
+
+    private static HttpServerProbe buildProbe() {
+        return new HttpServerProbe() {
+            @Override
+            public void onRequestReceiveEvent(HttpServerFilter filter,
+                    Connection connection, Request request) {
+                log.info("{}: {}", request.getMethod().toString(),
+                        request.getRequestURI());
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onRequestCompleteEvent(HttpServerFilter filter,
+                    Connection connection, Response response) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onRequestSuspendEvent(HttpServerFilter filter,
+                    Connection connection, Request request) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onRequestResumeEvent(HttpServerFilter filter,
+                    Connection connection, Request request) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onRequestTimeoutEvent(HttpServerFilter filter,
+                    Connection connection, Request request) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onRequestCancelEvent(HttpServerFilter filter,
+                    Connection connection, Request request) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void onBeforeServiceEvent(HttpServerFilter filter,
+                    Connection connection, Request request,
+                    HttpHandler httpHandler) {
+                // TODO Auto-generated method stub
+            }
+        };
     }
 
     /**
@@ -264,17 +322,17 @@ public class Main {
         .addMappingForUrlPatterns(null, "/*");
 
         // Initialize and register Jersey ServletContainer
-        final ServletRegistration servletRegistration = context.addServlet(
+        final ServletRegistration servletReg = context.addServlet(
                 "ServletContainer", ServletContainer.class);
-        servletRegistration.addMapping("/*");
-        servletRegistration.setInitParameter("javax.ws.rs.Application",
+        servletReg.addMapping("/*");
+        servletReg.setInitParameter("javax.ws.rs.Application",
                 WebApp.class.getName());
 
         // Initialize and register GuiceFilter
-        final FilterRegistration registration = context.addFilter(
-                "GuiceFilter", GuiceFilter.class);
-        registration.addMappingForUrlPatterns(
-                EnumSet.allOf(DispatcherType.class), "/*");
+        final FilterRegistration filterReg = context.addFilter("GuiceFilter",
+                GuiceFilter.class);
+        filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
+                "/*");
 
         final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
                 baseUri, false);

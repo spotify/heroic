@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.query;
+package com.spotify.heroic.http.query;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,7 +18,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
-public class MetricsResponse {
+public class QueryMetricsResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
         @Override

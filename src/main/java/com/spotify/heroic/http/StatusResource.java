@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.status;
+package com.spotify.heroic.http;
 
 import java.util.Set;
 
@@ -12,6 +12,8 @@ import javax.ws.rs.core.Response;
 
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.http.status.ServiceStatus;
+import com.spotify.heroic.http.status.ServiceStatus.Cluster;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metrics.Backend;
 

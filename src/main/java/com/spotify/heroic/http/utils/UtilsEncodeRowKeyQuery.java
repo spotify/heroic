@@ -8,12 +8,12 @@ import com.spotify.heroic.metrics.heroic.MetricsRowKey;
 import com.spotify.heroic.model.Series;
 
 @Data
-public class EncodeRowKeyQuery {
+public class UtilsEncodeRowKeyQuery {
     private final Series series;
     private final long base;
 
     @JsonCreator
-    public static EncodeRowKeyQuery create(
+    public static UtilsEncodeRowKeyQuery create(
             @JsonProperty("series") Series series,
             @JsonProperty("base") Long base) {
         if (base == null) {
@@ -21,6 +21,6 @@ public class EncodeRowKeyQuery {
             base = now - now % MetricsRowKey.MAX_WIDTH;
         }
 
-        return new EncodeRowKeyQuery(series, base);
+        return new UtilsEncodeRowKeyQuery(series, base);
     }
 }

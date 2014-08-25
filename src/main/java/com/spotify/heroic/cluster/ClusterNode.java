@@ -17,8 +17,8 @@ import org.glassfish.jersey.client.ClientConfig;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.model.NodeMetadata;
-import com.spotify.heroic.http.rpc.model.RpcMetadata;
-import com.spotify.heroic.http.rpc.model.RpcQueryBody;
+import com.spotify.heroic.http.rpc.RpcMetadata;
+import com.spotify.heroic.http.rpc.RpcQueryBody;
 import com.spotify.heroic.metrics.model.MetricGroups;
 
 @Data

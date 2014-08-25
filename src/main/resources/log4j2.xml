@@ -15,7 +15,7 @@
     <Logger name="kafka.consumer" level="INFO" additivity="false">
       <AppenderRef ref="primary" />
     </Logger>
-    <Root level="WARN">
+    <Root level="DEBUG">
       <AppenderRef ref="primary" />
     </Root>
   </Loggers>

@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.metadata;
+package com.spotify.heroic.http.metadata;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +18,7 @@ import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SeriesQuery {
+public class MetadataQueryBody {
     /**
      * Only include time series which match the exact key.
      */
@@ -41,11 +41,11 @@ public class SeriesQuery {
     private final Filter filter;
 
     @JsonCreator
-    public static SeriesQuery create(@JsonProperty("matchKey") String matchKey,
+    public static MetadataQueryBody create(@JsonProperty("matchKey") String matchKey,
             @JsonProperty("matchTags") Map<String, String> matchTags,
             @JsonProperty("hasTags") Set<String> hasTags,
             @JsonProperty("filter") Filter filter) {
-        return new SeriesQuery(matchKey, matchTags, hasTags, filter);
+        return new MetadataQueryBody(matchKey, matchTags, hasTags, filter);
     }
 
     public Filter makeFilter() {

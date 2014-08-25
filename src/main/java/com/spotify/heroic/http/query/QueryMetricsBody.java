@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.model.query;
+package com.spotify.heroic.http.query;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,18 +12,18 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.model.filter.Filter;
 
 @Data
-public class MetricsQuery {
-    private static final DateRangeQuery DEFAULT_DATE_RANGE = new DateRangeQuery.Relative(
+public class QueryMetricsBody {
+    private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(
             TimeUnit.DAYS, 7);
-    private static final List<AggregationQuery> EMPTY_AGGREGATIONS = new ArrayList<>();
+    private static final List<QueryAggregation> EMPTY_AGGREGATIONS = new ArrayList<>();
 
     private final String key = null;
     private final Map<String, String> tags = new HashMap<String, String>();
     private final Filter filter = null;
     private final List<String> groupBy = new ArrayList<String>();
-    private final DateRangeQuery range = DEFAULT_DATE_RANGE;
+    private final QueryDateRange range = DEFAULT_DATE_RANGE;
     private final boolean noCache = false;
-    private final List<AggregationQuery> aggregators = EMPTY_AGGREGATIONS;
+    private final List<QueryAggregation> aggregators = EMPTY_AGGREGATIONS;
 
     public List<Aggregation> makeAggregators() {
         if (this.aggregators == null)
@@ -32,7 +32,7 @@ public class MetricsQuery {
         final List<Aggregation> aggregators = new ArrayList<>(
                 this.aggregators.size());
 
-        for (final AggregationQuery aggregation : this.aggregators) {
+        for (final QueryAggregation aggregation : this.aggregators) {
             aggregators.add(aggregation.makeAggregation());
         }
 
