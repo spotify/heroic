@@ -142,6 +142,9 @@ public class Statistics {
                 @JsonProperty(value = "onlineNodes", required = true) Long onlineNodes,
                 @JsonProperty(value = "offlineNodes", required = true) Long offlineNodes,
                 @JsonProperty(value = "clusterReady", required = true) Boolean clusterReady) {
+            if (clusterReady == null)
+                clusterReady = true;
+
             return new Rpc(successful, failed, onlineNodes, offlineNodes,
                     clusterReady);
         }
