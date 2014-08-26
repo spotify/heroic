@@ -5,8 +5,12 @@ import java.util.UUID;
 
 import lombok.Data;
 
+import com.spotify.heroic.cluster.DiscoveredClusterNode;
+
 @Data
 public class NodeMetadata {
+    private final DiscoveredClusterNode discovered;
+    private final int version;
     private final UUID id;
     private final Map<String, String> tags;
 

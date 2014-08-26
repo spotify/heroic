@@ -56,7 +56,7 @@ import com.spotify.heroic.model.filter.MatchKeyFilter;
 import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @Slf4j
-@Path("/query")
+@Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
@@ -181,13 +181,13 @@ public class QueryResource {
 
         log.info("Query: {}", q);
 
-        final EventOutput eventOutput = new EventOutput();
+        final EventOutput output = new EventOutput();
 
         final MetricStream handle = new MetricStream() {
             @Override
             public void stream(Callback<StreamMetricsResult> callback,
                     QueryMetricsResult result) throws Exception {
-                if (eventOutput.isClosed()) {
+                if (output.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
                     return;
                 }
@@ -202,7 +202,7 @@ public class QueryResource {
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
                 builder.name("metrics");
                 builder.data(QueryMetricsResponse.class, entity);
-                eventOutput.write(builder.build());
+                output.write(builder.build());
             }
         };
 
@@ -213,19 +213,19 @@ public class QueryResource {
         callback.register(new Callback.Handle<StreamMetricsResult>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                sendEvent(eventOutput, "cancel",
+                sendEvent(output, "cancel",
                         new MessageResponse(reason.getMessage()));
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                sendEvent(eventOutput, "error",
+                sendEvent(output, "error",
                         new MessageResponse(e.getMessage()));
             }
 
             @Override
             public void resolved(StreamMetricsResult result) throws Exception {
-                sendEvent(eventOutput, "end", "end");
+                sendEvent(output, "end", "end");
             }
 
             private void sendEvent(final EventOutput eventOutput, String type,
@@ -243,7 +243,7 @@ public class QueryResource {
             }
         });
 
-        return eventOutput;
+        return output;
     }
 
     /**

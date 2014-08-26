@@ -17,7 +17,7 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.ClusterDiscovery;
-import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.DiscoveredClusterNode;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
@@ -39,7 +39,7 @@ public class StaticListDiscovery implements ClusterDiscovery {
             clientConfig.register(JacksonJsonProvider.class);
             final List<URI> nodeUris = parseURIs(context + ".nodes");
 
-            return new StaticListDiscovery(nodeUris, executor, clientConfig);
+            return new StaticListDiscovery(nodeUris, clientConfig, executor);
         }
 
         private List<URI> parseURIs(String context) throws ValidationException {
@@ -64,17 +64,18 @@ public class StaticListDiscovery implements ClusterDiscovery {
     }
 
     private final List<URI> nodes;
-    private final Executor executor;
     private final ClientConfig config;
+    private final Executor executor;
 
     @Override
-    public Callback<Collection<ClusterNode>> getNodes() {
-        final List<ClusterNode> clusterNodes = new ArrayList<>();
+    public Callback<Collection<DiscoveredClusterNode>> getNodes() {
+        final List<DiscoveredClusterNode> discovered = new ArrayList<>();
 
         for (final URI n : nodes) {
-            clusterNodes.add(new ClusterNode(n, config, executor));
+            discovered.add(new DiscoveredClusterNode(n, config, executor));
         }
 
-        return new ResolvedCallback<Collection<ClusterNode>>(clusterNodes);
+        return new ResolvedCallback<Collection<DiscoveredClusterNode>>(
+                discovered);
     }
 }

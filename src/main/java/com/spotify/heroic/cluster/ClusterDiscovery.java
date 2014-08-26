@@ -11,5 +11,5 @@ public interface ClusterDiscovery {
                 throws ValidationException;
     }
 
-    Callback<Collection<ClusterNode>> getNodes();
+    Callback<Collection<DiscoveredClusterNode>> getNodes();
 }

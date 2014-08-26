@@ -17,7 +17,19 @@ public final class MetricGroup {
     @JsonCreator
     public static MetricGroup create(
             @JsonProperty(value = "series", required = true) Series series,
+            @JsonProperty(value = "timeSerie", required = true) Series timeSeries,
             @JsonProperty(value = "datapoints", required = true) List<DataPoint> datapoints) {
-        return new MetricGroup(series, datapoints);
+        final Series s;
+
+        if (series != null) {
+            s = series;
+        } else if (timeSeries != null) {
+            s = timeSeries;
+        } else {
+            throw new IllegalArgumentException(
+                    "Neither series nor timeSeries was specified");
+        }
+
+        return new MetricGroup(s, datapoints);
     }
 }

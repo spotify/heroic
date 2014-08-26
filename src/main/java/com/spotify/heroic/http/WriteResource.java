@@ -41,7 +41,8 @@ public class WriteResource {
     };
 
     @POST
-    public void writeMetrics(@Suspended final AsyncResponse response,
+    @Path("/metrics")
+    public void metrics(@Suspended final AsyncResponse response,
             WriteMetrics write) {
         final WriteMetric entry = new WriteMetric(write.getSeries(),
                 write.getData());

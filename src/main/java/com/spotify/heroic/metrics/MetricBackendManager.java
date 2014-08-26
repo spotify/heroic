@@ -24,7 +24,6 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.rpc.RpcQueryBody;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
@@ -94,9 +93,8 @@ public class MetricBackendManager {
             final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
 
             for (final RemoteGroupedTimeSeries group : grouped) {
-                final RpcQueryBody request = new RpcQueryBody(group.getKey(),
-                        group.getSeries(), rounded, aggregation);
-                callbacks.add(group.getNode().query(request));
+                callbacks.add(group.getNode().query(group.getKey(),
+                        group.getSeries(), rounded, aggregation));
             }
 
             final Callback.Reducer<MetricGroups, MetricGroups> reducer = new Callback.Reducer<MetricGroups, MetricGroups>() {
@@ -280,13 +278,14 @@ public class MetricBackendManager {
                 });
     }
 
-    public Callback<MetricGroups> rpcQueryMetrics(RpcQueryBody query) {
+    public Callback<MetricGroups> rpcQueryMetrics(final Series key,
+            final Set<Series> series, final DateRange range,
+            final AggregationGroup aggregationGroup) {
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, query.getAggregationGroup(), query.getRange());
+                aggregationCache, aggregationGroup, range);
 
-        return groupTimeseries(query.getKey(), query.getTimeseries())
-                .transform(transformer).register(
-                        reporter.reportRpcQueryMetrics());
+        return groupTimeseries(key, series).transform(transformer).register(
+                reporter.reportRpcQueryMetrics());
     }
 
     private static final long RANGE_FACTOR = 20;

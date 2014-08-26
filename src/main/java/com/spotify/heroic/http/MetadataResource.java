@@ -31,7 +31,7 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.filter.Filter;
 
 @Slf4j
-@Path("/query")
+@Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
@@ -58,15 +58,15 @@ public class MetadataResource {
         metadataResult(
                 response,
                 metadata.findTags(seriesQuery)
-                .transform(
-                        new Callback.Transformer<FindTags, MetadataTagsResponse>() {
-                            @Override
-                            public MetadataTagsResponse transform(
-                                    FindTags result) throws Exception {
-                                return new MetadataTagsResponse(result
-                                        .getTags(), result.getSize());
-                            }
-                        }));
+                        .transform(
+                                new Callback.Transformer<FindTags, MetadataTagsResponse>() {
+                                    @Override
+                                    public MetadataTagsResponse transform(
+                                            FindTags result) throws Exception {
+                                        return new MetadataTagsResponse(result
+                                                .getTags(), result.getSize());
+                                    }
+                                }));
     }
 
     @POST
@@ -89,15 +89,15 @@ public class MetadataResource {
         metadataResult(
                 response,
                 metadata.findKeys(seriesQuery)
-                .transform(
-                        new Callback.Transformer<FindKeys, MetadataKeysResponse>() {
-                            @Override
-                            public MetadataKeysResponse transform(
-                                    FindKeys result) throws Exception {
-                                return new MetadataKeysResponse(result
-                                        .getKeys(), result.getSize());
-                            }
-                        }));
+                        .transform(
+                                new Callback.Transformer<FindKeys, MetadataKeysResponse>() {
+                                    @Override
+                                    public MetadataKeysResponse transform(
+                                            FindKeys result) throws Exception {
+                                        return new MetadataKeysResponse(result
+                                                .getKeys(), result.getSize());
+                                    }
+                                }));
     }
 
     @POST
@@ -124,18 +124,18 @@ public class MetadataResource {
         metadataResult(
                 response,
                 metadata.findTimeSeries(seriesQuery)
-                .transform(
-                        new Callback.Transformer<FindTimeSeries, MetadataSeriesResponse>() {
-                            @Override
-                            public MetadataSeriesResponse transform(
-                                    FindTimeSeries result)
+                        .transform(
+                                new Callback.Transformer<FindTimeSeries, MetadataSeriesResponse>() {
+                                    @Override
+                                    public MetadataSeriesResponse transform(
+                                            FindTimeSeries result)
                                             throws Exception {
-                                return new MetadataSeriesResponse(
-                                        new ArrayList<Series>(result
-                                                .getSeries()), result
-                                                .getSize());
-                            }
-                        }));
+                                        return new MetadataSeriesResponse(
+                                                new ArrayList<Series>(result
+                                                        .getSeries()), result
+                                                        .getSize());
+                                    }
+                                }));
     }
 
     private <T> void metadataResult(final AsyncResponse response,

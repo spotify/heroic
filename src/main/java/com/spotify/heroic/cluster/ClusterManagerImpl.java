@@ -14,10 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.cluster.async.ClusterNodeLogHandle;
-import com.spotify.heroic.cluster.async.NodeRegistryEntryReducer;
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -63,38 +62,45 @@ public class ClusterManagerImpl implements ClusterManager {
     @Override
     public Callback<Void> refresh() {
         log.info("Cluster refresh in progress");
-        final Callback<Collection<ClusterNode>> callback = discovery.getNodes();
 
-        return callback
-                .transform(new Callback.DeferredTransformer<Collection<ClusterNode>, Void>() {
+        final Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void> transformer = new Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void>() {
+            @Override
+            public Callback<Void> transform(
+                    Collection<DiscoveredClusterNode> result) throws Exception {
+                final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
+                        result.size());
+
+                for (final DiscoveredClusterNode discovered : result) {
+                    callbacks.add(discovered.getMetadata().transform(
+                            new NodeRegistryEntryTransformer()));
+                }
+
+                final Callback.Reducer<NodeRegistryEntry, Void> reducer = new Callback.Reducer<NodeRegistryEntry, Void>() {
                     @Override
-                    public Callback<Void> transform(
-                            Collection<ClusterNode> result) throws Exception {
-                        final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>();
-
-                        for (final ClusterNode clusterNode : result) {
-                            final Callback<NodeRegistryEntry> transform = clusterNode
-                                    .getMetadata()
-                                    .transform(
-                                            new Callback.Transformer<NodeMetadata, NodeRegistryEntry>() {
-                                                @Override
-                                                public NodeRegistryEntry transform(
-                                                        NodeMetadata result)
-                                                        throws Exception {
-                                                    return new NodeRegistryEntry(
-                                                            clusterNode, result);
-                                                }
-                                            });
-                            transform.register(new ClusterNodeLogHandle(
-                                    clusterNode));
-                            callbacks.add(transform);
+                    public Void resolved(Collection<NodeRegistryEntry> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
+                            throws Exception {
+                        for (final Exception error : errors) {
+                            log.error("Failed to refresh metadata", error);
                         }
-                        return ConcurrentCallback.newReduce(
-                                callbacks,
-                                new NodeRegistryEntryReducer(registry, result
-                                        .size()));
+
+                        for (final CancelReason reason : cancelled) {
+                            log.error("Metadata refresh cancelled: " + reason);
+                        }
+
+                        log.info("Updated cluster registry with: " + results);
+                        registry.set(new NodeRegistry(new ArrayList<>(results),
+                                results.size()));
+                        return null;
                     }
-                });
+                };
+
+                return ConcurrentCallback.newReduce(callbacks, reducer);
+            }
+        };
+
+        return discovery.getNodes().transform(transformer);
     }
 
     @Override
