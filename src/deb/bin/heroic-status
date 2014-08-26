@@ -6,7 +6,7 @@ import json
 
 def main(command, args):
     if len(args) != 1:
-        print u"Usage: {} <url>".format(command)
+        print u"Usage: {0} <url>".format(command)
         return 1
 
     url = args[0]
@@ -14,7 +14,7 @@ def main(command, args):
     try:
         result = json.loads(urllib2.urlopen(url).read())
     except urllib2.URLError, e:
-        print u"Status request failed for {}: {}".format(url, e)
+        print u"Status request failed for {0}: {1}".format(url, e)
         return 1
 
     printSection("Consumers", result["consumers"])
@@ -29,10 +29,10 @@ def main(command, args):
 
 
 def printSection(name, data):
-    print u"# {} ({})".format(name, "OK" if data["ok"] else "NOT OK")
+    print u"# {0} ({1})".format(name, "OK" if data["ok"] else "NOT OK")
 
     for key, value in data.items():
-        print u"  {}: {}".format(key, value)
+        print u"  {0}: {1}".format(key, value)
 
 
 if __name__ == "__main__":
