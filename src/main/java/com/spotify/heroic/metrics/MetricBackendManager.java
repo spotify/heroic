@@ -23,6 +23,7 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
@@ -93,7 +94,8 @@ public class MetricBackendManager {
 
                 final Series one = timeseries.iterator().next();
 
-                final NodeRegistryEntry node = cluster.findNode(one.getTags());
+                final NodeRegistryEntry node = cluster.findNode(one.getTags(),
+                        NodeCapability.QUERY);
 
                 if (node == null) {
                     log.warn("No matching node in group {} found for {}",
@@ -108,7 +110,7 @@ public class MetricBackendManager {
                                     + " original time series would be loaded from Cassandra).");
 
                 for (final Series series : timeseries) {
-                    if (!node.getMetadata().matches(series.getTags()))
+                    if (!node.getMetadata().matchesTags(series.getTags()))
                         throw new IllegalArgumentException(
                                 "The current query is too heavy! (Global aggregation not permitted)");
                 }
@@ -135,11 +137,11 @@ public class MetricBackendManager {
 
         for (final WriteMetric write : writes) {
             final NodeRegistryEntry node = cluster.findNode(write.getSeries()
-                    .getTags());
+                    .getTags(), NodeCapability.WRITE);
 
             if (node == null)
                 throw new MetricWriteException("Cannot route "
-                        + write.getSeries() + " to any known partition");
+                        + write.getSeries() + " to any known, writable node");
 
             List<WriteMetric> partition = partitions.get(node);
 

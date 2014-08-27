@@ -22,11 +22,12 @@ public class NodeRegistry {
      *            The tags to match.
      * @return A random matching entry.
      */
-    public NodeRegistryEntry findEntry(Map<String, String> tags) {
+    public NodeRegistryEntry findEntry(Map<String, String> tags,
+            NodeCapability capability) {
         final List<NodeRegistryEntry> matches = new ArrayList<>();
 
         for (final NodeRegistryEntry entry : entries) {
-            if (entry.getMetadata().matches(tags))
+            if (entry.getMetadata().matches(tags, capability))
                 matches.add(entry);
         }
 

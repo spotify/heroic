@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 
 @Slf4j
 public final class HttpAsyncUtils {
@@ -35,15 +35,15 @@ public final class HttpAsyncUtils {
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
                         .status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(new MessageResponse("Request cancelled: "
-                                + reason)).build());
+                        .entity(new ErrorMessage("Request cancelled: " + reason))
+                        .build());
             }
 
             @Override
             public void failed(Exception e) throws Exception {
                 response.resume(Response
                         .status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(e).build());
+                        .entity(new ErrorMessage(e.getMessage())).build());
             }
 
             @Override

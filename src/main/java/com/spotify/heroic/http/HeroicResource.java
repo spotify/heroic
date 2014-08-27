@@ -7,7 +7,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
@@ -18,6 +18,6 @@ public class HeroicResource {
     public Response shutdown() {
         // lol, no :), send TERM signal instead.
         return Response.status(Response.Status.OK)
-                .entity(new MessageResponse("shutting down")).build();
+                .entity(new ErrorMessage("shutting down")).build();
     }
 }

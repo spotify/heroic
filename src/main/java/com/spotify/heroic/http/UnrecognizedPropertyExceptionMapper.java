@@ -6,7 +6,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 
 @Provider
 public class UnrecognizedPropertyExceptionMapper implements
@@ -14,7 +14,7 @@ public class UnrecognizedPropertyExceptionMapper implements
     @Override
     public Response toResponse(UnrecognizedPropertyException exception) {
         return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new MessageResponse(exception.getMessage()))
+                .entity(new ErrorMessage(exception.getMessage()))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 }

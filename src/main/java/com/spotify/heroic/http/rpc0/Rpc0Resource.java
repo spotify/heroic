@@ -11,7 +11,6 @@ import javax.ws.rs.core.MediaType;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
-import com.spotify.heroic.http.HttpAsyncUtils.Resume;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 

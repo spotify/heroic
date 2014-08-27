@@ -9,7 +9,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 
 @Path("/rpc")
 @Produces(MediaType.APPLICATION_JSON)
@@ -26,12 +26,13 @@ public class RpcResource {
         if (cluster == ClusterManager.NULL) {
             return Response
                     .status(Response.Status.NOT_IMPLEMENTED)
-                    .entity(new MessageResponse(
+                    .entity(new ErrorMessage(
                             "service is not configured as a cluster")).build();
         }
 
         final RpcMetadata metadata = new RpcMetadata(VERSION,
-                cluster.getLocalNodeId(), cluster.getLocalNodeTags());
+                cluster.getLocalNodeId(), cluster.getLocalNodeTags(),
+                cluster.getCapabilities());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
 }

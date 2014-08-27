@@ -15,6 +15,7 @@ import org.glassfish.jersey.client.ClientConfig;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.http.rpc.RpcGetRequestResolver;
 import com.spotify.heroic.http.rpc.RpcMetadata;
 
 @Data
@@ -24,27 +25,23 @@ public class DiscoveredClusterNode {
     private final ClientConfig config;
     private final Executor executor;
 
-    private final class GetMetadataResolver implements
-            Callback.Resolver<NodeMetadata> {
-        private final Client client;
-
-        private GetMetadataResolver(Client client) {
-            this.client = client;
-        }
-
-        @Override
-        public NodeMetadata resolve() throws Exception {
-            final WebTarget target = client.target(url).path("rpc")
-                    .path("metadata");
-            final RpcMetadata response = target.request()
-                    .get(RpcMetadata.class);
-            return new NodeMetadata(DiscoveredClusterNode.this,
-                    response.getVersion(), response.getId(), response.getTags());
-        }
+    private <R, T> Callback<T> get(Class<T> clazz, String endpoint) {
+        final Client client = ClientBuilder.newClient(config);
+        final WebTarget target = client.target(url).path("rpc").path(endpoint);
+        return ConcurrentCallback.newResolve(executor,
+                new RpcGetRequestResolver<T>(clazz, target));
     }
 
     public Callback<NodeMetadata> getMetadata() {
-        return ConcurrentCallback.newResolve(executor, new GetMetadataResolver(
-                ClientBuilder.newClient(config)));
+        final Callback.Transformer<RpcMetadata, NodeMetadata> transformer = new Callback.Transformer<RpcMetadata, NodeMetadata>() {
+            @Override
+            public NodeMetadata transform(RpcMetadata r) throws Exception {
+                return new NodeMetadata(DiscoveredClusterNode.this,
+                        r.getVersion(), r.getId(), r.getTags(),
+                        r.getCapabilities());
+            }
+        };
+
+        return get(RpcMetadata.class, "metadata").transform(transformer);
     }
 }

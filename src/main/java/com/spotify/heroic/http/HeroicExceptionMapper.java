@@ -6,7 +6,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 
 @Provider
 public class HeroicExceptionMapper implements
@@ -14,7 +14,7 @@ ExceptionMapper<WebApplicationException> {
     @Override
     public Response toResponse(WebApplicationException exception) {
         return Response.status(exception.getResponse().getStatus())
-                .entity(new MessageResponse(exception.getMessage()))
+                .entity(new ErrorMessage(exception.getMessage()))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 }

@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.http.general.MessageResponse;
+import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -40,7 +40,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new MessageResponse("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
@@ -70,7 +70,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new MessageResponse("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
@@ -100,7 +100,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new MessageResponse("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Cache is not ready")).build());
             return;
         }
 
@@ -134,7 +134,7 @@ public class MetadataResource {
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
                         .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new MessageResponse("Request cancelled: "
+                        .entity(new ErrorMessage("Request cancelled: "
                                 + reason)).build());
             }
 

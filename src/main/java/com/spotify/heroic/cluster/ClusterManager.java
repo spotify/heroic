@@ -1,6 +1,7 @@
 package com.spotify.heroic.cluster;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import lombok.Data;
@@ -38,7 +39,8 @@ public interface ClusterManager {
         }
 
         @Override
-        public NodeRegistryEntry findNode(Map<String, String> tags) {
+        public NodeRegistryEntry findNode(Map<String, String> tags,
+                NodeCapability capability) {
             throw new NullPointerException();
         }
 
@@ -51,6 +53,11 @@ public interface ClusterManager {
         public Statistics getStatistics() {
             throw new NullPointerException();
         }
+
+        @Override
+        public Set<NodeCapability> getCapabilities() {
+            throw new NullPointerException();
+        }
     }
 
     public static final ClusterManager NULL = new Null();
@@ -59,9 +66,22 @@ public interface ClusterManager {
 
     public Map<String, String> getLocalNodeTags();
 
-    public NodeRegistryEntry findNode(final Map<String, String> tags);
+    /**
+     * Find a node that matches the given tags and capability.
+     *
+     * @param tags
+     *            The tags to match.
+     * @param capability
+     *            The capability to match (may be <code>null</code>).
+     * @return A NodeRegistryEntry matching the parameters or <code>null</code>
+     *         if none matches.
+     */
+    public NodeRegistryEntry findNode(final Map<String, String> tags,
+            NodeCapability capability);
 
     public Callback<Void> refresh();
 
     public Statistics getStatistics();
+
+    public Set<NodeCapability> getCapabilities();
 }

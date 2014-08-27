@@ -37,9 +37,8 @@ import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.http.HttpAsyncUtils;
-import com.spotify.heroic.http.HttpAsyncUtils.Resume;
+import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.http.general.IdResponse;
-import com.spotify.heroic.http.general.MessageResponse;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;
@@ -214,13 +213,12 @@ public class QueryResource {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 sendEvent(output, "cancel",
-                        new MessageResponse(reason.getMessage()));
+                        new ErrorMessage(reason.getMessage()));
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                sendEvent(output, "error",
-                        new MessageResponse(e.getMessage()));
+                sendEvent(output, "error", new ErrorMessage(e.getMessage()));
             }
 
             @Override
