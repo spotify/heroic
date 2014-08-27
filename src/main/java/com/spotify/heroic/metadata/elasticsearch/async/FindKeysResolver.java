@@ -9,6 +9,7 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -29,9 +30,9 @@ public class FindKeysResolver implements Callback.Resolver<FindKeys> {
         final SearchRequestBuilder request = client.prepareSearch(index)
                 .setTypes(type).setSearchType("count");
 
-        if (filter != null) {
-            request.setPostFilter(filter);
-        }
+        if (filter != null)
+            request.setQuery(QueryBuilders.filteredQuery(
+                    QueryBuilders.matchAllQuery(), filter));
 
         {
             final AggregationBuilder<?> terms = AggregationBuilders
