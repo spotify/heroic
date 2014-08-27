@@ -38,7 +38,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -119,18 +119,18 @@ public class HeroicBackend extends CassandraBackend implements Backend {
     private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
     @Override
-    public Callback<WriteResponse> write(WriteMetric write) {
+    public Callback<WriteResult> write(WriteMetric write) {
         final Collection<WriteMetric> writes = new ArrayList<WriteMetric>();
         writes.add(write);
         return write(writes);
     }
 
     @Override
-    public Callback<WriteResponse> write(final Collection<WriteMetric> writes) {
+    public Callback<WriteResult> write(final Collection<WriteMetric> writes) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<WriteResponse>(
+            return new CancelledCallback<WriteResult>(
                     CancelReason.BACKEND_DISABLED);
 
         final MutationBatch mutation = keyspace.prepareMutationBatch()
@@ -159,11 +159,11 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         final int size = writes.size();
 
-        final Callback.Resolver<WriteResponse> resolver = new Callback.Resolver<WriteResponse>() {
+        final Callback.Resolver<WriteResult> resolver = new Callback.Resolver<WriteResult>() {
             @Override
-            public WriteResponse resolve() throws Exception {
+            public WriteResult resolve() throws Exception {
                 mutation.execute();
-                return new WriteResponse(size);
+                return new WriteResult(size);
             }
         };
 

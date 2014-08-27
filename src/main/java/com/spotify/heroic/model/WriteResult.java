@@ -10,7 +10,7 @@ import com.spotify.heroic.async.CancelReason;
 
 @Data
 @AllArgsConstructor
-public class WriteResponse {
+public class WriteResult {
     private final int successful;
     private final Collection<Exception> failed;
     private final Collection<CancelReason> cancelled;
@@ -18,16 +18,16 @@ public class WriteResponse {
     private static final Collection<Exception> EMPTY_FAILED = new ArrayList<>();
     private static final Collection<CancelReason> EMPTY_CANCELLED = new ArrayList<>();
 
-    public WriteResponse(int successful) {
+    public WriteResult(int successful) {
         this(successful, EMPTY_FAILED, EMPTY_CANCELLED);
     }
 
-    public WriteResponse merge(final WriteResponse other) {
+    public WriteResult merge(final WriteResult other) {
         final ArrayList<Exception> failures = new ArrayList<>(this.failed);
         failures.addAll(other.failed);
         final ArrayList<CancelReason> cancels = new ArrayList<>(this.cancelled);
         cancels.addAll(other.cancelled);
-        return new WriteResponse(this.successful + other.successful, failures,
+        return new WriteResult(this.successful + other.successful, failures,
                 cancels);
     }
 }

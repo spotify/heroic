@@ -1,7 +1,7 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -26,23 +26,22 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
-import com.spotify.heroic.metrics.async.MergeWriteResponse;
+import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
+import com.spotify.heroic.metrics.async.RemoteTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
-import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
-import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
@@ -70,75 +69,9 @@ public class MetricBackendManager {
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    private final class RemoteTimeSeriesTransformer
-    implements
-    Callback.DeferredTransformer<List<RemoteGroupedTimeSeries>, MetricGroups> {
-        private final DateRange rounded;
-        private final AggregationGroup aggregation;
-
-        private RemoteTimeSeriesTransformer(DateRange rounded,
-                AggregationGroup aggregation) {
-            this.rounded = rounded;
-            this.aggregation = aggregation;
-        }
-
-        @Override
-        public Callback<MetricGroups> transform(
-                List<RemoteGroupedTimeSeries> grouped) throws Exception {
-            if (cluster == ClusterManager.NULL)
-                throw new IllegalStateException(
-                        "Service is not configured as a cluster");
-
-            final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
-
-            for (final RemoteGroupedTimeSeries group : grouped) {
-                callbacks.add(group.getNode().query(group.getKey(),
-                        group.getSeries(), rounded, aggregation));
-            }
-
-            final Callback.Reducer<MetricGroups, MetricGroups> reducer = new Callback.Reducer<MetricGroups, MetricGroups>() {
-                @Override
-                public MetricGroups resolved(Collection<MetricGroups> results,
-                        Collection<Exception> errors,
-                        Collection<CancelReason> cancelled) throws Exception {
-                    for (final Exception e : errors) {
-                        log.error("Remote request failed", e);
-                    }
-
-                    final ClusterManager.Statistics clusterStatistics = cluster
-                            .getStatistics();
-                    final Statistics.Rpc rpc;
-
-                    if (clusterStatistics != null) {
-                        rpc = new Statistics.Rpc(results.size(), errors.size(),
-                                clusterStatistics.getOnlineNodes(),
-                                clusterStatistics.getOfflineNodes(), true);
-                    } else {
-                        rpc = new Statistics.Rpc(results.size(), errors.size(),
-                                0, 0, false);
-                    }
-
-                    final List<MetricGroup> groups = new ArrayList<>();
-                    Statistics statistics = Statistics.builder().rpc(rpc)
-                            .build();
-
-                    for (final MetricGroups metricGroups : results) {
-                        groups.addAll(metricGroups.getGroups());
-                        statistics = statistics.merge(metricGroups
-                                .getStatistics());
-                    }
-
-                    return new MetricGroups(groups, statistics);
-                }
-            };
-
-            return ConcurrentCallback.newReduce(callbacks, reducer);
-        }
-    }
-
     private final class FindAndRouteTransformer
-    implements
-    Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
+            implements
+            Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
         @Override
         public List<RemoteGroupedTimeSeries> transform(
                 final FindTimeSeriesGroups result) throws Exception {
@@ -192,42 +125,59 @@ public class MetricBackendManager {
         void run(int disabled, Backend backend) throws Exception;
     }
 
-    public Callback<WriteResponse> write(final Collection<WriteMetric> writes) {
-        final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
+    public Callback<WriteResult> write(final List<WriteMetric> writes)
+            throws MetricWriteException {
+        if (cluster == ClusterManager.NULL)
+            throw new MetricWriteException(
+                    "Cannot write metrics, cluster is not configured");
 
-        with(new BackendOperation() {
-            @Override
-            public void run(int disabled, Backend backend) throws Exception {
-                callbacks.add(backend.write(writes));
-            }
-        });
+        final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
 
-        // Send new time series to metadata backends.
-        if (updateMetadata) {
-            for (final WriteMetric entry : writes) {
-                if (metadata.isReady())
-                    callbacks.add(metadata.write(entry.getSeries()));
+        for (final WriteMetric write : writes) {
+            final NodeRegistryEntry node = cluster.findNode(write.getSeries()
+                    .getTags());
+
+            if (node == null)
+                throw new MetricWriteException("Cannot route "
+                        + write.getSeries() + " to any known partition");
+
+            List<WriteMetric> partition = partitions.get(node);
+
+            if (partition == null) {
+                partition = new ArrayList<WriteMetric>();
+                partitions.put(node, partition);
             }
+
+            partition.add(write);
         }
 
-        if (callbacks.isEmpty())
-            return new CancelledCallback<WriteResponse>(
-                    CancelReason.NO_BACKENDS_AVAILABLE);
+        final List<Callback<WriteResult>> callbacks = new ArrayList<>();
 
-        return ConcurrentCallback
-                .newReduce(callbacks, MergeWriteResponse.get());
+        for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
+                .entrySet()) {
+            final NodeRegistryEntry node = entry.getKey();
+            final List<WriteMetric> nodeWrites = entry.getValue();
+
+            callbacks.add(node.getClusterNode().write(nodeWrites));
+        }
+
+        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 
     public Callback<QueryMetricsResult> queryMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation) throws MetricQueryException {
+        if (cluster == ClusterManager.NULL)
+            throw new MetricQueryException(
+                    "Cannot query metrics, cluster is not configured");
+
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
                 filter, groupBy, rounded);
 
         final RemoteTimeSeriesTransformer transformer = new RemoteTimeSeriesTransformer(
-                rounded, aggregation);
+                cluster, rounded, aggregation);
 
         return findAndRouteTimeSeries(criteria).transform(transformer)
                 .transform(new MetricGroupsTransformer(rounded))
@@ -237,7 +187,11 @@ public class MetricBackendManager {
     public Callback<StreamMetricsResult> streamMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-                    throws MetricQueryException {
+            throws MetricQueryException {
+        if (cluster == ClusterManager.NULL)
+            throw new MetricQueryException(
+                    "Cannot stream metrics, cluster is not configured");
+
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -257,7 +211,7 @@ public class MetricBackendManager {
                 log.info("{}: streaming chunk {}", streamId, range);
 
                 final RemoteTimeSeriesTransformer transformer = new RemoteTimeSeriesTransformer(
-                        range, aggregation);
+                        cluster, range, aggregation);
 
                 return rows.transform(transformer);
             }
@@ -275,16 +229,6 @@ public class MetricBackendManager {
                         log.info("{}: done streaming", streamId);
                     }
                 });
-    }
-
-    public Callback<MetricGroups> rpcQueryMetrics(final Series key,
-            final Set<Series> series, final DateRange range,
-            final AggregationGroup aggregationGroup) {
-        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, aggregationGroup, range);
-
-        return groupTimeseries(key, series).transform(transformer).register(
-                reporter.reportRpcQueryMetrics());
     }
 
     private static final long RANGE_FACTOR = 20;
@@ -347,7 +291,7 @@ public class MetricBackendManager {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                .register(reporter.reportStreamMetricsChunk());
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -419,7 +363,7 @@ public class MetricBackendManager {
             final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer()).register(
-                        reporter.reportFindTimeSeries());
+                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
@@ -449,5 +393,44 @@ public class MetricBackendManager {
         });
 
         return new ResolvedCallback<List<GroupedTimeSeries>>(grouped);
+    }
+
+    /**
+     * RPC METHODS.
+     */
+
+    public Callback<MetricGroups> directQuery(final Series key,
+            final Set<Series> series, final DateRange range,
+            final AggregationGroup aggregationGroup) {
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
+                aggregationCache, aggregationGroup, range);
+
+        return groupTimeseries(key, series).transform(transformer).register(
+                reporter.reportRpcQueryMetrics());
+    }
+
+    public Callback<WriteResult> directWrite(final List<WriteMetric> writes) {
+        final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
+
+        with(new BackendOperation() {
+            @Override
+            public void run(int disabled, Backend backend) throws Exception {
+                callbacks.add(backend.write(writes));
+            }
+        });
+
+        // Send new time series to metadata backends.
+        if (updateMetadata) {
+            for (final WriteMetric entry : writes) {
+                if (metadata.isReady())
+                    callbacks.add(metadata.write(entry.getSeries()));
+            }
+        }
+
+        if (callbacks.isEmpty())
+            return new CancelledCallback<WriteResult>(
+                    CancelReason.NO_BACKENDS_AVAILABLE);
+
+        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 }

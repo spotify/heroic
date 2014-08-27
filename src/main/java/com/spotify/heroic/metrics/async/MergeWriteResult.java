@@ -7,24 +7,24 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class MergeWriteResponse implements
-        Callback.Reducer<WriteResponse, WriteResponse> {
-    private static final MergeWriteResponse instance = new MergeWriteResponse();
+public class MergeWriteResult implements
+        Callback.Reducer<WriteResult, WriteResult> {
+    private static final MergeWriteResult instance = new MergeWriteResult();
 
-    public static MergeWriteResponse get() {
+    public static MergeWriteResult get() {
         return instance;
     }
 
     @Override
-    public WriteResponse resolved(Collection<WriteResponse> results,
+    public WriteResult resolved(Collection<WriteResult> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
             throws Exception {
-        WriteResponse response = new WriteResponse(0, errors, cancelled);
+        WriteResult response = new WriteResult(0, errors, cancelled);
 
-        for (final WriteResponse result : results) {
+        for (final WriteResult result : results) {
             response = response.merge(result);
         }
 

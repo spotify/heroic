@@ -16,6 +16,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.glassfish.jersey.client.ClientConfig;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
@@ -26,6 +27,8 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.WriteMetric;
+import com.spotify.heroic.model.WriteResult;
 
 @Data
 @ToString(of = "url")
@@ -38,7 +41,7 @@ public class Rpc0ClusterNode implements ClusterNode {
 
     @RequiredArgsConstructor
     private final class QueryResolver implements
-            Callback.Resolver<MetricGroups> {
+    Callback.Resolver<MetricGroups> {
         private final Rpc0QueryBody request;
         private final Client client;
 
@@ -78,5 +81,10 @@ public class Rpc0ClusterNode implements ClusterNode {
                 aggregationGroup);
         return ConcurrentCallback.newResolve(executor, new QueryResolver(
                 request, ClientBuilder.newClient(config)));
+    }
+
+    @Override
+    public Callback<WriteResult> write(List<WriteMetric> writes) {
+        throw new NotImplementedException();
     }
 }

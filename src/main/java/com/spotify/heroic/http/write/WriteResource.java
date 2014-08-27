@@ -13,12 +13,15 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.metrics.MetricWriteException;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 
+@Slf4j
 @Path("/write")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -31,18 +34,21 @@ public class WriteResource {
         private final String message;
     }
 
-    private static final HttpAsyncUtils.Resume<WriteResponse, WriteMetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<WriteResponse, WriteMetricsResponse>() {
+    private static final HttpAsyncUtils.Resume<WriteResult, WriteMetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<WriteResult, WriteMetricsResponse>() {
         @Override
-        public WriteMetricsResponse resume(WriteResponse result)
-                throws Exception {
-            return new WriteMetricsResponse(0);
+        public WriteMetricsResponse resume(WriteResult result) throws Exception {
+            for (final Exception e : result.getFailed())
+                log.error("Write failed", e);
+
+            return new WriteMetricsResponse(result.getSuccessful(), result
+                    .getFailed().size(), result.getCancelled().size());
         }
     };
 
     @POST
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
-            WriteMetrics write) {
+            WriteMetrics write) throws MetricWriteException {
         final WriteMetric entry = new WriteMetric(write.getSeries(),
                 write.getData());
 

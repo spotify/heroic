@@ -16,9 +16,9 @@ import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.metrics.async.MergeWriteResponse;
+import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
@@ -28,8 +28,8 @@ public class MetadataBackendManager {
     private final MetadataBackendManagerReporter reporter;
     private final List<MetadataBackend> backends;
 
-    public Callback<WriteResponse> write(Series series) {
-        final List<Callback<WriteResponse>> callbacks = new ArrayList<Callback<WriteResponse>>();
+    public Callback<WriteResult> write(Series series) {
+        final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
 
         for (final MetadataBackend backend : backends) {
             try {
@@ -40,7 +40,7 @@ public class MetadataBackendManager {
         }
 
         return ConcurrentCallback
-                .newReduce(callbacks, MergeWriteResponse.get()).register(
+                .newReduce(callbacks, MergeWriteResult.get()).register(
                         reporter.reportFindTags());
     }
 

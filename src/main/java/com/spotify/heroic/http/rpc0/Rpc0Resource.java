@@ -33,7 +33,7 @@ public class Rpc0Resource {
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             Rpc0QueryBody query) {
-        final Callback<MetricGroups> callback = metrics.rpcQueryMetrics(
+        final Callback<MetricGroups> callback = metrics.directQuery(
                 query.getKey(), query.getTimeseries(), query.getRange(),
                 query.getAggregationGroup());
 

@@ -34,9 +34,9 @@ public final class HttpAsyncUtils {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response
-                        .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new MessageResponse("Request cancelled: " + reason))
-                        .build());
+                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(new MessageResponse("Request cancelled: "
+                                + reason)).build());
             }
 
             @Override

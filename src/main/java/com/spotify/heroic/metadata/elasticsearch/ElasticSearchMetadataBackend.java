@@ -54,7 +54,7 @@ import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.AndFilter;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.model.filter.HasTagFilter;
@@ -378,25 +378,25 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<WriteResponse> write(final Series series)
+    public Callback<WriteResult> write(final Series series)
             throws MetadataQueryException {
         return writeBatch(Arrays.asList(series));
     }
 
     @Override
-    public Callback<WriteResponse> writeBatch(final List<Series> series)
+    public Callback<WriteResult> writeBatch(final List<Series> series)
             throws MetadataQueryException {
         final Client client = client();
         final BulkProcessor bulkProcessor = this.bulkProcessorRef.get();
 
         if (client == null || bulkProcessor == null)
-            return new CancelledCallback<WriteResponse>(
+            return new CancelledCallback<WriteResult>(
                     CancelReason.BACKEND_DISABLED);
 
         return ConcurrentCallback.newResolve(pools.write(),
-                new Callback.Resolver<WriteResponse>() {
+                new Callback.Resolver<WriteResult>() {
                     @Override
-                    public WriteResponse resolve() throws Exception {
+                    public WriteResult resolve() throws Exception {
                         for (final Series s : series) {
                             if (writeCache.contains(s.hashCode())) {
                                 reporter.reportWriteCacheHit();
@@ -414,7 +414,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                             writeCache.add(s.hashCode());
                         }
 
-                        return new WriteResponse(series.size());
+                        return new WriteResult(series.size());
                     }
                 }).register(reporter.reportWrite());
     }

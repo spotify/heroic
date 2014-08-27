@@ -27,7 +27,7 @@ import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -151,10 +151,10 @@ public class KafkaConsumer implements Consumer {
             return;
         }
 
-        WriteResponse result;
+        WriteResult result;
 
         try {
-            result = metric.write(flush).get();
+            result = metric.directWrite(flush).get();
         } catch (final InterruptedException e) {
             throw new WriteException("Write batch interrupted", e);
         } catch (final CancelledException e) {

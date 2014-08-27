@@ -34,7 +34,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.yaml.Utils;
 import com.spotify.heroic.yaml.ValidationException;
@@ -280,14 +280,14 @@ public class KairosBackend extends CassandraBackend implements Backend {
     }
 
     @Override
-    public Callback<WriteResponse> write(WriteMetric write) {
-        return new FailedCallback<WriteResponse>(new Exception(
+    public Callback<WriteResult> write(WriteMetric write) {
+        return new FailedCallback<WriteResult>(new Exception(
                 "not implemented"));
     }
 
     @Override
-    public Callback<WriteResponse> write(Collection<WriteMetric> writes) {
-        return new FailedCallback<WriteResponse>(new Exception(
+    public Callback<WriteResult> write(Collection<WriteMetric> writes) {
+        return new FailedCallback<WriteResult>(new Exception(
                 "not implemented"));
     }
 }
