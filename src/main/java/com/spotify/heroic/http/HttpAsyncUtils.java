@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 
 @Slf4j
 public final class HttpAsyncUtils {

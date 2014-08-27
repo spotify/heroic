@@ -16,10 +16,10 @@ import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.MergeWriteResponse;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResponse;
+import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @Slf4j
@@ -44,12 +44,12 @@ public class MetadataBackendManager {
                         reporter.reportFindTags());
     }
 
-    public Callback<FindTags> findTags(final TimeSerieQuery query) {
+    public Callback<FindTags> findTags(final Filter filter) {
         final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findTags(query));
+                callbacks.add(backend.findTags(filter));
             } catch (final MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }
@@ -59,12 +59,12 @@ public class MetadataBackendManager {
                 .register(reporter.reportFindTags());
     }
 
-    public Callback<FindTimeSeries> findTimeSeries(final TimeSerieQuery query) {
+    public Callback<FindTimeSeries> findTimeSeries(final Filter filter) {
         final List<Callback<FindTimeSeries>> callbacks = new ArrayList<Callback<FindTimeSeries>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findTimeSeries(query));
+                callbacks.add(backend.findTimeSeries(filter));
             } catch (final MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }
@@ -72,36 +72,36 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
-            @Override
-            public FindTimeSeries resolved(
-                    Collection<FindTimeSeries> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
+                    @Override
+                    public FindTimeSeries resolved(
+                            Collection<FindTimeSeries> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
                             throws Exception {
-                return mergeFindTimeSeries(results);
-            }
+                        return mergeFindTimeSeries(results);
+                    }
 
-            private FindTimeSeries mergeFindTimeSeries(
-                    Collection<FindTimeSeries> results) {
-                final Set<Series> series = new HashSet<Series>();
-                int size = 0;
+                    private FindTimeSeries mergeFindTimeSeries(
+                            Collection<FindTimeSeries> results) {
+                        final Set<Series> series = new HashSet<Series>();
+                        int size = 0;
 
-                for (final FindTimeSeries findTimeSeries : results) {
-                    series.addAll(findTimeSeries.getSeries());
-                    size += findTimeSeries.getSize();
-                }
+                        for (final FindTimeSeries findTimeSeries : results) {
+                            series.addAll(findTimeSeries.getSeries());
+                            size += findTimeSeries.getSize();
+                        }
 
-                return new FindTimeSeries(series, size);
-            }
-        }).register(reporter.reportFindTimeSeries());
+                        return new FindTimeSeries(series, size);
+                    }
+                }).register(reporter.reportFindTimeSeries());
     }
 
-    public Callback<FindKeys> findKeys(final TimeSerieQuery query) {
+    public Callback<FindKeys> findKeys(final Filter filter) {
         final List<Callback<FindKeys>> callbacks = new ArrayList<Callback<FindKeys>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findKeys(query));
+                callbacks.add(backend.findKeys(filter));
             } catch (final MetadataQueryException e) {
                 log.error("Failed to query backend", e);
             }
@@ -109,26 +109,26 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<FindKeys, FindKeys>() {
-            @Override
-            public FindKeys resolved(Collection<FindKeys> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
+                    @Override
+                    public FindKeys resolved(Collection<FindKeys> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
                             throws Exception {
-                return mergeFindKeys(results);
-            }
+                        return mergeFindKeys(results);
+                    }
 
-            private FindKeys mergeFindKeys(Collection<FindKeys> results) {
-                final Set<String> keys = new HashSet<String>();
-                int size = 0;
+                    private FindKeys mergeFindKeys(Collection<FindKeys> results) {
+                        final Set<String> keys = new HashSet<String>();
+                        int size = 0;
 
-                for (final FindKeys findKeys : results) {
-                    keys.addAll(findKeys.getKeys());
-                    size += findKeys.getSize();
-                }
+                        for (final FindKeys findKeys : results) {
+                            keys.addAll(findKeys.getKeys());
+                            size += findKeys.getSize();
+                        }
 
-                return new FindKeys(keys, size);
-            }
-        }).register(reporter.reportFindKeys());
+                        return new FindKeys(keys, size);
+                    }
+                }).register(reporter.reportFindKeys());
     }
 
     public Callback<Boolean> refresh() {
@@ -140,12 +140,12 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.DefaultStreamReducer<Void, Boolean>() {
-            @Override
-            public Boolean resolved(int successful, int failed,
-                    int cancelled) throws Exception {
-                return failed == 0 && cancelled == 0;
-            }
-        }).register(reporter.reportRefresh());
+                    @Override
+                    public Boolean resolved(int successful, int failed,
+                            int cancelled) throws Exception {
+                        return failed == 0 && cancelled == 0;
+                    }
+                }).register(reporter.reportRefresh());
     }
 
     public boolean isReady() {

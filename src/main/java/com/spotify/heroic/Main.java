@@ -44,7 +44,7 @@ import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.QueryResource.StoredMetricQueries;
+import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;

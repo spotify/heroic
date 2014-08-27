@@ -1,4 +1,4 @@
-package com.spotify.heroic.http;
+package com.spotify.heroic.http.metadata;
 
 import java.util.ArrayList;
 
@@ -16,17 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.http.metadata.MetadataKeysResponse;
-import com.spotify.heroic.http.metadata.MetadataQueryBody;
-import com.spotify.heroic.http.metadata.MetadataSeriesResponse;
-import com.spotify.heroic.http.metadata.MetadataTagsResponse;
-import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.filter.Filter;
 
@@ -53,20 +48,19 @@ public class MetadataResource {
 
         log.info("/tags: {} {}", query, filter);
 
-        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
+        final Callback.Transformer<FindTags, MetadataTagsResponse> transformer = new Callback.Transformer<FindTags, MetadataTagsResponse>() {
+            @Override
+            public MetadataTagsResponse transform(FindTags result)
+                    throws Exception {
+                return new MetadataTagsResponse(result.getTags(),
+                        result.getSize());
+            }
+        };
 
-        metadataResult(
-                response,
-                metadata.findTags(seriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindTags, MetadataTagsResponse>() {
-                                    @Override
-                                    public MetadataTagsResponse transform(
-                                            FindTags result) throws Exception {
-                                        return new MetadataTagsResponse(result
-                                                .getTags(), result.getSize());
-                                    }
-                                }));
+        final Callback<MetadataTagsResponse> callback = metadata.findTags(
+                filter).transform(transformer);
+
+        metadataResult(response, callback);
     }
 
     @POST
@@ -84,20 +78,19 @@ public class MetadataResource {
 
         log.info("/keys: {} {}", query, filter);
 
-        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
+        final Callback.Transformer<FindKeys, MetadataKeysResponse> transformer = new Callback.Transformer<FindKeys, MetadataKeysResponse>() {
+            @Override
+            public MetadataKeysResponse transform(FindKeys result)
+                    throws Exception {
+                return new MetadataKeysResponse(result.getKeys(),
+                        result.getSize());
+            }
+        };
 
-        metadataResult(
-                response,
-                metadata.findKeys(seriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindKeys, MetadataKeysResponse>() {
-                                    @Override
-                                    public MetadataKeysResponse transform(
-                                            FindKeys result) throws Exception {
-                                        return new MetadataKeysResponse(result
-                                                .getKeys(), result.getSize());
-                                    }
-                                }));
+        final Callback<MetadataKeysResponse> callback = metadata.findKeys(
+                filter).transform(transformer);
+
+        metadataResult(response, callback);
     }
 
     @POST
@@ -119,23 +112,19 @@ public class MetadataResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final TimeSerieQuery seriesQuery = new TimeSerieQuery(filter);
+        final Callback.Transformer<FindTimeSeries, MetadataSeriesResponse> transformer = new Callback.Transformer<FindTimeSeries, MetadataSeriesResponse>() {
+            @Override
+            public MetadataSeriesResponse transform(FindTimeSeries result)
+                    throws Exception {
+                return new MetadataSeriesResponse(new ArrayList<Series>(
+                        result.getSeries()), result.getSize());
+            }
+        };
 
-        metadataResult(
-                response,
-                metadata.findTimeSeries(seriesQuery)
-                        .transform(
-                                new Callback.Transformer<FindTimeSeries, MetadataSeriesResponse>() {
-                                    @Override
-                                    public MetadataSeriesResponse transform(
-                                            FindTimeSeries result)
-                                            throws Exception {
-                                        return new MetadataSeriesResponse(
-                                                new ArrayList<Series>(result
-                                                        .getSeries()), result
-                                                        .getSize());
-                                    }
-                                }));
+        final Callback<MetadataSeriesResponse> callback = metadata
+                .findTimeSeries(filter).transform(transformer);
+
+        metadataResult(response, callback);
     }
 
     private <T> void metadataResult(final AsyncResponse response,

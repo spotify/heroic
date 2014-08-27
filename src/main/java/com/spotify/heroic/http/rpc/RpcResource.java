@@ -9,7 +9,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 
 @Path("/rpc")
 @Produces(MediaType.APPLICATION_JSON)

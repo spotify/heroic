@@ -1,4 +1,4 @@
-package com.spotify.heroic.http;
+package com.spotify.heroic.http.write;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,8 +14,7 @@ import javax.ws.rs.core.MediaType;
 
 import lombok.Data;
 
-import com.spotify.heroic.http.write.WriteMetrics;
-import com.spotify.heroic.http.write.WriteMetricsResponse;
+import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResponse;

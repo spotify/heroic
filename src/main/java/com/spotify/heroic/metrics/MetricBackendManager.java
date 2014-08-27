@@ -25,7 +25,6 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metadata.model.TimeSerieQuery;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.MergeWriteResponse;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
@@ -425,10 +424,10 @@ public class MetricBackendManager {
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
             final FindTimeSeriesCriteria query) {
-        final TimeSerieQuery metaQuery = new TimeSerieQuery(query.getFilter());
         final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
                 query.getGroupBy());
-        return metadata.findTimeSeries(metaQuery).transform(transformer);
+        return metadata.findTimeSeries(query.getFilter())
+                .transform(transformer);
     }
 
     private Callback<List<GroupedTimeSeries>> groupTimeseries(final Series key,

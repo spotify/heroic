@@ -6,7 +6,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
-import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 
 @Provider
 public class UnrecognizedPropertyExceptionMapper implements

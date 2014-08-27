@@ -6,7 +6,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.spotify.heroic.http.model.MessageResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 
 @Provider
 public class HeroicExceptionMapper implements

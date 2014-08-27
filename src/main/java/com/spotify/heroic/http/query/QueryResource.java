@@ -1,4 +1,4 @@
-package com.spotify.heroic.http;
+package com.spotify.heroic.http.query;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,10 +36,10 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.http.model.IdResponse;
-import com.spotify.heroic.http.model.MessageResponse;
-import com.spotify.heroic.http.query.QueryMetricsBody;
-import com.spotify.heroic.http.query.QueryMetricsResponse;
+import com.spotify.heroic.http.HttpAsyncUtils;
+import com.spotify.heroic.http.HttpAsyncUtils.Resume;
+import com.spotify.heroic.http.general.IdResponse;
+import com.spotify.heroic.http.general.MessageResponse;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricQueryException;
 import com.spotify.heroic.metrics.MetricStream;

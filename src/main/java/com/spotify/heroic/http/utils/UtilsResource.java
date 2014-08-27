@@ -1,4 +1,4 @@
-package com.spotify.heroic.http;
+package com.spotify.heroic.http.utils;
 
 import java.nio.ByteBuffer;
 
@@ -10,10 +10,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.google.common.io.BaseEncoding;
-import com.spotify.heroic.http.model.DataResponse;
-import com.spotify.heroic.http.utils.UtilsDecodeRowKeyQuery;
-import com.spotify.heroic.http.utils.UtilsEncodeRowKeyQuery;
-import com.spotify.heroic.http.utils.UtilsRowKeyResponse;
+import com.spotify.heroic.http.general.DataResponse;
 import com.spotify.heroic.metrics.heroic.MetricsRowKey;
 import com.spotify.heroic.metrics.heroic.MetricsRowKeySerializer;
 
