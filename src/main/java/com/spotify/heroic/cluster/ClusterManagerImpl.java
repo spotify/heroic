@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
@@ -32,10 +33,15 @@ public class ClusterManagerImpl implements ClusterManager {
 
         public ClusterManagerImpl build(String context)
                 throws ValidationException {
-            Utils.notNull(context + ".discovery", discovery);
+            final ClusterDiscovery discovery;
+
+            if (this.discovery == null) {
+                discovery = ClusterDiscovery.NULL;
+            } else {
+                discovery = this.discovery.build(context + ".discovery");
+            }
+
             Utils.notEmpty(context + ".tags", tags);
-            final ClusterDiscovery discovery = this.discovery.build(context
-                    + ".discovery");
             return new ClusterManagerImpl(discovery, UUID.randomUUID(), tags,
                     capabilities);
         }
@@ -62,6 +68,12 @@ public class ClusterManagerImpl implements ClusterManager {
 
     @Override
     public Callback<Void> refresh() {
+        if (discovery == ClusterDiscovery.NULL) {
+            log.info("Cluster refresh in progress, but no discovery mechanism configured");
+            registry.set(new NodeRegistry(new ArrayList<NodeRegistryEntry>(), 0));
+            return new ResolvedCallback<Void>(null);
+        }
+
         log.info("Cluster refresh in progress");
 
         final Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void> transformer = new Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void>() {

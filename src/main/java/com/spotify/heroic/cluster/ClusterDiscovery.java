@@ -11,5 +11,17 @@ public interface ClusterDiscovery {
                 throws ValidationException;
     }
 
+    public static final class Null implements ClusterDiscovery {
+        private Null() {
+        }
+
+        @Override
+        public Callback<Collection<DiscoveredClusterNode>> getNodes() {
+            throw new NullPointerException();
+        }
+    }
+
+    public static final ClusterDiscovery NULL = new Null();
+
     Callback<Collection<DiscoveredClusterNode>> getNodes();
 }
