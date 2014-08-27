@@ -79,12 +79,13 @@ public class ClusterManagerImpl implements ClusterManager {
         final Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void> transformer = new Callback.DeferredTransformer<Collection<DiscoveredClusterNode>, Void>() {
             @Override
             public Callback<Void> transform(
-                    Collection<DiscoveredClusterNode> result) throws Exception {
+                    final Collection<DiscoveredClusterNode> nodes)
+                    throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
-                        result.size());
+                        nodes.size());
 
-                for (final DiscoveredClusterNode discovered : result) {
-                    callbacks.add(discovered.getMetadata().transform(
+                for (final DiscoveredClusterNode node : nodes) {
+                    callbacks.add(node.getMetadata().transform(
                             new NodeRegistryEntryTransformer()));
                 }
 
@@ -93,7 +94,7 @@ public class ClusterManagerImpl implements ClusterManager {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                                    throws Exception {
+                            throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }
@@ -107,7 +108,7 @@ public class ClusterManagerImpl implements ClusterManager {
                                         results.size(), errors.size(),
                                         cancelled.size()));
                         registry.set(new NodeRegistry(new ArrayList<>(results),
-                                results.size()));
+                                nodes.size()));
                         return null;
                     }
                 };
