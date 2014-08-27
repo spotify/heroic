@@ -9,12 +9,11 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResult;
 
 public interface ClusterNode {
     public Callback<MetricGroups> query(final Series key,
             final Set<Series> series, final DateRange range,
             final AggregationGroup aggregationGroup);
 
-    public Callback<WriteResult> write(List<WriteMetric> writes);
+    public Callback<Boolean> write(List<WriteMetric> writes);
 }

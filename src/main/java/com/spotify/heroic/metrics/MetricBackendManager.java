@@ -1,6 +1,7 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +72,8 @@ public class MetricBackendManager {
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
     private final class FindAndRouteTransformer
-            implements
-            Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
+    implements
+    Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
         @Override
         public List<RemoteGroupedTimeSeries> transform(
                 final FindTimeSeriesGroups result) throws Exception {
@@ -127,7 +128,7 @@ public class MetricBackendManager {
         void run(int disabled, Backend backend) throws Exception;
     }
 
-    public Callback<WriteResult> write(final List<WriteMetric> writes)
+    public Callback<Boolean> write(final List<WriteMetric> writes)
             throws MetricWriteException {
         if (cluster == ClusterManager.NULL)
             throw new MetricWriteException(
@@ -153,7 +154,7 @@ public class MetricBackendManager {
             partition.add(write);
         }
 
-        final List<Callback<WriteResult>> callbacks = new ArrayList<>();
+        final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
         for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
                 .entrySet()) {
@@ -163,7 +164,30 @@ public class MetricBackendManager {
             callbacks.add(node.getClusterNode().write(nodeWrites));
         }
 
-        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
+        final Callback.Reducer<Boolean, Boolean> reducer = new Callback.Reducer<Boolean, Boolean>() {
+            @Override
+            public Boolean resolved(Collection<Boolean> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
+                for (final Exception e : errors) {
+                    log.error("Remote write failed", e);
+                }
+
+                for (final CancelReason reason : cancelled) {
+                    log.error("Remote write cancelled: " + reason.getMessage());
+                }
+
+                boolean ok = true;
+
+                for (final Boolean b : results) {
+                    ok &= b;
+                }
+
+                return ok;
+            }
+        };
+
+        return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
     public Callback<QueryMetricsResult> queryMetrics(final Filter filter,
@@ -189,7 +213,7 @@ public class MetricBackendManager {
     public Callback<StreamMetricsResult> streamMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         if (cluster == ClusterManager.NULL)
             throw new MetricQueryException(
                     "Cannot stream metrics, cluster is not configured");
@@ -293,7 +317,7 @@ public class MetricBackendManager {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -365,7 +389,7 @@ public class MetricBackendManager {
             final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer()).register(
-                reporter.reportFindTimeSeries());
+                        reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(

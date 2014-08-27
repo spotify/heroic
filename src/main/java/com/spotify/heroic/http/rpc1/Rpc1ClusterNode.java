@@ -19,11 +19,11 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.http.rpc.RpcPostRequestResolver;
+import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
-import com.spotify.heroic.model.WriteResult;
 
 @Data
 @ToString(of = "url")
@@ -51,8 +51,17 @@ public class Rpc1ClusterNode implements ClusterNode {
         return resolve(request, MetricGroups.class, "query");
     }
 
+    private static final Callback.Transformer<RpcWriteResult, Boolean> WRITE_TRANSFORMER = new Callback.Transformer<RpcWriteResult, Boolean>() {
+        @Override
+        public Boolean transform(RpcWriteResult result) throws Exception {
+            return result.isOk();
+        }
+    };
+
     @Override
-    public Callback<WriteResult> write(List<WriteMetric> request) {
-        return resolve(request, WriteResult.class, "write");
+    public Callback<Boolean> write(List<WriteMetric> request) {
+
+        return resolve(request, RpcWriteResult.class, "write").transform(
+                WRITE_TRANSFORMER);
     }
 }

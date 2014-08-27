@@ -13,6 +13,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
+import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.WriteMetric;
@@ -43,10 +44,12 @@ public class Rpc1Resource {
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 
-    private static final HttpAsyncUtils.Resume<WriteResult, WriteResult> WRITE = new HttpAsyncUtils.Resume<WriteResult, WriteResult>() {
+    private static final HttpAsyncUtils.Resume<WriteResult, RpcWriteResult> WRITE = new HttpAsyncUtils.Resume<WriteResult, RpcWriteResult>() {
         @Override
-        public WriteResult resume(WriteResult value) throws Exception {
-            return value;
+        public RpcWriteResult resume(WriteResult value) throws Exception {
+            final boolean ok = value.getFailed().size()
+                    + value.getCancelled().size() == 0;
+            return new RpcWriteResult(ok);
         }
     };
 
