@@ -39,6 +39,7 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
@@ -128,7 +129,7 @@ public class MetricBackendManager {
         void run(int disabled, Backend backend) throws Exception;
     }
 
-    public Callback<Boolean> write(final List<WriteMetric> writes)
+    public Callback<WriteBatchResult> write(final List<WriteMetric> writes)
             throws MetricWriteException {
         if (cluster == ClusterManager.NULL)
             throw new MetricWriteException(
@@ -164,9 +165,9 @@ public class MetricBackendManager {
             callbacks.add(node.getClusterNode().write(nodeWrites));
         }
 
-        final Callback.Reducer<Boolean, Boolean> reducer = new Callback.Reducer<Boolean, Boolean>() {
+        final Callback.Reducer<Boolean, WriteBatchResult> reducer = new Callback.Reducer<Boolean, WriteBatchResult>() {
             @Override
-            public Boolean resolved(Collection<Boolean> results,
+            public WriteBatchResult resolved(Collection<Boolean> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 for (final Exception e : errors) {
@@ -177,13 +178,21 @@ public class MetricBackendManager {
                     log.error("Remote write cancelled: " + reason.getMessage());
                 }
 
-                boolean ok = true;
+                Boolean ok = null;
+
+                if (!errors.isEmpty() || !cancelled.isEmpty())
+                    ok = false;
 
                 for (final Boolean b : results) {
-                    ok &= b;
+                    if (ok == null) {
+                        ok = b;
+                    } else {
+                        ok &= b;
+                    }
                 }
 
-                return ok;
+                return new WriteBatchResult(ok, results.size() + errors.size()
+                        + cancelled.size());
             }
         };
 

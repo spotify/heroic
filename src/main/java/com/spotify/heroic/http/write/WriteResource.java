@@ -17,6 +17,7 @@ import lombok.Data;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricWriteException;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.WriteMetric;
 
 @Path("/write")
@@ -31,10 +32,11 @@ public class WriteResource {
         private final String message;
     }
 
-    private static final HttpAsyncUtils.Resume<Boolean, WriteMetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<Boolean, WriteMetricsResponse>() {
+    private static final HttpAsyncUtils.Resume<WriteBatchResult, WriteBatchResult> WRITE_METRICS = new HttpAsyncUtils.Resume<WriteBatchResult, WriteBatchResult>() {
         @Override
-        public WriteMetricsResponse resume(Boolean result) throws Exception {
-            return new WriteMetricsResponse(result);
+        public WriteBatchResult resume(WriteBatchResult result)
+                throws Exception {
+            return result;
         }
     };
 

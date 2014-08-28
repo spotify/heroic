@@ -60,7 +60,6 @@ public class Rpc1ClusterNode implements ClusterNode {
 
     @Override
     public Callback<Boolean> write(List<WriteMetric> request) {
-
         return resolve(request, RpcWriteResult.class, "write").transform(
                 WRITE_TRANSFORMER);
     }
