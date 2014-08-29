@@ -100,7 +100,7 @@ public class QueryResource {
     @POST
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
-            QueryMetricsBody query) throws MetricQueryException {
+            QueryMetrics query) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(query);
 
         final Callback<QueryMetricsResult> callback = metrics
@@ -115,7 +115,7 @@ public class QueryResource {
     @POST
     @Path("/metrics-stream")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(QueryMetricsBody query,
+    public Response makeMetricsStream(QueryMetrics query,
             @Context UriInfo info) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(query);
 
@@ -128,7 +128,7 @@ public class QueryResource {
                 .build();
     }
 
-    private StoredQuery makeMetricsQuery(QueryMetricsBody query)
+    private StoredQuery makeMetricsQuery(QueryMetrics query)
             throws MetricQueryException {
         if (query == null)
             throw new MetricQueryException("Query must be defined");
@@ -253,7 +253,7 @@ public class QueryResource {
      * @param query
      * @return
      */
-    private Filter buildFilter(QueryMetricsBody query) {
+    private Filter buildFilter(QueryMetrics query) {
         final List<Filter> statements = new ArrayList<>();
 
         if (query.getTags() != null && !query.getTags().isEmpty()) {

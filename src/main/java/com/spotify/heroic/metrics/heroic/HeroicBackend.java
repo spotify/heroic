@@ -3,6 +3,7 @@ package com.spotify.heroic.metrics.heroic;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -11,16 +12,16 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang.NotImplementedException;
-
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
@@ -264,17 +265,18 @@ public class HeroicBackend extends CassandraBackend implements Backend {
                                         .calculateColumnKey(newRange.getEnd()))
                                 .build());
 
-        return ConcurrentCallback.newResolve(pools.read(),
-                new Callback.Resolver<FetchDataPoints.Result>() {
-                    @Override
-                    public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Integer>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(key,
-                                result);
-                        return new FetchDataPoints.Result(datapoints, series);
-                    }
-                });
+        final Callback.Resolver<FetchDataPoints.Result> resolver = new Callback.Resolver<FetchDataPoints.Result>() {
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = key.buildDataPoints(result
+                        .getResult());
+                return new FetchDataPoints.Result(datapoints, series);
+            }
+        };
+
+        return ConcurrentCallback.newResolve(pools.read(), resolver);
     }
 
     @Override
@@ -291,20 +293,6 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         }
 
         pools.stop();
-    }
-
-    private static List<DataPoint> buildDataPoints(final MetricsRowKey key,
-            final OperationResult<ColumnList<Integer>> result) {
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-        for (final Column<Integer> column : result.getResult()) {
-            datapoints.add(new DataPoint(
-                    MetricsRowKeySerializer.calculateAbsoluteTimestamp(
-                            key.getBase(), column.getName()), column
-                            .getDoubleValue()));
-        }
-
-        return datapoints;
     }
 
     private static List<Long> buildBases(DateRange range) {
@@ -324,6 +312,45 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
     @Override
     public Iterable<BackendEntry> listEntries() {
-        throw new NotImplementedException();
+        final Keyspace keyspace = keyspace();
+
+        if (keyspace == null)
+            throw new IllegalStateException("Backend is not ready");
+
+        final OperationResult<Rows<MetricsRowKey, Integer>> result;
+
+        try {
+            result = keyspace.prepareQuery(METRICS_CF).getAllRows().execute();
+        } catch (final ConnectionException e) {
+            throw new RuntimeException("Request failed", e);
+        }
+
+        return new Iterable<BackendEntry>() {
+            @Override
+            public Iterator<BackendEntry> iterator() {
+                final Iterator<Row<MetricsRowKey, Integer>> iterator = result
+                        .getResult().iterator();
+
+                return new Iterator<BackendEntry>() {
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    @Override
+                    public BackendEntry next() {
+                        final Row<MetricsRowKey, Integer> entry = iterator
+                                .next();
+                        final MetricsRowKey rowKey = entry.getKey();
+                        final Series series = rowKey.getSeries();
+
+                        final List<DataPoint> dataPoints = rowKey
+                                .buildDataPoints(entry.getColumns());
+
+                        return new BackendEntry(series, dataPoints);
+                    }
+                };
+            }
+        };
     }
 }

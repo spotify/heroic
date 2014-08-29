@@ -123,7 +123,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
+                .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
                 multiBind(config.getMetricBackends(), Backend.class);
@@ -132,17 +132,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((Lifecycle) i);
-                                    }
-                                });
+                            public void afterInjection(Object i) {
+                                managed.add((Lifecycle) i);
                             }
                         });
+                    }
+                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -190,7 +190,13 @@ public class Main {
         final Server server = setupHttpServer(config);
         final FastForwardReporter ffwd = setupReporter(registry);
 
-        server.start();
+        try {
+            server.start();
+        } catch (final Exception e) {
+            log.error("Failed to start server", e);
+            System.exit(1);
+            return;
+        }
 
         final Scheduler scheduler = injector.getInstance(Scheduler.class);
         scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
@@ -262,33 +268,33 @@ public class Main {
     /*
      * private static HttpServer setupHttpServer(final HeroicConfig config)
      * throws IOException { log.info("Starting grizzly http server...");
-     *
+     * 
      * final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
      * .port(config.getPort()).build();
-     *
+     * 
      * final WebappContext context = new WebappContext("Guice Webapp sample",
      * "");
-     *
+     * 
      * context.addListener(Main.LISTENER);
      * context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
      * .addMappingForUrlPatterns(null, "/*");
-     *
+     * 
      * // Initialize and register Jersey ServletContainer final
      * ServletRegistration servletReg = context.addServlet( "ServletContainer",
      * ServletContainer.class); servletReg.addMapping("/*");
      * servletReg.setInitParameter("javax.ws.rs.Application",
      * WebApp.class.getName());
-     *
+     * 
      * // Initialize and register GuiceFilter final FilterRegistration filterReg
      * = context.addFilter("GuiceFilter", GuiceFilter.class);
      * filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
      * "/*");
-     *
+     * 
      * final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
      * baseUri, false);
-     *
+     * 
      * context.deploy(server);
-     *
+     * 
      * return server; }
      */
 

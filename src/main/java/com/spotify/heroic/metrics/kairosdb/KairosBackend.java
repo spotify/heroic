@@ -54,7 +54,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
     @RequiredArgsConstructor
     private static final class RowCountTransformer implements
-            Callback.Resolver<Long> {
+    Callback.Resolver<Long> {
         private final Keyspace keyspace;
         private final DateRange range;
         private final DataPointsRowKey row;
@@ -187,22 +187,22 @@ public class KairosBackend extends CassandraBackend implements Backend {
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                                .setStart((int) startTime,
-                                        IntegerSerializer.get())
+                        .setStart((int) startTime,
+                                IntegerSerializer.get())
                                 .setEnd((int) endTime, IntegerSerializer.get())
                                 .build());
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
-                    @Override
-                    public Result resolve() throws Exception {
-                        final OperationResult<ColumnList<Integer>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = rowKey
-                                .buildDataPoints(result.getResult());
-                        return new FetchDataPoints.Result(datapoints, series);
-                    }
-                });
+            @Override
+            public Result resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = rowKey
+                        .buildDataPoints(result.getResult());
+                return new FetchDataPoints.Result(datapoints, series);
+            }
+        });
     }
 
     @Override
@@ -224,20 +224,20 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<Long, Long>() {
-                    @Override
-                    public Long resolved(Collection<Long> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public Long resolved(Collection<Long> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        long value = 0;
+                long value = 0;
 
-                        for (final long result : results) {
-                            value += result;
-                        }
+                for (final long result : results) {
+                    value += result;
+                }
 
-                        return value;
-                    }
-                });
+                return value;
+            }
+        });
     }
 
     private static List<Long> buildBases(DateRange range) {
@@ -309,6 +309,5 @@ public class KairosBackend extends CassandraBackend implements Backend {
                 };
             }
         };
-
     }
 }

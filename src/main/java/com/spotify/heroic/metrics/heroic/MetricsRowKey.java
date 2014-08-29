@@ -1,8 +1,14 @@
 package com.spotify.heroic.metrics.heroic;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.Data;
 import lombok.Getter;
 
+import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnList;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
 
 @Data
@@ -22,4 +28,16 @@ public class MetricsRowKey {
     private final Series series;
     @Getter
     private final long base;
+
+    public List<DataPoint> buildDataPoints(ColumnList<Integer> result) {
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+        for (final Column<Integer> column : result) {
+            datapoints.add(new DataPoint(MetricsRowKeySerializer
+                    .calculateAbsoluteTimestamp(base, column.getName()), column
+                    .getDoubleValue()));
+        }
+
+        return datapoints;
+    }
 }

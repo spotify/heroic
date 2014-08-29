@@ -12,7 +12,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.model.filter.Filter;
 
 @Data
-public class QueryMetricsBody {
+public class QueryMetrics {
     private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(
             TimeUnit.DAYS, 7);
     private static final List<QueryAggregation> EMPTY_AGGREGATIONS = new ArrayList<>();

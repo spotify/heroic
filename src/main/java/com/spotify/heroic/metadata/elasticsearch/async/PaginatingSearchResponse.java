@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
@@ -26,12 +27,14 @@ public class PaginatingSearchResponse implements Iterable<SearchResponse> {
             private SearchResponse next;
             private int from = 0;
             private final int size = 100000;
+            private final int timeout = 120;
 
             @Override
             public boolean hasNext() {
                 final SearchRequestBuilder request = client
                         .prepareSearch(index).setTypes(type).setFrom(from)
-                        .setSize(size);
+                        .setSize(size)
+                        .setTimeout(TimeValue.timeValueSeconds(timeout));
 
                 if (filter != null)
                     request.setQuery(QueryBuilders.filteredQuery(
