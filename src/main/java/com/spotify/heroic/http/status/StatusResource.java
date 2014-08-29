@@ -33,35 +33,39 @@ public class StatusResource {
 
     @GET
     public Response get() {
-        final StatusInfo.Consumer consumers = buildConsumerStatus();
-        final StatusInfo.Backend backends = buildBackendStatus();
-        final StatusInfo.MetadataBackend metadataBackends = buildMetadataBackendStatus();
+        final StatusResponse.Consumer consumers = buildConsumerStatus();
+        final StatusResponse.Backend backends = buildBackendStatus();
+        final StatusResponse.MetadataBackend metadataBackends = buildMetadataBackendStatus();
 
-        final StatusInfo.Cluster cluster = buildClusterStatus();
+        final StatusResponse.Cluster cluster = buildClusterStatus();
 
         final boolean allOk = consumers.isOk() && backends.isOk()
                 && metadataBackends.isOk() && cluster.isOk();
 
-        final StatusInfo response = new StatusInfo(allOk, consumers, backends,
-                metadataBackends, cluster);
+        final StatusResponse response = new StatusResponse(allOk, consumers,
+                backends, metadataBackends, cluster);
+
+        if (!response.isOk())
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(response).build();
 
         return Response.status(Response.Status.OK).entity(response).build();
     }
 
-    private StatusInfo.Cluster buildClusterStatus() {
+    private StatusResponse.Cluster buildClusterStatus() {
         if (cluster == ClusterManager.NULL)
-            return new StatusInfo.Cluster(true, 0, 0);
+            return new StatusResponse.Cluster(true, 0, 0);
 
         final ClusterManager.Statistics s = cluster.getStatistics();
 
         if (s == null)
-            return new StatusInfo.Cluster(true, 0, 0);
+            return new StatusResponse.Cluster(true, 0, 0);
 
-        return new StatusInfo.Cluster(s.getOfflineNodes() == 0,
+        return new StatusResponse.Cluster(s.getOnlineNodes() > 0,
                 s.getOnlineNodes(), s.getOfflineNodes());
     }
 
-    private StatusInfo.Backend buildBackendStatus() {
+    private StatusResponse.Backend buildBackendStatus() {
         final int available = backends.size();
 
         int ready = 0;
@@ -71,10 +75,10 @@ public class StatusResource {
                 ready += 1;
         }
 
-        return new StatusInfo.Backend(available == ready, available, ready);
+        return new StatusResponse.Backend(available == ready, available, ready);
     }
 
-    private StatusInfo.Consumer buildConsumerStatus() {
+    private StatusResponse.Consumer buildConsumerStatus() {
         final int available = consumers.size();
 
         int ready = 0;
@@ -84,10 +88,10 @@ public class StatusResource {
                 ready += 1;
         }
 
-        return new StatusInfo.Consumer(available == ready, available, ready);
+        return new StatusResponse.Consumer(available == ready, available, ready);
     }
 
-    private StatusInfo.MetadataBackend buildMetadataBackendStatus() {
+    private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
         final int available = metadataBackends.size();
 
         int ready = 0;
@@ -97,7 +101,7 @@ public class StatusResource {
                 ready += 1;
         }
 
-        return new StatusInfo.MetadataBackend(available == ready, available,
-                ready);
+        return new StatusResponse.MetadataBackend(available == ready,
+                available, ready);
     }
 }

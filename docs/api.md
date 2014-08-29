@@ -10,7 +10,11 @@ This details the API endpoints that are used for querying for data out of Heroic
 
 Query for the status of a heroic instance.
 
-+ Response 200 (application/json) [TODO](#todo)
+The status code <code>503</code> is used to indicate to load balancers that a
+service is not available for requests right now.
+
++ Response 200 (application/json) [TODO](#statusresponse)
++ Response 503 (application/json) [TODO](#statusresponse)
 
 ### POST /metrics [MetricsRequest](#metricsrequest)
 
@@ -23,23 +27,75 @@ The simplest query method, expects a [MetricsRequest](#metricsrequest), and will
 
 Internal RPC endpoint to query for a nodes metadata.
 
-+ Response 200 (application/json) [MetadataResponse](#metadataresponse)
-
-### POST /rpc/query [TODO](#todo)
-
-Internal RPC endpoint to perform a remote query.
-
-+ Response 200 (application/json) [TODO](#todo)
-
 # Types
 
 The following are structure documentation for all available types in the API.
+
+### ErrorMessage
+
+A human readable error that can be returned by the api.
+
+###### Structure
+```yml
+ErrorMessage:
+  # A message describing the error.
+  message: required String
+```
+
+### StatusResponse
+
+Contains the status for a specific heroic instance.
+
+###### Structure
+
+```yml
+Consumer:
+  # Indicates if all the consumer instances are 'ok'.
+  ok: required Boolean
+  # How many consumer instances are available.
+  available: required Number
+  # How many consumer instances are ready.
+  ready: required Number
+
+Backend:
+  # Indicates if all backend instances are 'ok'.
+  ok: required Boolean
+  # How many backend instances are available.
+  available: required Number
+  # How many backend instances are ready.
+  ready: required Number
+
+MetadataBackend:
+  # Indicates if all metadata backend instances are 'ok'.
+  ok: required Boolean
+  # How many metadata backend instances are available.
+  available: required Number
+  # How many metadata backend instances are ready.
+  ready: required Number
+
+Cluster:
+  # Indicates the heroic cluster is 'ok'.
+  ok: required Boolean
+  # How many nodes that are considered 'online' and available.
+  onlineNodes: required Number
+  # How many nodes that are considered 'offline' and unavailable.
+  offlineNodes: required Number
+
+StatusResponse:
+  ok: required Boolean
+  consumers: required Consumer
+  backends: required Backend
+  metadataBackends: required MetadataBackend
+  cluster: required Cluster
+```
 
 ### QueryDateRange
 
 Defines a DateRange, but with a much more flexible format.
 
-Has the following types.
+A QueryDateRange has a __type__ field defining its type.
+
+The following types are available.
 
 + Absolute - Queries an absolute time range.
 + Relative - Queries a time range which is relative to the current time.
@@ -97,7 +153,7 @@ The __first__ element is the timestamp which is milliseconds from the unix epoch
 The __second__ element is the value.
 
 ###### Structure
-```
+```yml
 DataPoint: [Number, Number]
 ```
 
@@ -238,15 +294,71 @@ The following example will select time series that the key is either <code>foo</
 ]
 ```
 
+### QuerySampling
+
+Defines a sampling period and an extent.
+
+###### Structure
+
+```yml
+QuerySampling:
+  # The time unit to use for the below fields.
+  unit: required TimeUnit
+  # The size of the sampling period to use in accordance with the given unit.
+  size: required Number
+  # The extent for which the request should get data for each sampling period
+  # in accordance with the given time unit.
+  # Defaults to the same as size.
+  extent: optional Number
+```
+
+###### Example
+
+The following example would define an extent with a sampling period of
+<code>10</code> minutes, which would for each sample collect a <code>20</code>
+minutes extent worth of data.
+
+```json
+{
+  "unit": "minutes",
+  "size": 10,
+  "extent": 20
+}
+```
+
+### QueryAggregation
+
+A single aggregation step.
+
+A QueryAggregation has a __type__ field defining its type.
+
+The following types are available.
+
++ Average - Calculate an average over all datapoints in each sampling period.
++ Sum - Calculate a sum over all datapoints in each sampling period.
+
+###### Structure
+
+See also:
++ [QuerySampling](#querysampling)
+
+```yml
+Average:
+  type: required "average"
+  # The sampling period and extent to use.
+  sampling: required QuerySampling
+
+Sum:
+  type: required "sum"
+  # The sampling period and extent to use.
+  sampling: required QuerySampling
+```
+
 ### MetricsRequest
 
 A request for metrics.
 
 ###### Structure
-
-| field | required? | type                              |
-| -     | -         | -                                 |
-| range | yes       | [QueryDateRange](#querydaterange) |
 
 ```yml
 MetricsRequest:
@@ -259,7 +371,7 @@ MetricsRequest:
   # A list of tags which will be used to group the result.
   groupBy: optional [String, ..]
   # The chain of aggregators to use for this request.
-  aggregators: optional [AggregatorRequest, ..]
+  aggregators: optional [QueryAggregation, ..]
   # Match the exact set of tags specified (will deprecated in favor of only "filter").
   tags: optional {String: String, ..}
   # Match that the specified tag names are present (will deprecated in favor of only "filter").

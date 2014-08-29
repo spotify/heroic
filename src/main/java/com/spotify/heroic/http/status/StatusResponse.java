@@ -3,7 +3,7 @@ package com.spotify.heroic.http.status;
 import lombok.Data;
 
 @Data
-public class StatusInfo {
+public class StatusResponse {
     @Data
     public static class Consumer {
         private final boolean ok;
