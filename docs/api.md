@@ -244,17 +244,13 @@ A request for metrics.
 
 ###### Structure
 
-| field       | required? | type                                                   | description                                               |
-| -           | -         | -                                                      |                                                           |
-| range       | yes       | [QueryDateRange](#querydaterange)                      | The time range for which to query.                        |
-| key         | yes       | String                                                 | The key to query for.                                     |
-| filter      | no        | [Filter](#filter)                                      | A statement used to filter down the selected time series. |
-| groupBy     | no        | <code>[String, ..]</code>                              | A list of tags which will be used to group the result     |
-| aggregators | no        | <code>[[QueryAggregator](#queryaggregator), ..]</code> | The chain of aggregators to use for this request.         |
+| field | required? | type                              |
+| -     | -         | -                                 |
+| range | yes       | [QueryDateRange](#querydaterange) |
 
 ```yml
 MetricsRequest:
-  # 
+  # The time range for which to query.
   range: required QueryDateRange
   # The key to query for
   key: required String
