@@ -35,33 +35,30 @@ Internal RPC endpoint to perform a remote query.
 
 The following are structure documentation for all available types in the API.
 
-### DateRangeRequest
+### QueryDateRange
 
 Defines a DateRange, but with a much more flexible format.
 
 Has the following types.
 
-+ AbsoluteDateRangeRequest - Queries an absolute time range.
-+ RelativeDateRangeRequest - Queries a time range which is relative to the current time.
++ Absolute - Queries an absolute time range.
++ Relative - Queries a time range which is relative to the current time.
 
 ###### Structure
 ```yml
-AbsoluteDateRangeRequest:
+Absolute:
   type: required "absolute"
   # Starting timestamp in milliseconds from the unix epoch.
   start: required Number
   # Ending timestamp in milliseconds from the unix epoch.
   end: required Number
 
-RelativeDateRangeRequest:
+Relative:
   type: required "absolute"
   # Unit to use for 'value'.
   unit: required "MILLISECONDS"|"SECONDS"|"MINUTES"|"HOURS"|"DAYS"|"WEEKS"|"MONTHS"
   # How many 'unit' timespans back in time this date starts.
   value: required Number
-
-DateRangeRequest:
-  AbsoluteDateRangeRequest | RelativeDateRangeRequest
 ```
 
 ###### Examples
@@ -201,24 +198,21 @@ that the time series they are seeing is probably inconsistent.
 }
 ```
 
-### FilterStatement
+### Filter
 
 A filter statement is a recursive structure that allows you to define a filter for which time series should be selected for a specific query.
 
 ###### Structure
 
 ```yml
-# Root filter statement.
-FilterStatement: AndFilter | OrFilter | NotFilter | MatchKeyFilter | MatchTagFilter | HasTagFilter
-
 # Match only if all child filter statements match.
-AndFilter: ["and", FilterStatement, ..]
+AndFilter: ["and", Filter, ..]
 
 # Match if any child filter statements match.
-OrFilter: ["or", FilterStatement, ..]
+OrFilter: ["or", Filter, ..]
 
 # Match if child filter statement does not match.
-NotFilter: ["not", FilterStatement]
+NotFilter: ["not", Filter]
 
 # Match if a time series has the specified key.
 MatchKeyFilter: ["key", String]
@@ -250,14 +244,18 @@ A request for metrics.
 
 ###### Structure
 
+| field | required? | type                              |
+| -     | -         | -                                 |
+| range | yes       | [QueryDateRange](#querydaterange) |
+
 ```yml
 MetricsRequest:
   # The time range for which to query.
-  range: required DateRangeRequest
+  range: required QueryDateRange
   # The key to query for
   key: required String
   # A statement used to filter down the selected time series.
-  filter: optional FilterStatement
+  filter: optional [Filter](#filter)
   # A list of tags which will be used to group the result.
   groupBy: optional [String, ..]
   # The chain of aggregators to use for this request.
