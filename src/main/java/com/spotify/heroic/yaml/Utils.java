@@ -23,11 +23,13 @@ public final class Utils {
         return object;
     }
 
-    public static void notEmpty(String context, String string)
+    public static String notEmpty(String context, String string)
             throws ValidationException {
         if (string == null || string.isEmpty())
             throw new ValidationException(context
                     + ": must be defined and non-empty");
+
+        return string;
     }
 
     public static <T> List<T> notEmpty(String context, List<T> list)
@@ -53,7 +55,7 @@ public final class Utils {
 
         try {
             return new URI(url);
-        } catch (URISyntaxException e) {
+        } catch (final URISyntaxException e) {
             throw new ValidationException(context + ": must be a valid URL");
         }
     }
@@ -91,7 +93,7 @@ public final class Utils {
 
         try {
             clazz = Class.forName(className);
-        } catch (ClassNotFoundException e) {
+        } catch (final ClassNotFoundException e) {
             throw new ValidationException(context + ": No such class: "
                     + className, e);
         }
@@ -129,7 +131,7 @@ public final class Utils {
 
         try {
             field = clazz.getField("TYPE");
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException("Invalid field 'TYPE' on class " + clazz);
         }
 
@@ -137,7 +139,7 @@ public final class Utils {
 
         try {
             type = field.get(null);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException(
                     "Unable to access field 'TYPE' on class " + clazz);
         }
@@ -146,7 +148,7 @@ public final class Utils {
 
         try {
             stringType = (String) type;
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             throw new RuntimeException("Type field 'TYPE' of class " + clazz
                     + " must be a String");
         }

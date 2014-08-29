@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
@@ -85,7 +87,8 @@ public class Main {
     }
 
     public static Injector setupInjector(final HeroicConfig config,
-            final HeroicReporter reporter) {
+            final HeroicReporter reporter,
+            final ScheduledExecutorService scheduledExecutor) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -106,6 +109,9 @@ public class Main {
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
+                bind(ScheduledExecutorService.class).toInstance(
+                        scheduledExecutor);
+
                 if (cache == null) {
                     bind(AggregationCache.class).toProvider(
                             Providers.of((AggregationCache) null));
@@ -117,7 +123,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metric);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                .toInstance(storedMetricsQueries);
+                        .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
                 multiBind(config.getMetricBackends(), Backend.class);
@@ -126,17 +132,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
                         new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public void afterInjection(Object i) {
-                                managed.add((Lifecycle) i);
+                            public <I> void hear(TypeLiteral<I> type,
+                                    TypeEncounter<I> encounter) {
+                                encounter.register(new InjectionListener<I>() {
+                                    @Override
+                                    public void afterInjection(Object i) {
+                                        managed.add((Lifecycle) i);
+                                    }
+                                });
                             }
                         });
-                    }
-                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -169,7 +175,10 @@ public class Main {
 
         final HeroicConfig config = setupConfig(configPath, reporter);
 
-        injector = setupInjector(config, reporter);
+        final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
+                10);
+
+        injector = setupInjector(config, reporter, scheduledExecutor);
 
         /* fire startable handlers */
         if (!startLifecycle()) {
@@ -189,9 +198,10 @@ public class Main {
         final CountDownLatch latch = new CountDownLatch(1);
 
         Runtime.getRuntime().addShutdownHook(
-                setupShutdownHook(ffwd, server, scheduler, latch));
+                setupShutdownHook(ffwd, server, scheduler, latch,
+                        scheduledExecutor));
 
-        log.info("Heroic was Successfully Started");
+        log.info("Heroic was successfully started!");
         latch.await();
         System.exit(0);
     }
@@ -252,39 +262,39 @@ public class Main {
     /*
      * private static HttpServer setupHttpServer(final HeroicConfig config)
      * throws IOException { log.info("Starting grizzly http server...");
-     * 
+     *
      * final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
      * .port(config.getPort()).build();
-     * 
+     *
      * final WebappContext context = new WebappContext("Guice Webapp sample",
      * "");
-     * 
+     *
      * context.addListener(Main.LISTENER);
      * context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
      * .addMappingForUrlPatterns(null, "/*");
-     * 
+     *
      * // Initialize and register Jersey ServletContainer final
      * ServletRegistration servletReg = context.addServlet( "ServletContainer",
      * ServletContainer.class); servletReg.addMapping("/*");
      * servletReg.setInitParameter("javax.ws.rs.Application",
      * WebApp.class.getName());
-     * 
+     *
      * // Initialize and register GuiceFilter final FilterRegistration filterReg
      * = context.addFilter("GuiceFilter", GuiceFilter.class);
      * filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
      * "/*");
-     * 
+     *
      * final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
      * baseUri, false);
-     * 
+     *
      * context.deploy(server);
-     * 
+     *
      * return server; }
      */
 
     private static Server setupHttpServer(final HeroicConfig config)
             throws IOException {
-        log.info("Starting grizzly http server...");
+        log.info("Starting HTTP Server...");
 
         final Server server = new Server(config.getPort());
 
@@ -335,18 +345,21 @@ public class Main {
 
     private static Thread setupShutdownHook(final FastForwardReporter ffwd,
             final Server server, final Scheduler scheduler,
-            final CountDownLatch latch) {
+            final CountDownLatch latch,
+            final ScheduledExecutorService scheduledExecutor) {
         return new Thread() {
             @Override
             public void run() {
                 log.info("Shutting down Heroic");
 
                 log.info("Shutting down scheduler");
+
                 try {
                     scheduler.shutdown(true);
                 } catch (final SchedulerException e) {
                     log.error("Scheduler shutdown failed", e);
                 }
+
                 try {
                     log.info("Waiting for server to shutdown");
                     server.stop();
@@ -357,6 +370,12 @@ public class Main {
 
                 log.info("Stopping all life cycles");
                 stopLifecycle();
+
+                try {
+                    scheduledExecutor.awaitTermination(30, TimeUnit.SECONDS);
+                } catch (final InterruptedException e) {
+                    log.error("Failed to shut down scheduled executor service");
+                }
 
                 log.info("Stopping fast forward reporter");
                 ffwd.stop();

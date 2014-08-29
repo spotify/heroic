@@ -5,17 +5,20 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -26,18 +29,20 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
-import com.spotify.heroic.metrics.async.RemoteTimeSeriesTransformer;
+import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.PreparedQuery;
 import com.spotify.heroic.metrics.model.QueryMetricsResult;
-import com.spotify.heroic.metrics.model.RemoteGroupedTimeSeries;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.DateRange;
@@ -48,14 +53,42 @@ import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
-@RequiredArgsConstructor
 @Slf4j
-public class MetricBackendManager {
+@RequiredArgsConstructor
+@ToString(exclude = { "scheduledExecutor" })
+public class MetricBackendManager implements Lifecycle {
     private final MetricBackendManagerReporter reporter;
     private final List<Backend> backends;
     private final boolean updateMetadata;
     private final int groupLimit;
     private final int groupLoadLimit;
+    private final long flushingInterval = 10;
+
+    private final BulkProcessor<WriteMetric> writeBulkProcessor = new BulkProcessor<>(
+            new BulkProcessor.Flushable<WriteMetric>() {
+                @Override
+                public void flushWrites(List<WriteMetric> writes)
+                        throws Exception {
+                    log.info("Flushing {} write(s)", writes.size());
+                    MetricBackendManager.this.flushWrites(writes);
+                }
+            });
+
+    private final Callback.Transformer<WriteResult, Boolean> DIRECT_WRITE_TO_BOOLEAN = new Callback.Transformer<WriteResult, Boolean>() {
+        @Override
+        public Boolean transform(WriteResult result) throws Exception {
+            for (final Exception e : result.getFailed()) {
+                log.error("Write failed", e);
+            }
+
+            for (final CancelReason reason : result.getCancelled()) {
+                log.error("Write cancelled: " + reason);
+            }
+
+            return result.getFailed().isEmpty()
+                    && result.getCancelled().isEmpty();
+        }
+    };
 
     @Inject
     @Nullable
@@ -67,102 +100,83 @@ public class MetricBackendManager {
     @Inject
     private MetadataBackendManager metadata;
 
+    @Inject
+    private ScheduledExecutorService scheduledExecutor;
+
     /**
      * Used for deferring work to avoid deep stack traces.
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    private final class FindAndRouteTransformer
-    implements
-    Callback.Transformer<FindTimeSeriesGroups, List<RemoteGroupedTimeSeries>> {
-        @Override
-        public List<RemoteGroupedTimeSeries> transform(
-                final FindTimeSeriesGroups result) throws Exception {
-            final List<RemoteGroupedTimeSeries> grouped = new ArrayList<>();
+    public void flushWrites(List<WriteMetric> writes) throws Exception {
+        final WriteBatchResult result;
 
-            final Map<Series, Set<Series>> groups = result.getGroups();
-
-            if (groups.size() > groupLimit)
-                throw new IllegalArgumentException(
-                        "The current query is too heavy! (More than "
-                                + groupLimit
-                                + " timeseries would be sent to your browser).");
-
-            for (final Entry<Series, Set<Series>> group : groups.entrySet()) {
-                final Set<Series> timeseries = group.getValue();
-
-                if (timeseries.isEmpty())
-                    continue;
-
-                final Series one = timeseries.iterator().next();
-
-                final NodeRegistryEntry node = cluster.findNode(one.getTags(),
-                        NodeCapability.QUERY);
-
-                if (node == null) {
-                    log.warn("No matching node in group {} found for {}",
-                            group.getKey(), one.getTags());
-                    continue;
-                }
-
-                if (timeseries.size() > groupLoadLimit)
-                    throw new IllegalArgumentException(
-                            "The current query is too heavy! (More than "
-                                    + groupLoadLimit
-                                    + " original time series would be loaded from Cassandra).");
-
-                for (final Series series : timeseries) {
-                    if (!node.getMetadata().matchesTags(series.getTags()))
-                        throw new IllegalArgumentException(
-                                "The current query is too heavy! (Global aggregation not permitted)");
-                }
-
-                grouped.add(new RemoteGroupedTimeSeries(group.getKey(), group
-                        .getValue(), node.getClusterNode()));
-            }
-
-            return grouped;
-        }
-    }
-
-    interface BackendOperation {
-        void run(int disabled, Backend backend) throws Exception;
-    }
-
-    public Callback<WriteBatchResult> write(final List<WriteMetric> writes)
-            throws MetricWriteException {
-        if (cluster == ClusterManager.NULL)
-            throw new MetricWriteException(
-                    "Cannot write metrics, cluster is not configured");
-
-        final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
-
-        for (final WriteMetric write : writes) {
-            final NodeRegistryEntry node = cluster.findNode(write.getSeries()
-                    .getTags(), NodeCapability.WRITE);
-
-            if (node == null)
-                throw new MetricWriteException("Cannot route "
-                        + write.getSeries() + " to any known, writable node");
-
-            List<WriteMetric> partition = partitions.get(node);
-
-            if (partition == null) {
-                partition = new ArrayList<WriteMetric>();
-                partitions.put(node, partition);
-            }
-
-            partition.add(write);
+        try {
+            result = routeWrites(writes).get();
+        } catch (final Exception e) {
+            log.error("Write batch failed", e);
+            throw new Exception("Write batch failed", e);
         }
 
+        if (!result.isOk())
+            throw new Exception("Write batch failed (asynchronously)");
+    }
+
+    public Backend getBackend(String id) {
+        if (id == null)
+            return null;
+
+        for (final Backend b : backends) {
+            if (b.getId().equals(id)) {
+                return b;
+            }
+        }
+
+        return null;
+    }
+
+    public List<Backend> getBackends() {
+        return ImmutableList.copyOf(backends);
+    }
+
+    /**
+     * Buffer a write to this backend, will block if the buffer is full.
+     *
+     * @param write
+     *            The write to buffer.
+     * @throws InterruptedException
+     *             If the write was interrupted.
+     * @throws BufferEnqueueException
+     *             If the provided metric could not be buffered.
+     * @throws MetricFormatException
+     *             If the provided metric is invalid.
+     */
+    public void bufferWrite(WriteMetric write) throws InterruptedException,
+            BufferEnqueueException, MetricFormatException {
+        if (cluster != ClusterManager.NULL) {
+            // TODO: don't do it like this.
+            findNodeRegistryEntry(write);
+        }
+
+        writeBulkProcessor.enqueue(write);
+    }
+
+    /**
+     * Perform a write that could be routed to other cluster nodes.
+     *
+     * @param writes
+     *            Writes to perform.
+     * @return A callback that will be fired when the write is done or failed.
+     */
+    private Callback<WriteBatchResult> routeWrites(
+            final List<WriteMetric> writes) {
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
-        for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
-                .entrySet()) {
-            final NodeRegistryEntry node = entry.getKey();
-            final List<WriteMetric> nodeWrites = entry.getValue();
-
-            callbacks.add(node.getClusterNode().write(nodeWrites));
+        if (cluster == ClusterManager.NULL) {
+            callbacks.add(writeDirect(writes)
+                    .transform(DIRECT_WRITE_TO_BOOLEAN));
+        } else {
+            callbacks.addAll(writeCluster(writes));
         }
 
         final Callback.Reducer<Boolean, WriteBatchResult> reducer = new Callback.Reducer<Boolean, WriteBatchResult>() {
@@ -199,19 +213,69 @@ public class MetricBackendManager {
         return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
+    private List<Callback<Boolean>> writeCluster(final List<WriteMetric> writes) {
+        final List<Callback<Boolean>> callbacks = new ArrayList<>();
+
+        final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
+
+        for (final WriteMetric write : writes) {
+            final NodeRegistryEntry node;
+
+            try {
+                node = findNodeRegistryEntry(write);
+            } catch (final MetricFormatException e) {
+                log.warn("Write failed: {}", write, e);
+                continue;
+            }
+
+            List<WriteMetric> partition = partitions.get(node);
+
+            if (partition == null) {
+                partition = new ArrayList<WriteMetric>();
+                partitions.put(node, partition);
+            }
+
+            partition.add(write);
+        }
+
+        for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
+                .entrySet()) {
+            final NodeRegistryEntry node = entry.getKey();
+            final List<WriteMetric> nodeWrites = entry.getValue();
+
+            // if request is local.
+            if (node.getMetadata().getId().equals(cluster.getLocalNodeId())) {
+                callbacks.add(writeDirect(nodeWrites).transform(
+                        DIRECT_WRITE_TO_BOOLEAN));
+            } else {
+                callbacks.add(node.getClusterNode().write(nodeWrites));
+            }
+        }
+
+        return callbacks;
+    }
+
+    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
+            throws MetricFormatException {
+        final NodeRegistryEntry node = cluster.findNode(write.getSeries()
+                .getTags(), NodeCapability.WRITE);
+
+        if (node == null)
+            throw new MetricFormatException("Cannot route " + write.getSeries()
+                    + " to any known, writable node");
+
+        return node;
+    }
+
     public Callback<QueryMetricsResult> queryMetrics(final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation) throws MetricQueryException {
-        if (cluster == ClusterManager.NULL)
-            throw new MetricQueryException(
-                    "Cannot query metrics, cluster is not configured");
-
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
                 filter, groupBy, rounded);
 
-        final RemoteTimeSeriesTransformer transformer = new RemoteTimeSeriesTransformer(
+        final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
                 cluster, rounded, aggregation);
 
         return findAndRouteTimeSeries(criteria).transform(transformer)
@@ -223,16 +287,12 @@ public class MetricBackendManager {
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
                     throws MetricQueryException {
-        if (cluster == ClusterManager.NULL)
-            throw new MetricQueryException(
-                    "Cannot stream metrics, cluster is not configured");
-
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
                 filter, groupBy, rounded);
 
-        final Callback<List<RemoteGroupedTimeSeries>> rows = findAndRouteTimeSeries(criteria);
+        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -245,7 +305,7 @@ public class MetricBackendManager {
             public Callback<MetricGroups> query(DateRange range) {
                 log.info("{}: streaming chunk {}", streamId, range);
 
-                final RemoteTimeSeriesTransformer transformer = new RemoteTimeSeriesTransformer(
+                final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
                         cluster, range, aggregation);
 
                 return rows.transform(transformer);
@@ -394,11 +454,12 @@ public class MetricBackendManager {
      * @param criteria
      * @return
      */
-    private Callback<List<RemoteGroupedTimeSeries>> findAndRouteTimeSeries(
+    private Callback<List<PreparedQuery>> findAndRouteTimeSeries(
             final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
-                new FindAndRouteTransformer()).register(
-                        reporter.reportFindTimeSeries());
+                new FindAndRouteTransformer(groupLimit, groupLoadLimit,
+                        cluster, this)).register(
+                                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
@@ -407,6 +468,33 @@ public class MetricBackendManager {
                 query.getGroupBy());
         return metadata.findTimeSeries(query.getFilter())
                 .transform(transformer);
+    }
+
+    /**
+     * Direct methods, mostly used for RPC.
+     */
+
+    /**
+     * Perform a direct query on the configured backends.
+     *
+     * @param key
+     *            Key of series to query.
+     * @param series
+     *            Set of series to query.
+     * @param range
+     *            Range of series to query.
+     * @param aggregationGroup
+     *            Aggregation method to use.
+     * @return The result in the form of MetricGroups.
+     */
+    public Callback<MetricGroups> directQuery(final Series key,
+            final Set<Series> series, final DateRange range,
+            final AggregationGroup aggregationGroup) {
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
+                aggregationCache, aggregationGroup, range);
+
+        return groupTimeseries(key, series).transform(transformer).register(
+                reporter.reportRpcQueryMetrics());
     }
 
     private Callback<List<GroupedTimeSeries>> groupTimeseries(final Series key,
@@ -431,20 +519,13 @@ public class MetricBackendManager {
     }
 
     /**
-     * RPC METHODS.
+     * Perform a direct write on available configured backends.
+     *
+     * @param writes
+     *            Batch of writes to perform.
+     * @return A callback indicating how the writes went.
      */
-
-    public Callback<MetricGroups> directQuery(final Series key,
-            final Set<Series> series, final DateRange range,
-            final AggregationGroup aggregationGroup) {
-        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, aggregationGroup, range);
-
-        return groupTimeseries(key, series).transform(transformer).register(
-                reporter.reportRpcQueryMetrics());
-    }
-
-    public Callback<WriteResult> directWrite(final List<WriteMetric> writes) {
+    public Callback<WriteResult> writeDirect(final List<WriteMetric> writes) {
         final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
 
         with(new BackendOperation() {
@@ -467,5 +548,36 @@ public class MetricBackendManager {
                     CancelReason.NO_BACKENDS_AVAILABLE);
 
         return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
+    }
+
+    public void scheduleFlush() {
+        if (writeBulkProcessor.isStopped())
+            return;
+
+        scheduledExecutor.schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (writeBulkProcessor.isStopped())
+                    return;
+
+                writeBulkProcessor.flush();
+                scheduleFlush();
+            }
+        }, flushingInterval, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public void start() throws Exception {
+        scheduleFlush();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        writeBulkProcessor.stop();
+    }
+
+    @Override
+    public boolean isReady() {
+        return false;
     }
 }

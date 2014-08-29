@@ -1,8 +1,8 @@
 package com.spotify.heroic.metrics.kairosdb;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import lombok.Data;
@@ -12,10 +12,12 @@ import lombok.ToString;
 
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
@@ -28,6 +30,7 @@ import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
+import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
@@ -110,7 +113,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
         private int readQueueSize = 10000;
 
         @Override
-        public Backend buildDelegate(String context,
+        public Backend buildDelegate(String id, String context,
                 MetricBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
@@ -118,7 +121,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
                     .reporter(reporter.newThreadPoolsReporter())
                     .readThreads(readThreads).readQueueSize(readQueueSize)
                     .build();
-            return new KairosBackend(pools, keyspace, seeds,
+            return new KairosBackend(id, pools, keyspace, seeds,
                     maxConnectionsPerHost);
         }
     }
@@ -129,9 +132,9 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
     private final ReadWriteThreadPools pools;
 
-    public KairosBackend(ReadWriteThreadPools pools, String keyspace,
-            String seeds, int maxConnectionsPerHost) {
-        super(keyspace, seeds, maxConnectionsPerHost);
+    public KairosBackend(String id, ReadWriteThreadPools pools,
+            String keyspace, String seeds, int maxConnectionsPerHost) {
+        super(id, keyspace, seeds, maxConnectionsPerHost);
         this.pools = pools;
     }
 
@@ -140,8 +143,8 @@ public class KairosBackend extends CassandraBackend implements Backend {
                     StringSerializer.get());
 
     @Override
-    public List<Callback<FetchDataPoints.Result>> query(
-            final Series series, final DateRange range) {
+    public List<Callback<FetchDataPoints.Result>> query(final Series series,
+            final DateRange range) {
         final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
 
         for (final long base : buildBases(range)) {
@@ -156,16 +159,16 @@ public class KairosBackend extends CassandraBackend implements Backend {
         return queries;
     }
 
-    private Callback<FetchDataPoints.Result> buildQuery(
-            final Series series, long base, DateRange queryRange) {
+    private Callback<FetchDataPoints.Result> buildQuery(final Series series,
+            long base, DateRange queryRange) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
             return new CancelledCallback<FetchDataPoints.Result>(
                     CancelReason.BACKEND_DISABLED);
 
-        final DataPointsRowKey rowKey = new DataPointsRowKey(
-                series.getKey(), base, series.getTags());
+        final DataPointsRowKey rowKey = new DataPointsRowKey(series.getKey(),
+                base, series.getTags());
         final DateRange rowRange = new DateRange(base, base
                 + DataPointsRowKey.MAX_WIDTH);
         final DateRange range = queryRange.modify(rowRange);
@@ -195,36 +198,9 @@ public class KairosBackend extends CassandraBackend implements Backend {
                     public Result resolve() throws Exception {
                         final OperationResult<ColumnList<Integer>> result = dataQuery
                                 .execute();
-                        final List<DataPoint> datapoints = buildDataPoints(
-                                rowKey, result);
+                        final List<DataPoint> datapoints = rowKey
+                                .buildDataPoints(result.getResult());
                         return new FetchDataPoints.Result(datapoints, series);
-                    }
-
-                    private List<DataPoint> buildDataPoints(
-                            final DataPointsRowKey rowKey,
-                            final OperationResult<ColumnList<Integer>> result) {
-                        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
-
-                        for (final Column<Integer> column : result.getResult()) {
-                            datapoints.add(fromColumn(rowKey, column));
-                        }
-
-                        return datapoints;
-                    }
-
-                    private DataPoint fromColumn(DataPointsRowKey rowKey,
-                            Column<Integer> column) {
-                        final int name = column.getName();
-                        final long timestamp = DataPointColumnKey.toTimeStamp(
-                                rowKey.getTimestamp(), name);
-                        final ByteBuffer bytes = column.getByteBufferValue();
-
-                        if (DataPointColumnKey.isLong(name))
-                            return new DataPoint(timestamp,
-                                    DataPointColumnValue.toLong(bytes));
-
-                        return new DataPoint(timestamp, DataPointColumnValue
-                                .toDouble(bytes));
                     }
                 });
     }
@@ -240,8 +216,8 @@ public class KairosBackend extends CassandraBackend implements Backend {
         final List<Callback<Long>> callbacks = new ArrayList<Callback<Long>>();
 
         for (final long base : buildBases(range)) {
-            final DataPointsRowKey row = new DataPointsRowKey(
-                    series.getKey(), base, series.getTags());
+            final DataPointsRowKey row = new DataPointsRowKey(series.getKey(),
+                    base, series.getTags());
             callbacks.add(ConcurrentCallback.newResolve(pools.read(),
                     new RowCountTransformer(keyspace, range, row)));
         }
@@ -281,13 +257,58 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
     @Override
     public Callback<WriteResult> write(WriteMetric write) {
-        return new FailedCallback<WriteResult>(new Exception(
-                "not implemented"));
+        return new FailedCallback<WriteResult>(new Exception("not implemented"));
     }
 
     @Override
     public Callback<WriteResult> write(Collection<WriteMetric> writes) {
-        return new FailedCallback<WriteResult>(new Exception(
-                "not implemented"));
+        return new FailedCallback<WriteResult>(new Exception("not implemented"));
+    }
+
+    @Override
+    public Iterable<BackendEntry> listEntries() {
+        final Keyspace keyspace = keyspace();
+
+        if (keyspace == null)
+            throw new IllegalStateException("Backend is not ready");
+
+        final OperationResult<Rows<DataPointsRowKey, Integer>> result;
+
+        try {
+            result = keyspace.prepareQuery(DATA_POINTS_CF).getAllRows()
+                    .execute();
+        } catch (final ConnectionException e) {
+            throw new RuntimeException("Request failed", e);
+        }
+
+        return new Iterable<BackendEntry>() {
+            @Override
+            public Iterator<BackendEntry> iterator() {
+                final Iterator<Row<DataPointsRowKey, Integer>> iterator = result
+                        .getResult().iterator();
+
+                return new Iterator<BackendEntry>() {
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
+
+                    @Override
+                    public BackendEntry next() {
+                        final Row<DataPointsRowKey, Integer> entry = iterator
+                                .next();
+                        final DataPointsRowKey rowKey = entry.getKey();
+                        final Series series = new Series(
+                                rowKey.getMetricName(), rowKey.getTags());
+
+                        final List<DataPoint> dataPoints = rowKey
+                                .buildDataPoints(entry.getColumns());
+
+                        return new BackendEntry(series, dataPoints);
+                    }
+                };
+            }
+        };
+
     }
 }

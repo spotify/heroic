@@ -28,7 +28,7 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private static final class BackendCacheGetHandle implements
-    Callback.Handle<CacheBackendGetResult> {
+            Callback.Handle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final SeriesSlice slice;
@@ -84,7 +84,7 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private final class BackendCachePutHandle implements
-    Callback.Handle<CacheBackendPutResult> {
+            Callback.Handle<CacheBackendPutResult> {
         private final Callback<CachePutResult> callback;
 
         @Override
@@ -128,8 +128,8 @@ public class AggregationCache {
 
         try {
             backend.put(key, datapoints)
-            .register(new BackendCachePutHandle(callback))
-            .register(reporter.reportPut());
+                    .register(new BackendCachePutHandle(callback))
+                    .register(reporter.reportPut());
         } catch (final AggregationCacheException e) {
             callback.fail(e);
         }

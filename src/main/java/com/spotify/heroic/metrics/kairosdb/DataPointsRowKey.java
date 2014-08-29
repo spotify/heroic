@@ -2,7 +2,9 @@ package com.spotify.heroic.metrics.kairosdb;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -11,7 +13,10 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
+import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.AbstractSerializer;
+import com.spotify.heroic.model.DataPoint;
 
 @ToString(of = { "metricName", "timestamp", "tags" })
 @EqualsAndHashCode(of = { "metricName", "timestamp", "tags" })
@@ -31,15 +36,16 @@ class DataPointsRowKey {
         @Override
         public ByteBuffer toByteBuffer(DataPointsRowKey dataPointsRowKey) {
             int size = 8; // size of timestamp
-            byte[] metricName = dataPointsRowKey.getMetricName().getBytes(UTF8);
+            final byte[] metricName = dataPointsRowKey.getMetricName()
+                    .getBytes(UTF8);
             size += metricName.length;
             size++; // Add one for null at end of string
-            byte[] tagString = generateTagString(
+            final byte[] tagString = generateTagString(
                     new TreeMap<String, String>(dataPointsRowKey.getTags()))
                     .getBytes(UTF8);
             size += tagString.length;
 
-            ByteBuffer buffer = ByteBuffer.allocate(size);
+            final ByteBuffer buffer = ByteBuffer.allocate(size);
             buffer.put(metricName);
             buffer.put((byte) 0x0);
             buffer.putLong(dataPointsRowKey.getTimestamp());
@@ -53,9 +59,9 @@ class DataPointsRowKey {
         private String generateTagString(SortedMap<String, String> tags) {
             final StringBuilder buffer = new StringBuilder();
 
-            for (Map.Entry<String, String> entry : tags.entrySet()) {
+            for (final Map.Entry<String, String> entry : tags.entrySet()) {
                 buffer.append(escape(entry.getKey())).append("=")
-                        .append(escape(entry.getValue())).append(":");
+                .append(escape(entry.getValue())).append(":");
             }
 
             return buffer.toString();
@@ -106,21 +112,21 @@ class DataPointsRowKey {
 
         @Override
         public DataPointsRowKey fromByteBuffer(ByteBuffer byteBuffer) {
-            int start = byteBuffer.position();
+            final int start = byteBuffer.position();
             byteBuffer.mark();
             // Find null
             while (byteBuffer.get() != 0x0)
                 ;
 
-            int nameSize = (byteBuffer.position() - start) - 1;
+            final int nameSize = (byteBuffer.position() - start) - 1;
             byteBuffer.reset();
 
-            byte[] metricNameBuffer = new byte[nameSize];
+            final byte[] metricNameBuffer = new byte[nameSize];
             byteBuffer.get(metricNameBuffer);
             byteBuffer.get(); // Skip the null
 
-            long timestamp = byteBuffer.getLong();
-            byte[] tagsBuffer = new byte[byteBuffer.remaining()];
+            final long timestamp = byteBuffer.getLong();
+            final byte[] tagsBuffer = new byte[byteBuffer.remaining()];
             byteBuffer.get(tagsBuffer);
 
             final String metricName = new String(metricNameBuffer, UTF8);
@@ -150,11 +156,32 @@ class DataPointsRowKey {
 
     /**
      * Get the time bucket associated with the specified date.
-     * 
+     *
      * @param date
      * @return The bucket for the specified date.
      */
     public static long getTimeBucket(long date) {
         return date - (date % MAX_WIDTH);
+    }
+
+    public DataPoint buildDataPoint(Column<Integer> column) {
+        final int name = column.getName();
+        final long time = DataPointColumnKey.toTimeStamp(timestamp, name);
+        final ByteBuffer bytes = column.getByteBufferValue();
+
+        if (DataPointColumnKey.isLong(name))
+            return new DataPoint(time, DataPointColumnValue.toLong(bytes));
+
+        return new DataPoint(time, DataPointColumnValue.toDouble(bytes));
+    }
+
+    public List<DataPoint> buildDataPoints(ColumnList<Integer> result) {
+        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+
+        for (final Column<Integer> column : result) {
+            datapoints.add(buildDataPoint(column));
+        }
+
+        return datapoints;
     }
 }

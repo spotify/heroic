@@ -16,7 +16,6 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.FatalSchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
-import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteMetric;
@@ -93,8 +92,8 @@ public class Spotify100 implements ConsumerSchema {
 
         try {
             consumer.write(new WriteMetric(series, data));
-        } catch (final WriteException e) {
-            throw new FatalSchemaException("write failed", e);
+        } catch (final Exception e) {
+            throw new FatalSchemaException("Write failed", e);
         }
     }
 }

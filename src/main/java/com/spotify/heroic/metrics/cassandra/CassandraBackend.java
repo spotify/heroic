@@ -25,8 +25,9 @@ import com.spotify.heroic.metrics.Backend;
  */
 @Slf4j
 @RequiredArgsConstructor
-@ToString(of = { "keyspaceName", "seeds", "maxConnectionsPerHost" })
+@ToString
 public abstract class CassandraBackend implements Backend {
+    private final String id;
     private final String keyspaceName;
     private final String seeds;
     private final int maxConnectionsPerHost;
@@ -35,6 +36,11 @@ public abstract class CassandraBackend implements Backend {
     // could be volatile, but this asserts that a request has to fetch-and-store
     // the keyspace _once_ in the context for which it is valid.
     private final AtomicReference<Keyspace> keyspace = new AtomicReference<Keyspace>();
+
+    @Override
+    public String getId() {
+        return id;
+    }
 
     @Override
     public boolean isReady() {

@@ -57,7 +57,7 @@ public class Rpc1Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             List<WriteMetric> writes) {
-        final Callback<WriteResult> callback = metrics.directWrite(writes);
+        final Callback<WriteResult> callback = metrics.writeDirect(writes);
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
 }

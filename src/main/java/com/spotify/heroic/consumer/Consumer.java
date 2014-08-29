@@ -18,5 +18,6 @@ public interface Consumer extends Lifecycle {
 
     public MetricBackendManager getMetricBackendManager();
 
-    public void write(WriteMetric entry) throws WriteException;
+    public void write(WriteMetric entry) throws WriteException,
+            InterruptedException;
 }

@@ -11,6 +11,8 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.commons.lang.NotImplementedException;
+
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -32,6 +34,7 @@ import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
+import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
@@ -82,7 +85,7 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         private int writeQueueSize = 1000;
 
         @Override
-        public Backend buildDelegate(String context,
+        public Backend buildDelegate(String id, String context,
                 MetricBackendReporter reporter) throws ValidationException {
             Utils.notEmpty(context + ".keyspace", this.keyspace);
             Utils.notEmpty(context + ".seeds", this.seeds);
@@ -92,7 +95,7 @@ public class HeroicBackend extends CassandraBackend implements Backend {
                     .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
                     .build();
 
-            return new HeroicBackend(reporter, pools, keyspace, seeds,
+            return new HeroicBackend(id, reporter, pools, keyspace, seeds,
                     maxConnectionsPerHost);
         }
     }
@@ -103,10 +106,10 @@ public class HeroicBackend extends CassandraBackend implements Backend {
     private final MetricBackendReporter reporter;
     private final ReadWriteThreadPools pools;
 
-    public HeroicBackend(MetricBackendReporter reporter,
+    public HeroicBackend(String id, MetricBackendReporter reporter,
             ReadWriteThreadPools pools, String keyspace, String seeds,
             int maxConnectionsPerHost) {
-        super(keyspace, seeds, maxConnectionsPerHost);
+        super(id, keyspace, seeds, maxConnectionsPerHost);
 
         this.reporter = reporter;
         this.pools = pools;
@@ -192,26 +195,26 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                for (final DataPoint d : datapoints) {
-                    keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(
-                                    MetricsRowKeySerializer
-                                    .calculateColumnKey(d
-                                            .getTimestamp()),
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            MetricsRowKeySerializer.get())
+                                    .withByteBufferValue(
+                                            MetricsRowKeySerializer
+                                                    .calculateColumnKey(d
+                                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                            .withByteBufferValue(d.getValue(),
-                                                    DoubleSerializer.get()).execute();
-                }
+                                    .withByteBufferValue(d.getValue(),
+                                            DoubleSerializer.get()).execute();
+                        }
 
-                return datapoints.size();
-            }
-        });
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override
@@ -253,25 +256,25 @@ public class HeroicBackend extends CassandraBackend implements Backend {
                 .autoPaginate(true)
                 .withColumnRange(
                         new RangeBuilder()
-                        .setStart(
-                                MetricsRowKeySerializer
-                                .calculateColumnKey(newRange
-                                        .getStart()))
-                                        .setEnd(MetricsRowKeySerializer
-                                                .calculateColumnKey(newRange.getEnd()))
-                                                .build());
+                                .setStart(
+                                        MetricsRowKeySerializer
+                                                .calculateColumnKey(newRange
+                                                        .getStart()))
+                                .setEnd(MetricsRowKeySerializer
+                                        .calculateColumnKey(newRange.getEnd()))
+                                .build());
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchDataPoints.Result>() {
-            @Override
-            public Result resolve() throws Exception {
-                final OperationResult<ColumnList<Integer>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = buildDataPoints(key,
-                        result);
-                return new FetchDataPoints.Result(datapoints, series);
-            }
-        });
+                    @Override
+                    public Result resolve() throws Exception {
+                        final OperationResult<ColumnList<Integer>> result = dataQuery
+                                .execute();
+                        final List<DataPoint> datapoints = buildDataPoints(key,
+                                result);
+                        return new FetchDataPoints.Result(datapoints, series);
+                    }
+                });
     }
 
     @Override
@@ -317,5 +320,10 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         }
 
         return bases;
+    }
+
+    @Override
+    public Iterable<BackendEntry> listEntries() {
+        throw new NotImplementedException();
     }
 }

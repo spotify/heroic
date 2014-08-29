@@ -6,12 +6,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.statistics.NullThreadPoolsReporter;
 import com.spotify.heroic.statistics.ThreadPoolReporterProvider;
 import com.spotify.heroic.statistics.ThreadPoolsReporter;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * An abstraction for the concept of having separate thread pools dedicated
@@ -117,13 +117,10 @@ public class ReadWriteThreadPools {
         read.shutdown();
         write.shutdown();
 
-        readContext.stop();
-        writeContext.stop();
-
         try {
             read.awaitTermination(120, TimeUnit.SECONDS);
-            log.info("Gracefully shutdown read executor");
-        } catch (InterruptedException e) {
+            log.info("Gracefully shut down read executor");
+        } catch (final InterruptedException e) {
             final List<?> tasks = read.shutdownNow();
             log.error(
                     "Failed to gracefully stop read executors ({} tasks(s) killed)",
@@ -132,12 +129,15 @@ public class ReadWriteThreadPools {
 
         try {
             write.awaitTermination(120, TimeUnit.SECONDS);
-            log.info("Gracefully shutdown write executor");
-        } catch (InterruptedException e) {
+            log.info("Gracefully shut down write executor");
+        } catch (final InterruptedException e) {
             final List<?> tasks = write.shutdownNow();
             log.error(
                     "Failed to gracefully stop write executors ({} tasks(s) killed)",
                     tasks.size(), e);
         }
+
+        readContext.stop();
+        writeContext.stop();
     }
 }

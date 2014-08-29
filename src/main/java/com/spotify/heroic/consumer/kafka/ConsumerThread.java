@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
+import com.spotify.heroic.consumer.exceptions.FatalSchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
@@ -33,10 +34,16 @@ public final class ConsumerThread implements Runnable {
 
         for (final MessageAndMetadata<byte[], byte[]> m : stream) {
             final byte[] body = m.message();
+
             reporter.reportMessageSize(body.length);
 
             try {
                 schema.consume(consumer, body);
+            } catch (final FatalSchemaException e) {
+                log.error(
+                        "Encountered fatal schema error, cannot recover consumer",
+                        e);
+                return;
             } catch (final SchemaValidationException e) {
                 reporter.reportConsumerSchemaError();
             } catch (final Exception e) {
