@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
@@ -22,25 +22,25 @@ import com.spotify.heroic.model.SeriesSlice;
 @Slf4j
 @RequiredArgsConstructor
 public final class SimpleCallbackStream implements
-Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+Callback.StreamReducer<FetchData, MetricGroups> {
     private final SeriesSlice slice;
 
-    private final Queue<FetchDataPoints.Result> results = new ConcurrentLinkedQueue<FetchDataPoints.Result>();
+    private final Queue<FetchData> results = new ConcurrentLinkedQueue<FetchData>();
 
     @Override
-    public void resolved(Callback<FetchDataPoints.Result> callback,
-            FetchDataPoints.Result result) throws Exception {
+    public void resolved(Callback<FetchData> callback,
+            FetchData result) throws Exception {
         results.add(result);
     }
 
     @Override
-    public void failed(Callback<FetchDataPoints.Result> callback,
+    public void failed(Callback<FetchData> callback,
             Exception error) throws Exception {
         log.error("Error encountered when processing request", error);
     }
 
     @Override
-    public void cancelled(Callback<FetchDataPoints.Result> callback,
+    public void cancelled(Callback<FetchData> callback,
             CancelReason reason) throws Exception {
         log.error("Cancel encountered when processing request", reason);
     }
@@ -65,7 +65,7 @@ Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
     private List<DataPoint> joinRawResults() {
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-        for (final FetchDataPoints.Result result : results) {
+        for (final FetchData result : results) {
             datapoints.addAll(result.getDatapoints());
         }
 

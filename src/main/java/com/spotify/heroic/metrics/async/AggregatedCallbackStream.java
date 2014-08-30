@@ -8,32 +8,32 @@ import lombok.RequiredArgsConstructor;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.SeriesSlice;
 
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements
-Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> {
+Callback.StreamReducer<FetchData, MetricGroups> {
     private final SeriesSlice slice;
     private final Aggregation.Session session;
 
     @Override
-    public void resolved(Callback<FetchDataPoints.Result> callback,
-            FetchDataPoints.Result result) throws Exception {
+    public void resolved(Callback<FetchData> callback,
+            FetchData result) throws Exception {
         session.update(result.getDatapoints());
     }
 
     @Override
-    public void failed(Callback<FetchDataPoints.Result> callback,
+    public void failed(Callback<FetchData> callback,
             Exception error) throws Exception {
     }
 
     @Override
-    public void cancelled(Callback<FetchDataPoints.Result> callback,
+    public void cancelled(Callback<FetchData> callback,
             CancelReason reason) throws Exception {
     }
 

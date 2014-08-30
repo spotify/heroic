@@ -5,7 +5,7 @@ class DataPointColumnKey {
     private static final int FLOAT_FLAG = 0x1;
 
     public static long toTimeStamp(long base, int name) {
-        long offset = name >>> 1;
+        final long offset = name >>> 1;
         return base + offset;
     }
 
@@ -13,19 +13,19 @@ class DataPointColumnKey {
         return (name & 0x1) == LONG_FLAG;
     }
 
-    public static long toStartTimeStamp(final long start, final long timestamp) {
+    public static int toStartColumn(final long start, final long timestamp) {
         if (start < timestamp)
-            return getColumnName(timestamp, timestamp, true);
+            return (int) getColumnName(timestamp, timestamp, true);
 
-        return getColumnName(timestamp, start, true);
+        return (int) getColumnName(timestamp, start, true);
     }
 
-    public static long toEndTimeStamp(final long end, final long timestamp) {
+    public static int toEndColumn(final long end, final long timestamp) {
         if (end > (timestamp + DataPointsRowKey.MAX_WIDTH))
-            return getColumnName(timestamp, timestamp
+            return (int) getColumnName(timestamp, timestamp
                     + DataPointsRowKey.MAX_WIDTH, false);
 
-        return getColumnName(timestamp, end, false);
+        return (int) getColumnName(timestamp, end, false);
     }
 
     private static long getColumnName(long rowTime, long timestamp,

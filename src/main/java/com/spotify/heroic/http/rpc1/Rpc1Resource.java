@@ -15,7 +15,7 @@ import javax.ws.rs.core.MediaType;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metrics.BackendCluster;
+import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.WriteMetric;
@@ -39,9 +39,10 @@ public class Rpc1Resource {
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             Rpc1QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = metrics.directQuery(
-                query.getBackendGroup(), query.getKey(), query.getSeries(),
-                query.getRange(), query.getAggregationGroup());
+        final Callback<MetricGroups> callback = metrics.useGroup(
+                query.getBackendGroup()).groupedQuery(query.getKey(),
+                query.getSeries(), query.getRange(),
+                query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
@@ -60,10 +61,9 @@ public class Rpc1Resource {
     public void write(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, List<WriteMetric> writes)
             throws Exception {
-        final BackendCluster backend = metrics.with(backendGroup);
+        final BackendGroup backend = metrics.useGroup(backendGroup);
 
-        final Callback<WriteResult> callback = metrics.writeDirect(backend,
-                writes);
+        final Callback<WriteResult> callback = backend.write(writes);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }

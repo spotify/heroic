@@ -17,6 +17,7 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
@@ -36,9 +37,8 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
-import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
@@ -202,35 +202,35 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-                    @Override
-                    public Integer resolve() throws Exception {
-                        for (final DataPoint d : datapoints) {
-                            keyspace.prepareQuery(CQL3_CF)
-                                    .withCql(INSERT_METRICS_CQL)
-                                    .asPreparedStatement()
-                                    .withByteBufferValue(rowKey,
-                                            MetricsRowKeySerializer.get())
-                                    .withByteBufferValue(
-                                            MetricsRowKeySerializer
-                                                    .calculateColumnKey(d
-                                                            .getTimestamp()),
+            @Override
+            public Integer resolve() throws Exception {
+                for (final DataPoint d : datapoints) {
+                    keyspace.prepareQuery(CQL3_CF)
+                    .withCql(INSERT_METRICS_CQL)
+                    .asPreparedStatement()
+                    .withByteBufferValue(rowKey,
+                            MetricsRowKeySerializer.get())
+                            .withByteBufferValue(
+                                    MetricsRowKeySerializer
+                                    .calculateColumnKey(d
+                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                    .withByteBufferValue(d.getValue(),
-                                            DoubleSerializer.get()).execute();
-                        }
+                                            .withByteBufferValue(d.getValue(),
+                                                    DoubleSerializer.get()).execute();
+                }
 
-                        return datapoints.size();
-                    }
-                });
+                return datapoints.size();
+            }
+        });
     }
 
     @Override
-    public List<Callback<FetchDataPoints.Result>> query(final Series series,
+    public List<Callback<FetchData>> fetch(final Series series,
             final DateRange range) {
-        final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
+        final List<Callback<FetchData>> queries = new ArrayList<Callback<FetchData>>();
 
         for (final long base : buildBases(range)) {
-            final Callback<Result> partial = buildQuery(series, base, range);
+            final Callback<FetchData> partial = buildQuery(series, base, range);
 
             if (partial == null)
                 continue;
@@ -241,12 +241,12 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         return queries;
     }
 
-    private Callback<FetchDataPoints.Result> buildQuery(final Series series,
-            long base, final DateRange range) {
+    private Callback<FetchData> buildQuery(final Series series, long base,
+            final DateRange range) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<FetchDataPoints.Result>(
+            return new CancelledCallback<FetchData>(
                     CancelReason.BACKEND_DISABLED);
 
         final DateRange newRange = range.modify(base, base
@@ -255,30 +255,27 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         if (newRange.isEmpty())
             return null;
 
-        final MetricsRowKey key = new MetricsRowKey(series, base);
+        final MetricsRowKey rowKey = new MetricsRowKey(series, base);
+
+        final int start = MetricsRowKeySerializer.calculateColumnKey(newRange
+                .getStart());
+        final int end = MetricsRowKeySerializer.calculateColumnKey(newRange
+                .getEnd());
+        final ByteBufferRange columnRange = new RangeBuilder().setStart(start)
+                .setEnd(end).build();
 
         final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
-                .prepareQuery(METRICS_CF)
-                .getRow(key)
-                .autoPaginate(true)
-                .withColumnRange(
-                        new RangeBuilder()
-                                .setStart(
-                                        MetricsRowKeySerializer
-                                                .calculateColumnKey(newRange
-                                                        .getStart()))
-                                .setEnd(MetricsRowKeySerializer
-                                        .calculateColumnKey(newRange.getEnd()))
-                                .build());
+                .prepareQuery(METRICS_CF).getRow(rowKey).autoPaginate(true)
+                .withColumnRange(columnRange);
 
-        final Callback.Resolver<FetchDataPoints.Result> resolver = new Callback.Resolver<FetchDataPoints.Result>() {
+        final Callback.Resolver<FetchData> resolver = new Callback.Resolver<FetchData>() {
             @Override
-            public Result resolve() throws Exception {
+            public FetchData resolve() throws Exception {
                 final OperationResult<ColumnList<Integer>> result = dataQuery
                         .execute();
-                final List<DataPoint> datapoints = key.buildDataPoints(result
-                        .getResult());
-                return new FetchDataPoints.Result(datapoints, series);
+                final List<DataPoint> datapoints = rowKey
+                        .buildDataPoints(result.getResult());
+                return new FetchData(series, datapoints);
             }
         };
 

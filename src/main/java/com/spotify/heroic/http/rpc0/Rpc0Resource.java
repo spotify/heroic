@@ -12,7 +12,7 @@ import javax.ws.rs.core.MediaType;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
-import com.spotify.heroic.metrics.BackendCluster;
+import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
 
@@ -34,10 +34,10 @@ public class Rpc0Resource {
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, Rpc0QueryBody query)
-            throws Exception {
-        final BackendCluster backend = metrics.with(backendGroup);
+                    throws Exception {
+        final BackendGroup backend = metrics.useGroup(backendGroup);
 
-        final Callback<MetricGroups> callback = metrics.directQuery(backend,
+        final Callback<MetricGroups> callback = backend.groupedQuery(
                 query.getKey(), query.getTimeseries(), query.getRange(),
                 query.getAggregationGroup());
 

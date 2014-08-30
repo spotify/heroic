@@ -25,7 +25,6 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
@@ -37,12 +36,10 @@ import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
-import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
 import com.spotify.heroic.metrics.model.BufferedWriteMetric;
 import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
-import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.PreparedQuery;
 import com.spotify.heroic.metrics.model.QueryMetricsResult;
@@ -51,7 +48,6 @@ import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
@@ -251,27 +247,45 @@ public class MetricBackendManager implements Lifecycle {
         return groups;
     }
 
-    public List<Backend> findBackends(String group) {
-        if (group == null)
-            return null;
+    public List<Backend> findBackends(Set<String> groups) {
+        final List<Backend> result = new ArrayList<>();
 
-        final List<Backend> result = backends.get(group);
+        for (final String group : groups) {
+            final List<Backend> partial = findBackends(group);
 
-        if (result == null)
-            return result;
+            if (partial == null)
+                continue;
+
+            result.addAll(partial);
+        }
 
         return ImmutableList.copyOf(result);
     }
 
-    public Backend getBackend(String id) {
-        final List<Backend> result = findBackends(id);
+    private static final List<Backend> EMPTY_RESULT = ImmutableList
+            .copyOf(new ArrayList<Backend>());
+
+    public List<Backend> findBackends(String group) {
+        if (group == null)
+            return EMPTY_RESULT;
+
+        final List<Backend> result = backends.get(group);
+
+        if (result == null)
+            return EMPTY_RESULT;
+
+        return ImmutableList.copyOf(result);
+    }
+
+    public Backend findOneBackend(String group) {
+        final List<Backend> result = findBackends(group);
 
         if (result.isEmpty())
             return null;
 
         if (result.size() > 1)
-            throw new IllegalStateException("Too many backends matching '" + id
-                    + "' are available: " + result);
+            throw new IllegalStateException("Too many backends matching '"
+                    + group + "' are available: " + result);
 
         return result.get(0);
     }
@@ -322,7 +336,7 @@ public class MetricBackendManager implements Lifecycle {
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
         if (cluster == ClusterManager.NULL) {
-            final BackendCluster backend = with(backendGroup);
+            final BackendGroup backend = useGroup(backendGroup);
             callbacks.add(writeDirect(backend, writes).transform(
                     DIRECT_WRITE_TO_BOOLEAN));
         } else {
@@ -392,7 +406,7 @@ public class MetricBackendManager implements Lifecycle {
 
             // if request is local.
             if (node.getMetadata().getId().equals(cluster.getLocalNodeId())) {
-                final BackendCluster backend = with(backendGroup);
+                final BackendGroup backend = useGroup(backendGroup);
                 callbacks.add(writeDirect(backend, nodeWrites).transform(
                         DIRECT_WRITE_TO_BOOLEAN));
             } else {
@@ -401,6 +415,27 @@ public class MetricBackendManager implements Lifecycle {
         }
 
         return callbacks;
+    }
+
+    private Callback<WriteResult> writeDirect(BackendGroup backend,
+            List<WriteMetric> writes) {
+        final List<Callback<WriteResult>> callbacks = new ArrayList<>();
+
+        callbacks.add(backend.write(writes));
+
+        // Send new time series to metadata backends.
+        if (updateMetadata) {
+            for (final WriteMetric entry : writes) {
+                if (metadata.isReady())
+                    callbacks.add(metadata.write(entry.getSeries()));
+            }
+        }
+
+        if (callbacks.isEmpty())
+            return new CancelledCallback<WriteResult>(
+                    CancelReason.NO_BACKENDS_AVAILABLE);
+
+        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 
     private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
@@ -559,21 +594,38 @@ public class MetricBackendManager implements Lifecycle {
                 .shiftStart(-sampling.getExtent());
     }
 
-    /**
-     * Function used to execute a backend operation on eligible backends.
-     *
-     * This will take care not to select disabled or unavailable backends.
-     */
-    public BackendCluster with(final String backendGroup)
+    public BackendGroup useDefault() throws BackendOperationException {
+        return useGroup(null);
+    }
+
+    public BackendGroup useGroup(final String group)
             throws BackendOperationException {
         final List<Backend> selected;
 
-        if (backendGroup == null) {
+        if (group == null) {
             selected = defaultBackends;
         } else {
-            selected = findBackends(backendGroup);
+            selected = findBackends(group);
         }
 
+        return useAlive(selected);
+    }
+
+    public BackendGroup useGroups(final Set<String> groups)
+            throws BackendOperationException {
+        final List<Backend> selected;
+
+        if (groups == null) {
+            selected = defaultBackends;
+        } else {
+            selected = findBackends(groups);
+        }
+
+        return useAlive(selected);
+    }
+
+    private BackendGroup useAlive(List<Backend> backends)
+            throws BackendOperationException {
         final List<Backend> alive = new ArrayList<Backend>();
 
         // Keep track of disabled partitions.
@@ -581,7 +633,7 @@ public class MetricBackendManager implements Lifecycle {
         // 1) If the result if an operation can be cached or not.
         int disabled = 0;
 
-        for (final Backend backend : selected) {
+        for (final Backend backend : backends) {
             if (!backend.isReady()) {
                 ++disabled;
                 continue;
@@ -591,9 +643,9 @@ public class MetricBackendManager implements Lifecycle {
         }
 
         if (alive.isEmpty())
-            throw new BackendOperationException("No backends available");
+            throw new BackendOperationException("No backend(s) available");
 
-        return new BackendCluster(disabled, alive);
+        return new BackendGroup(cache, reporter, disabled, alive);
     }
 
     /**
@@ -617,98 +669,6 @@ public class MetricBackendManager implements Lifecycle {
                 query.getGroupBy());
         return metadata.findTimeSeries(query.getFilter())
                 .transform(transformer);
-    }
-
-    /**
-     * Direct methods, mostly used for RPC.
-     */
-
-    public Callback<MetricGroups> directQuery(final String backendGroup,
-            final Series key, final Set<Series> series, final DateRange range,
-            final AggregationGroup aggregationGroup)
-                    throws BackendOperationException {
-        return directQuery(with(backendGroup), key, series, range,
-                aggregationGroup);
-    }
-
-    /**
-     * Perform a direct query on the configured backends.
-     *
-     * @param key
-     *            Key of series to query.
-     * @param series
-     *            Set of series to query.
-     * @param range
-     *            Range of series to query.
-     * @param aggregationGroup
-     *            Aggregation method to use.
-     * @return The result in the form of MetricGroups.
-     * @throws BackendOperationException
-     */
-    public Callback<MetricGroups> directQuery(final BackendCluster backend,
-            final Series key, final Set<Series> series, final DateRange range,
-            final AggregationGroup aggregationGroup) {
-        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                cache, aggregationGroup, range);
-
-        return groupTimeseries(backend, key, series).transform(transformer)
-                .register(reporter.reportRpcQueryMetrics());
-    }
-
-    private Callback<List<GroupedTimeSeries>> groupTimeseries(
-            BackendCluster backend, final Series key,
-            final Set<Series> timeseries) {
-        final List<GroupedTimeSeries> grouped = new ArrayList<>();
-
-        backend.execute(new BackendOperation() {
-            @Override
-            public void run(final int disabled, final Backend backend)
-                    throws Exception {
-                // do not cache results if any backends are disabled or
-                // unavailable,
-                // because that would contribute to messed up results.
-                final boolean noCache = disabled > 0;
-
-                grouped.add(new GroupedTimeSeries(key, backend, timeseries,
-                        noCache));
-            }
-        });
-
-        return new ResolvedCallback<>(grouped);
-    }
-
-    /**
-     * Perform a direct write on available configured backends.
-     *
-     * @param writes
-     *            Batch of writes to perform.
-     * @return A callback indicating how the writes went.
-     * @throws BackendOperationException
-     */
-    public Callback<WriteResult> writeDirect(final BackendCluster backend,
-            final List<WriteMetric> writes) throws BackendOperationException {
-        final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
-
-        backend.execute(new BackendOperation() {
-            @Override
-            public void run(int disabled, Backend backend) throws Exception {
-                callbacks.add(backend.write(writes));
-            }
-        });
-
-        // Send new time series to metadata backends.
-        if (updateMetadata) {
-            for (final WriteMetric entry : writes) {
-                if (metadata.isReady())
-                    callbacks.add(metadata.write(entry.getSeries()));
-            }
-        }
-
-        if (callbacks.isEmpty())
-            return new CancelledCallback<WriteResult>(
-                    CancelReason.NO_BACKENDS_AVAILABLE);
-
-        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 
     public void scheduleFlush() {

@@ -14,9 +14,9 @@ import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.metrics.Backend;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.SeriesSlice;
@@ -80,12 +80,12 @@ Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
 
     private Callback<MetricGroups> buildLookup(final Backend backend,
             final SeriesSlice slice, final Set<Series> series) {
-        final List<Callback<FetchDataPoints.Result>> callbacks = new ArrayList<Callback<FetchDataPoints.Result>>();
+        final List<Callback<FetchData>> callbacks = new ArrayList<Callback<FetchData>>();
 
         final DateRange range = modifiedRange(slice);
 
         for (final Series serie : series) {
-            callbacks.addAll(backend.query(serie, range));
+            callbacks.addAll(backend.fetch(serie, range));
         }
 
         if (callbacks.isEmpty())
@@ -103,7 +103,7 @@ Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
                 -aggregation.getSampling().getExtent());
     }
 
-    private Callback.StreamReducer<FetchDataPoints.Result, MetricGroups> buildReducer(
+    private Callback.StreamReducer<FetchData, MetricGroups> buildReducer(
             SeriesSlice slice) {
         if (aggregation == null)
             return new SimpleCallbackStream(slice);

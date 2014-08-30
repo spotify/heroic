@@ -13,6 +13,7 @@ import lombok.ToString;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
@@ -31,9 +32,8 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
-import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
@@ -63,9 +63,9 @@ public class KairosBackend extends CassandraBackend implements Backend {
         @Override
         public Long resolve() throws Exception {
             final long timestamp = row.getTimestamp();
-            final long start = DataPointColumnKey.toStartTimeStamp(
-                    range.start(), timestamp);
-            final long end = DataPointColumnKey.toEndTimeStamp(range.end(),
+            final long start = DataPointColumnKey.toStartColumn(range.start(),
+                    timestamp);
+            final long end = DataPointColumnKey.toEndColumn(range.end(),
                     timestamp);
 
             final OperationResult<CqlResult<Integer, String>> op = keyspace
@@ -153,12 +153,12 @@ public class KairosBackend extends CassandraBackend implements Backend {
                     StringSerializer.get());
 
     @Override
-    public List<Callback<FetchDataPoints.Result>> query(final Series series,
+    public List<Callback<FetchData>> fetch(final Series series,
             final DateRange range) {
-        final List<Callback<FetchDataPoints.Result>> queries = new ArrayList<Callback<FetchDataPoints.Result>>();
+        final List<Callback<FetchData>> queries = new ArrayList<Callback<FetchData>>();
 
         for (final long base : buildBases(range)) {
-            final Callback<Result> partial = buildQuery(series, base, range);
+            final Callback<FetchData> partial = buildQuery(series, base, range);
 
             if (partial == null)
                 continue;
@@ -169,12 +169,12 @@ public class KairosBackend extends CassandraBackend implements Backend {
         return queries;
     }
 
-    private Callback<FetchDataPoints.Result> buildQuery(final Series series,
-            long base, DateRange queryRange) {
+    private Callback<FetchData> buildQuery(final Series series, long base,
+            DateRange queryRange) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<FetchDataPoints.Result>(
+            return new CancelledCallback<FetchData>(
                     CancelReason.BACKEND_DISABLED);
 
         final DataPointsRowKey rowKey = new DataPointsRowKey(series.getKey(),
@@ -186,31 +186,26 @@ public class KairosBackend extends CassandraBackend implements Backend {
         if (range.isEmpty())
             return null;
 
-        final long startTime = DataPointColumnKey.toStartTimeStamp(
-                range.start(), base);
-        final long endTime = DataPointColumnKey.toEndTimeStamp(range.end(),
-                base);
+        final int start = DataPointColumnKey.toStartColumn(range.start(), base);
+        final int end = DataPointColumnKey.toEndColumn(range.end(), base);
+
+        final ByteBufferRange columnRange = new RangeBuilder()
+        .setStart(start, IntegerSerializer.get())
+        .setEnd(end, IntegerSerializer.get()).build();
 
         final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
-                .prepareQuery(DATA_POINTS_CF)
-                .getRow(rowKey)
-                .autoPaginate(true)
-                .withColumnRange(
-                        new RangeBuilder()
-                        .setStart((int) startTime,
-                                IntegerSerializer.get())
-                                .setEnd((int) endTime, IntegerSerializer.get())
-                                .build());
+                .prepareQuery(DATA_POINTS_CF).getRow(rowKey).autoPaginate(true)
+                .withColumnRange(columnRange);
 
         return ConcurrentCallback.newResolve(pools.read(),
-                new Callback.Resolver<FetchDataPoints.Result>() {
+                new Callback.Resolver<FetchData>() {
             @Override
-            public Result resolve() throws Exception {
+            public FetchData resolve() throws Exception {
                 final OperationResult<ColumnList<Integer>> result = dataQuery
                         .execute();
                 final List<DataPoint> datapoints = rowKey
                         .buildDataPoints(result.getResult());
-                return new FetchDataPoints.Result(datapoints, series);
+                return new FetchData(series, datapoints);
             }
         });
     }

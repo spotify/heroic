@@ -15,7 +15,7 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.metrics.BackendCluster;
+import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -26,7 +26,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
         private final String backendGroup;
@@ -44,16 +44,14 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
 
     @RequiredArgsConstructor
     public static class LocalQuery implements PreparedQuery {
-        private final MetricBackendManager metrics;
-        private final BackendCluster backend;
+        private final BackendGroup backend;
         private final Series key;
         private final Set<Series> series;
 
         @Override
         public Callback<MetricGroups> query(final DateRange range,
                 final AggregationGroup aggregationGroup) {
-            return metrics.directQuery(backend, key, series, range,
-                    aggregationGroup);
+            return backend.groupedQuery(key, series, range, aggregationGroup);
         }
     };
 
@@ -73,7 +71,7 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                    + " timeseries would be sent to your browser).");
+                            + " timeseries would be sent to your browser).");
 
         for (final Entry<Series, Set<Series>> group : groups.entrySet()) {
             final Set<Series> timeseries = group.getValue();
@@ -92,9 +90,8 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
             if (cluster != ClusterManager.NULL) {
                 query = clusterQuery(group.getKey(), timeseries);
             } else {
-                final BackendCluster backend = metrics.with(backendGroup);
-                query = new LocalQuery(metrics, backend, group.getKey(),
-                        timeseries);
+                final BackendGroup backend = metrics.useGroup(backendGroup);
+                query = new LocalQuery(backend, group.getKey(), timeseries);
             }
 
             if (query == null)

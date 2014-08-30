@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.inject.Inject;
+import javax.servlet.ServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -32,10 +33,9 @@ import com.spotify.heroic.http.general.DataResponse;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.Backend;
-import com.spotify.heroic.metrics.BackendCluster;
-import com.spotify.heroic.metrics.BackendOperation;
+import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
@@ -71,17 +71,17 @@ public class HeroicResource {
     @Path("/migrate/{source}/{target}")
     public Response migrate(@PathParam("source") String source,
             @PathParam("target") String target,
-            @QueryParam("history") Long history, Filter filter)
-            throws Exception {
+            @QueryParam("history") Long history, ServletResponse response,
+            Filter filter) throws Exception {
         if (cluster == ClusterManager.NULL)
             return Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage(
                             "Cannot migrate since instance is not configured as a cluster"))
-                    .build();
+                            .build();
 
-        final BackendCluster sourceCluster = metrics.with(source);
-        final BackendCluster targetCluster = metrics.with(target);
+        final BackendGroup sourceCluster = metrics.useGroup(source);
+        final BackendGroup targetCluster = metrics.useGroup(target);
 
         if (sourceCluster == null)
             return Response
@@ -117,9 +117,9 @@ public class HeroicResource {
         return Response.status(Response.Status.OK).build();
     }
 
-    private void migrateData(long history, final BackendCluster source,
-            final BackendCluster target, final Set<Series> series)
-            throws Exception {
+    private void migrateData(long history, final BackendGroup source,
+            final BackendGroup target, final Set<Series> series)
+                    throws Exception {
         final long now = System.currentTimeMillis();
 
         final DateRange range = new DateRange(now - history, now);
@@ -154,13 +154,12 @@ public class HeroicResource {
         }
     }
 
-    private void migrate(final String session, final BackendCluster source,
-            final BackendCluster target, final Set<Series> series,
+    private void migrate(final String session, final BackendGroup source,
+            final BackendGroup target, final Set<Series> series,
             final DateRange range, final Series s) throws Exception {
-        final Callback.Reducer<FetchDataPoints.Result, List<DataPoint>> reducer = new Callback.Reducer<FetchDataPoints.Result, List<DataPoint>>() {
+        final Callback.Reducer<FetchData, List<DataPoint>> reducer = new Callback.Reducer<FetchData, List<DataPoint>>() {
             @Override
-            public List<DataPoint> resolved(
-                    Collection<FetchDataPoints.Result> results,
+            public List<DataPoint> resolved(Collection<FetchData> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 for (final Exception e : errors)
@@ -174,7 +173,7 @@ public class HeroicResource {
 
                 final List<DataPoint> datapoints = new ArrayList<>();
 
-                for (final FetchDataPoints.Result r : results)
+                for (final FetchData r : results)
                     datapoints.addAll(r.getDatapoints());
 
                 Collections.sort(datapoints);
@@ -183,23 +182,13 @@ public class HeroicResource {
             }
         };
 
-        final List<Callback<FetchDataPoints.Result>> callbacks = new ArrayList<>();
-
-        source.execute(new BackendOperation() {
-            @Override
-            public void run(int disabled, Backend backend) throws Exception {
-                callbacks.addAll(backend.query(s, range));
-            }
-        });
-
         final List<DataPoint> datapoints = ConcurrentCallback.newReduce(
-                callbacks, reducer).get();
+                source.query(s, range), reducer).get();
 
         log.info(String.format("%s: Writing %d datapoint(s) for series: %s",
                 session, datapoints.size(), s));
 
-        metrics.writeDirect(
-                target,
+        target.write(
                 Arrays.asList(new WriteMetric[] { new WriteMetric(s, datapoints) }))
                 .get();
     }

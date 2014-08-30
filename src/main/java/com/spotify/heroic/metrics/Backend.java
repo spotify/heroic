@@ -8,7 +8,7 @@ import lombok.Data;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.BackendEntry;
-import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
@@ -100,7 +100,7 @@ public interface Backend extends Lifecycle {
      *
      * @throws QueryException
      */
-    public List<Callback<FetchDataPoints.Result>> query(final Series series,
+    public List<Callback<FetchData>> fetch(final Series series,
             final DateRange range);
 
     /**
