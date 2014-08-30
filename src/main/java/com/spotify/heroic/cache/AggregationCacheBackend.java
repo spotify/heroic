@@ -9,23 +9,24 @@ import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * Is used to query for pre-aggregated cached time series.
- * 
+ *
  * @author udoprog
  */
 public interface AggregationCacheBackend {
     public static interface YAML {
-        AggregationCacheBackend build(String context,
+        AggregationCacheBackend build(ConfigContext context,
                 AggregationCacheBackendReporter reporter)
                 throws ValidationException;
     }
 
     /**
      * Get an entry from the cache.
-     * 
+     *
      * @param key
      *            The entry key to get.
      * @return A callback that will be executed when the entry is available with
@@ -38,9 +39,9 @@ public interface AggregationCacheBackend {
 
     /**
      * Put a new entry into the aggregation cache.
-     * 
-     * 
-     * 
+     *
+     *
+     *
      * @param key
      * @param datapoints
      *            An array of datapoints, <code>null</code> entries should be

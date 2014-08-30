@@ -14,6 +14,7 @@ import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -27,9 +28,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         public static final String TYPE = "!in-memory-cache";
 
         @Override
-        public AggregationCacheBackend build(String context,
+        public AggregationCacheBackend build(ConfigContext context,
                 AggregationCacheBackendReporter reporter)
-                throws ValidationException {
+                        throws ValidationException {
             return new InMemoryAggregationCacheBackend();
         }
     }
@@ -39,7 +40,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     @Override
     public synchronized Callback<CacheBackendGetResult> get(
             CacheBackendKey key, DateRange range)
-            throws AggregationCacheException {
+                    throws AggregationCacheException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {
@@ -76,7 +77,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     @Override
     public synchronized Callback<CacheBackendPutResult> put(
             CacheBackendKey key, List<DataPoint> datapoints)
-            throws AggregationCacheException {
+                    throws AggregationCacheException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {

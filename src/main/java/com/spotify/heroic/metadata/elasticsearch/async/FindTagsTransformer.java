@@ -7,12 +7,10 @@ import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.FilterBuilder;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
-import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.filter.AndFilter;
@@ -46,11 +44,8 @@ public class FindTagsTransformer implements
     private Callback<FindTags> findSingle(final String key) {
         final Filter filter = removeKeyFromFilter(this.filter, key);
 
-        final FilterBuilder builder = ElasticSearchMetadataBackend
-                .convertFilter(filter);
-
         return ConcurrentCallback.newResolve(executor, new FindTagsResolver(
-                client, index, type, builder, key));
+                client, index, type, filter, key));
     }
 
     private Filter removeKeyFromFilter(Filter filter, String key) {

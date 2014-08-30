@@ -18,6 +18,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.DiscoveredClusterNode;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
@@ -30,35 +31,36 @@ public class StaticListDiscovery implements ClusterDiscovery {
         private List<String> nodes = new ArrayList<String>();
 
         @Override
-        public ClusterDiscovery build(String context)
+        public ClusterDiscovery build(ConfigContext context)
                 throws ValidationException {
             final Executor executor = Executors
                     .newFixedThreadPool(threadPoolSize);
 
             final ClientConfig clientConfig = new ClientConfig();
             clientConfig.register(JacksonJsonProvider.class);
-            final List<URI> nodeUris = parseURIs(context + ".nodes");
+            final List<URI> nodeUris = parseURIs(context);
 
             return new StaticListDiscovery(nodeUris, clientConfig, executor);
         }
 
-        private List<URI> parseURIs(String context) throws ValidationException {
+        private List<URI> parseURIs(ConfigContext context)
+                throws ValidationException {
             final List<URI> nodeUris = new ArrayList<URI>();
 
-            for (int i = 0; i < nodes.size(); i++) {
-                nodeUris.add(parseUri(context + "[" + i + "]", nodes.get(i)));
+            for (final ConfigContext.Entry<String> entry : context.iterate(
+                    nodes, "nodes")) {
+                nodeUris.add(parseUri(entry.getContext(), entry.getValue()));
             }
 
             return nodeUris;
         }
 
-        private URI parseUri(String context, final String n)
+        private URI parseUri(ConfigContext context, final String n)
                 throws ValidationException {
             try {
                 return new URI(n);
             } catch (final URISyntaxException e) {
-                throw new ValidationException(context + ": Invalid URI: " + n,
-                        e);
+                throw new ValidationException(context, "Invalid URI", e);
             }
         }
     }

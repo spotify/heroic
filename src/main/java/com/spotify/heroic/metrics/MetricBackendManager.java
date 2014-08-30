@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,8 @@ import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
+import com.spotify.heroic.metrics.error.BackendOperationException;
+import com.spotify.heroic.metrics.model.BufferedWriteMetric;
 import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
@@ -45,29 +48,106 @@ import com.spotify.heroic.metrics.model.PreparedQuery;
 import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @RequiredArgsConstructor
 @ToString(exclude = { "scheduledExecutor" })
 public class MetricBackendManager implements Lifecycle {
+    public static final boolean DEFAULT_UPDATE_METADATA = false;
+    public static final int DEFAULT_GROUP_LIMIT = 500;
+    public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
+    public static final long DEFAULT_FLUSHING_INTERVAL = 10;
+
+    @Data
+    public static final class YAML {
+        public List<Backend.YAML> backends = new ArrayList<>();
+        private List<String> defaultBackends = null;
+        private boolean updateMetadata = DEFAULT_UPDATE_METADATA;
+        private int groupLimit = DEFAULT_GROUP_LIMIT;
+        private int groupLoadLimit = DEFAULT_GROUP_LOAD_LIMIT;
+        private long flushingInterval = DEFAULT_FLUSHING_INTERVAL;
+
+        public MetricBackendManager build(ConfigContext ctx,
+                MetricBackendManagerReporter reporter)
+                throws ValidationException {
+            final Map<String, List<Backend>> backends = buildBackends(ctx,
+                    reporter);
+            final List<Backend> defaultBackends = buildDefaultBackends(ctx,
+                    backends);
+
+            return new MetricBackendManager(reporter, backends,
+                    defaultBackends, updateMetadata, groupLimit,
+                    groupLoadLimit, flushingInterval);
+        }
+
+        private List<Backend> buildDefaultBackends(ConfigContext ctx,
+                Map<String, List<Backend>> backends) throws ValidationException {
+            if (defaultBackends == null)
+                return null;
+
+            final List<Backend> result = new ArrayList<>();
+
+            for (final ConfigContext.Entry<String> entry : ctx.iterate(
+                    defaultBackends, "defaultBackends")) {
+                final List<Backend> someResult = backends.get(entry.getValue());
+
+                if (someResult == null)
+                    throw new ValidationException(entry.getContext(),
+                            "No backend(s) available with id : "
+                                    + entry.getValue());
+
+                result.addAll(someResult);
+            }
+
+            return result;
+        }
+
+        private Map<String, List<Backend>> buildBackends(ConfigContext ctx,
+                MetricBackendManagerReporter reporter)
+                        throws ValidationException {
+            final Map<String, List<Backend>> groups = new HashMap<>();
+
+            for (final ConfigContext.Entry<Backend.YAML> c : ctx.iterate(
+                    this.backends, "backends")) {
+                final Backend backend = c.getValue().build(c.getContext(),
+                        c.getIndex(),
+                        reporter.newBackend(c.getContext().toString()));
+
+                List<Backend> group = groups.get(backend.getGroup());
+
+                if (group == null) {
+                    group = new ArrayList<>();
+                    groups.put(backend.getGroup(), group);
+                }
+
+                group.add(backend);
+            }
+
+            return groups;
+        }
+    }
+
     private final MetricBackendManagerReporter reporter;
-    private final List<Backend> backends;
+    private final Map<String, List<Backend>> backends;
+    private final List<Backend> defaultBackends;
     private final boolean updateMetadata;
     private final int groupLimit;
     private final int groupLoadLimit;
-    private final long flushingInterval = 10;
+    private final long flushingInterval;
 
-    private final BulkProcessor<WriteMetric> writeBulkProcessor = new BulkProcessor<>(
-            new BulkProcessor.Flushable<WriteMetric>() {
+    private final BulkProcessor<BufferedWriteMetric> writeBulkProcessor = new BulkProcessor<>(
+            new BulkProcessor.Flushable<BufferedWriteMetric>() {
                 @Override
-                public void flushWrites(List<WriteMetric> writes)
+                public void flushWrites(List<BufferedWriteMetric> writes)
                         throws Exception {
                     log.info("Flushing {} write(s)", writes.size());
                     MetricBackendManager.this.flushWrites(writes);
@@ -92,7 +172,7 @@ public class MetricBackendManager implements Lifecycle {
 
     @Inject
     @Nullable
-    private AggregationCache aggregationCache;
+    private AggregationCache cache;
 
     @Inject
     private ClusterManager cluster;
@@ -108,13 +188,44 @@ public class MetricBackendManager implements Lifecycle {
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    public void flushWrites(List<WriteMetric> writes) throws Exception {
+    public void flushWrites(List<BufferedWriteMetric> bufferedWrites)
+            throws Exception {
+        final Map<String, List<WriteMetric>> writes = groupByBackendGroup(bufferedWrites);
+
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+
+        for (final Map.Entry<String, List<WriteMetric>> entry : writes
+                .entrySet()) {
+            callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
+        }
+
+        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
+            @Override
+            public WriteBatchResult resolved(
+                    Collection<WriteBatchResult> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
+                boolean allOk = true;
+                int requests = 0;
+
+                for (final WriteBatchResult r : results) {
+                    allOk = allOk && r.isOk();
+                    requests += r.getRequests();
+                }
+
+                return new WriteBatchResult(allOk && errors.isEmpty()
+                        && cancelled.isEmpty(), requests);
+            }
+        };
+
+        final Callback<WriteBatchResult> callback = ConcurrentCallback
+                .newReduce(callbacks, reducer);
+
         final WriteBatchResult result;
 
         try {
-            result = routeWrites(writes).get();
+            result = callback.get();
         } catch (final Exception e) {
-            log.error("Write batch failed", e);
             throw new Exception("Write batch failed", e);
         }
 
@@ -122,21 +233,56 @@ public class MetricBackendManager implements Lifecycle {
             throw new Exception("Write batch failed (asynchronously)");
     }
 
-    public Backend getBackend(String id) {
-        if (id == null)
-            return null;
+    private Map<String, List<WriteMetric>> groupByBackendGroup(
+            List<BufferedWriteMetric> writes) {
+        final Map<String, List<WriteMetric>> groups = new HashMap<>();
 
-        for (final Backend b : backends) {
-            if (b.getId().equals(id)) {
-                return b;
+        for (final BufferedWriteMetric w : writes) {
+            List<WriteMetric> group = groups.get(w.getBackendGroup());
+
+            if (group == null) {
+                group = new ArrayList<>();
+                groups.put(w.getBackendGroup(), group);
             }
+
+            group.add(new WriteMetric(w.getSeries(), w.getData()));
         }
 
-        return null;
+        return groups;
+    }
+
+    public List<Backend> findBackends(String group) {
+        if (group == null)
+            return null;
+
+        final List<Backend> result = backends.get(group);
+
+        if (result == null)
+            return result;
+
+        return ImmutableList.copyOf(result);
+    }
+
+    public Backend getBackend(String id) {
+        final List<Backend> result = findBackends(id);
+
+        if (result.isEmpty())
+            return null;
+
+        if (result.size() > 1)
+            throw new IllegalStateException("Too many backends matching '" + id
+                    + "' are available: " + result);
+
+        return result.get(0);
     }
 
     public List<Backend> getBackends() {
-        return ImmutableList.copyOf(backends);
+        final List<Backend> result = new ArrayList<>();
+
+        for (final Map.Entry<String, List<Backend>> entry : backends.entrySet())
+            result.addAll(entry.getValue());
+
+        return ImmutableList.copyOf(result);
     }
 
     /**
@@ -151,14 +297,16 @@ public class MetricBackendManager implements Lifecycle {
      * @throws MetricFormatException
      *             If the provided metric is invalid.
      */
-    public void bufferWrite(WriteMetric write) throws InterruptedException,
-            BufferEnqueueException, MetricFormatException {
+    public void bufferWrite(String backendGroup, WriteMetric write)
+            throws InterruptedException, BufferEnqueueException,
+            MetricFormatException {
         if (cluster != ClusterManager.NULL) {
             // TODO: don't do it like this.
             findNodeRegistryEntry(write);
         }
 
-        writeBulkProcessor.enqueue(write);
+        writeBulkProcessor.enqueue(new BufferedWriteMetric(backendGroup, write
+                .getSeries(), write.getData()));
     }
 
     /**
@@ -167,16 +315,18 @@ public class MetricBackendManager implements Lifecycle {
      * @param writes
      *            Writes to perform.
      * @return A callback that will be fired when the write is done or failed.
+     * @throws BackendOperationException
      */
-    private Callback<WriteBatchResult> routeWrites(
-            final List<WriteMetric> writes) {
+    private Callback<WriteBatchResult> routeWrites(final String backendGroup,
+            final List<WriteMetric> writes) throws BackendOperationException {
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
         if (cluster == ClusterManager.NULL) {
-            callbacks.add(writeDirect(writes)
-                    .transform(DIRECT_WRITE_TO_BOOLEAN));
+            final BackendCluster backend = with(backendGroup);
+            callbacks.add(writeDirect(backend, writes).transform(
+                    DIRECT_WRITE_TO_BOOLEAN));
         } else {
-            callbacks.addAll(writeCluster(writes));
+            callbacks.addAll(writeCluster(backendGroup, writes));
         }
 
         final Callback.Reducer<Boolean, WriteBatchResult> reducer = new Callback.Reducer<Boolean, WriteBatchResult>() {
@@ -192,16 +342,11 @@ public class MetricBackendManager implements Lifecycle {
                     log.error("Remote write cancelled: " + reason.getMessage());
                 }
 
-                Boolean ok = null;
+                boolean ok = errors.isEmpty() && cancelled.isEmpty();
 
-                if (!errors.isEmpty() || !cancelled.isEmpty())
-                    ok = false;
-
-                for (final Boolean b : results) {
-                    if (ok == null) {
-                        ok = b;
-                    } else {
-                        ok &= b;
+                if (ok) {
+                    for (final boolean b : results) {
+                        ok = ok && b;
                     }
                 }
 
@@ -213,7 +358,9 @@ public class MetricBackendManager implements Lifecycle {
         return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
-    private List<Callback<Boolean>> writeCluster(final List<WriteMetric> writes) {
+    private List<Callback<Boolean>> writeCluster(final String backendGroup,
+            final List<WriteMetric> writes) throws BackendOperationException {
+
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
         final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
@@ -245,7 +392,8 @@ public class MetricBackendManager implements Lifecycle {
 
             // if request is local.
             if (node.getMetadata().getId().equals(cluster.getLocalNodeId())) {
-                callbacks.add(writeDirect(nodeWrites).transform(
+                final BackendCluster backend = with(backendGroup);
+                callbacks.add(writeDirect(backend, nodeWrites).transform(
                         DIRECT_WRITE_TO_BOOLEAN));
             } else {
                 callbacks.add(node.getClusterNode().write(nodeWrites));
@@ -267,9 +415,10 @@ public class MetricBackendManager implements Lifecycle {
         return node;
     }
 
-    public Callback<QueryMetricsResult> queryMetrics(final Filter filter,
-            final List<String> groupBy, final DateRange range,
-            final AggregationGroup aggregation) throws MetricQueryException {
+    public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
+            final Filter filter, final List<String> groupBy,
+            final DateRange range, final AggregationGroup aggregation)
+            throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -278,21 +427,24 @@ public class MetricBackendManager implements Lifecycle {
         final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
                 cluster, rounded, aggregation);
 
-        return findAndRouteTimeSeries(criteria).transform(transformer)
+        return findAndRouteTimeSeries(backendGroup, criteria)
+                .transform(transformer)
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
     }
 
-    public Callback<StreamMetricsResult> streamMetrics(final Filter filter,
+    public Callback<StreamMetricsResult> streamMetrics(
+            final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-                    throws MetricQueryException {
+            throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
                 filter, groupBy, rounded);
 
-        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(criteria);
+        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
+                backendGroup, criteria);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -386,7 +538,7 @@ public class MetricBackendManager implements Lifecycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                .register(reporter.reportStreamMetricsChunk());
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -408,20 +560,20 @@ public class MetricBackendManager implements Lifecycle {
     }
 
     /**
-     * Shorthand for running the operation on all available partitions.
-     *
-     * @param op
-     */
-    private void with(BackendOperation op) {
-        with(null, op);
-    }
-
-    /**
      * Function used to execute a backend operation on eligible backends.
      *
      * This will take care not to select disabled or unavailable backends.
      */
-    private void with(final Series match, BackendOperation op) {
+    public BackendCluster with(final String backendGroup)
+            throws BackendOperationException {
+        final List<Backend> selected;
+
+        if (backendGroup == null) {
+            selected = defaultBackends;
+        } else {
+            selected = findBackends(backendGroup);
+        }
+
         final List<Backend> alive = new ArrayList<Backend>();
 
         // Keep track of disabled partitions.
@@ -429,7 +581,7 @@ public class MetricBackendManager implements Lifecycle {
         // 1) If the result if an operation can be cached or not.
         int disabled = 0;
 
-        for (final Backend backend : backends) {
+        for (final Backend backend : selected) {
             if (!backend.isReady()) {
                 ++disabled;
                 continue;
@@ -438,13 +590,10 @@ public class MetricBackendManager implements Lifecycle {
             alive.add(backend);
         }
 
-        for (final Backend backend : alive) {
-            try {
-                op.run(disabled, backend);
-            } catch (final Exception e) {
-                log.error("Backend operation failed", e);
-            }
-        }
+        if (alive.isEmpty())
+            throw new BackendOperationException("No backends available");
+
+        return new BackendCluster(disabled, alive);
     }
 
     /**
@@ -455,11 +604,11 @@ public class MetricBackendManager implements Lifecycle {
      * @return
      */
     private Callback<List<PreparedQuery>> findAndRouteTimeSeries(
-            final FindTimeSeriesCriteria criteria) {
+            final String backendGroup, final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
-                new FindAndRouteTransformer(groupLimit, groupLoadLimit,
-                        cluster, this)).register(
-                                reporter.reportFindTimeSeries());
+                new FindAndRouteTransformer(backendGroup, groupLimit,
+                        groupLoadLimit, cluster, this)).register(
+                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
@@ -474,6 +623,14 @@ public class MetricBackendManager implements Lifecycle {
      * Direct methods, mostly used for RPC.
      */
 
+    public Callback<MetricGroups> directQuery(final String backendGroup,
+            final Series key, final Set<Series> series, final DateRange range,
+            final AggregationGroup aggregationGroup)
+                    throws BackendOperationException {
+        return directQuery(with(backendGroup), key, series, range,
+                aggregationGroup);
+    }
+
     /**
      * Perform a direct query on the configured backends.
      *
@@ -486,22 +643,24 @@ public class MetricBackendManager implements Lifecycle {
      * @param aggregationGroup
      *            Aggregation method to use.
      * @return The result in the form of MetricGroups.
+     * @throws BackendOperationException
      */
-    public Callback<MetricGroups> directQuery(final Series key,
-            final Set<Series> series, final DateRange range,
+    public Callback<MetricGroups> directQuery(final BackendCluster backend,
+            final Series key, final Set<Series> series, final DateRange range,
             final AggregationGroup aggregationGroup) {
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                aggregationCache, aggregationGroup, range);
+                cache, aggregationGroup, range);
 
-        return groupTimeseries(key, series).transform(transformer).register(
-                reporter.reportRpcQueryMetrics());
+        return groupTimeseries(backend, key, series).transform(transformer)
+                .register(reporter.reportRpcQueryMetrics());
     }
 
-    private Callback<List<GroupedTimeSeries>> groupTimeseries(final Series key,
+    private Callback<List<GroupedTimeSeries>> groupTimeseries(
+            BackendCluster backend, final Series key,
             final Set<Series> timeseries) {
         final List<GroupedTimeSeries> grouped = new ArrayList<>();
 
-        with(new BackendOperation() {
+        backend.execute(new BackendOperation() {
             @Override
             public void run(final int disabled, final Backend backend)
                     throws Exception {
@@ -515,7 +674,7 @@ public class MetricBackendManager implements Lifecycle {
             }
         });
 
-        return new ResolvedCallback<List<GroupedTimeSeries>>(grouped);
+        return new ResolvedCallback<>(grouped);
     }
 
     /**
@@ -524,11 +683,13 @@ public class MetricBackendManager implements Lifecycle {
      * @param writes
      *            Batch of writes to perform.
      * @return A callback indicating how the writes went.
+     * @throws BackendOperationException
      */
-    public Callback<WriteResult> writeDirect(final List<WriteMetric> writes) {
+    public Callback<WriteResult> writeDirect(final BackendCluster backend,
+            final List<WriteMetric> writes) throws BackendOperationException {
         final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
 
-        with(new BackendOperation() {
+        backend.execute(new BackendOperation() {
             @Override
             public void run(int disabled, Backend backend) throws Exception {
                 callbacks.add(backend.write(writes));

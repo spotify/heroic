@@ -32,8 +32,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
@@ -55,13 +53,9 @@ import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResult;
-import com.spotify.heroic.model.filter.AndFilter;
 import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.model.filter.HasTagFilter;
-import com.spotify.heroic.model.filter.MatchKeyFilter;
-import com.spotify.heroic.model.filter.MatchTagFilter;
-import com.spotify.heroic.model.filter.OrFilter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
@@ -69,11 +63,6 @@ import com.spotify.heroic.yaml.ValidationException;
 @ToString(of = { "seeds", "clusterName", "index", "type", "nodeClient",
         "bulkActions", "dumpInterval", "concurrentBulkRequests" })
 public class ElasticSearchMetadataBackend implements MetadataBackend {
-    public static final String TAGS_VALUE = "tags.value";
-    public static final String TAGS_KEY = "tags.key";
-    public static final String TAGS = "tags";
-    public static final String KEY = "key";
-
     @Data
     public static class YAML implements MetadataBackend.YAML {
         public static String TYPE = "!elasticsearch-metadata";
@@ -95,10 +84,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         private int concurrentBulkRequests = 5;
 
         @Override
-        public MetadataBackend build(String context,
+        public MetadataBackend build(ConfigContext ctx,
                 MetadataBackendReporter reporter) throws ValidationException {
             final String[] seeds = this.seeds.toArray(new String[this.seeds
-                    .size()]);
+                                                                 .size()]);
 
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
@@ -339,11 +328,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<FindTimeSeries>(
                     CancelReason.BACKEND_DISABLED);
 
-        final FilterBuilder f = convertFilter(filter);
-
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindTimeSeriesResolver(client, index, type, f)).register(
-                        reporter.reportFindTimeSeries());
+                new FindTimeSeriesResolver(client, index, type, filter))
+                .register(reporter.reportFindTimeSeries());
     }
 
     public Callback<FindTagKeys> findTagKeys(final Filter filter)
@@ -354,11 +341,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<FindTagKeys>(
                     CancelReason.BACKEND_DISABLED);
 
-        final FilterBuilder f = convertFilter(filter);
-
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindTagKeysResolver(client, index, type, f)).register(
-                reporter.reportFindTagKeys());
+                new FindTagKeysResolver(client, index, type, filter)).register(
+                        reporter.reportFindTagKeys());
     }
 
     @Override
@@ -370,11 +355,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<FindKeys>(
                     CancelReason.BACKEND_DISABLED);
 
-        final FilterBuilder f = convertFilter(filter);
-
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindKeysResolver(client, index, type, f)).register(
-                reporter.reportFindKeys());
+                new FindKeysResolver(client, index, type, filter)).register(
+                        reporter.reportFindKeys());
     }
 
     @Override
@@ -395,28 +378,28 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.write(),
                 new Callback.Resolver<WriteResult>() {
-                    @Override
-                    public WriteResult resolve() throws Exception {
-                        for (final Series s : series) {
-                            if (writeCache.contains(s.hashCode())) {
-                                reporter.reportWriteCacheHit();
-                                continue;
-                            }
-
-                            reporter.reportWriteCacheMiss();
-
-                            final Map<String, Object> source = fromTimeSerie(s);
-                            final IndexRequest request = client.prepareIndex()
-                                    .setIndex(index).setType(type)
-                                    .setSource(source).request();
-                            bulkProcessor.add(request);
-
-                            writeCache.add(s.hashCode());
-                        }
-
-                        return new WriteResult(series.size());
+            @Override
+            public WriteResult resolve() throws Exception {
+                for (final Series s : series) {
+                    if (writeCache.contains(s.hashCode())) {
+                        reporter.reportWriteCacheHit();
+                        continue;
                     }
-                }).register(reporter.reportWrite());
+
+                    reporter.reportWriteCacheMiss();
+
+                    final Map<String, Object> source = fromTimeSerie(s);
+                    final IndexRequest request = client.prepareIndex()
+                            .setIndex(index).setType(type)
+                            .setSource(source).request();
+                    bulkProcessor.add(request);
+
+                    writeCache.add(s.hashCode());
+                }
+
+                return new WriteResult(series.size());
+            }
+        }).register(reporter.reportWrite());
     }
 
     @Override
@@ -427,62 +410,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     @Override
     public boolean isReady() {
         return client() != null && bulkProcessorRef.get() != null;
-    }
-
-    public static FilterBuilder convertFilter(final Filter filter) {
-        if (filter == null)
-            return null;
-
-        if (filter instanceof AndFilter) {
-            final AndFilter and = (AndFilter) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and
-                    .getStatements().size());
-
-            for (final Filter stmt : and.getStatements())
-                filters.add(convertFilter(stmt));
-
-            return FilterBuilders.andFilter(filters
-                    .toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof OrFilter) {
-            final OrFilter or = (OrFilter) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or
-                    .getStatements().size());
-
-            for (final Filter stmt : or.getStatements())
-                filters.add(convertFilter(stmt));
-
-            return FilterBuilders.orFilter(filters
-                    .toArray(new FilterBuilder[0]));
-        }
-
-        if (filter instanceof MatchTagFilter) {
-            final MatchTagFilter matchTag = (MatchTagFilter) filter;
-
-            return FilterBuilders.nestedFilter(
-                    TAGS,
-                    FilterBuilders
-                            .boolFilter()
-                            .must(FilterBuilders.termFilter(TAGS_KEY,
-                                    matchTag.getTag()))
-                            .must(FilterBuilders.termFilter(TAGS_VALUE,
-                                    matchTag.getValue())));
-        }
-
-        if (filter instanceof HasTagFilter) {
-            final HasTagFilter hasTag = (HasTagFilter) filter;
-            return FilterBuilders.nestedFilter(TAGS,
-                    FilterBuilders.termFilter(TAGS_KEY, hasTag.getTag()));
-        }
-
-        if (filter instanceof MatchKeyFilter) {
-            final MatchKeyFilter matchKey = (MatchKeyFilter) filter;
-            return FilterBuilders.termFilter(KEY, matchKey.getValue());
-        }
-
-        throw new IllegalArgumentException("Invalid filter statement: "
-                + filter);
     }
 
     public static Map<String, Object> fromTimeSerie(Series series) {
@@ -515,7 +442,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-                .get("tags");
+        .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (final Map<String, String> entry : attributes) {

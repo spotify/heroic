@@ -14,4 +14,6 @@ public interface MetricBackendManagerReporter {
     CallbackReporter.Context reportWrite();
 
     CallbackReporter.Context reportRpcQueryMetrics();
+
+    BackendReporter newBackend(String context);
 }

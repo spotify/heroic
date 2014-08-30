@@ -27,7 +27,7 @@ import com.spotify.heroic.metrics.Backend;
 @RequiredArgsConstructor
 @ToString
 public abstract class CassandraBackend implements Backend {
-    private final String id;
+    private final String group;
     private final String keyspaceName;
     private final String seeds;
     private final int maxConnectionsPerHost;
@@ -38,8 +38,8 @@ public abstract class CassandraBackend implements Backend {
     private final AtomicReference<Keyspace> keyspace = new AtomicReference<Keyspace>();
 
     @Override
-    public String getId() {
-        return id;
+    public String getGroup() {
+        return group;
     }
 
     @Override

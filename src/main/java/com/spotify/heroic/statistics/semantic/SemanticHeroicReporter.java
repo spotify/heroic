@@ -2,14 +2,12 @@ package com.spotify.heroic.statistics.semantic;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
@@ -27,28 +25,12 @@ public class SemanticHeroicReporter implements HeroicReporter {
     }
 
     @Override
-    public AggregationCacheReporter newAggregationCache(String context) {
+    public AggregationCacheReporter newAggregationCache(ConfigContext context) {
         return new SemanticAggregationCacheReporter(registry, context);
     }
 
     @Override
-    public MetricBackendReporter newMetricBackend(String context) {
-        return new SemanticMetricBackendReporter(registry, context);
-    }
-
-    @Override
-    public AggregationCacheBackendReporter newAggregationCacheBackend(
-            String context) {
-        return new SemanticAggregationCacheBackendReporter(registry, context);
-    }
-
-    @Override
-    public MetadataBackendReporter newMetadataBackend(String context) {
-        return new SemanticMetadataBackendReporter(registry, context);
-    }
-
-    @Override
-    public ConsumerReporter newConsumerReporter(String context) {
+    public ConsumerReporter newConsumerReporter(ConfigContext context) {
         return new SemanticConsumerReporter(registry, context);
     }
 }

@@ -37,14 +37,15 @@ import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResult;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -71,25 +72,25 @@ public class HeroicBackend extends CassandraBackend implements Backend {
         /**
          * Max connections per host in the cassandra cluster.
          */
-        private int maxConnectionsPerHost = 20;
+        private int maxConnectionsPerHost = 50;
 
         /**
          * Threads dedicated to asynchronous request handling.
          */
-        private int readThreads = 20;
-        private int readQueueSize = 40;
+        private int readThreads = 50;
+        private int readQueueSize = 10000;
 
         /**
          * Threads dedicated to asynchronous request handling.
          */
-        private int writeThreads = 20;
+        private int writeThreads = 50;
         private int writeQueueSize = 1000;
 
         @Override
-        public Backend buildDelegate(String id, String context,
-                MetricBackendReporter reporter) throws ValidationException {
-            Utils.notEmpty(context + ".keyspace", this.keyspace);
-            Utils.notEmpty(context + ".seeds", this.seeds);
+        public Backend buildDelegate(String id, ConfigContext ctx,
+                BackendReporter reporter) throws ValidationException {
+            ConfigUtils.notEmpty(ctx.extend("keyspace"), this.keyspace);
+            ConfigUtils.notEmpty(ctx.extend("seeds"), this.seeds);
 
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
@@ -99,15 +100,20 @@ public class HeroicBackend extends CassandraBackend implements Backend {
             return new HeroicBackend(id, reporter, pools, keyspace, seeds,
                     maxConnectionsPerHost);
         }
+
+        @Override
+        protected String defaultGroup() {
+            return "heroic";
+        }
     }
 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
             "metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
 
-    private final MetricBackendReporter reporter;
+    private final BackendReporter reporter;
     private final ReadWriteThreadPools pools;
 
-    public HeroicBackend(String id, MetricBackendReporter reporter,
+    public HeroicBackend(String id, BackendReporter reporter,
             ReadWriteThreadPools pools, String keyspace, String seeds,
             int maxConnectionsPerHost) {
         super(id, keyspace, seeds, maxConnectionsPerHost);

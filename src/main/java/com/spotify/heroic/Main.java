@@ -5,9 +5,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
@@ -28,6 +32,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.yaml.snakeyaml.error.YAMLException;
 
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.google.inject.AbstractModule;
@@ -42,7 +47,6 @@ import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
-import com.google.inject.util.Providers;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
@@ -55,6 +59,7 @@ import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
+import com.spotify.heroic.yaml.ValidationException;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
@@ -93,41 +98,33 @@ public class Main {
 
         final List<Module> modules = new ArrayList<Module>();
         final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
-        final AggregationCache cache = config.getAggregationCache();
+        final AggregationCache cache = config.getCache();
 
-        final MetricBackendManager metric = new MetricBackendManager(
-                reporter.newMetricBackendManager(), config.getMetricBackends(),
-                config.isUpdateMetadata(), config.getGroupLimit(),
-                config.getGroupLoadLimit());
-
-        final MetadataBackendManager metadata = new MetadataBackendManager(
-                reporter.newMetadataBackendManager(),
-                config.getMetadataBackends());
-
+        final MetricBackendManager metrics = config.getMetrics();
+        final MetadataBackendManager metadata = config.getMetadata();
         final ClusterManager cluster = config.getCluster();
+
+        final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<Runnable>(
+                100000);
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(50, 100, 60,
+                TimeUnit.SECONDS, queue);
 
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
                 bind(ScheduledExecutorService.class).toInstance(
                         scheduledExecutor);
-
-                if (cache == null) {
-                    bind(AggregationCache.class).toProvider(
-                            Providers.of((AggregationCache) null));
-                } else {
-                    bind(AggregationCache.class).toInstance(cache);
-                }
-
+                bind(ExecutorService.class).toInstance(executor);
+                bind(AggregationCache.class).toInstance(cache);
                 bind(ClusterManager.class).toInstance(cluster);
-                bind(MetricBackendManager.class).toInstance(metric);
+                bind(MetricBackendManager.class).toInstance(metrics);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
                 .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
 
-                multiBind(config.getMetricBackends(), Backend.class);
-                multiBind(config.getMetadataBackends(), MetadataBackend.class);
+                multiBind(metrics.getBackends(), Backend.class);
+                multiBind(metadata.getBackends(), MetadataBackend.class);
                 multiBind(config.getConsumers(), Consumer.class);
 
                 bindListener(new IsSubclassOf(Lifecycle.class),
@@ -173,7 +170,20 @@ public class Main {
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        final HeroicConfig config = setupConfig(configPath, reporter);
+        final HeroicConfig config;
+
+        try {
+            config = setupConfig(configPath, reporter);
+        } catch (final YAMLException e) {
+            log.error("Error in configuration file: {}", configPath, e);
+            System.exit(1);
+            return;
+        } catch (final ValidationException e) {
+            log.error(String.format("Error in configuration file: %s#%s",
+                    configPath, e.getContext().toString()), e);
+            System.exit(1);
+            return;
+        }
 
         final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
                 10);
@@ -251,16 +261,16 @@ public class Main {
     }
 
     private static HeroicConfig setupConfig(final String configPath,
-            final HeroicReporter reporter) throws Exception {
+            final HeroicReporter reporter) throws ValidationException,
+            IOException {
         log.info("Loading configuration from: {}", configPath);
 
         final HeroicConfig config = HeroicConfig.parse(Paths.get(configPath),
                 reporter);
 
-        if (config == null) {
-            throw new Exception(
+        if (config == null)
+            throw new IOException(
                     "INTERNAL ERROR: No configuration, shutting down");
-        }
 
         return config;
     }

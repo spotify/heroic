@@ -9,12 +9,13 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResult;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 public interface Backend extends Lifecycle {
@@ -26,7 +27,7 @@ public interface Backend extends Lifecycle {
         /**
          * Identifier for this backend, is used for data-migrations.
          */
-        private String id = null;
+        private String group = null;
 
         /**
          * Disable this backend if too many errors are being reported by it.
@@ -43,18 +44,28 @@ public interface Backend extends Lifecycle {
          */
         private long cooldown = DEFAULT_COOLDOWN;
 
-        public Backend build(String context, MetricBackendReporter reporter)
-                throws ValidationException {
-            final String id = Utils.notEmpty(context + ".id", this.id);
-            return buildDelegate(id, context, reporter);
+        public Backend build(ConfigContext ctx, int index,
+                BackendReporter reporter) throws ValidationException {
+            final String id = buildId(ctx, index);
+            return buildDelegate(id, ctx, reporter);
         }
 
+        private String buildId(ConfigContext ctx, int index)
+                throws ValidationException {
+            if (this.group == null)
+                return defaultGroup();
+
+            return ConfigUtils.notEmpty(ctx.extend("group"), this.group);
+        }
+
+        protected abstract String defaultGroup();
+
         protected abstract Backend buildDelegate(final String id,
-                final String context, final MetricBackendReporter reporter)
+                final ConfigContext ctx, final BackendReporter reporter)
                 throws ValidationException;
     }
 
-    public String getId();
+    public String getGroup();
 
     /**
      * Execute a single write.

@@ -1,4 +1,4 @@
-package com.spotify.heroic.model;
+package com.spotify.heroic.metrics.model;
 
 import java.util.List;
 
@@ -6,6 +6,8 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.Series;
 
 @Data
 public final class WriteMetric {

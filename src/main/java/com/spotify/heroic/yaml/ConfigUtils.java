@@ -14,93 +14,88 @@ import java.util.Map;
 
 import org.yaml.snakeyaml.TypeDescription;
 
-public final class Utils {
-    public static <T> T notNull(String context, T object)
+public final class ConfigUtils {
+    public static <T> T notNull(ConfigContext c, T object)
             throws ValidationException {
         if (object == null)
-            throw new ValidationException(context + ": must be defined");
+            throw new ValidationException(c, "must be defined");
 
         return object;
     }
 
-    public static String notEmpty(String context, String string)
+    public static String notEmpty(ConfigContext c, String string)
             throws ValidationException {
         if (string == null || string.isEmpty())
-            throw new ValidationException(context
-                    + ": must be defined and non-empty");
+            throw new ValidationException(c, "must be defined and non-empty");
 
         return string;
     }
 
-    public static <T> List<T> notEmpty(String context, List<T> list)
+    public static <T> List<T> notEmpty(ConfigContext c, List<T> list)
             throws ValidationException {
         if (list == null || list.isEmpty())
-            throw new ValidationException(context
-                    + ": must be a non-empty list");
+            throw new ValidationException(c, "must be a non-empty list");
 
         return list;
     }
 
-    public static Map<String, String> notEmpty(String context,
+    public static Map<String, String> notEmpty(ConfigContext c,
             Map<String, String> map) throws ValidationException {
         if (map == null || map.isEmpty())
-            throw new ValidationException(context + ": must be a non-empty map");
+            throw new ValidationException(c, "must be a non-empty map");
 
         return map;
     }
 
-    public static URI toURI(String context, String url)
+    public static URI toURI(ConfigContext c, String url)
             throws ValidationException {
-        notEmpty(context, url);
+        notEmpty(c, url);
 
         try {
             return new URI(url);
         } catch (final URISyntaxException e) {
-            throw new ValidationException(context + ": must be a valid URL");
+            throw new ValidationException(c, "must be a valid URL");
         }
     }
 
-    public static Path toDirectory(String context, String path)
+    public static Path toDirectory(ConfigContext c, String path)
             throws ValidationException {
-        notEmpty(context, path);
+        notEmpty(c, path);
 
         final Path p = Paths.get(path);
 
         if (!Files.isDirectory(p))
-            throw new ValidationException(context
-                    + ": must be an existing directory");
+            throw new ValidationException(c, "must be an existing directory");
 
         return p;
     }
 
-    public static <T, V> Map<T, V> toMap(String context, Map<T, V> map) {
+    public static <T, V> Map<T, V> toMap(ConfigContext c, Map<T, V> map) {
         if (map == null)
             return new HashMap<T, V>();
 
         return map;
     }
 
-    public static <T> List<T> toList(String context, List<T> list) {
+    public static <T> List<T> toList(ConfigContext c, List<T> list) {
         if (list == null)
             return new ArrayList<T>();
 
         return list;
     }
 
-    public static <T> T instance(String context, String className,
+    public static <T> T instance(ConfigContext c, String className,
             Class<T> expectedType) throws ValidationException {
         final Class<?> clazz;
 
         try {
             clazz = Class.forName(className);
         } catch (final ClassNotFoundException e) {
-            throw new ValidationException(context + ": No such class: "
-                    + className, e);
+            throw new ValidationException(c, "No such class: " + className, e);
         }
 
         if (!expectedType.isAssignableFrom(clazz)) {
-            throw new ValidationException(context
-                    + ": Class is not subtype of: "
+            throw new ValidationException(c, "Class is not subtype of: "
                     + expectedType.getCanonicalName());
         }
 
@@ -112,17 +107,17 @@ public final class Utils {
         try {
             constructor = target.getConstructor();
         } catch (NoSuchMethodException | SecurityException e) {
-            throw new ValidationException(context
-                    + ": Cannot find empty constructor for class: "
-                    + target.getCanonicalName(), e);
+            throw new ValidationException(c,
+                    "Cannot find empty constructor for class: "
+                            + target.getCanonicalName(), e);
         }
 
         try {
             return constructor.newInstance();
         } catch (IllegalArgumentException | ReflectiveOperationException e) {
-            throw new ValidationException(context
-                    + ": Failed to create instance of class: "
-                    + target.getCanonicalName(), e);
+            throw new ValidationException(c,
+                    "Failed to create instance of class: "
+                            + target.getCanonicalName(), e);
         }
     }
 

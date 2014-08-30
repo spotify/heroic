@@ -1,5 +1,7 @@
 package com.spotify.heroic.statistics;
 
+import com.spotify.heroic.yaml.ConfigContext;
+
 public interface MetadataBackendManagerReporter {
     public CallbackReporter.Context reportRefresh();
 
@@ -8,4 +10,6 @@ public interface MetadataBackendManagerReporter {
     public CallbackReporter.Context reportFindTimeSeries();
 
     public CallbackReporter.Context reportFindKeys();
+
+    MetadataBackendReporter newMetadataBackend(ConfigContext context);
 }

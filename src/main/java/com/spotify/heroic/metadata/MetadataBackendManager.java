@@ -6,9 +6,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -21,12 +23,46 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @RequiredArgsConstructor
 public class MetadataBackendManager {
+    @Data
+    public static final class YAML {
+        private List<MetadataBackend.YAML> backends = new ArrayList<>();
+
+        public MetadataBackendManager build(ConfigContext ctx,
+                MetadataBackendManagerReporter reporter)
+                        throws ValidationException {
+            final List<MetadataBackend> backends = buildBackends(ctx, reporter);
+            return new MetadataBackendManager(reporter, backends);
+        }
+
+        private List<MetadataBackend> buildBackends(ConfigContext ctx,
+                MetadataBackendManagerReporter reporter)
+                throws ValidationException {
+            final List<MetadataBackend> result = new ArrayList<>();
+
+            for (final ConfigContext.Entry<MetadataBackend.YAML> c : ctx
+                    .iterate(backends, "backends")) {
+                final MetadataBackend backend = c.getValue().build(
+                        c.getContext(),
+                        reporter.newMetadataBackend(c.getContext()));
+                result.add(backend);
+            }
+
+            return result;
+        }
+    }
+
     private final MetadataBackendManagerReporter reporter;
     private final List<MetadataBackend> backends;
+
+    public List<MetadataBackend> getBackends() {
+        return ImmutableList.copyOf(backends);
+    }
 
     public Callback<WriteResult> write(Series series) {
         final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
@@ -39,9 +75,8 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback
-                .newReduce(callbacks, MergeWriteResult.get()).register(
-                        reporter.reportFindTags());
+        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get())
+                .register(reporter.reportFindTags());
     }
 
     public Callback<FindTags> findTags(final Filter filter) {

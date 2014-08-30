@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -17,15 +16,16 @@ import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
+import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
+import com.spotify.heroic.model.filter.Filter;
 
 @RequiredArgsConstructor
 public class FindTagKeysResolver implements Callback.Resolver<FindTagKeys> {
     private final Client client;
     private final String index;
     private final String type;
-    private final FilterBuilder filter;
+    private final Filter filter;
 
     @Override
     public FindTagKeys resolve() throws Exception {
@@ -34,14 +34,14 @@ public class FindTagKeysResolver implements Callback.Resolver<FindTagKeys> {
 
         if (filter != null)
             request.setQuery(QueryBuilders.filteredQuery(
-                    QueryBuilders.matchAllQuery(), filter));
+                    QueryBuilders.matchAllQuery(),
+                    FilterUtils.convertFilter(filter)));
 
         {
             final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms")
-                    .field(ElasticSearchMetadataBackend.TAGS_KEY).size(0);
+                    .terms("terms").field(FilterUtils.TAGS_KEY).size(0);
             final AggregationBuilder<?> nested = AggregationBuilders
-                    .nested("nested").path(ElasticSearchMetadataBackend.TAGS)
+                    .nested("nested").path(FilterUtils.TAGS)
                     .subAggregation(terms);
             request.addAggregation(nested);
         }

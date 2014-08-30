@@ -11,12 +11,13 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 public interface MetadataBackend extends Lifecycle {
     public static interface YAML {
-        MetadataBackend build(String context, MetadataBackendReporter reporter)
-                throws ValidationException;
+        MetadataBackend build(ConfigContext configContext,
+                MetadataBackendReporter reporter) throws ValidationException;
     }
 
     public Callback<WriteResult> write(Series series)

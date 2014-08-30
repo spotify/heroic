@@ -42,6 +42,9 @@ public class DataPoint implements Comparable<DataPoint> {
             case VALUE_NUMBER_FLOAT:
                 value = p.readValueAs(Double.class);
                 break;
+            case VALUE_NUMBER_INT:
+                value = p.readValueAs(Long.class).doubleValue();
+                break;
             case VALUE_NULL:
                 value = Double.NaN;
                 break;

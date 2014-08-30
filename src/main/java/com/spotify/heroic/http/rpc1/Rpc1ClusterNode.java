@@ -21,9 +21,9 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.http.rpc.RpcPostRequestResolver;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 
 @Data
 @ToString(of = "url")
@@ -43,11 +43,11 @@ public class Rpc1ClusterNode implements ClusterNode {
     }
 
     @Override
-    public Callback<MetricGroups> query(final Series key,
-            final Set<Series> series, final DateRange range,
+    public Callback<MetricGroups> query(final String backendGroup,
+            final Series key, final Set<Series> series, final DateRange range,
             final AggregationGroup aggregationGroup) {
-        final Rpc1QueryBody request = new Rpc1QueryBody(key, series, range,
-                aggregationGroup);
+        final Rpc1QueryBody request = new Rpc1QueryBody(backendGroup, key,
+                series, range, aggregationGroup);
         return resolve(request, MetricGroups.class, "query");
     }
 

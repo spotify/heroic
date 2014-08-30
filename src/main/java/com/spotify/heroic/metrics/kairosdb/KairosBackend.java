@@ -32,14 +32,15 @@ import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchDataPoints;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.metrics.model.FetchDataPoints.Result;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 import com.spotify.heroic.model.WriteResult;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 /**
@@ -100,12 +101,12 @@ public class KairosBackend extends CassandraBackend implements Backend {
         /**
          * Max connections per host in the cassandra cluster.
          */
-        private int maxConnectionsPerHost = 20;
+        private int maxConnectionsPerHost = 50;
 
         /**
          * Threads dedicated to asynchronous request handling.
          */
-        private int readThreads = 20;
+        private int readThreads = 50;
 
         /**
          * Threads dedicated to asynchronous request handling.
@@ -113,16 +114,25 @@ public class KairosBackend extends CassandraBackend implements Backend {
         private int readQueueSize = 10000;
 
         @Override
-        public Backend buildDelegate(String id, String context,
-                MetricBackendReporter reporter) throws ValidationException {
-            Utils.notEmpty(context + ".keyspace", this.keyspace);
-            Utils.notEmpty(context + ".seeds", this.seeds);
+        public Backend buildDelegate(String id, ConfigContext ctx,
+                BackendReporter reporter) throws ValidationException {
+            final String keyspace = ConfigUtils.notEmpty(
+                    ctx.extend("keyspace"), this.keyspace);
+            final String seeds = ConfigUtils.notEmpty(ctx.extend("seeds"),
+                    this.seeds);
+
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .reporter(reporter.newThreadPoolsReporter())
                     .readThreads(readThreads).readQueueSize(readQueueSize)
                     .build();
+
             return new KairosBackend(id, pools, keyspace, seeds,
                     maxConnectionsPerHost);
+        }
+
+        @Override
+        protected String defaultGroup() {
+            return "kairosdb";
         }
     }
 

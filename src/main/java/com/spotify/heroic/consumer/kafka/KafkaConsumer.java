@@ -24,9 +24,10 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.BufferEnqueueException;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricFormatException;
-import com.spotify.heroic.model.WriteMetric;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
@@ -42,12 +43,12 @@ public class KafkaConsumer implements Consumer {
         private Map<String, String> config = new HashMap<String, String>();
 
         @Override
-        public Consumer build(String context, ConsumerReporter reporter)
+        public Consumer build(ConfigContext ctx, ConsumerReporter reporter)
                 throws ValidationException {
-            final List<String> topics = Utils.notEmpty(context + ".topics",
-                    this.topics);
-            final ConsumerSchema schema = Utils.instance(context + ".schema",
-                    this.schema, ConsumerSchema.class);
+            final List<String> topics = ConfigUtils.notEmpty(
+                    ctx.extend("topics"), this.topics);
+            final ConsumerSchema schema = ConfigUtils.instance(
+                    ctx.extend("schema"), this.schema, ConsumerSchema.class);
             return new KafkaConsumer(topics, threadCount, config, reporter,
                     schema);
         }
@@ -141,7 +142,7 @@ public class KafkaConsumer implements Consumer {
     @Override
     public void write(WriteMetric write) throws WriteException {
         try {
-            metric.bufferWrite(write);
+            metric.bufferWrite(null, write);
         } catch (InterruptedException | BufferEnqueueException e) {
             throw new WriteException("Failed to write metric", e);
         } catch (final MetricFormatException e) {

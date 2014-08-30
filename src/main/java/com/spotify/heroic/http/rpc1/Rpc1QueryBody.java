@@ -15,6 +15,7 @@ import com.spotify.heroic.model.Series;
  */
 @Data
 public class Rpc1QueryBody {
+    private final String backendGroup;
     private final Series key;
     private final Set<Series> series;
     private final DateRange range;
@@ -22,10 +23,12 @@ public class Rpc1QueryBody {
 
     @JsonCreator
     public static Rpc1QueryBody create(
+            @JsonProperty(value = "backendGroup") String backendGroup,
             @JsonProperty(value = "key") Series key,
             @JsonProperty(value = "series") Set<Series> series,
             @JsonProperty(value = "range") DateRange range,
             @JsonProperty(value = "aggregationGroup") AggregationGroup aggregationGroup) {
-        return new Rpc1QueryBody(key, series, range, aggregationGroup);
+        return new Rpc1QueryBody(backendGroup, key, series, range,
+                aggregationGroup);
     }
 }

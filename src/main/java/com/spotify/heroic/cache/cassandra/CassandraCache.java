@@ -25,7 +25,8 @@ import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 public class CassandraCache implements AggregationCacheBackend {
@@ -56,11 +57,11 @@ public class CassandraCache implements AggregationCacheBackend {
         private int threads = 20;
 
         @Override
-        public AggregationCacheBackend build(String context,
+        public AggregationCacheBackend build(ConfigContext ctx,
                 AggregationCacheBackendReporter reporter)
                 throws ValidationException {
-            Utils.notEmpty(context + ".keyspace", this.keyspace);
-            Utils.notEmpty(context + ".seeds", this.seeds);
+            ConfigUtils.notEmpty(ctx.extend("keyspace"), this.keyspace);
+            ConfigUtils.notEmpty(ctx.extend("seeds"), this.seeds);
             final Executor executor = Executors.newFixedThreadPool(threads);
             return new CassandraCache(reporter, executor, seeds, keyspace,
                     maxConnectionsPerHost);

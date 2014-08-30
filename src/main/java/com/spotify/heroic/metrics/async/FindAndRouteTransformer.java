@@ -15,6 +15,7 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.metrics.BackendCluster;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -25,9 +26,10 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
+        private final String backendGroup;
         private final ClusterNode node;
         private final Series key;
         private final Set<Series> series;
@@ -35,23 +37,27 @@ public final class FindAndRouteTransformer implements
         @Override
         public Callback<MetricGroups> query(final DateRange range,
                 final AggregationGroup aggregationGroup) {
-            return node.query(key, series, range, aggregationGroup);
+            return node.query(backendGroup, key, series, range,
+                    aggregationGroup);
         }
     };
 
     @RequiredArgsConstructor
     public static class LocalQuery implements PreparedQuery {
         private final MetricBackendManager metrics;
+        private final BackendCluster backend;
         private final Series key;
         private final Set<Series> series;
 
         @Override
         public Callback<MetricGroups> query(final DateRange range,
                 final AggregationGroup aggregationGroup) {
-            return metrics.directQuery(key, series, range, aggregationGroup);
+            return metrics.directQuery(backend, key, series, range,
+                    aggregationGroup);
         }
     };
 
+    private final String backendGroup;
     private final int groupLimit;
     private final int groupLoadLimit;
     private final ClusterManager cluster;
@@ -67,7 +73,7 @@ public final class FindAndRouteTransformer implements
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                            + " timeseries would be sent to your browser).");
+                    + " timeseries would be sent to your browser).");
 
         for (final Entry<Series, Set<Series>> group : groups.entrySet()) {
             final Set<Series> timeseries = group.getValue();
@@ -86,7 +92,8 @@ public final class FindAndRouteTransformer implements
             if (cluster != ClusterManager.NULL) {
                 query = clusterQuery(group.getKey(), timeseries);
             } else {
-                query = new LocalQuery(metrics, group.getKey(),
+                final BackendCluster backend = metrics.with(backendGroup);
+                query = new LocalQuery(metrics, backend, group.getKey(),
                         timeseries);
             }
 
@@ -119,6 +126,6 @@ public final class FindAndRouteTransformer implements
 
         final ClusterNode clusterNode = node.getClusterNode();
 
-        return new ClusterQuery(clusterNode, key, timeseries);
+        return new ClusterQuery(backendGroup, clusterNode, key, timeseries);
     }
 }

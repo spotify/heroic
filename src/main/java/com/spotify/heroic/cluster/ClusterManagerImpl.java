@@ -19,7 +19,8 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.yaml.Utils;
+import com.spotify.heroic.yaml.ConfigContext;
+import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
@@ -31,17 +32,19 @@ public class ClusterManagerImpl implements ClusterManager {
         private Map<String, String> tags = new HashMap<String, String>();
         private Set<NodeCapability> capabilities = NodeMetadata.DEFAULT_CAPABILITIES;
 
-        public ClusterManagerImpl build(String context)
+        public ClusterManagerImpl build(ConfigContext context)
                 throws ValidationException {
             final ClusterDiscovery discovery;
 
             if (this.discovery == null) {
                 discovery = ClusterDiscovery.NULL;
             } else {
-                discovery = this.discovery.build(context + ".discovery");
+                discovery = this.discovery.build(context.extend("discovery"));
             }
 
-            Utils.notEmpty(context + ".tags", tags);
+            final Map<String, String> tags = ConfigUtils.notEmpty(
+                    context.extend("tags"), this.tags);
+
             return new ClusterManagerImpl(discovery, UUID.randomUUID(), tags,
                     capabilities);
         }

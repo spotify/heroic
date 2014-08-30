@@ -3,12 +3,16 @@ package com.spotify.heroic.statistics.semantic;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetadataBackendManagerReporter implements
-        MetadataBackendManagerReporter {
+MetadataBackendManagerReporter {
     private static final String COMPONENT = "metadata-backend-manager";
+
+    private final SemanticMetricRegistry registry;
 
     private final CallbackReporter refresh;
     private final CallbackReporter findTags;
@@ -18,6 +22,8 @@ public class SemanticMetadataBackendManagerReporter implements
     public SemanticMetadataBackendManagerReporter(
             SemanticMetricRegistry registry) {
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
+
+        this.registry = registry;
 
         refresh = new SemanticCallbackReporter(registry, id.tagged("what",
                 "refresh", "unit", Units.REFRESH));
@@ -47,5 +53,10 @@ public class SemanticMetadataBackendManagerReporter implements
     @Override
     public Context reportFindKeys() {
         return findKeys.setup();
+    }
+
+    @Override
+    public MetadataBackendReporter newMetadataBackend(ConfigContext context) {
+        return new SemanticMetadataBackendReporter(registry, context);
     }
 }

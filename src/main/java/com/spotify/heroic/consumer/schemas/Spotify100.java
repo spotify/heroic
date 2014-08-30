@@ -16,9 +16,9 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.FatalSchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
+import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteMetric;
 
 public class Spotify100 implements ConsumerSchema {
     private static final String HOST = "host";

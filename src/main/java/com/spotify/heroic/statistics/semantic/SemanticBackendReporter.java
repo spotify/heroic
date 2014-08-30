@@ -4,20 +4,20 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.ThreadPoolsReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
-public class SemanticMetricBackendReporter implements MetricBackendReporter {
+public class SemanticBackendReporter implements BackendReporter {
     private static final String COMPONENT = "metric-backend";
 
     private final SemanticMetricRegistry registry;
     private final MetricId id;
     private final CallbackReporter writeBatch;
 
-    public SemanticMetricBackendReporter(SemanticMetricRegistry registry,
+    public SemanticBackendReporter(SemanticMetricRegistry registry,
             String context) {
         this.registry = registry;
 

@@ -17,6 +17,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
@@ -73,6 +74,7 @@ public class QueryResource {
 
     @Data
     public static class StoredQuery {
+        private final String backendGroup;
         private final Filter filter;
         private final List<String> groupBy;
         private final DateRange range;
@@ -100,12 +102,13 @@ public class QueryResource {
     @POST
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
-            QueryMetrics query) throws MetricQueryException {
-        final StoredQuery q = makeMetricsQuery(query);
+            @QueryParam("backend") String backendGroup, QueryMetrics query)
+            throws MetricQueryException {
+        final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
-        final Callback<QueryMetricsResult> callback = metrics
-                .queryMetrics(q.getFilter(), q.getGroupBy(), q.getRange(),
-                        q.getAggregation());
+        final Callback<QueryMetricsResult> callback = metrics.queryMetrics(
+                q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
+                q.getRange(), q.getAggregation());
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
@@ -115,9 +118,10 @@ public class QueryResource {
     @POST
     @Path("/metrics-stream")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(QueryMetrics query,
+    public Response makeMetricsStream(
+            @QueryParam("backend") String backendGroup, QueryMetrics query,
             @Context UriInfo info) throws MetricQueryException {
-        final StoredQuery q = makeMetricsQuery(query);
+        final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
         final String id = Integer.toHexString(q.hashCode());
         storedQueries.put(id, q);
@@ -128,7 +132,7 @@ public class QueryResource {
                 .build();
     }
 
-    private StoredQuery makeMetricsQuery(QueryMetrics query)
+    private StoredQuery makeMetricsQuery(String backendGroup, QueryMetrics query)
             throws MetricQueryException {
         if (query == null)
             throw new MetricQueryException("Query must be defined");
@@ -162,8 +166,8 @@ public class QueryResource {
             throw new MetricQueryException(
                     "Filter must not be empty when querying");
 
-        final StoredQuery stored = new StoredQuery(filter, groupBy, range,
-                aggregation);
+        final StoredQuery stored = new StoredQuery(backendGroup, filter,
+                groupBy, range, aggregation);
 
         return stored;
     }
@@ -206,8 +210,8 @@ public class QueryResource {
         };
 
         final Callback<StreamMetricsResult> callback = metrics.streamMetrics(
-                q.getFilter(), q.getGroupBy(), q.getRange(),
-                q.getAggregation(), handle);
+                q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
+                q.getRange(), q.getAggregation(), handle);
 
         callback.register(new Callback.Handle<StreamMetricsResult>() {
             @Override
