@@ -17,7 +17,7 @@ import com.spotify.heroic.yaml.ConfigContext.Entry;
 
 @Data
 public class HeroicConfigYAML {
-    private ClusterManagerImpl.YAML cluster;
+    private ClusterManagerImpl.YAML cluster = new ClusterManagerImpl.YAML();
     private MetricBackendManager.YAML metrics;
     private MetadataBackendManager.YAML metadata;
     private List<MetadataBackend.YAML> metadataBackends;
@@ -44,15 +44,15 @@ public class HeroicConfigYAML {
 
     public HeroicConfig build(HeroicReporter reporter)
             throws ValidationException {
-        final ClusterManager cluster;
 
         final ConfigContext ctx = new ConfigContext();
 
-        if (this.cluster != null) {
-            cluster = this.cluster.build(ctx.extend("cluster"));
-        } else {
-            cluster = ClusterManager.NULL;
-        }
+        final MetricBackendManager metrics = this.metrics.build(
+                ctx.extend("backend"), reporter.newMetricBackendManager());
+
+        final ClusterManager cluster = ConfigUtils.notNull(
+                ctx.extend("cluster"), this.cluster).build(
+                        ctx.extend("cluster"), metrics);
 
         final AggregationCache cache;
 
@@ -62,9 +62,6 @@ public class HeroicConfigYAML {
         } else {
             cache = AggregationCache.NULL;
         }
-
-        final MetricBackendManager metrics = this.metrics.build(
-                ctx.extend("backend"), reporter.newMetricBackendManager());
 
         final MetadataBackendManager metadata = this.metadata.build(
                 ctx.extend("metadata"), reporter.newMetadataBackendManager());

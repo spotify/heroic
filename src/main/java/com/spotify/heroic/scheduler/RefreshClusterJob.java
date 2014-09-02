@@ -18,9 +18,6 @@ public class RefreshClusterJob implements Job {
     @Override
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-        if (cluster == ClusterManager.NULL)
-            return;
-
         log.info("Refreshing cluster");
 
         try {

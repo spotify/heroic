@@ -53,9 +53,6 @@ public class StatusResource {
     }
 
     private StatusResponse.Cluster buildClusterStatus() {
-        if (cluster == ClusterManager.NULL)
-            return new StatusResponse.Cluster(true, 0, 0);
-
         final ClusterManager.Statistics s = cluster.getStatistics();
 
         if (s == null)

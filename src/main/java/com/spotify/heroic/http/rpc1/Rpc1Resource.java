@@ -59,10 +59,11 @@ public class Rpc1Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, List<WriteMetric> writes)
-            throws Exception {
+                    throws Exception {
         final BackendGroup backend = metrics.useGroup(backendGroup);
 
-        final Callback<WriteResult> callback = backend.write(writes);
+        final Callback<WriteResult> callback = metrics.writeDirect(backend,
+                writes);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }

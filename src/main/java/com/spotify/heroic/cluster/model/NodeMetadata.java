@@ -23,6 +23,10 @@ public class NodeMetadata {
     private final Map<String, String> tags;
     private final Set<NodeCapability> capabilities;
 
+    public UUID getId() {
+        return id;
+    }
+
     /**
      * Checks if both the given tags and capability matches.
      */
@@ -30,16 +34,35 @@ public class NodeMetadata {
         if (!matchesTags(tags))
             return false;
 
-        if (capability != null && !capabilities.contains(capability))
+        if (!matchesCapability(capability))
             return false;
 
         return true;
     }
 
     /**
+     * Capabilities match if the node capabilities are not set, or if it is set
+     * and contains the specified value.
+     *
+     * @param capability
+     *            The capability to match, or <code>null</code> for any
+     *            capability.
+     * @return <code>bool</code> indicating if the capabiltiy matches or not.
+     */
+    private boolean matchesCapability(NodeCapability capability) {
+        if (this.capabilities == null)
+            return true;
+
+        return capability != null && !capabilities.contains(capability);
+    }
+
+    /**
      * Checks if the set of 'other' tags matches the tags of this meta data.
      */
     public boolean matchesTags(Map<String, String> tags) {
+        if (this.tags == null)
+            return true;
+
         for (final Map.Entry<String, String> entry : this.tags.entrySet()) {
             final String value = entry.getValue();
             final String tagValue = tags.get(entry.getKey());

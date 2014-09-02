@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,9 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheImpl;
 import com.spotify.heroic.cache.InMemoryAggregationCacheBackend;
 import com.spotify.heroic.cache.cassandra.CassandraCache;
+import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.ClusterManagerImpl;
 import com.spotify.heroic.cluster.discovery.StaticListDiscovery;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
@@ -48,13 +51,13 @@ public class HeroicConfig {
     private final String refreshClusterSchedule;
 
     private static final TypeDescription[] TYPES = new TypeDescription[] {
-        ConfigUtils.makeType(HeroicBackend.YAML.class),
-        ConfigUtils.makeType(KairosBackend.YAML.class),
-        ConfigUtils.makeType(InMemoryAggregationCacheBackend.YAML.class),
-        ConfigUtils.makeType(CassandraCache.YAML.class),
-        ConfigUtils.makeType(ElasticSearchMetadataBackend.YAML.class),
-        ConfigUtils.makeType(KafkaConsumer.YAML.class),
-        ConfigUtils.makeType(StaticListDiscovery.YAML.class) };
+            ConfigUtils.makeType(HeroicBackend.YAML.class),
+            ConfigUtils.makeType(KairosBackend.YAML.class),
+            ConfigUtils.makeType(InMemoryAggregationCacheBackend.YAML.class),
+            ConfigUtils.makeType(CassandraCache.YAML.class),
+            ConfigUtils.makeType(ElasticSearchMetadataBackend.YAML.class),
+            ConfigUtils.makeType(KafkaConsumer.YAML.class),
+            ConfigUtils.makeType(StaticListDiscovery.YAML.class) };
 
     private static final class CustomConstructor extends Constructor {
         public CustomConstructor() {
@@ -69,8 +72,6 @@ public class HeroicConfig {
                 reporter.newAggregationCache(null),
                 new InMemoryAggregationCacheBackend());
 
-        final ClusterManager cluster = ClusterManager.NULL;
-
         final MetricBackendManager metrics = new MetricBackendManager(
                 reporter.newMetricBackendManager(),
                 new HashMap<String, List<Backend>>(), new ArrayList<Backend>(),
@@ -78,6 +79,9 @@ public class HeroicConfig {
                 MetricBackendManager.DEFAULT_GROUP_LIMIT,
                 MetricBackendManager.DEFAULT_GROUP_LOAD_LIMIT,
                 MetricBackendManager.DEFAULT_FLUSHING_INTERVAL);
+
+        final ClusterManager cluster = new ClusterManagerImpl(
+                ClusterDiscovery.NULL, metrics, UUID.randomUUID(), null, null);
 
         final MetadataBackendManager metadata = new MetadataBackendManager(
                 reporter.newMetadataBackendManager(),

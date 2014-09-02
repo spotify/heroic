@@ -34,6 +34,9 @@ public class NodeRegistry {
         if (matches.isEmpty())
             return null;
 
+        if (matches.size() == 1)
+            return matches.get(0);
+
         return matches.get(random.nextInt(matches.size()));
     }
 

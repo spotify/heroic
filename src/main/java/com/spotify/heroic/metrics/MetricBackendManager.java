@@ -195,11 +195,11 @@ public class MetricBackendManager implements Lifecycle {
 
     public void flushWrites(List<BufferedWriteMetric> bufferedWrites)
             throws Exception {
-        final Map<String, List<WriteMetric>> writes = groupByBackendGroup(bufferedWrites);
+        final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
 
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
-        for (final Map.Entry<String, List<WriteMetric>> entry : writes
+        for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes
                 .entrySet()) {
             callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
         }
@@ -238,19 +238,19 @@ public class MetricBackendManager implements Lifecycle {
             throw new Exception("Write batch failed (asynchronously)");
     }
 
-    private Map<String, List<WriteMetric>> groupByBackendGroup(
+    private Map<String, List<BufferedWriteMetric>> groupByBackendGroup(
             List<BufferedWriteMetric> writes) {
-        final Map<String, List<WriteMetric>> groups = new HashMap<>();
+        final Map<String, List<BufferedWriteMetric>> groups = new HashMap<>();
 
         for (final BufferedWriteMetric w : writes) {
-            List<WriteMetric> group = groups.get(w.getBackendGroup());
+            List<BufferedWriteMetric> group = groups.get(w.getBackendGroup());
 
             if (group == null) {
                 group = new ArrayList<>();
                 groups.put(w.getBackendGroup(), group);
             }
 
-            group.add(new WriteMetric(w.getSeries(), w.getData()));
+            group.add(w);
         }
 
         return groups;
@@ -273,9 +273,6 @@ public class MetricBackendManager implements Lifecycle {
 
         return ImmutableList.copyOf(result);
     }
-
-    private static final List<Backend> EMPTY_RESULT = ImmutableList
-            .copyOf(new ArrayList<Backend>());
 
     public List<Backend> findBackends(String group) {
         if (group == null)
@@ -326,14 +323,14 @@ public class MetricBackendManager implements Lifecycle {
     public void bufferWrite(String backendGroup, WriteMetric write)
             throws InterruptedException, BufferEnqueueException,
             MetricFormatException {
-        if (cluster != ClusterManager.NULL) {
-            // TODO: don't do it like this, but it's good if we pre-emptively
-            // check that it _can_ be routed.
-            findNodeRegistryEntry(write);
-        }
+        final NodeRegistryEntry node = findNodeRegistryEntry(write);
 
-        writeBulkProcessor.enqueue(new BufferedWriteMetric(backendGroup, write
-                .getSeries(), write.getData()));
+        if (node == null)
+            throw new BufferEnqueueException(
+                    "Could not match write to any known node.");
+
+        writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup,
+                write.getSeries(), write.getData()));
     }
 
     /**
@@ -345,16 +342,10 @@ public class MetricBackendManager implements Lifecycle {
      * @throws BackendOperationException
      */
     private Callback<WriteBatchResult> routeWrites(final String backendGroup,
-            final List<WriteMetric> writes) throws BackendOperationException {
+            List<BufferedWriteMetric> writes) throws BackendOperationException {
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
-        if (cluster == ClusterManager.NULL) {
-            final BackendGroup backend = useGroup(backendGroup);
-            callbacks.add(writeDirect(backend, writes).transform(
-                    DIRECT_WRITE_TO_BOOLEAN));
-        } else {
-            callbacks.addAll(writeCluster(backendGroup, writes));
-        }
+        callbacks.addAll(writeCluster(backendGroup, writes));
 
         final Callback.Reducer<Boolean, WriteBatchResult> reducer = new Callback.Reducer<Boolean, WriteBatchResult>() {
             @Override
@@ -386,30 +377,22 @@ public class MetricBackendManager implements Lifecycle {
     }
 
     private List<Callback<Boolean>> writeCluster(final String backendGroup,
-            final List<WriteMetric> writes) throws BackendOperationException {
+            final List<BufferedWriteMetric> writes)
+            throws BackendOperationException {
 
         final List<Callback<Boolean>> callbacks = new ArrayList<>();
 
         final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
 
-        for (final WriteMetric write : writes) {
-            final NodeRegistryEntry node;
-
-            try {
-                node = findNodeRegistryEntry(write);
-            } catch (final MetricFormatException e) {
-                log.warn("Write failed: {}", write, e);
-                continue;
-            }
-
-            List<WriteMetric> partition = partitions.get(node);
+        for (final BufferedWriteMetric write : writes) {
+            List<WriteMetric> partition = partitions.get(write.getNode());
 
             if (partition == null) {
                 partition = new ArrayList<WriteMetric>();
-                partitions.put(node, partition);
+                partitions.put(write.getNode(), partition);
             }
 
-            partition.add(write);
+            partition.add(new WriteMetric(write.getSeries(), write.getData()));
         }
 
         for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
@@ -417,20 +400,13 @@ public class MetricBackendManager implements Lifecycle {
             final NodeRegistryEntry node = entry.getKey();
             final List<WriteMetric> nodeWrites = entry.getValue();
 
-            // if request is local.
-            if (node.getMetadata().getId().equals(cluster.getLocalNodeId())) {
-                final BackendGroup backend = useGroup(backendGroup);
-                callbacks.add(writeDirect(backend, nodeWrites).transform(
-                        DIRECT_WRITE_TO_BOOLEAN));
-            } else {
-                callbacks.add(node.getClusterNode().write(nodeWrites));
-            }
+            callbacks.add(node.getClusterNode().write(nodeWrites));
         }
 
         return callbacks;
     }
 
-    private Callback<WriteResult> writeDirect(BackendGroup backend,
+    public Callback<WriteResult> writeDirect(BackendGroup backend,
             List<WriteMetric> writes) {
         final List<Callback<WriteResult>> callbacks = new ArrayList<>();
 
@@ -456,16 +432,9 @@ public class MetricBackendManager implements Lifecycle {
         return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 
-    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
-            throws MetricFormatException {
-        final NodeRegistryEntry node = cluster.findNode(write.getSeries()
-                .getTags(), NodeCapability.WRITE);
-
-        if (node == null)
-            throw new MetricFormatException("Cannot route " + write.getSeries()
-                    + " to any known, writable node");
-
-        return node;
+    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write) {
+        return cluster.findNode(write.getSeries().getTags(),
+                NodeCapability.WRITE);
     }
 
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
@@ -691,7 +660,7 @@ public class MetricBackendManager implements Lifecycle {
             final String backendGroup, final FindTimeSeriesCriteria criteria) {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer(backendGroup, groupLimit,
-                        groupLoadLimit, cluster, this)).register(
+                        groupLoadLimit, cluster)).register(
                 reporter.reportFindTimeSeries());
     }
 

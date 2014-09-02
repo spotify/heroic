@@ -1,8 +1,8 @@
 package com.spotify.heroic.cluster;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,9 +19,10 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.http.rpc.RpcResource;
 import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
@@ -29,12 +30,12 @@ import com.spotify.heroic.yaml.ValidationException;
 public class ClusterManagerImpl implements ClusterManager, Lifecycle {
     @Data
     public static final class YAML {
-        private ClusterDiscovery.YAML discovery;
-        private Map<String, String> tags = new HashMap<String, String>();
-        private Set<NodeCapability> capabilities = NodeMetadata.DEFAULT_CAPABILITIES;
+        private ClusterDiscovery.YAML discovery = null;
+        private Map<String, String> tags = null;
+        private Set<NodeCapability> capabilities = null;
 
-        public ClusterManagerImpl build(ConfigContext context)
-                throws ValidationException {
+        public ClusterManagerImpl build(ConfigContext context,
+                MetricBackendManager metrics) throws ValidationException {
             final ClusterDiscovery discovery;
 
             if (this.discovery == null) {
@@ -43,18 +44,38 @@ public class ClusterManagerImpl implements ClusterManager, Lifecycle {
                 discovery = this.discovery.build(context.extend("discovery"));
             }
 
-            final Map<String, String> tags = ConfigUtils.notEmpty(
-                    context.extend("tags"), this.tags);
-
-            return new ClusterManagerImpl(discovery, UUID.randomUUID(), tags,
-                    capabilities);
+            return new ClusterManagerImpl(discovery, metrics,
+                    UUID.randomUUID(), tags, capabilities);
         }
     }
 
     private final ClusterDiscovery discovery;
+    private final MetricBackendManager metrics;
     private final UUID localNodeId;
     private final Map<String, String> localNodeTags;
     private final Set<NodeCapability> capabilities;
+    private final NodeRegistryEntry localEntry;
+
+    public ClusterManagerImpl(ClusterDiscovery discovery,
+            MetricBackendManager metrics, UUID localNodeId,
+            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
+        this.discovery = discovery;
+        this.metrics = metrics;
+        this.localNodeId = localNodeId;
+        this.localNodeTags = localNodeTags;
+        this.capabilities = capabilities;
+        this.localEntry = buildLocalEntry(localNodeId, localNodeTags,
+                capabilities);
+    }
+
+    private NodeRegistryEntry buildLocalEntry(UUID localNodeId,
+            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
+        final LocalClusterNode localClusterNode = new LocalClusterNode(metrics);
+        final NodeMetadata metadata = new NodeMetadata(null,
+                RpcResource.VERSION, localNodeId, localNodeTags, capabilities);
+        return new NodeRegistryEntry(localClusterNode, metadata);
+
+    }
 
     private final AtomicReference<NodeRegistry> registry = new AtomicReference<>(
             null);
@@ -75,7 +96,8 @@ public class ClusterManagerImpl implements ClusterManager, Lifecycle {
     public Callback<Void> refresh() {
         if (discovery == ClusterDiscovery.NULL) {
             log.info("Cluster refresh in progress, but no discovery mechanism configured");
-            registry.set(new NodeRegistry(new ArrayList<NodeRegistryEntry>(), 0));
+            registry.set(new NodeRegistry(Arrays
+                    .asList(new NodeRegistryEntry[] { localEntry }), 0));
             return new ResolvedCallback<Void>(null);
         }
 
@@ -91,7 +113,7 @@ public class ClusterManagerImpl implements ClusterManager, Lifecycle {
 
                 for (final DiscoveredClusterNode node : nodes) {
                     callbacks.add(node.getMetadata().transform(
-                            new NodeRegistryEntryTransformer()));
+                            new NodeRegistryEntryTransformer(localEntry)));
                 }
 
                 final Callback.Reducer<NodeRegistryEntry, Void> reducer = new Callback.Reducer<NodeRegistryEntry, Void>() {

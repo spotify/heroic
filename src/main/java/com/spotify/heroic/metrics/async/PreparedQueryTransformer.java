@@ -21,7 +21,7 @@ import com.spotify.heroic.model.DateRange;
 @Slf4j
 @RequiredArgsConstructor
 public final class PreparedQueryTransformer implements
-        Callback.DeferredTransformer<List<PreparedQuery>, MetricGroups> {
+Callback.DeferredTransformer<List<PreparedQuery>, MetricGroups> {
     private final ClusterManager cluster;
     private final DateRange rounded;
     private final AggregationGroup aggregation;
@@ -60,13 +60,8 @@ public final class PreparedQueryTransformer implements
             private Statistics.Rpc buildRpcStatistics(
                     Collection<MetricGroups> results,
                     Collection<Exception> errors) {
-                final ClusterManager.Statistics statistics;
-
-                if (cluster == ClusterManager.NULL)
-                    return new Statistics.Rpc(results.size(), errors.size(), 0,
-                            0, false);
-
-                statistics = cluster.getStatistics();
+                final ClusterManager.Statistics statistics = cluster
+                        .getStatistics();
 
                 if (statistics == null)
                     return new Statistics.Rpc(results.size(), errors.size(), 0,
