@@ -31,6 +31,7 @@ import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.MergeWriteResult;
@@ -74,7 +75,7 @@ public class MetricBackendManager implements Lifecycle {
 
         public MetricBackendManager build(ConfigContext ctx,
                 MetricBackendManagerReporter reporter)
-                        throws ValidationException {
+                throws ValidationException {
             final Map<String, List<Backend>> backends = buildBackends(ctx,
                     reporter);
             final List<Backend> defaultBackends = buildDefaultBackends(ctx,
@@ -117,7 +118,7 @@ public class MetricBackendManager implements Lifecycle {
 
         private Map<String, List<Backend>> buildBackends(ConfigContext ctx,
                 MetricBackendManagerReporter reporter)
-                throws ValidationException {
+                        throws ValidationException {
             final Map<String, List<Backend>> groups = new HashMap<>();
 
             for (final ConfigContext.Entry<Backend.YAML> c : ctx.iterate(
@@ -438,8 +439,13 @@ public class MetricBackendManager implements Lifecycle {
         // Send new time series to metadata backends.
         if (updateMetadata) {
             for (final WriteMetric entry : writes) {
-                if (metadata.isReady())
-                    callbacks.add(metadata.write(entry.getSeries()));
+                if (metadata.isReady()) {
+                    try {
+                        metadata.write(entry.getSeries());
+                    } catch (final MetadataOperationException e) {
+                        log.error("Failed to write metadata", e);
+                    }
+                }
             }
         }
 
@@ -465,7 +471,7 @@ public class MetricBackendManager implements Lifecycle {
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation)
-                    throws MetricQueryException {
+            throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -484,7 +490,7 @@ public class MetricBackendManager implements Lifecycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-                    throws MetricQueryException {
+            throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -585,7 +591,7 @@ public class MetricBackendManager implements Lifecycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                .register(reporter.reportStreamMetricsChunk());
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -686,15 +692,14 @@ public class MetricBackendManager implements Lifecycle {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer(backendGroup, groupLimit,
                         groupLoadLimit, cluster, this)).register(
-                                reporter.reportFindTimeSeries());
+                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
             final FindTimeSeriesCriteria query) {
         final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
                 query.getGroupBy());
-        return metadata.findTimeSeries(query.getFilter())
-                .transform(transformer);
+        return metadata.findSeries(query.getFilter()).transform(transformer);
     }
 
     public void scheduleFlush() {

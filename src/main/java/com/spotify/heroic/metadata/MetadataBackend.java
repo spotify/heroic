@@ -4,10 +4,10 @@ import java.util.List;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
-import com.spotify.heroic.metadata.model.DeleteTimeSeries;
+import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
@@ -22,22 +22,35 @@ public interface MetadataBackend extends Lifecycle {
     }
 
     public Callback<WriteResult> write(Series series)
-            throws MetadataQueryException;
+            throws MetadataOperationException;
 
     public Callback<WriteResult> writeBatch(List<Series> series)
-            throws MetadataQueryException;
+            throws MetadataOperationException;
 
     public Callback<FindTags> findTags(Filter filter)
-            throws MetadataQueryException;
+            throws MetadataOperationException;
 
-    public Callback<FindTimeSeries> findTimeSeries(Filter filter)
-            throws MetadataQueryException;
+    /**
+     * Buffer a write for the specified series.
+     *
+     * @param id
+     *            Id of series to write.
+     * @param series
+     *            Series to write.
+     * @throws MetadataOperationException
+     *             If write could not be buffered.
+     */
+    public void write(String id, Series series)
+            throws MetadataOperationException;
 
-    public Callback<DeleteTimeSeries> deleteTimeSeries(Filter filter)
-            throws MetadataQueryException;
+    public Callback<FindSeries> findSeries(Filter filter)
+            throws MetadataOperationException;
+
+    public Callback<DeleteSeries> deleteSeries(Filter filter)
+            throws MetadataOperationException;
 
     public Callback<FindKeys> findKeys(Filter filter)
-            throws MetadataQueryException;
+            throws MetadataOperationException;
 
     public Callback<Void> refresh();
 

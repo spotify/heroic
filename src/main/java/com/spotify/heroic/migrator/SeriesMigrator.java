@@ -111,7 +111,7 @@ public class SeriesMigrator {
         final Set<Series> series;
 
         try {
-            series = metadata.findTimeSeries(filter).get().getSeries();
+            series = metadata.findSeries(filter).get().getSeries();
         } catch (final Exception e) {
             throw new Exception("Failed to load time series to migrate", e);
         }

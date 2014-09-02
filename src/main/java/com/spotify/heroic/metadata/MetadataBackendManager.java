@@ -15,13 +15,11 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
-import com.spotify.heroic.metadata.model.DeleteTimeSeries;
+import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metadata.model.FindTimeSeries;
-import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 import com.spotify.heroic.yaml.ConfigContext;
@@ -36,14 +34,14 @@ public class MetadataBackendManager {
 
         public MetadataBackendManager build(ConfigContext ctx,
                 MetadataBackendManagerReporter reporter)
-                        throws ValidationException {
+                throws ValidationException {
             final List<MetadataBackend> backends = buildBackends(ctx, reporter);
             return new MetadataBackendManager(reporter, backends);
         }
 
         private List<MetadataBackend> buildBackends(ConfigContext ctx,
                 MetadataBackendManagerReporter reporter)
-                throws ValidationException {
+                        throws ValidationException {
             final List<MetadataBackend> result = new ArrayList<>();
 
             for (final ConfigContext.Entry<MetadataBackend.YAML> c : ctx
@@ -65,28 +63,13 @@ public class MetadataBackendManager {
         return ImmutableList.copyOf(backends);
     }
 
-    public Callback<WriteResult> write(Series series) {
-        final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
-
-        for (final MetadataBackend backend : backends) {
-            try {
-                callbacks.add(backend.write(series));
-            } catch (final MetadataQueryException e) {
-                log.error("Failed to write to backend", e);
-            }
-        }
-
-        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get())
-                .register(reporter.reportFindTags());
-    }
-
     public Callback<FindTags> findTags(final Filter filter) {
         final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
 
         for (final MetadataBackend backend : backends) {
             try {
                 callbacks.add(backend.findTags(filter));
-            } catch (final MetadataQueryException e) {
+            } catch (final MetadataOperationException e) {
                 log.error("Failed to query backend", e);
             }
         }
@@ -95,20 +78,34 @@ public class MetadataBackendManager {
                 .register(reporter.reportFindTags());
     }
 
-    public Callback<FindTimeSeries> findTimeSeries(final Filter filter) {
-        final List<Callback<FindTimeSeries>> callbacks = new ArrayList<Callback<FindTimeSeries>>();
+    public String write(Series series) throws MetadataOperationException {
+        final String id = MetadataUtils.buildId(series);
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.findTimeSeries(filter));
-            } catch (final MetadataQueryException e) {
+                backend.write(id, series);
+            } catch (final MetadataOperationException e) {
+                log.error("Failed to write to backend", e);
+            }
+        }
+
+        return id;
+    }
+
+    public Callback<FindSeries> findSeries(final Filter filter) {
+        final List<Callback<FindSeries>> callbacks = new ArrayList<Callback<FindSeries>>();
+
+        for (final MetadataBackend backend : backends) {
+            try {
+                callbacks.add(backend.findSeries(filter));
+            } catch (final MetadataOperationException e) {
                 log.error("Failed to query backend", e);
             }
         }
 
-        final Callback.Reducer<FindTimeSeries, FindTimeSeries> reducer = new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
+        final Callback.Reducer<FindSeries, FindSeries> reducer = new Callback.Reducer<FindSeries, FindSeries>() {
             @Override
-            public FindTimeSeries resolved(Collection<FindTimeSeries> results,
+            public FindSeries resolved(Collection<FindSeries> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
 
@@ -116,14 +113,14 @@ public class MetadataBackendManager {
                     throw new Exception("Query failed");
 
                 final Set<Series> series = new HashSet<Series>();
-                int size = 0;
+                int duplicates = 0;
 
-                for (final FindTimeSeries findTimeSeries : results) {
-                    series.addAll(findTimeSeries.getSeries());
-                    size += findTimeSeries.getSize();
+                for (final FindSeries result : results) {
+                    series.addAll(result.getSeries());
+                    duplicates += result.getDuplicates();
                 }
 
-                return new FindTimeSeries(series, size);
+                return new FindSeries(series, series.size(), duplicates);
             }
         };
 
@@ -131,21 +128,20 @@ public class MetadataBackendManager {
                 reporter.reportFindTimeSeries());
     }
 
-    public Callback<DeleteTimeSeries> deleteTimeSeries(final Filter filter) {
-        final List<Callback<DeleteTimeSeries>> callbacks = new ArrayList<Callback<DeleteTimeSeries>>();
+    public Callback<DeleteSeries> deleteSeries(final Filter filter) {
+        final List<Callback<DeleteSeries>> callbacks = new ArrayList<Callback<DeleteSeries>>();
 
         for (final MetadataBackend backend : backends) {
             try {
-                callbacks.add(backend.deleteTimeSeries(filter));
-            } catch (final MetadataQueryException e) {
+                callbacks.add(backend.deleteSeries(filter));
+            } catch (final MetadataOperationException e) {
                 log.error("Failed to query backend", e);
             }
         }
 
-        final Callback.Reducer<DeleteTimeSeries, DeleteTimeSeries> reducer = new Callback.Reducer<DeleteTimeSeries, DeleteTimeSeries>() {
+        final Callback.Reducer<DeleteSeries, DeleteSeries> reducer = new Callback.Reducer<DeleteSeries, DeleteSeries>() {
             @Override
-            public DeleteTimeSeries resolved(
-                    Collection<DeleteTimeSeries> results,
+            public DeleteSeries resolved(Collection<DeleteSeries> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
 
@@ -155,12 +151,12 @@ public class MetadataBackendManager {
                 int successful = 0;
                 int failed = 0;
 
-                for (final DeleteTimeSeries result : results) {
+                for (final DeleteSeries result : results) {
                     successful += result.getSuccessful();
                     failed += result.getFailed();
                 }
 
-                return new DeleteTimeSeries(successful, failed);
+                return new DeleteSeries(successful, failed);
             }
         };
 
@@ -173,33 +169,33 @@ public class MetadataBackendManager {
         for (final MetadataBackend backend : backends) {
             try {
                 callbacks.add(backend.findKeys(filter));
-            } catch (final MetadataQueryException e) {
+            } catch (final MetadataOperationException e) {
                 log.error("Failed to query backend", e);
             }
         }
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<FindKeys, FindKeys>() {
-                    @Override
-                    public FindKeys resolved(Collection<FindKeys> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public FindKeys resolved(Collection<FindKeys> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        return mergeFindKeys(results);
-                    }
+                return mergeFindKeys(results);
+            }
 
-                    private FindKeys mergeFindKeys(Collection<FindKeys> results) {
-                        final Set<String> keys = new HashSet<String>();
-                        int size = 0;
+            private FindKeys mergeFindKeys(Collection<FindKeys> results) {
+                final Set<String> keys = new HashSet<String>();
+                int size = 0;
 
-                        for (final FindKeys findKeys : results) {
-                            keys.addAll(findKeys.getKeys());
-                            size += findKeys.getSize();
-                        }
+                for (final FindKeys findKeys : results) {
+                    keys.addAll(findKeys.getKeys());
+                    size += findKeys.getSize();
+                }
 
-                        return new FindKeys(keys, size);
-                    }
-                }).register(reporter.reportFindKeys());
+                return new FindKeys(keys, size);
+            }
+        }).register(reporter.reportFindKeys());
     }
 
     public Callback<Boolean> refresh() {
@@ -211,12 +207,12 @@ public class MetadataBackendManager {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.DefaultStreamReducer<Void, Boolean>() {
-                    @Override
-                    public Boolean resolved(int successful, int failed,
-                            int cancelled) throws Exception {
-                        return failed == 0 && cancelled == 0;
-                    }
-                }).register(reporter.reportRefresh());
+            @Override
+            public Boolean resolved(int successful, int failed,
+                    int cancelled) throws Exception {
+                return failed == 0 && cancelled == 0;
+            }
+        }).register(reporter.reportRefresh());
     }
 
     public boolean isReady() {

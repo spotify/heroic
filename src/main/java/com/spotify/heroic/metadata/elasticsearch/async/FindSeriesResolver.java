@@ -18,14 +18,14 @@ import org.elasticsearch.search.SearchHit;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
-import com.spotify.heroic.metadata.model.FindTimeSeries;
+import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.filter.Filter;
 
 @Slf4j
 @RequiredArgsConstructor
-public class FindTimeSeriesResolver implements
-        Callback.Resolver<FindTimeSeries> {
+public class FindSeriesResolver implements
+Callback.Resolver<FindSeries> {
     private final Client client;
     private final String index;
     private final String type;
@@ -34,7 +34,7 @@ public class FindTimeSeriesResolver implements
     private static final int MAX_SIZE = 10000;
 
     @Override
-    public FindTimeSeries resolve() throws Exception {
+    public FindSeries resolve() throws Exception {
         final Set<Series> series = new HashSet<Series>();
 
         final SearchRequestBuilder request = client.prepareSearch(index)
@@ -55,7 +55,7 @@ public class FindTimeSeriesResolver implements
         log.info("{}: Started scanning for time series (filter={})", session,
                 filter.toString());
 
-        int i = 0;
+        int size = 0;
 
         while (true) {
             final SearchScrollRequestBuilder resp = client.prepareSearchScroll(
@@ -67,21 +67,21 @@ public class FindTimeSeriesResolver implements
 
             for (final SearchHit hit : scroll.getHits()) {
                 any = true;
-                i++;
+                size++;
 
-                if (i % 100000 == 0)
-                    log.info("{}: Got {} time series", session, i);
+                if (size % 100000 == 0)
+                    log.info("{}: Got {} time series", session, size);
 
                 series.add(ElasticSearchMetadataBackend.toTimeSerie(hit
                         .getSource()));
             }
 
             if (!any) {
-                log.info("{}: Finished, loaded {} time series", session, i);
+                log.info("{}: Finished, loaded {} time series", session, size);
                 break;
             }
         }
 
-        return new FindTimeSeries(series, series.size());
+        return new FindSeries(series, series.size(), size - series.size());
     }
 }

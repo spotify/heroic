@@ -10,19 +10,19 @@ import org.elasticsearch.index.query.QueryBuilders;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
-import com.spotify.heroic.metadata.model.DeleteTimeSeries;
+import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.model.filter.Filter;
 
 @RequiredArgsConstructor
 public class DeleteTimeSeriesResolver implements
-Callback.Resolver<DeleteTimeSeries> {
+Callback.Resolver<DeleteSeries> {
     private final Client client;
     private final String index;
     private final String type;
     private final Filter filter;
 
     @Override
-    public DeleteTimeSeries resolve() throws Exception {
+    public DeleteSeries resolve() throws Exception {
         if (filter == null)
             throw new IllegalArgumentException("filter must be specified");
 
@@ -37,7 +37,7 @@ Callback.Resolver<DeleteTimeSeries> {
 
         final IndexDeleteByQueryResponse result = response.getIndices().get(
                 index);
-        return new DeleteTimeSeries(result.getSuccessfulShards(),
+        return new DeleteSeries(result.getSuccessfulShards(),
                 result.getFailedShards());
     }
 }

@@ -1,10 +1,12 @@
 package com.spotify.heroic.http.metadata;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -15,15 +17,18 @@ import javax.ws.rs.core.Response;
 
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metadata.MetadataQueryException;
-import com.spotify.heroic.metadata.model.DeleteTimeSeries;
+import com.spotify.heroic.metadata.MetadataOperationException;
+import com.spotify.heroic.metadata.model.AddSeries;
+import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
+import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metadata.model.FindTimeSeries;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.filter.Filter;
 
@@ -45,7 +50,7 @@ public class MetadataResource {
     @POST
     @Path("/tags")
     public void tags(@Suspended final AsyncResponse response,
-            MetadataQueryBody query) throws MetadataQueryException {
+            MetadataQueryBody query) throws MetadataOperationException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
@@ -72,7 +77,7 @@ public class MetadataResource {
     @POST
     @Path("/keys")
     public void keys(@Suspended final AsyncResponse response,
-            MetadataQueryBody query) throws MetadataQueryException {
+            MetadataQueryBody query) throws MetadataOperationException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
@@ -89,19 +94,41 @@ public class MetadataResource {
         HttpAsyncUtils.handleAsyncResume(response, callback, KEYS);
     }
 
-    private static final HttpAsyncUtils.Resume<FindTimeSeries, MetadataSeriesResponse> GET_TIMESERIES = new HttpAsyncUtils.Resume<FindTimeSeries, MetadataSeriesResponse>() {
+    private static final HttpAsyncUtils.Resume<AddSeries, MetadataAddSeriesResponse> ADD_SERIES = new HttpAsyncUtils.Resume<AddSeries, MetadataAddSeriesResponse>() {
         @Override
-        public MetadataSeriesResponse resume(FindTimeSeries result)
+        public MetadataAddSeriesResponse resume(AddSeries result)
+                throws Exception {
+            return new MetadataAddSeriesResponse(result.getId());
+        }
+    };
+
+    @POST
+    @Path("/series")
+    public Response addSeries(Series series) throws MetadataOperationException {
+        if (!metadata.isReady()) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build();
+        }
+
+        final String id = metadata.write(series);
+        return Response.status(Response.Status.OK)
+                .entity(new MetadataAddSeriesResponse(id)).build();
+    }
+
+    private static final HttpAsyncUtils.Resume<FindSeries, MetadataSeriesResponse> GET_SERIES = new HttpAsyncUtils.Resume<FindSeries, MetadataSeriesResponse>() {
+        @Override
+        public MetadataSeriesResponse resume(FindSeries result)
                 throws Exception {
             return new MetadataSeriesResponse(new ArrayList<Series>(
                     result.getSeries()), result.getSize());
         }
     };
 
-    @POST
-    @Path("/timeseries")
+    @GET
+    @Path("/series")
     public void getTimeSeries(@Suspended final AsyncResponse response,
-            MetadataQueryBody query) throws MetadataQueryException {
+            MetadataQueryBody query) throws MetadataOperationException,
+            JsonParseException, JsonMappingException, IOException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
@@ -112,20 +139,19 @@ public class MetadataResource {
         final Filter filter = query.makeFilter();
 
         if (filter == null)
-            throw new MetadataQueryException(
+            throw new MetadataOperationException(
                     "Filter must not be empty when querying");
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final Callback<FindTimeSeries> callback = metadata
-                .findTimeSeries(filter);
+        final Callback<FindSeries> callback = metadata.findSeries(filter);
 
-        HttpAsyncUtils.handleAsyncResume(response, callback, GET_TIMESERIES);
+        HttpAsyncUtils.handleAsyncResume(response, callback, GET_SERIES);
     }
 
-    private static final HttpAsyncUtils.Resume<DeleteTimeSeries, MetadataDeleteSeriesResponse> DELETE_TIMESERIES = new HttpAsyncUtils.Resume<DeleteTimeSeries, MetadataDeleteSeriesResponse>() {
+    private static final HttpAsyncUtils.Resume<DeleteSeries, MetadataDeleteSeriesResponse> DELETE_SERIES = new HttpAsyncUtils.Resume<DeleteSeries, MetadataDeleteSeriesResponse>() {
         @Override
-        public MetadataDeleteSeriesResponse resume(DeleteTimeSeries result)
+        public MetadataDeleteSeriesResponse resume(DeleteSeries result)
                 throws Exception {
             return new MetadataDeleteSeriesResponse(result.getSuccessful(),
                     result.getFailed());
@@ -133,9 +159,9 @@ public class MetadataResource {
     };
 
     @DELETE
-    @Path("/timeseries")
+    @Path("/series")
     public void deleteTimeSeries(@Suspended final AsyncResponse response,
-            MetadataQueryBody query) throws MetadataQueryException {
+            MetadataQueryBody query) throws MetadataOperationException {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
@@ -146,14 +172,13 @@ public class MetadataResource {
         final Filter filter = query.makeFilter();
 
         if (filter == null)
-            throw new MetadataQueryException(
+            throw new MetadataOperationException(
                     "Filter must not be empty when querying");
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final Callback<DeleteTimeSeries> callback = metadata
-                .deleteTimeSeries(filter);
+        final Callback<DeleteSeries> callback = metadata.deleteSeries(filter);
 
-        HttpAsyncUtils.handleAsyncResume(response, callback, DELETE_TIMESERIES);
+        HttpAsyncUtils.handleAsyncResume(response, callback, DELETE_SERIES);
     }
 }
