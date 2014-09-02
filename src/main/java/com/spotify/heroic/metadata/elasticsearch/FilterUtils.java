@@ -11,8 +11,9 @@ import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.model.filter.HasTagFilter;
 import com.spotify.heroic.model.filter.MatchKeyFilter;
 import com.spotify.heroic.model.filter.MatchTagFilter;
-import com.spotify.heroic.model.filter.StartsWithFilter;
 import com.spotify.heroic.model.filter.OrFilter;
+import com.spotify.heroic.model.filter.RegexFilter;
+import com.spotify.heroic.model.filter.StartsWithFilter;
 
 public final class FilterUtils {
     public static final String TAGS_VALUE = "tags.value";
@@ -54,9 +55,9 @@ public final class FilterUtils {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            matchTag.getTag()))
+                            .boolFilter()
+                            .must(FilterBuilders.termFilter(TAGS_KEY,
+                                    matchTag.getTag()))
                             .must(FilterBuilders.termFilter(TAGS_VALUE,
                                     matchTag.getValue())));
         }
@@ -67,11 +68,24 @@ public final class FilterUtils {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            startsWith.getTag()))
+                            .boolFilter()
+                            .must(FilterBuilders.termFilter(TAGS_KEY,
+                                    startsWith.getTag()))
                             .must(FilterBuilders.prefixFilter(TAGS_VALUE,
                                     startsWith.getValue())));
+        }
+
+        if (filter instanceof RegexFilter) {
+            final RegexFilter regex = (RegexFilter) filter;
+
+            return FilterBuilders.nestedFilter(
+                    TAGS,
+                    FilterBuilders
+                            .boolFilter()
+                            .must(FilterBuilders.termFilter(TAGS_KEY,
+                                    regex.getTag()))
+                            .must(FilterBuilders.regexpFilter(TAGS_VALUE,
+                                    regex.getValue())));
         }
 
         if (filter instanceof HasTagFilter) {

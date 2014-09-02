@@ -3,8 +3,8 @@ package com.spotify.heroic.model.filter;
 import lombok.Data;
 
 @Data
-public class StartsWithFilter implements Filter {
-    public static final String OPERATOR = "^";
+public class RegexFilter implements Filter {
+    public static final String OPERATOR = "~";
 
     private final String tag;
     private final String value;
@@ -15,7 +15,7 @@ public class StartsWithFilter implements Filter {
     }
 
     @Override
-    public StartsWithFilter optimize() {
+    public RegexFilter optimize() {
         return this;
     }
 }

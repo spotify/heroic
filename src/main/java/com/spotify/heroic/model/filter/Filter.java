@@ -20,9 +20,10 @@ public interface Filter {
                 throws IOException, JsonProcessingException;
     }
 
-    public static FilterDeserializer<MatchTagFilter> MATCH_TAG = new FilterDeserializer<MatchTagFilter>() {
+    public abstract static class TagAndValueDeserializer<T> implements
+            FilterDeserializer<T> {
         @Override
-        public MatchTagFilter deserialize(JsonParser p, DeserializationContext c)
+        public T deserialize(JsonParser p, DeserializationContext c)
                 throws IOException, JsonProcessingException {
             final String tag;
 
@@ -45,37 +46,30 @@ public interface Filter {
             if (p.nextToken() != JsonToken.END_ARRAY)
                 throw c.mappingException("Expected end of array");
 
+            return build(tag, value);
+        }
+
+        protected abstract T build(String tag, String value);
+    }
+
+    public static FilterDeserializer<MatchTagFilter> MATCH_TAG = new TagAndValueDeserializer<MatchTagFilter>() {
+        @Override
+        public MatchTagFilter build(String tag, String value) {
             return new MatchTagFilter(tag, value);
         }
     };
 
-    public static FilterDeserializer<StartsWithFilter> STARTS_WITH = new FilterDeserializer<StartsWithFilter>() {
+    public static FilterDeserializer<StartsWithFilter> STARTS_WITH = new TagAndValueDeserializer<StartsWithFilter>() {
         @Override
-        public StartsWithFilter deserialize(JsonParser p,
-                DeserializationContext c) throws IOException,
-                JsonProcessingException {
-            final String tag;
-
-            {
-                if (p.nextToken() != JsonToken.VALUE_STRING)
-                    throw c.mappingException("Expected string (tag)");
-
-                tag = p.readValueAs(String.class);
-            }
-
-            final String value;
-
-            {
-                if (p.nextToken() != JsonToken.VALUE_STRING)
-                    throw c.mappingException("Expected string (value)");
-
-                value = p.readValueAs(String.class);
-            }
-
-            if (p.nextToken() != JsonToken.END_ARRAY)
-                throw c.mappingException("Expected end of array");
-
+        public StartsWithFilter build(String tag, String value) {
             return new StartsWithFilter(tag, value);
+        }
+    };
+
+    public static FilterDeserializer<RegexFilter> REGEX = new TagAndValueDeserializer<RegexFilter>() {
+        @Override
+        public RegexFilter build(String tag, String value) {
+            return new RegexFilter(tag, value);
         }
     };
 
@@ -107,7 +101,7 @@ public interface Filter {
 
             {
                 if (p.nextToken() != JsonToken.VALUE_STRING)
-                    throw c.mappingException("Expected string (value)");
+                    throw c.mappingException("Expected string (key)");
 
                 value = p.readValueAs(String.class);
             }
@@ -148,16 +142,16 @@ public interface Filter {
     };
 
     public static class Deserializer extends JsonDeserializer<Filter> {
-        private static final Map<String, FilterDeserializer<? extends Filter>> implementations = new HashMap<>();
+        private static final Map<String, FilterDeserializer<? extends Filter>> IMPL = new HashMap<>();
 
         static {
-            implementations.put(MatchTagFilter.OPERATOR, MATCH_TAG);
-            implementations.put(StartsWithFilter.OPERATOR,
-                    STARTS_WITH);
-            implementations.put(HasTagFilter.OPERATOR, HAS_TAG);
-            implementations.put(MatchKeyFilter.OPERATOR, MATCH_KEY);
-            implementations.put(AndFilter.OPERATOR, AND);
-            implementations.put(OrFilter.OPERATOR, OR);
+            IMPL.put(MatchTagFilter.OPERATOR, MATCH_TAG);
+            IMPL.put(StartsWithFilter.OPERATOR, STARTS_WITH);
+            IMPL.put(RegexFilter.OPERATOR, REGEX);
+            IMPL.put(HasTagFilter.OPERATOR, HAS_TAG);
+            IMPL.put(MatchKeyFilter.OPERATOR, MATCH_KEY);
+            IMPL.put(AndFilter.OPERATOR, AND);
+            IMPL.put(OrFilter.OPERATOR, OR);
         }
 
         @Override
@@ -176,7 +170,7 @@ public interface Filter {
                 operator = p.readValueAs(String.class);
             }
 
-            final FilterDeserializer<? extends Filter> deserializer = implementations
+            final FilterDeserializer<? extends Filter> deserializer = IMPL
                     .get(operator);
 
             if (deserializer == null)
