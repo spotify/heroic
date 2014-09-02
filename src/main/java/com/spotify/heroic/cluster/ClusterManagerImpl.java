@@ -19,13 +19,14 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.injection.Lifecycle;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @Data
-public class ClusterManagerImpl implements ClusterManager {
+public class ClusterManagerImpl implements ClusterManager, Lifecycle {
     @Data
     public static final class YAML {
         private ClusterDiscovery.YAML discovery;
@@ -55,7 +56,8 @@ public class ClusterManagerImpl implements ClusterManager {
     private final Map<String, String> localNodeTags;
     private final Set<NodeCapability> capabilities;
 
-    private final AtomicReference<NodeRegistry> registry = new AtomicReference<>();
+    private final AtomicReference<NodeRegistry> registry = new AtomicReference<>(
+            null);
 
     @Override
     public NodeRegistryEntry findNode(final Map<String, String> tags,
@@ -83,7 +85,7 @@ public class ClusterManagerImpl implements ClusterManager {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                    throws Exception {
+                            throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
@@ -97,7 +99,7 @@ public class ClusterManagerImpl implements ClusterManager {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                            throws Exception {
+                                    throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }
@@ -132,5 +134,20 @@ public class ClusterManagerImpl implements ClusterManager {
 
         return new ClusterManager.Statistics(registry.getOnlineNodes(),
                 registry.getOfflineNodes());
+    }
+
+    @Override
+    public void start() throws Exception {
+        log.info("Executing initial refresh");
+        refresh().get();
+    }
+
+    @Override
+    public void stop() throws Exception {
+    }
+
+    @Override
+    public boolean isReady() {
+        return registry.get() != null;
     }
 }

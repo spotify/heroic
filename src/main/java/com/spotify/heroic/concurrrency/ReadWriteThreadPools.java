@@ -76,20 +76,20 @@ public class ReadWriteThreadPools {
             final ThreadPoolsReporter.Context readContext = reporter
                     .newThreadPoolContext("read",
                             new ThreadPoolReporterProvider() {
-                                @Override
-                                public long getQueueSize() {
-                                    return readExecutor.getQueue().size();
-                                }
-                            });
+                        @Override
+                        public long getQueueSize() {
+                            return readExecutor.getQueue().size();
+                        }
+                    });
 
             final ThreadPoolsReporter.Context writeContext = reporter
                     .newThreadPoolContext("write",
                             new ThreadPoolReporterProvider() {
-                                @Override
-                                public long getQueueSize() {
-                                    return readExecutor.getQueue().size();
-                                }
-                            });
+                        @Override
+                        public long getQueueSize() {
+                            return readExecutor.getQueue().size();
+                        }
+                    });
 
             return new ReadWriteThreadPools(readExecutor, writeExecutor,
                     readContext, writeContext);
@@ -119,7 +119,7 @@ public class ReadWriteThreadPools {
 
         try {
             read.awaitTermination(120, TimeUnit.SECONDS);
-            log.info("Gracefully shut down read executor");
+            log.debug("Gracefully shut down read executor");
         } catch (final InterruptedException e) {
             final List<?> tasks = read.shutdownNow();
             log.error(
@@ -129,7 +129,7 @@ public class ReadWriteThreadPools {
 
         try {
             write.awaitTermination(120, TimeUnit.SECONDS);
-            log.info("Gracefully shut down write executor");
+            log.debug("Gracefully shut down write executor");
         } catch (final InterruptedException e) {
             final List<?> tasks = write.shutdownNow();
             log.error(

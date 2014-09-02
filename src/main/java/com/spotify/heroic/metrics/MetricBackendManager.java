@@ -259,6 +259,9 @@ public class MetricBackendManager implements Lifecycle {
             result.addAll(partial);
         }
 
+        if (result.isEmpty())
+            return null;
+
         return ImmutableList.copyOf(result);
     }
 
@@ -267,12 +270,12 @@ public class MetricBackendManager implements Lifecycle {
 
     public List<Backend> findBackends(String group) {
         if (group == null)
-            return EMPTY_RESULT;
+            return null;
 
         final List<Backend> result = backends.get(group);
 
-        if (result == null)
-            return EMPTY_RESULT;
+        if (result == null || result.isEmpty())
+            return null;
 
         return ImmutableList.copyOf(result);
     }
@@ -315,7 +318,8 @@ public class MetricBackendManager implements Lifecycle {
             throws InterruptedException, BufferEnqueueException,
             MetricFormatException {
         if (cluster != ClusterManager.NULL) {
-            // TODO: don't do it like this.
+            // TODO: don't do it like this, but it's good if we pre-emptively
+            // check that it _can_ be routed.
             findNodeRegistryEntry(write);
         }
 
@@ -594,7 +598,7 @@ public class MetricBackendManager implements Lifecycle {
                 .shiftStart(-sampling.getExtent());
     }
 
-    public BackendGroup useDefault() throws BackendOperationException {
+    public BackendGroup useDefaultGroup() throws BackendOperationException {
         return useGroup(null);
     }
 
@@ -603,10 +607,17 @@ public class MetricBackendManager implements Lifecycle {
         final List<Backend> selected;
 
         if (group == null) {
+            if (defaultBackends == null)
+                throw new BackendOperationException(
+                        "No default backend configured");
+
             selected = defaultBackends;
         } else {
             selected = findBackends(group);
         }
+
+        if (selected == null || selected.isEmpty())
+            throw new BackendOperationException("No backend(s) found");
 
         return useAlive(selected);
     }
@@ -616,10 +627,17 @@ public class MetricBackendManager implements Lifecycle {
         final List<Backend> selected;
 
         if (groups == null) {
+            if (defaultBackends == null)
+                throw new BackendOperationException(
+                        "No default backend configured");
+
             selected = defaultBackends;
         } else {
             selected = findBackends(groups);
         }
+
+        if (selected == null || selected.isEmpty())
+            throw new BackendOperationException("No backend(s) found");
 
         return useAlive(selected);
     }

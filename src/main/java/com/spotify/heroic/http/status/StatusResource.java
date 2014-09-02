@@ -82,13 +82,20 @@ public class StatusResource {
         final int available = consumers.size();
 
         int ready = 0;
+        long errors = 0;
+        boolean allOk = true;
 
         for (final Consumer consumer : consumers) {
-            if (consumer.isReady())
+            if (consumer.isReady()) {
                 ready += 1;
+                final Consumer.Statistics s = consumer.getStatistics();
+                errors += s.getErrors();
+                allOk = allOk && s.isOk();
+            }
         }
 
-        return new StatusResponse.Consumer(available == ready, available, ready);
+        return new StatusResponse.Consumer((available == ready) && allOk,
+                available, ready, errors);
     }
 
     private StatusResponse.MetadataBackend buildMetadataBackendStatus() {

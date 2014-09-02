@@ -9,6 +9,11 @@ public class StatusResponse {
         private final boolean ok;
         private final int available;
         private final int ready;
+
+        /**
+         * Total number of consumer errors encountered.
+         */
+        private final long errors;
     }
 
     @Data

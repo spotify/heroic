@@ -1,9 +1,9 @@
 package com.spotify.heroic.consumer;
 
+import lombok.Data;
+
 import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.injection.Lifecycle;
-import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.yaml.ConfigContext;
@@ -15,10 +15,14 @@ public interface Consumer extends Lifecycle {
                 throws ValidationException;
     }
 
-    public MetadataBackendManager getMetadataManager();
-
-    public MetricBackendManager getMetricBackendManager();
+    @Data
+    public static class Statistics {
+        private final boolean ok;
+        private final long errors;
+    }
 
     public void write(WriteMetric entry) throws WriteException,
-    InterruptedException;
+            InterruptedException;
+
+    public Statistics getStatistics();
 }

@@ -56,6 +56,8 @@ Consumer:
   available: required Number
   # How many consumer instances are ready.
   ready: required Number
+  # How many consumer errors have been encountered (in total).
+  errors: required Number
 
 Backend:
   # Indicates if all backend instances are 'ok'.

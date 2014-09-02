@@ -5,8 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.Executor;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
 
@@ -17,10 +21,10 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.ApplicationLifecycle;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.WriteException;
-import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.BufferEnqueueException;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.MetricFormatException;
@@ -54,21 +58,41 @@ public class KafkaConsumer implements Consumer {
         }
     }
 
+    @Inject
+    private MetricBackendManager metric;
+
+    @Inject
+    private ApplicationLifecycle lifecycle;
+
     private final List<String> topics;
     private final int threadCount;
     private final Map<String, String> config;
     private final ConsumerReporter reporter;
     private final ConsumerSchema schema;
 
+    /**
+     * Total number of threads which are still consuming.
+     */
+    private final AtomicInteger consuming = new AtomicInteger(0);
+
+    /**
+     * Total number of threads that should be consuming.
+     */
+    private final AtomicInteger total = new AtomicInteger(0);
+
+    /**
+     * Total number of errors encountered.
+     */
+    private final AtomicLong errors = new AtomicLong(0);
+
+    /**
+     * Latch that will be set when we want to shut down.
+     */
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+
     private volatile boolean running = false;
 
-    @Inject
-    private MetadataBackendManager metadata;
-
-    @Inject
-    private MetricBackendManager metric;
-
-    private Executor executor;
+    private ExecutorService executor;
     private ConsumerConnector connector;
 
     @Override
@@ -88,6 +112,9 @@ public class KafkaConsumer implements Consumer {
 
         executor = Executors.newFixedThreadPool(topics.size() * threadCount);
 
+        consuming.set(0);
+        total.set(topics.size() * threadCount);
+
         final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
                 .createMessageStreams(streamsMap);
 
@@ -97,8 +124,8 @@ public class KafkaConsumer implements Consumer {
             final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
 
             for (final KafkaStream<byte[], byte[]> stream : list) {
-                executor.execute(new ConsumerThread(reporter, topic, stream,
-                        this, schema));
+                executor.execute(new ConsumerThread(lifecycle, reporter, topic,
+                        stream, this, schema, consuming, errors, shutdownLatch));
             }
         }
 
@@ -110,23 +137,25 @@ public class KafkaConsumer implements Consumer {
         if (!running)
             throw new IllegalStateException("Kafka consumer not running");
 
-        connector.shutdown();
         this.running = false;
+
+        // disconnect streams.
+        connector.shutdown();
+        // tell sleeping threads to wake up.
+        shutdownLatch.countDown();
+        // shut down executor.
+        executor.shutdown();
+
+        try {
+            executor.awaitTermination(30, TimeUnit.SECONDS);
+        } catch (final InterruptedException e) {
+            log.info("Waiting for executor service was interrupted");
+        }
     }
 
     @Override
     public boolean isReady() {
         return running;
-    }
-
-    @Override
-    public MetadataBackendManager getMetadataManager() {
-        return metadata;
-    }
-
-    @Override
-    public MetricBackendManager getMetricBackendManager() {
-        return metric;
     }
 
     private Map<String, Integer> makeStreamsMap() {
@@ -148,5 +177,11 @@ public class KafkaConsumer implements Consumer {
         } catch (final MetricFormatException e) {
             log.error("Invalid write: {}", write, e);
         }
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        final boolean ok = consuming.get() == total.get();
+        return new Statistics(ok, errors.get());
     }
 }

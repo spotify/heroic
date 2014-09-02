@@ -56,6 +56,7 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.migrator.SeriesMigrator;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
@@ -93,7 +94,8 @@ public class Main {
 
     public static Injector setupInjector(final HeroicConfig config,
             final HeroicReporter reporter,
-            final ScheduledExecutorService scheduledExecutor) {
+            final ScheduledExecutorService scheduledExecutor,
+            final ApplicationLifecycle lifecycle) {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -103,6 +105,7 @@ public class Main {
         final MetricBackendManager metrics = config.getMetrics();
         final MetadataBackendManager metadata = config.getMetadata();
         final ClusterManager cluster = config.getCluster();
+        final SeriesMigrator migrator = new SeriesMigrator();
 
         final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<Runnable>(
                 100000);
@@ -112,6 +115,8 @@ public class Main {
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
+                bind(ApplicationLifecycle.class).toInstance(lifecycle);
+                bind(SeriesMigrator.class).toInstance(migrator);
                 bind(ScheduledExecutorService.class).toInstance(
                         scheduledExecutor);
                 bind(ExecutorService.class).toInstance(executor);
@@ -188,14 +193,16 @@ public class Main {
         final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
                 10);
 
-        injector = setupInjector(config, reporter, scheduledExecutor);
+        final CountDownLatch startupLatch = new CountDownLatch(1);
 
-        /* fire startable handlers */
-        if (!startLifecycle()) {
-            log.info("Failed to start all lifecycle components");
-            System.exit(1);
-            return;
-        }
+        final ApplicationLifecycle lifecycle = new ApplicationLifecycle() {
+            @Override
+            public void awaitStartup() throws InterruptedException {
+                startupLatch.await();
+            }
+        };
+
+        injector = setupInjector(config, reporter, scheduledExecutor, lifecycle);
 
         final Server server = setupHttpServer(config);
         final FastForwardReporter ffwd = setupReporter(registry);
@@ -208,8 +215,14 @@ public class Main {
             return;
         }
 
+        /* fire startable handlers */
+        if (!startLifecycle()) {
+            log.info("Failed to start all lifecycle components");
+            System.exit(1);
+            return;
+        }
+
         final Scheduler scheduler = injector.getInstance(Scheduler.class);
-        scheduler.triggerJob(SchedulerModule.REFRESH_CLUSTER);
 
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -217,7 +230,9 @@ public class Main {
                 setupShutdownHook(ffwd, server, scheduler, latch,
                         scheduledExecutor));
 
+        startupLatch.countDown();
         log.info("Heroic was successfully started!");
+
         latch.await();
         System.exit(0);
     }
@@ -242,7 +257,7 @@ public class Main {
         return ok;
     }
 
-    private static boolean stopLifecycle() {
+    private static boolean stopLifeCycles() {
         boolean ok = true;
 
         /* fire Stoppable handlers */
@@ -274,39 +289,6 @@ public class Main {
 
         return config;
     }
-
-    /*
-     * private static HttpServer setupHttpServer(final HeroicConfig config)
-     * throws IOException { log.info("Starting grizzly http server...");
-     * 
-     * final URI baseUri = UriBuilder.fromUri("http://0.0.0.0/")
-     * .port(config.getPort()).build();
-     * 
-     * final WebappContext context = new WebappContext("Guice Webapp sample",
-     * "");
-     * 
-     * context.addListener(Main.LISTENER);
-     * context.addFilter(GuiceFilter.class.getName(), GuiceFilter.class)
-     * .addMappingForUrlPatterns(null, "/*");
-     * 
-     * // Initialize and register Jersey ServletContainer final
-     * ServletRegistration servletReg = context.addServlet( "ServletContainer",
-     * ServletContainer.class); servletReg.addMapping("/*");
-     * servletReg.setInitParameter("javax.ws.rs.Application",
-     * WebApp.class.getName());
-     * 
-     * // Initialize and register GuiceFilter final FilterRegistration filterReg
-     * = context.addFilter("GuiceFilter", GuiceFilter.class);
-     * filterReg.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class),
-     * "/*");
-     * 
-     * final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(
-     * baseUri, false);
-     * 
-     * context.deploy(server);
-     * 
-     * return server; }
-     */
 
     private static Server setupHttpServer(final HeroicConfig config)
             throws IOException {
@@ -384,14 +366,18 @@ public class Main {
                     log.error("Server shutdown failed", e);
                 }
 
-                log.info("Stopping all life cycles");
-                stopLifecycle();
+                log.info("Stopping scheduled executor service");
+
+                scheduledExecutor.shutdownNow();
 
                 try {
                     scheduledExecutor.awaitTermination(30, TimeUnit.SECONDS);
                 } catch (final InterruptedException e) {
                     log.error("Failed to shut down scheduled executor service");
                 }
+
+                log.info("Stopping life cycles");
+                stopLifeCycles();
 
                 log.info("Stopping fast forward reporter");
                 ffwd.stop();

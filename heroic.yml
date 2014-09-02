@@ -1,50 +1,52 @@
 # vim: sw=2 tabstop=2
 
-port: 8080
-maxAggregationMagnitude: 400000
+port: 8081
 
 cluster:
   tags:
     site: lon
+  capabilities:
+    - WRITE
   discovery:
     !static-list-discovery
     nodes:
-      - http://ash2-heroic-a1:8080
-      - http://ash2-heroic-a2:8080
-      - http://ash2-heroic-a3:8080
-      - http://sjc1-heroic-a1:8080
-      - http://sjc1-heroic-a2:8080
-      - http://sjc1-heroic-a3:8080
-      - http://sto1-heroic-a1:8080
-      - http://sto1-heroic-a2:8080
-      - http://sto1-heroic-a3:8080
-      - http://lon3-heroic-a1:8080
-      - http://lon3-heroic-a2:8080
-      - http://lon3-heroic-a3:8080
+      - http://localhost:8081
 
-backends: []
-
-metadataBackends:
-  - !elasticsearch-metadata
-    # requires the use of the mapping found in docs/metadata-mapping.json
-    nodeClient: false
-    clusterName: metalastic-production
-    index: meta
-    type: meta
-    seeds:
-      - lon2-heroex-a2.lon2.spotify.net
-      - lon2-heroex-a3.lon.spotify.net
-      - lon2-heroex-a4.lon2.spotify.net
-    writeBulkActions: 2000
-    writeBulkFlushInterval: 10000
-    concurrentBulkRequests: 5
-
-cache:
-#  !in-memory-cache {}
-#  cassandra-cache uses the schema located at "docs/aggregation-schema.cql"
-  !cassandra-cache
-  keyspace: aggregations
-  seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
+metrics:
+  defaultBackends:
+    - local
+  backends:
+    - !heroic-backend
+      group: local
+      seeds: localhost:9160
+    - !heroic-backend
+      group: heroic-lon
+      seeds: &cassandra_lon
+        lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
+    - !kairosdb-backend
+      group: kairosdb-lon
+      seeds: *cassandra_lon
+    - !heroic-backend
+      group: heroic-sto
+      seeds: &cassandra_sto
+        sto3-kairosdbcassandra-a1:9160,sto3-kairosdbcassandra-a2:9160,sto3-kairosdbcassandra-a3:9160
+    - !kairosdb-backend
+      group: kairosdb-sto
+      seeds: *cassandra_sto
+    - !heroic-backend
+      group: heroic-sjc
+      seeds: &cassandra_sjc
+        sjc1-kairosdbcassandra-a1:9160,sjc1-kairosdbcassandra-a2:9160,sjc1-kairosdbcassandra-a3:9160
+    - !kairosdb-backend
+      group: kairosdb-sjc
+      seeds: *cassandra_sjc
+    - !heroic-backend
+      group: heroic-ash
+      seeds: &cassahdra_ash
+        ash2-kairosdbcassandra-a1:9160,ash2-kairosdbcassandra-a2:9160,ash2-kairosdbcassandra-a3:9160
+    - !kairosdb-backend
+      group: kairosdb-ash
+      seeds: *cassahdra_ash
 
 #consumers:
 #  - !kafka-consumer
@@ -54,7 +56,44 @@ cache:
 #      - "metrics-lon3"
 #      - "metrics-lon4"
 #    config:
-#      group.id: heroic
-#      zookeeper.connect: lon3-kafkazookeeper-a1.lon3.spotify.net,lon3-kafkazookeeper-a2.lon3.spotify.net,lon3-kafkazookeeper-a3.lon3.spotify.net/kafka-monitoring
+#      group.id: heroic-testing
+#      zookeeper.connect: lon3-kafkazookeeper-a1,lon3-kafkazookeeper-a2,lon3-kafkazookeeper-a3/kafka-monitoring
 #      auto.offset.reset: smallest
 #      auto.commit.enable: false
+
+metadata:
+  backends:
+    - !elasticsearch-metadata
+      # requires the use of the mapping found in docs/metadata-mapping.json
+      nodeClient: false
+      clusterName: metalastic-production
+      index: meta
+      type: meta
+      seeds:
+        - lon2-heroex-a2.lon2.spotify.net
+        - lon2-heroex-a3.lon.spotify.net
+        - lon2-heroex-a4.lon2.spotify.net
+      writeBulkActions: 2000
+      writeBulkFlushInterval: 10000
+      concurrentBulkRequests: 5
+
+#cache:
+#  backend:
+#    !in-memory-cache {}
+#    cassandra-cache uses the schema located at "docs/aggregation-schema.cql"
+#    !cassandra-cache
+#    keyspace: aggregations
+#    seeds: lon3-kairosdbcassandra-a2.spotify.net:9160,lon3-kairosdbcassandra-a3.spotify.net:9160,lon3-kairosdbcassandra-a4.spotify.net:9160
+
+consumers:
+  - !kafka-consumer
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics-lon2"
+      - "metrics-lon3"
+      - "metrics-lon4"
+    config:
+      group.id: heroic
+      zookeeper.connect: lon3-kafkazookeeper-a1.lon3.spotify.net,lon3-kafkazookeeper-a2.lon3.spotify.net,lon3-kafkazookeeper-a3.lon3.spotify.net/kafka-monitoring
+      auto.offset.reset: smallest
+      auto.commit.enable: false

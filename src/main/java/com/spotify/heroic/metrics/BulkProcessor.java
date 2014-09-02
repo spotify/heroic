@@ -21,8 +21,8 @@ public class BulkProcessor<T> {
     private static final int MAX_SIZE = 10000;
     final List<T> buffer = new ArrayList<>(MAX_SIZE);
 
-    private volatile boolean failed = false;
     private volatile boolean stopped = false;
+    private volatile boolean failing = false;
 
     private final Flushable<T> flushable;
 
@@ -41,11 +41,15 @@ public class BulkProcessor<T> {
             return false;
 
         synchronized (this) {
-            while (buffer.size() >= MAX_SIZE && !stopped && !failed)
+            while (buffer.size() >= MAX_SIZE && !stopped && !failing)
                 this.wait();
 
+            if (failing)
+                throw new BufferEnqueueException(
+                        "Flushing is currently failing");
+
             if (stopped)
-                throw new BufferEnqueueException("stopped");
+                throw new BufferEnqueueException("Processor is stopped");
 
             buffer.add(write);
         }
@@ -66,12 +70,13 @@ public class BulkProcessor<T> {
 
         try {
             flushable.flushWrites(buffer);
+            this.failing = false;
+            buffer.clear();
         } catch (final Exception e) {
             log.error("Failed to flush writes", e);
-            this.stopped = true;
+            this.failing = true;
         }
 
-        buffer.clear();
         this.notifyAll();
     }
 
@@ -81,6 +86,6 @@ public class BulkProcessor<T> {
 
     public synchronized void stop() {
         this.stopped = true;
-        this.notifyAll();
+        flush();
     }
 }
