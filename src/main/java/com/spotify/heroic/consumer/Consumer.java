@@ -3,13 +3,13 @@ package com.spotify.heroic.consumer;
 import lombok.Data;
 
 import com.spotify.heroic.consumer.exceptions.WriteException;
-import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
-public interface Consumer extends Lifecycle {
+public interface Consumer extends LifeCycle {
     public interface YAML {
         public Consumer build(ConfigContext context, ConsumerReporter reporter)
                 throws ValidationException;

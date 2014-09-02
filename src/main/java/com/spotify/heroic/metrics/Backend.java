@@ -6,7 +6,7 @@ import java.util.List;
 import lombok.Data;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
@@ -18,7 +18,7 @@ import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
 import com.spotify.heroic.yaml.ValidationException;
 
-public interface Backend extends Lifecycle {
+public interface Backend extends LifeCycle {
     @Data
     public abstract class YAML {
         private static final double DEFAULT_THRESHOLD = 10.0;

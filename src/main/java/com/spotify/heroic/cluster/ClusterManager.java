@@ -8,8 +8,9 @@ import lombok.Data;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.injection.LifeCycle;
 
-public interface ClusterManager {
+public interface ClusterManager extends LifeCycle {
     @Data
     public static final class Statistics {
         private final int onlineNodes;

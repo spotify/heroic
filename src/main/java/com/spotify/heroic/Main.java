@@ -51,7 +51,7 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
-import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.Backend;
@@ -73,7 +73,7 @@ public class Main {
 
     public static Injector injector;
 
-    public static List<Lifecycle> managed = new ArrayList<Lifecycle>();
+    public static List<LifeCycle> managed = new ArrayList<LifeCycle>();
 
     public static final GuiceServletContextListener LISTENER = new GuiceServletContextListener() {
         @Override
@@ -132,7 +132,7 @@ public class Main {
                 multiBind(metadata.getBackends(), MetadataBackend.class);
                 multiBind(config.getConsumers(), Consumer.class);
 
-                bindListener(new IsSubclassOf(Lifecycle.class),
+                bindListener(new IsSubclassOf(LifeCycle.class),
                         new TypeListener() {
                     @Override
                     public <I> void hear(TypeLiteral<I> type,
@@ -140,7 +140,7 @@ public class Main {
                         encounter.register(new InjectionListener<I>() {
                             @Override
                             public void afterInjection(Object i) {
-                                managed.add((Lifecycle) i);
+                                managed.add((LifeCycle) i);
                             }
                         });
                     }
@@ -243,7 +243,7 @@ public class Main {
     private static boolean startLifecycle() {
         boolean ok = true;
 
-        for (final Lifecycle startable : Main.managed) {
+        for (final LifeCycle startable : Main.managed) {
             log.info("Starting: {}", startable);
 
             try {
@@ -261,7 +261,7 @@ public class Main {
         boolean ok = true;
 
         /* fire Stoppable handlers */
-        for (final Lifecycle stoppable : Main.managed) {
+        for (final LifeCycle stoppable : Main.managed) {
             log.info("Stopping: {}", stoppable);
 
             try {

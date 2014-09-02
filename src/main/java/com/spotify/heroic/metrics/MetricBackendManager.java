@@ -29,7 +29,7 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
@@ -58,7 +58,7 @@ import com.spotify.heroic.yaml.ValidationException;
 @Slf4j
 @RequiredArgsConstructor
 @ToString(exclude = { "scheduledExecutor" })
-public class MetricBackendManager implements Lifecycle {
+public class MetricBackendManager implements LifeCycle {
     public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;
     public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
@@ -432,9 +432,19 @@ public class MetricBackendManager implements Lifecycle {
         return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
     }
 
-    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write) {
-        return cluster.findNode(write.getSeries().getTags(),
-                NodeCapability.WRITE);
+    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
+            throws MetricFormatException {
+        if (!cluster.isReady())
+            return null;
+
+        final NodeRegistryEntry node = cluster.findNode(write.getSeries()
+                .getTags(), NodeCapability.WRITE);
+
+        if (node == null)
+            throw new MetricFormatException("Could not route: "
+                    + write.getSeries());
+
+        return node;
     }
 
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
