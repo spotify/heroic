@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc1;
+package com.spotify.heroic.http.rpc2;
 
 import java.net.URI;
 import java.util.List;
@@ -27,8 +27,8 @@ import com.spotify.heroic.model.Series;
 
 @Data
 @ToString(of = "url")
-public class Rpc1ClusterNode implements ClusterNode {
-    private final String BASE = "rpc1";
+public class Rpc2ClusterNode implements ClusterNode {
+    private final String BASE = "rpc2";
 
     private final URI url;
     private final ClientConfig config;
@@ -46,8 +46,8 @@ public class Rpc1ClusterNode implements ClusterNode {
     public Callback<MetricGroups> query(final String backendGroup,
             final Series key, final Set<Series> series, final DateRange range,
             final AggregationGroup aggregationGroup) {
-        final Rpc1QueryBody request = new Rpc1QueryBody(key, series, range,
-                aggregationGroup);
+        final Rpc2QueryBody request = new Rpc2QueryBody(backendGroup, key,
+                series, range, aggregationGroup);
         return resolve(request, MetricGroups.class, "query");
     }
 

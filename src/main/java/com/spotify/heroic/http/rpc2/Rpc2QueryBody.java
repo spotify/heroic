@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc1;
+package com.spotify.heroic.http.rpc2;
 
 import java.util.Set;
 
@@ -14,18 +14,21 @@ import com.spotify.heroic.model.Series;
  * @author udoprog
  */
 @Data
-public class Rpc1QueryBody {
+public class Rpc2QueryBody {
+    private final String backendGroup;
     private final Series key;
     private final Set<Series> series;
     private final DateRange range;
     private final AggregationGroup aggregationGroup;
 
     @JsonCreator
-    public static Rpc1QueryBody create(
+    public static Rpc2QueryBody create(
+            @JsonProperty(value = "backendGroup") String backendGroup,
             @JsonProperty(value = "key") Series key,
             @JsonProperty(value = "series") Set<Series> series,
             @JsonProperty(value = "range") DateRange range,
             @JsonProperty(value = "aggregationGroup") AggregationGroup aggregationGroup) {
-        return new Rpc1QueryBody(key, series, range, aggregationGroup);
+        return new Rpc2QueryBody(backendGroup, key, series, range,
+                aggregationGroup);
     }
 }

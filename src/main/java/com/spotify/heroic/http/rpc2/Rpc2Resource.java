@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc1;
+package com.spotify.heroic.http.rpc2;
 
 import java.util.List;
 
@@ -21,10 +21,10 @@ import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.WriteResult;
 
-@Path("/rpc1")
+@Path("/rpc2")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class Rpc1Resource {
+public class Rpc2Resource {
     @Inject
     private MetricBackendManager metrics;
 
@@ -38,10 +38,11 @@ public class Rpc1Resource {
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
-            Rpc1QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = metrics.useDefaultGroup()
-                .groupedQuery(query.getKey(), query.getSeries(),
-                        query.getRange(), query.getAggregationGroup());
+            Rpc2QueryBody query) throws Exception {
+        final Callback<MetricGroups> callback = metrics.useGroup(
+                query.getBackendGroup()).groupedQuery(query.getKey(),
+                query.getSeries(), query.getRange(),
+                query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
