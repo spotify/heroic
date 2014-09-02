@@ -56,6 +56,11 @@ public final class ConfigContext {
                                 ConfigContext.this.extend(part + "[" + index
                                         + "]"));
                     }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
                 };
             }
         };

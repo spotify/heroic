@@ -352,6 +352,11 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
                         return new BackendEntry(series, dataPoints);
                     }
+
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
                 };
             }
         };
