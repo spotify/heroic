@@ -74,7 +74,7 @@ public class MetricBackendManager implements Lifecycle {
 
         public MetricBackendManager build(ConfigContext ctx,
                 MetricBackendManagerReporter reporter)
-                throws ValidationException {
+                        throws ValidationException {
             final Map<String, List<Backend>> backends = buildBackends(ctx,
                     reporter);
             final List<Backend> defaultBackends = buildDefaultBackends(ctx,
@@ -87,8 +87,16 @@ public class MetricBackendManager implements Lifecycle {
 
         private List<Backend> buildDefaultBackends(ConfigContext ctx,
                 Map<String, List<Backend>> backends) throws ValidationException {
-            if (defaultBackends == null)
-                return null;
+            if (defaultBackends == null) {
+                final List<Backend> result = new ArrayList<>();
+
+                for (final Map.Entry<String, List<Backend>> entry : backends
+                        .entrySet()) {
+                    result.addAll(entry.getValue());
+                }
+
+                return result;
+            }
 
             final List<Backend> result = new ArrayList<>();
 
@@ -109,7 +117,7 @@ public class MetricBackendManager implements Lifecycle {
 
         private Map<String, List<Backend>> buildBackends(ConfigContext ctx,
                 MetricBackendManagerReporter reporter)
-                        throws ValidationException {
+                throws ValidationException {
             final Map<String, List<Backend>> groups = new HashMap<>();
 
             for (final ConfigContext.Entry<Backend.YAML> c : ctx.iterate(
@@ -457,7 +465,7 @@ public class MetricBackendManager implements Lifecycle {
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -476,7 +484,7 @@ public class MetricBackendManager implements Lifecycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
@@ -577,7 +585,7 @@ public class MetricBackendManager implements Lifecycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -678,7 +686,7 @@ public class MetricBackendManager implements Lifecycle {
         return findAllTimeSeries(criteria).transform(
                 new FindAndRouteTransformer(backendGroup, groupLimit,
                         groupLoadLimit, cluster, this)).register(
-                reporter.reportFindTimeSeries());
+                                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
