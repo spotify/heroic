@@ -6,13 +6,10 @@ import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.http.general.ErrorMessage;
 
-@Slf4j
 public final class HttpAsyncUtils {
     public interface Resume<T, R> {
         public R resume(T value) throws Exception;
@@ -61,7 +58,6 @@ public final class HttpAsyncUtils {
         response.setTimeoutHandler(new TimeoutHandler() {
             @Override
             public void handleTimeout(AsyncResponse asyncResponse) {
-                log.info("Request timed out");
                 callback.cancel(new CancelReason("Request timed out"));
             }
         });
@@ -69,7 +65,6 @@ public final class HttpAsyncUtils {
         response.register(new CompletionCallback() {
             @Override
             public void onComplete(Throwable throwable) {
-                log.info("Client completed");
                 callback.cancel(new CancelReason("Client completed"));
             }
         });
@@ -77,7 +72,6 @@ public final class HttpAsyncUtils {
         response.register(new ConnectionCallback() {
             @Override
             public void onDisconnect(AsyncResponse disconnected) {
-                log.info("Client disconnected");
                 callback.cancel(new CancelReason("Client disconnected"));
             }
         });

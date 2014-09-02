@@ -27,7 +27,6 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.filter.Filter;
 
-@Slf4j
 public class SeriesMigrator {
     @Inject
     private ExecutorService executor;

@@ -36,8 +36,7 @@ public class DiscoveredClusterNode {
         final Callback.Transformer<RpcMetadata, NodeMetadata> transformer = new Callback.Transformer<RpcMetadata, NodeMetadata>() {
             @Override
             public NodeMetadata transform(RpcMetadata r) throws Exception {
-                return new NodeMetadata(DiscoveredClusterNode.this,
-                        r.getVersion(), r.getId(), r.getTags(),
+                return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(),
                         r.getCapabilities());
             }
         };

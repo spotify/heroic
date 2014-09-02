@@ -13,11 +13,16 @@ import com.spotify.heroic.http.rpc2.Rpc2ClusterNode;
 
 @RequiredArgsConstructor
 public class NodeRegistryEntryTransformer implements
-Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+        Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+    private final DiscoveredClusterNode discovered;
     private final NodeRegistryEntry localEntry;
 
     @Override
     public NodeRegistryEntry transform(NodeMetadata metadata) throws Exception {
+        if (metadata.getId().equals(localEntry.getMetadata().getId())) {
+            return localEntry;
+        }
+
         final ClusterNode node = buildClusterNode(metadata);
         return new NodeRegistryEntry(node, metadata);
     }
@@ -32,13 +37,6 @@ Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
      */
     private ClusterNode buildClusterNode(NodeMetadata metadata)
             throws Exception {
-        final DiscoveredClusterNode discovered = metadata.getDiscovered();
-
-        if (metadata.getId().equals(
-                localEntry.getMetadata().getId())) {
-            return localEntry.getClusterNode();
-        }
-
         switch (metadata.getVersion()) {
         case 0:
             return new Rpc0ClusterNode(discovered.getUrl(),

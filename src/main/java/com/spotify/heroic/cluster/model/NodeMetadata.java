@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import lombok.Data;
 
-import com.spotify.heroic.cluster.DiscoveredClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
@@ -17,15 +16,10 @@ public class NodeMetadata {
         DEFAULT_CAPABILITIES.add(NodeCapability.QUERY);
     }
 
-    private final DiscoveredClusterNode discovered;
     private final int version;
     private final UUID id;
     private final Map<String, String> tags;
     private final Set<NodeCapability> capabilities;
-
-    public UUID getId() {
-        return id;
-    }
 
     /**
      * Checks if both the given tags and capability matches.
@@ -50,10 +44,10 @@ public class NodeMetadata {
      * @return <code>bool</code> indicating if the capabiltiy matches or not.
      */
     private boolean matchesCapability(NodeCapability capability) {
-        if (this.capabilities == null)
+        if (this.capabilities == null || capability == null)
             return true;
 
-        return capability != null && !capabilities.contains(capability);
+        return capabilities.contains(capability);
     }
 
     /**

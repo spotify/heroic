@@ -24,7 +24,6 @@ import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
-import com.spotify.heroic.metadata.model.AddSeries;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
@@ -93,14 +92,6 @@ public class MetadataResource {
 
         HttpAsyncUtils.handleAsyncResume(response, callback, KEYS);
     }
-
-    private static final HttpAsyncUtils.Resume<AddSeries, MetadataAddSeriesResponse> ADD_SERIES = new HttpAsyncUtils.Resume<AddSeries, MetadataAddSeriesResponse>() {
-        @Override
-        public MetadataAddSeriesResponse resume(AddSeries result)
-                throws Exception {
-            return new MetadataAddSeriesResponse(result.getId());
-        }
-    };
 
     @POST
     @Path("/series")

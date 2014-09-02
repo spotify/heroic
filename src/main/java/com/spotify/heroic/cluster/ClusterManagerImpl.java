@@ -71,8 +71,8 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     private NodeRegistryEntry buildLocalEntry(UUID localNodeId,
             Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
         final LocalClusterNode localClusterNode = new LocalClusterNode(metrics);
-        final NodeMetadata metadata = new NodeMetadata(null,
-                RpcResource.VERSION, localNodeId, localNodeTags, capabilities);
+        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
+                localNodeId, localNodeTags, capabilities);
         return new NodeRegistryEntry(localClusterNode, metadata);
 
     }
@@ -95,7 +95,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     @Override
     public Callback<Void> refresh() {
         if (discovery == ClusterDiscovery.NULL) {
-            log.info("Cluster refresh in progress, but no discovery mechanism configured");
+            log.info("No discovery mechanism configured");
             registry.set(new NodeRegistry(Arrays
                     .asList(new NodeRegistryEntry[] { localEntry }), 1));
             return new ResolvedCallback<Void>(null);
@@ -107,13 +107,14 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                    throws Exception {
+                            throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
                 for (final DiscoveredClusterNode node : nodes) {
-                    callbacks.add(node.getMetadata().transform(
-                            new NodeRegistryEntryTransformer(localEntry)));
+                    final NodeRegistryEntryTransformer transformer = new NodeRegistryEntryTransformer(
+                            node, localEntry);
+                    callbacks.add(node.getMetadata().transform(transformer));
                 }
 
                 final Callback.Reducer<NodeRegistryEntry, Void> reducer = new Callback.Reducer<NodeRegistryEntry, Void>() {
@@ -121,7 +122,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                            throws Exception {
+                                    throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }
