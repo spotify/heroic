@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.Lifecycle;
+import com.spotify.heroic.metadata.model.DeleteTimeSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -30,6 +31,9 @@ public interface MetadataBackend extends Lifecycle {
             throws MetadataQueryException;
 
     public Callback<FindTimeSeries> findTimeSeries(Filter filter)
+            throws MetadataQueryException;
+
+    public Callback<DeleteTimeSeries> deleteTimeSeries(Filter filter)
             throws MetadataQueryException;
 
     public Callback<FindKeys> findKeys(Filter filter)

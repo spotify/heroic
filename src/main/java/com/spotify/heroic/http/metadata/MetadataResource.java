@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -15,10 +16,11 @@ import javax.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataQueryException;
+import com.spotify.heroic.metadata.model.DeleteTimeSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -32,6 +34,13 @@ import com.spotify.heroic.model.filter.Filter;
 public class MetadataResource {
     @Inject
     private MetadataBackendManager metadata;
+
+    private static final HttpAsyncUtils.Resume<FindTags, MetadataTagsResponse> TAGS = new HttpAsyncUtils.Resume<FindTags, MetadataTagsResponse>() {
+        @Override
+        public MetadataTagsResponse resume(FindTags result) throws Exception {
+            return new MetadataTagsResponse(result.getTags(), result.getSize());
+        }
+    };
 
     @POST
     @Path("/tags")
@@ -48,20 +57,17 @@ public class MetadataResource {
 
         log.info("/tags: {} {}", query, filter);
 
-        final Callback.Transformer<FindTags, MetadataTagsResponse> transformer = new Callback.Transformer<FindTags, MetadataTagsResponse>() {
-            @Override
-            public MetadataTagsResponse transform(FindTags result)
-                    throws Exception {
-                return new MetadataTagsResponse(result.getTags(),
-                        result.getSize());
-            }
-        };
+        final Callback<FindTags> callback = metadata.findTags(filter);
 
-        final Callback<MetadataTagsResponse> callback = metadata.findTags(
-                filter).transform(transformer);
-
-        metadataResult(response, callback);
+        HttpAsyncUtils.handleAsyncResume(response, callback, TAGS);
     }
+
+    private static final HttpAsyncUtils.Resume<FindKeys, MetadataKeysResponse> KEYS = new HttpAsyncUtils.Resume<FindKeys, MetadataKeysResponse>() {
+        @Override
+        public MetadataKeysResponse resume(FindKeys result) throws Exception {
+            return new MetadataKeysResponse(result.getKeys(), result.getSize());
+        }
+    };
 
     @POST
     @Path("/keys")
@@ -78,20 +84,19 @@ public class MetadataResource {
 
         log.info("/keys: {} {}", query, filter);
 
-        final Callback.Transformer<FindKeys, MetadataKeysResponse> transformer = new Callback.Transformer<FindKeys, MetadataKeysResponse>() {
-            @Override
-            public MetadataKeysResponse transform(FindKeys result)
-                    throws Exception {
-                return new MetadataKeysResponse(result.getKeys(),
-                        result.getSize());
-            }
-        };
+        final Callback<FindKeys> callback = metadata.findKeys(filter);
 
-        final Callback<MetadataKeysResponse> callback = metadata.findKeys(
-                filter).transform(transformer);
-
-        metadataResult(response, callback);
+        HttpAsyncUtils.handleAsyncResume(response, callback, KEYS);
     }
+
+    private static final HttpAsyncUtils.Resume<FindTimeSeries, MetadataSeriesResponse> GET_TIMESERIES = new HttpAsyncUtils.Resume<FindTimeSeries, MetadataSeriesResponse>() {
+        @Override
+        public MetadataSeriesResponse resume(FindTimeSeries result)
+                throws Exception {
+            return new MetadataSeriesResponse(new ArrayList<Series>(
+                    result.getSeries()), result.getSize());
+        }
+    };
 
     @POST
     @Path("/timeseries")
@@ -112,44 +117,43 @@ public class MetadataResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final Callback.Transformer<FindTimeSeries, MetadataSeriesResponse> transformer = new Callback.Transformer<FindTimeSeries, MetadataSeriesResponse>() {
-            @Override
-            public MetadataSeriesResponse transform(FindTimeSeries result)
-                    throws Exception {
-                return new MetadataSeriesResponse(new ArrayList<Series>(
-                        result.getSeries()), result.getSize());
-            }
-        };
+        final Callback<FindTimeSeries> callback = metadata
+                .findTimeSeries(filter);
 
-        final Callback<MetadataSeriesResponse> callback = metadata
-                .findTimeSeries(filter).transform(transformer);
-
-        metadataResult(response, callback);
+        HttpAsyncUtils.handleAsyncResume(response, callback, GET_TIMESERIES);
     }
 
-    private <T> void metadataResult(final AsyncResponse response,
-            Callback<T> callback) {
-        callback.register(new Callback.Handle<T>() {
-            @Override
-            public void cancelled(CancelReason reason) throws Exception {
-                response.resume(Response
-                        .status(Response.Status.GATEWAY_TIMEOUT)
-                        .entity(new ErrorMessage("Request cancelled: "
-                                + reason)).build());
-            }
+    private static final HttpAsyncUtils.Resume<DeleteTimeSeries, MetadataDeleteSeriesResponse> DELETE_TIMESERIES = new HttpAsyncUtils.Resume<DeleteTimeSeries, MetadataDeleteSeriesResponse>() {
+        @Override
+        public MetadataDeleteSeriesResponse resume(DeleteTimeSeries result)
+                throws Exception {
+            return new MetadataDeleteSeriesResponse(result.getSuccessful(),
+                    result.getFailed());
+        }
+    };
 
-            @Override
-            public void failed(Exception e) throws Exception {
-                response.resume(Response
-                        .status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(e).build());
-            }
+    @DELETE
+    @Path("/timeseries")
+    public void deleteTimeSeries(@Suspended final AsyncResponse response,
+            MetadataQueryBody query) throws MetadataQueryException {
+        if (!metadata.isReady()) {
+            response.resume(Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Cache is not ready")).build());
+            return;
+        }
 
-            @Override
-            public void resolved(T result) throws Exception {
-                response.resume(Response.status(Response.Status.OK)
-                        .entity(result).build());
-            }
-        });
+        final Filter filter = query.makeFilter();
+
+        if (filter == null)
+            throw new MetadataQueryException(
+                    "Filter must not be empty when querying");
+
+        log.info("/timeseries: {} {}", query, filter);
+
+        final Callback<DeleteTimeSeries> callback = metadata
+                .deleteTimeSeries(filter);
+
+        HttpAsyncUtils.handleAsyncResume(response, callback, DELETE_TIMESERIES);
     }
 }

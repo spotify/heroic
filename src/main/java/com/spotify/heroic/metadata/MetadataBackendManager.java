@@ -15,6 +15,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
+import com.spotify.heroic.metadata.model.DeleteTimeSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -105,30 +106,65 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
-                    @Override
-                    public FindTimeSeries resolved(
-                            Collection<FindTimeSeries> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
-                            throws Exception {
-                        return mergeFindTimeSeries(results);
-                    }
+        final Callback.Reducer<FindTimeSeries, FindTimeSeries> reducer = new Callback.Reducer<FindTimeSeries, FindTimeSeries>() {
+            @Override
+            public FindTimeSeries resolved(Collection<FindTimeSeries> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
 
-                    private FindTimeSeries mergeFindTimeSeries(
-                            Collection<FindTimeSeries> results) {
-                        final Set<Series> series = new HashSet<Series>();
-                        int size = 0;
+                if (!errors.isEmpty() || !cancelled.isEmpty())
+                    throw new Exception("Query failed");
 
-                        for (final FindTimeSeries findTimeSeries : results) {
-                            series.addAll(findTimeSeries.getSeries());
-                            size += findTimeSeries.getSize();
-                        }
+                final Set<Series> series = new HashSet<Series>();
+                int size = 0;
 
-                        return new FindTimeSeries(series, size);
-                    }
-                }).register(reporter.reportFindTimeSeries());
+                for (final FindTimeSeries findTimeSeries : results) {
+                    series.addAll(findTimeSeries.getSeries());
+                    size += findTimeSeries.getSize();
+                }
+
+                return new FindTimeSeries(series, size);
+            }
+        };
+
+        return ConcurrentCallback.newReduce(callbacks, reducer).register(
+                reporter.reportFindTimeSeries());
+    }
+
+    public Callback<DeleteTimeSeries> deleteTimeSeries(final Filter filter) {
+        final List<Callback<DeleteTimeSeries>> callbacks = new ArrayList<Callback<DeleteTimeSeries>>();
+
+        for (final MetadataBackend backend : backends) {
+            try {
+                callbacks.add(backend.deleteTimeSeries(filter));
+            } catch (final MetadataQueryException e) {
+                log.error("Failed to query backend", e);
+            }
+        }
+
+        final Callback.Reducer<DeleteTimeSeries, DeleteTimeSeries> reducer = new Callback.Reducer<DeleteTimeSeries, DeleteTimeSeries>() {
+            @Override
+            public DeleteTimeSeries resolved(
+                    Collection<DeleteTimeSeries> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled) throws Exception {
+
+                if (!errors.isEmpty() || !cancelled.isEmpty())
+                    throw new Exception("Delete failed");
+
+                int successful = 0;
+                int failed = 0;
+
+                for (final DeleteTimeSeries result : results) {
+                    successful += result.getSuccessful();
+                    failed += result.getFailed();
+                }
+
+                return new DeleteTimeSeries(successful, failed);
+            }
+        };
+
+        return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
     public Callback<FindKeys> findKeys(final Filter filter) {

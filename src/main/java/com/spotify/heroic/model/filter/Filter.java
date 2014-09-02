@@ -49,6 +49,36 @@ public interface Filter {
         }
     };
 
+    public static FilterDeserializer<StartsWithFilter> STARTS_WITH = new FilterDeserializer<StartsWithFilter>() {
+        @Override
+        public StartsWithFilter deserialize(JsonParser p,
+                DeserializationContext c) throws IOException,
+                JsonProcessingException {
+            final String tag;
+
+            {
+                if (p.nextToken() != JsonToken.VALUE_STRING)
+                    throw c.mappingException("Expected string (tag)");
+
+                tag = p.readValueAs(String.class);
+            }
+
+            final String value;
+
+            {
+                if (p.nextToken() != JsonToken.VALUE_STRING)
+                    throw c.mappingException("Expected string (value)");
+
+                value = p.readValueAs(String.class);
+            }
+
+            if (p.nextToken() != JsonToken.END_ARRAY)
+                throw c.mappingException("Expected end of array");
+
+            return new StartsWithFilter(tag, value);
+        }
+    };
+
     public static FilterDeserializer<HasTagFilter> HAS_TAG = new FilterDeserializer<HasTagFilter>() {
         @Override
         public HasTagFilter deserialize(JsonParser p, DeserializationContext c)
@@ -122,6 +152,8 @@ public interface Filter {
 
         static {
             implementations.put(MatchTagFilter.OPERATOR, MATCH_TAG);
+            implementations.put(StartsWithFilter.OPERATOR,
+                    STARTS_WITH);
             implementations.put(HasTagFilter.OPERATOR, HAS_TAG);
             implementations.put(MatchKeyFilter.OPERATOR, MATCH_KEY);
             implementations.put(AndFilter.OPERATOR, AND);

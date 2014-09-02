@@ -43,11 +43,13 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataQueryException;
+import com.spotify.heroic.metadata.elasticsearch.async.DeleteTimeSeriesResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindKeysResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindTagKeysResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindTagsTransformer;
 import com.spotify.heroic.metadata.elasticsearch.async.FindTimeSeriesResolver;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
+import com.spotify.heroic.metadata.model.DeleteTimeSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metadata.model.FindTimeSeries;
@@ -169,7 +171,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return;
 
         final Builder builder = BulkProcessor.builder(client, new Listener() {
-
             @Override
             public void beforeBulk(long executionId, BulkRequest request) {
             }
@@ -188,17 +189,21 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                     BulkResponse response) {
                 reporter.reportWriteBatchDuration(response.getTookInMillis());
                 final int all = response.getItems().length;
+
                 if (!response.hasFailures()) {
                     reporter.reportWriteSuccess(all);
                     return;
                 }
+
                 final BulkItemResponse[] responses = response.getItems();
                 int failures = 0;
+
                 for (final BulkItemResponse r : responses) {
                     if (r.isFailed()) {
                         failures++;
                     }
                 }
+
                 reporter.reportWriteFailure(failures);
                 reporter.reportWriteSuccess(all - failures);
             }
@@ -311,8 +316,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindTags>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
         return findTagKeys(filter).transform(
                 new FindTagsTransformer(pools.read(), client, index, type,
@@ -325,12 +329,23 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindTimeSeries>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindTimeSeriesResolver(client, index, type, filter))
                 .register(reporter.reportFindTimeSeries());
+    }
+
+    @Override
+    public Callback<DeleteTimeSeries> deleteTimeSeries(final Filter filter)
+            throws MetadataQueryException {
+        final Client client = client();
+
+        if (client == null)
+            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
+
+        return ConcurrentCallback.newResolve(pools.write(),
+                new DeleteTimeSeriesResolver(client, index, type, filter));
     }
 
     public Callback<FindTagKeys> findTagKeys(final Filter filter)
@@ -412,14 +427,25 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return client() != null && bulkProcessorRef.get() != null;
     }
 
+    public static Series toTimeSerie(Map<String, Object> source) {
+        final Map<String, String> tags = extractTags(source);
+        final String key = (String) source.get("key");
+        return new Series(key, tags);
+    }
+
     public static Map<String, Object> fromTimeSerie(Series series) {
         final Map<String, Object> source = new HashMap<String, Object>();
+        source.put("_id", idFromTimeSerie(series));
         source.put("key", series.getKey());
         source.put("tags", buildTags(series.getTags()));
         return source;
     }
 
-    public static List<Map<String, String>> buildTags(Map<String, String> map) {
+    private static String idFromTimeSerie(Series series) {
+        return Integer.toHexString(series.hashCode());
+    }
+
+    private static List<Map<String, String>> buildTags(Map<String, String> map) {
         final List<Map<String, String>> tags = new ArrayList<Map<String, String>>();
 
         for (final Map.Entry<String, String> entry : map.entrySet()) {
@@ -432,13 +458,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return tags;
     }
 
-    public static Series toTimeSerie(Map<String, Object> source) {
-        final Map<String, String> tags = extractTags(source);
-        final String key = (String) source.get("key");
-        return new Series(key, tags);
-    }
-
-    public static Map<String, String> extractTags(
+    private static Map<String, String> extractTags(
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
