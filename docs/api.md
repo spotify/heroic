@@ -34,12 +34,35 @@ Internal RPC endpoint to query for a nodes metadata.
 Used for writing data to Heroic.
 Expects a [WriteMetrics](#writemetrics) object.
 
-+ Response 200 (application/json) [WriteMetricsResponse](#WriteMetricsResponse)
++ Response 200 (application/json) [WriteMetricsResponse](#writemetricsresponse)
++ Response 5xx (application/json) [ErrorMessage](#errormessage)
 
 ###### Example CURL
 
 ```sh
 curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"series": {"key": "heroic-test", "tags": {"site": "lon"}}, "data": [[1409775940000, 42.0], [1409775910000, 20.2]]}'
+```
+
+# Common Types
+
+The following are structure documentation for common (shared) types in this documentation.
+
+### ErrorMessage
+
+Contains a human readable error that can be returned by the API.
+
+Is typically returned by ```4xx``` and ```5xx``` HTTP status code family responses.
+
+###### Structure
+```yml
+ErrorMessage:
+  # A message describing the error.
+  message: required String
+```
+
+###### Example
+```json
+{"message": "Something gone doofed!"}
 ```
 
 # Types
@@ -72,6 +95,18 @@ WriteMetrics:
 }
 ```
 
+
+### WriteMetricsResponse
+
+Indicates if a write was successfully queued or not.
+
+###### Structure
+```yml
+WriteMetricsResponse:
+  # true if write was successful, false otherwise.
+  ok: required Boolean
+```
+
 ### Series
 
 The identity of a time series.
@@ -90,28 +125,6 @@ Series:
 
 ```json
 {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}}
-```
-
-### WriteMetricsResponse
-
-Indicates if a write was successful or not.
-
-###### Structure
-```yml
-WriteMetricsResponse:
-  # true if write was successful, false otherwise.
-  ok: required Boolean
-```
-
-### ErrorMessage
-
-A human readable error that can be returned by the api.
-
-###### Structure
-```yml
-ErrorMessage:
-  # A message describing the error.
-  message: required String
 ```
 
 ### StatusResponse
