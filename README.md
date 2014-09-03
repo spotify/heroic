@@ -3,7 +3,9 @@
 Heroic is a service to make a simplified and safe API on top of metrics and
 event databases.
 
-[For API documentation, go to docs/api.md](docs/api.md)
+###### Documentation
+
++ [API documentation](docs/api.md)
 
 # Usage
 
