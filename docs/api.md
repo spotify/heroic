@@ -16,7 +16,7 @@ service is not available for requests right now.
 + Response 200 (application/json) [TODO](#statusresponse)
 + Response 503 (application/json) [TODO](#statusresponse)
 
-### POST /metrics [MetricsRequest](#metricsrequest)
+### POST /query/metrics (alias: /metrics) [MetricsRequest](#metricsrequest)
 
 The simplest query method, expects a [MetricsRequest](#metricsrequest), and will return a [MetricsResponse](#metricsresponse) object when successful.
 
@@ -27,9 +27,75 @@ The simplest query method, expects a [MetricsRequest](#metricsrequest), and will
 
 Internal RPC endpoint to query for a nodes metadata.
 
+# Writing Metrics
+
+### POST /write/metrics [WriteMetrics](#writemetrics)
+
+Used for writing data to Heroic.
+Expects a [WriteMetrics](#writemetrics) object.
+
++ Response 200 (application/json) [WriteMetricsResponse](#WriteMetricsResponse)
+
 # Types
 
 The following are structure documentation for all available types in the API.
+
+### WriteMetrics
+
+A request to write data to a single time series.
+
+###### Structure
+
+See also;
+
++ [Series](#series)
++ [DataPoint](#datapoint)
+
+```yml
+WriteMetrics:
+  series: required Series
+  data: [DataPoint, ..]
+```
+
+###### Example
+
+```json
+{
+  "series": {"key": "foo", "tags: {"site": "lon", "host": "www.example.com"}},
+  "data": [[1300000000000, 42.0], [1300001000000, 84.0]]
+}
+```
+
+### Series
+
+The identity of a time series.
+
+###### Structure
+
+```yml
+Series:
+  # The namespace of a time series.
+  key: required String
+  # The tags of a time series.
+  tags: required {String: String, ..}
+```
+
+###### Example
+
+```json
+{"key": "foo", "tags: {"site": "lon", "host": "www.example.com"}}
+```
+
+### WriteMetricsResponse
+
+Indicates if a write was successful or not.
+
+###### Structure
+```yml
+WriteMetricsResponse:
+  # true if write was successful, false otherwise.
+  ok: required Boolean
+```
 
 ### ErrorMessage
 
