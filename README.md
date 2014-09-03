@@ -6,7 +6,7 @@ event databases.
 ###### Documentation
 
 + [API](docs/api.md)
-+ [API Structure (or: how to read the API documentation)](docs/api-structure.md)
++ [API Structure (how to read the API documentation)](docs/api-structure-docs.md)
 
 # Usage
 
@@ -17,20 +17,6 @@ Build the project.
 ```
 
 # Database Setup
-
-## Setting Up ElasticSearch
-
-Make sure there is no pre-existing metadata index.
-
-```sh
-curl -X DELETE http://<url>/heroic/metadata
-```
-
-Setup new mapping.
-
-```sh
-curl -d @docs/metadata-mapping.json http://<url>/heroic/metadata/_mapping
-```
 
 ## Preparing Cassandra
 
