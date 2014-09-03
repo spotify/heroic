@@ -36,6 +36,12 @@ Expects a [WriteMetrics](#writemetrics) object.
 
 + Response 200 (application/json) [WriteMetricsResponse](#WriteMetricsResponse)
 
+###### Example CURL
+
+```sh
+curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"series": {"key": "heroic-test", "tags": {"site": "lon"}}, "data": [[1409775940000, 42.0], [1409775910000, 20.2]]}'
+```
+
 # Types
 
 The following are structure documentation for all available types in the API.
@@ -83,7 +89,7 @@ Series:
 ###### Example
 
 ```json
-{"key": "foo", "tags: {"site": "lon", "host": "www.example.com"}}
+{"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}}
 ```
 
 ### WriteMetricsResponse
