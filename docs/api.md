@@ -61,7 +61,7 @@ WriteMetrics:
 
 ```json
 {
-  "series": {"key": "foo", "tags: {"site": "lon", "host": "www.example.com"}},
+  "series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}},
   "data": [[1300000000000, 42.0], [1300001000000, 84.0]]
 }
 ```
