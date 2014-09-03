@@ -13,19 +13,17 @@ Query for the status of a heroic instance.
 The status code <code>503</code> is used to indicate to load balancers that a
 service is not available for requests right now.
 
-+ Response 200 (application/json) [TODO](#statusresponse)
-+ Response 503 (application/json) [TODO](#statusresponse)
++ Response ```200``` (application/json) [StatusResponse](#statusresponse)
++ Response ```503``` (application/json) [StatusResponse](#statusresponse)
+ + Used to indicate to load-balancers that this node is unsuitable to receive requests.
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
 
 ### POST /query/metrics (alias: /metrics) [MetricsRequest](#metricsrequest)
 
 The simplest query method, expects a [MetricsRequest](#metricsrequest), and will return a [MetricsResponse](#metricsresponse) object when successful.
 
-+ Response 200 (application/json) [MetricsResponse](#metricsresponse)
-+ Response 500 (application/json) [ErrorMessage](#errormessage)
-
-### GET /rpc/metadata
-
-Internal RPC endpoint to query for a nodes metadata.
++ Response ```200``` (application/json) [MetricsResponse](#metricsresponse)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
 
 # Writing Metrics
 
@@ -34,8 +32,26 @@ Internal RPC endpoint to query for a nodes metadata.
 Used for writing data to Heroic.
 Expects a [WriteMetrics](#writemetrics) object.
 
-+ Response 200 (application/json) [WriteMetricsResponse](#writemetricsresponse)
-+ Response 5xx (application/json) [ErrorMessage](#errormessage)
++ Response ```200``` (application/json) [WriteMetricsResponse](#writemetricsresponse)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
+
+# RPC Endpoints
+
+These endpoints are used internally by the cluster.
+
+All other RPC endpoints except ```/rpc/metadata``` are versioned.
+The versioned endpoints differ, but can all be found under ```/rpc<version>``` where ```version``` is a nodes provided version.
+
+### GET /rpc/metadata
+
+Query a node for its metadata.
+
+The metadata is used to determine which _shard_ a node belongs to through its ```tags``` attributes.
+It is also used to determine which ```capabilities``` a node has which changes which type of requests it can receive.
+Finally it provides a ```version``` which allows other node to determine how this node should be communicated with, and which features it support.
+
++ Response ```200``` (application/json) [RpcMetadata](#rpcmetadata)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
 
 ###### Example CURL
 
@@ -63,6 +79,35 @@ ErrorMessage:
 ###### Example
 ```json
 {"message": "Something gone doofed!"}
+```
+
+# RPC Types
+
+### RpcMetadata
+
+This object describes how other nodes _can_ communicate with this node.
+
+The following are the available capabilities and their corresponding meaning.
+
++ ```QUERY``` - Means that the node can receive queries.
++ ```WRITE``` - Means that the node can receive writes.
+
+###### Structure
+
+```yml
+NodeCapability: "QUERY" | "WRITE"
+
+RpcMetadata:
+  version: required Number
+  id: required String
+  tags: required {String: String, ..}
+  capabilities: required [NodeCapability, ..]
+```
+
+###### Example
+
+```json
+{"version": 2, "id": "431f3900-33be-11e4-8c21-0800200c9a66", "tags": {"site": "lon"}, "capabilities": ["QUERY"]}
 ```
 
 # Types
