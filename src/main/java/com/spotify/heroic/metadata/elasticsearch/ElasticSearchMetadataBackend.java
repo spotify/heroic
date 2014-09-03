@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
@@ -27,6 +28,7 @@ import org.elasticsearch.action.bulk.BulkProcessor.Listener;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.AdminClient;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
@@ -244,10 +246,22 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         final Client client = connection.client();
 
-        final IndicesAdminClient indices = client.admin().indices();
+        final AdminClient admin = client.admin();
+
+        if (indexExists(admin))
+            return;
+
+        final IndicesAdminClient indices = admin.indices();
 
         createIndex(indices);
         createMapping(indices);
+    }
+
+    private boolean indexExists(AdminClient admin) {
+        final ClusterStateResponse response = admin.cluster().prepareState()
+                .get();
+
+        return response.getState().metaData().hasIndex(index);
     }
 
     private void createMapping(final IndicesAdminClient indices)
