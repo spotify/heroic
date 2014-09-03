@@ -3,6 +3,8 @@ package com.spotify.heroic.metrics;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.spotify.heroic.metrics.error.BufferEnqueueException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

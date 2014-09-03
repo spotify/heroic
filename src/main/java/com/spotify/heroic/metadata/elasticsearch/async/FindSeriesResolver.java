@@ -74,8 +74,6 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
                 final Series s = ElasticSearchMetadataBackend.toSeries(hit
                         .getSource());
 
-                log.info("Hey: {}", s);
-
                 series.add(s);
             }
 

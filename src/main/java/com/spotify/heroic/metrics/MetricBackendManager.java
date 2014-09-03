@@ -37,6 +37,7 @@ import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
+import com.spotify.heroic.metrics.error.BufferEnqueueException;
 import com.spotify.heroic.metrics.model.BufferedWriteMetric;
 import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
