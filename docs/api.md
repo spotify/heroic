@@ -35,6 +35,12 @@ Expects a [WriteMetrics](#writemetrics) object.
 + Response ```200``` (application/json) [WriteMetricsResponse](#writemetricsresponse)
 + Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
 
+###### Example CURL
+
+```sh
+curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"series": {"key": "heroic-test", "tags": {"site": "lon"}}, "data": [[1409775940000, 42.0], [1409775910000, 20.2]]}'
+```
+
 # RPC Endpoints
 
 These endpoints are used internally by the cluster.
@@ -52,12 +58,6 @@ Finally it provides a ```version``` which allows other node to determine how thi
 
 + Response ```200``` (application/json) [RpcMetadata](#rpcmetadata)
 + Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
-
-###### Example CURL
-
-```sh
-curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"series": {"key": "heroic-test", "tags": {"site": "lon"}}, "data": [[1409775940000, 42.0], [1409775910000, 20.2]]}'
-```
 
 # Common Types
 
