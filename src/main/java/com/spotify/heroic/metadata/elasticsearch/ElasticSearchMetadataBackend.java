@@ -453,7 +453,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return client() != null && bulkProcessor.get() != null;
     }
 
-    public static Series toTimeSerie(Map<String, Object> source) {
+    public static Series toSeries(Map<String, Object> source) {
         final Map<String, String> tags = extractTags(source);
         final String key = (String) source.get("key");
         return new Series(key, tags);

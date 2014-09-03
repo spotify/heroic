@@ -23,6 +23,7 @@ import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterManagerImpl;
 import com.spotify.heroic.cluster.discovery.StaticListDiscovery;
+import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -80,8 +81,13 @@ public class HeroicConfig {
                 MetricBackendManager.DEFAULT_GROUP_LOAD_LIMIT,
                 MetricBackendManager.DEFAULT_FLUSHING_INTERVAL);
 
+        final UUID id = UUID.randomUUID();
+
+        final NodeRegistryEntry localEntry = ClusterManagerImpl
+                .buildLocalEntry(metrics, id, null, null);
+
         final ClusterManager cluster = new ClusterManagerImpl(
-                ClusterDiscovery.NULL, metrics, UUID.randomUUID(), null, null);
+                ClusterDiscovery.NULL, id, null, null, localEntry);
 
         final MetadataBackendManager metadata = new MetadataBackendManager(
                 reporter.newMetadataBackendManager(),

@@ -36,46 +36,31 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
 
         public ClusterManagerImpl build(ConfigContext context,
                 MetricBackendManager metrics) throws ValidationException {
-            final ClusterDiscovery discovery;
+            final UUID id = UUID.randomUUID();
 
-            if (this.discovery == null) {
-                discovery = ClusterDiscovery.NULL;
-            } else {
-                discovery = this.discovery.build(context.extend("discovery"));
-            }
+            final ClusterDiscovery discovery = buildDiscovery(context);
 
-            return new ClusterManagerImpl(discovery, metrics,
-                    UUID.randomUUID(), tags, capabilities);
+            final NodeRegistryEntry localEntry = ClusterManagerImpl
+                    .buildLocalEntry(metrics, id, tags, capabilities);
+
+            return new ClusterManagerImpl(discovery, id, tags, capabilities,
+                    localEntry);
+        }
+
+        private ClusterDiscovery buildDiscovery(ConfigContext context)
+                throws ValidationException {
+            if (discovery == null)
+                return ClusterDiscovery.NULL;
+
+            return discovery.build(context.extend("discovery"));
         }
     }
 
     private final ClusterDiscovery discovery;
-    private final MetricBackendManager metrics;
     private final UUID localNodeId;
     private final Map<String, String> localNodeTags;
     private final Set<NodeCapability> capabilities;
     private final NodeRegistryEntry localEntry;
-
-    public ClusterManagerImpl(ClusterDiscovery discovery,
-            MetricBackendManager metrics, UUID localNodeId,
-            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
-        this.discovery = discovery;
-        this.metrics = metrics;
-        this.localNodeId = localNodeId;
-        this.localNodeTags = localNodeTags;
-        this.capabilities = capabilities;
-        this.localEntry = buildLocalEntry(localNodeId, localNodeTags,
-                capabilities);
-    }
-
-    private NodeRegistryEntry buildLocalEntry(UUID localNodeId,
-            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
-        final LocalClusterNode localClusterNode = new LocalClusterNode(metrics);
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
-                localNodeId, localNodeTags, capabilities);
-        return new NodeRegistryEntry(localClusterNode, metadata);
-
-    }
 
     private final AtomicReference<NodeRegistry> registry = new AtomicReference<>(
             null);
@@ -107,7 +92,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                            throws Exception {
+                    throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
@@ -122,7 +107,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                                    throws Exception {
+                            throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }
@@ -177,5 +162,14 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
             return false;
 
         return registry.getOnlineNodes() > 0;
+    }
+
+    public static NodeRegistryEntry buildLocalEntry(
+            MetricBackendManager metrics, UUID localNodeId,
+            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
+        final LocalClusterNode localClusterNode = new LocalClusterNode(metrics);
+        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
+                localNodeId, localNodeTags, capabilities);
+        return new NodeRegistryEntry(localClusterNode, metadata);
     }
 }

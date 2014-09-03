@@ -24,8 +24,7 @@ import com.spotify.heroic.model.filter.Filter;
 
 @Slf4j
 @RequiredArgsConstructor
-public class FindSeriesResolver implements
-Callback.Resolver<FindSeries> {
+public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
     private final Client client;
     private final String index;
     private final String type;
@@ -72,8 +71,12 @@ Callback.Resolver<FindSeries> {
                 if (size % 100000 == 0)
                     log.info("{}: Got {} time series", session, size);
 
-                series.add(ElasticSearchMetadataBackend.toTimeSerie(hit
-                        .getSource()));
+                final Series s = ElasticSearchMetadataBackend.toSeries(hit
+                        .getSource());
+
+                log.info("Hey: {}", s);
+
+                series.add(s);
             }
 
             if (!any) {

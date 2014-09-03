@@ -108,6 +108,9 @@ public class MetadataBackendManager {
             public FindSeries resolved(Collection<FindSeries> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
+                for (final Exception e : errors) {
+                    log.error("Query failed", e);
+                }
 
                 if (!errors.isEmpty() || !cancelled.isEmpty())
                     throw new Exception("Query failed");
