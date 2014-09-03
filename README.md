@@ -5,7 +5,8 @@ event databases.
 
 ###### Documentation
 
-+ [API documentation](docs/api.md)
++ [API](docs/api.md)
++ [API Structure (or: how to read the API documentation)](docs/api-structure.md)
 
 # Usage
 
