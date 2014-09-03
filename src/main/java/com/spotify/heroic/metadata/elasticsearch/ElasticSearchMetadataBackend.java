@@ -2,7 +2,6 @@ package com.spotify.heroic.metadata.elasticsearch;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +37,7 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
@@ -97,9 +97,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         @Override
         public MetadataBackend build(ConfigContext ctx,
                 MetadataBackendReporter reporter) throws ValidationException {
-            final String[] seeds = this.seeds.toArray(new String[this.seeds
-                    .size()]);
-
             final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
                     .readThreads(readThreads).readQueueSize(readQueueSize)
                     .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
@@ -114,10 +111,40 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                         "Failed to create mapping", e);
             }
 
+            final List<InetSocketTransportAddress> seeds = buildSeeds(ctx);
+
             return new ElasticSearchMetadataBackend(pools, reporter, seeds,
                     mapping, clusterName, index, type, nodeClient,
                     writeBulkActions, writeBulkFlushInterval,
                     concurrentBulkRequests);
+        }
+
+        private List<InetSocketTransportAddress> buildSeeds(ConfigContext ctx)
+                throws ValidationException {
+            final List<InetSocketTransportAddress> seeds = new ArrayList<>();
+
+            for (final ConfigContext.Entry<String> entry : ctx.iterate(
+                    this.seeds, "seeds")) {
+                try {
+                    seeds.add(parseInetSocketTransportAddress(entry.getValue()));
+                } catch (final Exception e) {
+                    throw new ValidationException(entry.getContext(),
+                            "Invalid seed address", e);
+                }
+            }
+
+            return seeds;
+        }
+
+        private InetSocketTransportAddress parseInetSocketTransportAddress(
+                final String seed) {
+            if (seed.contains(":")) {
+                final String parts[] = seed.split(":");
+                return new InetSocketTransportAddress(parts[0],
+                        Integer.valueOf(parts[1]));
+            }
+
+            return new InetSocketTransportAddress(seed, 9300);
         }
 
         private XContentBuilder buildMapping(String type) throws IOException {
@@ -165,7 +192,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     private final ReadWriteThreadPools pools;
     private final MetadataBackendReporter reporter;
-    private final String[] seeds;
+    private final List<InetSocketTransportAddress> seeds;
     private final XContentBuilder mapping;
     private final String clusterName;
     private final String index;
@@ -219,24 +246,32 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         final IndicesAdminClient indices = client.admin().indices();
 
-        {
-            final CreateIndexResponse response = indices.prepareCreate(index)
-                    .get();
+        createIndex(indices);
+        createMapping(indices);
+    }
 
-            if (!response.isAcknowledged())
-                throw new Exception("Failed to setup index: "
-                        + response.toString());
+    private void createMapping(final IndicesAdminClient indices)
+            throws Exception {
+        final PutMappingResponse response = indices.preparePutMapping(index)
+                .setType(type).setSource(mapping).get();
+
+        if (!response.isAcknowledged())
+            throw new Exception("Failed to setup mapping: "
+                    + response.toString());
+    }
+
+    private void createIndex(final IndicesAdminClient indices) throws Exception {
+        final CreateIndexResponse response;
+
+        try {
+            response = indices.prepareCreate(index).get();
+        } catch (final IndexAlreadyExistsException e) {
+            log.info("Index already exists: {}", index);
+            return;
         }
 
-        {
-            final PutMappingResponse response = indices
-                    .preparePutMapping(index).setType(type).setSource(mapping)
-                    .get();
-
-            if (!response.isAcknowledged())
-                throw new Exception("Failed to setup mapping: "
-                        + response.toString());
-        }
+        if (!response.isAcknowledged())
+            throw new Exception("Failed to setup index: " + response.toString());
     }
 
     private synchronized Connection initConnection()
@@ -342,10 +377,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     private synchronized Connection setupNodeClient()
             throws UnknownHostException {
-        final Settings settings = ImmutableSettings.builder()
+        final Settings settings = ImmutableSettings
+                .builder()
                 .put("node.name", InetAddress.getLocalHost().getHostName())
                 .put("discovery.zen.ping.multicast.enabled", false)
-                .putArray("discovery.zen.ping.unicast.hosts", seeds).build();
+                .putArray("discovery.zen.ping.unicast.hosts",
+                        seedsToDiscovery()).build();
         final Node node = NodeBuilder.nodeBuilder().settings(settings)
                 .client(true).clusterName(clusterName).node();
         final Client client = node.client();
@@ -363,23 +400,25 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         };
     }
 
+    private String[] seedsToDiscovery() {
+        final List<String> seeds = new ArrayList<>();
+
+        for (final InetSocketTransportAddress seed : this.seeds) {
+            seeds.add(String.format("%s:%d", seed.address().getHostString(),
+                    seed.address().getPort()));
+        }
+
+        return seeds.toArray(new String[0]);
+    }
+
     private synchronized Connection setupTransportClient() {
         final Settings settings = ImmutableSettings.builder()
                 .put("cluster.name", clusterName).build();
 
         final TransportClient client = new TransportClient(settings);
 
-        for (final String seed : seeds) {
-            final InetSocketTransportAddress transportAddress;
-
-            try {
-                transportAddress = parseInetSocketTransportAddress(seed);
-            } catch (final Exception e) {
-                log.error("Invalid seed address: {}", seed, e);
-                continue;
-            }
-
-            client.addTransportAddress(transportAddress);
+        for (final InetSocketTransportAddress seed : seeds) {
+            client.addTransportAddress(seed);
         }
 
         return new Connection() {
@@ -393,17 +432,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                 client.close();
             }
         };
-    }
-
-    private InetSocketTransportAddress parseInetSocketTransportAddress(
-            final String seed) throws URISyntaxException {
-        if (seed.contains(":")) {
-            final String parts[] = seed.split(":");
-            return new InetSocketTransportAddress(parts[0],
-                    Integer.valueOf(parts[1]));
-        }
-
-        return new InetSocketTransportAddress(seed, 9300);
     }
 
     @Override

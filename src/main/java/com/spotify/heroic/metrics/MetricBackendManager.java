@@ -60,7 +60,7 @@ public class MetricBackendManager implements LifeCycle {
     public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;
     public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
-    public static final long DEFAULT_FLUSHING_INTERVAL = 10;
+    public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
 
     @Data
     public static final class YAML {
@@ -684,7 +684,7 @@ public class MetricBackendManager implements LifeCycle {
                 writeBulkProcessor.flush();
                 scheduleFlush();
             }
-        }, flushingInterval, TimeUnit.SECONDS);
+        }, flushingInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override

@@ -18,7 +18,7 @@ public class BulkProcessor<T> {
         public void flushWrites(List<T> writes) throws Exception;
     }
 
-    private static final int MAX_SIZE = 1000;
+    private static final int MAX_SIZE = 100000;
     final List<T> buffer = new ArrayList<>(MAX_SIZE);
 
     private volatile boolean stopped = false;
@@ -36,7 +36,7 @@ public class BulkProcessor<T> {
      *             If interrupted during the write.
      */
     public boolean enqueue(T write) throws InterruptedException,
-            BufferEnqueueException {
+    BufferEnqueueException {
         if (stopped)
             return false;
 
