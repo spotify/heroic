@@ -18,7 +18,7 @@ public class BulkProcessor<T> {
         public void flushWrites(List<T> writes) throws Exception;
     }
 
-    private static final int MAX_SIZE = 10000;
+    private static final int MAX_SIZE = 1000;
     final List<T> buffer = new ArrayList<>(MAX_SIZE);
 
     private volatile boolean stopped = false;

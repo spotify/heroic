@@ -38,11 +38,11 @@ import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
@@ -129,19 +129,18 @@ public class HeroicBackend extends CassandraBackend implements Backend {
     private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
     @Override
-    public Callback<WriteResult> write(WriteMetric write) {
+    public Callback<WriteBatchResult> write(WriteMetric write) {
         final Collection<WriteMetric> writes = new ArrayList<WriteMetric>();
         writes.add(write);
         return write(writes);
     }
 
     @Override
-    public Callback<WriteResult> write(final Collection<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(final Collection<WriteMetric> writes) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<WriteResult>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
         final MutationBatch mutation = keyspace.prepareMutationBatch()
                 .setConsistencyLevel(ConsistencyLevel.CL_ANY);
@@ -167,13 +166,11 @@ public class HeroicBackend extends CassandraBackend implements Backend {
             }
         }
 
-        final int size = writes.size();
-
-        final Callback.Resolver<WriteResult> resolver = new Callback.Resolver<WriteResult>() {
+        final Callback.Resolver<WriteBatchResult> resolver = new Callback.Resolver<WriteBatchResult>() {
             @Override
-            public WriteResult resolve() throws Exception {
+            public WriteBatchResult resolve() throws Exception {
                 mutation.execute();
-                return new WriteResult(size);
+                return new WriteBatchResult(true, 1);
             }
         };
 
@@ -202,26 +199,26 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                for (final DataPoint d : datapoints) {
-                    keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(
-                                    MetricsRowKeySerializer
-                                    .calculateColumnKey(d
-                                            .getTimestamp()),
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            MetricsRowKeySerializer.get())
+                                    .withByteBufferValue(
+                                            MetricsRowKeySerializer
+                                                    .calculateColumnKey(d
+                                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                            .withByteBufferValue(d.getValue(),
-                                                    DoubleSerializer.get()).execute();
-                }
+                                    .withByteBufferValue(d.getValue(),
+                                            DoubleSerializer.get()).execute();
+                        }
 
-                return datapoints.size();
-            }
-        });
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override

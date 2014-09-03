@@ -12,16 +12,15 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.FetchData;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 @Slf4j
@@ -109,8 +108,8 @@ public class BackendGroup {
      * @return A callback indicating how the writes went.
      * @throws BackendOperationException
      */
-    public Callback<WriteResult> write(final List<WriteMetric> writes) {
-        final List<Callback<WriteResult>> callbacks = new ArrayList<Callback<WriteResult>>();
+    public Callback<WriteBatchResult> write(final List<WriteMetric> writes) {
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         execute(new BackendOperation() {
             @Override
@@ -119,6 +118,7 @@ public class BackendGroup {
             }
         });
 
-        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
+        return ConcurrentCallback.newReduce(callbacks,
+                WriteBatchResult.merger());
     }
 }

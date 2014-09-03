@@ -33,11 +33,11 @@ import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.cassandra.CassandraBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
@@ -55,7 +55,7 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
     @RequiredArgsConstructor
     private static final class RowCountTransformer implements
-    Callback.Resolver<Long> {
+            Callback.Resolver<Long> {
         private final Keyspace keyspace;
         private final DateRange range;
         private final DataPointsRowKey row;
@@ -190,8 +190,8 @@ public class KairosBackend extends CassandraBackend implements Backend {
         final int end = DataPointColumnKey.toEndColumn(range.end(), base);
 
         final ByteBufferRange columnRange = new RangeBuilder()
-        .setStart(start, IntegerSerializer.get())
-        .setEnd(end, IntegerSerializer.get()).build();
+                .setStart(start, IntegerSerializer.get())
+                .setEnd(end, IntegerSerializer.get()).build();
 
         final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(DATA_POINTS_CF).getRow(rowKey).autoPaginate(true)
@@ -199,15 +199,15 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchData>() {
-            @Override
-            public FetchData resolve() throws Exception {
-                final OperationResult<ColumnList<Integer>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = rowKey
-                        .buildDataPoints(result.getResult());
-                return new FetchData(series, datapoints);
-            }
-        });
+                    @Override
+                    public FetchData resolve() throws Exception {
+                        final OperationResult<ColumnList<Integer>> result = dataQuery
+                                .execute();
+                        final List<DataPoint> datapoints = rowKey
+                                .buildDataPoints(result.getResult());
+                        return new FetchData(series, datapoints);
+                    }
+                });
     }
 
     @Override
@@ -229,20 +229,20 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<Long, Long>() {
-            @Override
-            public Long resolved(Collection<Long> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
+                    @Override
+                    public Long resolved(Collection<Long> results,
+                            Collection<Exception> errors,
+                            Collection<CancelReason> cancelled)
                             throws Exception {
-                long value = 0;
+                        long value = 0;
 
-                for (final long result : results) {
-                    value += result;
-                }
+                        for (final long result : results) {
+                            value += result;
+                        }
 
-                return value;
-            }
-        });
+                        return value;
+                    }
+                });
     }
 
     private static List<Long> buildBases(DateRange range) {
@@ -261,13 +261,15 @@ public class KairosBackend extends CassandraBackend implements Backend {
     }
 
     @Override
-    public Callback<WriteResult> write(WriteMetric write) {
-        return new FailedCallback<WriteResult>(new Exception("not implemented"));
+    public Callback<WriteBatchResult> write(WriteMetric write) {
+        return new FailedCallback<WriteBatchResult>(new Exception(
+                "not implemented"));
     }
 
     @Override
-    public Callback<WriteResult> write(Collection<WriteMetric> writes) {
-        return new FailedCallback<WriteResult>(new Exception("not implemented"));
+    public Callback<WriteBatchResult> write(Collection<WriteMetric> writes) {
+        return new FailedCallback<WriteBatchResult>(new Exception(
+                "not implemented"));
     }
 
     @Override

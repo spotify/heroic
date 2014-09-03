@@ -9,10 +9,10 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
@@ -62,7 +62,7 @@ public interface Backend extends LifeCycle {
 
         protected abstract Backend buildDelegate(final String id,
                 final ConfigContext ctx, final BackendReporter reporter)
-                throws ValidationException;
+                        throws ValidationException;
     }
 
     public String getGroup();
@@ -73,7 +73,7 @@ public interface Backend extends LifeCycle {
      * @param write
      * @return
      */
-    public Callback<WriteResult> write(WriteMetric write);
+    public Callback<WriteBatchResult> write(WriteMetric write);
 
     /**
      * Write a collection of datapoints for a specific time series.
@@ -84,7 +84,7 @@ public interface Backend extends LifeCycle {
      *            Datapoints to write.
      * @return A callback indicating if the write was successful or not.
      */
-    public Callback<WriteResult> write(Collection<WriteMetric> writes);
+    public Callback<WriteBatchResult> write(Collection<WriteMetric> writes);
 
     /**
      * Query for data points that is part of the specified list of rows and

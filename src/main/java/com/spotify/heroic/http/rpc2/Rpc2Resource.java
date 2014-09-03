@@ -18,8 +18,8 @@ import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
-import com.spotify.heroic.model.WriteResult;
 
 @Path("/rpc2")
 @Produces(MediaType.APPLICATION_JSON)
@@ -47,12 +47,10 @@ public class Rpc2Resource {
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 
-    private static final HttpAsyncUtils.Resume<WriteResult, RpcWriteResult> WRITE = new HttpAsyncUtils.Resume<WriteResult, RpcWriteResult>() {
+    private static final HttpAsyncUtils.Resume<WriteBatchResult, RpcWriteResult> WRITE = new HttpAsyncUtils.Resume<WriteBatchResult, RpcWriteResult>() {
         @Override
-        public RpcWriteResult resume(WriteResult value) throws Exception {
-            final boolean ok = value.getFailed().size()
-                    + value.getCancelled().size() == 0;
-            return new RpcWriteResult(ok);
+        public RpcWriteResult resume(WriteBatchResult value) throws Exception {
+            return new RpcWriteResult(value.isOk());
         }
     };
 
@@ -63,8 +61,8 @@ public class Rpc2Resource {
                     throws Exception {
         final BackendGroup backend = metrics.useGroup(backendGroup);
 
-        final Callback<WriteResult> callback = metrics.writeDirect(backend,
-                writes);
+        final Callback<WriteBatchResult> callback = metrics.writeDirect(
+                backend, writes);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }

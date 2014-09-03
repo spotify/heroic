@@ -1,5 +1,6 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.bulk.BulkProcessor.Builder;
@@ -26,12 +29,15 @@ import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
@@ -56,8 +62,8 @@ import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.yaml.ConfigContext;
@@ -99,9 +105,52 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
                     .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
                     .build();
 
+            XContentBuilder mapping;
+
+            try {
+                mapping = buildMapping(type);
+            } catch (final IOException e) {
+                throw new ValidationException(ctx.extend("type"),
+                        "Failed to create mapping", e);
+            }
+
             return new ElasticSearchMetadataBackend(pools, reporter, seeds,
-                    clusterName, index, type, nodeClient, writeBulkActions,
-                    writeBulkFlushInterval, concurrentBulkRequests);
+                    mapping, clusterName, index, type, nodeClient,
+                    writeBulkActions, writeBulkFlushInterval,
+                    concurrentBulkRequests);
+        }
+
+        private XContentBuilder buildMapping(String type) throws IOException {
+            final XContentBuilder builder = XContentFactory.jsonBuilder();
+
+            XContentBuilder b = builder.startObject();
+
+            b = b.startObject(type);
+            b = b.startObject("properties");
+
+            b = b.startObject("key").field("type", "string")
+                    .field("index", "not_analyzed").endObject();
+
+            b = b.startObject("tags").field("type", "nested");
+
+            {
+                b = b.startObject("properties");
+
+                {
+                    b = b.startObject("value").field("type", "string")
+                            .field("index", "not_analyzed").endObject();
+                    b = b.startObject("key").field("type", "string")
+                            .field("index", "not_analyzed").endObject();
+                }
+
+                b = b.endObject();
+            }
+
+            b = b.endObject();
+
+            b = b.endObject();
+            b = b.endObject();
+            return b;
         }
     }
 
@@ -117,6 +166,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private final ReadWriteThreadPools pools;
     private final MetadataBackendReporter reporter;
     private final String[] seeds;
+    private final XContentBuilder mapping;
     private final String clusterName;
     private final String index;
     private final String type;
@@ -149,11 +199,48 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (this.connection.get() != null)
             return;
 
-        initializeConnection();
-        initializeBulkProcessor();
+        final Connection connection = initConnection();
+
+        try {
+            initMapping(connection);
+        } catch (final Exception e) {
+            stop();
+            throw new Exception("Failed to initialize mapping", e);
+        }
+
+        initBulkProcessor(connection);
     }
 
-    private void initializeConnection() throws UnknownHostException, Exception {
+    private synchronized void initMapping(Connection connection)
+            throws Exception {
+        log.info("Setting up mapping for index={} and type={}", index, type);
+
+        final Client client = connection.client();
+
+        final IndicesAdminClient indices = client.admin().indices();
+
+        {
+            final CreateIndexResponse response = indices.prepareCreate(index)
+                    .get();
+
+            if (!response.isAcknowledged())
+                throw new Exception("Failed to setup index: "
+                        + response.toString());
+        }
+
+        {
+            final PutMappingResponse response = indices
+                    .preparePutMapping(index).setType(type).setSource(mapping)
+                    .get();
+
+            if (!response.isAcknowledged())
+                throw new Exception("Failed to setup mapping: "
+                        + response.toString());
+        }
+    }
+
+    private synchronized Connection initConnection()
+            throws UnknownHostException, Exception {
         final Connection connection;
 
         if (nodeClient) {
@@ -164,14 +251,15 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             connection = setupTransportClient();
         }
 
-        if (!this.connection.compareAndSet(null, connection))
-            connection.close();
+        if (this.connection.compareAndSet(null, connection))
+            return connection;
+
+        connection.close();
+        return null;
     }
 
-    private void initializeBulkProcessor() {
-        final Client client = client();
-        if (client == null)
-            return;
+    private synchronized void initBulkProcessor(final Connection connection) {
+        final Client client = connection.client();
 
         final Builder builder = BulkProcessor.builder(client, new Listener() {
             @Override
@@ -232,8 +320,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         stopConnection();
     }
 
-    private void stopBulkProcessor() {
+    private synchronized void stopBulkProcessor() {
         final BulkProcessor bulkProcessor = this.bulkProcessor.get();
+
         if (bulkProcessor == null)
             return;
 
@@ -241,8 +330,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             bulkProcessor.close();
     }
 
-    private void stopConnection() throws Exception {
+    private synchronized void stopConnection() throws Exception {
         final Connection connection = this.connection.get();
+
         if (connection == null)
             return;
 
@@ -250,7 +340,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             connection.close();
     }
 
-    private Connection setupNodeClient() throws UnknownHostException {
+    private synchronized Connection setupNodeClient()
+            throws UnknownHostException {
         final Settings settings = ImmutableSettings.builder()
                 .put("node.name", InetAddress.getLocalHost().getHostName())
                 .put("discovery.zen.ping.multicast.enabled", false)
@@ -272,7 +363,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         };
     }
 
-    private Connection setupTransportClient() {
+    private synchronized Connection setupTransportClient() {
         final Settings settings = ImmutableSettings.builder()
                 .put("cluster.name", clusterName).build();
 
@@ -396,13 +487,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<WriteResult> write(final Series series)
+    public Callback<WriteBatchResult> write(final Series series)
             throws MetadataOperationException {
         return writeBatch(Arrays.asList(series));
     }
 
     @Override
-    public Callback<WriteResult> writeBatch(final List<Series> series)
+    public Callback<WriteBatchResult> writeBatch(final List<Series> series)
             throws MetadataOperationException {
         final Client client = client();
         final BulkProcessor bulkProcessor = this.bulkProcessor.get();
@@ -420,8 +511,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             }
         }
 
-        return new ResolvedCallback<WriteResult>(new WriteResult(0,
-                new ArrayList<Exception>(), new ArrayList<CancelReason>()));
+        return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(
+                true, 1));
     }
 
     private void writeSeries(final Client client,

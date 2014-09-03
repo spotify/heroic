@@ -25,6 +25,7 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
@@ -40,7 +41,7 @@ public class Rpc0ClusterNode implements ClusterNode {
 
     @RequiredArgsConstructor
     private final class QueryResolver implements
-    Callback.Resolver<MetricGroups> {
+            Callback.Resolver<MetricGroups> {
         private final Rpc0QueryBody request;
         private final Client client;
 
@@ -83,7 +84,7 @@ public class Rpc0ClusterNode implements ClusterNode {
     }
 
     @Override
-    public Callback<Boolean> write(List<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(List<WriteMetric> writes) {
         throw new NotImplementedException();
     }
 }

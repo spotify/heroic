@@ -22,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
+import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Slf4jRequestLog;
@@ -316,11 +318,31 @@ public class Main {
 
         requestLogHandler.setRequestLog(new Slf4jRequestLog());
 
+        final RewriteHandler rewrite = new RewriteHandler();
+        makeRewriteRules(rewrite);
+
         final HandlerCollection handlers = new HandlerCollection();
-        handlers.setHandlers(new Handler[] { context, requestLogHandler });
+        handlers.setHandlers(new Handler[] { rewrite, context,
+                requestLogHandler });
         server.setHandler(handlers);
 
         return server;
+    }
+
+    private static void makeRewriteRules(RewriteHandler rewrite) {
+        {
+            final RewritePatternRule rule = new RewritePatternRule();
+            rule.setPattern("/metrics");
+            rule.setReplacement("/query/metrics");
+            rewrite.addRule(rule);
+        }
+
+        {
+            final RewritePatternRule rule = new RewritePatternRule();
+            rule.setPattern("/metrics-stream/*");
+            rule.setReplacement("/query/metrics-stream");
+            rewrite.addRule(rule);
+        }
     }
 
     private static FastForwardReporter setupReporter(

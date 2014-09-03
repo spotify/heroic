@@ -34,7 +34,6 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
 import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
-import com.spotify.heroic.metrics.async.MergeWriteResult;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
@@ -49,7 +48,6 @@ import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.WriteResult;
 import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 import com.spotify.heroic.yaml.ConfigContext;
@@ -159,22 +157,6 @@ public class MetricBackendManager implements LifeCycle {
                 }
             });
 
-    private final Callback.Transformer<WriteResult, Boolean> DIRECT_WRITE_TO_BOOLEAN = new Callback.Transformer<WriteResult, Boolean>() {
-        @Override
-        public Boolean transform(WriteResult result) throws Exception {
-            for (final Exception e : result.getFailed()) {
-                log.error("Write failed", e);
-            }
-
-            for (final CancelReason reason : result.getCancelled()) {
-                log.error("Write cancelled: " + reason);
-            }
-
-            return result.getFailed().isEmpty()
-                    && result.getCancelled().isEmpty();
-        }
-    };
-
     @Inject
     @Nullable
     private AggregationCache cache;
@@ -210,6 +192,12 @@ public class MetricBackendManager implements LifeCycle {
                     Collection<WriteBatchResult> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
+                for (final Exception e : errors)
+                    log.error("Write failed", e);
+
+                for (final CancelReason cancel : cancelled)
+                    log.error("Write cancelled: {}", cancel);
+
                 boolean allOk = true;
                 int requests = 0;
 
@@ -343,13 +331,14 @@ public class MetricBackendManager implements LifeCycle {
      */
     private Callback<WriteBatchResult> routeWrites(final String backendGroup,
             List<BufferedWriteMetric> writes) throws BackendOperationException {
-        final List<Callback<Boolean>> callbacks = new ArrayList<>();
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.addAll(writeCluster(backendGroup, writes));
 
-        final Callback.Reducer<Boolean, WriteBatchResult> reducer = new Callback.Reducer<Boolean, WriteBatchResult>() {
+        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
             @Override
-            public WriteBatchResult resolved(Collection<Boolean> results,
+            public WriteBatchResult resolved(
+                    Collection<WriteBatchResult> results,
                     Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 for (final Exception e : errors) {
@@ -363,8 +352,8 @@ public class MetricBackendManager implements LifeCycle {
                 boolean ok = errors.isEmpty() && cancelled.isEmpty();
 
                 if (ok) {
-                    for (final boolean b : results) {
-                        ok = ok && b;
+                    for (final WriteBatchResult r : results) {
+                        ok = ok && r.isOk();
                     }
                 }
 
@@ -376,11 +365,11 @@ public class MetricBackendManager implements LifeCycle {
         return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
-    private List<Callback<Boolean>> writeCluster(final String backendGroup,
-            final List<BufferedWriteMetric> writes)
+    private List<Callback<WriteBatchResult>> writeCluster(
+            final String backendGroup, final List<BufferedWriteMetric> writes)
             throws BackendOperationException {
 
-        final List<Callback<Boolean>> callbacks = new ArrayList<>();
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
 
@@ -406,9 +395,9 @@ public class MetricBackendManager implements LifeCycle {
         return callbacks;
     }
 
-    public Callback<WriteResult> writeDirect(BackendGroup backend,
+    public Callback<WriteBatchResult> writeDirect(BackendGroup backend,
             List<WriteMetric> writes) {
-        final List<Callback<WriteResult>> callbacks = new ArrayList<>();
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.add(backend.write(writes));
 
@@ -426,10 +415,11 @@ public class MetricBackendManager implements LifeCycle {
         }
 
         if (callbacks.isEmpty())
-            return new CancelledCallback<WriteResult>(
+            return new CancelledCallback<WriteBatchResult>(
                     CancelReason.NO_BACKENDS_AVAILABLE);
 
-        return ConcurrentCallback.newReduce(callbacks, MergeWriteResult.get());
+        return ConcurrentCallback.newReduce(callbacks,
+                WriteBatchResult.merger());
     }
 
     private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)

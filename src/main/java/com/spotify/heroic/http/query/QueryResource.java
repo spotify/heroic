@@ -56,7 +56,7 @@ import com.spotify.heroic.model.filter.MatchKeyFilter;
 import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @Slf4j
-@Path("/")
+@Path("/query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
@@ -103,7 +103,7 @@ public class QueryResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, QueryMetrics query)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
         final Callback<QueryMetricsResult> callback = metrics.queryMetrics(
