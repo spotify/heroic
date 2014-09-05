@@ -2,28 +2,26 @@ package com.spotify.heroic.cache;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.cache.cassandra.CassandraCache;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * Is used to query for pre-aggregated cached time series.
  *
  * @author udoprog
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = InMemoryAggregationCacheBackend.class, name = "in-memory"),
+        @JsonSubTypes.Type(value = CassandraCache.class, name = "cassandra") })
 public interface AggregationCacheBackend {
-    public static interface YAML {
-        AggregationCacheBackend build(ConfigContext context,
-                AggregationCacheBackendReporter reporter)
-                throws ValidationException;
-    }
-
     /**
      * Get an entry from the cache.
      *
@@ -32,10 +30,10 @@ public interface AggregationCacheBackend {
      * @return A callback that will be executed when the entry is available with
      *         the datapoints contained in the entry. This array can contain
      *         null values to indicate that entries are missing.
-     * @throws AggregationCacheException
+     * @throws CacheOperationException
      */
     public Callback<CacheBackendGetResult> get(CacheBackendKey key,
-            DateRange range) throws AggregationCacheException;
+            DateRange range) throws CacheOperationException;
 
     /**
      * Put a new entry into the aggregation cache.
@@ -48,10 +46,10 @@ public interface AggregationCacheBackend {
      *            ignored.
      * @return A callback that will be executed as soon as any underlying
      *         request has been satisfied.
-     * @throws AggregationCacheException
+     * @throws CacheOperationException
      *             An early throw exception, if the backend is unable to prepare
      *             the request.
      */
     public Callback<CacheBackendPutResult> put(CacheBackendKey key,
-            List<DataPoint> datapoints) throws AggregationCacheException;
+            List<DataPoint> datapoints) throws CacheOperationException;
 }

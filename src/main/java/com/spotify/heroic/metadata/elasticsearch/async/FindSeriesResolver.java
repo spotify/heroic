@@ -16,11 +16,11 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.Filter;
 
 @Slf4j
 @RequiredArgsConstructor

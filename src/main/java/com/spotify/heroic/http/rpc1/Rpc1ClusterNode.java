@@ -2,6 +2,7 @@ package com.spotify.heroic.http.rpc1;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
@@ -18,6 +19,7 @@ import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.rpc.RpcPostRequestResolver;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -45,10 +47,12 @@ public class Rpc1ClusterNode implements ClusterNode {
 
     @Override
     public Callback<MetricGroups> query(final String backendGroup,
-            final Series key, final Set<Series> series, final DateRange range,
-            final AggregationGroup aggregationGroup) {
+            final Filter filter, final Map<String, String> group,
+            final AggregationGroup aggregation, final DateRange range,
+            final Set<Series> series) {
+        final Series key = new Series(null, group);
         final Rpc1QueryBody request = new Rpc1QueryBody(key, series, range,
-                aggregationGroup);
+                aggregation);
         return resolve(request, MetricGroups.class, "query");
     }
 

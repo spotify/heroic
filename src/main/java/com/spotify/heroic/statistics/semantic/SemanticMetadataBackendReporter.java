@@ -7,7 +7,6 @@ import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.statistics.ThreadPoolProvider;
-import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
@@ -32,11 +31,9 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     private final Histogram writeBatchDuration;
 
-    public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
-            ConfigContext context) {
+    public SemanticMetadataBackendReporter(SemanticMetricRegistry registry) {
         this.registry = registry;
-        this.id = MetricId.build().tagged("context", context.toString(),
-                "component", COMPONENT);
+        this.id = MetricId.build().tagged("component", COMPONENT);
 
         refresh = new SemanticCallbackReporter(registry, id.tagged("what",
                 "refresh", "unit", Units.REFRESH));

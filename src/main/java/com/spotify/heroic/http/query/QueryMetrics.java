@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.model.filter.Filter;
+import com.spotify.heroic.filter.Filter;
 
 @Data
 public class QueryMetrics {

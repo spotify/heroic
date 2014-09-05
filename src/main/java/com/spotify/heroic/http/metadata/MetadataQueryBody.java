@@ -10,11 +10,11 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.model.filter.AndFilter;
-import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.model.filter.HasTagFilter;
-import com.spotify.heroic.model.filter.MatchKeyFilter;
-import com.spotify.heroic.model.filter.MatchTagFilter;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

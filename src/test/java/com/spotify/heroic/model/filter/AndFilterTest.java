@@ -6,6 +6,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.Filter;
+
 public class AndFilterTest {
 	@Test
 	public void testOptimize() throws Exception {

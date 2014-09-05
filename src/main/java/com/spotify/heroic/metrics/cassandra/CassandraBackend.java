@@ -56,16 +56,16 @@ public abstract class CassandraBackend implements Backend {
         log.info("Starting: {}", this);
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-                .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
+        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
 
         context = new AstyanaxContext.Builder()
-                .withConnectionPoolConfiguration(
-                        new ConnectionPoolConfigurationImpl(
-                                "HeroicConnectionPool").setPort(9160)
-                                .setMaxConnsPerHost(maxConnectionsPerHost)
-                                .setSeeds(seeds)).forKeyspace(keyspaceName)
-                .withAstyanaxConfiguration(config)
-                .buildKeyspace(ThriftFamilyFactory.getInstance());
+        .withConnectionPoolConfiguration(
+                new ConnectionPoolConfigurationImpl(
+                        "HeroicConnectionPool").setPort(9160)
+                        .setMaxConnsPerHost(maxConnectionsPerHost)
+                        .setSeeds(seeds)).forKeyspace(keyspaceName)
+                        .withAstyanaxConfiguration(config)
+                        .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         context.start();
         keyspace.set(context.getClient());

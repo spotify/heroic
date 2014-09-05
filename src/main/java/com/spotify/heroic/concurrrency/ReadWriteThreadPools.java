@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.statistics.NullThreadPoolsReporter;
 import com.spotify.heroic.statistics.ThreadPoolReporterProvider;
 import com.spotify.heroic.statistics.ThreadPoolsReporter;
@@ -22,20 +24,25 @@ import com.spotify.heroic.statistics.ThreadPoolsReporter;
 @RequiredArgsConstructor
 @Slf4j
 public class ReadWriteThreadPools {
+    public static int DEFAULT_READ_THREADS = 20;
+    public static int DEFAULT_READ_QUEUE_SIZE = 10000;
+    public static int DEFAULT_WRITE_THREADS = 20;
+    public static int DEFAULT_WRITE_QUEUE_SIZE = 10000;
+
     public static final class Config {
         /**
          * Threads dedicated to asynchronous request handling.
          */
-        private int readThreads = 20;
+        private int readThreads = DEFAULT_READ_THREADS;
 
-        private int readQueueSize = 40;
+        private int readQueueSize = DEFAULT_READ_QUEUE_SIZE;
 
         /**
          * Threads dedicated to asynchronous request handling.
          */
-        private int writeThreads = 20;
+        private int writeThreads = DEFAULT_WRITE_THREADS;
 
-        private int writeQueueSize = 1000;
+        private int writeQueueSize = DEFAULT_WRITE_QUEUE_SIZE;
 
         private ThreadPoolsReporter reporter = new NullThreadPoolsReporter();
 
@@ -98,6 +105,29 @@ public class ReadWriteThreadPools {
 
     public static Config config() {
         return new Config();
+    }
+
+    @JsonCreator
+    private static ReadWriteThreadPools create(
+            @JsonProperty("readThreads") Integer readThreads,
+            @JsonProperty("readQueueSize") Integer readQueueSize,
+            @JsonProperty("writeThreads") Integer writeThreads,
+            @JsonProperty("writeQueueSize") Integer writeQueueSize) {
+        if (readThreads == null)
+            readThreads = DEFAULT_READ_THREADS;
+
+        if (readQueueSize == null)
+            readQueueSize = DEFAULT_READ_QUEUE_SIZE;
+
+        if (writeThreads == null)
+            writeThreads = DEFAULT_WRITE_THREADS;
+
+        if (writeQueueSize == null)
+            writeQueueSize = DEFAULT_WRITE_QUEUE_SIZE;
+
+        return config().readThreads(readThreads).readQueueSize(readQueueSize)
+                .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
+                .build();
     }
 
     private final ThreadPoolExecutor read;

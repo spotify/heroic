@@ -5,13 +5,13 @@ import java.nio.ByteBuffer;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
-import com.spotify.heroic.cache.cassandra.model.TimeSerieSerializer;
+import com.spotify.heroic.cache.cassandra.model.SeriesSerializer;
 import com.spotify.heroic.model.Series;
 
 public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     public static final MetricsRowKeySerializer instance = new MetricsRowKeySerializer();
 
-    private static final TimeSerieSerializer seriesSerializer = TimeSerieSerializer
+    private static final SeriesSerializer seriesSerializer = SeriesSerializer
             .get();
     private static final LongSerializer longSerializer = LongSerializer.get();
 

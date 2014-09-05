@@ -21,12 +21,10 @@ AggregationCacheReporter {
 
     private final SemanticMetricRegistry registry;
 
-    public SemanticAggregationCacheReporter(SemanticMetricRegistry registry,
-            ConfigContext context) {
+    public SemanticAggregationCacheReporter(SemanticMetricRegistry registry) {
         this.registry = registry;
 
-        final MetricId id = MetricId.build().tagged("context",
-                context.toString(), "component", COMPONENT);
+        final MetricId id = MetricId.build().tagged("component", COMPONENT);
 
         this.get = new SemanticCallbackReporter(registry, id.tagged("what",
                 "get", "unit", Units.READ));

@@ -1,39 +1,33 @@
 package com.spotify.heroic.cache.cassandra.model;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import java.util.Map;
+
+import lombok.Data;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.filter.Filter;
 
-@ToString(of = { "series", "aggregationGroup", "base" })
-@EqualsAndHashCode(of = { "series", "aggregationGroup", "base" })
+@Data
 public class CacheKey {
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     /**
-     * Includes key and tags.
+     * Which filter was used to query the specified data.
      */
-    @Getter
-    private final Series series;
+    private final Filter filter;
+
+    /**
+     * Which group this result belongs to.
+     */
+    private final Map<String, String> group;
 
     /**
      * Always includes sampling.
      */
-    @Getter
-    private final AggregationGroup aggregationGroup;
+    private final AggregationGroup aggregation;
 
     /**
      * long base.
      */
-    @Getter
     private final long base;
-
-    public CacheKey(Series series, AggregationGroup aggregationGroup,
-            long base) {
-        this.series = series;
-        this.aggregationGroup = aggregationGroup;
-        this.base = base;
-    }
 }

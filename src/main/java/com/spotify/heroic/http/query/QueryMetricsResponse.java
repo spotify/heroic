@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public class QueryMetricsResponse {
@@ -26,24 +25,24 @@ public class QueryMetricsResponse {
                 SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
-            final Map<Series, List<DataPoint>> result = (Map<Series, List<DataPoint>>) value;
+            final Map<Map<String, String>, List<DataPoint>> result = (Map<Map<String, String>, List<DataPoint>>) value;
 
             g.writeStartArray();
 
-            for (Map.Entry<Series, List<DataPoint>> entry : result
+            for (final Map.Entry<Map<String, String>, List<DataPoint>> entry : result
                     .entrySet()) {
-                final Series series = entry.getKey();
+                final Map<String, String> tags = entry.getKey();
                 final List<DataPoint> datapoints = entry.getValue();
 
                 g.writeStartObject();
                 g.writeFieldName("hash");
-                g.writeString(Integer.toHexString(series.hashCode()));
+                g.writeString(Integer.toHexString(tags.hashCode()));
 
                 g.writeFieldName("key");
-                g.writeString(series.getKey());
+                g.writeNull();
 
                 g.writeFieldName("tags");
-                g.writeObject(series.getTags());
+                g.writeObject(tags);
 
                 g.writeFieldName("values");
                 g.writeObject(datapoints);
@@ -60,7 +59,7 @@ public class QueryMetricsResponse {
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)
-    private final Map<Series, List<DataPoint>> result;
+    private final Map<Map<String, String>, List<DataPoint>> result;
 
     @Getter
     private final Statistics statistics;

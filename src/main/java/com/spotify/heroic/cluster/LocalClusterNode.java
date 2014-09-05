@@ -1,13 +1,15 @@
 package com.spotify.heroic.cluster;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import lombok.RequiredArgsConstructor;
+import javax.inject.Inject;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.error.BackendOperationException;
 import com.spotify.heroic.metrics.model.MetricGroups;
@@ -16,16 +18,18 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
-@RequiredArgsConstructor
 public class LocalClusterNode implements ClusterNode {
-    private final MetricBackendManager metrics;
+    @Inject
+    private MetricBackendManager metrics;
 
     @Override
-    public Callback<MetricGroups> query(String backendGroup, Series key,
-            Set<Series> series, DateRange range, AggregationGroup aggregation) {
+    public Callback<MetricGroups> query(final String backendGroup,
+            final Filter filter, final Map<String, String> group,
+            final AggregationGroup aggregation, final DateRange range,
+            final Set<Series> series) {
         try {
-            return metrics.useGroup(backendGroup).groupedQuery(key, series,
-                    range, aggregation);
+            return metrics.useGroup(backendGroup).groupedQuery(group, filter,
+                    series, range, aggregation);
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }

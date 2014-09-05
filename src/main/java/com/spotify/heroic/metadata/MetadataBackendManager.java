@@ -6,58 +6,39 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import lombok.Data;
+import javax.inject.Inject;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @RequiredArgsConstructor
 public class MetadataBackendManager {
-    @Data
-    public static final class YAML {
-        private List<MetadataBackend.YAML> backends = new ArrayList<>();
-
-        public MetadataBackendManager build(ConfigContext ctx,
-                MetadataBackendManagerReporter reporter)
-                throws ValidationException {
-            final List<MetadataBackend> backends = buildBackends(ctx, reporter);
-            return new MetadataBackendManager(reporter, backends);
-        }
-
-        private List<MetadataBackend> buildBackends(ConfigContext ctx,
-                MetadataBackendManagerReporter reporter)
-                        throws ValidationException {
-            final List<MetadataBackend> result = new ArrayList<>();
-
-            for (final ConfigContext.Entry<MetadataBackend.YAML> c : ctx
-                    .iterate(backends, "backends")) {
-                final MetadataBackend backend = c.getValue().build(
-                        c.getContext(),
-                        reporter.newMetadataBackend(c.getContext()));
-                result.add(backend);
-            }
-
-            return result;
-        }
+    @JsonCreator
+    public static MetadataBackendManager create(
+            @JsonProperty("backends") List<MetadataBackend> backends) {
+        return new MetadataBackendManager(backends);
     }
 
-    private final MetadataBackendManagerReporter reporter;
     private final List<MetadataBackend> backends;
+
+    @Inject
+    private MetadataBackendManagerReporter reporter;
 
     public List<MetadataBackend> getBackends() {
         return ImmutableList.copyOf(backends);

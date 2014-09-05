@@ -14,7 +14,6 @@ import com.spotify.heroic.cache.cassandra.model.CacheKeySerializer;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 final class CachePutResolver implements
@@ -30,8 +29,7 @@ Callback.Resolver<CacheBackendPutResult> {
 
     @Override
     public CacheBackendPutResult resolve() throws Exception {
-        final AggregationGroup aggregation = key.getAggregationGroup();
-        final Series series = key.getSeries();
+        final AggregationGroup aggregation = key.getAggregation();
         final long size = aggregation.getSampling().getSize();
         final long columnWidth = size * CassandraCache.WIDTH;
         for (final DataPoint d : datapoints) {
@@ -42,7 +40,8 @@ Callback.Resolver<CacheBackendPutResult> {
 
             final int index = (int) ((d.getTimestamp() % columnWidth) / size);
             final long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
-            final CacheKey key = new CacheKey(series, aggregation, base);
+            final CacheKey key = new CacheKey(this.key.getFilter(),
+                    this.key.getGroup(), aggregation, base);
             doPut(key, index, d);
         }
 

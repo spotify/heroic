@@ -3,68 +3,24 @@ package com.spotify.heroic.metrics;
 import java.util.Collection;
 import java.util.List;
 
-import lombok.Data;
-
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.metrics.heroic.HeroicBackend;
+import com.spotify.heroic.metrics.kairosdb.KairosBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.BackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = HeroicBackend.class, name = "heroic"),
+        @JsonSubTypes.Type(value = KairosBackend.class, name = "kairosdb") })
 public interface Backend extends LifeCycle {
-    @Data
-    public abstract class YAML {
-        private static final double DEFAULT_THRESHOLD = 10.0;
-        private static final long DEFAULT_COOLDOWN = 60000;
-
-        /**
-         * Identifier for this backend, is used for data-migrations.
-         */
-        private String group = null;
-
-        /**
-         * Disable this backend if too many errors are being reported by it.
-         */
-        private boolean disableOnFailures = false;
-
-        /**
-         * How many errors per minute that are acceptable.
-         */
-        private double threshold = DEFAULT_THRESHOLD;
-
-        /**
-         * The cooldown period in milliseconds.
-         */
-        private long cooldown = DEFAULT_COOLDOWN;
-
-        public Backend build(ConfigContext ctx, int index,
-                BackendReporter reporter) throws ValidationException {
-            final String id = buildId(ctx, index);
-            return buildDelegate(id, ctx, reporter);
-        }
-
-        private String buildId(ConfigContext ctx, int index)
-                throws ValidationException {
-            if (this.group == null)
-                return defaultGroup();
-
-            return ConfigUtils.notEmpty(ctx.extend("group"), this.group);
-        }
-
-        protected abstract String defaultGroup();
-
-        protected abstract Backend buildDelegate(final String id,
-                final ConfigContext ctx, final BackendReporter reporter)
-                        throws ValidationException;
-    }
-
     public String getGroup();
 
     /**

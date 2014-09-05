@@ -9,8 +9,8 @@ import org.junit.Test;
 
 import com.spotify.heroic.model.Series;
 
-public class TimeSerieSerializerTest {
-    private static final TimeSerieSerializer serializer = TimeSerieSerializer.get();
+public class SeriesSerializerTest {
+    private static final SeriesSerializer serializer = SeriesSerializer.get();
 
     private Series roundTrip(Series series) {
         final ByteBuffer bb = serializer.toByteBuffer(series);

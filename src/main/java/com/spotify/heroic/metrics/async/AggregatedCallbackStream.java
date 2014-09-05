@@ -2,39 +2,38 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.Statistics;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.SeriesSlice;
 
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements
 Callback.StreamReducer<FetchData, MetricGroups> {
-    private final SeriesSlice slice;
+    private final Map<String, String> group;
     private final Aggregation.Session session;
 
     @Override
-    public void resolved(Callback<FetchData> callback,
-            FetchData result) throws Exception {
+    public void resolved(Callback<FetchData> callback, FetchData result)
+            throws Exception {
         session.update(result.getDatapoints());
     }
 
     @Override
-    public void failed(Callback<FetchData> callback,
-            Exception error) throws Exception {
+    public void failed(Callback<FetchData> callback, Exception error)
+            throws Exception {
     }
 
     @Override
-    public void cancelled(Callback<FetchData> callback,
-            CancelReason reason) throws Exception {
+    public void cancelled(Callback<FetchData> callback, CancelReason reason)
+            throws Exception {
     }
 
     @Override
@@ -45,10 +44,8 @@ Callback.StreamReducer<FetchData, MetricGroups> {
                 .aggregator(result.getStatistics())
                 .row(new Statistics.Row(successful, failed, cancelled)).build();
 
-        final Series series = slice.getSeries();
-
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
-        groups.add(new MetricGroup(series, result.getResult()));
+        groups.add(new MetricGroup(group, result.getResult()));
 
         return new MetricGroups(groups, stat);
     }

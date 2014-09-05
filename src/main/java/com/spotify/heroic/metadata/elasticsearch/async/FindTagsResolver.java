@@ -28,7 +28,7 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
     private final Client client;
     private final String index;
     private final String type;
-    private final com.spotify.heroic.model.filter.Filter filter;
+    private final com.spotify.heroic.filter.Filter filter;
     private final String key;
 
     @Override

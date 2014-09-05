@@ -4,12 +4,10 @@ import java.util.Map;
 import java.util.Set;
 
 import lombok.Data;
-import lombok.Getter;
 
 import com.spotify.heroic.model.Series;
 
 @Data
 public class FindTimeSeriesGroups {
-    @Getter
-    private final Map<Series, Set<Series>> groups;
+    private final Map<Map<String, String>, Set<Series>> groups;
 }

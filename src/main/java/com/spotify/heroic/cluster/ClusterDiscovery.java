@@ -2,10 +2,15 @@ package com.spotify.heroic.cluster;
 
 import java.util.Collection;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.cluster.discovery.StaticListDiscovery;
 import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(value = StaticListDiscovery.class, name = "static") })
 public interface ClusterDiscovery {
     public interface YAML {
         public ClusterDiscovery build(ConfigContext context)

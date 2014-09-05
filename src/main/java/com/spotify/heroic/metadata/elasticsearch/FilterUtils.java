@@ -6,14 +6,14 @@ import java.util.List;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 
-import com.spotify.heroic.model.filter.AndFilter;
-import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.model.filter.HasTagFilter;
-import com.spotify.heroic.model.filter.MatchKeyFilter;
-import com.spotify.heroic.model.filter.MatchTagFilter;
-import com.spotify.heroic.model.filter.OrFilter;
-import com.spotify.heroic.model.filter.RegexFilter;
-import com.spotify.heroic.model.filter.StartsWithFilter;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.HasTagFilter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.OrFilter;
+import com.spotify.heroic.filter.RegexFilter;
+import com.spotify.heroic.filter.StartsWithFilter;
 
 public final class FilterUtils {
     public static final String TAGS_VALUE = "tags.value";

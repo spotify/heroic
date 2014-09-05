@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ResolvedCallback;
@@ -13,9 +15,6 @@ import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * A reference aggregation cache implementation to allow for easier testing of
@@ -24,23 +23,18 @@ import com.spotify.heroic.yaml.ValidationException;
  * @author udoprog
  */
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
-    public static class YAML implements AggregationCacheBackend.YAML {
-        public static final String TYPE = "!in-memory-cache";
-
-        @Override
-        public AggregationCacheBackend build(ConfigContext context,
-                AggregationCacheBackendReporter reporter)
-                        throws ValidationException {
-            return new InMemoryAggregationCacheBackend();
-        }
+    @JsonCreator
+    public static InMemoryAggregationCacheBackend create(
+            @JsonProperty("hello") Integer hello) {
+        return new InMemoryAggregationCacheBackend();
     }
 
-    public Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
+    private final Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
 
     @Override
     public synchronized Callback<CacheBackendGetResult> get(
             CacheBackendKey key, DateRange range)
-                    throws AggregationCacheException {
+                    throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {
@@ -48,7 +42,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             cache.put(key, entry);
         }
 
-        final AggregationGroup aggregation = key.getAggregationGroup();
+        final AggregationGroup aggregation = key.getAggregation();
         final long width = aggregation.getSampling().getSize();
 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
@@ -70,14 +64,14 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             datapoints.add(d);
         }
 
-        return new ResolvedCallback<CacheBackendGetResult>(
+        return new ResolvedCallback<>(
                 new CacheBackendGetResult(key, datapoints));
     }
 
     @Override
     public synchronized Callback<CacheBackendPutResult> put(
             CacheBackendKey key, List<DataPoint> datapoints)
-                    throws AggregationCacheException {
+                    throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {
@@ -85,7 +79,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             cache.put(key, entry);
         }
 
-        final AggregationGroup aggregator = key.getAggregationGroup();
+        final AggregationGroup aggregator = key.getAggregation();
         final long width = aggregator.getSampling().getSize();
 
         if (width == 0) {
@@ -106,7 +100,6 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             entry.put(timestamp, d);
         }
 
-        return new ResolvedCallback<CacheBackendPutResult>(
-                new CacheBackendPutResult());
+        return new ResolvedCallback<>(new CacheBackendPutResult());
     }
 }

@@ -10,12 +10,12 @@ import org.elasticsearch.client.Client;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.model.filter.AndFilter;
-import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @RequiredArgsConstructor
 public class FindTagsTransformer implements

@@ -1,14 +1,16 @@
-package com.spotify.heroic.model.filter;
+package com.spotify.heroic.filter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import lombok.Data;
 
 import org.apache.commons.lang.StringUtils;
 
 @Data
-public class AndFilter implements Filter {
+public class AndFilter implements ManyTermsFilter, Comparable<Filter> {
     public static final String OPERATOR = "and";
 
     private final List<Filter> statements;
@@ -31,12 +33,14 @@ public class AndFilter implements Filter {
 
     @Override
     public Filter optimize() {
-        final List<Filter> statements = new ArrayList<Filter>(
-                this.statements.size());
+        final SortedSet<Filter> statements = new TreeSet<Filter>();
 
         for (final Filter f : this.statements) {
             if (f instanceof AndFilter) {
                 final AndFilter and = (AndFilter) f.optimize();
+
+                if (and == null)
+                    continue;
 
                 for (final Filter statement : and.getStatements())
                     statements.add(statement);
@@ -44,12 +48,44 @@ public class AndFilter implements Filter {
                 continue;
             }
 
-            statements.add(f.optimize());
+            final Filter o = f.optimize();
+
+            if (o == null)
+                continue;
+
+            statements.add(o);
         }
 
-        if (statements.size() == 1)
-            return statements.get(0);
+        if (statements.isEmpty())
+            return null;
 
-        return new AndFilter(statements);
+        if (statements.size() == 1)
+            return statements.iterator().next();
+
+        return new AndFilter(new ArrayList<>(statements));
+    }
+
+    @Override
+    public String operator() {
+        return OPERATOR;
+    }
+
+    @Override
+    public int compareTo(Filter o) {
+        if (o == null)
+            return -1;
+
+        if (!(o instanceof Filter))
+            return -1;
+
+        if (!(o instanceof AndFilter))
+            return operator().compareTo(o.operator());
+
+        return Integer.compare(hashCode(), o.hashCode());
+    }
+
+    @Override
+    public List<Filter> terms() {
+        return statements;
     }
 }

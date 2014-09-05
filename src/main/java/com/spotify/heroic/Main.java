@@ -37,10 +37,12 @@ import org.quartz.SchedulerException;
 import org.yaml.snakeyaml.error.YAMLException;
 
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.AbstractMatcher;
 import com.google.inject.multibindings.Multibinder;
@@ -51,6 +53,7 @@ import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
 import com.spotify.heroic.injection.LifeCycle;
@@ -59,7 +62,13 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
+import com.spotify.heroic.statistics.AggregationCacheReporter;
+import com.spotify.heroic.statistics.BackendReporter;
+import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
 import com.spotify.heroic.yaml.ValidationException;
@@ -115,6 +124,36 @@ public class Main {
                 TimeUnit.SECONDS, queue);
 
         modules.add(new AbstractModule() {
+            @Provides
+            public ConsumerReporter newConsumerReporter() {
+                return reporter.newConsumer();
+            }
+
+            @Provides
+            public MetadataBackendManagerReporter newMetadataBackendManager() {
+                return reporter.newMetadataBackendManager();
+            }
+
+            @Provides
+            public BackendReporter newBackend() {
+                return reporter.newBackend();
+            }
+
+            @Provides
+            public MetricBackendManagerReporter newMetricBackendManager() {
+                return reporter.newMetricBackendManager();
+            }
+
+            @Provides
+            public MetadataBackendReporter newMetadataBackend() {
+                return reporter.newMetadataBackend();
+            }
+
+            @Provides
+            public AggregationCacheReporter newAggregationCache() {
+                return reporter.newAggregationCache();
+            }
+
             @Override
             protected void configure() {
                 bind(ApplicationLifecycle.class).toInstance(lifecycle);
@@ -127,8 +166,10 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metrics);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                .toInstance(storedMetricsQueries);
+                        .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
+                bind(LocalClusterNode.class).toInstance(
+                        cluster.getLocalClusterNode());
 
                 multiBind(metrics.getBackends(), Backend.class);
                 multiBind(metadata.getBackends(), MetadataBackend.class);
@@ -136,17 +177,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(LifeCycle.class),
                         new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public void afterInjection(Object i) {
-                                managed.add((LifeCycle) i);
+                            public <I> void hear(TypeLiteral<I> type,
+                                    TypeEncounter<I> encounter) {
+                                encounter.register(new InjectionListener<I>() {
+                                    @Override
+                                    public void afterInjection(Object i) {
+                                        managed.add((LifeCycle) i);
+                                    }
+                                });
                             }
                         });
-                    }
-                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -186,8 +227,8 @@ public class Main {
             System.exit(1);
             return;
         } catch (final ValidationException e) {
-            log.error(String.format("Error in configuration file: %s#%s",
-                    configPath, e.getContext().toString()), e);
+            log.error(String.format("Error in configuration file: %s",
+                    configPath), e);
             System.exit(1);
             return;
         }
@@ -282,8 +323,14 @@ public class Main {
             IOException {
         log.info("Loading configuration from: {}", configPath);
 
-        final HeroicConfig config = HeroicConfig.parse(Paths.get(configPath),
-                reporter);
+        final HeroicConfig config;
+
+        try {
+            config = HeroicConfig.parse(Paths.get(configPath), reporter);
+        } catch (final JsonMappingException e) {
+            log.error(String.format("%s#%s: %s", configPath, e.getPath(), e));
+            throw new IOException("Configuration failed", e);
+        }
 
         if (config == null)
             throw new IOException(

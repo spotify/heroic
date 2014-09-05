@@ -18,7 +18,7 @@ public final class ConfigUtils {
     public static <T> T notNull(ConfigContext c, T object)
             throws ValidationException {
         if (object == null)
-            throw new ValidationException(c, "must be defined");
+            throw new ValidationException("must be defined");
 
         return object;
     }
@@ -26,7 +26,7 @@ public final class ConfigUtils {
     public static String notEmpty(ConfigContext c, String string)
             throws ValidationException {
         if (string == null || string.isEmpty())
-            throw new ValidationException(c, "must be defined and non-empty");
+            throw new ValidationException("must be defined and non-empty");
 
         return string;
     }
@@ -34,7 +34,7 @@ public final class ConfigUtils {
     public static <T> List<T> notEmpty(ConfigContext c, List<T> list)
             throws ValidationException {
         if (list == null || list.isEmpty())
-            throw new ValidationException(c, "must be a non-empty list");
+            throw new ValidationException("must be a non-empty list");
 
         return list;
     }
@@ -42,7 +42,7 @@ public final class ConfigUtils {
     public static Map<String, String> notEmpty(ConfigContext c,
             Map<String, String> map) throws ValidationException {
         if (map == null || map.isEmpty())
-            throw new ValidationException(c, "must be a non-empty map");
+            throw new ValidationException("must be a non-empty map");
 
         return map;
     }
@@ -54,7 +54,7 @@ public final class ConfigUtils {
         try {
             return new URI(url);
         } catch (final URISyntaxException e) {
-            throw new ValidationException(c, "must be a valid URL");
+            throw new ValidationException("must be a valid URL");
         }
     }
 
@@ -65,7 +65,7 @@ public final class ConfigUtils {
         final Path p = Paths.get(path);
 
         if (!Files.isDirectory(p))
-            throw new ValidationException(c, "must be an existing directory");
+            throw new ValidationException("must be an existing directory");
 
         return p;
     }
@@ -84,18 +84,18 @@ public final class ConfigUtils {
         return list;
     }
 
-    public static <T> T instance(ConfigContext c, String className,
-            Class<T> expectedType) throws ValidationException {
+    public static <T> T instance(String className, Class<T> expectedType)
+            throws ValidationException {
         final Class<?> clazz;
 
         try {
             clazz = Class.forName(className);
         } catch (final ClassNotFoundException e) {
-            throw new ValidationException(c, "No such class: " + className, e);
+            throw new ValidationException("No such class: " + className, e);
         }
 
         if (!expectedType.isAssignableFrom(clazz)) {
-            throw new ValidationException(c, "Class is not subtype of: "
+            throw new ValidationException("Class is not subtype of: "
                     + expectedType.getCanonicalName());
         }
 
@@ -107,7 +107,7 @@ public final class ConfigUtils {
         try {
             constructor = target.getConstructor();
         } catch (NoSuchMethodException | SecurityException e) {
-            throw new ValidationException(c,
+            throw new ValidationException(
                     "Cannot find empty constructor for class: "
                             + target.getCanonicalName(), e);
         }
@@ -115,7 +115,7 @@ public final class ConfigUtils {
         try {
             return constructor.newInstance();
         } catch (IllegalArgumentException | ReflectiveOperationException e) {
-            throw new ValidationException(c,
+            throw new ValidationException(
                     "Failed to create instance of class: "
                             + target.getCanonicalName(), e);
         }

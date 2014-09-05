@@ -9,9 +9,9 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.QueryBuilders;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.model.DeleteSeries;
-import com.spotify.heroic.model.filter.Filter;
 
 @RequiredArgsConstructor
 public class DeleteTimeSeriesResolver implements

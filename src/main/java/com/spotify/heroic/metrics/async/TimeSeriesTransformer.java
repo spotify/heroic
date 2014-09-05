@@ -2,36 +2,38 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.CacheOperationException;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.Backend;
+import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.GroupedTimeSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.SeriesSlice;
 
 @RequiredArgsConstructor
 public final class TimeSeriesTransformer implements
-Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
+        Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
     private final AggregationCache cache;
+    private final Filter filter;
     private final AggregationGroup aggregation;
     private final DateRange range;
 
     @Override
     public Callback<MetricGroups> transform(List<GroupedTimeSeries> result)
             throws Exception {
-        if (cache == AggregationCache.NULL || aggregation == null)
+        if (!cache.isConfigured() || aggregation == null)
             return ConcurrentCallback.newReduce(execute(result),
                     new MergeMetricGroups());
 
@@ -44,19 +46,19 @@ Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            final SeriesSlice slice = r.getKey().slice(range);
-            queries.add(buildLookup(r.getBackend(), slice, r.getSeries()));
+            queries.add(buildLookup(r.getBackend(), r.getGroup(), range,
+                    r.getSeries()));
         }
 
         return queries;
     }
 
     private List<Callback<MetricGroups>> executeCached(
-            List<GroupedTimeSeries> result) {
+            List<GroupedTimeSeries> result) throws CacheOperationException {
         final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
         for (final GroupedTimeSeries r : result) {
-            callbacks.add(buildCachedLookup(r.getBackend(), r.getKey(),
+            callbacks.add(buildCachedLookup(r.getBackend(), r.getGroup(),
                     r.getSeries()));
         }
 
@@ -64,52 +66,51 @@ Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
     }
 
     private Callback<MetricGroups> buildCachedLookup(final Backend backend,
-            final Series series, final Set<Series> seriesSet) {
-        final CacheGetTransformer transformer = new CacheGetTransformer(series,
-                cache) {
+            final Map<String, String> group, final Set<Series> series)
+                    throws CacheOperationException {
+        final CacheGetTransformer transformer = new CacheGetTransformer(cache) {
             @Override
-            public Callback<MetricGroups> cacheMiss(SeriesSlice slice)
-                    throws Exception {
-                return buildLookup(backend, slice, seriesSet);
+            public Callback<MetricGroups> cacheMiss(Map<String, String> group,
+                    DateRange range) throws Exception {
+                return buildLookup(backend, group, range, series);
             }
         };
 
-        return cache.get(series.slice(range), aggregation).transform(
+        return cache.get(filter, group, aggregation, range).transform(
                 transformer);
     }
 
     private Callback<MetricGroups> buildLookup(final Backend backend,
-            final SeriesSlice slice, final Set<Series> series) {
+            final Map<String, String> group, final DateRange range,
+            final Set<Series> series) {
         final List<Callback<FetchData>> callbacks = new ArrayList<Callback<FetchData>>();
 
-        final DateRange range = modifiedRange(slice);
+        final DateRange modified = modifiedRange(range);
 
         for (final Series serie : series) {
-            callbacks.addAll(backend.fetch(serie, range));
+            callbacks.addAll(backend.fetch(serie, modified));
         }
 
         if (callbacks.isEmpty())
             return new CancelledCallback<MetricGroups>(
                     CancelReason.BACKEND_MISMATCH);
 
-        return ConcurrentCallback.newReduce(callbacks, buildReducer(slice));
+        return ConcurrentCallback.newReduce(callbacks,
+                buildReducer(group, range));
     }
 
-    private DateRange modifiedRange(final SeriesSlice slice) {
+    private DateRange modifiedRange(final DateRange range) {
         if (aggregation == null)
-            return slice.getRange();
+            return range;
 
-        return slice.getRange().shiftStart(
-                -aggregation.getSampling().getExtent());
+        return range.shiftStart(-aggregation.getSampling().getExtent());
     }
 
     private Callback.StreamReducer<FetchData, MetricGroups> buildReducer(
-            SeriesSlice slice) {
+            Map<String, String> group, final DateRange range) {
         if (aggregation == null)
-            return new SimpleCallbackStream(slice);
+            return new SimpleCallbackStream(group);
 
-        final Aggregation.Session session = aggregation.session(slice
-                .getRange());
-        return new AggregatedCallbackStream(slice, session);
+        return new AggregatedCallbackStream(group, aggregation.session(range));
     }
 }

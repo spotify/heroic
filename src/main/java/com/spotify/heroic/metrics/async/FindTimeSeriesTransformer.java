@@ -26,7 +26,7 @@ Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
     @Override
     public FindTimeSeriesGroups transform(final FindSeries result)
             throws Exception {
-        final Map<Series, Set<Series>> groups = new HashMap<Series, Set<Series>>();
+        final Map<Map<String, String>, Set<Series>> groups = new HashMap<>();
 
         for (final Series series : result.getSeries()) {
             final Map<String, String> tags = new HashMap<>();
@@ -37,13 +37,11 @@ Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
                 }
             }
 
-            final Series key = series.withTags(tags);
-
-            Set<Series> group = groups.get(key);
+            Set<Series> group = groups.get(tags);
 
             if (group == null) {
                 group = new HashSet<>();
-                groups.put(key, group);
+                groups.put(tags, group);
             }
 
             group.add(series);

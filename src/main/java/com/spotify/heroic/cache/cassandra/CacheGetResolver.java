@@ -21,7 +21,6 @@ import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public final class CacheGetResolver implements
@@ -41,17 +40,16 @@ Callback.Resolver<CacheBackendGetResult> {
     }
 
     private List<DataPoint> doGetRow() throws ConnectionException {
-        final Series series = key.getSeries();
-        final AggregationGroup aggregationGroup = key.getAggregationGroup();
-        final long columnSize = aggregationGroup.getSampling().getSize();
+        final AggregationGroup aggregation = key.getAggregation();
+        final long columnSize = aggregation.getSampling().getSize();
 
         final List<Long> bases = calculateBases(columnSize);
 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         for (final long base : bases) {
-            final CacheKey cacheKey = new CacheKey(series, aggregationGroup,
-                    base);
+            final CacheKey cacheKey = new CacheKey(key.getFilter(),
+                    key.getGroup(), aggregation, base);
 
             final OperationResult<CqlResult<Integer, String>> op = keyspace
                     .prepareQuery(columnFamily).withCql(CQL_QUERY)

@@ -7,11 +7,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import javax.inject.Inject;
+
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -44,9 +46,6 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.BackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -54,71 +53,49 @@ import com.spotify.heroic.yaml.ValidationException;
 @ToString(of = {}, callSuper = true)
 @Slf4j
 public class HeroicBackend extends CassandraBackend implements Backend {
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    public static class YAML extends Backend.YAML {
-        public static final String TYPE = "!heroic-backend";
+    public static final String DEFAULT_SEEDS = "localhost:9160";
+    public static final String DEFAULT_KEYSPACE = "heroic";
+    public static final String DEFAULT_GROUP = "heroic";
+    public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 50;
 
-        /**
-         * Cassandra seed nodes.
-         */
-        private String seeds;
+    @JsonCreator
+    public static HeroicBackend create(
+            @JsonProperty("seeds") String seeds,
+            @JsonProperty("keyspace") String keyspace,
+            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
+            @JsonProperty("group") String group,
+            @JsonProperty("pools") ReadWriteThreadPools pools) {
+        if (seeds == null)
+            seeds = DEFAULT_SEEDS;
 
-        /**
-         * Cassandra keyspace for heroic.
-         */
-        private String keyspace = "heroic";
+        if (keyspace == null)
+            keyspace = DEFAULT_KEYSPACE;
 
-        /**
-         * Max connections per host in the cassandra cluster.
-         */
-        private int maxConnectionsPerHost = 50;
+        if (maxConnectionsPerHost == null)
+            maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
 
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int readThreads = 50;
-        private int readQueueSize = 10000;
+        if (group == null)
+            group = DEFAULT_GROUP;
 
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int writeThreads = 50;
-        private int writeQueueSize = 1000;
+        if (pools == null)
+            pools = ReadWriteThreadPools.config().build();
 
-        @Override
-        public Backend buildDelegate(String id, ConfigContext ctx,
-                BackendReporter reporter) throws ValidationException {
-            ConfigUtils.notEmpty(ctx.extend("keyspace"), this.keyspace);
-            ConfigUtils.notEmpty(ctx.extend("seeds"), this.seeds);
-
-            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
-                    .readThreads(readThreads).readQueueSize(readQueueSize)
-                    .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
-                    .build();
-
-            return new HeroicBackend(id, reporter, pools, keyspace, seeds,
-                    maxConnectionsPerHost);
-        }
-
-        @Override
-        protected String defaultGroup() {
-            return "heroic";
-        }
+        return new HeroicBackend(group, pools, keyspace, seeds,
+                maxConnectionsPerHost);
     }
 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
             "metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
 
-    private final BackendReporter reporter;
     private final ReadWriteThreadPools pools;
 
-    public HeroicBackend(String id, BackendReporter reporter,
-            ReadWriteThreadPools pools, String keyspace, String seeds,
-            int maxConnectionsPerHost) {
+    @Inject
+    private BackendReporter reporter;
+
+    public HeroicBackend(String id, ReadWriteThreadPools pools,
+            String keyspace, String seeds, int maxConnectionsPerHost) {
         super(id, keyspace, seeds, maxConnectionsPerHost);
 
-        this.reporter = reporter;
         this.pools = pools;
     }
 
@@ -199,26 +176,26 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-                    @Override
-                    public Integer resolve() throws Exception {
-                        for (final DataPoint d : datapoints) {
-                            keyspace.prepareQuery(CQL3_CF)
-                                    .withCql(INSERT_METRICS_CQL)
-                                    .asPreparedStatement()
-                                    .withByteBufferValue(rowKey,
-                                            MetricsRowKeySerializer.get())
-                                    .withByteBufferValue(
-                                            MetricsRowKeySerializer
-                                                    .calculateColumnKey(d
-                                                            .getTimestamp()),
+            @Override
+            public Integer resolve() throws Exception {
+                for (final DataPoint d : datapoints) {
+                    keyspace.prepareQuery(CQL3_CF)
+                    .withCql(INSERT_METRICS_CQL)
+                    .asPreparedStatement()
+                    .withByteBufferValue(rowKey,
+                            MetricsRowKeySerializer.get())
+                            .withByteBufferValue(
+                                    MetricsRowKeySerializer
+                                    .calculateColumnKey(d
+                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                    .withByteBufferValue(d.getValue(),
-                                            DoubleSerializer.get()).execute();
-                        }
+                                            .withByteBufferValue(d.getValue(),
+                                                    DoubleSerializer.get()).execute();
+                }
 
-                        return datapoints.size();
-                    }
-                });
+                return datapoints.size();
+            }
+        });
     }
 
     @Override

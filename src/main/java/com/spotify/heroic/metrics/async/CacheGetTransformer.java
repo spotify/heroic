@@ -2,6 +2,7 @@ package com.spotify.heroic.metrics.async;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,8 +15,7 @@ import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.SeriesSlice;
+import com.spotify.heroic.model.DateRange;
 
 /**
  * Common class for taking a cache query result and building up new queries for
@@ -25,8 +25,7 @@ import com.spotify.heroic.model.SeriesSlice;
  */
 @RequiredArgsConstructor
 public abstract class CacheGetTransformer implements
-        Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
-    private final Series series;
+Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
     private final AggregationCache cache;
 
     @Override
@@ -34,8 +33,8 @@ public abstract class CacheGetTransformer implements
             throws Exception {
         final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
 
-        for (final SeriesSlice slice : cacheResult.getMisses()) {
-            missQueries.add(cacheMiss(slice));
+        for (final DateRange miss : cacheResult.getMisses()) {
+            missQueries.add(cacheMiss(cacheResult.getKey().getGroup(), miss));
         }
 
         /**
@@ -43,7 +42,8 @@ public abstract class CacheGetTransformer implements
          */
         if (missQueries.isEmpty()) {
             final List<DataPoint> datapoints = cacheResult.getResult();
-            final MetricGroup group = new MetricGroup(series, datapoints);
+            final MetricGroup group = new MetricGroup(cacheResult.getKey()
+                    .getGroup(), datapoints);
             final List<MetricGroup> groups = new ArrayList<MetricGroup>();
 
             groups.add(group);
@@ -60,9 +60,9 @@ public abstract class CacheGetTransformer implements
          * Merge with queried data.
          */
         return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(
-                cache, series, cacheResult));
+                cache, cacheResult));
     }
 
-    public abstract Callback<MetricGroups> cacheMiss(SeriesSlice slice)
-            throws Exception;
+    public abstract Callback<MetricGroups> cacheMiss(Map<String, String> group,
+            DateRange miss) throws Exception;
 }

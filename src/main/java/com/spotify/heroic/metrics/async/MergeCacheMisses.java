@@ -15,13 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.CacheOperationException;
+import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,12 +31,11 @@ Callback.Reducer<MetricGroups, MetricGroups> {
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
-        private final Map<Series, List<DataPoint>> cacheUpdates;
+        private final Map<Map<String, String>, List<DataPoint>> cacheUpdates;
         private final Statistics statistics;
     }
 
     private final AggregationCache cache;
-    private final Series series;
     private final CacheQueryResult cacheResult;
 
     @Override
@@ -60,15 +60,18 @@ Callback.Reducer<MetricGroups, MetricGroups> {
     }
 
     private List<Callback<CachePutResult>> updateCache(
-            Map<Series, List<DataPoint>> cacheUpdates) {
+            Map<Map<String, String>, List<DataPoint>> cacheUpdates)
+            throws CacheOperationException {
         final List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(
                 cacheUpdates.size());
 
-        for (final Map.Entry<Series, List<DataPoint>> update : cacheUpdates
+        for (final Map.Entry<Map<String, String>, List<DataPoint>> update : cacheUpdates
                 .entrySet()) {
-            final Series series = update.getKey();
+            final Map<String, String> group = update.getKey();
             final List<DataPoint> datapoints = update.getValue();
-            queries.add(cache.put(series, cacheResult.getAggregation(),
+
+            final CacheBackendKey key = cacheResult.getKey();
+            queries.add(cache.put(key.getFilter(), group, key.getAggregation(),
                     datapoints));
         }
 
@@ -82,7 +85,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
                 .getResultSet().values());
         Collections.sort(datapoints);
 
-        groups.add(new MetricGroup(series, datapoints));
+        groups.add(new MetricGroup(cacheResult.getKey().getGroup(), datapoints));
         return groups;
     }
 
@@ -103,7 +106,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
      */
     private MergeCacheMisses.JoinResult joinResults(
             Collection<MetricGroups> results) {
-        final Map<Series, List<DataPoint>> cacheUpdates = new HashMap<Series, List<DataPoint>>();
+        final Map<Map<String, String>, List<DataPoint>> cacheUpdates = new HashMap<Map<String, String>, List<DataPoint>>();
 
         int cacheConflicts = 0;
 
@@ -124,8 +127,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
                     }
                 }
 
-                cacheUpdates.put(cacheResult.getSlice().getSeries(),
-                        group.getDatapoints());
+                cacheUpdates.put(group.getGroup(), group.getDatapoints());
             }
         }
 

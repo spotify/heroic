@@ -14,9 +14,9 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.model.FindKeys;
-import com.spotify.heroic.model.filter.Filter;
 
 @RequiredArgsConstructor
 public class FindKeysResolver implements Callback.Resolver<FindKeys> {

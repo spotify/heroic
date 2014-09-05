@@ -1,29 +1,26 @@
 package com.spotify.heroic.cache.model;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import java.util.Map;
+
+import lombok.Data;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.filter.Filter;
 
-@ToString(of = { "series", "aggregationGroup" })
-@EqualsAndHashCode(of = { "series", "aggregationGroup" })
+@Data
 public class CacheBackendKey {
     /**
-     * Includes key and tags.
+     * Which filter was used to query the specified data.
      */
-    @Getter
-    private final Series series;
+    private final Filter filter;
+
+    /**
+     * Which group this result belongs to.
+     */
+    private final Map<String, String> group;
 
     /**
      * Always includes sampling.
      */
-    @Getter
-    private final AggregationGroup aggregationGroup;
-
-    public CacheBackendKey(Series series, AggregationGroup aggregation) {
-        this.series = series;
-        this.aggregationGroup = aggregation;
-    }
+    private final AggregationGroup aggregation;
 }

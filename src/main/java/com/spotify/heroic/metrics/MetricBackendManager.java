@@ -14,11 +14,12 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
@@ -29,6 +30,7 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
@@ -39,7 +41,6 @@ import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
 import com.spotify.heroic.metrics.error.BufferEnqueueException;
 import com.spotify.heroic.metrics.model.BufferedWriteMetric;
-import com.spotify.heroic.metrics.model.FindTimeSeriesCriteria;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.PreparedQuery;
@@ -49,9 +50,7 @@ import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
-import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
@@ -63,90 +62,89 @@ public class MetricBackendManager implements LifeCycle {
     public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
     public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
 
-    @Data
-    public static final class YAML {
-        public List<Backend.YAML> backends = new ArrayList<>();
-        private List<String> defaultBackends = null;
-        private boolean updateMetadata = DEFAULT_UPDATE_METADATA;
-        private int groupLimit = DEFAULT_GROUP_LIMIT;
-        private int groupLoadLimit = DEFAULT_GROUP_LOAD_LIMIT;
-        private long flushingInterval = DEFAULT_FLUSHING_INTERVAL;
+    @JsonCreator
+    public static MetricBackendManager create(
+            @JsonProperty("backends") List<Backend> backends,
+            @JsonProperty("defaultBackends") List<String> defaultBackends,
+            @JsonProperty("updateMetadata") Boolean updateMetadata,
+            @JsonProperty("groupLimit") Integer groupLimit,
+            @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
+            @JsonProperty("flushingInterval") Long flushingInterval) {
+        if (updateMetadata == null)
+            updateMetadata = DEFAULT_UPDATE_METADATA;
 
-        public MetricBackendManager build(ConfigContext ctx,
-                MetricBackendManagerReporter reporter)
-                throws ValidationException {
-            final Map<String, List<Backend>> backends = buildBackends(ctx,
-                    reporter);
-            final List<Backend> defaultBackends = buildDefaultBackends(ctx,
-                    backends);
+        if (groupLimit == null)
+            groupLimit = DEFAULT_GROUP_LIMIT;
 
-            return new MetricBackendManager(reporter, backends,
-                    defaultBackends, updateMetadata, groupLimit,
-                    groupLoadLimit, flushingInterval);
-        }
+        if (groupLoadLimit == null)
+            groupLoadLimit = DEFAULT_GROUP_LOAD_LIMIT;
 
-        private List<Backend> buildDefaultBackends(ConfigContext ctx,
-                Map<String, List<Backend>> backends) throws ValidationException {
-            if (defaultBackends == null) {
-                final List<Backend> result = new ArrayList<>();
+        if (flushingInterval == null)
+            flushingInterval = DEFAULT_FLUSHING_INTERVAL;
 
-                for (final Map.Entry<String, List<Backend>> entry : backends
-                        .entrySet()) {
-                    result.addAll(entry.getValue());
-                }
+        final Map<String, List<Backend>> mappedBackends = buildBackends(backends);
+        final List<Backend> buildDefaultBackends = buildDefaultBackends(
+                mappedBackends, defaultBackends);
 
-                return result;
-            }
+        return new MetricBackendManager(mappedBackends, buildDefaultBackends,
+                updateMetadata, groupLimit, groupLoadLimit, flushingInterval);
+    }
 
+    private static List<Backend> buildDefaultBackends(
+            Map<String, List<Backend>> backends, List<String> defaultBackends) {
+        if (defaultBackends == null) {
             final List<Backend> result = new ArrayList<>();
 
-            for (final ConfigContext.Entry<String> entry : ctx.iterate(
-                    defaultBackends, "defaultBackends")) {
-                final List<Backend> someResult = backends.get(entry.getValue());
-
-                if (someResult == null)
-                    throw new ValidationException(entry.getContext(),
-                            "No backend(s) available with id : "
-                                    + entry.getValue());
-
-                result.addAll(someResult);
+            for (final Map.Entry<String, List<Backend>> entry : backends
+                    .entrySet()) {
+                result.addAll(entry.getValue());
             }
 
             return result;
         }
 
-        private Map<String, List<Backend>> buildBackends(ConfigContext ctx,
-                MetricBackendManagerReporter reporter)
-                        throws ValidationException {
-            final Map<String, List<Backend>> groups = new HashMap<>();
+        final List<Backend> result = new ArrayList<>();
 
-            for (final ConfigContext.Entry<Backend.YAML> c : ctx.iterate(
-                    this.backends, "backends")) {
-                final Backend backend = c.getValue().build(c.getContext(),
-                        c.getIndex(),
-                        reporter.newBackend(c.getContext().toString()));
+        for (final String defaultBackend : defaultBackends) {
+            final List<Backend> someResult = backends.get(defaultBackend);
 
-                List<Backend> group = groups.get(backend.getGroup());
+            if (someResult == null)
+                throw new ValidationException(
+                        "No backend(s) available with id : " + defaultBackend);
 
-                if (group == null) {
-                    group = new ArrayList<>();
-                    groups.put(backend.getGroup(), group);
-                }
-
-                group.add(backend);
-            }
-
-            return groups;
+            result.addAll(someResult);
         }
+
+        return result;
     }
 
-    private final MetricBackendManagerReporter reporter;
+    private static Map<String, List<Backend>> buildBackends(
+            List<Backend> backends) {
+        final Map<String, List<Backend>> groups = new HashMap<>();
+
+        for (final Backend backend : backends) {
+            List<Backend> group = groups.get(backend.getGroup());
+
+            if (group == null) {
+                group = new ArrayList<>();
+                groups.put(backend.getGroup(), group);
+            }
+
+            group.add(backend);
+        }
+
+        return groups;
+    }
+
     private final Map<String, List<Backend>> backends;
     private final List<Backend> defaultBackends;
     private final boolean updateMetadata;
     private final int groupLimit;
     private final int groupLoadLimit;
     private final long flushingInterval;
+
+    @Inject
+    private MetricBackendManagerReporter reporter;
 
     private final BulkProcessor<BufferedWriteMetric> writeBulkProcessor = new BulkProcessor<>(
             new BulkProcessor.Flushable<BufferedWriteMetric>() {
@@ -444,13 +442,10 @@ public class MetricBackendManager implements LifeCycle {
             throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
-        final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
-                filter, groupBy, rounded);
-
         final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
                 cluster, rounded, aggregation);
 
-        return findAndRouteTimeSeries(backendGroup, criteria)
+        return findAndRouteTimeSeries(backendGroup, filter, groupBy)
                 .transform(transformer)
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
@@ -463,17 +458,14 @@ public class MetricBackendManager implements LifeCycle {
             throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
-        final FindTimeSeriesCriteria criteria = new FindTimeSeriesCriteria(
-                filter, groupBy, rounded);
-
         final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
-                backendGroup, criteria);
+                backendGroup, filter, groupBy);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
-        final String streamId = Integer.toHexString(criteria.hashCode());
+        final String streamId = Integer.toHexString(filter.hashCode());
 
-        log.info("{}: streaming {}", streamId, criteria);
+        log.info("{}: streaming {}", streamId, filter);
 
         final StreamingQuery streamingQuery = new StreamingQuery() {
             @Override
@@ -489,7 +481,7 @@ public class MetricBackendManager implements LifeCycle {
 
         final long chunk = rounded.diff() / RANGE_FACTOR;
 
-        streamChunks(callback, handle, streamingQuery, criteria,
+        streamChunks(callback, handle, streamingQuery, rounded,
                 rounded.start(rounded.end()), chunk, chunk);
 
         return callback.register(reporter.reportStreamMetrics()).register(
@@ -513,10 +505,8 @@ public class MetricBackendManager implements LifeCycle {
      */
     private void streamChunks(final Callback<StreamMetricsResult> callback,
             final MetricStream handle, final StreamingQuery query,
-            final FindTimeSeriesCriteria original, final DateRange lastRange,
+            final DateRange originalRange, final DateRange lastRange,
             final long chunk, final long window) {
-        final DateRange originalRange = original.getRange();
-
         // decrease the range for the current chunk.
         final DateRange currentRange = lastRange.start(Math.max(
                 lastRange.start() - window, originalRange.start()));
@@ -551,8 +541,8 @@ public class MetricBackendManager implements LifeCycle {
                     return;
                 }
 
-                streamChunks(callback, handle, query, original, currentRange,
-                        chunk, window + chunk);
+                streamChunks(callback, handle, query, originalRange,
+                        currentRange, chunk, window + chunk);
             }
         };
 
@@ -658,18 +648,19 @@ public class MetricBackendManager implements LifeCycle {
      * @return
      */
     private Callback<List<PreparedQuery>> findAndRouteTimeSeries(
-            final String backendGroup, final FindTimeSeriesCriteria criteria) {
-        return findAllTimeSeries(criteria).transform(
-                new FindAndRouteTransformer(backendGroup, groupLimit,
+            final String backendGroup, final Filter filter,
+            final List<String> groupBy) {
+        return findAllTimeSeries(filter, groupBy).transform(
+                new FindAndRouteTransformer(filter, backendGroup, groupLimit,
                         groupLoadLimit, cluster)).register(
                 reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
-            final FindTimeSeriesCriteria query) {
+            final Filter filter, List<String> groupBy) {
         final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
-                query.getGroupBy());
-        return metadata.findSeries(query.getFilter()).transform(transformer);
+                groupBy);
+        return metadata.findSeries(filter).transform(transformer);
     }
 
     public void scheduleFlush() {

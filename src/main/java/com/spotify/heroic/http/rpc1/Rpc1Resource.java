@@ -40,8 +40,9 @@ public class Rpc1Resource {
     public void query(@Suspended final AsyncResponse response,
             Rpc1QueryBody query) throws Exception {
         final Callback<MetricGroups> callback = metrics.useDefaultGroup()
-                .groupedQuery(query.getKey(), query.getSeries(),
-                        query.getRange(), query.getAggregationGroup());
+                .groupedQuery(query.getKey().getTags(), null,
+                        query.getSeries(), query.getRange(),
+                        query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
@@ -57,7 +58,7 @@ public class Rpc1Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, List<WriteMetric> writes)
-                    throws Exception {
+            throws Exception {
         final BackendGroup backend = metrics.useGroup(backendGroup);
 
         final Callback<WriteBatchResult> callback = metrics.writeDirect(

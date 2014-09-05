@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.model.FetchData;
@@ -25,7 +26,6 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.Filter;
 
 public class SeriesMigrator {
     @Inject

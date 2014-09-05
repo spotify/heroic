@@ -4,8 +4,10 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import lombok.Data;
+import javax.inject.Inject;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -18,54 +20,43 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCacheBackend;
-import com.spotify.heroic.cache.AggregationCacheException;
+import com.spotify.heroic.cache.CacheOperationException;
 import com.spotify.heroic.cache.model.CacheBackendGetResult;
 import com.spotify.heroic.cache.model.CacheBackendKey;
 import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
 public class CassandraCache implements AggregationCacheBackend {
     public static final int WIDTH = 1200;
 
-    @Data
-    public static class YAML implements AggregationCacheBackend.YAML {
-        public static final String TYPE = "!cassandra-cache";
+    public static final int DEFAULT_THREADS = 20;
+    public static final String DEFAULT_KEYSPACE = "aggregations";
+    public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 20;
 
-        /**
-         * Cassandra seed nodes.
-         */
-        private String seeds;
+    @JsonCreator
+    public static CassandraCache create(
+            @JsonProperty("seeds") String seeds,
+            @JsonProperty("keyspace") String keyspace,
+            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
+            @JsonProperty("threads") Integer threads) {
+        if (seeds == null)
+            throw new RuntimeException("'seeds' must be defined");
 
-        /**
-         * Cassandra keyspace for aggregations data.
-         */
-        private String keyspace = "aggregations";
+        if (keyspace == null)
+            keyspace = DEFAULT_KEYSPACE;
 
-        /**
-         * Max connections per host in the cassandra cluster.
-         */
-        private int maxConnectionsPerHost = 20;
+        if (maxConnectionsPerHost == null)
+            maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
 
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int threads = 20;
+        if (threads == null)
+            threads = DEFAULT_THREADS;
 
-        @Override
-        public AggregationCacheBackend build(ConfigContext ctx,
-                AggregationCacheBackendReporter reporter)
-                throws ValidationException {
-            ConfigUtils.notEmpty(ctx.extend("keyspace"), this.keyspace);
-            ConfigUtils.notEmpty(ctx.extend("seeds"), this.seeds);
-            final Executor executor = Executors.newFixedThreadPool(threads);
-            return new CassandraCache(reporter, executor, seeds, keyspace,
-                    maxConnectionsPerHost);
-        }
+        final Executor executor = Executors.newFixedThreadPool(threads);
+
+        return new CassandraCache(executor, seeds, keyspace,
+                maxConnectionsPerHost);
     }
 
     private final Keyspace keyspace;
@@ -75,13 +66,11 @@ public class CassandraCache implements AggregationCacheBackend {
             .newColumnFamily("Cql3CF", IntegerSerializer.get(),
                     StringSerializer.get());
 
-    @SuppressWarnings("unused")
-    private final AggregationCacheBackendReporter reporter;
+    @Inject
+    private AggregationCacheBackendReporter reporter;
 
-    public CassandraCache(AggregationCacheBackendReporter reporter,
-            Executor executor, String seeds, String keyspace,
+    public CassandraCache(Executor executor, String seeds, String keyspace,
             int maxConnectionsPerHost) {
-        this.reporter = reporter;
         this.executor = executor;
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
@@ -101,14 +90,14 @@ public class CassandraCache implements AggregationCacheBackend {
 
     @Override
     public Callback<CacheBackendGetResult> get(final CacheBackendKey key,
-            DateRange range) throws AggregationCacheException {
+            DateRange range) throws CacheOperationException {
         return ConcurrentCallback.newResolve(executor, new CacheGetResolver(
                 keyspace, CQL3_CF, key, range));
     }
 
     @Override
     public Callback<CacheBackendPutResult> put(final CacheBackendKey key,
-            final List<DataPoint> datapoints) throws AggregationCacheException {
+            final List<DataPoint> datapoints) throws CacheOperationException {
         return ConcurrentCallback.newResolve(executor, new CachePutResolver(
                 keyspace, CQL3_CF, key, datapoints));
     }

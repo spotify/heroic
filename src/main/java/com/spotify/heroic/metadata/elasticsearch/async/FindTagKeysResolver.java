@@ -16,9 +16,9 @@ import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
-import com.spotify.heroic.model.filter.Filter;
 
 @RequiredArgsConstructor
 public class FindTagKeysResolver implements Callback.Resolver<FindTagKeys> {

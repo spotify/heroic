@@ -3,7 +3,6 @@ package com.spotify.heroic.statistics.semantic;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
-import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
@@ -75,10 +74,5 @@ public class SemanticMetricBackendManagerReporter implements
     @Override
     public Context reportRpcQueryMetrics() {
         return rpcQueryMetrics.setup();
-    }
-
-    @Override
-    public BackendReporter newBackend(String context) {
-        return new SemanticBackendReporter(registry, context);
     }
 }

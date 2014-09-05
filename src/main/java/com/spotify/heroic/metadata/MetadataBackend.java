@@ -2,25 +2,22 @@ package com.spotify.heroic.metadata;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ValidationException;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(value = ElasticSearchMetadataBackend.class, name = "elasticsearch") })
 public interface MetadataBackend extends LifeCycle {
-    public static interface YAML {
-        MetadataBackend build(ConfigContext configContext,
-                MetadataBackendReporter reporter) throws ValidationException;
-    }
-
     public Callback<WriteBatchResult> write(Series series)
             throws MetadataOperationException;
 

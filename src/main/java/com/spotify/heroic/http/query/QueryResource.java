@@ -37,6 +37,10 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.MatchKeyFilter;
+import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.http.general.IdResponse;
@@ -49,11 +53,6 @@ import com.spotify.heroic.metrics.model.QueryMetricsResult;
 import com.spotify.heroic.metrics.model.StreamMetricsResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.AndFilter;
-import com.spotify.heroic.model.filter.Filter;
-import com.spotify.heroic.model.filter.MatchKeyFilter;
-import com.spotify.heroic.model.filter.MatchTagFilter;
 
 @Slf4j
 @Path("/query")
@@ -86,7 +85,7 @@ public class QueryResource {
         public QueryMetricsResponse resume(QueryMetricsResult result)
                 throws Exception {
             final MetricGroups groups = result.getMetricGroups();
-            final Map<Series, List<DataPoint>> data = makeData(groups
+            final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
                     .getGroups());
             return new QueryMetricsResponse(result.getQueryRange(), data,
                     groups.getStatistics());
@@ -196,7 +195,7 @@ public class QueryResource {
                 }
 
                 final MetricGroups groups = result.getMetricGroups();
-                final Map<Series, List<DataPoint>> data = makeData(groups
+                final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
                         .getGroups());
                 final QueryMetricsResponse entity = new QueryMetricsResponse(
                         result.getQueryRange(), data, groups.getStatistics());
@@ -283,12 +282,12 @@ public class QueryResource {
         return new AndFilter(statements).optimize();
     }
 
-    private static Map<Series, List<DataPoint>> makeData(
+    private static Map<Map<String, String>, List<DataPoint>> makeData(
             List<MetricGroup> groups) {
-        final Map<Series, List<DataPoint>> data = new HashMap<Series, List<DataPoint>>();
+        final Map<Map<String, String>, List<DataPoint>> data = new HashMap<>();
 
         for (final MetricGroup group : groups) {
-            data.put(group.getSeries(), group.getDatapoints());
+            data.put(group.getGroup(), group.getDatapoints());
         }
 
         return data;

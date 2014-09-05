@@ -1,67 +1,152 @@
 package com.spotify.heroic.cache;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import lombok.Data;
+import javax.inject.Inject;
 
+import lombok.RequiredArgsConstructor;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.cache.model.CacheBackendGetResult;
+import com.spotify.heroic.cache.model.CacheBackendKey;
+import com.spotify.heroic.cache.model.CacheBackendPutResult;
 import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.SeriesSlice;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
-public interface AggregationCache {
-    @Data
-    public static final class YAML {
-        private AggregationCacheBackend.YAML backend = null;
-
-        public AggregationCache build(ConfigContext ctx,
-                AggregationCacheReporter reporter) throws ValidationException {
-
-            final ConfigContext backendContext = ctx.extend("backend");
-
-            final AggregationCacheBackend backend = buildBackend(reporter,
-                    backendContext);
-
-            return new AggregationCacheImpl(reporter, backend);
-        }
-
-        private AggregationCacheBackend buildBackend(
-                AggregationCacheReporter reporter, final ConfigContext ctx)
-                        throws ValidationException {
-            return ConfigUtils.notNull(ctx, this.backend).build(ctx,
-                    reporter.newAggregationCacheBackend(ctx));
-        }
+@RequiredArgsConstructor
+public class AggregationCache {
+    @JsonCreator
+    public static AggregationCache create(
+            @JsonProperty("backend") AggregationCacheBackend backend) {
+        return new AggregationCache(backend);
     }
 
-    public static final class Null implements AggregationCache {
-        private Null() {
+    private final AggregationCacheBackend backend;
+
+    @Inject
+    private AggregationCacheReporter reporter;
+
+    @RequiredArgsConstructor
+    private static final class BackendCacheGetHandle implements
+    Callback.Handle<CacheBackendGetResult> {
+        private final AggregationCacheReporter reporter;
+        private final Callback<CacheQueryResult> callback;
+        private final DateRange range;
+
+        @Override
+        public void cancelled(CancelReason reason) throws Exception {
+            callback.cancel(reason);
         }
 
         @Override
-        public Callback<CacheQueryResult> get(SeriesSlice slice,
-                AggregationGroup aggregation) {
-            throw new NullPointerException();
+        public void failed(Exception e) throws Exception {
+            callback.fail(e);
         }
 
         @Override
-        public Callback<CachePutResult> put(Series series,
-                AggregationGroup aggregation, List<DataPoint> datapoints) {
-            throw new NullPointerException();
+        public void resolved(CacheBackendGetResult result) throws Exception {
+            final CacheBackendKey key = result.getKey();
+
+            final long width = key.getAggregation().getSampling().getSize();
+
+            final List<DateRange> misses = new ArrayList<DateRange>();
+
+            final List<DataPoint> cached = result.getDatapoints();
+
+            if (width == 0 || cached.isEmpty()) {
+                misses.add(range);
+                callback.resolve(new CacheQueryResult(key, range, cached,
+                        misses));
+                reporter.reportGetMiss(misses.size());
+                return;
+            }
+
+            final long end = range.getEnd();
+
+            long current = range.getStart();
+
+            for (final DataPoint d : cached) {
+                if (current + width != d.getTimestamp()
+                        && current < d.getTimestamp())
+                    misses.add(range.modify(current, d.getTimestamp()));
+
+                current = d.getTimestamp();
+            }
+
+            if (current < end)
+                misses.add(range.modify(current, end));
+
+            reporter.reportGetMiss(misses.size());
+            callback.resolve(new CacheQueryResult(key, range, cached, misses));
         }
     }
 
-    public static final AggregationCache NULL = new Null();
+    @RequiredArgsConstructor
+    private final class BackendCachePutHandle implements
+    Callback.Handle<CacheBackendPutResult> {
+        private final Callback<CachePutResult> callback;
 
-    public Callback<CacheQueryResult> get(SeriesSlice slice,
-            final AggregationGroup aggregation);
+        @Override
+        public void cancelled(CancelReason reason) throws Exception {
+            callback.cancel(reason);
+        }
 
-    public Callback<CachePutResult> put(Series series,
-            AggregationGroup aggregation, List<DataPoint> datapoints);
+        @Override
+        public void failed(Exception e) throws Exception {
+            callback.fail(e);
+        }
+
+        @Override
+        public void resolved(CacheBackendPutResult result) throws Exception {
+            callback.resolve(new CachePutResult());
+        }
+    }
+
+    public boolean isConfigured() {
+        return backend != null;
+    }
+
+    public Callback<CacheQueryResult> get(Filter filter,
+            Map<String, String> group, final AggregationGroup aggregation,
+            DateRange range) throws CacheOperationException {
+        if (!isConfigured())
+            throw new CacheOperationException("Cache backend is not configured");
+
+        final CacheBackendKey key = new CacheBackendKey(filter, group,
+                aggregation);
+        final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
+
+        backend.get(key, range).register(
+                new BackendCacheGetHandle(reporter, callback, range));
+
+        return callback;
+    }
+
+    public Callback<CachePutResult> put(Filter filter,
+            Map<String, String> group, AggregationGroup aggregation,
+            List<DataPoint> datapoints) throws CacheOperationException {
+        final CacheBackendKey key = new CacheBackendKey(filter, group,
+                aggregation);
+        final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
+
+        if (!isConfigured())
+            throw new CacheOperationException("Cache backend is not configured");
+
+        backend.put(key, datapoints)
+        .register(new BackendCachePutHandle(callback))
+        .register(reporter.reportPut());
+
+        return callback;
+    }
 }

@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -43,14 +42,18 @@ import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.inject.Inject;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metadata.MetadataUtils;
@@ -66,9 +69,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.filter.Filter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
@@ -76,111 +77,120 @@ import com.spotify.heroic.yaml.ValidationException;
 @ToString(of = { "seeds", "clusterName", "index", "type", "nodeClient",
         "bulkActions", "dumpInterval", "concurrentBulkRequests" })
 public class ElasticSearchMetadataBackend implements MetadataBackend {
-    @Data
-    public static class YAML implements MetadataBackend.YAML {
-        public static String TYPE = "!elasticsearch-metadata";
+    public static String DEFAULT_CLUSTER_NAME = "elasticsearch";
+    public static String DEFAULT_INDEX = "heroic";
+    public static String DEFAULT_TYPE = "metadata";
+    public static boolean DEFAULT_NODE_CLIENT = false;
+    public static int DEFAULT_WRITE_BULK_ACTIONS = 1000;
+    public static int DEFAULT_CONCURRENT_BULK_REQUESTS = 5;
+    public static long DEFAULT_WRITE_BULK_FLUSH_INTERVAL = 1;
 
-        private List<String> seeds;
-        private String clusterName = "elasticsearch";
-        private String index = "heroic";
-        private String type = "metadata";
-        private boolean nodeClient = false;
+    @JsonCreator
+    public static ElasticSearchMetadataBackend create(
+            @JsonProperty("seeds") List<String> seeds,
+            @JsonProperty("clusterName") String clusterName,
+            @JsonProperty("index") String index,
+            @JsonProperty("type") String type,
+            @JsonProperty("nodeClient") Boolean nodeClient,
 
-        private int readThreads = 20;
-        private int readQueueSize = 10000;
+            @JsonProperty("pools") ReadWriteThreadPools pools,
 
-        private int writeThreads = 20;
-        private int writeQueueSize = 10000;
-        private int writeBulkActions = 1000;
-        private Long writeBulkFlushInterval = null;
+            @JsonProperty("writeBulkActions") Integer writeBulkActions,
+            @JsonProperty("writeBulkFlushInterval") Long writeBulkFlushInterval,
+            @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests)
+                    throws ValidationException {
+        if (clusterName == null)
+            clusterName = DEFAULT_CLUSTER_NAME;
 
-        private int concurrentBulkRequests = 5;
+        if (index == null)
+            index = DEFAULT_INDEX;
 
-        @Override
-        public MetadataBackend build(ConfigContext ctx,
-                MetadataBackendReporter reporter) throws ValidationException {
-            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
-                    .readThreads(readThreads).readQueueSize(readQueueSize)
-                    .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
-                    .build();
+        if (type == null)
+            type = DEFAULT_TYPE;
 
-            XContentBuilder mapping;
+        if (nodeClient == null)
+            nodeClient = DEFAULT_NODE_CLIENT;
 
-            try {
-                mapping = buildMapping(type);
-            } catch (final IOException e) {
-                throw new ValidationException(ctx.extend("type"),
-                        "Failed to create mapping", e);
-            }
+        if (writeBulkActions == null)
+            writeBulkActions = DEFAULT_WRITE_BULK_ACTIONS;
 
-            final List<InetSocketTransportAddress> seeds = buildSeeds(ctx);
+        if (concurrentBulkRequests == null)
+            concurrentBulkRequests = DEFAULT_CONCURRENT_BULK_REQUESTS;
 
-            return new ElasticSearchMetadataBackend(pools, reporter, seeds,
-                    mapping, clusterName, index, type, nodeClient,
-                    writeBulkActions, writeBulkFlushInterval,
-                    concurrentBulkRequests);
+        if (writeBulkFlushInterval == null)
+            writeBulkFlushInterval = DEFAULT_WRITE_BULK_FLUSH_INTERVAL;
+
+        if (pools == null)
+            pools = ReadWriteThreadPools.config().build();
+
+        XContentBuilder mapping;
+
+        try {
+            mapping = buildMapping(type);
+        } catch (final IOException e) {
+            throw new RuntimeException("Failed to create mapping", e);
         }
 
-        private List<InetSocketTransportAddress> buildSeeds(ConfigContext ctx)
-                throws ValidationException {
-            final List<InetSocketTransportAddress> seeds = new ArrayList<>();
+        final List<InetSocketTransportAddress> s = buildSeeds(seeds);
 
-            for (final ConfigContext.Entry<String> entry : ctx.iterate(
-                    this.seeds, "seeds")) {
-                try {
-                    seeds.add(parseInetSocketTransportAddress(entry.getValue()));
-                } catch (final Exception e) {
-                    throw new ValidationException(entry.getContext(),
-                            "Invalid seed address", e);
-                }
-            }
+        return new ElasticSearchMetadataBackend(pools, s, mapping, clusterName,
+                index, type, nodeClient, writeBulkActions,
+                writeBulkFlushInterval, concurrentBulkRequests);
+    }
 
-            return seeds;
+    private static List<InetSocketTransportAddress> buildSeeds(
+            final List<String> rawSeeds) {
+        final List<InetSocketTransportAddress> seeds = new ArrayList<>();
+
+        for (final String seed : rawSeeds) {
+            seeds.add(parseInetSocketTransportAddress(seed));
         }
 
-        private InetSocketTransportAddress parseInetSocketTransportAddress(
-                final String seed) {
-            if (seed.contains(":")) {
-                final String parts[] = seed.split(":");
-                return new InetSocketTransportAddress(parts[0],
-                        Integer.valueOf(parts[1]));
-            }
+        return seeds;
+    }
 
-            return new InetSocketTransportAddress(seed, 9300);
+    private static InetSocketTransportAddress parseInetSocketTransportAddress(
+            final String seed) {
+        if (seed.contains(":")) {
+            final String parts[] = seed.split(":");
+            return new InetSocketTransportAddress(parts[0],
+                    Integer.valueOf(parts[1]));
         }
 
-        private XContentBuilder buildMapping(String type) throws IOException {
-            final XContentBuilder builder = XContentFactory.jsonBuilder();
+        return new InetSocketTransportAddress(seed, 9300);
+    }
 
-            XContentBuilder b = builder.startObject();
+    private static XContentBuilder buildMapping(String type) throws IOException {
+        final XContentBuilder builder = XContentFactory.jsonBuilder();
 
-            b = b.startObject(type);
+        XContentBuilder b = builder.startObject();
+
+        b = b.startObject(type);
+        b = b.startObject("properties");
+
+        b = b.startObject("key").field("type", "string")
+                .field("index", "not_analyzed").endObject();
+
+        b = b.startObject("tags").field("type", "nested");
+
+        {
             b = b.startObject("properties");
 
-            b = b.startObject("key").field("type", "string")
-                    .field("index", "not_analyzed").endObject();
-
-            b = b.startObject("tags").field("type", "nested");
-
             {
-                b = b.startObject("properties");
-
-                {
-                    b = b.startObject("value").field("type", "string")
-                            .field("index", "not_analyzed").endObject();
-                    b = b.startObject("key").field("type", "string")
-                            .field("index", "not_analyzed").endObject();
-                }
-
-                b = b.endObject();
+                b = b.startObject("value").field("type", "string")
+                        .field("index", "not_analyzed").endObject();
+                b = b.startObject("key").field("type", "string")
+                        .field("index", "not_analyzed").endObject();
             }
 
             b = b.endObject();
-
-            b = b.endObject();
-            b = b.endObject();
-            return b;
         }
+
+        b = b.endObject();
+
+        b = b.endObject();
+        b = b.endObject();
+        return b;
     }
 
     /**
@@ -193,7 +203,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     private final ReadWriteThreadPools pools;
-    private final MetadataBackendReporter reporter;
     private final List<InetSocketTransportAddress> seeds;
     private final XContentBuilder mapping;
     private final String clusterName;
@@ -203,6 +212,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private final int bulkActions;
     private final Long dumpInterval;
     private final int concurrentBulkRequests;
+
+    @Inject
+    private MetadataBackendReporter reporter;
 
     private final AtomicReference<Connection> connection = new AtomicReference<Connection>();
     private final AtomicReference<BulkProcessor> bulkProcessor = new AtomicReference<BulkProcessor>();
@@ -511,7 +523,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindTagKeysResolver(client, index, type, filter)).register(
-                reporter.reportFindTagKeys());
+                        reporter.reportFindTagKeys());
     }
 
     @Override
@@ -525,7 +537,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindKeysResolver(client, index, type, filter)).register(
-                reporter.reportFindKeys());
+                        reporter.reportFindKeys());
     }
 
     @Override
@@ -619,7 +631,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-                .get("tags");
+        .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (final Map<String, String> entry : attributes) {

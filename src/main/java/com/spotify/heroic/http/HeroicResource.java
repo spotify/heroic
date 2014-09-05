@@ -15,13 +15,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.general.DataResponse;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
-import com.spotify.heroic.model.filter.Filter;
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)

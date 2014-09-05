@@ -15,6 +15,7 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.PreparedQuery;
@@ -24,22 +25,24 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
         private final String backendGroup;
         private final ClusterNode node;
-        private final Series key;
+        private final Filter filter;
+        private final Map<String, String> group;
         private final Set<Series> series;
 
         @Override
         public Callback<MetricGroups> query(final DateRange range,
-                final AggregationGroup aggregationGroup) {
-            return node.query(backendGroup, key, series, range,
-                    aggregationGroup);
+                final AggregationGroup aggregation) {
+            return node.query(backendGroup, filter, group, aggregation, range,
+                    series);
         }
     };
 
+    private final Filter filter;
     private final String backendGroup;
     private final int groupLimit;
     private final int groupLoadLimit;
@@ -50,26 +53,28 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
             throws Exception {
         final List<PreparedQuery> queries = new ArrayList<>();
 
-        final Map<Series, Set<Series>> groups = result.getGroups();
+        final Map<Map<String, String>, Set<Series>> groups = result.getGroups();
 
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                    + " timeseries would be sent to your browser).");
+                            + " timeseries would be sent to your browser).");
 
-        for (final Entry<Series, Set<Series>> group : groups.entrySet()) {
-            final Set<Series> timeseries = group.getValue();
+        for (final Entry<Map<String, String>, Set<Series>> entry : groups
+                .entrySet()) {
+            final Set<Series> series = entry.getValue();
 
-            if (timeseries.isEmpty())
+            if (series.isEmpty())
                 continue;
 
-            if (timeseries.size() > groupLoadLimit)
+            if (series.size() > groupLoadLimit)
                 throw new IllegalArgumentException(
                         "The current query is too heavy! (More than "
                                 + groupLoadLimit
                                 + " original time series would be loaded from Cassandra).");
 
-            final PreparedQuery query = clusterQuery(group.getKey(), timeseries);
+            final PreparedQuery query = clusterQuery(filter, entry.getKey(),
+                    series);
 
             if (query == null)
                 continue;
@@ -80,26 +85,28 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
         return queries;
     }
 
-    public PreparedQuery clusterQuery(Series key, Set<Series> timeseries) {
-        final Series one = timeseries.iterator().next();
+    public PreparedQuery clusterQuery(Filter filter, Map<String, String> group,
+            Set<Series> series) {
+        final Series one = series.iterator().next();
 
         final NodeRegistryEntry node = cluster.findNode(one.getTags(),
                 NodeCapability.QUERY);
 
         if (node == null) {
-            log.warn("No matching node in group {} found for {}", key,
+            log.warn("No matching node in group {} found for {}", group,
                     one.getTags());
             return null;
         }
 
-        for (final Series series : timeseries) {
-            if (!node.getMetadata().matchesTags(series.getTags()))
+        for (final Series s : series) {
+            if (!node.getMetadata().matchesTags(s.getTags()))
                 throw new IllegalArgumentException(
                         "The current query is too heavy! (Global aggregation not permitted)");
         }
 
         final ClusterNode clusterNode = node.getClusterNode();
 
-        return new ClusterQuery(backendGroup, clusterNode, key, timeseries);
+        return new ClusterQuery(backendGroup, clusterNode, filter, group,
+                series);
     }
 }

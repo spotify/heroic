@@ -5,11 +5,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -38,10 +38,6 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.BackendReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
 /**
  * The data access layer for accessing KairosDB schema in Cassandra.
@@ -50,12 +46,40 @@ import com.spotify.heroic.yaml.ValidationException;
  */
 @ToString(of = {}, callSuper = true)
 public class KairosBackend extends CassandraBackend implements Backend {
-    private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
-            + "column1 > ? AND column1 < ?";
+    public static final String DEFAULT_SEEDS = "localhost:9160";
+    public static final String DEFAULT_KEYSPACE = "heroic";
+    public static final String DEFAULT_GROUP = "heroic";
+    public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 50;
+
+    @JsonCreator
+    public static KairosBackend create(
+            @JsonProperty("seeds") String seeds,
+            @JsonProperty("keyspace") String keyspace,
+            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
+            @JsonProperty("group") String group,
+            @JsonProperty("pools") ReadWriteThreadPools pools) {
+        if (seeds == null)
+            seeds = DEFAULT_SEEDS;
+
+        if (keyspace == null)
+            keyspace = DEFAULT_KEYSPACE;
+
+        if (maxConnectionsPerHost == null)
+            maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
+
+        if (group == null)
+            group = DEFAULT_GROUP;
+
+        if (pools == null)
+            pools = ReadWriteThreadPools.config().build();
+
+        return new KairosBackend(group, pools, keyspace, seeds,
+                maxConnectionsPerHost);
+    }
 
     @RequiredArgsConstructor
     private static final class RowCountTransformer implements
-            Callback.Resolver<Long> {
+    Callback.Resolver<Long> {
         private final Keyspace keyspace;
         private final DateRange range;
         private final DataPointsRowKey row;
@@ -83,58 +107,8 @@ public class KairosBackend extends CassandraBackend implements Backend {
         }
     }
 
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    public static class YAML extends Backend.YAML {
-        public static final String TYPE = "!kairosdb-backend";
-
-        /**
-         * Cassandra seed nodes.
-         */
-        private String seeds;
-
-        /**
-         * Cassandra keyspace for kairosdb.
-         */
-        private String keyspace = "kairosdb";
-
-        /**
-         * Max connections per host in the cassandra cluster.
-         */
-        private int maxConnectionsPerHost = 50;
-
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int readThreads = 50;
-
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int readQueueSize = 10000;
-
-        @Override
-        public Backend buildDelegate(String id, ConfigContext ctx,
-                BackendReporter reporter) throws ValidationException {
-            final String keyspace = ConfigUtils.notEmpty(
-                    ctx.extend("keyspace"), this.keyspace);
-            final String seeds = ConfigUtils.notEmpty(ctx.extend("seeds"),
-                    this.seeds);
-
-            final ReadWriteThreadPools pools = ReadWriteThreadPools.config()
-                    .reporter(reporter.newThreadPoolsReporter())
-                    .readThreads(readThreads).readQueueSize(readQueueSize)
-                    .build();
-
-            return new KairosBackend(id, pools, keyspace, seeds,
-                    maxConnectionsPerHost);
-        }
-
-        @Override
-        protected String defaultGroup() {
-            return "kairosdb";
-        }
-    }
+    private static final String COUNT_CQL = "SELECT count(*) FROM data_points WHERE key = ? AND "
+            + "column1 > ? AND column1 < ?";
 
     private static final ColumnFamily<DataPointsRowKey, Integer> DATA_POINTS_CF = new ColumnFamily<DataPointsRowKey, Integer>(
             "data_points", DataPointsRowKey.Serializer.get(),
@@ -190,8 +164,8 @@ public class KairosBackend extends CassandraBackend implements Backend {
         final int end = DataPointColumnKey.toEndColumn(range.end(), base);
 
         final ByteBufferRange columnRange = new RangeBuilder()
-                .setStart(start, IntegerSerializer.get())
-                .setEnd(end, IntegerSerializer.get()).build();
+        .setStart(start, IntegerSerializer.get())
+        .setEnd(end, IntegerSerializer.get()).build();
 
         final RowQuery<DataPointsRowKey, Integer> dataQuery = keyspace
                 .prepareQuery(DATA_POINTS_CF).getRow(rowKey).autoPaginate(true)
@@ -199,15 +173,15 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<FetchData>() {
-                    @Override
-                    public FetchData resolve() throws Exception {
-                        final OperationResult<ColumnList<Integer>> result = dataQuery
-                                .execute();
-                        final List<DataPoint> datapoints = rowKey
-                                .buildDataPoints(result.getResult());
-                        return new FetchData(series, datapoints);
-                    }
-                });
+            @Override
+            public FetchData resolve() throws Exception {
+                final OperationResult<ColumnList<Integer>> result = dataQuery
+                        .execute();
+                final List<DataPoint> datapoints = rowKey
+                        .buildDataPoints(result.getResult());
+                return new FetchData(series, datapoints);
+            }
+        });
     }
 
     @Override
@@ -229,20 +203,20 @@ public class KairosBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newReduce(callbacks,
                 new Callback.Reducer<Long, Long>() {
-                    @Override
-                    public Long resolved(Collection<Long> results,
-                            Collection<Exception> errors,
-                            Collection<CancelReason> cancelled)
+            @Override
+            public Long resolved(Collection<Long> results,
+                    Collection<Exception> errors,
+                    Collection<CancelReason> cancelled)
                             throws Exception {
-                        long value = 0;
+                long value = 0;
 
-                        for (final long result : results) {
-                            value += result;
-                        }
+                for (final long result : results) {
+                    value += result;
+                }
 
-                        return value;
-                    }
-                });
+                return value;
+            }
+        });
     }
 
     private static List<Long> buildBases(DateRange range) {

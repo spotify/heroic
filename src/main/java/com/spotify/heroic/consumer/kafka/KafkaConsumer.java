@@ -1,6 +1,5 @@
 package com.spotify.heroic.consumer.kafka;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +16,11 @@ import javax.inject.Inject;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ApplicationLifecycle;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
@@ -30,33 +30,40 @@ import com.spotify.heroic.metrics.MetricFormatException;
 import com.spotify.heroic.metrics.error.BufferEnqueueException;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.yaml.ConfigContext;
 import com.spotify.heroic.yaml.ConfigUtils;
-import com.spotify.heroic.yaml.ValidationException;
 
 @RequiredArgsConstructor
 @Slf4j
 public class KafkaConsumer implements Consumer {
-    @Data
-    public static class YAML implements Consumer.YAML {
-        public static final String TYPE = "!kafka-consumer";
+    public static final int DEFAULT_THREAD_COUNT = 2;
 
-        private String schema = null;
-        private List<String> topics = new ArrayList<String>();
-        private int threadCount = 2;
-        private Map<String, String> config = new HashMap<String, String>();
+    @JsonCreator
+    public static KafkaConsumer create(@JsonProperty("schema") String schema,
+            @JsonProperty("topics") List<String> topics,
+            @JsonProperty("threadCount") Integer threadCount,
+            @JsonProperty("config") Map<String, String> config) {
+        if (schema == null)
+            throw new RuntimeException("'schema' not defined");
 
-        @Override
-        public Consumer build(ConfigContext ctx, ConsumerReporter reporter)
-                throws ValidationException {
-            final List<String> topics = ConfigUtils.notEmpty(
-                    ctx.extend("topics"), this.topics);
-            final ConsumerSchema schema = ConfigUtils.instance(
-                    ctx.extend("schema"), this.schema, ConsumerSchema.class);
-            return new KafkaConsumer(topics, threadCount, config, reporter,
-                    schema);
-        }
+        final ConsumerSchema schemaClass = ConfigUtils.instance(schema,
+                ConsumerSchema.class);
+
+        if (topics == null || topics.isEmpty())
+            throw new RuntimeException("'topics' must be defined and non-empty");
+
+        if (config == null)
+            config = new HashMap<String, String>();
+
+        if (threadCount == null)
+            threadCount = DEFAULT_THREAD_COUNT;
+
+        return new KafkaConsumer(topics, threadCount, config, schemaClass);
     }
+
+    private final List<String> topics;
+    private final int threadCount;
+    private final Map<String, String> config;
+    private final ConsumerSchema schema;
 
     @Inject
     private MetricBackendManager metric;
@@ -64,11 +71,8 @@ public class KafkaConsumer implements Consumer {
     @Inject
     private ApplicationLifecycle lifecycle;
 
-    private final List<String> topics;
-    private final int threadCount;
-    private final Map<String, String> config;
-    private final ConsumerReporter reporter;
-    private final ConsumerSchema schema;
+    @Inject
+    private ConsumerReporter reporter;
 
     /**
      * Total number of threads which are still consuming.

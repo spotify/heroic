@@ -40,8 +40,8 @@ public class Rpc2Resource {
     public void query(@Suspended final AsyncResponse response,
             Rpc2QueryBody query) throws Exception {
         final Callback<MetricGroups> callback = metrics.useGroup(
-                query.getBackendGroup()).groupedQuery(query.getKey(),
-                        query.getSeries(), query.getRange(),
+                query.getBackendGroup()).groupedQuery(query.getKey().getTags(),
+                null, query.getSeries(), query.getRange(),
                         query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);

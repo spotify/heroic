@@ -2,9 +2,9 @@ package com.spotify.heroic.statistics.semantic;
 
 import lombok.RequiredArgsConstructor;
 
+import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.ThreadPoolsReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
@@ -17,12 +17,10 @@ public class SemanticBackendReporter implements BackendReporter {
     private final MetricId id;
     private final CallbackReporter writeBatch;
 
-    public SemanticBackendReporter(SemanticMetricRegistry registry,
-            String context) {
+    public SemanticBackendReporter(SemanticMetricRegistry registry) {
         this.registry = registry;
 
-        this.id = MetricId.build().tagged("context", context, "component",
-                COMPONENT);
+        this.id = MetricId.build().tagged("component", COMPONENT);
 
         this.writeBatch = new SemanticCallbackReporter(registry, id.tagged(
                 "what", "write-batch", "unit", Units.WRITE));
