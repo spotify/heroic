@@ -23,10 +23,11 @@ public class RpcMetadata {
     private final Set<NodeCapability> capabilities;
 
     @JsonCreator
-    public static RpcMetadata create(@JsonProperty("version") Integer version,
+    public static RpcMetadata create(
+            @JsonProperty("version") Integer version,
             @JsonProperty("id") UUID id,
-            @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities) {
+            @JsonProperty(value = "tags", required = false) Map<String, String> tags,
+            @JsonProperty(value = "capabilities", required = false) Set<NodeCapability> capabilities) {
         if (version == null)
             version = DEFAULT_VERSION;
 
@@ -35,10 +36,6 @@ public class RpcMetadata {
 
         if (id == null)
             throw new IllegalArgumentException("'id' must be specified");
-
-        if (tags == null || tags.isEmpty())
-            throw new IllegalArgumentException(
-                    "'tags' must be specified and non-empty");
 
         return new RpcMetadata(version, id, tags, capabilities);
     }

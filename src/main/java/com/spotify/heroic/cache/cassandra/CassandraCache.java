@@ -66,6 +66,7 @@ public class CassandraCache implements AggregationCacheBackend {
             .newColumnFamily("Cql3CF", IntegerSerializer.get(),
                     StringSerializer.get());
 
+    @SuppressWarnings("unused")
     @Inject
     private AggregationCacheBackendReporter reporter;
 
@@ -74,15 +75,15 @@ public class CassandraCache implements AggregationCacheBackend {
         this.executor = executor;
 
         final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-                .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
+        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
         final AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
-                .withConnectionPoolConfiguration(
-                        new ConnectionPoolConfigurationImpl(
-                                "HeroicConnectionPool").setPort(9160)
-                                .setMaxConnsPerHost(maxConnectionsPerHost)
-                                .setSeeds(seeds)).forKeyspace(keyspace)
-                .withAstyanaxConfiguration(config)
-                .buildKeyspace(ThriftFamilyFactory.getInstance());
+        .withConnectionPoolConfiguration(
+                new ConnectionPoolConfigurationImpl(
+                        "HeroicConnectionPool").setPort(9160)
+                        .setMaxConnsPerHost(maxConnectionsPerHost)
+                        .setSeeds(seeds)).forKeyspace(keyspace)
+                        .withAstyanaxConfiguration(config)
+                        .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         ctx.start();
         this.keyspace = ctx.getClient();

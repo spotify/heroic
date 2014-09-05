@@ -19,5 +19,6 @@ public interface ClusterNode {
             final AggregationGroup aggregation, final DateRange range,
             final Set<Series> series);
 
-    public Callback<WriteBatchResult> write(List<WriteMetric> writes);
+    public Callback<WriteBatchResult> write(final String backendGroup,
+            List<WriteMetric> writes);
 }

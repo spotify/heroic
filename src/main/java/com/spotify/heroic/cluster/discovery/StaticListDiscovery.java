@@ -30,6 +30,9 @@ public class StaticListDiscovery implements ClusterDiscovery {
         if (threadPoolSize == null)
             threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 
+        if (nodes == null)
+            nodes = new ArrayList<>();
+
         final ClientConfig clientConfig = new ClientConfig();
         clientConfig.register(JacksonJsonProvider.class);
 

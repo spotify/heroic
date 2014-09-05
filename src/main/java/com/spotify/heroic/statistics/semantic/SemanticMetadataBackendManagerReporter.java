@@ -7,9 +7,10 @@ import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 public class SemanticMetadataBackendManagerReporter implements
-        MetadataBackendManagerReporter {
+MetadataBackendManagerReporter {
     private static final String COMPONENT = "metadata-backend-manager";
 
+    @SuppressWarnings("unused")
     private final SemanticMetricRegistry registry;
 
     private final CallbackReporter refresh;

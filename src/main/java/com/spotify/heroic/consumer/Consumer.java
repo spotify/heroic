@@ -8,18 +8,10 @@ import com.spotify.heroic.consumer.exceptions.WriteException;
 import com.spotify.heroic.consumer.kafka.KafkaConsumer;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metrics.model.WriteMetric;
-import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.yaml.ConfigContext;
-import com.spotify.heroic.yaml.ValidationException;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = KafkaConsumer.class, name = "kafka") })
 public interface Consumer extends LifeCycle {
-    public interface YAML {
-        public Consumer build(ConfigContext context, ConsumerReporter reporter)
-                throws ValidationException;
-    }
-
     @Data
     public static class Statistics {
         private final boolean ok;
@@ -27,7 +19,7 @@ public interface Consumer extends LifeCycle {
     }
 
     public void write(WriteMetric entry) throws WriteException,
-    InterruptedException;
+            InterruptedException;
 
     public Statistics getStatistics();
 }

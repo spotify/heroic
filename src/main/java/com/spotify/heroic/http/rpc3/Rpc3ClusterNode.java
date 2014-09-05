@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc2;
+package com.spotify.heroic.http.rpc3;
 
 import java.net.URI;
 import java.util.List;
@@ -30,8 +30,8 @@ import com.spotify.heroic.model.Series;
 
 @Data
 @ToString(of = "url")
-public class Rpc2ClusterNode implements ClusterNode {
-    private final String BASE = "rpc2";
+public class Rpc3ClusterNode implements ClusterNode {
+    private final String BASE = "rpc3";
 
     private final URI url;
     private final ClientConfig config;
@@ -50,9 +50,8 @@ public class Rpc2ClusterNode implements ClusterNode {
             final Filter filter, final Map<String, String> group,
             final AggregationGroup aggregation, final DateRange range,
             final Set<Series> series) {
-        final Series key = new Series(null, group);
-        final Rpc2QueryBody request = new Rpc2QueryBody(backendGroup, key,
-                series, range, aggregation);
+        final Rpc3QueryBody request = new Rpc3QueryBody(backendGroup, group,
+                filter, series, range, aggregation);
         return resolve(request, MetricGroups.class, "query");
     }
 
@@ -66,7 +65,8 @@ public class Rpc2ClusterNode implements ClusterNode {
 
     @Override
     public Callback<WriteBatchResult> write(final String backendGroup,
-            List<WriteMetric> request) {
+            List<WriteMetric> writes) {
+        final Rpc3WriteBody request = new Rpc3WriteBody(backendGroup, writes);
         return resolve(request, RpcWriteResult.class, "write").transform(
                 WRITE_TRANSFORMER);
     }

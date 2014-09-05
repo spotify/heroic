@@ -14,7 +14,7 @@ import com.spotify.heroic.cluster.ClusterManager;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class RpcResource {
-    public static final int VERSION = 1;
+    public static final int VERSION = 3;
 
     @Inject
     private ClusterManager cluster;

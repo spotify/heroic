@@ -11,7 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import lombok.RequiredArgsConstructor;
@@ -157,7 +156,6 @@ public class MetricBackendManager implements LifeCycle {
             });
 
     @Inject
-    @Nullable
     private AggregationCache cache;
 
     @Inject
@@ -388,7 +386,8 @@ public class MetricBackendManager implements LifeCycle {
             final NodeRegistryEntry node = entry.getKey();
             final List<WriteMetric> nodeWrites = entry.getValue();
 
-            callbacks.add(node.getClusterNode().write(nodeWrites));
+            callbacks
+                    .add(node.getClusterNode().write(backendGroup, nodeWrites));
         }
 
         return callbacks;

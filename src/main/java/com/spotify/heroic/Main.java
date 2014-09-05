@@ -52,6 +52,7 @@ import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
 import com.spotify.heroic.cache.AggregationCache;
+import com.spotify.heroic.cache.AggregationCacheBackend;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.consumer.Consumer;
@@ -62,6 +63,7 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -154,6 +156,11 @@ public class Main {
                 return reporter.newAggregationCache();
             }
 
+            @Provides
+            public AggregationCacheBackendReporter newAggregationCacheBackend() {
+                return reporter.newAggregationCacheBackend();
+            }
+
             @Override
             protected void configure() {
                 bind(ApplicationLifecycle.class).toInstance(lifecycle);
@@ -166,28 +173,30 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metrics);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
+                .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
                 bind(LocalClusterNode.class).toInstance(
                         cluster.getLocalClusterNode());
 
+                bind(AggregationCacheBackend.class).toInstance(
+                        cache.getBackend());
                 multiBind(metrics.getBackends(), Backend.class);
                 multiBind(metadata.getBackends(), MetadataBackend.class);
                 multiBind(config.getConsumers(), Consumer.class);
 
                 bindListener(new IsSubclassOf(LifeCycle.class),
                         new TypeListener() {
+                    @Override
+                    public <I> void hear(TypeLiteral<I> type,
+                            TypeEncounter<I> encounter) {
+                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((LifeCycle) i);
-                                    }
-                                });
+                            public void afterInjection(Object i) {
+                                managed.add((LifeCycle) i);
                             }
                         });
+                    }
+                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {

@@ -6,6 +6,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -32,6 +33,7 @@ public class AggregationCache {
         return new AggregationCache(backend);
     }
 
+    @Getter
     private final AggregationCacheBackend backend;
 
     @Inject
@@ -39,7 +41,7 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private static final class BackendCacheGetHandle implements
-    Callback.Handle<CacheBackendGetResult> {
+            Callback.Handle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final DateRange range;
@@ -94,7 +96,7 @@ public class AggregationCache {
 
     @RequiredArgsConstructor
     private final class BackendCachePutHandle implements
-    Callback.Handle<CacheBackendPutResult> {
+            Callback.Handle<CacheBackendPutResult> {
         private final Callback<CachePutResult> callback;
 
         @Override
@@ -144,8 +146,8 @@ public class AggregationCache {
             throw new CacheOperationException("Cache backend is not configured");
 
         backend.put(key, datapoints)
-        .register(new BackendCachePutHandle(callback))
-        .register(reporter.reportPut());
+                .register(new BackendCachePutHandle(callback))
+                .register(reporter.reportPut());
 
         return callback;
     }

@@ -1,7 +1,5 @@
 package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.yaml.ConfigContext;
-
 public interface AggregationCacheReporter {
     CallbackReporter.Context reportGet();
 
@@ -13,7 +11,4 @@ public interface AggregationCacheReporter {
      * @param size
      */
     void reportGetMiss(int size);
-
-    AggregationCacheBackendReporter newAggregationCacheBackend(
-            ConfigContext context);
 }

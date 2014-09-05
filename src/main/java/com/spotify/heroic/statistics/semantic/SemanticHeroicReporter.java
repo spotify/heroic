@@ -2,6 +2,7 @@ package com.spotify.heroic.statistics.semantic;
 
 import lombok.RequiredArgsConstructor;
 
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -43,5 +44,10 @@ public class SemanticHeroicReporter implements HeroicReporter {
     @Override
     public BackendReporter newBackend() {
         return new SemanticBackendReporter(registry);
+    }
+
+    @Override
+    public AggregationCacheBackendReporter newAggregationCacheBackend() {
+        return new SemanticAggregationCacheBackendReporter(registry);
     }
 }

@@ -1,7 +1,6 @@
 package com.spotify.heroic.cluster;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
@@ -24,15 +26,32 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.rpc.RpcResource;
 import com.spotify.heroic.injection.LifeCycle;
 
+/**
+ * Handles management of cluster state.
+ *
+ * The primary responsibility is to receive refresh requests through
+ * {@link #refresh()} that should cause the cluster state to be updated.
+ *
+ * It also provides an interface for looking up nodes through
+ * {@link #findNode(Map, NodeCapability)}.
+ *
+ * @author udoprog
+ */
 @Slf4j
 @Data
 public class ClusterManager implements LifeCycle {
+    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet
+            .copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
+
+    public static final boolean DEFAULT_USE_LOCAL = false;
+
     private final ClusterDiscovery discovery;
     private final Map<String, String> localNodeTags;
     private final Set<NodeCapability> capabilities;
     private final UUID localNodeId;
     private final NodeRegistryEntry localEntry;
     private final LocalClusterNode localClusterNode;
+    private final boolean useLocal;
 
     @Data
     public static final class Statistics {
@@ -44,9 +63,16 @@ public class ClusterManager implements LifeCycle {
     public static ClusterManager create(
             @JsonProperty("discovery") ClusterDiscovery discovery,
             @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities) {
+            @JsonProperty("capabilities") Set<NodeCapability> capabilities,
+            @JsonProperty("useLocal") Boolean useLocal) {
         if (discovery == null)
             discovery = ClusterDiscovery.NULL;
+
+        if (capabilities == null)
+            capabilities = DEFAULT_CAPABILITIES;
+
+        if (useLocal == null)
+            useLocal = DEFAULT_USE_LOCAL;
 
         final UUID id = UUID.randomUUID();
 
@@ -54,13 +80,9 @@ public class ClusterManager implements LifeCycle {
 
         final NodeRegistryEntry localEntry = buildLocalEntry(localClusterNode,
                 id, tags, capabilities);
-        /*
-         * final NodeRegistryEntry localEntry = ClusterManagerImpl
-         * .buildLocalEntry(metrics, id, tags, capabilities);
-         */
 
         return new ClusterManager(discovery, tags, capabilities, id,
-                localEntry, localClusterNode);
+                localEntry, localClusterNode, useLocal);
     }
 
     private final AtomicReference<NodeRegistry> registry = new AtomicReference<>(
@@ -70,9 +92,8 @@ public class ClusterManager implements LifeCycle {
             NodeCapability capability) {
         final NodeRegistry registry = this.registry.get();
 
-        if (registry == null) {
+        if (registry == null)
             throw new IllegalStateException("Registry not ready");
-        }
 
         return registry.findEntry(tags, capability);
     }
@@ -80,8 +101,7 @@ public class ClusterManager implements LifeCycle {
     public Callback<Void> refresh() {
         if (discovery == ClusterDiscovery.NULL) {
             log.info("No discovery mechanism configured");
-            registry.set(new NodeRegistry(Arrays
-                    .asList(new NodeRegistryEntry[] { localEntry }), 1));
+            registry.set(new NodeRegistry(Lists.newArrayList(localEntry), 1));
             return new ResolvedCallback<Void>(null);
         }
 
@@ -91,13 +111,13 @@ public class ClusterManager implements LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                            throws Exception {
+                    throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
                 for (final DiscoveredClusterNode node : nodes) {
                     final NodeRegistryEntryTransformer transformer = new NodeRegistryEntryTransformer(
-                            node, localEntry);
+                            node, localEntry, useLocal);
                     callbacks.add(node.getMetadata().transform(transformer));
                 }
 
@@ -106,7 +126,7 @@ public class ClusterManager implements LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                                    throws Exception {
+                            throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }

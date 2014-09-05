@@ -36,9 +36,10 @@ public class LocalClusterNode implements ClusterNode {
     }
 
     @Override
-    public Callback<WriteBatchResult> write(List<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(String backendGroup,
+            List<WriteMetric> writes) {
         try {
-            return metrics.writeDirect(metrics.useDefaultGroup(), writes);
+            return metrics.writeDirect(metrics.useGroup(backendGroup), writes);
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }
