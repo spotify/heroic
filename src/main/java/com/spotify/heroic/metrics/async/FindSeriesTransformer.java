@@ -19,7 +19,7 @@ import com.spotify.heroic.model.Series;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class FindTimeSeriesTransformer implements
+public class FindSeriesTransformer implements
 Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
     private final List<String> groupBy;
 

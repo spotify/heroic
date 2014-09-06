@@ -37,7 +37,7 @@ import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
-import com.spotify.heroic.metrics.async.FindTimeSeriesTransformer;
+import com.spotify.heroic.metrics.async.FindSeriesTransformer;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
 import com.spotify.heroic.metrics.async.PreparedQueryTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
@@ -668,7 +668,7 @@ public class MetricBackendManager implements LifeCycle {
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(
             final Filter filter, List<String> groupBy) {
-        final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
+        final FindSeriesTransformer transformer = new FindSeriesTransformer(
                 groupBy);
         return metadata.findSeries(filter).transform(transformer);
     }

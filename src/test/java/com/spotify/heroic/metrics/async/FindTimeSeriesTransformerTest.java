@@ -41,7 +41,7 @@ public class FindTimeSeriesTransformerTest {
         final Set<Series> series = new HashSet<Series>();
         final FindSeries input = new FindSeries(series, 0, 0);
 
-        final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
+        final FindSeriesTransformer transformer = new FindSeriesTransformer(
                 GROUP_BY);
         final FindTimeSeriesGroups output = transformer.transform(input);
 
@@ -56,7 +56,7 @@ public class FindTimeSeriesTransformerTest {
 
         final FindSeries input = new FindSeries(series, 0, 0);
 
-        final FindTimeSeriesTransformer transformer = new FindTimeSeriesTransformer(
+        final FindSeriesTransformer transformer = new FindSeriesTransformer(
                 GROUP_BY);
         final FindTimeSeriesGroups output = transformer.transform(input);
 

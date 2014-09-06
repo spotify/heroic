@@ -14,6 +14,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
+import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.MetricBackendManager;
@@ -26,7 +27,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
         private final String backendGroup;
@@ -77,7 +78,7 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                    + " timeseries would be sent to your browser).");
+                            + " timeseries would be sent to your browser).");
 
         for (final Entry<Map<String, String>, Set<Series>> entry : groups
                 .entrySet()) {
@@ -111,6 +112,14 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
 
     public PreparedQuery localQuery(Filter filter, Map<String, String> group,
             Set<Series> series) {
+        final NodeMetadata metadata = cluster.getLocalEntry().getMetadata();
+
+        for (final Series s : series) {
+            if (!metadata.matchesTags(s.getTags()))
+                throw new IllegalArgumentException(
+                        "The current query is too heavy! (Global aggregation not permitted)");
+        }
+
         return new LocalQuery(metrics, backendGroup, filter, group, series);
     }
 
