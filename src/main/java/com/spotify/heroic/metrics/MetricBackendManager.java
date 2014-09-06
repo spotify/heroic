@@ -53,7 +53,6 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
-import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -111,7 +110,7 @@ public class MetricBackendManager implements LifeCycle {
             final List<Backend> someResult = backends.get(defaultBackend);
 
             if (someResult == null)
-                throw new ValidationException(
+                throw new IllegalArgumentException(
                         "No backend(s) available with id : " + defaultBackend);
 
             result.addAll(someResult);
@@ -367,7 +366,7 @@ public class MetricBackendManager implements LifeCycle {
 
     private List<Callback<WriteBatchResult>> writeCluster(
             final String backendGroup, final List<BufferedWriteMetric> writes)
-            throws BackendOperationException {
+                    throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
@@ -432,7 +431,7 @@ public class MetricBackendManager implements LifeCycle {
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation)
-            throws MetricQueryException {
+                    throws MetricQueryException {
 
         final Collection<NodeRegistryEntry> nodes = cluster
                 .findAllShards(NodeCapability.QUERY);
@@ -465,7 +464,7 @@ public class MetricBackendManager implements LifeCycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
@@ -561,7 +560,7 @@ public class MetricBackendManager implements LifeCycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -663,7 +662,7 @@ public class MetricBackendManager implements LifeCycle {
         return findAllTimeSeries(filter, groupBy).transform(
                 new FindAndRouteTransformer(this, cluster, localQuery, filter,
                         backendGroup, groupLimit, groupLoadLimit)).register(
-                reporter.reportFindTimeSeries());
+                                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(

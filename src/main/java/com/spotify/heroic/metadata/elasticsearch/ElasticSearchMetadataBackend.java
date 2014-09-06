@@ -70,7 +70,6 @@ import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.yaml.ValidationException;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -97,8 +96,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
             @JsonProperty("writeBulkActions") Integer writeBulkActions,
             @JsonProperty("writeBulkFlushInterval") Long writeBulkFlushInterval,
-            @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests)
-                    throws ValidationException {
+            @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests) {
         if (clusterName == null)
             clusterName = DEFAULT_CLUSTER_NAME;
 
@@ -498,7 +496,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindSeriesResolver(client, index, type, filter)).register(
-                        reporter.reportFindTimeSeries());
+                reporter.reportFindTimeSeries());
     }
 
     @Override
@@ -523,7 +521,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindTagKeysResolver(client, index, type, filter)).register(
-                        reporter.reportFindTagKeys());
+                reporter.reportFindTagKeys());
     }
 
     @Override
@@ -537,7 +535,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new FindKeysResolver(client, index, type, filter)).register(
-                        reporter.reportFindKeys());
+                reporter.reportFindKeys());
     }
 
     @Override
@@ -571,7 +569,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     private void writeSeries(final Client client,
             final BulkProcessor bulkProcessor, final String id, final Series s)
-                    throws MetadataOperationException, ExecutionException {
+            throws MetadataOperationException, ExecutionException {
         writeCache.get(s, new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
@@ -631,7 +629,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
         final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-        .get("tags");
+                .get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (final Map<String, String> entry : attributes) {

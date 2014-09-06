@@ -60,7 +60,7 @@ public class HeroicConfig {
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)
-            throws ValidationException, IOException {
+            throws IOException {
         final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         return mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
     }

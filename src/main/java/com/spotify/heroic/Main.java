@@ -34,7 +34,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
-import org.yaml.snakeyaml.error.YAMLException;
 
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -73,7 +72,6 @@ import com.spotify.heroic.statistics.MetadataBackendReporter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.heroic.yaml.HeroicConfig;
-import com.spotify.heroic.yaml.ValidationException;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
@@ -227,20 +225,7 @@ public class Main {
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        final HeroicConfig config;
-
-        try {
-            config = setupConfig(configPath, reporter);
-        } catch (final YAMLException e) {
-            log.error("Error in configuration file: {}", configPath, e);
-            System.exit(1);
-            return;
-        } catch (final ValidationException e) {
-            log.error(String.format("Error in configuration file: %s",
-                    configPath), e);
-            System.exit(1);
-            return;
-        }
+        final HeroicConfig config = setupConfig(configPath, reporter);
 
         final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
                 10);
@@ -328,8 +313,7 @@ public class Main {
     }
 
     private static HeroicConfig setupConfig(final String configPath,
-            final HeroicReporter reporter) throws ValidationException,
-            IOException {
+            final HeroicReporter reporter) throws IOException {
         log.info("Loading configuration from: {}", configPath);
 
         final HeroicConfig config;
