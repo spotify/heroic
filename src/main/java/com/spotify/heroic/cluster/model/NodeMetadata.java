@@ -43,7 +43,7 @@ public class NodeMetadata {
      *            capability.
      * @return <code>bool</code> indicating if the capabiltiy matches or not.
      */
-    private boolean matchesCapability(NodeCapability capability) {
+    public boolean matchesCapability(NodeCapability capability) {
         if (this.capabilities == null || capability == null)
             return true;
 

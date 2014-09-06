@@ -18,22 +18,23 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 public class NodeRegistry {
     private final List<NodeRegistryEntry> entries;
     private final int totalNodes;
-    private final Multimap<Map<String, String>, NodeRegistryEntry> shards;
     private static final Random random = new Random(System.currentTimeMillis());
 
     public NodeRegistry(List<NodeRegistryEntry> entries, int totalNodes) {
         this.entries = entries;
         this.totalNodes = totalNodes;
-        this.shards = buildShards(entries);
     }
 
     private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(
-            List<NodeRegistryEntry> entries) {
+            List<NodeRegistryEntry> entries, NodeCapability capability) {
 
         final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap
                 .create();
 
         for (final NodeRegistryEntry e : entries) {
+            if (!e.getMetadata().matchesCapability(capability))
+                continue;
+
             shards.put(e.getMetadata().getTags(), e);
         }
 
@@ -75,6 +76,9 @@ public class NodeRegistry {
 
     public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
         final List<NodeRegistryEntry> result = Lists.newArrayList();
+
+        final Multimap<Map<String, String>, NodeRegistryEntry> shards = buildShards(
+                entries, capability);
 
         for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards
                 .asMap().entrySet()) {
