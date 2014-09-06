@@ -1,17 +1,29 @@
 package com.spotify.heroic.filter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.collect.Lists;
+
 @Data
-public class OrFilter implements ManyTermsFilter, Comparable<Filter> {
+@EqualsAndHashCode(of = { "OPERATOR", "statements" }, doNotUseGetters = true)
+public class OrFilter implements ManyTermsFilter {
     public static final String OPERATOR = "or";
+
+    public static final ManyTermsFilterBuilder<OrFilter> BUILDER = new ManyTermsFilterBuilder<OrFilter>() {
+        @Override
+        public OrFilter build(Collection<Filter> filters) {
+            return new OrFilter(Lists.newArrayList(filters));
+        }
+    };
 
     private final List<Filter> statements;
 
@@ -33,25 +45,23 @@ public class OrFilter implements ManyTermsFilter, Comparable<Filter> {
 
     @Override
     public Filter optimize() {
-        final SortedSet<Filter> statements = new TreeSet<Filter>();
+        final SortedSet<Filter> statements = new TreeSet<Filter>(
+                FilterComparator.get());
 
         for (final Filter f : this.statements) {
-            if (f instanceof OrFilter) {
-                final OrFilter or = (OrFilter) f.optimize();
-
-                if (or == null)
-                    continue;
-
-                for (final Filter statement : or.getStatements())
-                    statements.add(statement);
-
-                continue;
-            }
-
             final Filter o = f.optimize();
 
             if (o == null)
                 continue;
+
+            if (o instanceof OrFilter) {
+                final OrFilter or = (OrFilter) o;
+
+                for (final Filter statement : or.statements)
+                    statements.add(statement);
+
+                continue;
+            }
 
             statements.add(o);
         }
@@ -68,20 +78,6 @@ public class OrFilter implements ManyTermsFilter, Comparable<Filter> {
     @Override
     public String operator() {
         return OPERATOR;
-    }
-
-    @Override
-    public int compareTo(Filter o) {
-        if (o == null)
-            return -1;
-
-        if (!(o instanceof Filter))
-            return -1;
-
-        if (!(o instanceof OrFilter))
-            return operator().compareTo(o.operator());
-
-        return Integer.compare(hashCode(), o.hashCode());
     }
 
     @Override

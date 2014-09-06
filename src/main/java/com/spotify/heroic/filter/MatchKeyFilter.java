@@ -1,10 +1,19 @@
 package com.spotify.heroic.filter;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class MatchKeyFilter implements OneTermFilter, Comparable<Filter> {
+@EqualsAndHashCode(of = { "OPERATOR", "value" }, doNotUseGetters = true)
+public class MatchKeyFilter implements OneTermFilter {
     public static final String OPERATOR = "key";
+
+    public static final OneTermFilterBuilder<MatchKeyFilter> BUILDER = new OneTermFilterBuilder<MatchKeyFilter>() {
+        @Override
+        public MatchKeyFilter build(String first) {
+            return new MatchKeyFilter(first);
+        }
+    };
 
     private final String value;
 
@@ -21,20 +30,6 @@ public class MatchKeyFilter implements OneTermFilter, Comparable<Filter> {
     @Override
     public String operator() {
         return OPERATOR;
-    }
-
-    @Override
-    public int compareTo(Filter o) {
-        if (o == null)
-            return -1;
-
-        if (!(o instanceof Filter))
-            return -1;
-
-        if (!(o instanceof MatchKeyFilter))
-            return operator().compareTo(o.operator());
-
-        return Integer.compare(hashCode(), o.hashCode());
     }
 
     @Override

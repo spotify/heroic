@@ -1,17 +1,29 @@
 package com.spotify.heroic.filter;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import org.apache.commons.lang.StringUtils;
 
+import com.google.common.collect.Lists;
+
 @Data
-public class AndFilter implements ManyTermsFilter, Comparable<Filter> {
+@EqualsAndHashCode(of = { "OPERATOR", "statements" }, doNotUseGetters = true)
+public class AndFilter implements ManyTermsFilter {
     public static final String OPERATOR = "and";
+
+    public static final ManyTermsFilterBuilder<AndFilter> BUILDER = new ManyTermsFilterBuilder<AndFilter>() {
+        @Override
+        public AndFilter build(Collection<Filter> filters) {
+            return new AndFilter(Lists.newArrayList(filters));
+        }
+    };
 
     private final List<Filter> statements;
 
@@ -33,25 +45,23 @@ public class AndFilter implements ManyTermsFilter, Comparable<Filter> {
 
     @Override
     public Filter optimize() {
-        final SortedSet<Filter> statements = new TreeSet<Filter>();
+        final SortedSet<Filter> statements = new TreeSet<Filter>(
+                FilterComparator.get());
 
         for (final Filter f : this.statements) {
-            if (f instanceof AndFilter) {
-                final AndFilter and = (AndFilter) f.optimize();
-
-                if (and == null)
-                    continue;
-
-                for (final Filter statement : and.getStatements())
-                    statements.add(statement);
-
-                continue;
-            }
-
             final Filter o = f.optimize();
 
             if (o == null)
                 continue;
+
+            if (o instanceof AndFilter) {
+                final AndFilter and = (AndFilter) o;
+
+                for (final Filter statement : and.statements)
+                    statements.add(statement);
+
+                continue;
+            }
 
             statements.add(o);
         }
@@ -62,26 +72,12 @@ public class AndFilter implements ManyTermsFilter, Comparable<Filter> {
         if (statements.size() == 1)
             return statements.iterator().next();
 
-        return new AndFilter(new ArrayList<>(statements));
+        return new AndFilter(Lists.newArrayList(statements));
     }
 
     @Override
     public String operator() {
         return OPERATOR;
-    }
-
-    @Override
-    public int compareTo(Filter o) {
-        if (o == null)
-            return -1;
-
-        if (!(o instanceof Filter))
-            return -1;
-
-        if (!(o instanceof AndFilter))
-            return operator().compareTo(o.operator());
-
-        return Integer.compare(hashCode(), o.hashCode());
     }
 
     @Override

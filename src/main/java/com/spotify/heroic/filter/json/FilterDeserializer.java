@@ -18,17 +18,17 @@ import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 
-public class FilterJsonDeserializer extends JsonDeserializer<Filter> {
+public class FilterDeserializer extends JsonDeserializer<Filter> {
     private static final Map<String, FilterSerialization<? extends Filter>> IMPL = new HashMap<>();
 
     static {
-        IMPL.put(MatchTagFilter.OPERATOR, Filter.MATCH_TAG);
-        IMPL.put(StartsWithFilter.OPERATOR, Filter.STARTS_WITH);
-        IMPL.put(RegexFilter.OPERATOR, Filter.REGEX);
-        IMPL.put(HasTagFilter.OPERATOR, Filter.HAS_TAG);
-        IMPL.put(MatchKeyFilter.OPERATOR, Filter.MATCH_KEY);
-        IMPL.put(AndFilter.OPERATOR, Filter.AND);
-        IMPL.put(OrFilter.OPERATOR, Filter.OR);
+        IMPL.put(MatchTagFilter.OPERATOR, JsonCommon.MATCH_TAG);
+        IMPL.put(StartsWithFilter.OPERATOR, JsonCommon.STARTS_WITH);
+        IMPL.put(RegexFilter.OPERATOR, JsonCommon.REGEX);
+        IMPL.put(HasTagFilter.OPERATOR, JsonCommon.HAS_TAG);
+        IMPL.put(MatchKeyFilter.OPERATOR, JsonCommon.MATCH_KEY);
+        IMPL.put(AndFilter.OPERATOR, JsonCommon.AND);
+        IMPL.put(OrFilter.OPERATOR, JsonCommon.OR);
     }
 
     @Override

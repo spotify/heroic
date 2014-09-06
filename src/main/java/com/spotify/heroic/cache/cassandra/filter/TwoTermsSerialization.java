@@ -1,11 +1,17 @@
 package com.spotify.heroic.cache.cassandra.filter;
 
+import lombok.RequiredArgsConstructor;
+
 import com.netflix.astyanax.model.Composite;
 import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 import com.spotify.heroic.filter.TwoTermsFilter;
+import com.spotify.heroic.filter.TwoTermsFilterBuilder;
 
-public abstract class TwoTermsSerialization<T extends TwoTermsFilter>
-        implements FilterSerialization<T> {
+@RequiredArgsConstructor
+public final class TwoTermsSerialization<T extends TwoTermsFilter> implements
+FilterSerialization<T> {
+    private final TwoTermsFilterBuilder<T> builder;
+
     private static final SafeStringSerializer stringSerializer = SafeStringSerializer
             .get();
 
@@ -19,8 +25,6 @@ public abstract class TwoTermsSerialization<T extends TwoTermsFilter>
     public T deserialize(Composite c) {
         final String first = c.get(2, stringSerializer);
         final String second = c.get(3, stringSerializer);
-        return build(first, second);
+        return builder.build(first, second);
     }
-
-    protected abstract T build(String first, String second);
 }

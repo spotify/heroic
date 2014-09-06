@@ -14,7 +14,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.model.Series;
 
-public class FindTimeSeriesTransformerTest {
+public class FindSeriesTransformerTest {
     private static final String REF_KEY = "foo";
 
     private static final List<String> GROUP_BY = new ArrayList<String>();
@@ -60,8 +60,8 @@ public class FindTimeSeriesTransformerTest {
                 GROUP_BY);
         final FindTimeSeriesGroups output = transformer.transform(input);
 
-        final Map<Series, Set<Series>> reference = new HashMap<Series, Set<Series>>();
-        reference.put(new Series(REF_KEY, REF_TAGS), series);
+        final Map<Map<String, String>, Set<Series>> reference = new HashMap<>();
+        reference.put(REF_TAGS, series);
 
         Assert.assertEquals(reference, output.getGroups());
     }

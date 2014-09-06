@@ -18,17 +18,17 @@ import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
 
-public class FilterJsonSerializer extends JsonSerializer<Filter> {
+public class FilterSerializer extends JsonSerializer<Filter> {
     private static final Map<Class<? extends Filter>, FilterSerialization<? extends Filter>> IMPL = new HashMap<>();
 
     static {
-        IMPL.put(MatchTagFilter.class, Filter.MATCH_TAG);
-        IMPL.put(StartsWithFilter.class, Filter.STARTS_WITH);
-        IMPL.put(RegexFilter.class, Filter.REGEX);
-        IMPL.put(HasTagFilter.class, Filter.HAS_TAG);
-        IMPL.put(MatchKeyFilter.class, Filter.MATCH_KEY);
-        IMPL.put(AndFilter.class, Filter.AND);
-        IMPL.put(OrFilter.class, Filter.OR);
+        IMPL.put(MatchTagFilter.class, JsonCommon.MATCH_TAG);
+        IMPL.put(StartsWithFilter.class, JsonCommon.STARTS_WITH);
+        IMPL.put(RegexFilter.class, JsonCommon.REGEX);
+        IMPL.put(HasTagFilter.class, JsonCommon.HAS_TAG);
+        IMPL.put(MatchKeyFilter.class, JsonCommon.MATCH_KEY);
+        IMPL.put(AndFilter.class, JsonCommon.AND);
+        IMPL.put(OrFilter.class, JsonCommon.OR);
     }
 
     @SuppressWarnings("unchecked")

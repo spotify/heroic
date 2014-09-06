@@ -1,10 +1,19 @@
 package com.spotify.heroic.filter;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class MatchTagFilter implements TwoTermsFilter, Comparable<Filter> {
+@EqualsAndHashCode(of = { "OPERATOR", "tag", "value" }, doNotUseGetters = true)
+public class MatchTagFilter implements TwoTermsFilter {
     public static final String OPERATOR = "=";
+
+    public static TwoTermsFilterBuilder<MatchTagFilter> BUILDER = new TwoTermsFilterBuilder<MatchTagFilter>() {
+        @Override
+        public MatchTagFilter build(String first, String second) {
+            return new MatchTagFilter(first, second);
+        }
+    };
 
     private final String tag;
     private final String value;
@@ -22,20 +31,6 @@ public class MatchTagFilter implements TwoTermsFilter, Comparable<Filter> {
     @Override
     public String operator() {
         return OPERATOR;
-    }
-
-    @Override
-    public int compareTo(Filter o) {
-        if (o == null)
-            return -1;
-
-        if (!(o instanceof Filter))
-            return -1;
-
-        if (!(o instanceof MatchTagFilter))
-            return operator().compareTo(o.operator());
-
-        return Integer.compare(hashCode(), o.hashCode());
     }
 
     @Override

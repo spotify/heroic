@@ -3,15 +3,21 @@ package com.spotify.heroic.cache.cassandra.filter;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
+
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.ManyTermsFilter;
+import com.spotify.heroic.filter.ManyTermsFilterBuilder;
 
-public abstract class ManyTermsSerialization<T extends ManyTermsFilter>
-        implements FilterSerialization<T> {
+@RequiredArgsConstructor
+public class ManyTermsSerialization<T extends ManyTermsFilter> implements
+FilterSerialization<T> {
     private static final IntegerSerializer integerSerializer = IntegerSerializer
             .get();
+
+    private final ManyTermsFilterBuilder<T> builder;
 
     @Override
     public void serialize(Composite c, T obj) {
@@ -30,8 +36,6 @@ public abstract class ManyTermsSerialization<T extends ManyTermsFilter>
         for (int i = 0; i < size; i++)
             statements.add(c.get(3 + i, FilterSerializer.get()));
 
-        return build(statements);
+        return builder.build(statements);
     }
-
-    protected abstract T build(List<Filter> statements);
 }
