@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Data;
-import lombok.Getter;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.spotify.heroic.model.DataPoint;
@@ -24,9 +25,7 @@ public class MetricsRowKey {
     public static final long MAX_WIDTH = (long) Integer.MAX_VALUE
             - (long) Integer.MIN_VALUE + 1;
 
-    @Getter
     private final Series series;
-    @Getter
     private final long base;
 
     public List<DataPoint> buildDataPoints(ColumnList<Integer> result) {
@@ -39,5 +38,11 @@ public class MetricsRowKey {
         }
 
         return datapoints;
+    }
+
+    @JsonCreator
+    public static MetricsRowKey create(@JsonProperty("series") Series series,
+            @JsonProperty("base") Long base) {
+        return new MetricsRowKey(series, base);
     }
 }

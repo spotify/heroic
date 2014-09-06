@@ -55,7 +55,7 @@ public class CacheKeySerializer extends AbstractSerializer<CacheKey> {
                 aggregationSerializer);
         final Long base = composite.get(4, longSerializer);
 
-        return new CacheKey(filter, group, aggregation, base);
+        return new CacheKey(version, filter, group, aggregation, base);
     }
 
     private static final CacheKeySerializer instance = new CacheKeySerializer();

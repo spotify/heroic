@@ -17,7 +17,7 @@ import com.spotify.heroic.model.DataPoint;
 
 @RequiredArgsConstructor
 final class CachePutResolver implements
-Callback.Resolver<CacheBackendPutResult> {
+        Callback.Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
     private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer
             .get();
@@ -40,8 +40,9 @@ Callback.Resolver<CacheBackendPutResult> {
 
             final int index = (int) ((d.getTimestamp() % columnWidth) / size);
             final long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
-            final CacheKey key = new CacheKey(this.key.getFilter(),
-                    this.key.getGroup(), aggregation, base);
+            final CacheKey key = new CacheKey(CacheKey.VERSION,
+                    this.key.getFilter(), this.key.getGroup(), aggregation,
+                    base);
             doPut(key, index, d);
         }
 
@@ -51,9 +52,9 @@ Callback.Resolver<CacheBackendPutResult> {
     private void doPut(CacheKey key, Integer dataOffset, DataPoint d)
             throws ConnectionException {
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
-        .asPreparedStatement()
-        .withByteBufferValue(key, cacheKeySerializer)
-        .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
-        .execute();
+                .asPreparedStatement()
+                .withByteBufferValue(key, cacheKeySerializer)
+                .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
+                .execute();
     }
 }
