@@ -173,7 +173,7 @@ public class Main {
                 bind(MetricBackendManager.class).toInstance(metrics);
                 bind(MetadataBackendManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
-                .toInstance(storedMetricsQueries);
+                        .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
                 bind(LocalClusterNode.class).toInstance(
                         cluster.getLocalClusterNode());
@@ -186,17 +186,17 @@ public class Main {
 
                 bindListener(new IsSubclassOf(LifeCycle.class),
                         new TypeListener() {
-                    @Override
-                    public <I> void hear(TypeLiteral<I> type,
-                            TypeEncounter<I> encounter) {
-                        encounter.register(new InjectionListener<I>() {
                             @Override
-                            public void afterInjection(Object i) {
-                                managed.add((LifeCycle) i);
+                            public <I> void hear(TypeLiteral<I> type,
+                                    TypeEncounter<I> encounter) {
+                                encounter.register(new InjectionListener<I>() {
+                                    @Override
+                                    public void afterInjection(Object i) {
+                                        managed.add((LifeCycle) i);
+                                    }
+                                });
                             }
                         });
-                    }
-                });
             }
 
             private <T> void multiBind(final List<T> binds, Class<T> clazz) {
@@ -397,6 +397,20 @@ public class Main {
             final RewritePatternRule rule = new RewritePatternRule();
             rule.setPattern("/metrics-stream/*");
             rule.setReplacement("/query/metrics-stream");
+            rewrite.addRule(rule);
+        }
+
+        {
+            final RewritePatternRule rule = new RewritePatternRule();
+            rule.setPattern("/tags");
+            rule.setReplacement("/metadata/tags");
+            rewrite.addRule(rule);
+        }
+
+        {
+            final RewritePatternRule rule = new RewritePatternRule();
+            rule.setPattern("/keys");
+            rule.setReplacement("/metadata/keys");
             rewrite.addRule(rule);
         }
     }

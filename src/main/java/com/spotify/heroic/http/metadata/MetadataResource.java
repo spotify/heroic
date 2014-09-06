@@ -32,7 +32,7 @@ import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.Series;
 
 @Slf4j
-@Path("/")
+@Path("/metadata")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
