@@ -18,7 +18,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.async.TimeSeriesTransformer;
 import com.spotify.heroic.metrics.error.BackendOperationException;
 import com.spotify.heroic.metrics.model.FetchData;
-import com.spotify.heroic.metrics.model.GroupedTimeSeries;
+import com.spotify.heroic.metrics.model.GroupedSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
@@ -82,9 +82,9 @@ public class BackendGroup {
         return callbacks;
     }
 
-    private Callback<List<GroupedTimeSeries>> groupTimeseries(
+    private Callback<List<GroupedSeries>> groupTimeseries(
             final Map<String, String> group, final Set<Series> series) {
-        final List<GroupedTimeSeries> grouped = new ArrayList<>();
+        final List<GroupedSeries> grouped = new ArrayList<>();
 
         execute(new BackendOperation() {
             @Override
@@ -95,7 +95,7 @@ public class BackendGroup {
                 // because that would contribute to messed up results.
                 final boolean noCache = disabled > 0;
 
-                grouped.add(new GroupedTimeSeries(group, backend, series,
+                grouped.add(new GroupedSeries(group, backend, series,
                         noCache));
             }
         });

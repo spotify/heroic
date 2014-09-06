@@ -2,6 +2,7 @@ package com.spotify.heroic.http.rpc2;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -13,6 +14,7 @@ import javax.ws.rs.client.WebTarget;
 import lombok.Data;
 import lombok.ToString;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.glassfish.jersey.client.ClientConfig;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
@@ -69,5 +71,11 @@ public class Rpc2ClusterNode implements ClusterNode {
             Collection<WriteMetric> writes) {
         return resolve(writes, RpcWriteResult.class, "write").transform(
                 WRITE_TRANSFORMER);
+    }
+
+    @Override
+    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter,
+            List<String> groupBy, DateRange range, AggregationGroup aggregation) {
+        throw new NotImplementedException();
     }
 }

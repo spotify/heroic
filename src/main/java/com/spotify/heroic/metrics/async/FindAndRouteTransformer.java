@@ -16,6 +16,7 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.metrics.model.PreparedQuery;
@@ -25,7 +26,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
         private final String backendGroup;
@@ -42,11 +43,29 @@ public final class FindAndRouteTransformer implements
         }
     };
 
+    @RequiredArgsConstructor
+    public static class LocalQuery implements PreparedQuery {
+        private final MetricBackendManager metrics;
+        private final String backendGroup;
+        private final Filter filter;
+        private final Map<String, String> group;
+        private final Set<Series> series;
+
+        @Override
+        public Callback<MetricGroups> query(final DateRange range,
+                final AggregationGroup aggregation) throws Exception {
+            return metrics.useGroup(backendGroup).groupedQuery(group, filter,
+                    series, range, aggregation);
+        }
+    };
+
+    private final MetricBackendManager metrics;
+    private final ClusterManager cluster;
+    private final boolean localQuery;
     private final Filter filter;
     private final String backendGroup;
     private final int groupLimit;
     private final int groupLoadLimit;
-    private final ClusterManager cluster;
 
     @Override
     public List<PreparedQuery> transform(final FindTimeSeriesGroups result)
@@ -58,7 +77,7 @@ public final class FindAndRouteTransformer implements
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                            + " timeseries would be sent to your browser).");
+                    + " timeseries would be sent to your browser).");
 
         for (final Entry<Map<String, String>, Set<Series>> entry : groups
                 .entrySet()) {
@@ -73,8 +92,13 @@ public final class FindAndRouteTransformer implements
                                 + groupLoadLimit
                                 + " original time series would be loaded from Cassandra).");
 
-            final PreparedQuery query = clusterQuery(filter, entry.getKey(),
-                    series);
+            final PreparedQuery query;
+
+            if (localQuery) {
+                query = localQuery(filter, entry.getKey(), series);
+            } else {
+                query = clusterQuery(filter, entry.getKey(), series);
+            }
 
             if (query == null)
                 continue;
@@ -83,6 +107,11 @@ public final class FindAndRouteTransformer implements
         }
 
         return queries;
+    }
+
+    public PreparedQuery localQuery(Filter filter, Map<String, String> group,
+            Set<Series> series) {
+        return new LocalQuery(metrics, backendGroup, filter, group, series);
     }
 
     public PreparedQuery clusterQuery(Filter filter, Map<String, String> group,

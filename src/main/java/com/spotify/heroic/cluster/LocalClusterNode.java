@@ -1,6 +1,7 @@
 package com.spotify.heroic.cluster;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,5 +44,12 @@ public class LocalClusterNode implements ClusterNode {
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }
+    }
+
+    @Override
+    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter,
+            List<String> groupBy, DateRange range, AggregationGroup aggregation) {
+        return metrics.directQueryMetrics(backendGroup, filter, groupBy, range,
+                aggregation);
     }
 }

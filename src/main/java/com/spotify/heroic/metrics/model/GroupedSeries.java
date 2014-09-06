@@ -9,7 +9,7 @@ import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.model.Series;
 
 @Data
-public class GroupedTimeSeries {
+public class GroupedSeries {
     private final Map<String, String> group;
     private final Backend backend;
     private final Set<Series> series;

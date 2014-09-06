@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
@@ -432,15 +433,32 @@ public class MetricBackendManager implements LifeCycle {
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation)
             throws MetricQueryException {
+
+        final Collection<NodeRegistryEntry> nodes = cluster
+                .findAllShards(NodeCapability.QUERY);
+
+        final List<Callback<MetricGroups>> callbacks = Lists.newArrayList();
+
         final DateRange rounded = roundRange(aggregation, range);
 
-        final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
-                cluster, rounded, aggregation);
+        for (final NodeRegistryEntry n : nodes) {
+            callbacks.add(n.getClusterNode().fullQuery(backendGroup, filter,
+                    groupBy, rounded, aggregation));
+        }
 
-        return findAndRouteTimeSeries(backendGroup, filter, groupBy)
-                .transform(transformer)
+        return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
+    }
+
+    public Callback<MetricGroups> directQueryMetrics(final String backendGroup,
+            final Filter filter, final List<String> groupBy,
+            final DateRange range, final AggregationGroup aggregation) {
+        final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
+                cluster, range, aggregation);
+
+        return findAndRouteTimeSeries(backendGroup, filter, groupBy, true)
+                .transform(transformer).register(reporter.reportQueryMetrics());
     }
 
     public Callback<StreamMetricsResult> streamMetrics(
@@ -451,7 +469,7 @@ public class MetricBackendManager implements LifeCycle {
         final DateRange rounded = roundRange(aggregation, range);
 
         final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
-                backendGroup, filter, groupBy);
+                backendGroup, filter, groupBy, false);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -641,10 +659,10 @@ public class MetricBackendManager implements LifeCycle {
      */
     private Callback<List<PreparedQuery>> findAndRouteTimeSeries(
             final String backendGroup, final Filter filter,
-            final List<String> groupBy) {
+            final List<String> groupBy, final boolean localQuery) {
         return findAllTimeSeries(filter, groupBy).transform(
-                new FindAndRouteTransformer(filter, backendGroup, groupLimit,
-                        groupLoadLimit, cluster)).register(
+                new FindAndRouteTransformer(this, cluster, localQuery, filter,
+                        backendGroup, groupLimit, groupLoadLimit)).register(
                 reporter.reportFindTimeSeries());
     }
 

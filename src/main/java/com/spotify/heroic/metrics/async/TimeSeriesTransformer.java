@@ -17,21 +17,21 @@ import com.spotify.heroic.cache.CacheOperationException;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metrics.Backend;
 import com.spotify.heroic.metrics.model.FetchData;
-import com.spotify.heroic.metrics.model.GroupedTimeSeries;
+import com.spotify.heroic.metrics.model.GroupedSeries;
 import com.spotify.heroic.metrics.model.MetricGroups;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public final class TimeSeriesTransformer implements
-        Callback.DeferredTransformer<List<GroupedTimeSeries>, MetricGroups> {
+        Callback.DeferredTransformer<List<GroupedSeries>, MetricGroups> {
     private final AggregationCache cache;
     private final Filter filter;
     private final AggregationGroup aggregation;
     private final DateRange range;
 
     @Override
-    public Callback<MetricGroups> transform(List<GroupedTimeSeries> result)
+    public Callback<MetricGroups> transform(List<GroupedSeries> result)
             throws Exception {
         if (!cache.isConfigured() || aggregation == null)
             return ConcurrentCallback.newReduce(execute(result),
@@ -42,10 +42,10 @@ public final class TimeSeriesTransformer implements
     }
 
     private List<Callback<MetricGroups>> execute(
-            final List<GroupedTimeSeries> result) throws Exception {
+            final List<GroupedSeries> result) throws Exception {
         final List<Callback<MetricGroups>> queries = new ArrayList<Callback<MetricGroups>>();
 
-        for (final GroupedTimeSeries r : result) {
+        for (final GroupedSeries r : result) {
             queries.add(buildLookup(r.getBackend(), r.getGroup(), range,
                     r.getSeries()));
         }
@@ -54,10 +54,10 @@ public final class TimeSeriesTransformer implements
     }
 
     private List<Callback<MetricGroups>> executeCached(
-            List<GroupedTimeSeries> result) throws CacheOperationException {
+            List<GroupedSeries> result) throws CacheOperationException {
         final List<Callback<MetricGroups>> callbacks = new ArrayList<Callback<MetricGroups>>();
 
-        for (final GroupedTimeSeries r : result) {
+        for (final GroupedSeries r : result) {
             callbacks.add(buildCachedLookup(r.getBackend(), r.getGroup(),
                     r.getSeries()));
         }

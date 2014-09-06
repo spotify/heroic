@@ -54,12 +54,28 @@ public class Rpc3Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             Rpc3WriteBody body) throws Exception {
-        final BackendGroup backend = metrics
-                .useGroup(body.getBackendGroup());
+        final BackendGroup backend = metrics.useGroup(body.getBackendGroup());
 
-        final Callback<WriteBatchResult> callback = metrics.write(
-                backend, body.getWrites());
+        final Callback<WriteBatchResult> callback = metrics.write(backend,
+                body.getWrites());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
+    }
+
+    private static final HttpAsyncUtils.Resume<MetricGroups, MetricGroups> FULL_QUERY = new HttpAsyncUtils.Resume<MetricGroups, MetricGroups>() {
+        @Override
+        public MetricGroups resume(MetricGroups value) throws Exception {
+            return value;
+        }
+    };
+
+    @POST
+    @Path("/full-query")
+    public void query(@Suspended final AsyncResponse response,
+            Rpc3FullQueryBody body) throws Exception {
+        final Callback<MetricGroups> callback = metrics.directQueryMetrics(
+                body.getBackendGroup(), body.getFilter(), body.getGroupBy(),
+                body.getRange(), body.getAggregation());
+        HttpAsyncUtils.handleAsyncResume(response, callback, FULL_QUERY);
     }
 }

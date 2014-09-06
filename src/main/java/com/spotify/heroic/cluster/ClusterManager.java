@@ -98,6 +98,15 @@ public class ClusterManager implements LifeCycle {
         return registry.findEntry(tags, capability);
     }
 
+    public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
+        final NodeRegistry registry = this.registry.get();
+
+        if (registry == null)
+            throw new IllegalStateException("Registry not ready");
+
+        return registry.findAllShards(capability);
+    }
+
     public Callback<Void> refresh() {
         if (discovery == ClusterDiscovery.NULL) {
             log.info("No discovery mechanism configured");
@@ -111,7 +120,7 @@ public class ClusterManager implements LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                    throws Exception {
+                            throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
@@ -126,7 +135,7 @@ public class ClusterManager implements LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                            throws Exception {
+                                    throws Exception {
                         for (final Exception error : errors) {
                             log.error("Failed to refresh metadata", error);
                         }

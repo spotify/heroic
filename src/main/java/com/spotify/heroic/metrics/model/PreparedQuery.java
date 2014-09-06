@@ -6,5 +6,5 @@ import com.spotify.heroic.model.DateRange;
 
 public interface PreparedQuery {
     public Callback<MetricGroups> query(final DateRange range,
-            final AggregationGroup aggregationGroup);
+            final AggregationGroup aggregationGroup) throws Exception;
 }

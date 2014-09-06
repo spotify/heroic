@@ -2,6 +2,7 @@ package com.spotify.heroic.http.rpc3;
 
 import java.net.URI;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -55,7 +56,7 @@ public class Rpc3ClusterNode implements ClusterNode {
         return resolve(request, MetricGroups.class, "query");
     }
 
-    private static final Callback.Transformer<RpcWriteResult, WriteBatchResult> WRITE_TRANSFORMER = new Callback.Transformer<RpcWriteResult, WriteBatchResult>() {
+    private static final Callback.Transformer<RpcWriteResult, WriteBatchResult> WRITE = new Callback.Transformer<RpcWriteResult, WriteBatchResult>() {
         @Override
         public WriteBatchResult transform(RpcWriteResult result)
                 throws Exception {
@@ -67,7 +68,22 @@ public class Rpc3ClusterNode implements ClusterNode {
     public Callback<WriteBatchResult> write(final String backendGroup,
             Collection<WriteMetric> writes) {
         final Rpc3WriteBody request = new Rpc3WriteBody(backendGroup, writes);
-        return resolve(request, RpcWriteResult.class, "write").transform(
-                WRITE_TRANSFORMER);
+        return resolve(request, RpcWriteResult.class, "write").transform(WRITE);
+    }
+
+    private static final Callback.Transformer<MetricGroups, MetricGroups> FULL_QUERY = new Callback.Transformer<MetricGroups, MetricGroups>() {
+        @Override
+        public MetricGroups transform(MetricGroups result) throws Exception {
+            return result;
+        }
+    };
+
+    @Override
+    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter,
+            List<String> groupBy, DateRange range, AggregationGroup aggregation) {
+        final Rpc3FullQueryBody request = new Rpc3FullQueryBody(backendGroup,
+                filter, groupBy, range, aggregation);
+        return resolve(request, MetricGroups.class, "full-query").transform(
+                FULL_QUERY);
     }
 }
