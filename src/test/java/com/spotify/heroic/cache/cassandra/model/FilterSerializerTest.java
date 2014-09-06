@@ -7,7 +7,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.cache.cassandra.filter.FilterSerializer;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
@@ -42,8 +41,11 @@ public class FilterSerializerTest {
 
     @Test
     public void testMatchTag() throws JsonProcessingException {
-        final ObjectMapper om = new ObjectMapper();
-
         Assert.assertEquals(MATCH_TAG, roundTrip(MATCH_TAG));
+    }
+
+    @Test
+    public void testSerializeNull() throws JsonProcessingException {
+        Assert.assertEquals(null, roundTrip(null));
     }
 }

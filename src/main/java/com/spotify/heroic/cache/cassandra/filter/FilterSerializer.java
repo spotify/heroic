@@ -34,6 +34,8 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
     private static final IntegerSerializer integerSerializer = IntegerSerializer
             .get();
 
+    private static final ByteBuffer ZERO_BUFFER = ByteBuffer.allocate(0);
+
     private static final int AND_ID = 0x0001;
     private static final int OR_ID = 0x0002;
     private static final int MATCH_KEY_ID = 0x0010;
@@ -104,6 +106,10 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
 
     @Override
     public ByteBuffer toByteBuffer(Filter obj) {
+        if (obj == null) {
+            return ZERO_BUFFER;
+        }
+
         final Composite c = new Composite();
 
         final Integer typeId = TYPE_TO_S.get(obj.getClass());
@@ -114,7 +120,7 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
 
         @SuppressWarnings("unchecked")
         final FilterSerialization<Filter> serializer = (FilterSerialization<Filter>) ID_TO_S
-        .get(typeId);
+                .get(typeId);
 
         if (serializer == null)
             throw new RuntimeException("No serializer for type "
@@ -130,6 +136,9 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
 
     @Override
     public Filter fromByteBuffer(ByteBuffer byteBuffer) {
+        if (byteBuffer.remaining() == 0)
+            return null;
+
         final Composite c = Composite.fromByteBuffer(byteBuffer);
 
         final int version = c.get(0, integerSerializer);
