@@ -1,6 +1,7 @@
 package com.spotify.heroic.metrics;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -110,7 +111,7 @@ public class BackendGroup {
      * @return A callback indicating how the writes went.
      * @throws BackendOperationException
      */
-    public Callback<WriteBatchResult> write(final List<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(final Collection<WriteMetric> writes) {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         execute(new BackendOperation() {

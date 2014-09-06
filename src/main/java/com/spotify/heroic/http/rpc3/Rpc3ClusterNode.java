@@ -1,7 +1,7 @@
 package com.spotify.heroic.http.rpc3;
 
 import java.net.URI;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -65,7 +65,7 @@ public class Rpc3ClusterNode implements ClusterNode {
 
     @Override
     public Callback<WriteBatchResult> write(final String backendGroup,
-            List<WriteMetric> writes) {
+            Collection<WriteMetric> writes) {
         final Rpc3WriteBody request = new Rpc3WriteBody(backendGroup, writes);
         return resolve(request, RpcWriteResult.class, "write").transform(
                 WRITE_TRANSFORMER);

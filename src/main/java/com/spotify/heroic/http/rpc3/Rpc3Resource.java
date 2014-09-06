@@ -53,12 +53,12 @@ public class Rpc3Resource {
     @POST
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
-            Rpc3WriteBody request) throws Exception {
+            Rpc3WriteBody body) throws Exception {
         final BackendGroup backend = metrics
-                .useGroup(request.getBackendGroup());
+                .useGroup(body.getBackendGroup());
 
-        final Callback<WriteBatchResult> callback = metrics.writeDirect(
-                backend, request.getWrites());
+        final Callback<WriteBatchResult> callback = metrics.write(
+                backend, body.getWrites());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }

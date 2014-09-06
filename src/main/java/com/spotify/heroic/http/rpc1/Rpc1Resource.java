@@ -61,7 +61,7 @@ public class Rpc1Resource {
             throws Exception {
         final BackendGroup backend = metrics.useGroup(backendGroup);
 
-        final Callback<WriteBatchResult> callback = metrics.writeDirect(
+        final Callback<WriteBatchResult> callback = metrics.write(
                 backend, writes);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);

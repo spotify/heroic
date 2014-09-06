@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -365,36 +367,27 @@ public class MetricBackendManager implements LifeCycle {
     private List<Callback<WriteBatchResult>> writeCluster(
             final String backendGroup, final List<BufferedWriteMetric> writes)
             throws BackendOperationException {
-
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
-        final Map<NodeRegistryEntry, List<WriteMetric>> partitions = new HashMap<>();
+        final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
+                .create();
 
-        for (final BufferedWriteMetric write : writes) {
-            List<WriteMetric> partition = partitions.get(write.getNode());
-
-            if (partition == null) {
-                partition = new ArrayList<WriteMetric>();
-                partitions.put(write.getNode(), partition);
-            }
-
-            partition.add(new WriteMetric(write.getSeries(), write.getData()));
+        for (final BufferedWriteMetric w : writes) {
+            partitions.put(w.getNode(),
+                    new WriteMetric(w.getSeries(), w.getData()));
         }
 
-        for (final Map.Entry<NodeRegistryEntry, List<WriteMetric>> entry : partitions
-                .entrySet()) {
-            final NodeRegistryEntry node = entry.getKey();
-            final List<WriteMetric> nodeWrites = entry.getValue();
-
-            callbacks
-                    .add(node.getClusterNode().write(backendGroup, nodeWrites));
+        for (final Map.Entry<NodeRegistryEntry, Collection<WriteMetric>> entry : partitions
+                .asMap().entrySet()) {
+            callbacks.add(entry.getKey().getClusterNode()
+                    .write(backendGroup, entry.getValue()));
         }
 
         return callbacks;
     }
 
-    public Callback<WriteBatchResult> writeDirect(BackendGroup backend,
-            List<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(BackendGroup backend,
+            Collection<WriteMetric> writes) {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.add(backend.write(writes));

@@ -1,6 +1,6 @@
 package com.spotify.heroic.cluster;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,9 +37,9 @@ public class LocalClusterNode implements ClusterNode {
 
     @Override
     public Callback<WriteBatchResult> write(String backendGroup,
-            List<WriteMetric> writes) {
+            Collection<WriteMetric> writes) {
         try {
-            return metrics.writeDirect(metrics.useGroup(backendGroup), writes);
+            return metrics.write(metrics.useGroup(backendGroup), writes);
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }

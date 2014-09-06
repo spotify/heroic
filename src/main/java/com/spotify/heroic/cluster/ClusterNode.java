@@ -1,6 +1,6 @@
 package com.spotify.heroic.cluster;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,5 +20,5 @@ public interface ClusterNode {
             final Set<Series> series);
 
     public Callback<WriteBatchResult> write(final String backendGroup,
-            List<WriteMetric> writes);
+            Collection<WriteMetric> writes);
 }

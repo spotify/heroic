@@ -1,6 +1,6 @@
 package com.spotify.heroic.http.rpc3;
 
-import java.util.List;
+import java.util.Collection;
 
 import lombok.Data;
 
@@ -14,12 +14,12 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 @Data
 public class Rpc3WriteBody {
     private final String backendGroup;
-    private final List<WriteMetric> writes;
+    private final Collection<WriteMetric> writes;
 
     @JsonCreator
     public static Rpc3WriteBody create(
             @JsonProperty("backendGroup") String backendGroup,
-            @JsonProperty("writes") List<WriteMetric> writes) {
+            @JsonProperty("writes") Collection<WriteMetric> writes) {
         return new Rpc3WriteBody(backendGroup, writes);
     }
 }
