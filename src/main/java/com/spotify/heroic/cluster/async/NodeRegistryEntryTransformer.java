@@ -7,13 +7,11 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.DiscoveredClusterNode;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.rpc1.Rpc1ClusterNode;
-import com.spotify.heroic.http.rpc2.Rpc2ClusterNode;
 import com.spotify.heroic.http.rpc3.Rpc3ClusterNode;
 
 @RequiredArgsConstructor
 public class NodeRegistryEntryTransformer implements
-        Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
     private final DiscoveredClusterNode discovered;
     private final NodeRegistryEntry localEntry;
     private final boolean useLocal;
@@ -41,14 +39,10 @@ public class NodeRegistryEntryTransformer implements
             throws Exception {
         switch (metadata.getVersion()) {
         case 0:
+        case 1:
+        case 2:
             throw new Exception("Unsupported RPC version: "
                     + metadata.getVersion());
-        case 1:
-            return new Rpc1ClusterNode(discovered.getUrl(),
-                    discovered.getConfig(), discovered.getExecutor());
-        case 2:
-            return new Rpc2ClusterNode(discovered.getUrl(),
-                    discovered.getConfig(), discovered.getExecutor());
         default:
             return new Rpc3ClusterNode(discovered.getUrl(),
                     discovered.getConfig(), discovered.getExecutor());
