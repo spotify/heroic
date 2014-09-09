@@ -176,8 +176,10 @@ public class Main {
                 bind(LocalClusterNode.class).toInstance(
                         cluster.getLocalClusterNode());
 
-                bind(AggregationCacheBackend.class).toInstance(
-                        cache.getBackend());
+                if (cache.getBackend() != null)
+                    bind(AggregationCacheBackend.class).toInstance(
+                            cache.getBackend());
+
                 multiBind(metrics.getBackends(), Backend.class);
                 multiBind(metadata.getBackends(), MetadataBackend.class);
                 multiBind(config.getConsumers(), Consumer.class);
