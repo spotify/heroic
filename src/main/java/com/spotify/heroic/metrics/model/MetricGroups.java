@@ -30,11 +30,11 @@ public final class MetricGroups {
 
     @Slf4j
     private static class Merger implements
-            Callback.Reducer<MetricGroups, MetricGroups> {
+    Callback.Reducer<MetricGroups, MetricGroups> {
         @Override
         public MetricGroups resolved(Collection<MetricGroups> results,
                 Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+                        throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 

@@ -31,8 +31,11 @@ import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
+import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
@@ -441,13 +444,27 @@ public class MetricBackendManager implements LifeCycle {
         final DateRange rounded = roundRange(aggregation, range);
 
         for (final NodeRegistryEntry n : nodes) {
-            callbacks.add(n.getClusterNode().fullQuery(backendGroup, filter,
+            final Filter f = modifyFilter(n.getMetadata(), filter);
+            callbacks.add(n.getClusterNode().fullQuery(backendGroup, f,
                     groupBy, rounded, aggregation));
         }
 
         return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
                 .transform(new MetricGroupsTransformer(rounded))
                 .register(reporter.reportQueryMetrics());
+    }
+
+    private Filter modifyFilter(NodeMetadata metadata, Filter filter) {
+        final List<Filter> statements = new ArrayList<>();
+        statements.add(filter);
+
+        for (final Map.Entry<String, String> entry : metadata.getTags()
+                .entrySet()) {
+            statements
+                    .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+        }
+
+        return new AndFilter(statements).optimize();
     }
 
     public Callback<MetricGroups> directQueryMetrics(final String backendGroup,

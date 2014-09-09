@@ -27,7 +27,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
                 try {
                     AbstractCallback.this.resolve(reducer.resolved(results,
                             errors, cancelled));
-                } catch (Exception error) {
+                } catch (final Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }
@@ -66,7 +66,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
                 try {
                     AbstractCallback.this.resolve(reducer.resolved(successful,
                             failed, cancelled));
-                } catch (Exception error) {
+                } catch (final Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }
@@ -168,7 +168,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
             public void resolved(T result) throws Exception {
                 try {
                     callback.resolve(transformer.transform(result));
-                } catch (Exception t) {
+                } catch (final Exception t) {
                     callback.fail(t);
                 }
             }
@@ -204,7 +204,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
 
                 try {
                     AbstractCallback.this.resolve(resolver.resolve());
-                } catch (Exception error) {
+                } catch (final Exception error) {
                     AbstractCallback.this.fail(error);
                 }
             }
@@ -212,7 +212,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
 
         try {
             executor.execute(runnable);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             AbstractCallback.this.fail(e);
         }
 

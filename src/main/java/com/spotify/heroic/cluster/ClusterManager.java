@@ -23,6 +23,7 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.NodeRegistryEntryTransformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.http.rpc.RpcNodeException;
 import com.spotify.heroic.http.rpc.RpcResource;
 import com.spotify.heroic.injection.LifeCycle;
 
@@ -120,7 +121,7 @@ public class ClusterManager implements LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                            throws Exception {
+                    throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
@@ -135,9 +136,20 @@ public class ClusterManager implements LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                                    throws Exception {
+                            throws Exception {
                         for (final Exception error : errors) {
-                            log.error("Failed to refresh metadata", error);
+                            if (error instanceof RpcNodeException) {
+                                final RpcNodeException e = (RpcNodeException) error;
+                                final String cause = e.getCause() == null ? "no cause"
+                                        : e.getCause().getMessage();
+
+                                log.error(String
+                                        .format("Failed to refresh metadata for %s: %s (%s)",
+                                                e.getUri(), e.getMessage(),
+                                                cause));
+                            } else {
+                                log.error("Failed to refresh metadata", error);
+                            }
                         }
 
                         for (final CancelReason reason : cancelled) {

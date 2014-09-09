@@ -9,7 +9,7 @@ import java.util.concurrent.Executor;
  * interesting events.
  *
  * The available events are.
- * 
+ *
  * <ul>
  * <li>resolved, for when a callback has been resolved with a value.</li>
  * <li>failed, for when a callback failed to resolve because of an exception.</li>
@@ -96,7 +96,7 @@ public interface Callback<T> {
      * @author udoprog
      */
     public static abstract class DefaultStreamReducer<C, R> implements
-            StreamReducer<C, R> {
+    StreamReducer<C, R> {
         /**
          * Override to trigger on one resolved.
          */
@@ -167,7 +167,7 @@ public interface Callback<T> {
     /**
      * Register functions to be fired for any of the possible events for a
      * callback.
-     * 
+     *
      * These events are; cancelled, failed or resolved.
      *
      * @param handle
@@ -242,13 +242,13 @@ public interface Callback<T> {
      * <pre>
      * {@code
      *   List<Callback<Integer>> callbacks = asyncListOperation();
-     * 
+     *
      *   Callback<Integer> callback = ConcurrentCallback.newReduce(callbacks, Callback.Reducer<Integer, Integer>() {
      *     Integer resolved(Collection<Integer> results, Collection<Exception> errors, Collection<CancelReason> cancelled) {
      *       return sum(results);
      *     }
      *   }
-     * 
+     *
      *   # use callback
      * }
      * </pre>
@@ -280,25 +280,25 @@ public interface Callback<T> {
      * <pre>
      * {@code
      *   List<Callback<Integer>> callbacks = asyncListOperation();
-     * 
+     *
      *   Callback<Integer> callback = ConcurrentCallback.newReduce(callbacks, new Callback.StreamReducer<Integer, Integer>() {
      *     final AtomicInteger value = new AtomicInteger(0);
-     * 
+     *
      *     void finish(Callback<Integer> callback, Integer result) {
      *       value.addAndGet(result);
      *     }
-     * 
+     *
      *     void failed(Callback<Integer> callback, Exception error) {
      *     }
-     * 
+     *
      *     void cancel(Callback<Integer> callback, CancelReason reason) throws Exception {
      *     }
-     * 
+     *
      *     Double resolved(int successful, int failed, int cancelled) throws Exception {
      *       return result.get();
      *     }
      *   });
-     * 
+     *
      *   # use callback
      * }
      * </pre>
@@ -327,13 +327,13 @@ public interface Callback<T> {
      * <pre>
      * {@code
      *   Callback<Integer> first = asyncOperation();
-     * 
+     *
      *   Callback<Double> second = callback.transform(new Transformer<Integer, Double>() {
      *     void transform(Integer result, Callback<Double> callback) {
      *       callback.finish(result.doubleValue());
      *     }
      *   };
-     * 
+     *
      *   # use second
      * }
      * </pre>
@@ -347,7 +347,7 @@ public interface Callback<T> {
     /**
      * Transforms the value of this callback into another type using a
      * transformer function.
-     * 
+     *
      * <pre>
      * Callback<T> (this) - *using transformer* -> Callback<C>
      * </pre>
@@ -358,13 +358,13 @@ public interface Callback<T> {
      * <pre>
      * {@code
      *   Callback<Integer> first = asyncOperation();
-     * 
+     *
      *   Callback<Double> second = callback.transform(new Transformer<Integer, Double>() {
      *     Double transform(Integer result) {
      *       return result.doubleValue();
      *     }
      *   };
-     * 
+     *
      *   # use second
      * }
      * </pre>
@@ -382,5 +382,5 @@ public interface Callback<T> {
      *             If the callback being resolved threw an exception.
      */
     public T get() throws InterruptedException, CancelledException,
-            FailedException;
+    FailedException;
 }
