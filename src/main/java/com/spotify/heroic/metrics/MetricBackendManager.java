@@ -74,6 +74,9 @@ public class MetricBackendManager implements LifeCycle {
             @JsonProperty("groupLimit") Integer groupLimit,
             @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
             @JsonProperty("flushingInterval") Long flushingInterval) {
+        if (backends == null)
+            backends = new ArrayList<>();
+
         if (updateMetadata == null)
             updateMetadata = DEFAULT_UPDATE_METADATA;
 
@@ -369,7 +372,7 @@ public class MetricBackendManager implements LifeCycle {
 
     private List<Callback<WriteBatchResult>> writeCluster(
             final String backendGroup, final List<BufferedWriteMetric> writes)
-                    throws BackendOperationException {
+            throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
@@ -445,8 +448,15 @@ public class MetricBackendManager implements LifeCycle {
 
         for (final NodeRegistryEntry n : nodes) {
             final Filter f = modifyFilter(n.getMetadata(), filter);
-            callbacks.add(n.getClusterNode().fullQuery(backendGroup, f,
-                    groupBy, rounded, aggregation));
+
+            final Map<String, String> shard = n.getMetadata().getTags();
+
+            final Callback<MetricGroups> query = n.getClusterNode().fullQuery(
+                    backendGroup, f, groupBy, rounded, aggregation);
+
+            callbacks.add(query.transform(MetricGroups.identity(), MetricGroups
+                    .nodeError(n.getMetadata().getId(), n.getClusterNode()
+                            .getUri(), shard)));
         }
 
         return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
@@ -461,7 +471,7 @@ public class MetricBackendManager implements LifeCycle {
         for (final Map.Entry<String, String> entry : metadata.getTags()
                 .entrySet()) {
             statements
-                    .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+            .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
         }
 
         return new AndFilter(statements).optimize();
@@ -471,7 +481,7 @@ public class MetricBackendManager implements LifeCycle {
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation) {
         final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
-                cluster, range, aggregation);
+                range, aggregation);
 
         return findAndRouteTimeSeries(backendGroup, filter, groupBy, true)
                 .transform(transformer).register(reporter.reportQueryMetrics());
@@ -481,7 +491,7 @@ public class MetricBackendManager implements LifeCycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-                    throws MetricQueryException {
+            throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
@@ -499,7 +509,7 @@ public class MetricBackendManager implements LifeCycle {
                 log.info("{}: streaming chunk {}", streamId, range);
 
                 final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
-                        cluster, range, aggregation);
+                        range, aggregation);
 
                 return rows.transform(transformer);
             }
@@ -577,7 +587,7 @@ public class MetricBackendManager implements LifeCycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                .register(reporter.reportStreamMetricsChunk());
+                        .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -617,7 +627,8 @@ public class MetricBackendManager implements LifeCycle {
         }
 
         if (selected == null || selected.isEmpty())
-            throw new BackendOperationException("No backend(s) found");
+            throw new BackendOperationException(
+                    "No usable metric backends available");
 
         return useAlive(selected);
     }
@@ -637,7 +648,8 @@ public class MetricBackendManager implements LifeCycle {
         }
 
         if (selected == null || selected.isEmpty())
-            throw new BackendOperationException("No backend(s) found");
+            throw new BackendOperationException(
+                    "No usable metric backends available");
 
         return useAlive(selected);
     }
@@ -661,7 +673,7 @@ public class MetricBackendManager implements LifeCycle {
         }
 
         if (alive.isEmpty())
-            throw new BackendOperationException("No backend(s) available");
+            throw new BackendOperationException("No alive backends available");
 
         return new BackendGroup(cache, reporter, disabled, alive);
     }
@@ -679,7 +691,7 @@ public class MetricBackendManager implements LifeCycle {
         return findAllTimeSeries(filter, groupBy).transform(
                 new FindAndRouteTransformer(this, cluster, localQuery, filter,
                         backendGroup, groupLimit, groupLoadLimit)).register(
-                                reporter.reportFindTimeSeries());
+                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(

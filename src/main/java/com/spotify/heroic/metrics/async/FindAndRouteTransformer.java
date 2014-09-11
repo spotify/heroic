@@ -27,7 +27,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class FindAndRouteTransformer implements
-        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     @RequiredArgsConstructor
     public static class ClusterQuery implements PreparedQuery {
         private final String backendGroup;
@@ -78,7 +78,7 @@ public final class FindAndRouteTransformer implements
         if (groups.size() > groupLimit)
             throw new IllegalArgumentException(
                     "The current query is too heavy! (More than " + groupLimit
-                            + " timeseries would be sent to your browser).");
+                    + " timeseries would be sent to your browser).");
 
         for (final Entry<Map<String, String>, Set<Series>> entry : groups
                 .entrySet()) {

@@ -21,18 +21,20 @@ import com.spotify.heroic.cache.model.CachePutResult;
 import com.spotify.heroic.cache.model.CacheQueryResult;
 import com.spotify.heroic.metrics.model.MetricGroup;
 import com.spotify.heroic.metrics.model.MetricGroups;
+import com.spotify.heroic.metrics.model.RequestError;
 import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 
 @Slf4j
 @RequiredArgsConstructor
 final class MergeCacheMisses implements
-Callback.Reducer<MetricGroups, MetricGroups> {
+        Callback.Reducer<MetricGroups, MetricGroups> {
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
         private final Map<Map<String, String>, List<DataPoint>> cacheUpdates;
         private final Statistics statistics;
+        private final List<RequestError> errors;
     }
 
     private final AggregationCache cache;
@@ -41,7 +43,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
     @Override
     public MetricGroups resolved(Collection<MetricGroups> results,
             Collection<Exception> errors, Collection<CancelReason> cancelled)
-                    throws Exception {
+            throws Exception {
 
         final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);
@@ -56,12 +58,13 @@ Callback.Reducer<MetricGroups, MetricGroups> {
                     statistics);
         }
 
-        return new MetricGroups(groups, joinResults.getStatistics());
+        return new MetricGroups(groups, joinResults.getStatistics(),
+                joinResults.getErrors());
     }
 
     private List<Callback<CachePutResult>> updateCache(
             Map<Map<String, String>, List<DataPoint>> cacheUpdates)
-            throws CacheOperationException {
+                    throws CacheOperationException {
         final List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(
                 cacheUpdates.size());
 
@@ -117,7 +120,10 @@ Callback.Reducer<MetricGroups, MetricGroups> {
 
         Statistics statistics = Statistics.EMPTY;
 
+        final List<RequestError> errors = new ArrayList<>();
+
         for (final MetricGroups result : results) {
+            errors.addAll(result.getErrors());
             statistics = statistics.merge(result.getStatistics());
 
             for (final MetricGroup group : result.getGroups()) {
@@ -135,7 +141,7 @@ Callback.Reducer<MetricGroups, MetricGroups> {
                 .builder(statistics)
                 .cache(new Statistics.Cache(cachedResults.getHits(),
                         cacheConflicts, cachedResults.getConflicts(),
-                        cachedResults.getNans())).build());
+                        cachedResults.getNans())).build(), errors);
     }
 
     @RequiredArgsConstructor

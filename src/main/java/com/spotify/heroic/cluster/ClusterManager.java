@@ -77,7 +77,7 @@ public class ClusterManager implements LifeCycle {
 
         final UUID id = UUID.randomUUID();
 
-        final LocalClusterNode localClusterNode = new LocalClusterNode();
+        final LocalClusterNode localClusterNode = new LocalClusterNode(id);
 
         final NodeRegistryEntry localEntry = buildLocalEntry(localClusterNode,
                 id, tags, capabilities);
@@ -121,7 +121,7 @@ public class ClusterManager implements LifeCycle {
             @Override
             public Callback<Void> transform(
                     final Collection<DiscoveredClusterNode> nodes)
-                    throws Exception {
+                            throws Exception {
                 final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
                         nodes.size());
 
@@ -136,13 +136,12 @@ public class ClusterManager implements LifeCycle {
                     public Void resolved(Collection<NodeRegistryEntry> results,
                             Collection<Exception> errors,
                             Collection<CancelReason> cancelled)
-                            throws Exception {
+                                    throws Exception {
                         for (final Exception error : errors) {
                             if (error instanceof RpcNodeException) {
                                 final RpcNodeException e = (RpcNodeException) error;
                                 final String cause = e.getCause() == null ? "no cause"
                                         : e.getCause().getMessage();
-
                                 log.error(String
                                         .format("Failed to refresh metadata for %s: %s (%s)",
                                                 e.getUri(), e.getMessage(),

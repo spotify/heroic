@@ -151,6 +151,12 @@ abstract class AbstractCallback<T> implements Callback<T> {
 
     @Override
     public <C> Callback<C> transform(final Transformer<T, C> transformer) {
+        return transform(transformer, null);
+    }
+
+    @Override
+    public <C> Callback<C> transform(final Transformer<T, C> transformer,
+            final ErrorTransformer<C> error) {
         final Callback<C> callback = newCallback();
 
         register(new Handle<T>() {
@@ -161,15 +167,25 @@ abstract class AbstractCallback<T> implements Callback<T> {
 
             @Override
             public void failed(Exception e) throws Exception {
-                callback.fail(e);
+                if (error == null) {
+                    callback.fail(e);
+                    return;
+                }
+
+                // use an error transformer.
+                try {
+                    callback.resolve(error.transform(e));
+                } catch (final Exception e2) {
+                    callback.fail(e2);
+                }
             }
 
             @Override
             public void resolved(T result) throws Exception {
                 try {
                     callback.resolve(transformer.transform(result));
-                } catch (final Exception t) {
-                    callback.fail(t);
+                } catch (final Exception e2) {
+                    callback.fail(e2);
                 }
             }
         });

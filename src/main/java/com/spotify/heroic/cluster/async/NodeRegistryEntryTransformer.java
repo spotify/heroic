@@ -45,7 +45,7 @@ public class NodeRegistryEntryTransformer implements
             throw new RpcNodeException(discovered.getUrl(),
                     "Unsupported RPC version: " + metadata.getVersion());
         default:
-            return new Rpc3ClusterNode(discovered.getUrl(),
+            return new Rpc3ClusterNode(metadata.getId(), discovered.getUrl(),
                     discovered.getConfig(), discovered.getExecutor());
         }
     }

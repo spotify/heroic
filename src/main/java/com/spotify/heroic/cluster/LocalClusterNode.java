@@ -1,11 +1,16 @@
 package com.spotify.heroic.cluster;
 
+import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.inject.Inject;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
@@ -19,9 +24,13 @@ import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
+@RequiredArgsConstructor
 public class LocalClusterNode implements ClusterNode {
     @Inject
     private MetricBackendManager metrics;
+
+    @Getter
+    private final UUID id;
 
     @Override
     public Callback<MetricGroups> query(final String backendGroup,
@@ -51,5 +60,10 @@ public class LocalClusterNode implements ClusterNode {
             List<String> groupBy, DateRange range, AggregationGroup aggregation) {
         return metrics.directQueryMetrics(backendGroup, filter, groupBy, range,
                 aggregation);
+    }
+
+    @Override
+    public URI getUri() {
+        return null;
     }
 }

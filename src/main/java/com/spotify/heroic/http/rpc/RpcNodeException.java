@@ -2,12 +2,12 @@ package com.spotify.heroic.http.rpc;
 
 import java.net.URI;
 
-import lombok.Data;
+import lombok.Getter;
 
-@Data
 public class RpcNodeException extends Exception {
     private static final long serialVersionUID = 7605363267979193022L;
 
+    @Getter
     private final URI uri;
 
     public RpcNodeException(URI uri, String message) {

@@ -35,10 +35,10 @@ public final class TimeSeriesTransformer implements
             throws Exception {
         if (!cache.isConfigured() || aggregation == null)
             return ConcurrentCallback.newReduce(execute(result),
-                    new MergeMetricGroups());
+                    MetricGroups.merger());
 
         return ConcurrentCallback.newReduce(executeCached(result),
-                new MergeMetricGroups());
+                MetricGroups.merger());
     }
 
     private List<Callback<MetricGroups>> execute(
@@ -96,7 +96,8 @@ public final class TimeSeriesTransformer implements
                     CancelReason.BACKEND_MISMATCH);
 
         return ConcurrentCallback.newReduce(callbacks,
-                buildReducer(group, range));
+                buildReducer(group, range)).transform(MetricGroups.identity(),
+                        MetricGroups.seriesError(null, null, group));
     }
 
     private DateRange modifiedRange(final DateRange range) {

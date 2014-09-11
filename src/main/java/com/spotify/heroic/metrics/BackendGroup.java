@@ -95,8 +95,7 @@ public class BackendGroup {
                 // because that would contribute to messed up results.
                 final boolean noCache = disabled > 0;
 
-                grouped.add(new GroupedSeries(group, backend, series,
-                        noCache));
+                grouped.add(new GroupedSeries(group, backend, series, noCache));
             }
         });
 

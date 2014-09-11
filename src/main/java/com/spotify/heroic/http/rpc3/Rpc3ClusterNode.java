@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 
 import javax.ws.rs.client.Client;
@@ -12,6 +13,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.ToString;
 
 import org.glassfish.jersey.client.ClientConfig;
@@ -30,18 +32,23 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
 @Data
-@ToString(of = "url")
+@ToString(exclude = { "config", "executor" })
 public class Rpc3ClusterNode implements ClusterNode {
     private final String BASE = "rpc3";
 
-    private final URI url;
+    @Getter
+    private final UUID id;
+
+    @Getter
+    private final URI uri;
+
     private final ClientConfig config;
     private final Executor executor;
 
     private <R, T> Callback<T> resolve(R request, Class<T> clazz,
             String endpoint) {
         final Client client = ClientBuilder.newClient(config);
-        final WebTarget target = client.target(url).path(BASE).path(endpoint);
+        final WebTarget target = client.target(uri).path(BASE).path(endpoint);
         return ConcurrentCallback.newResolve(executor,
                 new RpcPostRequestResolver<R, T>(request, clazz, target));
     }

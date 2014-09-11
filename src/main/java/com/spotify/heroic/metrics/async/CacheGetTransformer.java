@@ -25,7 +25,7 @@ import com.spotify.heroic.model.DateRange;
  */
 @RequiredArgsConstructor
 public abstract class CacheGetTransformer implements
-Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
+        Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
     private final AggregationCache cache;
 
     @Override
@@ -53,7 +53,7 @@ Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
                     .build();
 
             return new ResolvedCallback<MetricGroups>(new MetricGroups(groups,
-                    stat));
+                    stat, MetricGroups.EMPTY_ERRORS));
         }
 
         /**

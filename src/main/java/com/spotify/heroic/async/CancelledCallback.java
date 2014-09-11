@@ -58,7 +58,7 @@ public class CancelledCallback<T> implements Callback<T> {
     public Callback<T> register(Callback.Handle<T> handle) {
         try {
             handle.cancelled(reason);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to call handle finish callback", e);
         }
 
@@ -75,7 +75,7 @@ public class CancelledCallback<T> implements Callback<T> {
     public Callback<T> register(Callback.Finishable finishable) {
         try {
             finishable.finished();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to call finish callback", e);
         }
 
@@ -104,13 +104,19 @@ public class CancelledCallback<T> implements Callback<T> {
     }
 
     @Override
+    public <C> Callback<C> transform(Transformer<T, C> transformer,
+            ErrorTransformer<C> error) {
+        return new CancelledCallback<C>(reason);
+    }
+
+    @Override
     public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
         return this;
     }
 
     @Override
     public T get() throws InterruptedException, CancelledException,
-            FailedException {
+    FailedException {
         throw new CancelledException(reason);
     }
 }

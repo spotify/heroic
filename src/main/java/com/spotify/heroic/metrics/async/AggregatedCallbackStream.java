@@ -37,7 +37,12 @@ Callback.StreamReducer<FetchData, MetricGroups> {
     }
 
     @Override
-    public MetricGroups resolved(int successful, int failed, int cancelled) {
+    public MetricGroups resolved(int successful, int failed, int cancelled)
+            throws Exception {
+        if (failed > 0)
+            throw new Exception(
+                    "Some time series could not be fetched from the database");
+
         final Aggregation.Result result = session.result();
 
         final Statistics stat = Statistics.builder()
@@ -47,6 +52,6 @@ Callback.StreamReducer<FetchData, MetricGroups> {
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(group, result.getResult()));
 
-        return new MetricGroups(groups, stat);
+        return new MetricGroups(groups, stat, MetricGroups.EMPTY_ERRORS);
     }
 }

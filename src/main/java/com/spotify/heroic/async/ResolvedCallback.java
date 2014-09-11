@@ -58,7 +58,7 @@ public class ResolvedCallback<T> implements Callback<T> {
     public Callback<T> register(Callback.Handle<T> handle) {
         try {
             handle.resolved(value);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to call handle finish callback", e);
         }
 
@@ -75,7 +75,7 @@ public class ResolvedCallback<T> implements Callback<T> {
     public Callback<T> register(Callback.Finishable finishable) {
         try {
             finishable.finished();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error("Failed to call finish callback", e);
         }
 
@@ -98,17 +98,27 @@ public class ResolvedCallback<T> implements Callback<T> {
     public <C> Callback<C> transform(DeferredTransformer<T, C> transformer) {
         try {
             return transformer.transform(value);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             return new FailedCallback<C>(e);
         }
     }
 
     @Override
     public <C> Callback<C> transform(Transformer<T, C> transformer) {
+        return transform(transformer, null);
+    }
+
+    @Override
+    public <C> Callback<C> transform(Transformer<T, C> transformer,
+            ErrorTransformer<C> error) {
         try {
             return new ResolvedCallback<C>(transformer.transform(value));
-        } catch (Exception e) {
-            return new FailedCallback<C>(e);
+        } catch (final Exception e) {
+            try {
+                return new ResolvedCallback<>(error.transform(e));
+            } catch (final Exception e2) {
+                return new FailedCallback<C>(e2);
+            }
         }
     }
 

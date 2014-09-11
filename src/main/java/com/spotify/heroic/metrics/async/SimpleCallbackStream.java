@@ -47,6 +47,10 @@ public final class SimpleCallbackStream implements
     @Override
     public MetricGroups resolved(int successful, int failed, int cancelled)
             throws Exception {
+        if (failed > 0)
+            throw new Exception(
+                    "Some time series could not be fetched from the database");
+
         final List<DataPoint> datapoints = joinRawResults();
 
         final Statistics statistics = Statistics.builder()
@@ -57,7 +61,7 @@ public final class SimpleCallbackStream implements
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(group, datapoints));
 
-        return new MetricGroups(groups, statistics);
+        return new MetricGroups(groups, statistics, MetricGroups.EMPTY_ERRORS);
     }
 
     private List<DataPoint> joinRawResults() {

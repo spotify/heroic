@@ -88,7 +88,7 @@ public class QueryResource {
             final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
                     .getGroups());
             return new QueryMetricsResponse(result.getQueryRange(), data,
-                    groups.getStatistics());
+                    groups.getStatistics(), groups.getErrors());
         }
     };
 
@@ -198,7 +198,8 @@ public class QueryResource {
                 final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
                         .getGroups());
                 final QueryMetricsResponse entity = new QueryMetricsResponse(
-                        result.getQueryRange(), data, groups.getStatistics());
+                        result.getQueryRange(), data, groups.getStatistics(),
+                        groups.getErrors());
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
