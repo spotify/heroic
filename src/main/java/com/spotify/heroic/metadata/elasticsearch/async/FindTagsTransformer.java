@@ -7,19 +7,22 @@ import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 
 import org.elasticsearch.client.Client;
+import org.elasticsearch.index.query.FilterBuilder;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
+import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
 public class FindTagsTransformer implements
-        Callback.DeferredTransformer<FindTagKeys, FindTags> {
+Callback.DeferredTransformer<FindTagKeys, FindTags> {
     private final Executor executor;
     private final Client client;
     private final String index;
@@ -44,14 +47,16 @@ public class FindTagsTransformer implements
     private Callback<FindTags> findSingle(final String key) {
         final Filter filter = removeKeyFromFilter(this.filter, key);
 
+        final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
+
+        if (f == null)
+            return new ResolvedCallback<FindTags>(FindTags.EMPTY);
+
         return ConcurrentCallback.newResolve(executor, new FindTagsResolver(
-                client, index, type, filter, key));
+                client, index, type, f, key));
     }
 
     private Filter removeKeyFromFilter(Filter filter, String key) {
-        if (filter == null)
-            return null;
-
         if (filter instanceof AndFilter) {
             final AndFilter and = (AndFilter) filter;
 

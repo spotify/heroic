@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
@@ -20,7 +21,7 @@ import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
+import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
     private final Client client;
     private final String index;
     private final String type;
-    private final com.spotify.heroic.filter.Filter filter;
+    private final FilterBuilder filter;
     private final String key;
 
     @Override
@@ -36,21 +37,19 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
         final SearchRequestBuilder request = client.prepareSearch(index)
                 .setTypes(type).setSearchType("count").setSize(0);
 
-        if (filter != null)
-            request.setQuery(QueryBuilders.filteredQuery(
-                    QueryBuilders.matchAllQuery(),
-                    FilterUtils.convertFilter(filter)));
+        request.setQuery(QueryBuilders.filteredQuery(
+                QueryBuilders.matchAllQuery(), filter));
 
         {
             final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms").field(FilterUtils.TAGS_VALUE).size(0);
+                    .terms("terms").field(ElasticSearchUtils.TAGS_VALUE).size(0);
             final AggregationBuilder<?> filter = AggregationBuilders
                     .filter("filter")
                     .filter(FilterBuilders
-                            .termFilter(FilterUtils.TAGS_KEY, key))
-                            .subAggregation(terms);
+                            .termFilter(ElasticSearchUtils.TAGS_KEY, key))
+                    .subAggregation(terms);
             final AggregationBuilder<?> aggregation = AggregationBuilders
-                    .nested("nested").path(FilterUtils.TAGS)
+                    .nested("nested").path(ElasticSearchUtils.TAGS)
                     .subAggregation(filter);
             request.addAggregation(aggregation);
         }

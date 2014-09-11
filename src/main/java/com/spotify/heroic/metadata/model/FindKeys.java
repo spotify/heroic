@@ -1,18 +1,14 @@
 package com.spotify.heroic.metadata.model;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import lombok.Getter;
+import lombok.Data;
 
+@Data
 public class FindKeys {
-    @Getter
+    public static final FindKeys EMPTY = new FindKeys(new HashSet<String>(), 0);
+
     private final Set<String> keys;
-
-    @Getter
     private final int size;
-
-    public FindKeys(Set<String> keys, int size) {
-        this.keys = keys;
-        this.size = size;
-    }
 }

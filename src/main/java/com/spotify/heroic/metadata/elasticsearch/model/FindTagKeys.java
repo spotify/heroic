@@ -1,18 +1,15 @@
 package com.spotify.heroic.metadata.elasticsearch.model;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import lombok.Getter;
+import lombok.Data;
 
+@Data
 public class FindTagKeys {
-    @Getter
+    public static final FindTagKeys EMPTY = new FindTagKeys(
+            new HashSet<String>(), 0);
+
     private final Set<String> keys;
-
-    @Getter
     private final int size;
-
-    public FindTagKeys(Set<String> keys, int size) {
-        this.keys = keys;
-        this.size = size;
-    }
 }

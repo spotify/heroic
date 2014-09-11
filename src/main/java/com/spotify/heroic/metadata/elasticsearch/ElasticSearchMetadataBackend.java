@@ -38,6 +38,7 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
@@ -494,8 +495,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (client == null)
             return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
+        final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
+
+        if (f == null)
+            return new ResolvedCallback<FindSeries>(FindSeries.EMPTY);
+
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindSeriesResolver(client, index, type, filter)).register(
+                new FindSeriesResolver(client, index, type, f)).register(
                 reporter.reportFindTimeSeries());
     }
 
@@ -507,8 +513,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (client == null)
             return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
+        final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
+
+        if (f == null)
+            return new ResolvedCallback<DeleteSeries>(DeleteSeries.EMPTY);
+
         return ConcurrentCallback.newResolve(pools.write(),
-                new DeleteTimeSeriesResolver(client, index, type, filter));
+                new DeleteTimeSeriesResolver(client, index, type, f));
     }
 
     public Callback<FindTagKeys> findTagKeys(final Filter filter)
@@ -519,8 +530,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<FindTagKeys>(
                     CancelReason.BACKEND_DISABLED);
 
+        final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
+
+        if (f == null)
+            return new ResolvedCallback<FindTagKeys>(FindTagKeys.EMPTY);
+
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindTagKeysResolver(client, index, type, filter)).register(
+                new FindTagKeysResolver(client, index, type, f)).register(
                 reporter.reportFindTagKeys());
     }
 
@@ -533,8 +549,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             return new CancelledCallback<FindKeys>(
                     CancelReason.BACKEND_DISABLED);
 
+        final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
+
+        if (f == null)
+            return new ResolvedCallback<FindKeys>(FindKeys.EMPTY);
+
         return ConcurrentCallback.newResolve(pools.read(),
-                new FindKeysResolver(client, index, type, filter)).register(
+                new FindKeysResolver(client, index, type, f)).register(
                 reporter.reportFindKeys());
     }
 

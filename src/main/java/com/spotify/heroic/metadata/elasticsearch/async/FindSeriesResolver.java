@@ -12,13 +12,12 @@ import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
-import com.spotify.heroic.metadata.elasticsearch.FilterUtils;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.model.Series;
 
@@ -28,7 +27,7 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
     private final Client client;
     private final String index;
     private final String type;
-    private final Filter filter;
+    private final FilterBuilder filter;
 
     private static final int MAX_SIZE = 10000;
 
@@ -41,10 +40,8 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
                 .setScroll(TimeValue.timeValueSeconds(10))
                 .setSearchType(SearchType.SCAN);
 
-        if (filter != null)
-            request.setQuery(QueryBuilders.filteredQuery(
-                    QueryBuilders.matchAllQuery(),
-                    FilterUtils.convertFilter(filter)));
+        request.setQuery(QueryBuilders.filteredQuery(
+                QueryBuilders.matchAllQuery(), filter));
 
         final SearchResponse response = request.get();
         final String scrollId = response.getScrollId();
