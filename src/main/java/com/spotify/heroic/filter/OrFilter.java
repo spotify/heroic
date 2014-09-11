@@ -3,8 +3,6 @@ package com.spotify.heroic.filter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,6 +26,12 @@ public class OrFilter implements ManyTermsFilter {
     private final List<Filter> statements;
 
     @Override
+    public Filter optimize() {
+        return ManyOptimizer.optimize(statements, OrFilter.class,
+                FalseFilter.get(), BUILDER);
+    }
+
+    @Override
     public String toString() {
         final List<String> parts = new ArrayList<String>(statements.size() + 1);
         parts.add(OPERATOR);
@@ -41,38 +45,6 @@ public class OrFilter implements ManyTermsFilter {
         }
 
         return "[" + StringUtils.join(parts, ", ") + "]";
-    }
-
-    @Override
-    public Filter optimize() {
-        final SortedSet<Filter> statements = new TreeSet<Filter>(
-                FilterComparator.get());
-
-        for (final Filter f : this.statements) {
-            final Filter o = f.optimize();
-
-            if (o == null)
-                continue;
-
-            if (o instanceof OrFilter) {
-                final OrFilter or = (OrFilter) o;
-
-                for (final Filter statement : or.statements)
-                    statements.add(statement);
-
-                continue;
-            }
-
-            statements.add(o);
-        }
-
-        if (statements.isEmpty())
-            return null;
-
-        if (statements.size() == 1)
-            return statements.iterator().next();
-
-        return new OrFilter(new ArrayList<>(statements));
     }
 
     @Override

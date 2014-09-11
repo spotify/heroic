@@ -10,13 +10,16 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.HasTagFilter;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NotFilter;
 import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 
 public class FilterDeserializer extends JsonDeserializer<Filter> {
     private static final Map<String, FilterSerialization<? extends Filter>> IMPL = new HashMap<>();
@@ -29,6 +32,9 @@ public class FilterDeserializer extends JsonDeserializer<Filter> {
         IMPL.put(MatchKeyFilter.OPERATOR, JsonCommon.MATCH_KEY);
         IMPL.put(AndFilter.OPERATOR, JsonCommon.AND);
         IMPL.put(OrFilter.OPERATOR, JsonCommon.OR);
+        IMPL.put(NotFilter.OPERATOR, JsonCommon.NOT);
+        IMPL.put(TrueFilter.OPERATOR, JsonCommon.TRUE);
+        IMPL.put(FalseFilter.OPERATOR, JsonCommon.FALSE);
     }
 
     @Override

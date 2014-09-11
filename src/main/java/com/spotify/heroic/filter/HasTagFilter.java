@@ -5,10 +5,10 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "tag" }, doNotUseGetters = true)
-public class HasTagFilter implements OneTermFilter {
+public class HasTagFilter implements OneTermFilter<String> {
     public static final String OPERATOR = "+";
 
-    public static final OneTermFilterBuilder<HasTagFilter> BUILDER = new OneTermFilterBuilder<HasTagFilter>() {
+    public static final OneTermFilterBuilder<HasTagFilter, String> BUILDER = new OneTermFilterBuilder<HasTagFilter, String>() {
         @Override
         public HasTagFilter build(String first) {
             return new HasTagFilter(first);

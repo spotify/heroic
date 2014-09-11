@@ -7,6 +7,7 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 
 import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.HasTagFilter;
 import com.spotify.heroic.filter.MatchKeyFilter;
@@ -14,6 +15,7 @@ import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 
 public final class FilterUtils {
     public static final String TAGS_VALUE = "tags.value";
@@ -22,8 +24,11 @@ public final class FilterUtils {
     public static final String KEY = "key";
 
     public static FilterBuilder convertFilter(final Filter filter) {
-        if (filter == null)
+        if (filter instanceof TrueFilter)
             return null;
+
+        if (filter instanceof FalseFilter)
+            throw new RuntimeException("Filter is a falsism");
 
         if (filter instanceof AndFilter) {
             final AndFilter and = (AndFilter) filter;
@@ -55,9 +60,9 @@ public final class FilterUtils {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                            .boolFilter()
-                            .must(FilterBuilders.termFilter(TAGS_KEY,
-                                    matchTag.getTag()))
+                    .boolFilter()
+                    .must(FilterBuilders.termFilter(TAGS_KEY,
+                            matchTag.getTag()))
                             .must(FilterBuilders.termFilter(TAGS_VALUE,
                                     matchTag.getValue())));
         }
@@ -68,9 +73,9 @@ public final class FilterUtils {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                            .boolFilter()
-                            .must(FilterBuilders.termFilter(TAGS_KEY,
-                                    startsWith.getTag()))
+                    .boolFilter()
+                    .must(FilterBuilders.termFilter(TAGS_KEY,
+                            startsWith.getTag()))
                             .must(FilterBuilders.prefixFilter(TAGS_VALUE,
                                     startsWith.getValue())));
         }
@@ -81,9 +86,9 @@ public final class FilterUtils {
             return FilterBuilders.nestedFilter(
                     TAGS,
                     FilterBuilders
-                            .boolFilter()
-                            .must(FilterBuilders.termFilter(TAGS_KEY,
-                                    regex.getTag()))
+                    .boolFilter()
+                    .must(FilterBuilders.termFilter(TAGS_KEY,
+                            regex.getTag()))
                             .must(FilterBuilders.regexpFilter(TAGS_VALUE,
                                     regex.getValue())));
         }

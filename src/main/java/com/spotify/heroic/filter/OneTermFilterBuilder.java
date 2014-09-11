@@ -1,5 +1,5 @@
 package com.spotify.heroic.filter;
 
-public interface OneTermFilterBuilder<T> {
-    T build(String first);
+public interface OneTermFilterBuilder<T, O> {
+    T build(O first);
 }

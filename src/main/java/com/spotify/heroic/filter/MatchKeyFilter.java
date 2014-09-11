@@ -5,10 +5,10 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "value" }, doNotUseGetters = true)
-public class MatchKeyFilter implements OneTermFilter {
+public class MatchKeyFilter implements OneTermFilter<String> {
     public static final String OPERATOR = "key";
 
-    public static final OneTermFilterBuilder<MatchKeyFilter> BUILDER = new OneTermFilterBuilder<MatchKeyFilter>() {
+    public static final OneTermFilterBuilder<MatchKeyFilter, String> BUILDER = new OneTermFilterBuilder<MatchKeyFilter, String>() {
         @Override
         public MatchKeyFilter build(String first) {
             return new MatchKeyFilter(first);

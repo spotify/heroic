@@ -3,8 +3,6 @@ package com.spotify.heroic.filter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -45,34 +43,8 @@ public class AndFilter implements ManyTermsFilter {
 
     @Override
     public Filter optimize() {
-        final SortedSet<Filter> statements = new TreeSet<Filter>(
-                FilterComparator.get());
-
-        for (final Filter f : this.statements) {
-            final Filter o = f.optimize();
-
-            if (o == null)
-                continue;
-
-            if (o instanceof AndFilter) {
-                final AndFilter and = (AndFilter) o;
-
-                for (final Filter statement : and.statements)
-                    statements.add(statement);
-
-                continue;
-            }
-
-            statements.add(o);
-        }
-
-        if (statements.isEmpty())
-            return null;
-
-        if (statements.size() == 1)
-            return statements.iterator().next();
-
-        return new AndFilter(Lists.newArrayList(statements));
+        return ManyOptimizer.optimize(statements, AndFilter.class,
+                TrueFilter.get(), BUILDER);
     }
 
     @Override

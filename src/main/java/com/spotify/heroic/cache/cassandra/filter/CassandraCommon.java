@@ -2,18 +2,25 @@ package com.spotify.heroic.cache.cassandra.filter;
 
 import java.util.HashMap;
 
+import com.netflix.astyanax.Serializer;
+import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 import com.spotify.heroic.filter.AndFilter;
+import com.spotify.heroic.filter.FalseFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.HasTagFilter;
 import com.spotify.heroic.filter.ManyTermsFilter;
 import com.spotify.heroic.filter.ManyTermsFilterBuilder;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.NoTermFilter;
+import com.spotify.heroic.filter.NoTermFilterBuilder;
+import com.spotify.heroic.filter.NotFilter;
 import com.spotify.heroic.filter.OneTermFilter;
 import com.spotify.heroic.filter.OneTermFilterBuilder;
 import com.spotify.heroic.filter.OrFilter;
 import com.spotify.heroic.filter.RegexFilter;
 import com.spotify.heroic.filter.StartsWithFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.filter.TwoTermsFilter;
 import com.spotify.heroic.filter.TwoTermsFilterBuilder;
 
@@ -31,9 +38,10 @@ public final class CassandraCommon {
                     "Multiple mappings for single type: " + type);
     }
 
-    private static <T extends OneTermFilter> void register(int typeId,
-            Class<T> type, OneTermFilterBuilder<T> builder) {
-        register(typeId, type, new OneTermSerialization<>(builder));
+    private static <T extends OneTermFilter<O>, O> void register(int typeId,
+            Class<T> type, Serializer<O> serializer,
+            OneTermFilterBuilder<T, O> builder) {
+        register(typeId, type, new OneTermSerialization<>(serializer, builder));
     }
 
     private static <T extends TwoTermsFilter> void register(int typeId,
@@ -46,14 +54,25 @@ public final class CassandraCommon {
         register(typeId, type, new ManyTermsSerialization<>(builder));
     }
 
+    private static <T extends NoTermFilter> void register(int typeId,
+            Class<T> type, NoTermFilterBuilder<T> builder) {
+        register(typeId, type, new NoTermSerialization<>(builder));
+    }
+
     static {
         register(0x0001, AndFilter.class, AndFilter.BUILDER);
         register(0x0002, OrFilter.class, OrFilter.BUILDER);
-        register(0x0010, MatchKeyFilter.class, MatchKeyFilter.BUILDER);
+        register(0x0003, NotFilter.class, FilterSerializer.get(),
+                NotFilter.BUILDER);
+        register(0x0010, MatchKeyFilter.class, SafeStringSerializer.get(),
+                MatchKeyFilter.BUILDER);
         register(0x0011, MatchTagFilter.class, MatchTagFilter.BUILDER);
-        register(0x0012, HasTagFilter.class, HasTagFilter.BUILDER);
+        register(0x0012, HasTagFilter.class, SafeStringSerializer.get(),
+                HasTagFilter.BUILDER);
         register(0x0013, StartsWithFilter.class, StartsWithFilter.BUILDER);
         register(0x0014, RegexFilter.class, RegexFilter.BUILDER);
+        register(0x0020, TrueFilter.class, TrueFilter.BUILDER);
+        register(0x0021, FalseFilter.class, FalseFilter.BUILDER);
     }
 
     public static int getTypeId(Class<? extends Filter> type) {
