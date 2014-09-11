@@ -13,8 +13,8 @@ import com.spotify.heroic.filter.OneTermFilter;
 import com.spotify.heroic.filter.OneTermFilterBuilder;
 
 @RequiredArgsConstructor
-public class OneTermSerialization<T extends OneTermFilter, O> implements
-FilterSerialization<T> {
+public class OneTermSerialization<T extends OneTermFilter<O>, O> implements
+        FilterSerialization<T> {
     private final OneTermFilterBuilder<T, O> builder;
     private final Class<O> type;
 
@@ -30,7 +30,8 @@ FilterSerialization<T> {
     }
 
     @Override
-    public void serialize(JsonGenerator g, OneTermFilter f) throws IOException {
+    public void serialize(JsonGenerator g, T f) throws IOException,
+            JsonProcessingException {
         g.writeObject(f.first());
     }
 }
