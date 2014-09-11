@@ -13,8 +13,8 @@ import com.spotify.heroic.model.DateRange;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),
-        @JsonSubTypes.Type(value = QueryDateRange.Relative.class, name = "relative") })
+    @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),
+    @JsonSubTypes.Type(value = QueryDateRange.Relative.class, name = "relative") })
 public interface QueryDateRange {
     @Data
     static class Absolute implements QueryDateRange {
@@ -43,10 +43,10 @@ public interface QueryDateRange {
         private final long value;
 
         @JsonCreator
-        public static Relative create(@JsonProperty("unit") TimeUnit unit,
+        public static Relative create(@JsonProperty("unit") String unitName,
                 @JsonProperty("value") Long value) {
-            if (unit == null)
-                unit = DEFAULT_UNIT;
+            final TimeUnit unit = QueryUtils.parseUnitName(unitName,
+                    DEFAULT_UNIT);
 
             if (value == null)
                 value = DEFAULT_VALUE;
