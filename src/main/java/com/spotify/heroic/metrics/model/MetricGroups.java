@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,6 +20,7 @@ import com.spotify.heroic.async.Callback.Transformer;
 import com.spotify.heroic.async.CancelReason;
 
 @Data
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MetricGroups {
     private static final List<MetricGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
@@ -42,11 +45,11 @@ public final class MetricGroups {
 
     @Slf4j
     private static class Merger implements
-    Callback.Reducer<MetricGroups, MetricGroups> {
+            Callback.Reducer<MetricGroups, MetricGroups> {
         @Override
         public MetricGroups resolved(Collection<MetricGroups> results,
                 Collection<Exception> errors, Collection<CancelReason> cancelled)
-                        throws Exception {
+                throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 
@@ -118,12 +121,25 @@ public final class MetricGroups {
     }
 
     public static Callback.ErrorTransformer<MetricGroups> seriesError(
-            final UUID id, final URI uri, final Map<String, String> shard) {
+            final Map<String, String> shard) {
         return new Callback.ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
                 return MetricGroups.seriesError(shard, e);
             }
         };
+    }
+
+    public static MetricGroups fromResult(List<MetricGroup> groups,
+            Statistics statistics) {
+        return new MetricGroups(groups, statistics, EMPTY_ERRORS);
+    }
+
+    public static MetricGroups build(List<MetricGroup> groups,
+            Statistics statistics, List<RequestError> errors) {
+        if (errors == null)
+            throw new NullPointerException();
+
+        return new MetricGroups(groups, statistics, errors);
     }
 }

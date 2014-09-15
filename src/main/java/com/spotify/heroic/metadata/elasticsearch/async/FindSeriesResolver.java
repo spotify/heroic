@@ -48,8 +48,7 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
 
         final String session = Integer.toHexString(new Object().hashCode());
 
-        log.info("{}: Started scanning for time series (filter={})", session,
-                filter.toString());
+        log.info("{}: Started scanning for time series", session);
 
         int size = 0;
 

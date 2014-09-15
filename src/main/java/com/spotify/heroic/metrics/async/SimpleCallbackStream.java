@@ -21,7 +21,7 @@ import com.spotify.heroic.model.DataPoint;
 @Slf4j
 @RequiredArgsConstructor
 public final class SimpleCallbackStream implements
-        Callback.StreamReducer<FetchData, MetricGroups> {
+Callback.StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
 
     private final Queue<FetchData> results = new ConcurrentLinkedQueue<FetchData>();
@@ -61,7 +61,7 @@ public final class SimpleCallbackStream implements
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(group, datapoints));
 
-        return new MetricGroups(groups, statistics, MetricGroups.EMPTY_ERRORS);
+        return MetricGroups.fromResult(groups, statistics);
     }
 
     private List<DataPoint> joinRawResults() {

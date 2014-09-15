@@ -52,8 +52,8 @@ public abstract class CacheGetTransformer implements
                     .cache(new Statistics.Cache(datapoints.size(), 0, 0, 0))
                     .build();
 
-            return new ResolvedCallback<MetricGroups>(new MetricGroups(groups,
-                    stat, MetricGroups.EMPTY_ERRORS));
+            return new ResolvedCallback<MetricGroups>(MetricGroups.fromResult(
+                    groups, stat));
         }
 
         /**

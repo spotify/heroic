@@ -16,7 +16,7 @@ import com.spotify.heroic.metrics.model.Statistics;
 
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements
-Callback.StreamReducer<FetchData, MetricGroups> {
+        Callback.StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
     private final Aggregation.Session session;
 
@@ -52,6 +52,6 @@ Callback.StreamReducer<FetchData, MetricGroups> {
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(group, result.getResult()));
 
-        return new MetricGroups(groups, stat, MetricGroups.EMPTY_ERRORS);
+        return MetricGroups.fromResult(groups, stat);
     }
 }

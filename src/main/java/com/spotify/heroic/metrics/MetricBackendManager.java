@@ -372,7 +372,7 @@ public class MetricBackendManager implements LifeCycle {
 
     private List<Callback<WriteBatchResult>> writeCluster(
             final String backendGroup, final List<BufferedWriteMetric> writes)
-            throws BackendOperationException {
+                    throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
@@ -437,7 +437,7 @@ public class MetricBackendManager implements LifeCycle {
     public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
             final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation)
-                    throws MetricQueryException {
+            throws MetricQueryException {
 
         final Collection<NodeRegistryEntry> nodes = cluster
                 .findAllShards(NodeCapability.QUERY);
@@ -471,7 +471,7 @@ public class MetricBackendManager implements LifeCycle {
         for (final Map.Entry<String, String> entry : metadata.getTags()
                 .entrySet()) {
             statements
-            .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+                    .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
         }
 
         return new AndFilter(statements).optimize();
@@ -491,7 +491,7 @@ public class MetricBackendManager implements LifeCycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range,
             final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
         final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
@@ -550,11 +550,13 @@ public class MetricBackendManager implements LifeCycle {
         final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
+                log.warn("Streaming cancelled: {}", reason);
                 callback.cancel(reason);
             }
 
             @Override
             public void failed(Exception e) throws Exception {
+                log.error("Streaming failed", e);
                 callback.fail(e);
             }
 
@@ -587,7 +589,7 @@ public class MetricBackendManager implements LifeCycle {
             @Override
             public void run() {
                 query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                .register(reporter.reportStreamMetricsChunk());
             }
         });
     }
@@ -691,7 +693,7 @@ public class MetricBackendManager implements LifeCycle {
         return findAllTimeSeries(filter, groupBy).transform(
                 new FindAndRouteTransformer(this, cluster, localQuery, filter,
                         backendGroup, groupLimit, groupLoadLimit)).register(
-                reporter.reportFindTimeSeries());
+                                reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(

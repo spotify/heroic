@@ -24,7 +24,7 @@ import com.spotify.heroic.model.Series;
 
 @RequiredArgsConstructor
 public final class TimeSeriesTransformer implements
-        Callback.DeferredTransformer<List<GroupedSeries>, MetricGroups> {
+Callback.DeferredTransformer<List<GroupedSeries>, MetricGroups> {
     private final AggregationCache cache;
     private final Filter filter;
     private final AggregationGroup aggregation;
@@ -67,7 +67,7 @@ public final class TimeSeriesTransformer implements
 
     private Callback<MetricGroups> buildCachedLookup(final Backend backend,
             final Map<String, String> group, final Set<Series> series)
-                    throws CacheOperationException {
+            throws CacheOperationException {
         final CacheGetTransformer transformer = new CacheGetTransformer(cache) {
             @Override
             public Callback<MetricGroups> cacheMiss(Map<String, String> group,
@@ -97,7 +97,7 @@ public final class TimeSeriesTransformer implements
 
         return ConcurrentCallback.newReduce(callbacks,
                 buildReducer(group, range)).transform(MetricGroups.identity(),
-                        MetricGroups.seriesError(null, null, group));
+                MetricGroups.seriesError(group));
     }
 
     private DateRange modifiedRange(final DateRange range) {

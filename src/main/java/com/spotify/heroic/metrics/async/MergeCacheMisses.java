@@ -58,7 +58,7 @@ final class MergeCacheMisses implements
                     statistics);
         }
 
-        return new MetricGroups(groups, joinResults.getStatistics(),
+        return MetricGroups.build(groups, joinResults.getStatistics(),
                 joinResults.getErrors());
     }
 

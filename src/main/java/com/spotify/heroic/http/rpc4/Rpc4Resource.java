@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc3;
+package com.spotify.heroic.http.rpc4;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -15,26 +15,20 @@ import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.Statistics;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 
-@Path("/rpc3")
+@Path("/rpc4")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class Rpc3Resource {
+public class Rpc4Resource {
     @Inject
     private MetricBackendManager metrics;
 
-    private static final HttpAsyncUtils.Resume<MetricGroups, Rpc3MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc3MetricGroups>() {
+    private static final HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups>() {
         @Override
-        public Rpc3MetricGroups resume(MetricGroups value) throws Exception {
-            return new Rpc3MetricGroups(value.getGroups(),
-                    convert(value.getStatistics()));
-        }
-
-        private Rpc3Statistics convert(Statistics s) {
-            return new Rpc3Statistics(s.getAggregator(), s.getRow(),
-                    s.getCache(), Rpc3Statistics.Rpc.EMPTY);
+        public Rpc4MetricGroups resume(MetricGroups value) throws Exception {
+            return new Rpc4MetricGroups(value.getGroups(),
+                    value.getStatistics(), value.getErrors());
         }
     };
 
@@ -48,11 +42,11 @@ public class Rpc3Resource {
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
-            Rpc3QueryBody query) throws Exception {
+            Rpc4QueryBody query) throws Exception {
         final Callback<MetricGroups> callback = metrics.useGroup(
                 query.getBackendGroup()).groupedQuery(query.getGroup(),
-                query.getFilter(), query.getSeries(), query.getRange(),
-                        query.getAggregationGroup());
+                        query.getFilter(), query.getSeries(), query.getRange(),
+                query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
@@ -60,7 +54,7 @@ public class Rpc3Resource {
     @POST
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
-            Rpc3WriteBody body) throws Exception {
+            Rpc4WriteBody body) throws Exception {
         final BackendGroup backend = metrics.useGroup(body.getBackendGroup());
 
         final Callback<WriteBatchResult> callback = metrics.write(backend,
@@ -72,7 +66,7 @@ public class Rpc3Resource {
     @POST
     @Path("/full-query")
     public void query(@Suspended final AsyncResponse response,
-            Rpc3FullQueryBody body) throws Exception {
+            Rpc4FullQueryBody body) throws Exception {
         final Callback<MetricGroups> callback = metrics.directQueryMetrics(
                 body.getBackendGroup(), body.getFilter(), body.getGroupBy(),
                 body.getRange(), body.getAggregation());
