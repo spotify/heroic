@@ -15,6 +15,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.HasTagFilter;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.TrueFilter;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -41,7 +42,8 @@ public class MetadataQueryBody {
     private final Filter filter;
 
     @JsonCreator
-    public static MetadataQueryBody create(@JsonProperty("matchKey") String matchKey,
+    public static MetadataQueryBody create(
+            @JsonProperty("matchKey") String matchKey,
             @JsonProperty("matchTags") Map<String, String> matchTags,
             @JsonProperty("hasTags") Set<String> hasTags,
             @JsonProperty("filter") Filter filter) {
@@ -71,9 +73,8 @@ public class MetadataQueryBody {
         if (matchKey != null)
             statements.add(new MatchKeyFilter(matchKey));
 
-        if (statements.size() == 0) {
-            return null;
-        }
+        if (statements.size() == 0)
+            return TrueFilter.get();
 
         if (statements.size() == 1)
             return statements.get(0).optimize();
