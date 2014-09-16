@@ -9,6 +9,7 @@ import java.util.Random;
 
 import lombok.Data;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -39,6 +40,10 @@ public class NodeRegistry {
         }
 
         return shards;
+    }
+
+    public List<NodeRegistryEntry> getEntries() {
+        return ImmutableList.copyOf(entries);
     }
 
     /**

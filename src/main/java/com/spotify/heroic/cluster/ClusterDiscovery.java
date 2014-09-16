@@ -1,5 +1,6 @@
 package com.spotify.heroic.cluster;
 
+import java.net.URI;
 import java.util.Collection;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -15,12 +16,12 @@ public interface ClusterDiscovery {
         }
 
         @Override
-        public Callback<Collection<DiscoveredClusterNode>> getNodes() {
+        public Callback<Collection<URI>> find() {
             throw new NullPointerException();
         }
     }
 
     public static final ClusterDiscovery NULL = new Null();
 
-    Callback<Collection<DiscoveredClusterNode>> getNodes();
+    Callback<Collection<URI>> find();
 }

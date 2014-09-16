@@ -455,8 +455,7 @@ public class MetricBackendManager implements LifeCycle {
                     backendGroup, f, groupBy, rounded, aggregation);
 
             callbacks.add(query.transform(MetricGroups.identity(), MetricGroups
-                    .nodeError(n.getMetadata().getId(), n.getClusterNode()
-                            .getUri(), shard)));
+                    .nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
         return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())

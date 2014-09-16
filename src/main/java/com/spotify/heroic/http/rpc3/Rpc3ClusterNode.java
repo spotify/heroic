@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Executor;
 
 import javax.ws.rs.client.Client;
@@ -35,7 +34,6 @@ import com.spotify.heroic.model.Series;
 @ToString(exclude = { "config", "executor" })
 public class Rpc3ClusterNode implements ClusterNode {
     private final String base;
-    private final UUID id;
     private final URI uri;
 
     private final ClientConfig config;

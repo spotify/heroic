@@ -1,6 +1,5 @@
 package com.spotify.heroic.cluster;
 
-import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -60,10 +59,5 @@ public class LocalClusterNode implements ClusterNode {
             List<String> groupBy, DateRange range, AggregationGroup aggregation) {
         return metrics.directQueryMetrics(backendGroup, filter, groupBy, range,
                 aggregation);
-    }
-
-    @Override
-    public URI getUri() {
-        return null;
     }
 }

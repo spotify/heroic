@@ -7,7 +7,8 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 import org.glassfish.jersey.client.ClientConfig;
@@ -18,16 +19,18 @@ import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.http.rpc.RpcGetRequestResolver;
 import com.spotify.heroic.http.rpc.RpcMetadata;
 
-@Data
+@RequiredArgsConstructor
 @ToString(exclude = { "config", "executor" })
 public class DiscoveredClusterNode {
-    private final URI url;
+    @Getter
+    private final URI uri;
+
     private final ClientConfig config;
     private final Executor executor;
 
     private <R, T> Callback<T> get(Class<T> clazz, String endpoint) {
         final Client client = ClientBuilder.newClient(config);
-        final WebTarget target = client.target(url).path("rpc").path(endpoint);
+        final WebTarget target = client.target(uri).path("rpc").path(endpoint);
         return ConcurrentCallback.newResolve(executor,
                 new RpcGetRequestResolver<T>(clazz, target));
     }

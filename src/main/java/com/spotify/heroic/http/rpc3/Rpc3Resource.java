@@ -51,8 +51,8 @@ public class Rpc3Resource {
             Rpc3QueryBody query) throws Exception {
         final Callback<MetricGroups> callback = metrics.useGroup(
                 query.getBackendGroup()).groupedQuery(query.getGroup(),
-                query.getFilter(), query.getSeries(), query.getRange(),
-                        query.getAggregationGroup());
+                        query.getFilter(), query.getSeries(), query.getRange(),
+                query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
