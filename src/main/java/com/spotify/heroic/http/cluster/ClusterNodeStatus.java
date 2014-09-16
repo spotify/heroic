@@ -11,7 +11,7 @@ import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
 public class ClusterNodeStatus {
-    private final Class<?> type;
+    private final String type;
     private final URI uri;
     private final UUID id;
     private final int version;

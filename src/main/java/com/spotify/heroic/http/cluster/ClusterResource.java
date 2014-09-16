@@ -12,6 +12,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
@@ -47,7 +48,10 @@ public class ClusterResource {
     private ClusterNodeStatus convert(NodeRegistryEntry e) {
         final NodeMetadata m = e.getMetadata();
 
-        return new ClusterNodeStatus(e.getClusterNode().getClass(), e.getUri(),
-                m.getId(), m.getVersion(), m.getTags(), m.getCapabilities());
+        final String type = e.getClusterNode() instanceof LocalClusterNode ? "local"
+                : "rpc";
+
+        return new ClusterNodeStatus(type, e.getUri(), m.getId(),
+                m.getVersion(), m.getTags(), m.getCapabilities());
     }
 }

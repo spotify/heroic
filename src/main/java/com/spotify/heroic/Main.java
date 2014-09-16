@@ -36,6 +36,7 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
+import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -229,6 +230,11 @@ public class Main {
 
         final HeroicConfig config = setupConfig(configPath, reporter);
 
+        if (config == null) {
+            System.exit(1);
+            return;
+        }
+
         final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
                 10);
 
@@ -323,13 +329,16 @@ public class Main {
         try {
             config = HeroicConfig.parse(Paths.get(configPath), reporter);
         } catch (final JsonMappingException e) {
-            log.error(String.format("%s#%s: %s", configPath, e.getPath(), e));
-            throw new IOException("Configuration failed", e);
-        }
+            final JsonLocation location = e.getLocation();
+            log.error(String.format("%s[%d:%d]: %s", configPath,
+                    location.getLineNr(), location.getColumnNr(),
+                    e.getOriginalMessage()));
 
-        if (config == null)
-            throw new IOException(
-                    "INTERNAL ERROR: No configuration, shutting down");
+            if (log.isDebugEnabled())
+                log.debug("Configuration error", e);
+
+            return null;
+        }
 
         return config;
     }
