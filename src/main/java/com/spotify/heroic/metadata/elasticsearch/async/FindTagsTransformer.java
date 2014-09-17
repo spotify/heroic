@@ -15,6 +15,7 @@ import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
+import com.spotify.heroic.filter.TrueFilter;
 import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
@@ -72,7 +73,7 @@ Callback.DeferredTransformer<FindTagKeys, FindTags> {
             }
 
             if (statements.isEmpty())
-                return null;
+                return TrueFilter.get();
 
             return new AndFilter(statements).optimize();
         }
@@ -81,7 +82,7 @@ Callback.DeferredTransformer<FindTagKeys, FindTags> {
             final MatchTagFilter matchTag = (MatchTagFilter) filter;
 
             if (matchTag.getTag().equals(key))
-                return null;
+                return TrueFilter.get();
 
             return matchTag.optimize();
         }
