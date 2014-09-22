@@ -41,6 +41,15 @@ Expects a [WriteMetrics](#writemetrics) object.
 curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"series": {"key": "heroic-test", "tags": {"site": "lon"}}, "data": [[1409775940000, 42.0], [1409775910000, 20.2]]}'
 ```
 
+# Metadata
+
+### GET /metadata/tags (alias /tags)
+
+Use to query for tags.
+
++ Response ```200``` (application/json) [MetadataTags](#metadatatags)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
+
 # RPC Endpoints
 
 These endpoints are used internally by the cluster.
@@ -79,6 +88,22 @@ ErrorMessage:
 ###### Example
 ```json
 {"message": "Something gone doofed!"}
+```
+
+# Metadata Types
+
+### MetadataTags
+
+This object represents a set of available tags and all their corresponding values.
+
+The result structure is an object that maps tag keys with all their corresponding values.
+
+###### Structure
+
+```yml
+MetadataTags:
+  result: {String: [String, ..], ..} 
+  sampleSize: required Number
 ```
 
 # RPC Types
