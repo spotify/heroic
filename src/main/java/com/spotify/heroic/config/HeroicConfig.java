@@ -1,4 +1,4 @@
-package com.spotify.heroic.yaml;
+package com.spotify.heroic.config;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,7 +16,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.http.HttpClientManager;
+import com.spotify.heroic.metadata.LocalMetadataManager;
 import com.spotify.heroic.metrics.MetricBackendManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
@@ -27,24 +28,29 @@ public class HeroicConfig {
     public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
 
     private final ClusterManager cluster;
-    private final MetricBackendManager metrics;
-    private final MetadataBackendManager metadata;
+    private final MetricBackendManager.Config metrics;
+    private final LocalMetadataManager.Config metadata;
     private final List<Consumer> consumers;
     private final AggregationCache cache;
+    private final HttpClientManager client;
     private final int port;
     private final String refreshClusterSchedule;
 
     @JsonCreator
     public static HeroicConfig create(
             @JsonProperty("cluster") ClusterManager cluster,
-            @JsonProperty("metrics") MetricBackendManager metrics,
-            @JsonProperty("metadata") MetadataBackendManager metadata,
+            @JsonProperty("metrics") MetricBackendManager.Config metrics,
+            @JsonProperty("metadata") LocalMetadataManager.Config metadata,
             @JsonProperty("consumers") List<Consumer> consumers,
             @JsonProperty("cache") AggregationCache cache,
+            @JsonProperty("client") HttpClientManager client,
             @JsonProperty("port") Integer port,
             @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule) {
         if (cache == null)
             cache = new AggregationCache(null);
+
+        if (client == null)
+            client = HttpClientManager.create();
 
         if (refreshClusterSchedule == null)
             refreshClusterSchedule = DEFAULT_REFRESH_CLUSTER_SCHEDULE;
@@ -56,7 +62,7 @@ public class HeroicConfig {
             consumers = new ArrayList<>();
 
         return new HeroicConfig(cluster, metrics, metadata, consumers, cache,
-                port, refreshClusterSchedule);
+                client, port, refreshClusterSchedule);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

@@ -23,7 +23,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.metadata.MetadataOperationException;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -37,7 +37,7 @@ import com.spotify.heroic.model.Series;
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
     @Inject
-    private MetadataBackendManager metadata;
+    private ClusteredMetadataManager metadata;
 
     private static final HttpAsyncUtils.Resume<FindTags, MetadataTagsResponse> TAGS = new HttpAsyncUtils.Resume<FindTags, MetadataTagsResponse>() {
         @Override
@@ -53,7 +53,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Metadata is not ready")).build());
             return;
         }
 
@@ -80,7 +80,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Metadata is not ready")).build());
             return;
         }
 
@@ -93,17 +93,27 @@ public class MetadataResource {
         HttpAsyncUtils.handleAsyncResume(response, callback, KEYS);
     }
 
+    private static final HttpAsyncUtils.Resume<String, MetadataAddSeriesResponse> WRITE = new HttpAsyncUtils.Resume<String, MetadataAddSeriesResponse>() {
+        @Override
+        public MetadataAddSeriesResponse resume(String value) throws Exception {
+            return new MetadataAddSeriesResponse(value);
+        }
+    };
+
     @POST
     @Path("/series")
-    public Response addSeries(Series series) throws MetadataOperationException {
+    public void addSeries(@Suspended final AsyncResponse response, Series series)
+            throws MetadataOperationException {
         if (!metadata.isReady()) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build();
+            response.resume(Response
+                    .status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(new ErrorMessage("Metadata not ready")).build());
+            return;
         }
 
-        final String id = metadata.write(series);
-        return Response.status(Response.Status.OK)
-                .entity(new MetadataAddSeriesResponse(id)).build();
+        final Callback<String> callback = metadata.write(series);
+
+        HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
 
     private static final HttpAsyncUtils.Resume<FindSeries, MetadataSeriesResponse> GET_SERIES = new HttpAsyncUtils.Resume<FindSeries, MetadataSeriesResponse>() {
@@ -156,7 +166,7 @@ public class MetadataResource {
         if (!metadata.isReady()) {
             response.resume(Response
                     .status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
+                    .entity(new ErrorMessage("Metadata is not ready")).build());
             return;
         }
 

@@ -1,5 +1,6 @@
-package com.spotify.heroic.http.rpc;
+package com.spotify.heroic.http;
 
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -10,9 +11,12 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.general.ErrorMessage;
+import com.spotify.heroic.http.rpc.RpcNodeException;
+import com.spotify.heroic.http.rpc.RpcRemoteException;
 
 @RequiredArgsConstructor
-public final class RpcGetRequestResolver<T> implements Callback.Resolver<T> {
+final class HttpPostRequestResolver<R, T> implements Callback.Resolver<T> {
+    private final R request;
     private final Class<T> bodyType;
     private final WebTarget target;
 
@@ -21,7 +25,8 @@ public final class RpcGetRequestResolver<T> implements Callback.Resolver<T> {
         final Response response;
 
         try {
-            response = target.request().get();
+            response = target.request().post(
+                    Entity.entity(request, MediaType.APPLICATION_JSON));
         } catch (final Exception e) {
             throw new RpcNodeException(target.getUri(), "request failed", e);
         }
@@ -30,12 +35,12 @@ public final class RpcGetRequestResolver<T> implements Callback.Resolver<T> {
                 .getHeaderString(HttpHeaders.CONTENT_TYPE);
 
         if (contentType == null) {
-            throw new RpcNodeException(target.getUri(),
+            throw new RpcRemoteException(target.getUri(),
                     "No Content-Type in response");
         }
 
         if (!contentType.equals(MediaType.APPLICATION_JSON)) {
-            throw new RpcNodeException(target.getUri(),
+            throw new RpcRemoteException(target.getUri(),
                     "Got body of unexpected Content-Type: " + contentType);
         }
 

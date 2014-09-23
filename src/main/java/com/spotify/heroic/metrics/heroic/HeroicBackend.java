@@ -9,11 +9,14 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Key;
+import com.google.inject.PrivateModule;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.MutationBatch;
@@ -50,53 +53,75 @@ import com.spotify.heroic.statistics.BackendReporter;
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString(of = {}, callSuper = true)
 @Slf4j
+@ToString(of = {}, callSuper = true)
 public class HeroicBackend extends CassandraBackend implements Backend {
-    public static final String DEFAULT_SEEDS = "localhost:9160";
-    public static final String DEFAULT_KEYSPACE = "heroic";
-    public static final String DEFAULT_GROUP = "heroic";
-    public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 50;
+    @Data
+    public static final class Config extends Backend.Config {
+        public static final String DEFAULT_SEEDS = "localhost:9160";
+        public static final String DEFAULT_KEYSPACE = "heroic";
+        public static final String DEFAULT_GROUP = "heroic";
+        public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 50;
 
-    @JsonCreator
-    public static HeroicBackend create(
-            @JsonProperty("seeds") String seeds,
-            @JsonProperty("keyspace") String keyspace,
-            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
-            @JsonProperty("group") String group,
-            @JsonProperty("pools") ReadWriteThreadPools pools) {
-        if (seeds == null)
-            seeds = DEFAULT_SEEDS;
+        private final String group;
+        private final String keyspaceName;
+        private final String seeds;
+        private final int maxConnectionsPerHost;
+        private final ReadWriteThreadPools.Config pools;
 
-        if (keyspace == null)
-            keyspace = DEFAULT_KEYSPACE;
+        @JsonCreator
+        public static Config create(
+                @JsonProperty("seeds") String seeds,
+                @JsonProperty("keyspace") String keyspace,
+                @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
+                @JsonProperty("group") String group,
+                @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
+            if (seeds == null)
+                seeds = DEFAULT_SEEDS;
 
-        if (maxConnectionsPerHost == null)
-            maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
+            if (keyspace == null)
+                keyspace = DEFAULT_KEYSPACE;
 
-        if (group == null)
-            group = DEFAULT_GROUP;
+            if (maxConnectionsPerHost == null)
+                maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
 
-        if (pools == null)
-            pools = ReadWriteThreadPools.config().build();
+            if (group == null)
+                group = DEFAULT_GROUP;
 
-        return new HeroicBackend(group, pools, keyspace, seeds,
-                maxConnectionsPerHost);
+            if (pools == null)
+                pools = ReadWriteThreadPools.Config.createDefault();
+
+            return new Config(group, keyspace, seeds, maxConnectionsPerHost,
+                    pools);
+        }
+
+        @Override
+        public PrivateModule module(final BackendReporter reporter,
+                final Key<Backend> key) {
+            return new PrivateModule() {
+                @Override
+                protected void configure() {
+                    bind(key).to(HeroicBackend.class);
+                    bind(Config.class).toInstance(Config.this);
+                    bind(BackendReporter.class).toInstance(reporter);
+                    expose(key);
+                }
+            };
+        }
     }
 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
             "metrics", MetricsRowKeySerializer.get(), IntegerSerializer.get());
 
     private final ReadWriteThreadPools pools;
+    private final BackendReporter reporter;
 
     @Inject
-    private BackendReporter reporter;
-
-    public HeroicBackend(String id, ReadWriteThreadPools pools,
-            String keyspace, String seeds, int maxConnectionsPerHost) {
-        super(id, keyspace, seeds, maxConnectionsPerHost);
-
-        this.pools = pools;
+    public HeroicBackend(final BackendReporter reporter, final Config config) {
+        super(config.getGroup(), config.getKeyspaceName(), config.getSeeds(),
+                config.getMaxConnectionsPerHost());
+        this.reporter = reporter;
+        this.pools = config.getPools().construct(reporter.newThreadPool());
     }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
@@ -176,26 +201,26 @@ public class HeroicBackend extends CassandraBackend implements Backend {
 
         return ConcurrentCallback.newResolve(pools.read(),
                 new Callback.Resolver<Integer>() {
-            @Override
-            public Integer resolve() throws Exception {
-                for (final DataPoint d : datapoints) {
-                    keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(
-                                    MetricsRowKeySerializer
-                                    .calculateColumnKey(d
-                                            .getTimestamp()),
+                    @Override
+                    public Integer resolve() throws Exception {
+                        for (final DataPoint d : datapoints) {
+                            keyspace.prepareQuery(CQL3_CF)
+                                    .withCql(INSERT_METRICS_CQL)
+                                    .asPreparedStatement()
+                                    .withByteBufferValue(rowKey,
+                                            MetricsRowKeySerializer.get())
+                                    .withByteBufferValue(
+                                            MetricsRowKeySerializer
+                                                    .calculateColumnKey(d
+                                                            .getTimestamp()),
                                             IntegerSerializer.get())
-                                            .withByteBufferValue(d.getValue(),
-                                                    DoubleSerializer.get()).execute();
-                }
+                                    .withByteBufferValue(d.getValue(),
+                                            DoubleSerializer.get()).execute();
+                        }
 
-                return datapoints.size();
-            }
-        });
+                        return datapoints.size();
+                    }
+                });
     }
 
     @Override

@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ApplicationLifecycle;
+import com.spotify.heroic.config.ConfigUtils;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.WriteException;
@@ -30,7 +31,6 @@ import com.spotify.heroic.metrics.MetricFormatException;
 import com.spotify.heroic.metrics.error.BufferEnqueueException;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.yaml.ConfigUtils;
 
 @RequiredArgsConstructor
 @Slf4j

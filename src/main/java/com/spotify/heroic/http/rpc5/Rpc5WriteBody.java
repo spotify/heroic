@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc3;
+package com.spotify.heroic.http.rpc5;
 
 import java.util.Collection;
 
@@ -12,14 +12,14 @@ import com.spotify.heroic.metrics.model.WriteMetric;
  * @author udoprog
  */
 @Data
-public class Rpc3WriteBody {
+public class Rpc5WriteBody {
     private final String backendGroup;
     private final Collection<WriteMetric> writes;
 
     @JsonCreator
-    public static Rpc3WriteBody create(
+    public static Rpc5WriteBody create(
             @JsonProperty("backendGroup") String backendGroup,
             @JsonProperty("writes") Collection<WriteMetric> writes) {
-        return new Rpc3WriteBody(backendGroup, writes);
+        return new Rpc5WriteBody(backendGroup, writes);
     }
 }

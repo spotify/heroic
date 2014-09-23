@@ -19,7 +19,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.LocalMetadataManager;
 import com.spotify.heroic.metrics.BackendGroup;
 import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteMetric;
@@ -32,7 +32,7 @@ public class SeriesMigrator {
     private ExecutorService executor;
 
     @Inject
-    private MetadataBackendManager metadata;
+    private LocalMetadataManager metadata;
 
     @Slf4j
     @RequiredArgsConstructor

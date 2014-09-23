@@ -1,5 +1,6 @@
 package com.spotify.heroic.statistics.semantic;
 
+import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
@@ -10,7 +11,6 @@ public class SemanticMetricBackendManagerReporter implements
 MetricBackendManagerReporter {
     private static final String COMPONENT = "metric-backend-manager";
 
-    @SuppressWarnings("unused")
     private final SemanticMetricRegistry registry;
 
     private final CallbackReporter getAllRows;
@@ -75,5 +75,10 @@ MetricBackendManagerReporter {
     @Override
     public Context reportRpcQueryMetrics() {
         return rpcQueryMetrics.setup();
+    }
+
+    @Override
+    public BackendReporter newBackend() {
+        return new SemanticBackendReporter(registry);
     }
 }

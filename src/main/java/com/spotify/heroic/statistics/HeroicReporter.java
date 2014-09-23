@@ -9,9 +9,5 @@ public interface HeroicReporter {
 
     ConsumerReporter newConsumer();
 
-    MetadataBackendReporter newMetadataBackend();
-
-    BackendReporter newBackend();
-
     AggregationCacheBackendReporter newAggregationCacheBackend();
 }

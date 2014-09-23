@@ -45,7 +45,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.AbstractMatcher;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.spi.InjectionListener;
@@ -55,24 +54,17 @@ import com.spotify.heroic.cache.AggregationCache;
 import com.spotify.heroic.cache.AggregationCacheBackend;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.LocalClusterNode;
-import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.config.HeroicConfig;
+import com.spotify.heroic.http.HttpClientManager;
 import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metrics.Backend;
-import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
-import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
-import com.spotify.heroic.yaml.HeroicConfig;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 import com.spotify.metrics.ffwd.FastForwardReporter;
@@ -114,10 +106,9 @@ public class Main {
         final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
         final AggregationCache cache = config.getCache();
 
-        final MetricBackendManager metrics = config.getMetrics();
-        final MetadataBackendManager metadata = config.getMetadata();
         final ClusterManager cluster = config.getCluster();
         final SeriesMigrator migrator = new SeriesMigrator();
+        final ClusteredMetadataManager metadata = new ClusteredMetadataManager();
 
         final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<Runnable>(
                 100000);
@@ -128,26 +119,6 @@ public class Main {
             @Provides
             public ConsumerReporter newConsumerReporter() {
                 return reporter.newConsumer();
-            }
-
-            @Provides
-            public MetadataBackendManagerReporter newMetadataBackendManager() {
-                return reporter.newMetadataBackendManager();
-            }
-
-            @Provides
-            public BackendReporter newBackend() {
-                return reporter.newBackend();
-            }
-
-            @Provides
-            public MetricBackendManagerReporter newMetricBackendManager() {
-                return reporter.newMetricBackendManager();
-            }
-
-            @Provides
-            public MetadataBackendReporter newMetadataBackend() {
-                return reporter.newMetadataBackend();
             }
 
             @Provides
@@ -169,21 +140,34 @@ public class Main {
                 bind(ExecutorService.class).toInstance(executor);
                 bind(AggregationCache.class).toInstance(cache);
                 bind(ClusterManager.class).toInstance(cluster);
-                bind(MetricBackendManager.class).toInstance(metrics);
-                bind(MetadataBackendManager.class).toInstance(metadata);
+
+                install(config.getMetrics().module(
+                        reporter.newMetricBackendManager()));
+
+                install(config.getMetadata().module(
+                        reporter.newMetadataBackendManager()));
+
+                // bind(MetricBackendManager.class).toInstance(metrics);
+                // bind(LocalMetadataManager.class).toInstance(localMetadata);
+                bind(ClusteredMetadataManager.class).toInstance(metadata);
                 bind(StoredMetricQueries.class)
                         .toInstance(storedMetricsQueries);
                 bind(ClusterManager.class).toInstance(cluster);
                 bind(LocalClusterNode.class).toInstance(
                         cluster.getLocalClusterNode());
 
+                bind(HttpClientManager.class).toInstance(config.getClient());
+
                 if (cache.getBackend() != null)
                     bind(AggregationCacheBackend.class).toInstance(
                             cache.getBackend());
 
-                multiBind(metrics.getBackends(), Backend.class);
-                multiBind(metadata.getBackends(), MetadataBackend.class);
-                multiBind(config.getConsumers(), Consumer.class);
+                // multiBind(injector, backends, Backend.class);
+
+                // multiBind(metrics.getBackends(), Backend.class);
+                // multiBind(localMetadata.getBackends(),
+                // MetadataBackend.class);
+                // multiBind(config.getConsumers(), Consumer.class);
 
                 bindListener(new IsSubclassOf(LifeCycle.class),
                         new TypeListener() {
@@ -198,16 +182,6 @@ public class Main {
                                 });
                             }
                         });
-            }
-
-            private <T> void multiBind(final List<T> binds, Class<T> clazz) {
-                {
-                    final Multibinder<T> bindings = Multibinder.newSetBinder(
-                            binder(), clazz);
-                    for (final T backend : binds) {
-                        bindings.addBinding().toInstance(backend);
-                    }
-                }
             }
         });
 
@@ -331,7 +305,8 @@ public class Main {
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath,
-                    location.getLineNr(), location.getColumnNr(),
+                    location == null ? null : location.getLineNr(),
+                            location == null ? null : location.getColumnNr(),
                     e.getOriginalMessage()));
 
             if (log.isDebugEnabled())

@@ -3,6 +3,7 @@ port: 8080
 refreshClusterSchedule: "0 */5 * * * ?"
 
 cluster:
+  useLocal: true
   tags:
     site: lon
   capabilities:
@@ -10,34 +11,7 @@ cluster:
   discovery:
     type: static
     nodes:
-      - http://ash2-heroic-a1:8080
-      - http://ash2-heroic-a2:8080
-      - http://ash2-heroic-a3:8080
-      - http://lon3-heroic-a1:8080
-      - http://lon3-heroic-a2:8080
-      - http://lon3-heroic-a3:8080
-      - http://sjc1-heroic-a1:8080
-      - http://sjc1-heroic-a2:8080
-      - http://sjc1-heroic-a3:8080
-      - http://sjc1-heroic-a1:8081
-      - http://sjc1-heroic-a2:8081
-      - http://sjc1-heroic-a3:8081
-      - http://ash2-heroic-a1:8081
-      - http://ash2-heroic-a2:8081
-      - http://ash2-heroic-a3:8081
-      - http://sto1-heroic-a1:8080
-      - http://sto1-heroic-a2:8080
-      - http://sto1-heroic-a3:8080
-      - http://sto1-heroic-a1:8081
-      - http://sto1-heroic-a2:8081
-      - http://sto1-heroic-a3:8081
-      - http://awseu2-heroic-a1.shared.cloud:8080
-      - http://awseu2-heroic-a2.shared.cloud:8080
-      - http://lon3-heroic-a1:8081
-      - http://lon3-heroic-a2:8081
-      - http://lon3-heroic-a3:8081
-      - http://awsuse1-heroic-a1.shared.cloud:8080
-      - http://awsuse1-heroic-a2.shared.cloud:8080
+      - http://localhost:1234
 
 metrics:
   flushingInterval: 1000

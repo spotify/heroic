@@ -5,22 +5,26 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metrics.heroic.HeroicBackend;
-import com.spotify.heroic.metrics.kairosdb.KairosBackend;
 import com.spotify.heroic.metrics.model.BackendEntry;
 import com.spotify.heroic.metrics.model.FetchData;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.metrics.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.statistics.BackendReporter;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = HeroicBackend.class, name = "heroic"),
-        @JsonSubTypes.Type(value = KairosBackend.class, name = "kairosdb") })
 public interface Backend extends LifeCycle {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({ @JsonSubTypes.Type(value = HeroicBackend.Config.class, name = "heroic") })
+    public abstract static class Config {
+        public abstract Module module(BackendReporter reporter, Key<Backend> key);
+    }
+
     public String getGroup();
 
     /**

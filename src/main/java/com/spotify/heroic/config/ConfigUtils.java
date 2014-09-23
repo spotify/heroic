@@ -1,4 +1,4 @@
-package com.spotify.heroic.yaml;
+package com.spotify.heroic.config;
 
 import java.lang.reflect.Constructor;
 

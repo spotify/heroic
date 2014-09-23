@@ -19,7 +19,7 @@ public interface MetadataBackendReporter {
 
     /**
      * report number of successful operations in a batch
-     * 
+     *
      * @param n
      *            number of successes
      */
@@ -27,7 +27,7 @@ public interface MetadataBackendReporter {
 
     /**
      * report number of failed operations in a batch
-     * 
+     *
      * @param n
      *            number of failures
      */
@@ -36,4 +36,6 @@ public interface MetadataBackendReporter {
     public void reportWriteBatchDuration(long millis);
 
     public void newWriteThreadPool(ThreadPoolProvider provider);
+
+    public ThreadPoolReporter newThreadPool();
 }

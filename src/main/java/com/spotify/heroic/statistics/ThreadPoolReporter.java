@@ -1,10 +1,10 @@
 package com.spotify.heroic.statistics;
 
-public interface ThreadPoolsReporter {
+public interface ThreadPoolReporter {
     public interface Context {
         public void stop();
     }
 
-    Context newThreadPoolContext(String string,
+    Context newThreadPoolContext(String name,
             ThreadPoolReporterProvider provider);
 }

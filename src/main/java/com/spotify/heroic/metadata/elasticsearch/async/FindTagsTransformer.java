@@ -16,7 +16,6 @@ import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.filter.TrueFilter;
-import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
@@ -38,7 +37,7 @@ Callback.DeferredTransformer<FindTagKeys, FindTags> {
             callbacks.add(findSingle(key));
         }
 
-        return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer());
+        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce());
     }
 
     /**

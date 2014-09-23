@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
@@ -14,10 +16,16 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metrics.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.statistics.MetadataBackendReporter;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(value = ElasticSearchMetadataBackend.class, name = "elasticsearch") })
 public interface MetadataBackend extends LifeCycle {
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+    @JsonSubTypes({ @JsonSubTypes.Type(value = ElasticSearchMetadataBackend.Config.class, name = "elasticsearch") })
+    public static abstract class Config {
+        public abstract Module module(MetadataBackendReporter reporter,
+                Key<MetadataBackend> key);
+    }
+
     public Callback<WriteBatchResult> write(Series series)
             throws MetadataOperationException;
 

@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.rpc3;
+package com.spotify.heroic.http.rpc5;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import com.spotify.heroic.model.DateRange;
  * @author udoprog
  */
 @Data
-public class Rpc3FullQueryBody {
+public class Rpc5FullQueryBody {
     private final String backendGroup;
     private final Filter filter;
     private final List<String> groupBy;
@@ -22,13 +22,13 @@ public class Rpc3FullQueryBody {
     private final AggregationGroup aggregation;
 
     @JsonCreator
-    public static Rpc3FullQueryBody create(
+    public static Rpc5FullQueryBody create(
             @JsonProperty("backendGroup") String backendGroup,
             @JsonProperty("filter") Filter filter,
             @JsonProperty("groupBy") List<String> groupBy,
             @JsonProperty("range") DateRange range,
             @JsonProperty("aggregation") AggregationGroup aggregation) {
-        return new Rpc3FullQueryBody(backendGroup, filter, groupBy, range,
+        return new Rpc5FullQueryBody(backendGroup, filter, groupBy, range,
                 aggregation);
     }
 }

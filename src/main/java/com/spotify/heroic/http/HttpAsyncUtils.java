@@ -15,6 +15,12 @@ public final class HttpAsyncUtils {
         public R resume(T value) throws Exception;
     }
 
+    public static <T> void handleAsyncResume(final AsyncResponse response,
+            final Callback<T> callback) {
+        HttpAsyncUtils.<T, T> handleAsyncResume(response, callback,
+                HttpAsyncUtils.<T> passthrough());
+    }
+
     /**
      * Helper function to correctly wire up async response management.
      *
@@ -75,5 +81,16 @@ public final class HttpAsyncUtils {
                 callback.cancel(new CancelReason("Client disconnected"));
             }
         });
+    }
+
+    public static final Resume<Object, Object> PASSTHROUGH = new Resume<Object, Object>() {
+        @Override
+        public Object resume(Object value) throws Exception {
+            return value;
+        }
+    };
+
+    public static <T> Resume<T, T> passthrough() {
+        return (Resume<T, T>) PASSTHROUGH;
     }
 }

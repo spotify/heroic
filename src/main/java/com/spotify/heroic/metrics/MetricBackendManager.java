@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.PrivateModule;
+import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
@@ -37,8 +44,7 @@ import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metadata.MetadataOperationException;
+import com.spotify.heroic.metadata.LocalMetadataManager;
 import com.spotify.heroic.metrics.async.FindAndRouteTransformer;
 import com.spotify.heroic.metrics.async.FindSeriesTransformer;
 import com.spotify.heroic.metrics.async.MetricGroupsTransformer;
@@ -61,43 +67,132 @@ import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 @RequiredArgsConstructor
 @ToString(exclude = { "scheduledExecutor" })
 public class MetricBackendManager implements LifeCycle {
-    public static final boolean DEFAULT_UPDATE_METADATA = false;
-    public static final int DEFAULT_GROUP_LIMIT = 500;
-    public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
-    public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
+    @Data
+    public static class Config {
+        public static final boolean DEFAULT_UPDATE_METADATA = false;
+        public static final int DEFAULT_GROUP_LIMIT = 500;
+        public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
+        public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
 
-    @JsonCreator
-    public static MetricBackendManager create(
-            @JsonProperty("backends") List<Backend> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends,
-            @JsonProperty("updateMetadata") Boolean updateMetadata,
-            @JsonProperty("groupLimit") Integer groupLimit,
-            @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
-            @JsonProperty("flushingInterval") Long flushingInterval) {
-        if (backends == null)
-            backends = new ArrayList<>();
+        private final List<Backend.Config> backends;
+        private final List<String> defaultBackends;
+        private final boolean updateMetadata;
+        private final int groupLimit;
+        private final int groupLoadLimit;
+        private final long flushingInterval;
 
-        if (updateMetadata == null)
-            updateMetadata = DEFAULT_UPDATE_METADATA;
+        @JsonCreator
+        public static Config create(
+                @JsonProperty("backends") List<Backend.Config> backends,
+                @JsonProperty("defaultBackends") List<String> defaultBackends,
+                @JsonProperty("updateMetadata") Boolean updateMetadata,
+                @JsonProperty("groupLimit") Integer groupLimit,
+                @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
+                @JsonProperty("flushingInterval") Long flushingInterval) {
+            if (backends == null)
+                backends = new ArrayList<>();
 
-        if (groupLimit == null)
-            groupLimit = DEFAULT_GROUP_LIMIT;
+            if (updateMetadata == null)
+                updateMetadata = DEFAULT_UPDATE_METADATA;
 
-        if (groupLoadLimit == null)
-            groupLoadLimit = DEFAULT_GROUP_LOAD_LIMIT;
+            if (groupLimit == null)
+                groupLimit = DEFAULT_GROUP_LIMIT;
 
-        if (flushingInterval == null)
-            flushingInterval = DEFAULT_FLUSHING_INTERVAL;
+            if (groupLoadLimit == null)
+                groupLoadLimit = DEFAULT_GROUP_LOAD_LIMIT;
 
-        final Map<String, List<Backend>> mappedBackends = buildBackends(backends);
-        final List<Backend> buildDefaultBackends = buildDefaultBackends(
-                mappedBackends, defaultBackends);
+            if (flushingInterval == null)
+                flushingInterval = DEFAULT_FLUSHING_INTERVAL;
 
-        return new MetricBackendManager(mappedBackends, buildDefaultBackends,
-                updateMetadata, groupLimit, groupLoadLimit, flushingInterval);
+            return new Config(backends, defaultBackends, updateMetadata,
+                    groupLimit, groupLoadLimit, flushingInterval);
+        }
+
+        public Module module(final MetricBackendManagerReporter reporter) {
+            return new PrivateModule() {
+                @Override
+                protected void configure() {
+                    bindBackends(Config.this.backends);
+                    bind(Config.class).toInstance(Config.this);
+                    bind(MetricBackendManagerReporter.class).toInstance(
+                            reporter);
+
+                    bind(MetricBackendManager.class).in(Scopes.SINGLETON);
+                    expose(MetricBackendManager.class);
+                }
+
+                private void bindBackends(
+                        final Collection<Backend.Config> configs) {
+                    final Multibinder<Backend> bindings = Multibinder
+                            .newSetBinder(binder(), Backend.class);
+
+                    int i = 0;
+
+                    for (final Backend.Config config : configs) {
+                        final Key<Backend> key = Key.get(Backend.class,
+                                Names.named(Integer.toString(i++)));
+
+                        install(config.module(reporter.newBackend(), key));
+
+                        bindings.addBinding().to(key);
+                    }
+                }
+            };
+        }
     }
 
-    private static List<Backend> buildDefaultBackends(
+    private final Map<String, List<Backend>> backends;
+    private final List<Backend> defaultBackends;
+    private final boolean updateMetadata;
+    private final int groupLimit;
+    private final int groupLoadLimit;
+    private final long flushingInterval;
+
+    @Inject
+    private MetricBackendManagerReporter reporter;
+
+    @Inject
+    private AggregationCache cache;
+
+    @Inject
+    private ClusterManager cluster;
+
+    @Inject
+    private LocalMetadataManager metadata;
+
+    @Inject
+    private ScheduledExecutorService scheduledExecutor;
+
+    @Inject
+    public MetricBackendManager(final Config config, final Set<Backend> backends) {
+        this.backends = buildBackends(backends);
+        this.defaultBackends = buildDefaultBackends(this.backends,
+                config.getDefaultBackends());
+        this.updateMetadata = config.isUpdateMetadata();
+        this.groupLimit = config.getGroupLimit();
+        this.groupLoadLimit = config.getGroupLoadLimit();
+        this.flushingInterval = config.getFlushingInterval();
+    }
+
+    private Map<String, List<Backend>> buildBackends(
+            Collection<Backend> backends) {
+        final Map<String, List<Backend>> groups = new HashMap<>();
+
+        for (final Backend backend : backends) {
+            List<Backend> group = groups.get(backend.getGroup());
+
+            if (group == null) {
+                group = new ArrayList<>();
+                groups.put(backend.getGroup(), group);
+            }
+
+            group.add(backend);
+        }
+
+        return groups;
+    }
+
+    private List<Backend> buildDefaultBackends(
             Map<String, List<Backend>> backends, List<String> defaultBackends) {
         if (defaultBackends == null) {
             final List<Backend> result = new ArrayList<>();
@@ -125,34 +220,6 @@ public class MetricBackendManager implements LifeCycle {
         return result;
     }
 
-    private static Map<String, List<Backend>> buildBackends(
-            List<Backend> backends) {
-        final Map<String, List<Backend>> groups = new HashMap<>();
-
-        for (final Backend backend : backends) {
-            List<Backend> group = groups.get(backend.getGroup());
-
-            if (group == null) {
-                group = new ArrayList<>();
-                groups.put(backend.getGroup(), group);
-            }
-
-            group.add(backend);
-        }
-
-        return groups;
-    }
-
-    private final Map<String, List<Backend>> backends;
-    private final List<Backend> defaultBackends;
-    private final boolean updateMetadata;
-    private final int groupLimit;
-    private final int groupLoadLimit;
-    private final long flushingInterval;
-
-    @Inject
-    private MetricBackendManagerReporter reporter;
-
     private final BulkProcessor<BufferedWriteMetric> writeBulkProcessor = new BulkProcessor<>(
             new BulkProcessor.Flushable<BufferedWriteMetric>() {
                 @Override
@@ -162,18 +229,6 @@ public class MetricBackendManager implements LifeCycle {
                     MetricBackendManager.this.flushWrites(writes);
                 }
             });
-
-    @Inject
-    private AggregationCache cache;
-
-    @Inject
-    private ClusterManager cluster;
-
-    @Inject
-    private MetadataBackendManager metadata;
-
-    @Inject
-    private ScheduledExecutorService scheduledExecutor;
 
     /**
      * Used for deferring work to avoid deep stack traces.
@@ -402,11 +457,7 @@ public class MetricBackendManager implements LifeCycle {
         if (updateMetadata) {
             for (final WriteMetric entry : writes) {
                 if (metadata.isReady()) {
-                    try {
-                        metadata.write(entry.getSeries());
-                    } catch (final MetadataOperationException e) {
-                        log.error("Failed to write metadata", e);
-                    }
+                    metadata.writeSeries(entry.getSeries());
                 }
             }
         }

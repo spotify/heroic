@@ -8,12 +8,12 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.LocalMetadataManager;
 
 @Slf4j
 public class RefreshTagsJob implements Job {
     @Inject
-    private MetadataBackendManager metadata;
+    private LocalMetadataManager metadata;
 
     @Override
     public void execute(JobExecutionContext context)

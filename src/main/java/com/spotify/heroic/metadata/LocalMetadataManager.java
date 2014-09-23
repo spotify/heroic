@@ -2,23 +2,27 @@ package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.PrivateModule;
+import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.async.FindTagsReducer;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
@@ -27,18 +31,62 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @Slf4j
-@RequiredArgsConstructor
-public class MetadataBackendManager {
-    @JsonCreator
-    public static MetadataBackendManager create(
-            @JsonProperty("backends") List<MetadataBackend> backends) {
-        return new MetadataBackendManager(backends);
+public class LocalMetadataManager {
+    @Data
+    public static class Config {
+        private final List<MetadataBackend.Config> backends;
+
+        @JsonCreator
+        public static Config create(
+                @JsonProperty("backends") List<MetadataBackend.Config> backends) {
+            return new Config(backends);
+        }
+
+        public Module module(final MetadataBackendManagerReporter reporter) {
+            return new PrivateModule() {
+                @Override
+                protected void configure() {
+                    bindBackends(Config.this.backends);
+                    bind(Config.class).toInstance(Config.this);
+                    bind(MetadataBackendManagerReporter.class).toInstance(
+                            reporter);
+
+                    bind(LocalMetadataManager.class).in(Scopes.SINGLETON);
+                    expose(LocalMetadataManager.class);
+                }
+
+                private void bindBackends(
+                        final Collection<MetadataBackend.Config> configs) {
+                    final Multibinder<MetadataBackend> bindings = Multibinder
+                            .newSetBinder(binder(), MetadataBackend.class);
+
+                    int i = 0;
+
+                    for (final MetadataBackend.Config config : configs) {
+                        final String id = Integer.toString(i++);
+                        final Key<MetadataBackend> key = Key.get(
+                                MetadataBackend.class, Names.named(id));
+
+                        install(config.module(reporter.newMetadataBackend(id),
+                                key));
+
+                        bindings.addBinding().to(key);
+                    }
+                }
+
+            };
+        }
     }
 
     private final List<MetadataBackend> backends;
+    private final MetadataBackendManagerReporter reporter;
 
     @Inject
-    private MetadataBackendManagerReporter reporter;
+    public LocalMetadataManager(final MetadataBackendManagerReporter reporter,
+            Set<MetadataBackend> backends) {
+        this.reporter = reporter;
+        this.backends = new ArrayList<>(backends);
+    }
 
     public List<MetadataBackend> getBackends() {
         return ImmutableList.copyOf(backends);
@@ -55,11 +103,11 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, new FindTagsReducer())
+        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce())
                 .register(reporter.reportFindTags());
     }
 
-    public String write(Series series) throws MetadataOperationException {
+    public Callback<String> writeSeries(Series series) {
         final String id = MetadataUtils.buildId(series);
 
         for (final MetadataBackend backend : backends) {
@@ -70,7 +118,7 @@ public class MetadataBackendManager {
             }
         }
 
-        return id;
+        return new ResolvedCallback<>(id);
     }
 
     public Callback<FindSeries> findSeries(final Filter filter) {
@@ -84,32 +132,8 @@ public class MetadataBackendManager {
             }
         }
 
-        final Callback.Reducer<FindSeries, FindSeries> reducer = new Callback.Reducer<FindSeries, FindSeries>() {
-            @Override
-            public FindSeries resolved(Collection<FindSeries> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                for (final Exception e : errors) {
-                    log.error("Query failed", e);
-                }
-
-                if (!errors.isEmpty() || !cancelled.isEmpty())
-                    throw new Exception("Query failed");
-
-                final Set<Series> series = new HashSet<Series>();
-                int duplicates = 0;
-
-                for (final FindSeries result : results) {
-                    series.addAll(result.getSeries());
-                    duplicates += result.getDuplicates();
-                }
-
-                return new FindSeries(series, series.size(), duplicates);
-            }
-        };
-
-        return ConcurrentCallback.newReduce(callbacks, reducer).register(
-                reporter.reportFindTimeSeries());
+        return ConcurrentCallback.newReduce(callbacks, FindSeries.reduce())
+                .register(reporter.reportFindTimeSeries());
     }
 
     public Callback<DeleteSeries> deleteSeries(final Filter filter) {
@@ -123,28 +147,7 @@ public class MetadataBackendManager {
             }
         }
 
-        final Callback.Reducer<DeleteSeries, DeleteSeries> reducer = new Callback.Reducer<DeleteSeries, DeleteSeries>() {
-            @Override
-            public DeleteSeries resolved(Collection<DeleteSeries> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-
-                if (!errors.isEmpty() || !cancelled.isEmpty())
-                    throw new Exception("Delete failed");
-
-                int successful = 0;
-                int failed = 0;
-
-                for (final DeleteSeries result : results) {
-                    successful += result.getSuccessful();
-                    failed += result.getFailed();
-                }
-
-                return new DeleteSeries(successful, failed);
-            }
-        };
-
-        return ConcurrentCallback.newReduce(callbacks, reducer);
+        return ConcurrentCallback.newReduce(callbacks, DeleteSeries.reduce());
     }
 
     public Callback<FindKeys> findKeys(final Filter filter) {
@@ -158,28 +161,8 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.Reducer<FindKeys, FindKeys>() {
-            @Override
-            public FindKeys resolved(Collection<FindKeys> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled)
-                            throws Exception {
-                return mergeFindKeys(results);
-            }
-
-            private FindKeys mergeFindKeys(Collection<FindKeys> results) {
-                final Set<String> keys = new HashSet<String>();
-                int size = 0;
-
-                for (final FindKeys findKeys : results) {
-                    keys.addAll(findKeys.getKeys());
-                    size += findKeys.getSize();
-                }
-
-                return new FindKeys(keys, size);
-            }
-        }).register(reporter.reportFindKeys());
+        return ConcurrentCallback.newReduce(callbacks, FindKeys.reduce())
+                .register(reporter.reportFindKeys());
     }
 
     public Callback<Boolean> refresh() {

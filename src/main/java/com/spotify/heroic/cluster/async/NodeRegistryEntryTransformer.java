@@ -1,28 +1,28 @@
 package com.spotify.heroic.cluster.async;
 
 import java.net.URI;
-import java.util.concurrent.Executor;
 
 import lombok.RequiredArgsConstructor;
-
-import org.glassfish.jersey.client.ClientConfig;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.http.HttpClientManager;
+import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcNodeException;
-import com.spotify.heroic.http.rpc3.Rpc3ClusterNode;
 import com.spotify.heroic.http.rpc4.Rpc4ClusterNode;
+import com.spotify.heroic.http.rpc5.Rpc5ClusterNode;
+import com.spotify.heroic.metadata.LocalMetadataManager;
 
 @RequiredArgsConstructor
 public class NodeRegistryEntryTransformer implements
         Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+    private final HttpClientManager clients;
     private final URI uri;
-    private final ClientConfig config;
-    private final Executor executor;
     private final NodeRegistryEntry localEntry;
     private final boolean useLocal;
+    private final LocalMetadataManager localMetadata;
 
     @Override
     public NodeRegistryEntry transform(NodeMetadata metadata) throws Exception {
@@ -46,16 +46,21 @@ public class NodeRegistryEntryTransformer implements
     private ClusterNode buildClusterNode(NodeMetadata m) throws Exception {
         final String base = String.format("rpc%d", m.getVersion());
 
+        final HttpClientSession client = clients.newSession(uri, base);
+
         switch (m.getVersion()) {
         case 0:
         case 1:
         case 2:
+        case 3:
             throw new RpcNodeException(uri, "Unsupported RPC version: "
                     + m.getVersion());
-        case 3:
-            return new Rpc3ClusterNode(base, uri, config, executor);
+        case 4:
+            // backwards compatibility entails providing this with access to
+            // local metadata.
+            return new Rpc4ClusterNode(client, localMetadata);
         default:
-            return new Rpc4ClusterNode(base, uri, config, executor);
+            return new Rpc5ClusterNode(client);
         }
     }
 }

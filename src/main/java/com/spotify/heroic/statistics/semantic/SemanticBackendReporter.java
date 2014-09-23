@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import com.spotify.heroic.statistics.BackendReporter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.ThreadPoolsReporter;
+import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
@@ -32,7 +32,7 @@ public class SemanticBackendReporter implements BackendReporter {
     }
 
     @Override
-    public ThreadPoolsReporter newThreadPoolsReporter() {
-        return new SemanticThreadPoolsReporter(registry, id);
+    public ThreadPoolReporter newThreadPool() {
+        return new SemanticThreadPoolReporter(registry, id);
     }
 }

@@ -1,19 +1,13 @@
 package com.spotify.heroic.concurrrency;
 
-import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.statistics.NullThreadPoolsReporter;
-import com.spotify.heroic.statistics.ThreadPoolReporterProvider;
-import com.spotify.heroic.statistics.ThreadPoolsReporter;
+import com.spotify.heroic.statistics.ThreadPoolReporter;
 
 /**
  * An abstraction for the concept of having separate thread pools dedicated
@@ -22,152 +16,64 @@ import com.spotify.heroic.statistics.ThreadPoolsReporter;
  * @author udoprog
  */
 @RequiredArgsConstructor
-@Slf4j
 public class ReadWriteThreadPools {
-    public static int DEFAULT_READ_THREADS = 20;
-    public static int DEFAULT_READ_QUEUE_SIZE = 10000;
-    public static int DEFAULT_WRITE_THREADS = 20;
-    public static int DEFAULT_WRITE_QUEUE_SIZE = 10000;
+    @Data
+    public static class Config {
+        private final int readThreads;
+        private final int readQueueSize;
+        private final int writeThreads;
+        private final int writeQueueSize;
 
-    public static final class Config {
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int readThreads = DEFAULT_READ_THREADS;
+        @JsonCreator
+        public static Config create(
+                @JsonProperty("readThreads") Integer readThreads,
+                @JsonProperty("readQueueSize") Integer readQueueSize,
+                @JsonProperty("writeThreads") Integer writeThreads,
+                @JsonProperty("writeQueueSize") Integer writeQueueSize) {
+            if (readThreads == null)
+                readThreads = ThreadPool.DEFAULT_THREADS;
 
-        private int readQueueSize = DEFAULT_READ_QUEUE_SIZE;
+            if (readQueueSize == null)
+                readQueueSize = ThreadPool.DEFAULT_QUEUE_SIZE;
 
-        /**
-         * Threads dedicated to asynchronous request handling.
-         */
-        private int writeThreads = DEFAULT_WRITE_THREADS;
+            if (writeThreads == null)
+                writeThreads = ThreadPool.DEFAULT_THREADS;
 
-        private int writeQueueSize = DEFAULT_WRITE_QUEUE_SIZE;
+            if (writeQueueSize == null)
+                writeQueueSize = ThreadPool.DEFAULT_QUEUE_SIZE;
 
-        private ThreadPoolsReporter reporter = new NullThreadPoolsReporter();
-
-        public Config readThreads(int i) {
-            this.readThreads = i;
-            return this;
+            return new Config(readThreads, readQueueSize, writeThreads,
+                    writeQueueSize);
         }
 
-        public Config readQueueSize(int i) {
-            this.readQueueSize = i;
-            return this;
+        public static Config createDefault() {
+            return create(null, null, null, null);
         }
 
-        public Config writeThreads(int i) {
-            this.writeThreads = i;
-            return this;
-        }
+        public ReadWriteThreadPools construct(ThreadPoolReporter reporter) {
+            final ThreadPool read = ThreadPool.create("read", reporter,
+                    readThreads, readQueueSize);
 
-        public Config writeQueueSize(int i) {
-            this.writeQueueSize = i;
-            return this;
-        }
+            final ThreadPool write = ThreadPool.create("write", reporter,
+                    writeThreads, writeQueueSize);
 
-        public Config reporter(ThreadPoolsReporter reporter) {
-            this.reporter = reporter;
-            return this;
-        }
-
-        public ReadWriteThreadPools build() {
-            final ThreadPoolExecutor readExecutor = new ThreadPoolExecutor(
-                    readThreads, readThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(readQueueSize));
-
-            final ThreadPoolExecutor writeExecutor = new ThreadPoolExecutor(
-                    writeThreads, writeThreads, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(writeQueueSize));
-
-            final ThreadPoolsReporter.Context readContext = reporter
-                    .newThreadPoolContext("read",
-                            new ThreadPoolReporterProvider() {
-                        @Override
-                        public long getQueueSize() {
-                            return readExecutor.getQueue().size();
-                        }
-                    });
-
-            final ThreadPoolsReporter.Context writeContext = reporter
-                    .newThreadPoolContext("write",
-                            new ThreadPoolReporterProvider() {
-                        @Override
-                        public long getQueueSize() {
-                            return readExecutor.getQueue().size();
-                        }
-                    });
-
-            return new ReadWriteThreadPools(readExecutor, writeExecutor,
-                    readContext, writeContext);
+            return new ReadWriteThreadPools(read, write);
         }
     }
 
-    public static Config config() {
-        return new Config();
-    }
-
-    @JsonCreator
-    private static ReadWriteThreadPools create(
-            @JsonProperty("readThreads") Integer readThreads,
-            @JsonProperty("readQueueSize") Integer readQueueSize,
-            @JsonProperty("writeThreads") Integer writeThreads,
-            @JsonProperty("writeQueueSize") Integer writeQueueSize) {
-        if (readThreads == null)
-            readThreads = DEFAULT_READ_THREADS;
-
-        if (readQueueSize == null)
-            readQueueSize = DEFAULT_READ_QUEUE_SIZE;
-
-        if (writeThreads == null)
-            writeThreads = DEFAULT_WRITE_THREADS;
-
-        if (writeQueueSize == null)
-            writeQueueSize = DEFAULT_WRITE_QUEUE_SIZE;
-
-        return config().readThreads(readThreads).readQueueSize(readQueueSize)
-                .writeThreads(writeThreads).writeQueueSize(writeQueueSize)
-                .build();
-    }
-
-    private final ThreadPoolExecutor read;
-    private final ThreadPoolExecutor write;
-    private final ThreadPoolsReporter.Context readContext;
-    private final ThreadPoolsReporter.Context writeContext;
+    private final ThreadPool read;
+    private final ThreadPool write;
 
     public Executor read() {
-        return read;
+        return read.get();
     }
 
     public Executor write() {
-        return write;
+        return write.get();
     }
 
     public void stop() {
-        read.shutdown();
-        write.shutdown();
-
-        try {
-            read.awaitTermination(120, TimeUnit.SECONDS);
-            log.debug("Gracefully shut down read executor");
-        } catch (final InterruptedException e) {
-            final List<?> tasks = read.shutdownNow();
-            log.error(
-                    "Failed to gracefully stop read executors ({} tasks(s) killed)",
-                    tasks.size(), e);
-        }
-
-        try {
-            write.awaitTermination(120, TimeUnit.SECONDS);
-            log.debug("Gracefully shut down write executor");
-        } catch (final InterruptedException e) {
-            final List<?> tasks = write.shutdownNow();
-            log.error(
-                    "Failed to gracefully stop write executors ({} tasks(s) killed)",
-                    tasks.size(), e);
-        }
-
-        readContext.stop();
-        writeContext.stop();
+        read.stop();
+        write.stop();
     }
 }

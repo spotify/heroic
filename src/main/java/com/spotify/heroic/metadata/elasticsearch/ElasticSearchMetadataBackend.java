@@ -13,7 +13,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import lombok.RequiredArgsConstructor;
+import javax.inject.Inject;
+
+import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,7 +49,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.inject.Inject;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.PrivateModule;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.CancelledCallback;
@@ -73,68 +77,128 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 
 @Slf4j
-@RequiredArgsConstructor
-@ToString(of = { "seeds", "clusterName", "index", "type", "nodeClient",
-        "bulkActions", "dumpInterval", "concurrentBulkRequests" })
+@ToString
 public class ElasticSearchMetadataBackend implements MetadataBackend {
-    public static String DEFAULT_CLUSTER_NAME = "elasticsearch";
-    public static String DEFAULT_INDEX = "heroic";
-    public static String DEFAULT_TYPE = "metadata";
-    public static boolean DEFAULT_NODE_CLIENT = false;
-    public static int DEFAULT_WRITE_BULK_ACTIONS = 1000;
-    public static int DEFAULT_CONCURRENT_BULK_REQUESTS = 5;
-    public static long DEFAULT_WRITE_BULK_FLUSH_INTERVAL = 1;
+    @Data
+    public static final class Config extends MetadataBackend.Config {
+        public static String DEFAULT_CLUSTER_NAME = "elasticsearch";
+        public static String DEFAULT_INDEX = "heroic";
+        public static String DEFAULT_TYPE = "metadata";
+        public static boolean DEFAULT_NODE_CLIENT = false;
+        public static int DEFAULT_WRITE_BULK_ACTIONS = 1000;
+        public static int DEFAULT_CONCURRENT_BULK_REQUESTS = 5;
+        public static long DEFAULT_WRITE_BULK_FLUSH_INTERVAL = 1;
 
-    @JsonCreator
-    public static ElasticSearchMetadataBackend create(
-            @JsonProperty("seeds") List<String> seeds,
-            @JsonProperty("clusterName") String clusterName,
-            @JsonProperty("index") String index,
-            @JsonProperty("type") String type,
-            @JsonProperty("nodeClient") Boolean nodeClient,
+        private final ReadWriteThreadPools.Config pools;
+        private final List<InetSocketTransportAddress> seeds;
+        private final String clusterName;
+        private final String index;
+        private final String type;
+        private final boolean nodeClient;
+        private final int bulkActions;
+        private final Long dumpInterval;
+        private final int concurrentBulkRequests;
+        private final XContentBuilder mapping;
 
-            @JsonProperty("pools") ReadWriteThreadPools pools,
+        @JsonCreator
+        public static Config create(
+                @JsonProperty("seeds") List<String> seeds,
+                @JsonProperty("clusterName") String clusterName,
+                @JsonProperty("index") String index,
+                @JsonProperty("type") String type,
+                @JsonProperty("nodeClient") Boolean nodeClient,
 
-            @JsonProperty("writeBulkActions") Integer writeBulkActions,
-            @JsonProperty("writeBulkFlushInterval") Long writeBulkFlushInterval,
-            @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests) {
-        if (clusterName == null)
-            clusterName = DEFAULT_CLUSTER_NAME;
+                @JsonProperty("pools") ReadWriteThreadPools.Config pools,
 
-        if (index == null)
-            index = DEFAULT_INDEX;
+                @JsonProperty("writeBulkActions") Integer writeBulkActions,
+                @JsonProperty("writeBulkFlushInterval") Long writeBulkFlushInterval,
+                @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests) {
+            if (clusterName == null)
+                clusterName = DEFAULT_CLUSTER_NAME;
 
-        if (type == null)
-            type = DEFAULT_TYPE;
+            if (index == null)
+                index = DEFAULT_INDEX;
 
-        if (nodeClient == null)
-            nodeClient = DEFAULT_NODE_CLIENT;
+            if (type == null)
+                type = DEFAULT_TYPE;
 
-        if (writeBulkActions == null)
-            writeBulkActions = DEFAULT_WRITE_BULK_ACTIONS;
+            if (nodeClient == null)
+                nodeClient = DEFAULT_NODE_CLIENT;
 
-        if (concurrentBulkRequests == null)
-            concurrentBulkRequests = DEFAULT_CONCURRENT_BULK_REQUESTS;
+            if (writeBulkActions == null)
+                writeBulkActions = DEFAULT_WRITE_BULK_ACTIONS;
 
-        if (writeBulkFlushInterval == null)
-            writeBulkFlushInterval = DEFAULT_WRITE_BULK_FLUSH_INTERVAL;
+            if (concurrentBulkRequests == null)
+                concurrentBulkRequests = DEFAULT_CONCURRENT_BULK_REQUESTS;
 
-        if (pools == null)
-            pools = ReadWriteThreadPools.config().build();
+            if (writeBulkFlushInterval == null)
+                writeBulkFlushInterval = DEFAULT_WRITE_BULK_FLUSH_INTERVAL;
 
-        XContentBuilder mapping;
+            if (pools == null)
+                pools = ReadWriteThreadPools.Config.createDefault();
 
-        try {
-            mapping = buildMapping(type);
-        } catch (final IOException e) {
-            throw new RuntimeException("Failed to create mapping", e);
+            XContentBuilder mapping;
+
+            try {
+                mapping = buildMapping(type);
+            } catch (final IOException e) {
+                throw new RuntimeException("Failed to create mapping", e);
+            }
+
+            final List<InetSocketTransportAddress> s = buildSeeds(seeds);
+
+            return new Config(pools, s, clusterName, index, type, nodeClient,
+                    writeBulkActions, writeBulkFlushInterval,
+                    concurrentBulkRequests, mapping);
         }
 
-        final List<InetSocketTransportAddress> s = buildSeeds(seeds);
+        private static XContentBuilder buildMapping(String type)
+                throws IOException {
+            final XContentBuilder builder = XContentFactory.jsonBuilder();
 
-        return new ElasticSearchMetadataBackend(pools, s, mapping, clusterName,
-                index, type, nodeClient, writeBulkActions,
-                writeBulkFlushInterval, concurrentBulkRequests);
+            XContentBuilder b = builder.startObject();
+
+            b = b.startObject(type);
+            b = b.startObject("properties");
+
+            b = b.startObject("key").field("type", "string")
+                    .field("index", "not_analyzed").endObject();
+
+            b = b.startObject("tags").field("type", "nested");
+
+            {
+                b = b.startObject("properties");
+
+                {
+                    b = b.startObject("value").field("type", "string")
+                            .field("index", "not_analyzed").endObject();
+                    b = b.startObject("key").field("type", "string")
+                            .field("index", "not_analyzed").endObject();
+                }
+
+                b = b.endObject();
+            }
+
+            b = b.endObject();
+
+            b = b.endObject();
+            b = b.endObject();
+            return b;
+        }
+
+        @Override
+        public Module module(final MetadataBackendReporter reporter,
+                final Key<MetadataBackend> key) {
+            return new PrivateModule() {
+                @Override
+                protected void configure() {
+                    bind(key).to(ElasticSearchMetadataBackend.class);
+                    bind(Config.class).toInstance(Config.this);
+                    bind(MetadataBackendReporter.class).toInstance(reporter);
+                    expose(key);
+                }
+            };
+        }
     }
 
     private static List<InetSocketTransportAddress> buildSeeds(
@@ -159,39 +223,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return new InetSocketTransportAddress(seed, 9300);
     }
 
-    private static XContentBuilder buildMapping(String type) throws IOException {
-        final XContentBuilder builder = XContentFactory.jsonBuilder();
-
-        XContentBuilder b = builder.startObject();
-
-        b = b.startObject(type);
-        b = b.startObject("properties");
-
-        b = b.startObject("key").field("type", "string")
-                .field("index", "not_analyzed").endObject();
-
-        b = b.startObject("tags").field("type", "nested");
-
-        {
-            b = b.startObject("properties");
-
-            {
-                b = b.startObject("value").field("type", "string")
-                        .field("index", "not_analyzed").endObject();
-                b = b.startObject("key").field("type", "string")
-                        .field("index", "not_analyzed").endObject();
-            }
-
-            b = b.endObject();
-        }
-
-        b = b.endObject();
-
-        b = b.endObject();
-        b = b.endObject();
-        return b;
-    }
-
     /**
      * Common connection abstraction between Node and TransportClient.
      */
@@ -201,9 +232,23 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         void close() throws Exception;
     }
 
+    @Inject
+    public ElasticSearchMetadataBackend(MetadataBackendReporter reporter,
+            Config config) throws IOException {
+        this.pools = config.getPools().construct(reporter.newThreadPool());
+        this.seeds = config.getSeeds();
+        this.clusterName = config.getClusterName();
+        this.index = config.getIndex();
+        this.type = config.getType();
+        this.nodeClient = config.isNodeClient();
+        this.bulkActions = config.getBulkActions();
+        this.dumpInterval = config.getDumpInterval();
+        this.concurrentBulkRequests = config.getConcurrentBulkRequests();
+        this.mapping = config.getMapping();
+    }
+
     private final ReadWriteThreadPools pools;
     private final List<InetSocketTransportAddress> seeds;
-    private final XContentBuilder mapping;
     private final String clusterName;
     private final String index;
     private final String type;
@@ -211,6 +256,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private final int bulkActions;
     private final Long dumpInterval;
     private final int concurrentBulkRequests;
+    private final XContentBuilder mapping;
 
     @Inject
     private MetadataBackendReporter reporter;
@@ -483,7 +529,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         try {
             writeSeries(client, bulkProcessor, id, s);
         } catch (final ExecutionException e) {
-            throw new MetadataOperationException("Failed to write", e);
+            throw new MetadataOperationException("Failed to process write", e);
         }
     }
 
@@ -590,7 +636,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     private void writeSeries(final Client client,
             final BulkProcessor bulkProcessor, final String id, final Series s)
-            throws MetadataOperationException, ExecutionException {
+            throws ExecutionException {
         writeCache.get(s, new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
