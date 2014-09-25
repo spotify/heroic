@@ -25,6 +25,6 @@ and aggregations.
 
 ```
 cqlsh < docs/keyspace.cql
-cqlsh -k heroic < docs/aggregation-schema.cql
-cqlsh -k aggregations < docs/metrics-schema.cql
+cqlsh -k aggregations < docs/aggregation-schema.cql
+cqlsh -k heroic < docs/metrics-schema.cql
 ```
