@@ -6,7 +6,7 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metric.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;

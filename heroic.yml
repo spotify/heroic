@@ -3,7 +3,7 @@ port: 8080
 refreshClusterSchedule: "0 */5 * * * ?"
 
 cluster:
-  useLocal: true
+  useLocal: false
   tags:
     site: lon
   capabilities:
@@ -11,7 +11,38 @@ cluster:
   discovery:
     type: static
     nodes:
-      - http://localhost:1234
+      - http://ash2-heroic-a1:8080
+      - http://ash2-heroic-a2:8080
+      - http://ash2-heroic-a3:8080
+      - http://ash2-heroic-a1:8081
+      - http://ash2-heroic-a2:8081
+      - http://ash2-heroic-a3:8081
+      - http://sjc1-heroic-a1:8080
+      - http://sjc1-heroic-a2:8080
+      - http://sjc1-heroic-a3:8080
+      - http://sjc1-heroic-a1:8081
+      - http://sjc1-heroic-a2:8081
+      - http://sjc1-heroic-a3:8081
+      - http://sto1-heroic-a1:8080
+      - http://sto1-heroic-a2:8080
+      - http://sto1-heroic-a3:8080
+      - http://sto1-heroic-a1:8081
+      - http://sto1-heroic-a2:8081
+      - http://sto1-heroic-a3:8081
+      - http://lon3-heroic-a1:8080
+      - http://lon3-heroic-a2:8080
+      - http://lon3-heroic-a3:8080
+      - http://lon3-heroic-a1:8081
+      - http://lon3-heroic-a2:8081
+      - http://lon3-heroic-a3:8081
+      - http://awsuse1-heroic-a1.shared.cloud:8080
+      - http://awsuse1-heroic-a2.shared.cloud:8080
+      - http://awsuse1-heroic-a1.shared.cloud:8081
+      - http://awsuse1-heroic-a2.shared.cloud:8081
+      - http://awseu3-heroic-a1.shared.cloud:8080
+      - http://awseu3-heroic-a2.shared.cloud:8080
+      - http://awseu3-heroic-a1.shared.cloud:8081
+      - http://awseu3-heroic-a2.shared.cloud:8081
 
 metrics:
   flushingInterval: 1000
@@ -37,4 +68,14 @@ cache:
     type: cassandra
     keyspace: aggregations
     seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
-        
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics-awsuse1"
+    config:
+      group.id: heroic-test
+      zookeeper.connect: awsuse1-kafkazookeeper-a1.shared.cloud.spotify.net,awsuse1-kafkazookeeper-a2.shared.cloud.spotify.net,awsuse1-kafkazookeeper-a3.shared.cloud.spotify.net/kafka-monitoring
+      auto.offset.reset: smallest
+      auto.commit.enable: true

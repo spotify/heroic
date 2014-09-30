@@ -7,37 +7,38 @@ import java.util.Set;
 import java.util.UUID;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.LocalMetadataManager;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.error.BackendOperationException;
-import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.WriteBatchResult;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.error.BackendOperationException;
+import com.spotify.heroic.metric.model.MetricGroups;
+import com.spotify.heroic.metric.model.WriteBatchResult;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
-@RequiredArgsConstructor
+@NoArgsConstructor
 public class LocalClusterNode implements ClusterNode {
     @Inject
     private MetricBackendManager metrics;
 
     @Inject
-    private LocalMetadataManager localMetadata;
+    private MetadataBackendManager localMetadata;
 
-    @Getter
-    private final UUID id;
+    @Inject
+    @Named("localId")
+    private UUID id;
 
     @Override
     public Callback<MetricGroups> query(final String backendGroup,

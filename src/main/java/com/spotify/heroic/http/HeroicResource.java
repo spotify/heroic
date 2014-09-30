@@ -18,9 +18,9 @@ import javax.ws.rs.core.Response;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.general.DataResponse;
 import com.spotify.heroic.http.general.ErrorMessage;
-import com.spotify.heroic.metrics.Backend;
-import com.spotify.heroic.metrics.BackendGroup;
-import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricBackendManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
 
 @Path("/")
@@ -49,8 +49,8 @@ public class HeroicResource {
             @PathParam("target") String targetGroup,
             @QueryParam("history") Long history, Filter filter)
             throws Exception {
-        final BackendGroup source = metrics.useGroup(sourceGroup);
-        final BackendGroup target = metrics.useGroup(targetGroup);
+        final MetricBackendGroup source = metrics.useGroup(sourceGroup);
+        final MetricBackendGroup target = metrics.useGroup(targetGroup);
 
         if (source == null)
             return Response
@@ -83,7 +83,7 @@ public class HeroicResource {
     public Response getBackends() {
         final List<String> results = new ArrayList<>();
 
-        for (final Backend b : metrics.getBackends()) {
+        for (final MetricBackend b : metrics.getBackends()) {
             results.add(b.getGroup());
         }
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.Data;
+import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -16,10 +17,11 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.FatalSchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaException;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
 
+@ToString
 public class Spotify100 implements ConsumerSchema {
     private static final String HOST = "host";
     private static final String KEY = "key";

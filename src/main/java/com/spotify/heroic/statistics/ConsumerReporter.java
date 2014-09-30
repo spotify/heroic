@@ -6,4 +6,6 @@ public interface ConsumerReporter {
     void reportMessageError();
 
     void reportConsumerSchemaError();
+
+    ThreadPoolReporter newThreadPool();
 }

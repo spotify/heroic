@@ -12,10 +12,10 @@ import javax.ws.rs.core.MediaType;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metrics.BackendGroup;
-import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.WriteBatchResult;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.model.MetricGroups;
+import com.spotify.heroic.metric.model.WriteBatchResult;
 
 @Path("/rpc4")
 @Produces(MediaType.APPLICATION_JSON)
@@ -55,7 +55,7 @@ public class Rpc4Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             Rpc4WriteBody body) throws Exception {
-        final BackendGroup backend = metrics.useGroup(body.getBackendGroup());
+        final MetricBackendGroup backend = metrics.useGroup(body.getBackendGroup());
 
         final Callback<WriteBatchResult> callback = metrics.write(backend,
                 body.getWrites());

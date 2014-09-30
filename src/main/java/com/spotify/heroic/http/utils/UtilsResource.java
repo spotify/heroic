@@ -11,10 +11,10 @@ import javax.ws.rs.core.Response;
 
 import com.google.common.io.BaseEncoding;
 import com.netflix.astyanax.Serializer;
-import com.spotify.heroic.cache.cassandra.model.CacheKey;
-import com.spotify.heroic.cache.cassandra.model.CacheKeySerializer;
-import com.spotify.heroic.metrics.heroic.MetricsRowKey;
-import com.spotify.heroic.metrics.heroic.MetricsRowKeySerializer;
+import com.spotify.heroic.aggregationcache.cassandra.model.CacheKey;
+import com.spotify.heroic.aggregationcache.cassandra.model.CacheKeySerializer;
+import com.spotify.heroic.metric.heroic.MetricsRowKey;
+import com.spotify.heroic.metric.heroic.MetricsRowKeySerializer;
 
 @Path("/utils")
 public class UtilsResource {

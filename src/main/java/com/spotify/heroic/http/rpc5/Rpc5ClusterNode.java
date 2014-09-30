@@ -17,9 +17,9 @@ import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.WriteBatchResult;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.model.MetricGroups;
+import com.spotify.heroic.metric.model.WriteBatchResult;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 

@@ -6,9 +6,9 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.metrics.model.MetricGroup;
-import com.spotify.heroic.metrics.model.RequestError;
-import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metric.model.MetricGroup;
+import com.spotify.heroic.metric.model.RequestError;
+import com.spotify.heroic.metric.model.Statistics;
 
 @Data
 public final class Rpc4MetricGroups {

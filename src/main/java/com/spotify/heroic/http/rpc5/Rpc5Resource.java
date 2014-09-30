@@ -13,11 +13,11 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metadata.LocalMetadataManager;
-import com.spotify.heroic.metrics.BackendGroup;
-import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.model.MetricGroups;
-import com.spotify.heroic.metrics.model.WriteBatchResult;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.model.MetricGroups;
+import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
 
 @Path("/rpc5")
@@ -28,7 +28,7 @@ public class Rpc5Resource {
     private MetricBackendManager metrics;
 
     @Inject
-    private LocalMetadataManager localMetadata;
+    private MetadataBackendManager localMetadata;
 
     private static final HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups>() {
         @Override
@@ -61,7 +61,7 @@ public class Rpc5Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             Rpc5WriteBody body) throws Exception {
-        final BackendGroup backend = metrics.useGroup(body.getBackendGroup());
+        final MetricBackendGroup backend = metrics.useGroup(body.getBackendGroup());
 
         final Callback<WriteBatchResult> callback = metrics.write(backend,
                 body.getWrites());

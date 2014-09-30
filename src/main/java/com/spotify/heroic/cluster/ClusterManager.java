@@ -3,29 +3,26 @@ package com.spotify.heroic.cluster;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.MetadataUriTransformer;
-import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
-import com.spotify.heroic.http.rpc.RpcResource;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.LocalMetadataManager;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 
 /**
  * Handles management of cluster state.
@@ -39,26 +36,26 @@ import com.spotify.heroic.metadata.LocalMetadataManager;
  * @author udoprog
  */
 @Slf4j
-@Data
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
+@ToString
 public class ClusterManager implements LifeCycle {
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet
-            .copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
-
-    public static final boolean DEFAULT_USE_LOCAL = false;
-
-    private final ClusterDiscovery discovery;
-    private final Map<String, String> localNodeTags;
-    private final Set<NodeCapability> capabilities;
-    private final UUID localNodeId;
-    private final NodeRegistryEntry localEntry;
-    private final LocalClusterNode localClusterNode;
-    private final boolean useLocal;
+    @Inject
+    @Named("localEntry")
+    @Getter
+    private NodeRegistryEntry localEntry;
 
     @Inject
-    LocalMetadataManager localMetadata;
+    @Named("useLocal")
+    private boolean useLocal;
 
     @Inject
-    HttpClientManager clients;
+    private ClusterDiscovery discovery;
+
+    @Inject
+    private MetadataBackendManager localMetadata;
+
+    @Inject
+    private HttpClientManager clients;
 
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
 
@@ -66,33 +63,6 @@ public class ClusterManager implements LifeCycle {
     public static final class Statistics {
         private final int onlineNodes;
         private final int offlineNodes;
-    }
-
-    @JsonCreator
-    public static ClusterManager create(
-            @JsonProperty("discovery") ClusterDiscovery discovery,
-            @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities,
-            @JsonProperty("useLocal") Boolean useLocal,
-            @JsonProperty("threadPoolSize") Integer threadPoolSize) {
-        if (discovery == null)
-            discovery = ClusterDiscovery.NULL;
-
-        if (capabilities == null)
-            capabilities = DEFAULT_CAPABILITIES;
-
-        if (useLocal == null)
-            useLocal = DEFAULT_USE_LOCAL;
-
-        final UUID id = UUID.randomUUID();
-
-        final LocalClusterNode localClusterNode = new LocalClusterNode(id);
-
-        final NodeRegistryEntry localEntry = buildLocalEntry(localClusterNode,
-                id, tags, capabilities);
-
-        return new ClusterManager(discovery, tags, capabilities, id,
-                localEntry, localClusterNode, useLocal);
     }
 
     public List<NodeRegistryEntry> getNodes() {
@@ -124,7 +94,7 @@ public class ClusterManager implements LifeCycle {
     }
 
     public Callback<Void> refresh() {
-        if (discovery == ClusterDiscovery.NULL) {
+        if (discovery == null) {
             log.info("No discovery mechanism configured");
             registry.set(new NodeRegistry(Lists.newArrayList(localEntry), 1));
             return new ResolvedCallback<Void>(null);
@@ -165,13 +135,5 @@ public class ClusterManager implements LifeCycle {
             return false;
 
         return registry.getOnlineNodes() > 0;
-    }
-
-    public static NodeRegistryEntry buildLocalEntry(
-            ClusterNode localClusterNode, UUID localNodeId,
-            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
-                localNodeId, localNodeTags, capabilities);
-        return new NodeRegistryEntry(null, localClusterNode, metadata);
     }
 }

@@ -11,4 +11,6 @@ public interface AggregationCacheReporter {
      * @param size
      */
     void reportGetMiss(int size);
+
+    AggregationCacheBackendReporter newAggregationCacheBackend();
 }

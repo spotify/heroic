@@ -13,7 +13,7 @@ import javax.ws.rs.core.Response;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metrics.Backend;
+import com.spotify.heroic.metric.MetricBackend;
 
 @Path("/status")
 @Produces(MediaType.APPLICATION_JSON)
@@ -23,7 +23,7 @@ public class StatusResource {
     private Set<Consumer> consumers;
 
     @Inject
-    private Set<Backend> backends;
+    private Set<MetricBackend> backends;
 
     @Inject
     private Set<MetadataBackend> metadataBackends;
@@ -67,7 +67,7 @@ public class StatusResource {
 
         int ready = 0;
 
-        for (final Backend backend : backends) {
+        for (final MetricBackend backend : backends) {
             if (backend.isReady())
                 ready += 1;
         }

@@ -90,6 +90,7 @@ public final class HttpAsyncUtils {
         }
     };
 
+    @SuppressWarnings("unchecked")
     public static <T> Resume<T, T> passthrough() {
         return (Resume<T, T>) PASSTHROUGH;
     }

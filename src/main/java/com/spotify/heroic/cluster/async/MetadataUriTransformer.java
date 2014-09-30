@@ -16,7 +16,7 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
 import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcMetadata;
-import com.spotify.heroic.metadata.LocalMetadataManager;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 
 @Data
 public final class MetadataUriTransformer implements
@@ -24,7 +24,7 @@ public final class MetadataUriTransformer implements
     private final boolean useLocal;
 
     private final NodeRegistryEntry localEntry;
-    private final LocalMetadataManager localMetadata;
+    private final MetadataBackendManager localMetadata;
     private final HttpClientManager clients;
     private final AtomicReference<NodeRegistry> registry;
 

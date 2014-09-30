@@ -13,7 +13,7 @@ import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcNodeException;
 import com.spotify.heroic.http.rpc4.Rpc4ClusterNode;
 import com.spotify.heroic.http.rpc5.Rpc5ClusterNode;
-import com.spotify.heroic.metadata.LocalMetadataManager;
+import com.spotify.heroic.metadata.MetadataBackendManager;
 
 @RequiredArgsConstructor
 public class NodeRegistryEntryTransformer implements
@@ -22,7 +22,7 @@ public class NodeRegistryEntryTransformer implements
     private final URI uri;
     private final NodeRegistryEntry localEntry;
     private final boolean useLocal;
-    private final LocalMetadataManager localMetadata;
+    private final MetadataBackendManager localMetadata;
 
     @Override
     public NodeRegistryEntry transform(NodeMetadata metadata) throws Exception {
@@ -48,13 +48,12 @@ public class NodeRegistryEntryTransformer implements
 
         final HttpClientSession client = clients.newSession(uri, base);
 
-        switch (m.getVersion()) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
+        if (m.getVersion() < 4) {
             throw new RpcNodeException(uri, "Unsupported RPC version: "
                     + m.getVersion());
+        }
+
+        switch (m.getVersion()) {
         case 4:
             // backwards compatibility entails providing this with access to
             // local metadata.

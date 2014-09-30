@@ -13,12 +13,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.http.HttpClientManager;
-import com.spotify.heroic.metadata.LocalMetadataManager;
-import com.spotify.heroic.metrics.MetricBackendManager;
+import com.spotify.heroic.aggregationcache.AggregationCacheConfig;
+import com.spotify.heroic.cluster.ClusterManagerConfig;
+import com.spotify.heroic.consumer.ConsumerConfig;
+import com.spotify.heroic.http.HttpClientManagerConfig;
+import com.spotify.heroic.metadata.MetadataBackendManagerConfig;
+import com.spotify.heroic.metric.MetricBackendManagerConfig;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
@@ -27,30 +27,27 @@ public class HeroicConfig {
     public static final int DEFAULT_PORT = 8080;
     public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
 
-    private final ClusterManager cluster;
-    private final MetricBackendManager.Config metrics;
-    private final LocalMetadataManager.Config metadata;
-    private final List<Consumer> consumers;
-    private final AggregationCache cache;
-    private final HttpClientManager client;
+    private final ClusterManagerConfig cluster;
+    private final MetricBackendManagerConfig metrics;
+    private final MetadataBackendManagerConfig metadata;
+    private final List<ConsumerConfig> consumers;
+    private final AggregationCacheConfig cache;
+    private final HttpClientManagerConfig client;
     private final int port;
     private final String refreshClusterSchedule;
 
     @JsonCreator
     public static HeroicConfig create(
-            @JsonProperty("cluster") ClusterManager cluster,
-            @JsonProperty("metrics") MetricBackendManager.Config metrics,
-            @JsonProperty("metadata") LocalMetadataManager.Config metadata,
-            @JsonProperty("consumers") List<Consumer> consumers,
-            @JsonProperty("cache") AggregationCache cache,
-            @JsonProperty("client") HttpClientManager client,
+            @JsonProperty("cluster") ClusterManagerConfig cluster,
+            @JsonProperty("metrics") MetricBackendManagerConfig metrics,
+            @JsonProperty("metadata") MetadataBackendManagerConfig metadata,
+            @JsonProperty("consumers") List<ConsumerConfig> consumers,
+            @JsonProperty("cache") AggregationCacheConfig cache,
+            @JsonProperty("client") HttpClientManagerConfig client,
             @JsonProperty("port") Integer port,
             @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule) {
-        if (cache == null)
-            cache = new AggregationCache(null);
-
         if (client == null)
-            client = HttpClientManager.create();
+            client = HttpClientManagerConfig.create();
 
         if (refreshClusterSchedule == null)
             refreshClusterSchedule = DEFAULT_REFRESH_CLUSTER_SCHEDULE;

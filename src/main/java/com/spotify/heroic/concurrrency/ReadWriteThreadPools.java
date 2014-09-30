@@ -4,6 +4,7 @@ import java.util.concurrent.Executor;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -16,6 +17,7 @@ import com.spotify.heroic.statistics.ThreadPoolReporter;
  * @author udoprog
  */
 @RequiredArgsConstructor
+@ToString
 public class ReadWriteThreadPools {
     @Data
     public static class Config {

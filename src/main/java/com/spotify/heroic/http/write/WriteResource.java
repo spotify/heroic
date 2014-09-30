@@ -11,9 +11,9 @@ import javax.ws.rs.core.Response;
 
 import lombok.Data;
 
-import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.MetricFormatException;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricFormatException;
+import com.spotify.heroic.metric.model.WriteMetric;
 
 @Path("/write")
 @Produces(MediaType.APPLICATION_JSON)

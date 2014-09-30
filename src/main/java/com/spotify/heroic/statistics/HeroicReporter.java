@@ -7,7 +7,7 @@ public interface HeroicReporter {
 
     AggregationCacheReporter newAggregationCache();
 
-    ConsumerReporter newConsumer();
+    HttpClientManagerReporter newHttpClientManager();
 
-    AggregationCacheBackendReporter newAggregationCacheBackend();
+    ConsumerReporter newConsumer(String id);
 }

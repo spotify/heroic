@@ -9,6 +9,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
 @Path("/rpc")
 @Produces(MediaType.APPLICATION_JSON)
@@ -22,9 +24,11 @@ public class RpcResource {
     @GET
     @Path("/metadata")
     public Response getMetadata() {
+        final NodeRegistryEntry localEntry = cluster.getLocalEntry();
+        final NodeMetadata localMetadata = localEntry.getMetadata();
         final RpcMetadata metadata = new RpcMetadata(VERSION,
-                cluster.getLocalNodeId(), cluster.getLocalNodeTags(),
-                cluster.getCapabilities());
+                localMetadata.getId(), localMetadata.getTags(),
+                localMetadata.getCapabilities());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }
 }

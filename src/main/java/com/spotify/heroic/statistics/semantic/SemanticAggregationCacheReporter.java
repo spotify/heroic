@@ -3,6 +3,7 @@ package com.spotify.heroic.statistics.semantic;
 import lombok.RequiredArgsConstructor;
 
 import com.codahale.metrics.Histogram;
+import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.metrics.core.MetricId;
@@ -17,7 +18,6 @@ AggregationCacheReporter {
     private final CallbackReporter put;
     private final Histogram getMiss;
 
-    @SuppressWarnings("unused")
     private final SemanticMetricRegistry registry;
 
     public SemanticAggregationCacheReporter(SemanticMetricRegistry registry) {
@@ -46,5 +46,10 @@ AggregationCacheReporter {
     @Override
     public void reportGetMiss(int size) {
         getMiss.update(size);
+    }
+
+    @Override
+    public AggregationCacheBackendReporter newAggregationCacheBackend() {
+        return new SemanticAggregationCacheBackendReporter(registry);
     }
 }

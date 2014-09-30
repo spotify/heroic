@@ -4,16 +4,16 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Singleton;
 import javax.servlet.DispatcherType;
 
 import lombok.RequiredArgsConstructor;
@@ -39,30 +39,28 @@ import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.inject.AbstractModule;
+import com.google.inject.Binder;
+import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.AbstractMatcher;
+import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.spi.InjectionListener;
 import com.google.inject.spi.TypeEncounter;
 import com.google.inject.spi.TypeListener;
-import com.spotify.heroic.cache.AggregationCache;
-import com.spotify.heroic.cache.AggregationCacheBackend;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.config.HeroicConfig;
-import com.spotify.heroic.http.HttpClientManager;
+import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
-import com.spotify.heroic.migrator.SeriesMigrator;
-import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
-import com.spotify.heroic.statistics.AggregationCacheReporter;
-import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.metrics.core.MetricId;
@@ -77,7 +75,7 @@ public class Main {
 
     public static Injector injector;
 
-    public static List<LifeCycle> managed = new ArrayList<LifeCycle>();
+    public static Set<LifeCycle> managed = new HashSet<>();
 
     public static final GuiceServletContextListener LISTENER = new GuiceServletContextListener() {
         @Override
@@ -87,107 +85,103 @@ public class Main {
     };
 
     @RequiredArgsConstructor
-    private static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
-        private final Class<?> clazz;
+    public static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
+        private final Class<?> type;
 
         @Override
         public boolean matches(TypeLiteral<?> t) {
-            return clazz.isAssignableFrom(t.getRawType());
+            return type.isAssignableFrom(t.getRawType());
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class LifeCycleTypeListener implements TypeListener {
+        private final Set<LifeCycle> managed;
+
+        @Override
+        public <I> void hear(final TypeLiteral<I> type,
+                final TypeEncounter<I> encounter) {
+            encounter.register(new InjectionListener<I>() {
+                @Override
+                public void afterInjection(I i) {
+                    managed.add((LifeCycle) i);
+                }
+            });
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class BinderSetup {
+        private final Set<LifeCycle> managed;
+        private final IsSubclassOf lifecycleMatcher = new IsSubclassOf(
+                LifeCycle.class);
+
+        public void listen(Binder binder) {
+            binder.bindListener(lifecycleMatcher, new LifeCycleTypeListener(
+                    managed));
         }
     }
 
     public static Injector setupInjector(final HeroicConfig config,
             final HeroicReporter reporter,
             final ScheduledExecutorService scheduledExecutor,
-            final ApplicationLifecycle lifecycle) {
+            final ApplicationLifecycle lifecycle) throws Exception {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
-        final StoredMetricQueries storedMetricsQueries = new StoredMetricQueries();
-        final AggregationCache cache = config.getCache();
 
-        final ClusterManager cluster = config.getCluster();
-        final SeriesMigrator migrator = new SeriesMigrator();
-        final ClusteredMetadataManager metadata = new ClusteredMetadataManager();
-
-        final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<Runnable>(
-                100000);
-        final ThreadPoolExecutor executor = new ThreadPoolExecutor(50, 100, 60,
-                TimeUnit.SECONDS, queue);
+        final BinderSetup binderSetup = new BinderSetup(managed);
 
         modules.add(new AbstractModule() {
             @Provides
-            public ConsumerReporter newConsumerReporter() {
-                return reporter.newConsumer();
-            }
-
-            @Provides
-            public AggregationCacheReporter newAggregationCache() {
-                return reporter.newAggregationCache();
-            }
-
-            @Provides
-            public AggregationCacheBackendReporter newAggregationCacheBackend() {
-                return reporter.newAggregationCacheBackend();
+            @Singleton
+            public HeroicReporter reporter() {
+                return reporter;
             }
 
             @Override
             protected void configure() {
                 bind(ApplicationLifecycle.class).toInstance(lifecycle);
-                bind(SeriesMigrator.class).toInstance(migrator);
                 bind(ScheduledExecutorService.class).toInstance(
                         scheduledExecutor);
-                bind(ExecutorService.class).toInstance(executor);
-                bind(AggregationCache.class).toInstance(cache);
-                bind(ClusterManager.class).toInstance(cluster);
+                bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
+                bind(StoredMetricQueries.class).in(Scopes.SINGLETON);
 
-                install(config.getMetrics().module(
-                        reporter.newMetricBackendManager()));
-
-                install(config.getMetadata().module(
-                        reporter.newMetadataBackendManager()));
-
-                // bind(MetricBackendManager.class).toInstance(metrics);
-                // bind(LocalMetadataManager.class).toInstance(localMetadata);
-                bind(ClusteredMetadataManager.class).toInstance(metadata);
-                bind(StoredMetricQueries.class)
-                        .toInstance(storedMetricsQueries);
-                bind(ClusterManager.class).toInstance(cluster);
-                bind(LocalClusterNode.class).toInstance(
-                        cluster.getLocalClusterNode());
-
-                bind(HttpClientManager.class).toInstance(config.getClient());
-
-                if (cache.getBackend() != null)
-                    bind(AggregationCacheBackend.class).toInstance(
-                            cache.getBackend());
-
-                // multiBind(injector, backends, Backend.class);
-
-                // multiBind(metrics.getBackends(), Backend.class);
-                // multiBind(localMetadata.getBackends(),
-                // MetadataBackend.class);
-                // multiBind(config.getConsumers(), Consumer.class);
-
-                bindListener(new IsSubclassOf(LifeCycle.class),
-                        new TypeListener() {
-                            @Override
-                            public <I> void hear(TypeLiteral<I> type,
-                                    TypeEncounter<I> encounter) {
-                                encounter.register(new InjectionListener<I>() {
-                                    @Override
-                                    public void afterInjection(Object i) {
-                                        managed.add((LifeCycle) i);
-                                    }
-                                });
-                            }
-                        });
+                binderSetup.listen(binder());
             }
         });
 
         modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
 
-        return Guice.createInjector(modules);
+        modules.add(config.getClient().module());
+        modules.add(config.getMetrics().module());
+        modules.add(config.getMetadata().module());
+        modules.add(config.getCluster().module());
+        modules.add(config.getCache().module());
+
+        setupConsumers(config, reporter, modules);
+
+        final Injector injector = Guice.createInjector(modules);
+
+        // touch all bindings to make sure they are 'eagerly' initialized.
+        for (final Entry<Key<?>, Binding<?>> entry : injector.getAllBindings()
+                .entrySet()) {
+            entry.getValue().getProvider().get();
+        }
+
+        return injector;
+    }
+
+    private static void setupConsumers(final HeroicConfig config,
+            final HeroicReporter reporter, final List<Module> modules) {
+        int consumerCount = 0;
+
+        for (final ConsumerConfig consumer : config.getConsumers()) {
+            final String id = consumer.id() != null ? consumer.id() : consumer
+                    .buildId(consumerCount++);
+            final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
+            modules.add(consumer.module(key, reporter.newConsumer(id)));
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -235,7 +229,7 @@ public class Main {
         }
 
         /* fire startable handlers */
-        if (!startLifecycle()) {
+        if (!startLifeCycles()) {
             log.info("Failed to start all lifecycle components");
             System.exit(1);
             return;
@@ -256,13 +250,11 @@ public class Main {
         System.exit(0);
     }
 
-    /**
-     * Start the lifecycle of all managed components.
-     */
-    private static boolean startLifecycle() {
+    private static boolean startLifeCycles() {
         boolean ok = true;
 
-        for (final LifeCycle startable : Main.managed) {
+        /* fire Stoppable handlers */
+        for (final LifeCycle startable : managed) {
             log.info("Starting: {}", startable);
 
             try {
@@ -280,7 +272,7 @@ public class Main {
         boolean ok = true;
 
         /* fire Stoppable handlers */
-        for (final LifeCycle stoppable : Main.managed) {
+        for (final LifeCycle stoppable : managed) {
             log.info("Stopping: {}", stoppable);
 
             try {
@@ -306,7 +298,7 @@ public class Main {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath,
                     location == null ? null : location.getLineNr(),
-                            location == null ? null : location.getColumnNr(),
+                    location == null ? null : location.getColumnNr(),
                     e.getOriginalMessage()));
 
             if (log.isDebugEnabled())
@@ -350,6 +342,7 @@ public class Main {
         final HandlerCollection handlers = new HandlerCollection();
         handlers.setHandlers(new Handler[] { rewrite, context,
                 requestLogHandler });
+
         server.setHandler(handlers);
 
         return server;

@@ -57,6 +57,10 @@ public class MetadataResource {
             return;
         }
 
+        if (query == null) {
+            query = MetadataQueryBody.create();
+        }
+
         final Filter filter = query.makeFilter();
 
         log.info("/tags: {} {}", query, filter);
@@ -82,6 +86,10 @@ public class MetadataResource {
                     .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Metadata is not ready")).build());
             return;
+        }
+
+        if (query == null) {
+            query = MetadataQueryBody.create();
         }
 
         final Filter filter = query.makeFilter();
@@ -135,6 +143,10 @@ public class MetadataResource {
                     .status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(new ErrorMessage("Cache is not ready")).build());
             return;
+        }
+
+        if (query == null) {
+            query = MetadataQueryBody.create();
         }
 
         final Filter filter = query.makeFilter();

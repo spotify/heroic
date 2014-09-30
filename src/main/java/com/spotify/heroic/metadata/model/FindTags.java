@@ -9,6 +9,8 @@ import java.util.Set;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 
@@ -46,7 +48,7 @@ public class FindTags {
         @Override
         public FindTags resolved(Collection<FindTags> results,
                 Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+                        throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 
@@ -69,5 +71,12 @@ public class FindTags {
 
     public static Reducer reduce() {
         return reducer;
+    }
+
+    @JsonCreator
+    public static FindTags create(
+            @JsonProperty("tags") Map<String, Set<String>> tags,
+            @JsonProperty("size") int size) {
+        return new FindTags(tags, size);
     }
 }

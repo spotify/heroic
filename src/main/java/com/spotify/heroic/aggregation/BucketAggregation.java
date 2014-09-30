@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
-import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metric.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;

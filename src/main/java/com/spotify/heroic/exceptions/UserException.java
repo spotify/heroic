@@ -1,6 +1,6 @@
 package com.spotify.heroic.exceptions;
 
-import com.spotify.heroic.metrics.model.NodeError;
+import com.spotify.heroic.metric.model.NodeError;
 
 /**
  * An exception which is caused by the user of the system.

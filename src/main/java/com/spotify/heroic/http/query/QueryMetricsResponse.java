@@ -12,8 +12,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.metrics.model.RequestError;
-import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metric.model.RequestError;
+import com.spotify.heroic.metric.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 

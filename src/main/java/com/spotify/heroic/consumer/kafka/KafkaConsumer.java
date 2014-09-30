@@ -5,65 +5,48 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.ApplicationLifecycle;
-import com.spotify.heroic.config.ConfigUtils;
+import com.spotify.heroic.concurrrency.ThreadPool;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.WriteException;
-import com.spotify.heroic.metrics.MetricBackendManager;
-import com.spotify.heroic.metrics.MetricFormatException;
-import com.spotify.heroic.metrics.error.BufferEnqueueException;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricFormatException;
+import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
-@RequiredArgsConstructor
+@NoArgsConstructor
 @Slf4j
+@ToString
 public class KafkaConsumer implements Consumer {
-    public static final int DEFAULT_THREAD_COUNT = 2;
+    @Inject
+    @Named("topics")
+    private List<String> topics;
 
-    @JsonCreator
-    public static KafkaConsumer create(@JsonProperty("schema") String schema,
-            @JsonProperty("topics") List<String> topics,
-            @JsonProperty("threadCount") Integer threadCount,
-            @JsonProperty("config") Map<String, String> config) {
-        if (schema == null)
-            throw new RuntimeException("'schema' not defined");
+    @Inject
+    @Named("config")
+    private Map<String, String> config;
 
-        final ConsumerSchema schemaClass = ConfigUtils.instance(schema,
-                ConsumerSchema.class);
+    @Inject
+    @Named("threads")
+    private int threads;
 
-        if (topics == null || topics.isEmpty())
-            throw new RuntimeException("'topics' must be defined and non-empty");
-
-        if (config == null)
-            config = new HashMap<String, String>();
-
-        if (threadCount == null)
-            threadCount = DEFAULT_THREAD_COUNT;
-
-        return new KafkaConsumer(topics, threadCount, config, schemaClass);
-    }
-
-    private final List<String> topics;
-    private final int threadCount;
-    private final Map<String, String> config;
-    private final ConsumerSchema schema;
+    @Inject
+    private ConsumerSchema schema;
 
     @Inject
     private MetricBackendManager metric;
@@ -73,6 +56,9 @@ public class KafkaConsumer implements Consumer {
 
     @Inject
     private ConsumerReporter reporter;
+
+    @Inject
+    private ThreadPool consumer;
 
     /**
      * Total number of threads which are still consuming.
@@ -96,7 +82,6 @@ public class KafkaConsumer implements Consumer {
 
     private volatile boolean running = false;
 
-    private ExecutorService executor;
     private ConsumerConnector connector;
 
     @Override
@@ -114,10 +99,8 @@ public class KafkaConsumer implements Consumer {
 
         final Map<String, Integer> streamsMap = makeStreamsMap();
 
-        executor = Executors.newFixedThreadPool(topics.size() * threadCount);
-
         consuming.set(0);
-        total.set(topics.size() * threadCount);
+        total.set(consumer.getThreadPoolSize());
 
         final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
                 .createMessageStreams(streamsMap);
@@ -128,8 +111,11 @@ public class KafkaConsumer implements Consumer {
             final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
 
             for (final KafkaStream<byte[], byte[]> stream : list) {
-                executor.execute(new ConsumerThread(lifecycle, reporter, topic,
-                        stream, this, schema, consuming, errors, shutdownLatch));
+                consumer.get()
+                        .execute(
+                                new ConsumerThread(lifecycle, reporter, topic,
+                                        stream, this, schema, consuming,
+                                        errors, shutdownLatch));
             }
         }
 
@@ -148,13 +134,7 @@ public class KafkaConsumer implements Consumer {
         // tell sleeping threads to wake up.
         shutdownLatch.countDown();
         // shut down executor.
-        executor.shutdown();
-
-        try {
-            executor.awaitTermination(30, TimeUnit.SECONDS);
-        } catch (final InterruptedException e) {
-            log.info("Waiting for executor service was interrupted");
-        }
+        consumer.stop();
     }
 
     @Override
@@ -166,7 +146,7 @@ public class KafkaConsumer implements Consumer {
         final Map<String, Integer> streamsMap = new HashMap<String, Integer>();
 
         for (final String topic : topics) {
-            streamsMap.put(topic, threadCount);
+            streamsMap.put(topic, threads);
         }
 
         return streamsMap;

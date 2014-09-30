@@ -19,10 +19,10 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.LocalMetadataManager;
-import com.spotify.heroic.metrics.BackendGroup;
-import com.spotify.heroic.metrics.model.FetchData;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
@@ -32,7 +32,7 @@ public class SeriesMigrator {
     private ExecutorService executor;
 
     @Inject
-    private LocalMetadataManager metadata;
+    private MetadataBackendManager metadata;
 
     @Slf4j
     @RequiredArgsConstructor
@@ -40,8 +40,8 @@ public class SeriesMigrator {
         private final String session;
         private final AtomicInteger count;
         private final int total;
-        private final BackendGroup source;
-        private final BackendGroup target;
+        private final MetricBackendGroup source;
+        private final MetricBackendGroup target;
         private final DateRange range;
         private final Series series;
         private final Semaphore available;
@@ -64,7 +64,7 @@ public class SeriesMigrator {
         }
 
         private void executeOne(final String session,
-                final BackendGroup source, final BackendGroup target,
+                final MetricBackendGroup source, final MetricBackendGroup target,
                 final DateRange range) throws Exception {
             final Callback.Reducer<FetchData, List<DataPoint>> reducer = new Callback.Reducer<FetchData, List<DataPoint>>() {
                 @Override
@@ -105,8 +105,8 @@ public class SeriesMigrator {
         }
     };
 
-    public void migrate(long history, final BackendGroup source,
-            final BackendGroup target, final Filter filter) throws Exception {
+    public void migrate(long history, final MetricBackendGroup source,
+            final MetricBackendGroup target, final Filter filter) throws Exception {
         final Set<Series> series;
 
         try {

@@ -7,7 +7,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.spotify.heroic.aggregation.Aggregation.Result;
-import com.spotify.heroic.metrics.model.Statistics;
+import com.spotify.heroic.metric.model.Statistics;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;

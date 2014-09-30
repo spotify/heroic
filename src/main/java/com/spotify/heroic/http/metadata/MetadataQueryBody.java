@@ -41,15 +41,6 @@ public class MetadataQueryBody {
      */
     private final Filter filter;
 
-    @JsonCreator
-    public static MetadataQueryBody create(
-            @JsonProperty("matchKey") String matchKey,
-            @JsonProperty("matchTags") Map<String, String> matchTags,
-            @JsonProperty("hasTags") Set<String> hasTags,
-            @JsonProperty("filter") Filter filter) {
-        return new MetadataQueryBody(matchKey, matchTags, hasTags, filter);
-    }
-
     public Filter makeFilter() {
         final List<Filter> statements = new ArrayList<>();
 
@@ -80,5 +71,18 @@ public class MetadataQueryBody {
             return statements.get(0).optimize();
 
         return new AndFilter(statements).optimize();
+    }
+
+    @JsonCreator
+    public static MetadataQueryBody create(
+            @JsonProperty("matchKey") String matchKey,
+            @JsonProperty("matchTags") Map<String, String> matchTags,
+            @JsonProperty("hasTags") Set<String> hasTags,
+            @JsonProperty("filter") Filter filter) {
+        return new MetadataQueryBody(matchKey, matchTags, hasTags, filter);
+    }
+
+    public static MetadataQueryBody create() {
+        return create(null, null, null, null);
     }
 }

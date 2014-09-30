@@ -6,7 +6,7 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.metrics.model.WriteMetric;
+import com.spotify.heroic.metric.model.WriteMetric;
 
 /**
  * @author udoprog
