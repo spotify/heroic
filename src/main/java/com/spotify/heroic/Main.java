@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Singleton;
 import javax.servlet.DispatcherType;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.logging.log4j.LogManager;
@@ -39,7 +38,6 @@ import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.inject.AbstractModule;
-import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -47,19 +45,16 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
-import com.google.inject.matcher.AbstractMatcher;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
-import com.google.inject.spi.InjectionListener;
-import com.google.inject.spi.TypeEncounter;
-import com.google.inject.spi.TypeListener;
 import com.spotify.heroic.config.HeroicConfig;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
+import com.spotify.heroic.injection.IsSubclassOf;
 import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.injection.LifeCycleTypeListener;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
@@ -84,44 +79,6 @@ public class Main {
         }
     };
 
-    @RequiredArgsConstructor
-    public static class IsSubclassOf extends AbstractMatcher<TypeLiteral<?>> {
-        private final Class<?> type;
-
-        @Override
-        public boolean matches(TypeLiteral<?> t) {
-            return type.isAssignableFrom(t.getRawType());
-        }
-    }
-
-    @RequiredArgsConstructor
-    public static class LifeCycleTypeListener implements TypeListener {
-        private final Set<LifeCycle> managed;
-
-        @Override
-        public <I> void hear(final TypeLiteral<I> type,
-                final TypeEncounter<I> encounter) {
-            encounter.register(new InjectionListener<I>() {
-                @Override
-                public void afterInjection(I i) {
-                    managed.add((LifeCycle) i);
-                }
-            });
-        }
-    }
-
-    @RequiredArgsConstructor
-    public static class BinderSetup {
-        private final Set<LifeCycle> managed;
-        private final IsSubclassOf lifecycleMatcher = new IsSubclassOf(
-                LifeCycle.class);
-
-        public void listen(Binder binder) {
-            binder.bindListener(lifecycleMatcher, new LifeCycleTypeListener(
-                    managed));
-        }
-    }
-
     public static Injector setupInjector(final HeroicConfig config,
             final HeroicReporter reporter,
             final ScheduledExecutorService scheduledExecutor,
@@ -129,8 +86,6 @@ public class Main {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
-
-        final BinderSetup binderSetup = new BinderSetup(managed);
 
         modules.add(new AbstractModule() {
             @Provides
@@ -147,7 +102,8 @@ public class Main {
                 bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
                 bind(StoredMetricQueries.class).in(Scopes.SINGLETON);
 
-                binderSetup.listen(binder());
+                bindListener(new IsSubclassOf(LifeCycle.class),
+                        new LifeCycleTypeListener(managed));
             }
         });
 
@@ -298,8 +254,8 @@ public class Main {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath,
                     location == null ? null : location.getLineNr(),
-                    location == null ? null : location.getColumnNr(),
-                    e.getOriginalMessage()));
+                            location == null ? null : location.getColumnNr(),
+                                    e.getOriginalMessage()));
 
             if (log.isDebugEnabled())
                 log.debug("Configuration error", e);

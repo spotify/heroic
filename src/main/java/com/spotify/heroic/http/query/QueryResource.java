@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -33,6 +32,8 @@ import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
 import org.glassfish.jersey.media.sse.SseFeature;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
@@ -60,14 +61,15 @@ import com.spotify.heroic.model.DateRange;
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
     public static class StoredMetricQueries {
-        private final ConcurrentHashMap<String, StoredQuery> storedQueries = new ConcurrentHashMap<>();
+        private final Cache<String, StoredQuery> store = CacheBuilder
+                .newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
 
         public void put(String id, StoredQuery query) {
-            storedQueries.put(id, query);
+            store.put(id, query);
         }
 
         public StoredQuery get(String id) {
-            return storedQueries.get(id);
+            return store.getIfPresent(id);
         }
     }
 
@@ -102,7 +104,7 @@ public class QueryResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, QueryMetrics query)
-                    throws MetricQueryException {
+            throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
         final Callback<QueryMetricsResult> callback = metrics.queryMetrics(

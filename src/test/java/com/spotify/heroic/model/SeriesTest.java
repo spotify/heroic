@@ -7,7 +7,7 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TimeSerieTest {
+public class SeriesTest {
     @Test
     public void testEquality() throws Exception {
         final Series a = new Series("foo", new HashMap<String, String>());

@@ -12,7 +12,7 @@ import org.mockito.Mockito;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.SeriesSlice;
 
-public class TimeSerieSliceTest {
+public class SeriesSliceTest {
     private static final Map<String, String> TAGS = new HashMap<String, String>();
     final Series TS = new Series("key_a", TAGS);
     final Series TS_B = new Series("key_b", TAGS);
