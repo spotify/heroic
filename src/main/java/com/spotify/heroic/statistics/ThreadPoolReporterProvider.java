@@ -8,4 +8,6 @@ public interface ThreadPoolReporterProvider {
     long getPoolSize();
 
     long getCorePoolSize();
+
+    long getQueueCapacity();
 }

@@ -32,18 +32,28 @@ public class ThreadPool {
         if (threads == null)
             threads = DEFAULT_THREADS;
 
-        if (queueSize == null)
-            queueSize = DEFAULT_QUEUE_SIZE;
+        final int size;
+
+        if (queueSize == null) {
+            size = DEFAULT_QUEUE_SIZE;
+        } else {
+            size = queueSize;
+        }
 
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(threads,
                 threads, 5000, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<Runnable>(queueSize, false));
+                new ArrayBlockingQueue<Runnable>(size, false));
 
         final ThreadPoolReporter.Context context = reporter
                 .newThreadPoolContext(name, new ThreadPoolReporterProvider() {
                     @Override
                     public long getQueueSize() {
                         return executor.getQueue().size();
+                    }
+
+                    @Override
+                    public long getQueueCapacity() {
+                        return size - executor.getQueue().size();
                     }
 
                     @Override
