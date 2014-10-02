@@ -8,6 +8,7 @@ cluster:
     site: lon
   capabilities:
     - WRITE
+    - QUERY
   discovery:
     type: static
     nodes:
@@ -32,7 +33,7 @@ consumers:
       - "metrics-lon3"
       - "metrics-lon4"
     config:
-      group.id: heroic-test
-      zookeeper.connect: lon3-kafkazookeeper-a1,lon3-kafkazookeeper-a2,lon3-kafkazookeeper-a3/kafka-monitoring
+      group.id: heroic-test2
+      zookeeper.connect: lon3-kafkazookeeper-a1.spotify.net,lon3-kafkazookeeper-a2.spotify.net,lon3-kafkazookeeper-a3.spotify.net/kafka-monitoring
       auto.offset.reset: smallest
       auto.commit.enable: true

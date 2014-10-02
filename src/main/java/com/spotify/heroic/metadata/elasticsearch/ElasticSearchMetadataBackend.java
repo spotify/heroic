@@ -3,7 +3,6 @@ package com.spotify.heroic.metadata.elasticsearch;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +53,6 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataOperationException;
-import com.spotify.heroic.metadata.MetadataUtils;
 import com.spotify.heroic.metadata.elasticsearch.async.DeleteTimeSeriesResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindKeysResolver;
 import com.spotify.heroic.metadata.elasticsearch.async.FindSeriesResolver;
@@ -65,7 +63,6 @@ import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 
@@ -438,32 +435,6 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
         return ConcurrentCallback.newResolve(pools.read(), new FindKeysResolver(client, index, type, f)).register(
                 reporter.reportFindKeys());
-    }
-
-    @Override
-    public Callback<WriteBatchResult> write(final Series series) throws MetadataOperationException {
-        return writeBatch(Arrays.asList(series));
-    }
-
-    @Override
-    public Callback<WriteBatchResult> writeBatch(final List<Series> series) throws MetadataOperationException {
-        final Client client = client();
-        final BulkProcessor bulkProcessor = this.bulkProcessor.get();
-
-        if (client == null || bulkProcessor == null)
-            throw new MetadataOperationException("Not ready");
-
-        for (final Series s : series) {
-            final String id = MetadataUtils.buildId(s);
-
-            try {
-                writeSeries(client, bulkProcessor, id, s);
-            } catch (final ExecutionException e) {
-                throw new MetadataOperationException("Failed to write", e);
-            }
-        }
-
-        return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(true, 1));
     }
 
     private void writeSeries(final Client client, final BulkProcessor bulkProcessor, final String id, final Series s)

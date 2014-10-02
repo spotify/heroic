@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.TermFilter;
@@ -33,7 +33,12 @@ import com.spotify.heroic.model.Series;
 
 @Slf4j
 public final class LuceneUtils {
-    public static final String KEY = "$$";
+    private static final String ID = "$$id";
+    private static final String KEY = "$$key";
+
+    public static Term idTerm(String id) {
+        return new Term(ID, id);
+    }
 
     public static org.apache.lucene.search.Filter convertFilter(final Filter filter) {
         if (filter instanceof TrueFilter) {
@@ -96,10 +101,11 @@ public final class LuceneUtils {
         throw new IllegalArgumentException("Invalid filter statement: " + filter);
     }
 
-    public static Document convert(Series series) {
+    public static Document convert(String id, Series series) {
         final Document doc = new Document();
 
-        doc.add(new TextField(KEY, series.getKey(), Field.Store.YES));
+        doc.add(new StringField(ID, id, Field.Store.YES));
+        doc.add(new StringField(KEY, series.getKey(), Field.Store.YES));
 
         for (final Map.Entry<String, String> e : series.getTags().entrySet()) {
             if (KEY.equals(e.getKey())) {
@@ -107,7 +113,17 @@ public final class LuceneUtils {
                 continue;
             }
 
-            doc.add(new TextField(e.getKey(), e.getValue(), Field.Store.YES));
+            if (ID.equals(e.getKey())) {
+                log.warn("Ignoring tag with reserved name '{}': {}", ID, e);
+                continue;
+            }
+
+            if (e.getValue() == null) {
+                log.warn("Ignoring null value '{}' in {}", e, series);
+                continue;
+            }
+
+            doc.add(new StringField(e.getKey(), e.getValue(), Field.Store.YES));
         }
 
         return doc;
@@ -118,7 +134,7 @@ public final class LuceneUtils {
             final String name = field.name();
             final String value = field.stringValue();
 
-            if (KEY.equals(name)) {
+            if (KEY.equals(name) || ID.equals(name)) {
                 continue;
             }
 

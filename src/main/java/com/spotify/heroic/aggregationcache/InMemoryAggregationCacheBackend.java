@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.ToString;
+
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
@@ -19,6 +21,7 @@ import com.spotify.heroic.model.DateRange;
  *
  * @author udoprog
  */
+@ToString
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
     private final Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
 

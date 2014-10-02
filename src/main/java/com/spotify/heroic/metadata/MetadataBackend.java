@@ -1,7 +1,5 @@
 package com.spotify.heroic.metadata;
 
-import java.util.List;
-
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
@@ -9,14 +7,9 @@ import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
 
 public interface MetadataBackend extends LifeCycle {
-    public Callback<WriteBatchResult> write(Series series) throws MetadataOperationException;
-
-    public Callback<WriteBatchResult> writeBatch(List<Series> series) throws MetadataOperationException;
-
     public Callback<FindTags> findTags(Filter filter) throws MetadataOperationException;
 
     /**
