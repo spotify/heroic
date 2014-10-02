@@ -42,14 +42,12 @@ public class CancelledCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
-            Callback.Reducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.Reducer<C, T> reducer) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
-            StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, StreamReducer<C, T> reducer) {
         return this;
     }
 
@@ -104,8 +102,7 @@ public class CancelledCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(Transformer<T, C> transformer,
-            ErrorTransformer<C> error) {
+    public <C> Callback<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error) {
         return new CancelledCallback<C>(reason);
     }
 
@@ -115,8 +112,7 @@ public class CancelledCallback<T> implements Callback<T> {
     }
 
     @Override
-    public T get() throws InterruptedException, CancelledException,
-    FailedException {
+    public T get() throws InterruptedException, CancelledException, FailedException {
         throw new CancelledException(reason);
     }
 }

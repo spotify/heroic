@@ -10,8 +10,7 @@ import com.google.inject.Scopes;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 
-public class InMemoryAggregationCacheBackendConfig implements
-        AggregationCacheBackendConfig {
+public class InMemoryAggregationCacheBackendConfig implements AggregationCacheBackendConfig {
     @JsonCreator
     public static InMemoryAggregationCacheBackendConfig create() {
         return new InMemoryAggregationCacheBackendConfig();
@@ -22,16 +21,13 @@ public class InMemoryAggregationCacheBackendConfig implements
         return new PrivateModule() {
             @Provides
             @Singleton
-            public AggregationCacheBackendReporter reporter(
-                    AggregationCacheReporter reporter) {
+            public AggregationCacheBackendReporter reporter(AggregationCacheReporter reporter) {
                 return reporter.newAggregationCacheBackend();
             }
 
             @Override
             protected void configure() {
-                bind(AggregationCacheBackend.class).to(
-                        InMemoryAggregationCacheBackend.class).in(
-                        Scopes.SINGLETON);
+                bind(AggregationCacheBackend.class).to(InMemoryAggregationCacheBackend.class).in(Scopes.SINGLETON);
                 expose(AggregationCacheBackend.class);
             }
         };

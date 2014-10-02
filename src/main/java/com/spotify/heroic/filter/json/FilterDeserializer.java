@@ -38,8 +38,7 @@ public class FilterDeserializer extends JsonDeserializer<Filter> {
     }
 
     @Override
-    public Filter deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+    public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
 
         if (p.getCurrentToken() != JsonToken.START_ARRAY)
             throw c.mappingException("Expected start of array");
@@ -53,8 +52,7 @@ public class FilterDeserializer extends JsonDeserializer<Filter> {
             operator = p.readValueAs(String.class);
         }
 
-        final FilterSerialization<? extends Filter> deserializer = IMPL
-                .get(operator);
+        final FilterSerialization<? extends Filter> deserializer = IMPL.get(operator);
 
         if (deserializer == null)
             throw c.mappingException("No such operator: " + operator);

@@ -36,8 +36,7 @@ public class MetadataQueryBody {
     private final Set<String> hasTags;
 
     /**
-     * A general set of filters. If this is combined with the other mechanisms,
-     * all the filters will be AND:ed together.
+     * A general set of filters. If this is combined with the other mechanisms, all the filters will be AND:ed together.
      */
     private final Filter filter;
 
@@ -50,8 +49,7 @@ public class MetadataQueryBody {
 
         if (matchTags != null && !matchTags.isEmpty()) {
             for (final Map.Entry<String, String> entry : matchTags.entrySet()) {
-                statements.add(new MatchTagFilter(entry.getKey(), entry
-                        .getValue()));
+                statements.add(new MatchTagFilter(entry.getKey(), entry.getValue()));
             }
         }
 
@@ -74,10 +72,8 @@ public class MetadataQueryBody {
     }
 
     @JsonCreator
-    public static MetadataQueryBody create(
-            @JsonProperty("matchKey") String matchKey,
-            @JsonProperty("matchTags") Map<String, String> matchTags,
-            @JsonProperty("hasTags") Set<String> hasTags,
+    public static MetadataQueryBody create(@JsonProperty("matchKey") String matchKey,
+            @JsonProperty("matchTags") Map<String, String> matchTags, @JsonProperty("hasTags") Set<String> hasTags,
             @JsonProperty("filter") Filter filter) {
         return new MetadataQueryBody(matchKey, matchTags, hasTags, filter);
     }

@@ -15,8 +15,7 @@ public class CacheQueryResult {
     private final DateRange range;
 
     /**
-     * Collected results so far. Should be joined by the result from the above
-     * cache misses.
+     * Collected results so far. Should be joined by the result from the above cache misses.
      */
     private final List<DataPoint> result;
 

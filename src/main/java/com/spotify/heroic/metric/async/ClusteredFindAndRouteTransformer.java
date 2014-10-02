@@ -22,7 +22,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class ClusteredFindAndRouteTransformer implements
-Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     private final ClusterManager cluster;
     private final Filter filter;
     private final String backendGroup;
@@ -30,32 +30,26 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     private final int groupLoadLimit;
 
     @Override
-    public List<PreparedQuery> transform(final FindTimeSeriesGroups result)
-            throws Exception {
+    public List<PreparedQuery> transform(final FindTimeSeriesGroups result) throws Exception {
         final List<PreparedQuery> queries = new ArrayList<>();
 
         final Map<Map<String, String>, Set<Series>> groups = result.getGroups();
 
         if (groups.size() > groupLimit)
-            throw new IllegalArgumentException(
-                    "The current query is too heavy! (More than " + groupLimit
+            throw new IllegalArgumentException("The current query is too heavy! (More than " + groupLimit
                     + " timeseries would be sent to your browser).");
 
-        for (final Entry<Map<String, String>, Set<Series>> entry : groups
-                .entrySet()) {
+        for (final Entry<Map<String, String>, Set<Series>> entry : groups.entrySet()) {
             final Set<Series> series = entry.getValue();
 
             if (series.isEmpty())
                 continue;
 
             if (series.size() > groupLoadLimit)
-                throw new IllegalArgumentException(
-                        "The current query is too heavy! (More than "
-                                + groupLoadLimit
-                                + " original time series would be loaded from Cassandra).");
+                throw new IllegalArgumentException("The current query is too heavy! (More than " + groupLoadLimit
+                        + " original time series would be loaded from Cassandra).");
 
-            final PreparedQuery query = clusterQuery(filter, entry.getKey(),
-                    series);
+            final PreparedQuery query = clusterQuery(filter, entry.getKey(), series);
 
             if (query == null)
                 continue;
@@ -66,28 +60,23 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
         return queries;
     }
 
-    public PreparedQuery clusterQuery(Filter filter, Map<String, String> group,
-            Set<Series> series) {
+    public PreparedQuery clusterQuery(Filter filter, Map<String, String> group, Set<Series> series) {
         final Series one = series.iterator().next();
 
-        final NodeRegistryEntry node = cluster.findNode(one.getTags(),
-                NodeCapability.QUERY);
+        final NodeRegistryEntry node = cluster.findNode(one.getTags(), NodeCapability.QUERY);
 
         if (node == null) {
-            log.warn("No matching node in group {} found for {}", group,
-                    one.getTags());
+            log.warn("No matching node in group {} found for {}", group, one.getTags());
             return null;
         }
 
         for (final Series s : series) {
             if (!node.getMetadata().matchesTags(s.getTags()))
-                throw new IllegalArgumentException(
-                        "The current query is too heavy! (Global aggregation not permitted)");
+                throw new IllegalArgumentException("The current query is too heavy! (Global aggregation not permitted)");
         }
 
         final ClusterNode clusterNode = node.getClusterNode();
 
-        return new ClusterQuery(backendGroup, clusterNode, filter, group,
-                series);
+        return new ClusterQuery(backendGroup, clusterNode, filter, group, series);
     }
 }

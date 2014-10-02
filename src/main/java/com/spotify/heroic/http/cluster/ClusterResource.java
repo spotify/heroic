@@ -24,15 +24,13 @@ public class ClusterResource {
     private ClusterManager cluster;
 
     /**
-     * Encode/Decode functions, helpful when interacting with cassandra through
-     * cqlsh.
+     * Encode/Decode functions, helpful when interacting with cassandra through cqlsh.
      */
     @GET
     @Path("/status")
     public Response decodeRowKey() {
         final List<ClusterNodeStatus> nodes = convert(cluster.getNodes());
-        final ClusterStatus status = new ClusterStatus(nodes,
-                cluster.getStatistics());
+        final ClusterStatus status = new ClusterStatus(nodes, cluster.getStatistics());
         return Response.status(Response.Status.OK).entity(status).build();
     }
 
@@ -48,10 +46,8 @@ public class ClusterResource {
     private ClusterNodeStatus convert(NodeRegistryEntry e) {
         final NodeMetadata m = e.getMetadata();
 
-        final String type = e.getClusterNode() instanceof LocalClusterNode ? "local"
-                : "rpc";
+        final String type = e.getClusterNode() instanceof LocalClusterNode ? "local" : "rpc";
 
-        return new ClusterNodeStatus(type, e.getUri(), m.getId(),
-                m.getVersion(), m.getTags(), m.getCapabilities());
+        return new ClusterNodeStatus(type, e.getUri(), m.getId(), m.getVersion(), m.getTags(), m.getCapabilities());
     }
 }

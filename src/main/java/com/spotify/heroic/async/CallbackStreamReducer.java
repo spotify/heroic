@@ -32,8 +32,7 @@ class CallbackStreamReducer<T> implements Callback.Cancellable {
     private final AtomicInteger failed = new AtomicInteger();
     private final AtomicInteger cancelled = new AtomicInteger();
 
-    public CallbackStreamReducer(Collection<Callback<T>> callbacks,
-            final Handle<T> handle) {
+    public CallbackStreamReducer(Collection<Callback<T>> callbacks, final Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
         this.callbacks = new ArrayList<Callback<T>>(callbacks);
 
@@ -66,8 +65,7 @@ class CallbackStreamReducer<T> implements Callback.Cancellable {
             handleDone(handle);
     }
 
-    private void handleError(Handle<T> handle, Callback<T> callback,
-            Exception error) {
+    private void handleError(Handle<T> handle, Callback<T> callback, Exception error) {
         try {
             handle.error(callback, error);
         } catch (final Exception t) {
@@ -83,8 +81,7 @@ class CallbackStreamReducer<T> implements Callback.Cancellable {
         }
     }
 
-    private void handleCancel(Handle<T> handle, Callback<T> callback,
-            CancelReason reason) {
+    private void handleCancel(Handle<T> handle, Callback<T> callback, CancelReason reason) {
         try {
             handle.cancel(callback, reason);
         } catch (final Exception t) {

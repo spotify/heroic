@@ -8,8 +8,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class ManyOptimizer {
-    public static <T extends ManyTermsFilter> Filter optimize(
-            final Collection<Filter> statements, Class<T> type,
+    public static <T extends ManyTermsFilter> Filter optimize(final Collection<Filter> statements, Class<T> type,
             final NoTermFilter finalizer, ManyTermsFilterBuilder<T> builder) {
         final SortedSet<Filter> step1 = optimizeChildren(type, statements);
         final SortedSet<Filter> result = optimizeOrSet(step1, finalizer);
@@ -23,8 +22,7 @@ public class ManyOptimizer {
         return builder.build(new ArrayList<>(result));
     }
 
-    private static SortedSet<Filter> optimizeChildren(
-            Class<? extends ManyTermsFilter> type,
+    private static SortedSet<Filter> optimizeChildren(Class<? extends ManyTermsFilter> type,
             final Collection<Filter> statements) {
         final SortedSet<Filter> result = new TreeSet<>(FilterComparator.get());
 
@@ -49,30 +47,28 @@ public class ManyOptimizer {
         return result;
     }
 
-    private static SortedSet<Filter> optimizeOrSet(
-            final SortedSet<Filter> statements, NoTermFilter finalizer) {
+    private static SortedSet<Filter> optimizeOrSet(final SortedSet<Filter> statements, NoTermFilter finalizer) {
         final SortedSet<Filter> result = new TreeSet<>(FilterComparator.get());
         final Set<Filter> rejected = new HashSet<Filter>();
 
         root:
-            for (final Filter f : statements) {
-                if (rejected.contains(f))
-                    continue;
+        for (final Filter f : statements) {
+            if (rejected.contains(f))
+                continue;
 
-                for (final Filter o : statements) {
-                    if (rejected.contains(o))
-                        continue root;
+            for (final Filter o : statements) {
+                if (rejected.contains(o))
+                    continue root;
 
-                    if (o instanceof NotFilter
-                            && f.equals(((NotFilter) o).getFilter())) {
-                        result.clear();
-                        result.add(finalizer.invert());
-                        return result;
-                    }
+                if (o instanceof NotFilter && f.equals(((NotFilter) o).getFilter())) {
+                    result.clear();
+                    result.add(finalizer.invert());
+                    return result;
                 }
-
-                result.add(f);
             }
+
+            result.add(f);
+        }
 
         return result;
     }

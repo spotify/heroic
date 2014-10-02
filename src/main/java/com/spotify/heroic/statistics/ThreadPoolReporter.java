@@ -5,6 +5,5 @@ public interface ThreadPoolReporter {
         public void stop();
     }
 
-    Context newThreadPoolContext(String name,
-            ThreadPoolReporterProvider provider);
+    Context newThreadPoolContext(String name, ThreadPoolReporterProvider provider);
 }

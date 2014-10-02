@@ -36,10 +36,8 @@ public class HttpClientManagerModule extends PrivateModule {
     private final int readTimeout;
 
     @JsonCreator
-    public static HttpClientManagerModule create(
-            @JsonProperty("threads") Integer threads,
-            @JsonProperty("queueSize") Integer queueSize,
-            @JsonProperty("connectTimeout") Integer connectTimeout,
+    public static HttpClientManagerModule create(@JsonProperty("threads") Integer threads,
+            @JsonProperty("queueSize") Integer queueSize, @JsonProperty("connectTimeout") Integer connectTimeout,
             @JsonProperty("readTimeout") Integer readTimeout) {
         if (threads == null)
             threads = DEFAULT_THREADS;
@@ -53,8 +51,7 @@ public class HttpClientManagerModule extends PrivateModule {
         if (readTimeout == null)
             readTimeout = DEFAULT_READ_TIMEOUT;
 
-        return new HttpClientManagerModule(threads, queueSize, connectTimeout,
-                readTimeout);
+        return new HttpClientManagerModule(threads, queueSize, connectTimeout, readTimeout);
     }
 
     /**
@@ -86,8 +83,7 @@ public class HttpClientManagerModule extends PrivateModule {
     @Provides
     @Singleton
     public ThreadPool executor(HttpClientManagerReporter reporter) {
-        return ThreadPool.create("request", reporter.newThreadPool(), threads,
-                queueSize);
+        return ThreadPool.create("request", reporter.newThreadPool(), threads, queueSize);
     }
 
     @Override

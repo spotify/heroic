@@ -26,11 +26,10 @@ public class NodeRegistry {
         this.totalNodes = totalNodes;
     }
 
-    private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(
-            List<NodeRegistryEntry> entries, NodeCapability capability) {
+    private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(List<NodeRegistryEntry> entries,
+            NodeCapability capability) {
 
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap
-                .create();
+        final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap.create();
 
         for (final NodeRegistryEntry e : entries) {
             if (!e.getMetadata().matchesCapability(capability))
@@ -53,8 +52,7 @@ public class NodeRegistry {
      *            The tags to match.
      * @return A random matching entry.
      */
-    public NodeRegistryEntry findEntry(Map<String, String> tags,
-            NodeCapability capability) {
+    public NodeRegistryEntry findEntry(Map<String, String> tags, NodeCapability capability) {
         final List<NodeRegistryEntry> matches = new ArrayList<>();
 
         for (final NodeRegistryEntry entry : entries) {
@@ -82,11 +80,9 @@ public class NodeRegistry {
     public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
         final List<NodeRegistryEntry> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards = buildShards(
-                entries, capability);
+        final Multimap<Map<String, String>, NodeRegistryEntry> shards = buildShards(entries, capability);
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards
-                .asMap().entrySet()) {
+        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap().entrySet()) {
             final NodeRegistryEntry one = pickOne(e.getValue());
 
             if (one == null)

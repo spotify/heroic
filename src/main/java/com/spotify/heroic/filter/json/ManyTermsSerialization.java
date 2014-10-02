@@ -16,13 +16,11 @@ import com.spotify.heroic.filter.ManyTermsFilter;
 import com.spotify.heroic.filter.ManyTermsFilterBuilder;
 
 @RequiredArgsConstructor
-public class ManyTermsSerialization<T extends ManyTermsFilter> implements
-        FilterSerialization<T> {
+public class ManyTermsSerialization<T extends ManyTermsFilter> implements FilterSerialization<T> {
     private final ManyTermsFilterBuilder<T> builder;
 
     @Override
-    public T deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+    public T deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
         final List<Filter> statements = new ArrayList<>();
 
         while (p.nextToken() != JsonToken.END_ARRAY)
@@ -32,8 +30,7 @@ public class ManyTermsSerialization<T extends ManyTermsFilter> implements
     }
 
     @Override
-    public void serialize(JsonGenerator g, ManyTermsFilter f)
-            throws IOException {
+    public void serialize(JsonGenerator g, ManyTermsFilter f) throws IOException {
         for (final Filter filter : f.terms())
             g.writeObject(filter);
     }

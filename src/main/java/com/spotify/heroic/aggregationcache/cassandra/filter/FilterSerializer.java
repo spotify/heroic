@@ -11,8 +11,7 @@ import com.spotify.heroic.filter.Filter;
 /**
  * Serializes aggregation configurations.
  *
- * Each aggregation configuration is packed into a Composite which has the type
- * of the aggregation as a prefixed short.
+ * Each aggregation configuration is packed into a Composite which has the type of the aggregation as a prefixed short.
  *
  * @author udoprog
  */
@@ -23,8 +22,7 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
         return instance;
     }
 
-    private static final IntegerSerializer integerSerializer = IntegerSerializer
-            .get();
+    private static final IntegerSerializer integerSerializer = IntegerSerializer.get();
 
     private static final ByteBuffer ZERO_BUFFER = ByteBuffer.allocate(0);
 
@@ -42,8 +40,7 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
 
         final int typeId = CassandraCommon.getTypeId(optimized.getClass());
 
-        final FilterSerialization<Filter> serializer = CassandraCommon
-                .getSerializer(typeId);
+        final FilterSerialization<Filter> serializer = CassandraCommon.getSerializer(typeId);
 
         c.addComponent(CacheKey.VERSION, integerSerializer);
         c.addComponent(typeId, integerSerializer);
@@ -67,8 +64,7 @@ public class FilterSerializer extends AbstractSerializer<Filter> {
 
         final int typeId = c.get(1, integerSerializer);
 
-        final FilterSerialization<Filter> serializer = CassandraCommon
-                .getSerializer(typeId);
+        final FilterSerialization<Filter> serializer = CassandraCommon.getSerializer(typeId);
 
         return serializer.deserialize(c);
     }

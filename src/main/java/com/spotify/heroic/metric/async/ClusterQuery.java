@@ -23,9 +23,7 @@ public class ClusterQuery implements PreparedQuery {
     private final Set<Series> series;
 
     @Override
-    public Callback<MetricGroups> query(final DateRange range,
-            final AggregationGroup aggregation) {
-        return node.query(backendGroup, filter, group, aggregation, range,
-                series);
+    public Callback<MetricGroups> query(final DateRange range, final AggregationGroup aggregation) {
+        return node.query(backendGroup, filter, group, aggregation, range, series);
     }
 };

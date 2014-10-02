@@ -15,8 +15,7 @@ public final class MetricGroup {
     private final List<DataPoint> datapoints;
 
     @JsonCreator
-    public static MetricGroup create(
-            @JsonProperty(value = "group", required = true) Map<String, String> group,
+    public static MetricGroup create(@JsonProperty(value = "group", required = true) Map<String, String> group,
             @JsonProperty(value = "datapoints", required = true) List<DataPoint> datapoints) {
         return new MetricGroup(group, datapoints);
     }

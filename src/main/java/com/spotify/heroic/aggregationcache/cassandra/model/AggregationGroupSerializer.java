@@ -17,12 +17,9 @@ import com.spotify.heroic.model.Sampling;
  * @author udoprog
  */
 class AggregationGroupSerializer extends AbstractSerializer<AggregationGroup> {
-    private static final IntegerSerializer INTEGER_SERIALIZER = IntegerSerializer
-            .get();
-    private static final AggregationSerializer AGGREGATION_SERIALIZER = AggregationSerializer
-            .get();
-    private static final SamplingSerializer SAMPLING_SERIALIZER = SamplingSerializer
-            .get();
+    private static final IntegerSerializer INTEGER_SERIALIZER = IntegerSerializer.get();
+    private static final AggregationSerializer AGGREGATION_SERIALIZER = AggregationSerializer.get();
+    private static final SamplingSerializer SAMPLING_SERIALIZER = SamplingSerializer.get();
 
     private static final AggregationGroupSerializer instance = new AggregationGroupSerializer();
 

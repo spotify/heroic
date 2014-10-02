@@ -19,8 +19,7 @@ import com.spotify.heroic.http.rpc.RpcMetadata;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 
 @Data
-public final class MetadataUriTransformer implements
-        Callback.DeferredTransformer<Collection<URI>, Void> {
+public final class MetadataUriTransformer implements Callback.DeferredTransformer<Collection<URI>, Void> {
     private final boolean useLocal;
 
     private final NodeRegistryEntry localEntry;
@@ -29,19 +28,15 @@ public final class MetadataUriTransformer implements
     private final AtomicReference<NodeRegistry> registry;
 
     @Override
-    public Callback<Void> transform(final Collection<URI> nodes)
-            throws Exception {
-        final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(
-                nodes.size());
+    public Callback<Void> transform(final Collection<URI> nodes) throws Exception {
+        final List<Callback<NodeRegistryEntry>> callbacks = new ArrayList<>(nodes.size());
 
         for (final URI uri : nodes) {
             callbacks.add(getMetadata(uri).transform(
-                    new NodeRegistryEntryTransformer(clients, uri, localEntry,
-                            useLocal, localMetadata)));
+                    new NodeRegistryEntryTransformer(clients, uri, localEntry, useLocal, localMetadata)));
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new NodeRegistryEntryReducer(registry, nodes));
+        return ConcurrentCallback.newReduce(callbacks, new NodeRegistryEntryReducer(registry, nodes));
     }
 
     public Callback<NodeMetadata> getMetadata(URI uri) {
@@ -50,8 +45,7 @@ public final class MetadataUriTransformer implements
         final Callback.Transformer<RpcMetadata, NodeMetadata> transformer = new Callback.Transformer<RpcMetadata, NodeMetadata>() {
             @Override
             public NodeMetadata transform(final RpcMetadata r) throws Exception {
-                return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(),
-                        r.getCapabilities());
+                return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(), r.getCapabilities());
             }
         };
 

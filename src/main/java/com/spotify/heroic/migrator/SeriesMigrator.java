@@ -50,33 +50,28 @@ public class SeriesMigrator {
         public void run() {
             final int id = count.incrementAndGet();
 
-            final String threadSession = String.format("%s-%04d/%04d", session,
-                    id, total);
+            final String threadSession = String.format("%s-%04d/%04d", session, id, total);
 
             try {
                 executeOne(threadSession, source, target, range);
             } catch (final Exception e) {
-                log.error(String.format("%s: Migrate of %s failed", session,
-                        series), e);
+                log.error(String.format("%s: Migrate of %s failed", session, series), e);
             }
 
             available.release();
         }
 
-        private void executeOne(final String session,
-                final MetricBackendGroup source, final MetricBackendGroup target,
+        private void executeOne(final String session, final MetricBackendGroup source, final MetricBackendGroup target,
                 final DateRange range) throws Exception {
             final Callback.Reducer<FetchData, List<DataPoint>> reducer = new Callback.Reducer<FetchData, List<DataPoint>>() {
                 @Override
-                public List<DataPoint> resolved(Collection<FetchData> results,
-                        Collection<Exception> errors,
+                public List<DataPoint> resolved(Collection<FetchData> results, Collection<Exception> errors,
                         Collection<CancelReason> cancelled) throws Exception {
                     for (final Exception e : errors)
                         log.error("{}: Failed to read entry", session, e);
 
                     for (final CancelReason reason : cancelled)
-                        log.error("{}, Entry read cancelled: {}", session,
-                                reason);
+                        log.error("{}, Entry read cancelled: {}", session, reason);
 
                     if (errors.size() > 0 || cancelled.size() > 0)
                         throw new Exception("Errors during read");
@@ -92,21 +87,16 @@ public class SeriesMigrator {
                 }
             };
 
-            final List<DataPoint> datapoints = ConcurrentCallback.newReduce(
-                    source.query(series, range), reducer).get();
+            final List<DataPoint> datapoints = ConcurrentCallback.newReduce(source.query(series, range), reducer).get();
 
-            log.info(String.format(
-                    "%s: Writing %d datapoint(s) for series: %s", session,
-                    datapoints.size(), series));
+            log.info(String.format("%s: Writing %d datapoint(s) for series: %s", session, datapoints.size(), series));
 
-            target.write(
-                    Arrays.asList(new WriteMetric[] { new WriteMetric(series,
-                            datapoints) })).get();
+            target.write(Arrays.asList(new WriteMetric[] { new WriteMetric(series, datapoints) })).get();
         }
     };
 
-    public void migrate(long history, final MetricBackendGroup source,
-            final MetricBackendGroup target, final Filter filter) throws Exception {
+    public void migrate(long history, final MetricBackendGroup source, final MetricBackendGroup target,
+            final Filter filter) throws Exception {
         final Set<Series> series;
 
         try {
@@ -128,8 +118,7 @@ public class SeriesMigrator {
         for (final Series s : series) {
             available.acquire();
 
-            final Runnable runnable = new MigratorThread(session, count, total,
-                    source, target, range, s, available);
+            final Runnable runnable = new MigratorThread(session, count, total, source, target, range, s, available);
 
             executor.execute(runnable);
         }

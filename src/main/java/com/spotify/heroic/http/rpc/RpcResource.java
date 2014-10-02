@@ -26,8 +26,7 @@ public class RpcResource {
     public Response getMetadata() {
         final NodeRegistryEntry localEntry = cluster.getLocalEntry();
         final NodeMetadata localMetadata = localEntry.getMetadata();
-        final RpcMetadata metadata = new RpcMetadata(VERSION,
-                localMetadata.getId(), localMetadata.getTags(),
+        final RpcMetadata metadata = new RpcMetadata(VERSION, localMetadata.getId(), localMetadata.getTags(),
                 localMetadata.getCapabilities());
         return Response.status(Response.Status.OK).entity(metadata).build();
     }

@@ -84,9 +84,8 @@ public class DateRange implements Comparable<DateRange> {
     /**
      * Modify this range with another range.
      * 
-     * A modification asserts that the new range is a subset of the current
-     * range. Any span which would cause the new range to become out of bounds
-     * will be cropped.
+     * A modification asserts that the new range is a subset of the current range. Any span which would cause the new
+     * range to become out of bounds will be cropped.
      * 
      * @param range
      *            The constraints to modify this range against.
@@ -97,8 +96,7 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     public DateRange modify(long start, long end) {
-        return new DateRange(Math.max(this.start, start), Math.min(this.end,
-                end));
+        return new DateRange(Math.max(this.start, start), Math.min(this.end, end));
     }
 
     public DateRange start(long start) {
@@ -118,24 +116,20 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     public DateRange shift(long extent) {
-        return new DateRange(Math.max(start + extent, 0), Math.max(
-                end + extent, 0));
+        return new DateRange(Math.max(start + extent, 0), Math.max(end + extent, 0));
     }
 
-    private static final FastDateFormat format = FastDateFormat
-            .getInstance("yyyy-MM-dd HH:mm");
+    private static final FastDateFormat format = FastDateFormat.getInstance("yyyy-MM-dd HH:mm");
 
     @Override
     public String toString() {
         final Date start = new Date(this.start);
         final Date end = new Date(this.end);
-        return "DateRange(start=" + format.format(start) + ", end="
-                + format.format(end) + ")";
+        return "DateRange(start=" + format.format(start) + ", end=" + format.format(end) + ")";
     }
 
     @JsonCreator
-    public static DateRange create(
-            @JsonProperty(value = "start", required = true) Long start,
+    public static DateRange create(@JsonProperty(value = "start", required = true) Long start,
             @JsonProperty(value = "end", required = true) Long end) {
         return new DateRange(start, end);
     }

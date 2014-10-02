@@ -13,20 +13,17 @@ import com.spotify.heroic.model.Series;
 
 @Data
 public class FindSeries {
-    public static final FindSeries EMPTY = new FindSeries(
-            new HashSet<Series>(), 0, 0);
+    public static final FindSeries EMPTY = new FindSeries(new HashSet<Series>(), 0, 0);
 
     private final Set<Series> series;
     private final int size;
     private final int duplicates;
 
     @Slf4j
-    public static class Reducer implements
-            Callback.Reducer<FindSeries, FindSeries> {
+    public static class Reducer implements Callback.Reducer<FindSeries, FindSeries> {
         @Override
-        public FindSeries resolved(Collection<FindSeries> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public FindSeries resolved(Collection<FindSeries> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 

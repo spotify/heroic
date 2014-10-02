@@ -17,8 +17,7 @@ public class Rpc4WriteBody {
     private final Collection<WriteMetric> writes;
 
     @JsonCreator
-    public static Rpc4WriteBody create(
-            @JsonProperty("backendGroup") String backendGroup,
+    public static Rpc4WriteBody create(@JsonProperty("backendGroup") String backendGroup,
             @JsonProperty("writes") Collection<WriteMetric> writes) {
         return new Rpc4WriteBody(backendGroup, writes);
     }

@@ -16,8 +16,7 @@ public class RefreshTagsJob implements Job {
     private MetadataBackendManager metadata;
 
     @Override
-    public void execute(JobExecutionContext context)
-            throws JobExecutionException {
+    public void execute(JobExecutionContext context) throws JobExecutionException {
         log.info("Refreshing tags");
         metadata.refresh();
     }

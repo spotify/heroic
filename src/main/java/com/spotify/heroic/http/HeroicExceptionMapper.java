@@ -9,12 +9,10 @@ import javax.ws.rs.ext.Provider;
 import com.spotify.heroic.http.general.ErrorMessage;
 
 @Provider
-public class HeroicExceptionMapper implements
-ExceptionMapper<WebApplicationException> {
+public class HeroicExceptionMapper implements ExceptionMapper<WebApplicationException> {
     @Override
     public Response toResponse(WebApplicationException exception) {
-        return Response.status(exception.getResponse().getStatus())
-                .entity(new ErrorMessage(exception.getMessage()))
+        return Response.status(exception.getResponse().getStatus()).entity(new ErrorMessage(exception.getMessage()))
                 .type(MediaType.APPLICATION_JSON).build();
     }
 }

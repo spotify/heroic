@@ -18,8 +18,7 @@ public class AggregationGroup {
         private final Aggregation.Session first;
         private final Iterable<Aggregation.Session> rest;
 
-        public Session(Aggregation.Session first,
-                Iterable<Aggregation.Session> rest) {
+        public Session(Aggregation.Session first, Iterable<Aggregation.Session> rest) {
             this.first = first;
             this.rest = rest;
         }
@@ -53,8 +52,7 @@ public class AggregationGroup {
         final Aggregation.Session first = aggregations.get(0).session(range);
         final List<Aggregation.Session> rest = new ArrayList<Aggregation.Session>();
 
-        for (final Aggregation aggregator : aggregations.subList(1,
-                aggregations.size())) {
+        for (final Aggregation aggregator : aggregations.subList(1, aggregations.size())) {
             rest.add(aggregator.session(range));
         }
 
@@ -62,9 +60,8 @@ public class AggregationGroup {
     }
 
     /**
-     * Get a guesstimate of how big of a memory all aggregations would need.
-     * This is for the invoker to make the decision whether or not to execute
-     * the aggregation.
+     * Get a guesstimate of how big of a memory all aggregations would need. This is for the invoker to make the
+     * decision whether or not to execute the aggregation.
      *
      * @return
      */

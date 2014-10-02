@@ -22,13 +22,9 @@ public class Rpc5FullQueryBody {
     private final AggregationGroup aggregation;
 
     @JsonCreator
-    public static Rpc5FullQueryBody create(
-            @JsonProperty("backendGroup") String backendGroup,
-            @JsonProperty("filter") Filter filter,
-            @JsonProperty("groupBy") List<String> groupBy,
-            @JsonProperty("range") DateRange range,
-            @JsonProperty("aggregation") AggregationGroup aggregation) {
-        return new Rpc5FullQueryBody(backendGroup, filter, groupBy, range,
-                aggregation);
+    public static Rpc5FullQueryBody create(@JsonProperty("backendGroup") String backendGroup,
+            @JsonProperty("filter") Filter filter, @JsonProperty("groupBy") List<String> groupBy,
+            @JsonProperty("range") DateRange range, @JsonProperty("aggregation") AggregationGroup aggregation) {
+        return new Rpc5FullQueryBody(backendGroup, filter, groupBy, range, aggregation);
     }
 }

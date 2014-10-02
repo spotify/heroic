@@ -25,7 +25,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 @RequiredArgsConstructor
-public class MetricBackendManagerModule extends PrivateModule {
+public class MetricModule extends PrivateModule {
     public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;
     public static final int DEFAULT_GROUP_LOAD_LIMIT = 5000;
@@ -38,11 +38,9 @@ public class MetricBackendManagerModule extends PrivateModule {
     private final long flushingInterval;
 
     @JsonCreator
-    public static MetricBackendManagerModule create(
-            @JsonProperty("backends") List<MetricBackendConfig> backends,
+    public static MetricModule create(@JsonProperty("backends") List<MetricBackendConfig> backends,
             @JsonProperty("defaultBackends") List<String> defaultBackends,
-            @JsonProperty("groupLimit") Integer groupLimit,
-            @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
+            @JsonProperty("groupLimit") Integer groupLimit, @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
             @JsonProperty("flushingInterval") Long flushingInterval) {
         if (backends == null)
             backends = new ArrayList<>();
@@ -56,8 +54,7 @@ public class MetricBackendManagerModule extends PrivateModule {
         if (flushingInterval == null)
             flushingInterval = DEFAULT_FLUSHING_INTERVAL;
 
-        return new MetricBackendManagerModule(backends, defaultBackends,
-                groupLimit, groupLoadLimit, flushingInterval);
+        return new MetricModule(backends, defaultBackends, groupLimit, groupLoadLimit, flushingInterval);
     }
 
     @Inject
@@ -69,8 +66,7 @@ public class MetricBackendManagerModule extends PrivateModule {
 
     @Provides
     @Named("backends")
-    public Map<String, List<MetricBackend>> buildBackends(
-            Set<MetricBackend> backends) {
+    public Map<String, List<MetricBackend>> buildBackends(Set<MetricBackend> backends) {
         final Map<String, List<MetricBackend>> groups = new HashMap<>();
 
         for (final MetricBackend backend : backends) {
@@ -89,13 +85,11 @@ public class MetricBackendManagerModule extends PrivateModule {
 
     @Provides
     @Named("defaultBackends")
-    public List<MetricBackend> defaultBackends(
-            @Named("backends") Map<String, List<MetricBackend>> backends) {
+    public List<MetricBackend> defaultBackends(@Named("backends") Map<String, List<MetricBackend>> backends) {
         if (defaultBackends == null) {
             final List<MetricBackend> result = new ArrayList<>();
 
-            for (final Map.Entry<String, List<MetricBackend>> entry : backends
-                    .entrySet()) {
+            for (final Map.Entry<String, List<MetricBackend>> entry : backends.entrySet()) {
                 result.addAll(entry.getValue());
             }
 
@@ -108,8 +102,7 @@ public class MetricBackendManagerModule extends PrivateModule {
             final List<MetricBackend> someResult = backends.get(defaultBackend);
 
             if (someResult == null)
-                throw new IllegalArgumentException(
-                        "No backend(s) available with id : " + defaultBackend);
+                throw new IllegalArgumentException("No backend(s) available with id : " + defaultBackend);
 
             result.addAll(someResult);
         }
@@ -140,20 +133,19 @@ public class MetricBackendManagerModule extends PrivateModule {
         bindBackends(backends);
         bind(MetricBackendManager.class).in(Scopes.SINGLETON);
         expose(MetricBackendManager.class);
+        bind(ClusteredMetricManager.class).in(Scopes.SINGLETON);
+        expose(ClusteredMetricManager.class);
     }
 
     private void bindBackends(final Collection<MetricBackendConfig> configs) {
-        final Multibinder<MetricBackend> bindings = Multibinder.newSetBinder(
-                binder(), MetricBackend.class);
+        final Multibinder<MetricBackend> bindings = Multibinder.newSetBinder(binder(), MetricBackend.class);
 
         int i = 0;
 
         for (final MetricBackendConfig config : configs) {
-            final String id = config.id() != null ? config.id() : config
-                    .buildId(i++);
+            final String id = config.id() != null ? config.id() : config.buildId(i++);
 
-            final Key<MetricBackend> key = Key.get(MetricBackend.class,
-                    Names.named(id));
+            final Key<MetricBackend> key = Key.get(MetricBackend.class, Names.named(id));
 
             install(config.module(key, id));
 

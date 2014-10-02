@@ -25,14 +25,10 @@ public class Rpc4QueryBody {
     private final AggregationGroup aggregationGroup;
 
     @JsonCreator
-    public static Rpc4QueryBody create(
-            @JsonProperty("backendGroup") String backendGroup,
-            @JsonProperty("group") Map<String, String> group,
-            @JsonProperty("filter") Filter filter,
-            @JsonProperty("series") Set<Series> series,
-            @JsonProperty("range") DateRange range,
+    public static Rpc4QueryBody create(@JsonProperty("backendGroup") String backendGroup,
+            @JsonProperty("group") Map<String, String> group, @JsonProperty("filter") Filter filter,
+            @JsonProperty("series") Set<Series> series, @JsonProperty("range") DateRange range,
             @JsonProperty("aggregationGroup") AggregationGroup aggregationGroup) {
-        return new Rpc4QueryBody(backendGroup, group, filter, series, range,
-                aggregationGroup);
+        return new Rpc4QueryBody(backendGroup, group, filter, series, range, aggregationGroup);
     }
 }

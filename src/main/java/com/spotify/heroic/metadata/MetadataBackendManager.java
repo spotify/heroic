@@ -50,8 +50,7 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce())
-                .register(reporter.reportFindTags());
+        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce()).register(reporter.reportFindTags());
     }
 
     public Callback<String> bufferWrite(WriteMetric write) {
@@ -79,8 +78,7 @@ public class MetadataBackendManager {
             callbacks.add(bufferWrite(write.getSeries()));
         }
 
-        return ConcurrentCallback
-                .newReduce(callbacks, Reducers.<String> list());
+        return ConcurrentCallback.newReduce(callbacks, Reducers.<String> list());
     }
 
     public Callback<FindSeries> findSeries(final Filter filter) {
@@ -94,8 +92,7 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindSeries.reduce())
-                .register(reporter.reportFindTimeSeries());
+        return ConcurrentCallback.newReduce(callbacks, FindSeries.reduce()).register(reporter.reportFindTimeSeries());
     }
 
     public Callback<DeleteSeries> deleteSeries(final Filter filter) {
@@ -123,8 +120,7 @@ public class MetadataBackendManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindKeys.reduce())
-                .register(reporter.reportFindKeys());
+        return ConcurrentCallback.newReduce(callbacks, FindKeys.reduce()).register(reporter.reportFindKeys());
     }
 
     public Callback<Boolean> refresh() {
@@ -134,14 +130,12 @@ public class MetadataBackendManager {
             callbacks.add(backend.refresh());
         }
 
-        return ConcurrentCallback.newReduce(callbacks,
-                new Callback.DefaultStreamReducer<Void, Boolean>() {
-                    @Override
-                    public Boolean resolved(int successful, int failed,
-                            int cancelled) throws Exception {
-                        return failed == 0 && cancelled == 0;
-                    }
-                }).register(reporter.reportRefresh());
+        return ConcurrentCallback.newReduce(callbacks, new Callback.DefaultStreamReducer<Void, Boolean>() {
+            @Override
+            public Boolean resolved(int successful, int failed, int cancelled) throws Exception {
+                return failed == 0 && cancelled == 0;
+            }
+        }).register(reporter.reportRefresh());
     }
 
     public boolean isReady() {

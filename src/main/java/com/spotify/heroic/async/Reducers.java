@@ -17,9 +17,8 @@ public final class Reducers {
 
     private static final ListReducer<Object> LIST = new ListReducer<Object>() {
         @Override
-        public List<Object> resolved(Collection<Object> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public List<Object> resolved(Collection<Object> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             return new ArrayList<Object>(results);
         }
     };
@@ -39,9 +38,8 @@ public final class Reducers {
 
     private static final JoinSets<Object> JOIN_SETS = new JoinSets<Object>() {
         @Override
-        public Set<Object> resolved(Collection<Set<Object>> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public Set<Object> resolved(Collection<Set<Object>> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             final Set<Object> all = new HashSet<Object>();
 
             for (final Set<Object> result : results) {
@@ -67,9 +65,8 @@ public final class Reducers {
 
     private static final JoinLists<Object> JOIN_LISTS = new JoinLists<Object>() {
         @Override
-        public List<Object> resolved(Collection<List<Object>> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public List<Object> resolved(Collection<List<Object>> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             final List<Object> list = new ArrayList<Object>();
 
             for (final List<Object> part : results) {
@@ -88,9 +85,8 @@ public final class Reducers {
 
     private static final Callback.Reducer<Object, Void> TO_VOID = new Callback.Reducer<Object, Void>() {
         @Override
-        public Void resolved(Collection<Object> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public Void resolved(Collection<Object> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             return null;
         }
     };
@@ -107,9 +103,8 @@ public final class Reducers {
 
     private static final Callback.Reducer<Boolean, Boolean> ALL = new Callback.Reducer<Boolean, Boolean>() {
         @Override
-        public Boolean resolved(Collection<Boolean> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public Boolean resolved(Collection<Boolean> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             if (!errors.isEmpty() || !cancelled.isEmpty()) {
                 throw new Exception("Not all callbacks were resolved");
             }

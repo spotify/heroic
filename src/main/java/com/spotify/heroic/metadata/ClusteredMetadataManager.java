@@ -31,10 +31,8 @@ public class ClusteredMetadataManager {
         public Callback<T> run(NodeRegistryEntry node);
     }
 
-    public <T> Callback<T> run(NodeCapability capability,
-            Callback.Reducer<T, T> reducer, ClusterOperation<T> op) {
-        final Collection<NodeRegistryEntry> nodes = cluster
-                .findAllShards(capability);
+    public <T> Callback<T> run(NodeCapability capability, Callback.Reducer<T, T> reducer, ClusterOperation<T> op) {
+        final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(capability);
 
         final List<Callback<T>> requests = new ArrayList<>(nodes.size());
 
@@ -45,8 +43,7 @@ public class ClusteredMetadataManager {
         return ConcurrentCallback.newReduce(requests, reducer);
     }
 
-    public <T> Callback<T> run(Map<String, String> tags,
-            NodeCapability capability, ClusterOperation<T> op) {
+    public <T> Callback<T> run(Map<String, String> tags, NodeCapability capability, ClusterOperation<T> op) {
         final NodeRegistryEntry node = cluster.findNode(tags, capability);
 
         if (node == null) {
@@ -57,8 +54,7 @@ public class ClusteredMetadataManager {
     }
 
     public Callback<FindTags> findTags(final Filter filter) {
-        return run(NodeCapability.QUERY, FindTags.reduce(),
-                new ClusterOperation<FindTags>() {
+        return run(NodeCapability.QUERY, FindTags.reduce(), new ClusterOperation<FindTags>() {
             @Override
             public Callback<FindTags> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findTags(filter);
@@ -67,8 +63,7 @@ public class ClusteredMetadataManager {
     }
 
     public Callback<FindKeys> findKeys(final Filter filter) {
-        return run(NodeCapability.QUERY, FindKeys.reduce(),
-                new ClusterOperation<FindKeys>() {
+        return run(NodeCapability.QUERY, FindKeys.reduce(), new ClusterOperation<FindKeys>() {
             @Override
             public Callback<FindKeys> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findKeys(filter);
@@ -77,8 +72,7 @@ public class ClusteredMetadataManager {
     }
 
     public Callback<FindSeries> findSeries(final Filter filter) {
-        return run(NodeCapability.QUERY, FindSeries.reduce(),
-                new ClusterOperation<FindSeries>() {
+        return run(NodeCapability.QUERY, FindSeries.reduce(), new ClusterOperation<FindSeries>() {
             @Override
             public Callback<FindSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findSeries(filter);
@@ -87,8 +81,7 @@ public class ClusteredMetadataManager {
     }
 
     public Callback<DeleteSeries> deleteSeries(final Filter filter) {
-        return run(NodeCapability.WRITE, DeleteSeries.reduce(),
-                new ClusterOperation<DeleteSeries>() {
+        return run(NodeCapability.WRITE, DeleteSeries.reduce(), new ClusterOperation<DeleteSeries>() {
             @Override
             public Callback<DeleteSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().deleteSeries(filter);
@@ -97,12 +90,11 @@ public class ClusteredMetadataManager {
     }
 
     public Callback<String> write(final Series series) {
-        return run(series.getTags(), NodeCapability.WRITE,
-                new ClusterOperation<String>() {
-                    @Override
-                    public Callback<String> run(NodeRegistryEntry node) {
-                        return node.getClusterNode().writeSeries(series);
-                    }
-                });
+        return run(series.getTags(), NodeCapability.WRITE, new ClusterOperation<String>() {
+            @Override
+            public Callback<String> run(NodeRegistryEntry node) {
+                return node.getClusterNode().writeSeries(series);
+            }
+        });
     }
 }

@@ -2,9 +2,8 @@ package com.spotify.heroic;
 
 public interface HeroicLifeCycle {
     /**
-     * Wait until the application has been fully started. This should be used on
-     * any threads which are spawned to make sure that the application is ready
-     * to process requests.
+     * Wait until the application has been fully started. This should be used on any threads which are spawned to make
+     * sure that the application is ready to process requests.
      *
      * @throws InterruptedException
      *             If initialization is interrupted.

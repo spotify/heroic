@@ -5,8 +5,7 @@ import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
-public class SemanticHttpClientManagerReporter implements
-HttpClientManagerReporter {
+public class SemanticHttpClientManagerReporter implements HttpClientManagerReporter {
     private static final String COMPONENT = "http-client-manager";
 
     private final SemanticMetricRegistry registry;

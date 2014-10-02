@@ -27,11 +27,10 @@ import com.spotify.heroic.metadata.MetadataBackendManager;
 /**
  * Handles management of cluster state.
  *
- * The primary responsibility is to receive refresh requests through
- * {@link #refresh()} that should cause the cluster state to be updated.
+ * The primary responsibility is to receive refresh requests through {@link #refresh()} that should cause the cluster
+ * state to be updated.
  *
- * It also provides an interface for looking up nodes through
- * {@link #findNode(Map, NodeCapability)}.
+ * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}.
  *
  * @author udoprog
  */
@@ -74,8 +73,7 @@ public class ClusterManager implements LifeCycle {
         return registry.getEntries();
     }
 
-    public NodeRegistryEntry findNode(final Map<String, String> tags,
-            NodeCapability capability) {
+    public NodeRegistryEntry findNode(final Map<String, String> tags, NodeCapability capability) {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null)
@@ -103,8 +101,7 @@ public class ClusterManager implements LifeCycle {
         log.info("Cluster refresh in progress");
 
         return discovery.find().transform(
-                new MetadataUriTransformer(useLocal, localEntry, localMetadata,
-                        clients, registry));
+                new MetadataUriTransformer(useLocal, localEntry, localMetadata, clients, registry));
     }
 
     public ClusterManager.Statistics getStatistics() {
@@ -113,8 +110,7 @@ public class ClusterManager implements LifeCycle {
         if (registry == null)
             return null;
 
-        return new ClusterManager.Statistics(registry.getOnlineNodes(),
-                registry.getOfflineNodes());
+        return new ClusterManager.Statistics(registry.getOnlineNodes(), registry.getOfflineNodes());
     }
 
     @Override

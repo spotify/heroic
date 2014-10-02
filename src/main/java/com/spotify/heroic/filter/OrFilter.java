@@ -27,8 +27,7 @@ public class OrFilter implements ManyTermsFilter {
 
     @Override
     public Filter optimize() {
-        return ManyOptimizer.optimize(statements, OrFilter.class,
-                FalseFilter.get(), BUILDER);
+        return ManyOptimizer.optimize(statements, OrFilter.class, FalseFilter.get(), BUILDER);
     }
 
     @Override

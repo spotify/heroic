@@ -8,9 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 
 public interface FilterSerialization<T> {
-    public T deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException;
+    public T deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException;
 
-    public void serialize(JsonGenerator g, T filter) throws IOException,
-            JsonProcessingException;
+    public void serialize(JsonGenerator g, T filter) throws IOException, JsonProcessingException;
 }

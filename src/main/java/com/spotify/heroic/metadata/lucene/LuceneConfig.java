@@ -44,8 +44,7 @@ public final class LuceneConfig implements MetadataBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetadataBackendReporter reporter(
-                    MetadataBackendManagerReporter reporter) {
+            public MetadataBackendReporter reporter(MetadataBackendManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
 

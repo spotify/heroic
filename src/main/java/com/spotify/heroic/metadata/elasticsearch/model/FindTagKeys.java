@@ -7,8 +7,7 @@ import lombok.Data;
 
 @Data
 public class FindTagKeys {
-    public static final FindTagKeys EMPTY = new FindTagKeys(
-            new HashSet<String>(), 0);
+    public static final FindTagKeys EMPTY = new FindTagKeys(new HashSet<String>(), 0);
 
     private final Set<String> keys;
     private final int size;

@@ -23,9 +23,7 @@ public class LocalQuery implements PreparedQuery {
     private final Set<Series> series;
 
     @Override
-    public Callback<MetricGroups> query(final DateRange range,
-            final AggregationGroup aggregation) throws Exception {
-        return metrics.useGroup(backendGroup).groupedQuery(group, filter,
-                series, range, aggregation);
+    public Callback<MetricGroups> query(final DateRange range, final AggregationGroup aggregation) throws Exception {
+        return metrics.useGroup(backendGroup).groupedQuery(group, filter, series, range, aggregation);
     }
 }

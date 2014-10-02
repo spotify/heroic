@@ -15,8 +15,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
 /**
- * A reference aggregation cache implementation to allow for easier testing of
- * application logic.
+ * A reference aggregation cache implementation to allow for easier testing of application logic.
  *
  * @author udoprog
  */
@@ -24,9 +23,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     private final Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
 
     @Override
-    public synchronized Callback<CacheBackendGetResult> get(
-            CacheBackendKey key, DateRange range)
-                    throws CacheOperationException {
+    public synchronized Callback<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
+            throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {
@@ -40,8 +38,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         if (width == 0) {
-            return new ResolvedCallback<CacheBackendGetResult>(
-                    new CacheBackendGetResult(key, datapoints));
+            return new ResolvedCallback<CacheBackendGetResult>(new CacheBackendGetResult(key, datapoints));
         }
 
         final long start = range.getStart() - range.getStart() % width;
@@ -56,14 +53,12 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             datapoints.add(d);
         }
 
-        return new ResolvedCallback<>(
-                new CacheBackendGetResult(key, datapoints));
+        return new ResolvedCallback<>(new CacheBackendGetResult(key, datapoints));
     }
 
     @Override
-    public synchronized Callback<CacheBackendPutResult> put(
-            CacheBackendKey key, List<DataPoint> datapoints)
-                    throws CacheOperationException {
+    public synchronized Callback<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints)
+            throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
         if (entry == null) {
@@ -75,8 +70,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final long width = aggregator.getSampling().getSize();
 
         if (width == 0) {
-            return new ResolvedCallback<CacheBackendPutResult>(
-                    new CacheBackendPutResult());
+            return new ResolvedCallback<CacheBackendPutResult>(new CacheBackendPutResult());
         }
 
         for (final DataPoint d : datapoints) {

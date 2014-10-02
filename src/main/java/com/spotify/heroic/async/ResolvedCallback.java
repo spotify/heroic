@@ -42,14 +42,12 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
-            Callback.Reducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.Reducer<C, T> reducer) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks,
-            StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> callbacks, StreamReducer<C, T> reducer) {
         return this;
     }
 
@@ -109,8 +107,7 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(Transformer<T, C> transformer,
-            ErrorTransformer<C> error) {
+    public <C> Callback<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error) {
         try {
             return new ResolvedCallback<C>(transformer.transform(value));
         } catch (final Exception e) {

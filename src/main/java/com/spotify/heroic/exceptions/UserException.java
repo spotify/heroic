@@ -5,8 +5,7 @@ import com.spotify.heroic.metric.model.NodeError;
 /**
  * An exception which is caused by the user of the system.
  *
- * This is used by
- * {@link NodeError#fromException(NodeError.Context, java.util.Map, Exception)}
+ * This is used by {@link NodeError#fromException(NodeError.Context, java.util.Map, Exception)}
  *
  * @author udoprog
  */

@@ -34,8 +34,7 @@ public class CassandraCacheConfig implements AggregationCacheBackendConfig {
     private final ReadWriteThreadPools.Config pools;
 
     @JsonCreator
-    public static CassandraCacheConfig create(
-            @JsonProperty("seeds") String seeds,
+    public static CassandraCacheConfig create(@JsonProperty("seeds") String seeds,
             @JsonProperty("keyspace") String keyspace,
             @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
             @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
@@ -51,8 +50,7 @@ public class CassandraCacheConfig implements AggregationCacheBackendConfig {
         if (pools == null)
             pools = ReadWriteThreadPools.Config.createDefault();
 
-        return new CassandraCacheConfig(seeds, keyspace, maxConnectionsPerHost,
-                pools);
+        return new CassandraCacheConfig(seeds, keyspace, maxConnectionsPerHost, pools);
     }
 
     @Override
@@ -60,34 +58,27 @@ public class CassandraCacheConfig implements AggregationCacheBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public AggregationCacheBackendReporter reporter(
-                    AggregationCacheReporter reporter) {
+            public AggregationCacheBackendReporter reporter(AggregationCacheReporter reporter) {
                 return reporter.newAggregationCacheBackend();
             }
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(
-                    AggregationCacheBackendReporter reporter) {
+            public ReadWriteThreadPools pools(AggregationCacheBackendReporter reporter) {
                 return pools.construct(reporter.newThreadPool());
             }
 
             @Provides
             @Singleton
             public AstyanaxContext<Keyspace> keyspace() {
-                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-                        .setCqlVersion("3.0.0")
+                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl().setCqlVersion("3.0.0")
                         .setTargetCassandraVersion("2.0");
 
                 final AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
                         .withConnectionPoolConfiguration(
-                                new ConnectionPoolConfigurationImpl(
-                                        "HeroicConnectionPool")
-                                        .setPort(9160)
-                                        .setMaxConnsPerHost(
-                                                maxConnectionsPerHost)
-                                        .setSeeds(seeds)).forKeyspace(keyspace)
-                        .withAstyanaxConfiguration(config)
+                                new ConnectionPoolConfigurationImpl("HeroicConnectionPool").setPort(9160)
+                                        .setMaxConnsPerHost(maxConnectionsPerHost).setSeeds(seeds))
+                        .forKeyspace(keyspace).withAstyanaxConfiguration(config)
                         .buildKeyspace(ThriftFamilyFactory.getInstance());
 
                 return ctx;
@@ -95,8 +86,7 @@ public class CassandraCacheConfig implements AggregationCacheBackendConfig {
 
             @Override
             protected void configure() {
-                bind(AggregationCacheBackend.class).to(CassandraCache.class)
-                .in(Scopes.SINGLETON);
+                bind(AggregationCacheBackend.class).to(CassandraCache.class).in(Scopes.SINGLETON);
                 expose(AggregationCacheBackend.class);
             }
         };

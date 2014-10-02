@@ -28,47 +28,38 @@ public final class CassandraCommon {
     private static final HashMap<Integer, FilterSerialization<? extends Filter>> ID_TO_S = new HashMap<Integer, FilterSerialization<? extends Filter>>();
     private static final HashMap<Class<?>, Integer> TYPE_TO_S = new HashMap<Class<?>, Integer>();
 
-    private static <T extends Filter> void register(int typeId, Class<T> type,
-            FilterSerialization<T> serialization) {
+    private static <T extends Filter> void register(int typeId, Class<T> type, FilterSerialization<T> serialization) {
         if (ID_TO_S.put(typeId, serialization) != null)
-            throw new IllegalStateException("Multiple mappings for single id: "
-                    + typeId);
+            throw new IllegalStateException("Multiple mappings for single id: " + typeId);
         if (TYPE_TO_S.put(type, typeId) != null)
-            throw new IllegalStateException(
-                    "Multiple mappings for single type: " + type);
+            throw new IllegalStateException("Multiple mappings for single type: " + type);
     }
 
-    private static <T extends OneTermFilter<O>, O> void register(int typeId,
-            Class<T> type, Serializer<O> serializer,
+    private static <T extends OneTermFilter<O>, O> void register(int typeId, Class<T> type, Serializer<O> serializer,
             OneTermFilterBuilder<T, O> builder) {
         register(typeId, type, new OneTermSerialization<>(serializer, builder));
     }
 
-    private static <T extends TwoTermsFilter> void register(int typeId,
-            Class<T> type, TwoTermsFilterBuilder<T> builder) {
+    private static <T extends TwoTermsFilter> void register(int typeId, Class<T> type, TwoTermsFilterBuilder<T> builder) {
         register(typeId, type, new TwoTermsSerialization<>(builder));
     }
 
-    private static <T extends ManyTermsFilter> void register(int typeId,
-            Class<T> type, ManyTermsFilterBuilder<T> builder) {
+    private static <T extends ManyTermsFilter> void register(int typeId, Class<T> type,
+            ManyTermsFilterBuilder<T> builder) {
         register(typeId, type, new ManyTermsSerialization<>(builder));
     }
 
-    private static <T extends NoTermFilter> void register(int typeId,
-            Class<T> type, NoTermFilterBuilder<T> builder) {
+    private static <T extends NoTermFilter> void register(int typeId, Class<T> type, NoTermFilterBuilder<T> builder) {
         register(typeId, type, new NoTermSerialization<>(builder));
     }
 
     static {
         register(0x0001, AndFilter.class, AndFilter.BUILDER);
         register(0x0002, OrFilter.class, OrFilter.BUILDER);
-        register(0x0003, NotFilter.class, FilterSerializer.get(),
-                NotFilter.BUILDER);
-        register(0x0010, MatchKeyFilter.class, SafeStringSerializer.get(),
-                MatchKeyFilter.BUILDER);
+        register(0x0003, NotFilter.class, FilterSerializer.get(), NotFilter.BUILDER);
+        register(0x0010, MatchKeyFilter.class, SafeStringSerializer.get(), MatchKeyFilter.BUILDER);
         register(0x0011, MatchTagFilter.class, MatchTagFilter.BUILDER);
-        register(0x0012, HasTagFilter.class, SafeStringSerializer.get(),
-                HasTagFilter.BUILDER);
+        register(0x0012, HasTagFilter.class, SafeStringSerializer.get(), HasTagFilter.BUILDER);
         register(0x0013, StartsWithFilter.class, StartsWithFilter.BUILDER);
         register(0x0014, RegexFilter.class, RegexFilter.BUILDER);
         register(0x0020, TrueFilter.class, TrueFilter.BUILDER);
@@ -86,12 +77,10 @@ public final class CassandraCommon {
 
     public static FilterSerialization<Filter> getSerializer(int typeId) {
         @SuppressWarnings("unchecked")
-        final FilterSerialization<Filter> serializer = (FilterSerialization<Filter>) ID_TO_S
-                .get(typeId);
+        final FilterSerialization<Filter> serializer = (FilterSerialization<Filter>) ID_TO_S.get(typeId);
 
         if (serializer == null)
-            throw new RuntimeException("No serializer for type id "
-                    + Integer.toHexString(typeId));
+            throw new RuntimeException("No serializer for type id " + Integer.toHexString(typeId));
 
         return serializer;
     }

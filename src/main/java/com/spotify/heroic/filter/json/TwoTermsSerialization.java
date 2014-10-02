@@ -13,13 +13,11 @@ import com.spotify.heroic.filter.TwoTermsFilter;
 import com.spotify.heroic.filter.TwoTermsFilterBuilder;
 
 @RequiredArgsConstructor
-public class TwoTermsSerialization<T extends TwoTermsFilter> implements
-        FilterSerialization<T> {
+public class TwoTermsSerialization<T extends TwoTermsFilter> implements FilterSerialization<T> {
     private final TwoTermsFilterBuilder<T> builder;
 
     @Override
-    public T deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+    public T deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
         final String tag;
 
         if (p.nextToken() != JsonToken.VALUE_STRING)

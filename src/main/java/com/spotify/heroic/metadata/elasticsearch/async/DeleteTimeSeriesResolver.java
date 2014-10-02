@@ -13,8 +13,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 
 @RequiredArgsConstructor
-public class DeleteTimeSeriesResolver implements
-        Callback.Resolver<DeleteSeries> {
+public class DeleteTimeSeriesResolver implements Callback.Resolver<DeleteSeries> {
     private final Client client;
     private final String index;
     private final String type;
@@ -22,17 +21,13 @@ public class DeleteTimeSeriesResolver implements
 
     @Override
     public DeleteSeries resolve() throws Exception {
-        final DeleteByQueryRequestBuilder request = client
-                .prepareDeleteByQuery(index).setTypes(type);
+        final DeleteByQueryRequestBuilder request = client.prepareDeleteByQuery(index).setTypes(type);
 
-        request.setQuery(QueryBuilders.filteredQuery(
-                QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
 
         final DeleteByQueryResponse response = request.execute().get();
 
-        final IndexDeleteByQueryResponse result = response.getIndices().get(
-                index);
-        return new DeleteSeries(result.getSuccessfulShards(),
-                result.getFailedShards());
+        final IndexDeleteByQueryResponse result = response.getIndices().get(index);
+        return new DeleteSeries(result.getSuccessfulShards(), result.getFailedShards());
     }
 }

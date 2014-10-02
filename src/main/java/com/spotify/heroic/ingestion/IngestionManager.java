@@ -27,8 +27,7 @@ public class IngestionManager {
     @Inject
     private ClusteredMetricManager metrics;
 
-    public void write(WriteMetric write) throws IngestionException,
-            FatalIngestionException {
+    public void write(WriteMetric write) throws IngestionException, FatalIngestionException {
         if (updateMetadata) {
             metadata.bufferWrite(write);
         }
@@ -37,8 +36,7 @@ public class IngestionManager {
             try {
                 metrics.bufferWrite(null, write);
             } catch (InterruptedException | BufferEnqueueException e) {
-                throw new FatalIngestionException("Failed to buffer up metric",
-                        e);
+                throw new FatalIngestionException("Failed to buffer up metric", e);
             } catch (final MetricFormatException e) {
                 log.error("Invalid write: {}", write, e);
             }

@@ -23,9 +23,7 @@ public class RpcMetadata {
     private final Set<NodeCapability> capabilities;
 
     @JsonCreator
-    public static RpcMetadata create(
-            @JsonProperty("version") Integer version,
-            @JsonProperty("id") UUID id,
+    public static RpcMetadata create(@JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
             @JsonProperty(value = "tags", required = false) Map<String, String> tags,
             @JsonProperty(value = "capabilities", required = false) Set<NodeCapability> capabilities) {
         if (version == null)

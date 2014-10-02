@@ -10,8 +10,7 @@ import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
-public class SemanticAggregationCacheReporter implements
-AggregationCacheReporter {
+public class SemanticAggregationCacheReporter implements AggregationCacheReporter {
     private static final String COMPONENT = "aggregation-cache";
 
     private final CallbackReporter get;
@@ -25,12 +24,9 @@ AggregationCacheReporter {
 
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
 
-        this.get = new SemanticCallbackReporter(registry, id.tagged("what",
-                "get", "unit", Units.READ));
-        this.put = new SemanticCallbackReporter(registry, id.tagged("what",
-                "put", "unit", Units.WRITE));
-        getMiss = registry.histogram(id.tagged("what", "get-miss", "unit",
-                Units.MISS));
+        this.get = new SemanticCallbackReporter(registry, id.tagged("what", "get", "unit", Units.READ));
+        this.put = new SemanticCallbackReporter(registry, id.tagged("what", "put", "unit", Units.WRITE));
+        getMiss = registry.histogram(id.tagged("what", "get-miss", "unit", Units.MISS));
     }
 
     @Override

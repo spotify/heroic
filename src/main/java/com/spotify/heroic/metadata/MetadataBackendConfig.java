@@ -8,8 +8,7 @@ import com.spotify.heroic.metadata.elasticsearch.ElasticSearchConfig;
 import com.spotify.heroic.metadata.lucene.LuceneConfig;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = ElasticSearchConfig.class, name = "elasticsearch"),
+@JsonSubTypes({ @JsonSubTypes.Type(value = ElasticSearchConfig.class, name = "elasticsearch"),
         @JsonSubTypes.Type(value = LuceneConfig.class, name = "lucene") })
 public interface MetadataBackendConfig {
     public String buildId(int i);

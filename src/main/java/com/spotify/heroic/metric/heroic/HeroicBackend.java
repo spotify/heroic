@@ -60,9 +60,8 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
     @Inject
     private MetricBackendReporter reporter;
 
-    private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
-            .newColumnFamily("Cql3CF", IntegerSerializer.get(),
-                    StringSerializer.get());
+    private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily("Cql3CF",
+            IntegerSerializer.get(), StringSerializer.get());
 
     private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
@@ -80,17 +79,14 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
         if (keyspace == null)
             return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
 
-        final MutationBatch mutation = keyspace.prepareMutationBatch()
-                .setConsistencyLevel(ConsistencyLevel.CL_ANY);
+        final MutationBatch mutation = keyspace.prepareMutationBatch().setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
         final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
         for (final WriteMetric write : writes) {
             for (final DataPoint d : write.getData()) {
-                final long base = MetricsRowKeySerializer.getBaseTimestamp(d
-                        .getTimestamp());
-                final MetricsRowKey rowKey = new MetricsRowKey(
-                        write.getSeries(), base);
+                final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
+                final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
 
                 ColumnListMutation<Integer> m = batches.get(rowKey);
 
@@ -99,8 +95,7 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
                     batches.put(rowKey, m);
                 }
 
-                m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d
-                        .getTimestamp()), d.getValue());
+                m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()), d.getValue());
             }
         }
 
@@ -112,46 +107,37 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
             }
         };
 
-        return ConcurrentCallback.newResolve(pools.write(), resolver).register(
-                reporter.reportWriteBatch());
+        return ConcurrentCallback.newResolve(pools.write(), resolver).register(reporter.reportWriteBatch());
     }
 
     /**
      * CQL3 implementation for insertions.
      *
-     * TODO: I cannot figure out how to get batch insertions to work. Until
-     * then, THIS IS NOT an option because it will murder performance in its
-     * sleep and steal its cookies.
+     * TODO: I cannot figure out how to get batch insertions to work. Until then, THIS IS NOT an option because it will
+     * murder performance in its sleep and steal its cookies.
      *
      * @param rowKey
      * @param datapoints
      * @return
      */
     @SuppressWarnings("unused")
-    private Callback<Integer> writeCQL(final MetricsRowKey rowKey,
-            final List<DataPoint> datapoints) {
+    private Callback<Integer> writeCQL(final MetricsRowKey rowKey, final List<DataPoint> datapoints) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
             return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
 
-        return ConcurrentCallback.newResolve(pools.read(),
-                new Callback.Resolver<Integer>() {
+        return ConcurrentCallback.newResolve(pools.read(), new Callback.Resolver<Integer>() {
             @Override
             public Integer resolve() throws Exception {
                 for (final DataPoint d : datapoints) {
                     keyspace.prepareQuery(CQL3_CF)
-                    .withCql(INSERT_METRICS_CQL)
-                    .asPreparedStatement()
-                    .withByteBufferValue(rowKey,
-                            MetricsRowKeySerializer.get())
-                            .withByteBufferValue(
-                                    MetricsRowKeySerializer
-                                    .calculateColumnKey(d
-                                            .getTimestamp()),
-                                            IntegerSerializer.get())
-                                            .withByteBufferValue(d.getValue(),
-                                                    DoubleSerializer.get()).execute();
+                            .withCql(INSERT_METRICS_CQL)
+                            .asPreparedStatement()
+                            .withByteBufferValue(rowKey, MetricsRowKeySerializer.get())
+                            .withByteBufferValue(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()),
+                                    IntegerSerializer.get()).withByteBufferValue(d.getValue(), DoubleSerializer.get())
+                            .execute();
                 }
 
                 return datapoints.size();
@@ -160,8 +146,7 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
     }
 
     @Override
-    public List<Callback<FetchData>> fetch(final Series series,
-            final DateRange range) {
+    public List<Callback<FetchData>> fetch(final Series series, final DateRange range) {
         final List<Callback<FetchData>> queries = new ArrayList<Callback<FetchData>>();
 
         for (final long base : buildBases(range)) {
@@ -176,40 +161,31 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
         return queries;
     }
 
-    private Callback<FetchData> buildQuery(final Series series, long base,
-            final DateRange range) {
+    private Callback<FetchData> buildQuery(final Series series, long base, final DateRange range) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<FetchData>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<FetchData>(CancelReason.BACKEND_DISABLED);
 
-        final DateRange newRange = range.modify(base, base
-                + MetricsRowKey.MAX_WIDTH - 1);
+        final DateRange newRange = range.modify(base, base + MetricsRowKey.MAX_WIDTH - 1);
 
         if (newRange.isEmpty())
             return null;
 
         final MetricsRowKey rowKey = new MetricsRowKey(series, base);
 
-        final int start = MetricsRowKeySerializer.calculateColumnKey(newRange
-                .getStart());
-        final int end = MetricsRowKeySerializer.calculateColumnKey(newRange
-                .getEnd());
-        final ByteBufferRange columnRange = new RangeBuilder().setStart(start)
-                .setEnd(end).build();
+        final int start = MetricsRowKeySerializer.calculateColumnKey(newRange.getStart());
+        final int end = MetricsRowKeySerializer.calculateColumnKey(newRange.getEnd());
+        final ByteBufferRange columnRange = new RangeBuilder().setStart(start).setEnd(end).build();
 
-        final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace
-                .prepareQuery(METRICS_CF).getRow(rowKey).autoPaginate(true)
-                .withColumnRange(columnRange);
+        final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace.prepareQuery(METRICS_CF).getRow(rowKey)
+                .autoPaginate(true).withColumnRange(columnRange);
 
         final Callback.Resolver<FetchData> resolver = new Callback.Resolver<FetchData>() {
             @Override
             public FetchData resolve() throws Exception {
-                final OperationResult<ColumnList<Integer>> result = dataQuery
-                        .execute();
-                final List<DataPoint> datapoints = rowKey
-                        .buildDataPoints(result.getResult());
+                final OperationResult<ColumnList<Integer>> result = dataQuery.execute();
+                final List<DataPoint> datapoints = rowKey.buildDataPoints(result.getResult());
                 return new FetchData(series, datapoints);
             }
         };
@@ -236,10 +212,8 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
     private static List<Long> buildBases(DateRange range) {
         final List<Long> bases = new ArrayList<Long>();
 
-        final long start = MetricsRowKeySerializer.getBaseTimestamp(range
-                .getStart());
-        final long end = MetricsRowKeySerializer.getBaseTimestamp(range
-                .getEnd());
+        final long start = MetricsRowKeySerializer.getBaseTimestamp(range.getStart());
+        final long end = MetricsRowKeySerializer.getBaseTimestamp(range.getEnd());
 
         for (long i = start; i <= end; i += MetricsRowKey.MAX_WIDTH) {
             bases.add(i);
@@ -266,8 +240,7 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
         return new Iterable<BackendEntry>() {
             @Override
             public Iterator<BackendEntry> iterator() {
-                final Iterator<Row<MetricsRowKey, Integer>> iterator = result
-                        .getResult().iterator();
+                final Iterator<Row<MetricsRowKey, Integer>> iterator = result.getResult().iterator();
 
                 return new Iterator<BackendEntry>() {
                     @Override
@@ -277,13 +250,11 @@ public class HeroicBackend extends CassandraBackend implements MetricBackend {
 
                     @Override
                     public BackendEntry next() {
-                        final Row<MetricsRowKey, Integer> entry = iterator
-                                .next();
+                        final Row<MetricsRowKey, Integer> entry = iterator.next();
                         final MetricsRowKey rowKey = entry.getKey();
                         final Series series = rowKey.getSeries();
 
-                        final List<DataPoint> dataPoints = rowKey
-                                .buildDataPoints(entry.getColumns());
+                        final List<DataPoint> dataPoints = rowKey.buildDataPoints(entry.getColumns());
 
                         return new BackendEntry(series, dataPoints);
                     }

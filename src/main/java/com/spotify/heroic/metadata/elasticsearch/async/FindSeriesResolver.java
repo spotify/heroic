@@ -35,13 +35,10 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
     public FindSeries resolve() throws Exception {
         final Set<Series> series = new HashSet<Series>();
 
-        final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSize(MAX_SIZE)
-                .setScroll(TimeValue.timeValueSeconds(10))
-                .setSearchType(SearchType.SCAN);
+        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSize(MAX_SIZE)
+                .setScroll(TimeValue.timeValueSeconds(10)).setSearchType(SearchType.SCAN);
 
-        request.setQuery(QueryBuilders.filteredQuery(
-                QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
 
         final SearchResponse response = request.get();
         final String scrollId = response.getScrollId();
@@ -53,8 +50,8 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
         int size = 0;
 
         while (true) {
-            final SearchScrollRequestBuilder resp = client.prepareSearchScroll(
-                    scrollId).setScroll(TimeValue.timeValueSeconds(10));
+            final SearchScrollRequestBuilder resp = client.prepareSearchScroll(scrollId).setScroll(
+                    TimeValue.timeValueSeconds(10));
 
             final SearchResponse scroll = resp.get();
 
@@ -67,8 +64,7 @@ public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
                 if (size % 100000 == 0)
                     log.info("{}: Got {} time series", session, size);
 
-                final Series s = ElasticSearchMetadataBackend.toSeries(hit
-                        .getSource());
+                final Series s = ElasticSearchMetadataBackend.toSeries(hit.getSource());
 
                 series.add(s);
             }

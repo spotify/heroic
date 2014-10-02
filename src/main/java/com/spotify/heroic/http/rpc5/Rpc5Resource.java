@@ -32,8 +32,7 @@ public class Rpc5Resource {
     private static final HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups>() {
         @Override
         public Rpc5MetricGroups resume(MetricGroups value) throws Exception {
-            return new Rpc5MetricGroups(value.getGroups(),
-                    value.getStatistics(), value.getErrors());
+            return new Rpc5MetricGroups(value.getGroups(), value.getStatistics(), value.getErrors());
         }
     };
 
@@ -46,70 +45,56 @@ public class Rpc5Resource {
 
     @POST
     @Path("/query")
-    public void query(@Suspended final AsyncResponse response,
-            Rpc5QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = localMetrics.useGroup(
-                query.getBackendGroup()).groupedQuery(query.getGroup(),
-                query.getFilter(), query.getSeries(), query.getRange(),
-                query.getAggregationGroup());
+    public void query(@Suspended final AsyncResponse response, Rpc5QueryBody query) throws Exception {
+        final Callback<MetricGroups> callback = localMetrics.useGroup(query.getBackendGroup()).groupedQuery(
+                query.getGroup(), query.getFilter(), query.getSeries(), query.getRange(), query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 
     @POST
     @Path("/write")
-    public void write(@Suspended final AsyncResponse response,
-            Rpc5WriteBody body) throws Exception {
-        final Callback<WriteBatchResult> callback = localMetrics.useGroup(
-                body.getBackendGroup()).write(body.getWrites());
+    public void write(@Suspended final AsyncResponse response, Rpc5WriteBody body) throws Exception {
+        final Callback<WriteBatchResult> callback = localMetrics.useGroup(body.getBackendGroup()).write(
+                body.getWrites());
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
 
     @POST
     @Path("/full-query")
-    public void query(@Suspended final AsyncResponse response,
-            Rpc5FullQueryBody body) throws Exception {
-        final Callback<MetricGroups> callback = localMetrics.directQueryMetrics(
-                body.getBackendGroup(), body.getFilter(), body.getGroupBy(),
-                body.getRange(), body.getAggregation());
+    public void query(@Suspended final AsyncResponse response, Rpc5FullQueryBody body) throws Exception {
+        final Callback<MetricGroups> callback = localMetrics.directQueryMetrics(body.getBackendGroup(),
+                body.getFilter(), body.getGroupBy(), body.getRange(), body.getAggregation());
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 
     @POST
     @Path("/find-tags")
     public void findTags(@Suspended final AsyncResponse response, Filter filter) {
-        HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.findTags(filter));
+        HttpAsyncUtils.handleAsyncResume(response, localMetadata.findTags(filter));
     }
 
     @POST
     @Path("/find-keys")
     public void findKeys(@Suspended final AsyncResponse response, Filter filter) {
-        HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.findKeys(filter));
+        HttpAsyncUtils.handleAsyncResume(response, localMetadata.findKeys(filter));
     }
 
     @POST
     @Path("/find-series")
-    public void findSeries(@Suspended final AsyncResponse response,
-            Filter filter) {
-        HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.findSeries(filter));
+    public void findSeries(@Suspended final AsyncResponse response, Filter filter) {
+        HttpAsyncUtils.handleAsyncResume(response, localMetadata.findSeries(filter));
     }
 
     @POST
     @Path("/delete-series")
-    public void deleteSeries(@Suspended final AsyncResponse response,
-            Filter filter) {
-        HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.deleteSeries(filter));
+    public void deleteSeries(@Suspended final AsyncResponse response, Filter filter) {
+        HttpAsyncUtils.handleAsyncResume(response, localMetadata.deleteSeries(filter));
     }
 
     @POST
     @Path("/write-series")
-    public void writeSeries(@Suspended final AsyncResponse response,
-            Series series) {
-        HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.bufferWrite(series));
+    public void writeSeries(@Suspended final AsyncResponse response, Series series) {
+        HttpAsyncUtils.handleAsyncResume(response, localMetadata.bufferWrite(series));
     }
 }

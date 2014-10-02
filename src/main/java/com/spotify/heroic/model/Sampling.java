@@ -11,8 +11,7 @@ public class Sampling {
     private final long extent;
 
     @JsonCreator
-    public static Sampling create(
-            @JsonProperty(value = "size", required = true) Long size,
+    public static Sampling create(@JsonProperty(value = "size", required = true) Long size,
             @JsonProperty(value = "extent", required = true) Long extent) {
         return new Sampling(size, extent);
     }

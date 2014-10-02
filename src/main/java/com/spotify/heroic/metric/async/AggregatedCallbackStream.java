@@ -15,38 +15,31 @@ import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.Statistics;
 
 @RequiredArgsConstructor
-public class AggregatedCallbackStream implements
-        Callback.StreamReducer<FetchData, MetricGroups> {
+public class AggregatedCallbackStream implements Callback.StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
     private final Aggregation.Session session;
 
     @Override
-    public void resolved(Callback<FetchData> callback, FetchData result)
-            throws Exception {
+    public void resolved(Callback<FetchData> callback, FetchData result) throws Exception {
         session.update(result.getDatapoints());
     }
 
     @Override
-    public void failed(Callback<FetchData> callback, Exception error)
-            throws Exception {
+    public void failed(Callback<FetchData> callback, Exception error) throws Exception {
     }
 
     @Override
-    public void cancelled(Callback<FetchData> callback, CancelReason reason)
-            throws Exception {
+    public void cancelled(Callback<FetchData> callback, CancelReason reason) throws Exception {
     }
 
     @Override
-    public MetricGroups resolved(int successful, int failed, int cancelled)
-            throws Exception {
+    public MetricGroups resolved(int successful, int failed, int cancelled) throws Exception {
         if (failed > 0)
-            throw new Exception(
-                    "Some time series could not be fetched from the database");
+            throw new Exception("Some time series could not be fetched from the database");
 
         final Aggregation.Result result = session.result();
 
-        final Statistics stat = Statistics.builder()
-                .aggregator(result.getStatistics())
+        final Statistics stat = Statistics.builder().aggregator(result.getStatistics())
                 .row(new Statistics.Row(successful, failed, cancelled)).build();
 
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();

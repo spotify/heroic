@@ -22,8 +22,8 @@ public class SemanticMetricBackendReporter implements MetricBackendReporter {
 
         this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
 
-        this.writeBatch = new SemanticCallbackReporter(registry, base.tagged(
-                "what", "write-batch", "unit", Units.WRITE));
+        this.writeBatch = new SemanticCallbackReporter(registry,
+                base.tagged("what", "write-batch", "unit", Units.WRITE));
     }
 
     @Override

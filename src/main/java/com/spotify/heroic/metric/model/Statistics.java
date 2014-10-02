@@ -50,14 +50,12 @@ public class Statistics {
         private final long uselessScan;
 
         public Aggregator merge(Aggregator other) {
-            return new Aggregator(this.sampleSize + other.sampleSize,
-                    this.outOfBounds + other.outOfBounds, this.uselessScan
-                            + other.uselessScan);
+            return new Aggregator(this.sampleSize + other.sampleSize, this.outOfBounds + other.outOfBounds,
+                    this.uselessScan + other.uselessScan);
         }
 
         @JsonCreator
-        public static Aggregator create(
-                @JsonProperty(value = "sampleSize", required = true) Integer sampleSize,
+        public static Aggregator create(@JsonProperty(value = "sampleSize", required = true) Integer sampleSize,
                 @JsonProperty(value = "outOfBounds", required = true) Integer outOfBounds,
                 @JsonProperty(value = "uselessScan", required = true) Integer uselessScan) {
             return new Aggregator(sampleSize, outOfBounds, uselessScan);
@@ -73,13 +71,12 @@ public class Statistics {
         private final int cancelled;
 
         public Row merge(Row other) {
-            return new Row(this.successful + other.successful, this.failed
-                    + other.failed, this.cancelled + other.cancelled);
+            return new Row(this.successful + other.successful, this.failed + other.failed, this.cancelled
+                    + other.cancelled);
         }
 
         @JsonCreator
-        public static Row create(
-                @JsonProperty(value = "successful", required = true) Integer successful,
+        public static Row create(@JsonProperty(value = "successful", required = true) Integer successful,
                 @JsonProperty(value = "failed", required = true) Integer failed,
                 @JsonProperty(value = "cancelled", required = true) Integer cancelled) {
             return new Row(successful, failed, cancelled);
@@ -97,14 +94,12 @@ public class Statistics {
         private final int cachedNans;
 
         public Cache merge(Cache other) {
-            return new Cache(this.hits + other.hits, this.conflicts
-                    + other.conflicts, this.cacheConflicts
+            return new Cache(this.hits + other.hits, this.conflicts + other.conflicts, this.cacheConflicts
                     + other.cacheConflicts, this.cachedNans + other.cachedNans);
         }
 
         @JsonCreator
-        public static Cache create(
-                @JsonProperty(value = "hits", required = true) Integer hits,
+        public static Cache create(@JsonProperty(value = "hits", required = true) Integer hits,
                 @JsonProperty(value = "conflicts", required = true) Integer conflicts,
                 @JsonProperty(value = "cacheConflicts", required = true) Integer cacheConflicts,
                 @JsonProperty(value = "cachedNans", required = true) Integer cachedNans) {
@@ -112,16 +107,14 @@ public class Statistics {
         }
     }
 
-    public static final Statistics EMPTY = new Statistics(Aggregator.EMPTY,
-            Row.EMPTY, Cache.EMPTY);
+    public static final Statistics EMPTY = new Statistics(Aggregator.EMPTY, Row.EMPTY, Cache.EMPTY);
 
     private final Aggregator aggregator;
     private final Row row;
     private final Cache cache;
 
     public Statistics merge(Statistics other) {
-        return new Statistics(aggregator.merge(other.aggregator),
-                row.merge(other.row), cache.merge(other.cache));
+        return new Statistics(aggregator.merge(other.aggregator), row.merge(other.row), cache.merge(other.cache));
     }
 
     public static Builder builder() {
@@ -134,8 +127,7 @@ public class Statistics {
 
     @JsonCreator
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static Statistics create(
-            @JsonProperty(value = "aggregator", required = true) Aggregator aggregator,
+    public static Statistics create(@JsonProperty(value = "aggregator", required = true) Aggregator aggregator,
             @JsonProperty(value = "row", required = true) Row row,
             @JsonProperty(value = "cache", required = true) Cache cache,
             @JsonProperty(value = "rpc", required = false) Object ignore) {

@@ -37,42 +37,33 @@ public class HeroicResource {
     @Path("/shutdown")
     public Response shutdown() {
         // lol, no :), send TERM signal instead.
-        return Response
-                .status(Response.Status.OK)
-                .entity(new ErrorMessage(
-                        "Not shutting down, use TERM signal instead.")).build();
+        return Response.status(Response.Status.OK)
+                .entity(new ErrorMessage("Not shutting down, use TERM signal instead.")).build();
     }
 
     @POST
     @Path("/migrate/{source}/{target}")
-    public Response migrate(@PathParam("source") String sourceGroup,
-            @PathParam("target") String targetGroup,
-            @QueryParam("history") Long history, Filter filter)
-            throws Exception {
+    public Response migrate(@PathParam("source") String sourceGroup, @PathParam("target") String targetGroup,
+            @QueryParam("history") Long history, Filter filter) throws Exception {
         final MetricBackendGroup source = metrics.useGroup(sourceGroup);
         final MetricBackendGroup target = metrics.useGroup(targetGroup);
 
         if (source == null)
-            return Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorMessage("No such backend group: " + sourceGroup))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorMessage("No such backend group: " + sourceGroup)).build();
 
         if (target == null)
-            return Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorMessage("No such backend group: " + targetGroup))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new ErrorMessage("No such backend group: " + targetGroup)).build();
 
         if (history == null)
             history = TimeUnit.MILLISECONDS.convert(365, TimeUnit.DAYS);
 
         try {
-            seriesMigrator.migrate(history, source, target,
-                    filter);
+            seriesMigrator.migrate(history, source, target, filter);
         } catch (final Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorMessage(e.getMessage())).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorMessage(e.getMessage()))
+                    .build();
         }
 
         return Response.status(Response.Status.OK).build();
@@ -87,7 +78,6 @@ public class HeroicResource {
             results.add(b.getGroup());
         }
 
-        return Response.status(Response.Status.OK)
-                .entity(new DataResponse<>(results)).build();
+        return Response.status(Response.Status.OK).entity(new DataResponse<>(results)).build();
     }
 }

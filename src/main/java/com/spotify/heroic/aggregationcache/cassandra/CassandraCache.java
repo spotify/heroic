@@ -37,37 +37,34 @@ public class CassandraCache implements AggregationCacheBackend {
 
     private AtomicReference<Keyspace> keyspace = new AtomicReference<>();
 
-    private final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily
-            .newColumnFamily("Cql3CF", IntegerSerializer.get(),
-                    StringSerializer.get());
+    private final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily("Cql3CF",
+            IntegerSerializer.get(), StringSerializer.get());
 
     @Inject
     private AggregationCacheBackendReporter reporter;
 
     @Override
-    public Callback<CacheBackendGetResult> get(final CacheBackendKey key,
-            DateRange range) throws CacheOperationException {
+    public Callback<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range)
+            throws CacheOperationException {
         final Keyspace keyspace = this.keyspace.get();
 
         if (keyspace == null) {
             throw new IllegalStateException("keyspace not available");
         }
 
-        return ConcurrentCallback.newResolve(pool.read(), new CacheGetResolver(
-                keyspace, CQL3_CF, key, range));
+        return ConcurrentCallback.newResolve(pool.read(), new CacheGetResolver(keyspace, CQL3_CF, key, range));
     }
 
     @Override
-    public Callback<CacheBackendPutResult> put(final CacheBackendKey key,
-            final List<DataPoint> datapoints) throws CacheOperationException {
+    public Callback<CacheBackendPutResult> put(final CacheBackendKey key, final List<DataPoint> datapoints)
+            throws CacheOperationException {
         final Keyspace keyspace = this.keyspace.get();
 
         if (keyspace == null) {
             throw new IllegalStateException("keyspace not available");
         }
 
-        return ConcurrentCallback.newResolve(pool.write(),
-                new CachePutResolver(keyspace, CQL3_CF, key, datapoints));
+        return ConcurrentCallback.newResolve(pool.write(), new CachePutResolver(keyspace, CQL3_CF, key, datapoints));
     }
 
     @Override

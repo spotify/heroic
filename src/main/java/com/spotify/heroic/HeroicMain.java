@@ -70,21 +70,17 @@ public class HeroicMain {
         }
     };
 
-    public static Injector setupInjector(final HeroicConfig config,
-            final HeroicReporter reporter,
-            final ScheduledExecutorService scheduledExecutor,
-            final HeroicLifeCycle lifecycle) throws Exception {
+    public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter,
+            final ScheduledExecutorService scheduledExecutor, final HeroicLifeCycle lifecycle) throws Exception {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
 
-        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles,
-                reporter));
-        modules.add(new HeroicSchedulerModule(config
-                .getRefreshClusterSchedule()));
+        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles, reporter));
+        modules.add(new HeroicSchedulerModule(config.getRefreshClusterSchedule()));
         modules.add(config.getHttpClientManagerModule());
-        modules.add(config.getMetricBackendManagerModule());
-        modules.add(config.getMetadataBackendManagerModule());
+        modules.add(config.getMetricModule());
+        modules.add(config.getMetadataModule());
         modules.add(config.getClusterManagerModule());
         modules.add(config.getAggregationCacheModule());
         modules.add(config.getIngestionModule());
@@ -94,23 +90,20 @@ public class HeroicMain {
         final Injector injector = Guice.createInjector(modules);
 
         // touch all bindings to make sure they are 'eagerly' initialized.
-        for (final Entry<Key<?>, Binding<?>> entry : injector.getAllBindings()
-                .entrySet()) {
+        for (final Entry<Key<?>, Binding<?>> entry : injector.getAllBindings().entrySet()) {
             entry.getValue().getProvider().get();
         }
 
         return injector;
     }
 
-    private static List<Module> setupConsumers(final HeroicConfig config,
-            final HeroicReporter reporter) {
+    private static List<Module> setupConsumers(final HeroicConfig config, final HeroicReporter reporter) {
         final List<Module> modules = new ArrayList<>();
 
         int consumerCount = 0;
 
         for (final ConsumerConfig consumer : config.getConsumers()) {
-            final String id = consumer.id() != null ? consumer.id() : consumer
-                    .buildId(consumerCount++);
+            final String id = consumer.id() != null ? consumer.id() : consumer.buildId(consumerCount++);
             final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
             modules.add(consumer.module(key, reporter.newConsumer(id)));
         }
@@ -137,8 +130,7 @@ public class HeroicMain {
             return;
         }
 
-        final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(
-                10);
+        final ScheduledExecutorService scheduledExecutor = new ScheduledThreadPoolExecutor(10);
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
@@ -173,9 +165,7 @@ public class HeroicMain {
 
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Runtime.getRuntime().addShutdownHook(
-                setupShutdownHook(ffwd, server, scheduler, latch,
-                        scheduledExecutor));
+        Runtime.getRuntime().addShutdownHook(setupShutdownHook(ffwd, server, scheduler, latch, scheduledExecutor));
 
         startupLatch.countDown();
         log.info("Heroic was successfully started!");
@@ -220,8 +210,7 @@ public class HeroicMain {
         return ok;
     }
 
-    private static HeroicConfig setupConfig(final String configPath,
-            final HeroicReporter reporter) throws IOException {
+    private static HeroicConfig setupConfig(final String configPath, final HeroicReporter reporter) throws IOException {
         log.info("Loading configuration from: {}", configPath);
 
         final HeroicConfig config;
@@ -230,10 +219,8 @@ public class HeroicMain {
             config = HeroicConfig.parse(Paths.get(configPath), reporter);
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
-            log.error(String.format("%s[%d:%d]: %s", configPath,
-                    location == null ? null : location.getLineNr(),
-                            location == null ? null : location.getColumnNr(),
-                                    e.getOriginalMessage()));
+            log.error(String.format("%s[%d:%d]: %s", configPath, location == null ? null : location.getLineNr(),
+                    location == null ? null : location.getColumnNr(), e.getOriginalMessage()));
 
             if (log.isDebugEnabled())
                 log.debug("Configuration error", e);
@@ -244,27 +231,22 @@ public class HeroicMain {
         return config;
     }
 
-    private static Server setupHttpServer(final HeroicConfig config)
-            throws IOException {
+    private static Server setupHttpServer(final HeroicConfig config) throws IOException {
         log.info("Starting HTTP Server...");
 
         final Server server = new Server(config.getPort());
 
-        final ServletContextHandler context = new ServletContextHandler(
-                ServletContextHandler.NO_SESSIONS);
+        final ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/");
 
         // Initialize and register GuiceFilter
-        context.addFilter(GuiceFilter.class, "/*",
-                EnumSet.allOf(DispatcherType.class));
+        context.addFilter(GuiceFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
         context.addEventListener(HeroicMain.LISTENER);
 
         // Initialize and register Jersey ServletContainer
-        final ServletHolder jerseyServlet = context.addServlet(
-                ServletContainer.class, "/*");
+        final ServletHolder jerseyServlet = context.addServlet(ServletContainer.class, "/*");
         jerseyServlet.setInitOrder(1);
-        jerseyServlet.setInitParameter("javax.ws.rs.Application",
-                HeroicJerseyApplication.class.getName());
+        jerseyServlet.setInitParameter("javax.ws.rs.Application", HeroicJerseyApplication.class.getName());
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();
 
@@ -274,8 +256,7 @@ public class HeroicMain {
         makeRewriteRules(rewrite);
 
         final HandlerCollection handlers = new HandlerCollection();
-        handlers.setHandlers(new Handler[] { rewrite, context,
-                requestLogHandler });
+        handlers.setHandlers(new Handler[] { rewrite, context, requestLogHandler });
 
         server.setHandler(handlers);
 
@@ -312,28 +293,23 @@ public class HeroicMain {
         }
     }
 
-    private static FastForwardReporter setupReporter(
-            final SemanticMetricRegistry registry) throws IOException {
+    private static FastForwardReporter setupReporter(final SemanticMetricRegistry registry) throws IOException {
         final MetricId gauges = MetricId.build();
 
         registry.register(gauges, new ThreadStatesMetricSet());
         registry.register(gauges, new GarbageCollectorMetricSet());
         registry.register(gauges, new MemoryUsageGaugeSet());
 
-        final FastForwardReporter ffwd = FastForwardReporter
-                .forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
-                .prefix(MetricId.build("heroic").tagged("service", "heroic"))
-                .build();
+        final FastForwardReporter ffwd = FastForwardReporter.forRegistry(registry).schedule(TimeUnit.SECONDS, 30)
+                .prefix(MetricId.build("heroic").tagged("service", "heroic")).build();
 
         ffwd.start();
 
         return ffwd;
     }
 
-    private static Thread setupShutdownHook(final FastForwardReporter ffwd,
-            final Server server, final Scheduler scheduler,
-            final CountDownLatch latch,
-            final ScheduledExecutorService scheduledExecutor) {
+    private static Thread setupShutdownHook(final FastForwardReporter ffwd, final Server server,
+            final Scheduler scheduler, final CountDownLatch latch, final ScheduledExecutorService scheduledExecutor) {
         return new Thread() {
             @Override
             public void run() {
@@ -373,8 +349,7 @@ public class HeroicMain {
 
                 if (LogManager.getContext() instanceof LoggerContext) {
                     log.info("Shutting down log4j2, Bye Bye!");
-                    Configurator.shutdown((LoggerContext) LogManager
-                            .getContext());
+                    Configurator.shutdown((LoggerContext) LogManager.getContext());
                 } else {
                     log.warn("Unable to shutdown log4j2, Bye Bye!");
                 }

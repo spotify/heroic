@@ -21,8 +21,7 @@ import com.spotify.heroic.metadata.elasticsearch.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
-public class FindTagsTransformer implements
-Callback.DeferredTransformer<FindTagKeys, FindTags> {
+public class FindTagsTransformer implements Callback.DeferredTransformer<FindTagKeys, FindTags> {
     private final Executor executor;
     private final Client client;
     private final String index;
@@ -41,8 +40,7 @@ Callback.DeferredTransformer<FindTagKeys, FindTags> {
     }
 
     /**
-     * Finds a single set of tags, excluding any criteria for this specific set
-     * of tags.
+     * Finds a single set of tags, excluding any criteria for this specific set of tags.
      */
     private Callback<FindTags> findSingle(final String key) {
         final Filter filter = removeKeyFromFilter(this.filter, key);
@@ -52,8 +50,7 @@ Callback.DeferredTransformer<FindTagKeys, FindTags> {
         if (f == null)
             return new ResolvedCallback<FindTags>(FindTags.EMPTY);
 
-        return ConcurrentCallback.newResolve(executor, new FindTagsResolver(
-                client, index, type, f, key));
+        return ConcurrentCallback.newResolve(executor, new FindTagsResolver(client, index, type, f, key));
     }
 
     private Filter removeKeyFromFilter(Filter filter, String key) {

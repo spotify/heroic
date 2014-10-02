@@ -102,20 +102,16 @@ public class KafkaConsumer implements Consumer {
         consuming.set(0);
         total.set(consumer.getThreadPoolSize());
 
-        final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
-                .createMessageStreams(streamsMap);
+        final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector.createMessageStreams(streamsMap);
 
-        for (final Map.Entry<String, List<KafkaStream<byte[], byte[]>>> entry : streams
-                .entrySet()) {
+        for (final Map.Entry<String, List<KafkaStream<byte[], byte[]>>> entry : streams.entrySet()) {
             final String topic = entry.getKey();
             final List<KafkaStream<byte[], byte[]>> list = entry.getValue();
 
             for (final KafkaStream<byte[], byte[]> stream : list) {
-                consumer.get()
-                        .execute(
-                                new ConsumerThread(lifecycle, reporter, topic,
-                                        stream, this, schema, consuming,
-                                        errors, shutdownLatch));
+                consumer.get().execute(
+                        new ConsumerThread(lifecycle, reporter, topic, stream, this, schema, consuming, errors,
+                                shutdownLatch));
             }
         }
 

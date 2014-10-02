@@ -33,26 +33,22 @@ public final class ElasticSearchUtils {
 
         if (filter instanceof AndFilter) {
             final AndFilter and = (AndFilter) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(and
-                    .getStatements().size());
+            final List<FilterBuilder> filters = new ArrayList<>(and.getStatements().size());
 
             for (final Filter stmt : and.getStatements())
                 filters.add(convertFilter(stmt));
 
-            return FilterBuilders.andFilter(filters
-                    .toArray(new FilterBuilder[0]));
+            return FilterBuilders.andFilter(filters.toArray(new FilterBuilder[0]));
         }
 
         if (filter instanceof OrFilter) {
             final OrFilter or = (OrFilter) filter;
-            final List<FilterBuilder> filters = new ArrayList<>(or
-                    .getStatements().size());
+            final List<FilterBuilder> filters = new ArrayList<>(or.getStatements().size());
 
             for (final Filter stmt : or.getStatements())
                 filters.add(convertFilter(stmt));
 
-            return FilterBuilders.orFilter(filters
-                    .toArray(new FilterBuilder[0]));
+            return FilterBuilders.orFilter(filters.toArray(new FilterBuilder[0]));
         }
 
         if (filter instanceof NotFilter) {
@@ -65,12 +61,8 @@ public final class ElasticSearchUtils {
 
             return FilterBuilders.nestedFilter(
                     TAGS,
-                    FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            matchTag.getTag()))
-                            .must(FilterBuilders.termFilter(TAGS_VALUE,
-                                    matchTag.getValue())));
+                    FilterBuilders.boolFilter().must(FilterBuilders.termFilter(TAGS_KEY, matchTag.getTag()))
+                            .must(FilterBuilders.termFilter(TAGS_VALUE, matchTag.getValue())));
         }
 
         if (filter instanceof StartsWithFilter) {
@@ -78,12 +70,8 @@ public final class ElasticSearchUtils {
 
             return FilterBuilders.nestedFilter(
                     TAGS,
-                    FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            startsWith.getTag()))
-                            .must(FilterBuilders.prefixFilter(TAGS_VALUE,
-                                    startsWith.getValue())));
+                    FilterBuilders.boolFilter().must(FilterBuilders.termFilter(TAGS_KEY, startsWith.getTag()))
+                            .must(FilterBuilders.prefixFilter(TAGS_VALUE, startsWith.getValue())));
         }
 
         if (filter instanceof RegexFilter) {
@@ -91,18 +79,13 @@ public final class ElasticSearchUtils {
 
             return FilterBuilders.nestedFilter(
                     TAGS,
-                    FilterBuilders
-                    .boolFilter()
-                    .must(FilterBuilders.termFilter(TAGS_KEY,
-                            regex.getTag()))
-                            .must(FilterBuilders.regexpFilter(TAGS_VALUE,
-                                    regex.getValue())));
+                    FilterBuilders.boolFilter().must(FilterBuilders.termFilter(TAGS_KEY, regex.getTag()))
+                            .must(FilterBuilders.regexpFilter(TAGS_VALUE, regex.getValue())));
         }
 
         if (filter instanceof HasTagFilter) {
             final HasTagFilter hasTag = (HasTagFilter) filter;
-            return FilterBuilders.nestedFilter(TAGS,
-                    FilterBuilders.termFilter(TAGS_KEY, hasTag.getTag()));
+            return FilterBuilders.nestedFilter(TAGS, FilterBuilders.termFilter(TAGS_KEY, hasTag.getTag()));
         }
 
         if (filter instanceof MatchKeyFilter) {
@@ -110,7 +93,6 @@ public final class ElasticSearchUtils {
             return FilterBuilders.termFilter(KEY, matchKey.getValue());
         }
 
-        throw new IllegalArgumentException("Invalid filter statement: "
-                + filter);
+        throw new IllegalArgumentException("Invalid filter statement: " + filter);
     }
 }

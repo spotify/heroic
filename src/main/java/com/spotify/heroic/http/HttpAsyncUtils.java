@@ -15,10 +15,8 @@ public final class HttpAsyncUtils {
         public R resume(T value) throws Exception;
     }
 
-    public static <T> void handleAsyncResume(final AsyncResponse response,
-            final Callback<T> callback) {
-        HttpAsyncUtils.<T, T> handleAsyncResume(response, callback,
-                HttpAsyncUtils.<T> passthrough());
+    public static <T> void handleAsyncResume(final AsyncResponse response, final Callback<T> callback) {
+        HttpAsyncUtils.<T, T> handleAsyncResume(response, callback, HttpAsyncUtils.<T> passthrough());
     }
 
     /**
@@ -31,36 +29,31 @@ public final class HttpAsyncUtils {
      * @param resume
      *            The resume implementation.
      */
-    public static <T, R> void handleAsyncResume(final AsyncResponse response,
-            final Callback<T> callback, final Resume<T, R> resume) {
+    public static <T, R> void handleAsyncResume(final AsyncResponse response, final Callback<T> callback,
+            final Resume<T, R> resume) {
         callback.register(new Callback.Handle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                response.resume(Response
-                        .status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(new ErrorMessage("Request cancelled: " + reason))
-                        .build());
+                response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(new ErrorMessage("Request cancelled: " + reason)).build());
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                response.resume(Response
-                        .status(Response.Status.INTERNAL_SERVER_ERROR)
+                response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                         .entity(new ErrorMessage(e.getMessage())).build());
             }
 
             @Override
             public void resolved(T result) throws Exception {
-                response.resume(Response.status(Response.Status.OK)
-                        .entity(resume.resume(result)).build());
+                response.resume(Response.status(Response.Status.OK).entity(resume.resume(result)).build());
             }
         });
 
         HttpAsyncUtils.setupAsyncHandling(response, callback);
     }
 
-    private static void setupAsyncHandling(final AsyncResponse response,
-            final Callback<?> callback) {
+    private static void setupAsyncHandling(final AsyncResponse response, final Callback<?> callback) {
         response.setTimeoutHandler(new TimeoutHandler() {
             @Override
             public void handleTimeout(AsyncResponse asyncResponse) {

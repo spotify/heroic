@@ -34,23 +34,18 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
 
     @Override
     public FindTags resolve() throws Exception {
-        final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSearchType("count").setSize(0);
+        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSearchType("count")
+                .setSize(0);
 
-        request.setQuery(QueryBuilders.filteredQuery(
-                QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
 
         {
-            final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms").field(ElasticSearchUtils.TAGS_VALUE).size(0);
-            final AggregationBuilder<?> filter = AggregationBuilders
-                    .filter("filter")
-                    .filter(FilterBuilders
-                            .termFilter(ElasticSearchUtils.TAGS_KEY, key))
-                    .subAggregation(terms);
-            final AggregationBuilder<?> aggregation = AggregationBuilders
-                    .nested("nested").path(ElasticSearchUtils.TAGS)
-                    .subAggregation(filter);
+            final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(ElasticSearchUtils.TAGS_VALUE)
+                    .size(0);
+            final AggregationBuilder<?> filter = AggregationBuilders.filter("filter")
+                    .filter(FilterBuilders.termFilter(ElasticSearchUtils.TAGS_KEY, key)).subAggregation(terms);
+            final AggregationBuilder<?> aggregation = AggregationBuilders.nested("nested")
+                    .path(ElasticSearchUtils.TAGS).subAggregation(filter);
             request.addAggregation(aggregation);
         }
 
@@ -58,10 +53,7 @@ public class FindTagsResolver implements Callback.Resolver<FindTags> {
 
         final Terms terms;
 
-        /*
-         * IMPORTANT: has to be unwrapped with the correct type in the correct
-         * order as specified above!
-         */
+        /* IMPORTANT: has to be unwrapped with the correct type in the correct order as specified above! */
         {
             final Aggregations aggregations = response.getAggregations();
             final Nested tags = (Nested) aggregations.get("nested");

@@ -13,8 +13,7 @@ public interface Consumer extends LifeCycle {
         private final long errors;
     }
 
-    public void write(WriteMetric entry) throws WriteException,
-    InterruptedException;
+    public void write(WriteMetric entry) throws WriteException, InterruptedException;
 
     public Statistics getStatistics();
 }

@@ -11,8 +11,7 @@ import com.spotify.heroic.model.Series;
 public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     public static final MetricsRowKeySerializer instance = new MetricsRowKeySerializer();
 
-    private static final SeriesSerializer seriesSerializer = SeriesSerializer
-            .get();
+    private static final SeriesSerializer seriesSerializer = SeriesSerializer.get();
     private static final LongSerializer longSerializer = LongSerializer.get();
 
     public static MetricsRowKeySerializer get() {
@@ -45,8 +44,7 @@ public class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
         final long shift = (long) Integer.MAX_VALUE + 1;
 
         timestamp = timestamp + shift;
-        return (int) (timestamp - MetricsRowKeySerializer
-                .getBaseTimestamp(timestamp));
+        return (int) (timestamp - MetricsRowKeySerializer.getBaseTimestamp(timestamp));
     }
 
     public static long calculateAbsoluteTimestamp(long base, int columnKey) {

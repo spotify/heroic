@@ -16,8 +16,7 @@ public class RefreshClusterJob implements Job {
     private ClusterManager cluster;
 
     @Override
-    public void execute(JobExecutionContext context)
-            throws JobExecutionException {
+    public void execute(JobExecutionContext context) throws JobExecutionException {
         log.info("Refreshing cluster");
 
         try {

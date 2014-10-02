@@ -29,17 +29,14 @@ public class FindTagKeysResolver implements Callback.Resolver<FindTagKeys> {
 
     @Override
     public FindTagKeys resolve() throws Exception {
-        final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSearchType("count");
+        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSearchType("count");
 
-        request.setQuery(QueryBuilders.filteredQuery(
-                QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
 
         {
-            final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms").field(ElasticSearchUtils.TAGS_KEY).size(0);
-            final AggregationBuilder<?> nested = AggregationBuilders
-                    .nested("nested").path(ElasticSearchUtils.TAGS)
+            final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(ElasticSearchUtils.TAGS_KEY)
+                    .size(0);
+            final AggregationBuilder<?> nested = AggregationBuilders.nested("nested").path(ElasticSearchUtils.TAGS)
                     .subAggregation(terms);
             request.addAggregation(nested);
         }

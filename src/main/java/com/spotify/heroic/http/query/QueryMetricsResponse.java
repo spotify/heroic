@@ -22,16 +22,14 @@ public class QueryMetricsResponse {
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
         @Override
-        public void serialize(Object value, JsonGenerator g,
-                SerializerProvider provider) throws IOException,
+        public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
             final Map<Map<String, String>, List<DataPoint>> result = (Map<Map<String, String>, List<DataPoint>>) value;
 
             g.writeStartArray();
 
-            for (final Map.Entry<Map<String, String>, List<DataPoint>> entry : result
-                    .entrySet()) {
+            for (final Map.Entry<Map<String, String>, List<DataPoint>> entry : result.entrySet()) {
                 final Map<String, String> tags = entry.getKey();
                 final List<DataPoint> datapoints = entry.getValue();
 

@@ -26,8 +26,7 @@ public class SeriesSlice {
 
     public SeriesSlice join(SeriesSlice other) {
         if (!overlap(other)) {
-            throw new IllegalArgumentException("Slices " + this + " and "
-                    + other + " does not overlap");
+            throw new IllegalArgumentException("Slices " + this + " and " + other + " does not overlap");
         }
 
         return new SeriesSlice(series, range.join(other.range));
@@ -53,8 +52,7 @@ public class SeriesSlice {
     /**
      * Create an expanded time slice.
      *
-     * This will cause the current time slice to be expanded if it the specified
-     * range is larger.
+     * This will cause the current time slice to be expanded if it the specified range is larger.
      *
      * @param first
      * @param last
@@ -76,8 +74,7 @@ public class SeriesSlice {
     };
 
     /**
-     * Join a list of slices into another list. This will make all overlapping
-     * slices into one.
+     * Join a list of slices into another list. This will make all overlapping slices into one.
      *
      * @param slices
      *            List of slices to join.
@@ -102,8 +99,8 @@ public class SeriesSlice {
         return joined;
     }
 
-    private static SeriesSlice joinAllIterate(final List<SeriesSlice> joined,
-            final SeriesSlice first, Iterator<SeriesSlice> iterator) {
+    private static SeriesSlice joinAllIterate(final List<SeriesSlice> joined, final SeriesSlice first,
+            Iterator<SeriesSlice> iterator) {
 
         long end = first.range.end();
 
@@ -111,8 +108,7 @@ public class SeriesSlice {
             final SeriesSlice tail = iterator.next();
 
             if (!first.getSeries().equals(tail.getSeries())) {
-                throw new IllegalArgumentException("Cannot join slices "
-                        + first + " and " + tail
+                throw new IllegalArgumentException("Cannot join slices " + first + " and " + tail
                         + " from different time series");
             }
 

@@ -41,21 +41,18 @@ public class LocalClusterNode implements ClusterNode {
     private UUID id;
 
     @Override
-    public Callback<MetricGroups> query(final String backendGroup,
-            final Filter filter, final Map<String, String> group,
-            final AggregationGroup aggregation, final DateRange range,
+    public Callback<MetricGroups> query(final String backendGroup, final Filter filter,
+            final Map<String, String> group, final AggregationGroup aggregation, final DateRange range,
             final Set<Series> series) {
         try {
-            return metrics.useGroup(backendGroup).groupedQuery(group, filter,
-                    series, range, aggregation);
+            return metrics.useGroup(backendGroup).groupedQuery(group, filter, series, range, aggregation);
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }
     }
 
     @Override
-    public Callback<WriteBatchResult> write(String backendGroup,
-            Collection<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(String backendGroup, Collection<WriteMetric> writes) {
         try {
             return metrics.useGroup(backendGroup).write(writes);
         } catch (final BackendOperationException e) {
@@ -64,10 +61,9 @@ public class LocalClusterNode implements ClusterNode {
     }
 
     @Override
-    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter,
-            List<String> groupBy, DateRange range, AggregationGroup aggregation) {
-        return metrics.directQueryMetrics(backendGroup, filter, groupBy, range,
-                aggregation);
+    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter, List<String> groupBy, DateRange range,
+            AggregationGroup aggregation) {
+        return metrics.directQueryMetrics(backendGroup, filter, groupBy, range, aggregation);
     }
 
     @Override

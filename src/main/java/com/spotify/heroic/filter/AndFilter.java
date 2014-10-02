@@ -43,8 +43,7 @@ public class AndFilter implements ManyTermsFilter {
 
     @Override
     public Filter optimize() {
-        return ManyOptimizer.optimize(statements, AndFilter.class,
-                TrueFilter.get(), BUILDER);
+        return ManyOptimizer.optimize(statements, AndFilter.class, TrueFilter.get(), BUILDER);
     }
 
     @Override

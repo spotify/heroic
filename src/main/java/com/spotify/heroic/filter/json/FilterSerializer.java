@@ -39,16 +39,13 @@ public class FilterSerializer extends JsonSerializer<Filter> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void serialize(Filter value, JsonGenerator g,
-            SerializerProvider provider) throws IOException,
+    public void serialize(Filter value, JsonGenerator g, SerializerProvider provider) throws IOException,
             JsonProcessingException {
 
-        final FilterSerialization<Filter> serializer = (FilterSerialization<Filter>) IMPL
-                .get(value.getClass());
+        final FilterSerialization<Filter> serializer = (FilterSerialization<Filter>) IMPL.get(value.getClass());
 
         if (serializer == null)
-            throw new JsonGenerationException("Filter type not supported: "
-                    + value.getClass());
+            throw new JsonGenerationException("Filter type not supported: " + value.getClass());
 
         g.writeStartArray();
         g.writeString(value.operator());

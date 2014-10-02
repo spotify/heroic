@@ -34,10 +34,8 @@ public class KafkaConsumerConfig implements ConsumerConfig {
     private final ConsumerSchema schema;
 
     @JsonCreator
-    public static KafkaConsumerConfig create(@JsonProperty("id") String id,
-            @JsonProperty("schema") String schema,
-            @JsonProperty("topics") List<String> topics,
-            @JsonProperty("threads") Integer threads,
+    public static KafkaConsumerConfig create(@JsonProperty("id") String id, @JsonProperty("schema") String schema,
+            @JsonProperty("topics") List<String> topics, @JsonProperty("threads") Integer threads,
             @JsonProperty("config") Map<String, String> config) {
         if (threads == null)
             threads = DEFAULT_THREADS;
@@ -45,8 +43,7 @@ public class KafkaConsumerConfig implements ConsumerConfig {
         if (schema == null)
             throw new RuntimeException("'schema' not defined");
 
-        final ConsumerSchema schemaClass = Reflection.buildInstance(schema,
-                ConsumerSchema.class);
+        final ConsumerSchema schemaClass = Reflection.buildInstance(schema, ConsumerSchema.class);
 
         if (topics == null || topics.isEmpty())
             throw new RuntimeException("'topics' must be defined and non-empty");
@@ -58,8 +55,7 @@ public class KafkaConsumerConfig implements ConsumerConfig {
     }
 
     @Override
-    public Module module(final Key<Consumer> key,
-            final ConsumerReporter reporter) {
+    public Module module(final Key<Consumer> key, final ConsumerReporter reporter) {
         return new PrivateModule() {
             @Provides
             @Singleton
@@ -84,8 +80,8 @@ public class KafkaConsumerConfig implements ConsumerConfig {
             @Provides
             @Singleton
             public ThreadPool threadPool() {
-                return ThreadPool.create("consumers", reporter.newThreadPool(),
-                        threads * topics.size(), threads * topics.size());
+                return ThreadPool.create("consumers", reporter.newThreadPool(), threads * topics.size(), threads
+                        * topics.size());
             }
 
             @Provides

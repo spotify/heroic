@@ -26,14 +26,12 @@ public class HttpClientSession {
     public <R, T> Callback<T> post(R request, Class<T> clazz, String endpoint) {
         final Client client = ClientBuilder.newClient(config);
         final WebTarget target = client.target(uri).path(base).path(endpoint);
-        return ConcurrentCallback.newResolve(executor,
-                new HttpPostRequestResolver<R, T>(request, clazz, target));
+        return ConcurrentCallback.newResolve(executor, new HttpPostRequestResolver<R, T>(request, clazz, target));
     }
 
     public <T> Callback<T> get(Class<T> clazz, String endpoint) {
         final Client client = ClientBuilder.newClient(config);
         final WebTarget target = client.target(uri).path(base).path(endpoint);
-        return ConcurrentCallback.newResolve(executor,
-                new HttpGetRequestResolver<T>(clazz, target));
+        return ConcurrentCallback.newResolve(executor, new HttpGetRequestResolver<T>(clazz, target));
     }
 }

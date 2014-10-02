@@ -21,8 +21,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 public class DataPoint implements Comparable<DataPoint> {
     public static class Deserializer extends JsonDeserializer<DataPoint> {
         @Override
-        public DataPoint deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+        public DataPoint deserialize(JsonParser p, DeserializationContext c) throws IOException,
+                JsonProcessingException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY)
                 throw c.mappingException("Expected start of array");
@@ -61,8 +61,7 @@ public class DataPoint implements Comparable<DataPoint> {
 
     public static class Serializer extends JsonSerializer<DataPoint> {
         @Override
-        public void serialize(DataPoint d, JsonGenerator g,
-                SerializerProvider provider) throws IOException,
+        public void serialize(DataPoint d, JsonGenerator g, SerializerProvider provider) throws IOException,
                 JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());

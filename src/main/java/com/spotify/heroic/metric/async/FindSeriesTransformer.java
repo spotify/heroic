@@ -19,13 +19,11 @@ import com.spotify.heroic.model.Series;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class FindSeriesTransformer implements
-Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
+public class FindSeriesTransformer implements Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
     private final List<String> groupBy;
 
     @Override
-    public FindTimeSeriesGroups transform(final FindSeries result)
-            throws Exception {
+    public FindTimeSeriesGroups transform(final FindSeries result) throws Exception {
         final Map<Map<String, String>, Set<Series>> groups = new HashMap<>();
 
         for (final Series series : result.getSeries()) {

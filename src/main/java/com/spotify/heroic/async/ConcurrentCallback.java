@@ -8,12 +8,11 @@ import java.util.concurrent.Executor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * A class implementing the callback pattern concurrently in a way that any
- * thread can use the callback instance in a thread-safe manner.
+ * A class implementing the callback pattern concurrently in a way that any thread can use the callback instance in a
+ * thread-safe manner.
  * 
- * The callback will retain it's result if it arrives early allowing for
- * graceful additions of late listeners. This allows for the deferred work to
- * start immediately.
+ * The callback will retain it's result if it arrives early allowing for graceful additions of late listeners. This
+ * allows for the deferred work to start immediately.
  * 
  * It also allows for cancellation in any order.
  * 
@@ -29,13 +28,11 @@ import lombok.extern.slf4j.Slf4j;
  * 
  * <h1>Synchronized functions.</h3>
  * 
- * rule a) The following fields must only be accessed in a block synchronized on
- * <code>state</code>: state, error, cancelReason, result, handlers,
- * cancellables, and finishables.
+ * rule a) The following fields must only be accessed in a block synchronized on <code>state</code>: state, error,
+ * cancelReason, result, handlers, cancellables, and finishables.
  * 
- * rule b) No other callback must be invoked in a synchronized block since that
- * could result in deadlocks because _this_ callback could be part of another
- * callbacks chain.
+ * rule b) No other callback must be invoked in a synchronized block since that could result in deadlocks because _this_
+ * callback could be part of another callbacks chain.
  * 
  * @author udoprog
  * 
@@ -43,8 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  *            The type being deferred.
  */
 @Slf4j
-public class ConcurrentCallback<T> extends AbstractCallback<T> implements
-        Callback<T> {
+public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callback<T> {
     private List<Handle<T>> handlers = new LinkedList<Handle<T>>();
     private List<Cancellable> cancellables = new LinkedList<Cancellable>();
     private List<Finishable> finishables = new LinkedList<Finishable>();
@@ -176,8 +172,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
     }
 
     /**
-     * Make a point to clear all handles to assert that any associated memory
-     * can be freed up ASAP.
+     * Make a point to clear all handles to assert that any associated memory can be freed up ASAP.
      */
     private void clear() {
         handlers = null;
@@ -281,8 +276,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
      * 
      * @see {@link Callback#resolve(Executor, com.spotify.heroic.async.Callback.Resolver)}
      */
-    public static <C> Callback<C> newResolve(Executor executor,
-            final Resolver<C> resolver) {
+    public static <C> Callback<C> newResolve(Executor executor, final Resolver<C> resolver) {
         return new ConcurrentCallback<C>().resolve(executor, resolver);
     }
 
@@ -291,8 +285,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
      * 
      * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.Reducer)}
      */
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
-            final Reducer<C, T> reducer) {
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
     }
 
@@ -301,14 +294,12 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements
      * 
      * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.StreamReducer)}
      */
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries,
-            final StreamReducer<C, T> reducer) {
+    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
         return new ConcurrentCallback<T>().reduce(queries, reducer);
     }
 
     @Override
-    public T get() throws InterruptedException, CancelledException,
-            FailedException {
+    public T get() throws InterruptedException, CancelledException, FailedException {
         final CountDownLatch latch = new CountDownLatch(1);
 
         register(new Finishable() {

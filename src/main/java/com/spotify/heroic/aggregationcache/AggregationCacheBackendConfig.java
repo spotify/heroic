@@ -11,8 +11,7 @@ import com.spotify.heroic.aggregationcache.cassandra.CassandraCacheConfig;
  * @author udoprog
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = InMemoryAggregationCacheBackendConfig.class, name = "in-memory"),
+@JsonSubTypes({ @JsonSubTypes.Type(value = InMemoryAggregationCacheBackendConfig.class, name = "in-memory"),
         @JsonSubTypes.Type(value = CassandraCacheConfig.class, name = "cassandra") })
 public interface AggregationCacheBackendConfig {
     public Module module();

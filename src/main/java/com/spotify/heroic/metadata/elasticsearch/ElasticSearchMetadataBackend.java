@@ -136,11 +136,10 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     /**
-     * prevent unnecessary writes if entry is already in cache. Integer is the
-     * hashCode of the series.
+     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
      */
-    private final Cache<Series, Boolean> writeCache = CacheBuilder.newBuilder()
-            .concurrencyLevel(4).expireAfterWrite(15, TimeUnit.MINUTES).build();
+    private final Cache<Series, Boolean> writeCache = CacheBuilder.newBuilder().concurrencyLevel(4)
+            .expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Override
     public synchronized void start() throws Exception {
@@ -159,8 +158,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         initBulkProcessor(connection);
     }
 
-    private synchronized void initMapping(Connection connection)
-            throws Exception {
+    private synchronized void initMapping(Connection connection) throws Exception {
         log.info("Setting up mapping for index={} and type={}", index, type);
 
         final Client client = connection.client();
@@ -177,20 +175,16 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     private boolean indexExists(AdminClient admin) {
-        final ClusterStateResponse response = admin.cluster().prepareState()
-                .get();
+        final ClusterStateResponse response = admin.cluster().prepareState().get();
 
         return response.getState().metaData().hasIndex(index);
     }
 
-    private void createMapping(final IndicesAdminClient indices)
-            throws Exception {
-        final PutMappingResponse response = indices.preparePutMapping(index)
-                .setType(type).setSource(mapping).get();
+    private void createMapping(final IndicesAdminClient indices) throws Exception {
+        final PutMappingResponse response = indices.preparePutMapping(index).setType(type).setSource(mapping).get();
 
         if (!response.isAcknowledged())
-            throw new Exception("Failed to setup mapping: "
-                    + response.toString());
+            throw new Exception("Failed to setup mapping: " + response.toString());
     }
 
     private void createIndex(final IndicesAdminClient indices) throws Exception {
@@ -207,8 +201,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             throw new Exception("Failed to setup index: " + response.toString());
     }
 
-    private synchronized Connection initConnection()
-            throws UnknownHostException, Exception {
+    private synchronized Connection initConnection() throws UnknownHostException, Exception {
         final Connection connection;
 
         if (nodeClient) {
@@ -235,15 +228,13 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             }
 
             @Override
-            public void afterBulk(long executionId, BulkRequest request,
-                    Throwable failure) {
+            public void afterBulk(long executionId, BulkRequest request, Throwable failure) {
                 reporter.reportWriteFailure(request.numberOfActions());
                 log.error("Failed to write bulk", failure);
             }
 
             @Override
-            public void afterBulk(long executionId, BulkRequest request,
-                    BulkResponse response) {
+            public void afterBulk(long executionId, BulkRequest request, BulkResponse response) {
                 reporter.reportWriteBatchDuration(response.getTookInMillis());
 
                 final int all = response.getItems().length;
@@ -308,16 +299,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             connection.close();
     }
 
-    private synchronized Connection setupNodeClient()
-            throws UnknownHostException {
-        final Settings settings = ImmutableSettings
-                .builder()
+    private synchronized Connection setupNodeClient() throws UnknownHostException {
+        final Settings settings = ImmutableSettings.builder()
                 .put("node.name", InetAddress.getLocalHost().getHostName())
                 .put("discovery.zen.ping.multicast.enabled", false)
-                .putArray("discovery.zen.ping.unicast.hosts",
-                        seedsToDiscovery()).build();
-        final Node node = NodeBuilder.nodeBuilder().settings(settings)
-                .client(true).clusterName(clusterName).node();
+                .putArray("discovery.zen.ping.unicast.hosts", seedsToDiscovery()).build();
+        final Node node = NodeBuilder.nodeBuilder().settings(settings).client(true).clusterName(clusterName).node();
         final Client client = node.client();
 
         return new Connection() {
@@ -337,16 +324,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final List<String> seeds = new ArrayList<>();
 
         for (final InetSocketTransportAddress seed : this.seeds) {
-            seeds.add(String.format("%s:%d", seed.address().getHostString(),
-                    seed.address().getPort()));
+            seeds.add(String.format("%s:%d", seed.address().getHostString(), seed.address().getPort()));
         }
 
         return seeds.toArray(new String[0]);
     }
 
     private synchronized Connection setupTransportClient() {
-        final Settings settings = ImmutableSettings.builder()
-                .put("cluster.name", clusterName).build();
+        final Settings settings = ImmutableSettings.builder().put("cluster.name", clusterName).build();
 
         final TransportClient client = new TransportClient(settings);
 
@@ -368,16 +353,14 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindTags> findTags(final Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindTags> findTags(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
             throw new MetadataOperationException("Backend not ready");
 
-        return findTagKeys(filter).transform(
-                new FindTagsTransformer(pools.read(), client, index, type,
-                        filter)).register(reporter.reportFindTags());
+        return findTagKeys(filter).transform(new FindTagsTransformer(pools.read(), client, index, type, filter))
+                .register(reporter.reportFindTags());
     }
 
     @Override
@@ -396,8 +379,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindSeries> findSeries(final Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindSeries> findSeries(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
@@ -408,14 +390,12 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (f == null)
             return new ResolvedCallback<FindSeries>(FindSeries.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(),
-                new FindSeriesResolver(client, index, type, f)).register(
-                        reporter.reportFindTimeSeries());
+        return ConcurrentCallback.newResolve(pools.read(), new FindSeriesResolver(client, index, type, f)).register(
+                reporter.reportFindTimeSeries());
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(final Filter filter)
-            throws MetadataOperationException {
+    public Callback<DeleteSeries> deleteSeries(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
@@ -426,56 +406,47 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         if (f == null)
             return new ResolvedCallback<DeleteSeries>(DeleteSeries.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.write(),
-                new DeleteTimeSeriesResolver(client, index, type, f));
+        return ConcurrentCallback.newResolve(pools.write(), new DeleteTimeSeriesResolver(client, index, type, f));
     }
 
-    public Callback<FindTagKeys> findTagKeys(final Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindTagKeys> findTagKeys(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindTagKeys>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<FindTagKeys>(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
             return new ResolvedCallback<FindTagKeys>(FindTagKeys.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(),
-                new FindTagKeysResolver(client, index, type, f)).register(
-                        reporter.reportFindTagKeys());
+        return ConcurrentCallback.newResolve(pools.read(), new FindTagKeysResolver(client, index, type, f)).register(
+                reporter.reportFindTagKeys());
     }
 
     @Override
-    public Callback<FindKeys> findKeys(final Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindKeys> findKeys(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindKeys>(
-                    CancelReason.BACKEND_DISABLED);
+            return new CancelledCallback<FindKeys>(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
             return new ResolvedCallback<FindKeys>(FindKeys.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(),
-                new FindKeysResolver(client, index, type, f)).register(
-                        reporter.reportFindKeys());
+        return ConcurrentCallback.newResolve(pools.read(), new FindKeysResolver(client, index, type, f)).register(
+                reporter.reportFindKeys());
     }
 
     @Override
-    public Callback<WriteBatchResult> write(final Series series)
-            throws MetadataOperationException {
+    public Callback<WriteBatchResult> write(final Series series) throws MetadataOperationException {
         return writeBatch(Arrays.asList(series));
     }
 
     @Override
-    public Callback<WriteBatchResult> writeBatch(final List<Series> series)
-            throws MetadataOperationException {
+    public Callback<WriteBatchResult> writeBatch(final List<Series> series) throws MetadataOperationException {
         final Client client = client();
         final BulkProcessor bulkProcessor = this.bulkProcessor.get();
 
@@ -492,21 +463,18 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
             }
         }
 
-        return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(
-                true, 1));
+        return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(true, 1));
     }
 
-    private void writeSeries(final Client client,
-            final BulkProcessor bulkProcessor, final String id, final Series s)
-                    throws ExecutionException {
+    private void writeSeries(final Client client, final BulkProcessor bulkProcessor, final String id, final Series s)
+            throws ExecutionException {
         writeCache.get(s, new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
                 reporter.reportWriteCacheMiss();
 
                 final Map<String, Object> source = buildSeries(s);
-                final IndexRequest request = client.prepareIndex()
-                        .setIndex(index).setType(type).setId(id)
+                final IndexRequest request = client.prepareIndex().setIndex(index).setType(type).setId(id)
                         .setSource(source).request();
 
                 bulkProcessor.add(request);
@@ -554,11 +522,9 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         return tags;
     }
 
-    private static Map<String, String> extractTags(
-            final Map<String, Object> source) {
+    private static Map<String, String> extractTags(final Map<String, Object> source) {
         @SuppressWarnings("unchecked")
-        final List<Map<String, String>> attributes = (List<Map<String, String>>) source
-        .get("tags");
+        final List<Map<String, String>> attributes = (List<Map<String, String>>) source.get("tags");
         final Map<String, String> tags = new HashMap<String, String>();
 
         for (final Map<String, String> entry : attributes) {

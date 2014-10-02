@@ -61,8 +61,8 @@ import com.spotify.heroic.model.DateRange;
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
     public static class StoredMetricQueries {
-        private final Cache<String, StoredQuery> store = CacheBuilder
-                .newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
+        private final Cache<String, StoredQuery> store = CacheBuilder.newBuilder()
+                .expireAfterWrite(5, TimeUnit.MINUTES).build();
 
         public void put(String id, StoredQuery query) {
             store.put(id, query);
@@ -84,13 +84,10 @@ public class QueryResource {
 
     private static final HttpAsyncUtils.Resume<QueryMetricsResult, QueryMetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<QueryMetricsResult, QueryMetricsResponse>() {
         @Override
-        public QueryMetricsResponse resume(QueryMetricsResult result)
-                throws Exception {
+        public QueryMetricsResponse resume(QueryMetricsResult result) throws Exception {
             final MetricGroups groups = result.getMetricGroups();
-            final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
-                    .getGroups());
-            return new QueryMetricsResponse(result.getQueryRange(), data,
-                    groups.getStatistics(), groups.getErrors());
+            final Map<Map<String, String>, List<DataPoint>> data = makeData(groups.getGroups());
+            return new QueryMetricsResponse(result.getQueryRange(), data, groups.getStatistics(), groups.getErrors());
         }
     };
 
@@ -102,14 +99,12 @@ public class QueryResource {
 
     @POST
     @Path("/metrics")
-    public void metrics(@Suspended final AsyncResponse response,
-            @QueryParam("backend") String backendGroup, QueryMetrics query)
-                    throws MetricQueryException {
+    public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
+            QueryMetrics query) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
-        final Callback<QueryMetricsResult> callback = metrics.queryMetrics(
-                q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
-                q.getRange(), q.getAggregation());
+        final Callback<QueryMetricsResult> callback = metrics.queryMetrics(q.getBackendGroup(), q.getFilter(),
+                q.getGroupBy(), q.getRange(), q.getAggregation());
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
@@ -119,22 +114,18 @@ public class QueryResource {
     @POST
     @Path("/metrics-stream")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response makeMetricsStream(
-            @QueryParam("backend") String backendGroup, QueryMetrics query,
+    public Response makeMetricsStream(@QueryParam("backend") String backendGroup, QueryMetrics query,
             @Context UriInfo info) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
         final String id = Integer.toHexString(q.hashCode());
         storedQueries.put(id, q);
 
-        final URI location = info.getBaseUriBuilder()
-                .path("/metrics-stream/" + id).build();
-        return Response.created(location).entity(new IdResponse<String>(id))
-                .build();
+        final URI location = info.getBaseUriBuilder().path("/metrics-stream/" + id).build();
+        return Response.created(location).entity(new IdResponse<String>(id)).build();
     }
 
-    private StoredQuery makeMetricsQuery(String backendGroup, QueryMetrics query)
-            throws MetricQueryException {
+    private StoredQuery makeMetricsQuery(String backendGroup, QueryMetrics query) throws MetricQueryException {
         if (query == null)
             throw new MetricQueryException("Query must be defined");
 
@@ -144,8 +135,7 @@ public class QueryResource {
         final DateRange range = query.getRange().buildDateRange();
 
         if (!(range.start() < range.end()))
-            throw new MetricQueryException(
-                    "Range start must come before its end");
+            throw new MetricQueryException("Range start must come before its end");
 
         final AggregationGroup aggregation;
 
@@ -155,8 +145,7 @@ public class QueryResource {
             if (aggregators == null || aggregators.isEmpty()) {
                 aggregation = null;
             } else {
-                aggregation = new AggregationGroup(aggregators, aggregators
-                        .get(0).getSampling());
+                aggregation = new AggregationGroup(aggregators, aggregators.get(0).getSampling());
             }
         }
 
@@ -164,11 +153,9 @@ public class QueryResource {
         final Filter filter = buildFilter(query);
 
         if (filter == null)
-            throw new MetricQueryException(
-                    "Filter must not be empty when querying");
+            throw new MetricQueryException("Filter must not be empty when querying");
 
-        final StoredQuery stored = new StoredQuery(backendGroup, filter,
-                groupBy, range, aggregation);
+        final StoredQuery stored = new StoredQuery(backendGroup, filter, groupBy, range, aggregation);
 
         return stored;
     }
@@ -176,8 +163,8 @@ public class QueryResource {
     @GET
     @Path("/metrics-stream/{id}")
     @Produces(SseFeature.SERVER_SENT_EVENTS)
-    public EventOutput getMetricsStream(@PathParam("id") String id)
-            throws WebApplicationException, MetricQueryException {
+    public EventOutput getMetricsStream(@PathParam("id") String id) throws WebApplicationException,
+            MetricQueryException {
         final StoredQuery q = storedQueries.get(id);
 
         if (q == null)
@@ -189,19 +176,16 @@ public class QueryResource {
 
         final MetricStream handle = new MetricStream() {
             @Override
-            public void stream(Callback<StreamMetricsResult> callback,
-                    QueryMetricsResult result) throws Exception {
+            public void stream(Callback<StreamMetricsResult> callback, QueryMetricsResult result) throws Exception {
                 if (output.isClosed()) {
                     callback.cancel(new CancelReason("client disconnected"));
                     return;
                 }
 
                 final MetricGroups groups = result.getMetricGroups();
-                final Map<Map<String, String>, List<DataPoint>> data = makeData(groups
-                        .getGroups());
-                final QueryMetricsResponse entity = new QueryMetricsResponse(
-                        result.getQueryRange(), data, groups.getStatistics(),
-                        groups.getErrors());
+                final Map<Map<String, String>, List<DataPoint>> data = makeData(groups.getGroups());
+                final QueryMetricsResponse entity = new QueryMetricsResponse(result.getQueryRange(), data,
+                        groups.getStatistics(), groups.getErrors());
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -211,15 +195,13 @@ public class QueryResource {
             }
         };
 
-        final Callback<StreamMetricsResult> callback = metrics.streamMetrics(
-                q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
-                q.getRange(), q.getAggregation(), handle);
+        final Callback<StreamMetricsResult> callback = metrics.streamMetrics(q.getBackendGroup(), q.getFilter(),
+                q.getGroupBy(), q.getRange(), q.getAggregation(), handle);
 
         callback.register(new Callback.Handle<StreamMetricsResult>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                sendEvent(output, "cancel",
-                        new ErrorMessage(reason.getMessage()));
+                sendEvent(output, "cancel", new ErrorMessage(reason.getMessage()));
             }
 
             @Override
@@ -232,8 +214,7 @@ public class QueryResource {
                 sendEvent(output, "end", "end");
             }
 
-            private void sendEvent(final EventOutput eventOutput, String type,
-                    Object message) throws IOException {
+            private void sendEvent(final EventOutput eventOutput, String type, Object message) throws IOException {
                 final OutboundEvent.Builder builder = new OutboundEvent.Builder();
 
                 builder.mediaType(MediaType.APPLICATION_JSON_TYPE);
@@ -253,8 +234,8 @@ public class QueryResource {
     /**
      * Convert a MetricsRequest into a filter.
      *
-     * This is meant to stay backwards compatible, since every filtering in
-     * MetricsRequest can be expressed as filter objects.
+     * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be expressed as filter
+     * objects.
      *
      * @param query
      * @return
@@ -263,10 +244,8 @@ public class QueryResource {
         final List<Filter> statements = new ArrayList<>();
 
         if (query.getTags() != null && !query.getTags().isEmpty()) {
-            for (final Map.Entry<String, String> entry : query.getTags()
-                    .entrySet()) {
-                statements.add(new MatchTagFilter(entry.getKey(), entry
-                        .getValue()));
+            for (final Map.Entry<String, String> entry : query.getTags().entrySet()) {
+                statements.add(new MatchTagFilter(entry.getKey(), entry.getValue()));
             }
         }
 
@@ -285,8 +264,7 @@ public class QueryResource {
         return new AndFilter(statements).optimize();
     }
 
-    private static Map<Map<String, String>, List<DataPoint>> makeData(
-            List<MetricGroup> groups) {
+    private static Map<Map<String, String>, List<DataPoint>> makeData(List<MetricGroup> groups) {
         final Map<Map<String, String>, List<DataPoint>> data = new HashMap<>();
 
         for (final MetricGroup group : groups) {

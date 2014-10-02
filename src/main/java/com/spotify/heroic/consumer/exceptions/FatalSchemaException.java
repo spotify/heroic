@@ -1,8 +1,7 @@
 package com.spotify.heroic.consumer.exceptions;
 
 /**
- * Exception thrown when schema consumption has caused a circumstance which
- * forces the consumer to stop.
+ * Exception thrown when schema consumption has caused a circumstance which forces the consumer to stop.
  *
  * @author udoprog
  */

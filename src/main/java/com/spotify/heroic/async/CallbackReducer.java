@@ -19,8 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class CallbackReducer<T> implements Callback.Cancellable {
     public static interface Handle<T> {
-        void done(Collection<T> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception;
+        void done(Collection<T> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
+                throws Exception;
     }
 
     private final AtomicInteger countdown;
@@ -70,8 +70,7 @@ class CallbackReducer<T> implements Callback.Cancellable {
     }
 
     /**
-     * Checks in a call back. It also wraps up the group if all the callbacks
-     * have checked in.
+     * Checks in a call back. It also wraps up the group if all the callbacks have checked in.
      */
     private void checkIn() {
         final int value = countdown.decrementAndGet();

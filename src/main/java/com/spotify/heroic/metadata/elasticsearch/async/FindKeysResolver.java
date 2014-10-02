@@ -27,15 +27,13 @@ public class FindKeysResolver implements Callback.Resolver<FindKeys> {
 
     @Override
     public FindKeys resolve() throws Exception {
-        final SearchRequestBuilder request = client.prepareSearch(index)
-                .setTypes(type).setSearchType("count");
+        final SearchRequestBuilder request = client.prepareSearch(index).setTypes(type).setSearchType("count");
 
-        request.setQuery(QueryBuilders.filteredQuery(
-                QueryBuilders.matchAllQuery(), filter));
+        request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), filter));
 
         {
-            final AggregationBuilder<?> terms = AggregationBuilders
-                    .terms("terms").field(ElasticSearchUtils.KEY).size(0);
+            final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(ElasticSearchUtils.KEY)
+                    .size(0);
             request.addAggregation(terms);
         }
 

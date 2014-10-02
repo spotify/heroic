@@ -13,8 +13,7 @@ import com.spotify.heroic.filter.Filter;
 
 @Data
 public class QueryMetrics {
-    private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(
-            TimeUnit.DAYS, 7);
+    private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(TimeUnit.DAYS, 7);
     private static final List<QueryAggregation> EMPTY_AGGREGATIONS = new ArrayList<>();
 
     private final String key = null;
@@ -29,8 +28,7 @@ public class QueryMetrics {
         if (this.aggregators == null)
             return null;
 
-        final List<Aggregation> aggregators = new ArrayList<>(
-                this.aggregators.size());
+        final List<Aggregation> aggregators = new ArrayList<>(this.aggregators.size());
 
         for (final QueryAggregation aggregation : this.aggregators) {
             aggregators.add(aggregation.makeAggregation());

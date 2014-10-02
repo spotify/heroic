@@ -19,8 +19,7 @@ public final class JsonCommon {
     public static FilterSerialization<StartsWithFilter> STARTS_WITH = new TwoTermsSerialization<StartsWithFilter>(
             StartsWithFilter.BUILDER);
 
-    public static FilterSerialization<RegexFilter> REGEX = new TwoTermsSerialization<RegexFilter>(
-            RegexFilter.BUILDER);
+    public static FilterSerialization<RegexFilter> REGEX = new TwoTermsSerialization<RegexFilter>(RegexFilter.BUILDER);
 
     public static FilterSerialization<HasTagFilter> HAS_TAG = new OneTermSerialization<HasTagFilter, String>(
             HasTagFilter.BUILDER, String.class);
@@ -28,18 +27,14 @@ public final class JsonCommon {
     public static FilterSerialization<MatchKeyFilter> MATCH_KEY = new OneTermSerialization<MatchKeyFilter, String>(
             MatchKeyFilter.BUILDER, String.class);
 
-    public static FilterSerialization<NotFilter> NOT = new OneTermSerialization<NotFilter, Filter>(
-            NotFilter.BUILDER, Filter.class);
+    public static FilterSerialization<NotFilter> NOT = new OneTermSerialization<NotFilter, Filter>(NotFilter.BUILDER,
+            Filter.class);
 
-    public static FilterSerialization<AndFilter> AND = new ManyTermsSerialization<AndFilter>(
-            AndFilter.BUILDER);
+    public static FilterSerialization<AndFilter> AND = new ManyTermsSerialization<AndFilter>(AndFilter.BUILDER);
 
-    public static FilterSerialization<OrFilter> OR = new ManyTermsSerialization<OrFilter>(
-            OrFilter.BUILDER);
+    public static FilterSerialization<OrFilter> OR = new ManyTermsSerialization<OrFilter>(OrFilter.BUILDER);
 
-    public static NoTermSerialization<TrueFilter> TRUE = new NoTermSerialization<TrueFilter>(
-            TrueFilter.BUILDER);
+    public static NoTermSerialization<TrueFilter> TRUE = new NoTermSerialization<TrueFilter>(TrueFilter.BUILDER);
 
-    public static NoTermSerialization<FalseFilter> FALSE = new NoTermSerialization<FalseFilter>(
-            FalseFilter.BUILDER);
+    public static NoTermSerialization<FalseFilter> FALSE = new NoTermSerialization<FalseFilter>(FalseFilter.BUILDER);
 }

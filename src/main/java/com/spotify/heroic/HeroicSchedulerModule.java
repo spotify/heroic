@@ -13,12 +13,11 @@ public class HeroicSchedulerModule extends QuartzModule {
         this.refreshClusterSchedule = refreshClusterSchedule;
     }
 
-    public static final JobKey REFRESH_CLUSTER = JobKey
-            .jobKey("refresh_cluster");
+    public static final JobKey REFRESH_CLUSTER = JobKey.jobKey("refresh_cluster");
 
     @Override
     protected void schedule() {
-        scheduleJob(RefreshClusterJob.class).withCronExpression(
-                refreshClusterSchedule).withJobName(REFRESH_CLUSTER.getName());
+        scheduleJob(RefreshClusterJob.class).withCronExpression(refreshClusterSchedule).withJobName(
+                REFRESH_CLUSTER.getName());
     }
 }

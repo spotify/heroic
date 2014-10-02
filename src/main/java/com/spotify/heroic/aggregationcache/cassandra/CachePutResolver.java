@@ -16,11 +16,9 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.model.DataPoint;
 
 @RequiredArgsConstructor
-final class CachePutResolver implements
-        Callback.Resolver<CacheBackendPutResult> {
+final class CachePutResolver implements Callback.Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
-    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer
-            .get();
+    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
     private final Keyspace keyspace;
     private final ColumnFamily<Integer, String> columnFamily;
@@ -40,8 +38,7 @@ final class CachePutResolver implements
 
             final int index = (int) ((d.getTimestamp() % columnWidth) / size);
             final long base = d.getTimestamp() - d.getTimestamp() % columnWidth;
-            final CacheKey key = new CacheKey(CacheKey.VERSION,
-                    this.key.getFilter(), this.key.getGroup(), aggregation,
+            final CacheKey key = new CacheKey(CacheKey.VERSION, this.key.getFilter(), this.key.getGroup(), aggregation,
                     base);
             doPut(key, index, d);
         }
@@ -49,12 +46,9 @@ final class CachePutResolver implements
         return new CacheBackendPutResult();
     }
 
-    private void doPut(CacheKey key, Integer dataOffset, DataPoint d)
-            throws ConnectionException {
-        keyspace.prepareQuery(columnFamily).withCql(CQL_STMT)
-                .asPreparedStatement()
-                .withByteBufferValue(key, cacheKeySerializer)
-                .withIntegerValue(dataOffset).withDoubleValue(d.getValue())
-                .execute();
+    private void doPut(CacheKey key, Integer dataOffset, DataPoint d) throws ConnectionException {
+        keyspace.prepareQuery(columnFamily).withCql(CQL_STMT).asPreparedStatement()
+                .withByteBufferValue(key, cacheKeySerializer).withIntegerValue(dataOffset)
+                .withDoubleValue(d.getValue()).execute();
     }
 }

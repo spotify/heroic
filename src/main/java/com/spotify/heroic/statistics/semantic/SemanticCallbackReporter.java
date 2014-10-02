@@ -42,17 +42,12 @@ public class SemanticCallbackReporter implements CallbackReporter {
         final String what = id.getTags().get("what");
 
         if (what == null)
-            throw new IllegalArgumentException(
-                    "id does not provide the tag 'what'");
+            throw new IllegalArgumentException("id does not provide the tag 'what'");
 
-        this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what",
-                what + "-latency")));
-        this.cancelled = registry.meter(id.tagged("what",
-                what + "-cancel-rate", "unit", Units.CANCEL));
-        this.failed = registry.meter(id.tagged("what", what + "-failure-rate",
-                "unit", Units.FAILURE));
-        this.resolved = registry.meter(id.tagged("what",
-                what + "-resolve-rate", "unit", Units.RESOLVE));
+        this.timer = new SemanticHeroicTimer(registry.timer(id.tagged("what", what + "-latency")));
+        this.cancelled = registry.meter(id.tagged("what", what + "-cancel-rate", "unit", Units.CANCEL));
+        this.failed = registry.meter(id.tagged("what", what + "-failure-rate", "unit", Units.FAILURE));
+        this.resolved = registry.meter(id.tagged("what", what + "-resolve-rate", "unit", Units.RESOLVE));
     }
 
     @Override

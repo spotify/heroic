@@ -25,16 +25,15 @@ public final class MetricGroups {
     private static final List<MetricGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
 
-    private static final MetricGroups EMPTY = new MetricGroups(
-            new ArrayList<MetricGroup>(), Statistics.EMPTY, EMPTY_ERRORS);
+    private static final MetricGroups EMPTY = new MetricGroups(new ArrayList<MetricGroup>(), Statistics.EMPTY,
+            EMPTY_ERRORS);
 
     private final List<MetricGroup> groups;
     private final Statistics statistics;
     private final List<RequestError> errors;
 
     @JsonCreator
-    public static MetricGroups create(
-            @JsonProperty(value = "groups", required = true) List<MetricGroup> groups,
+    public static MetricGroups create(@JsonProperty(value = "groups", required = true) List<MetricGroup> groups,
             @JsonProperty(value = "statistics", required = true) Statistics statistics,
             @JsonProperty(value = "errors", required = false) List<RequestError> errors) {
         if (errors == null)
@@ -44,12 +43,10 @@ public final class MetricGroups {
     }
 
     @Slf4j
-    private static class Merger implements
-            Callback.Reducer<MetricGroups, MetricGroups> {
+    private static class Merger implements Callback.Reducer<MetricGroups, MetricGroups> {
         @Override
-        public MetricGroups resolved(Collection<MetricGroups> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public MetricGroups resolved(Collection<MetricGroups> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 
@@ -81,8 +78,7 @@ public final class MetricGroups {
         errors.addAll(this.errors);
         errors.addAll(other.errors);
 
-        return new MetricGroups(groups,
-                this.statistics.merge(other.statistics), errors);
+        return new MetricGroups(groups, this.statistics.merge(other.statistics), errors);
     }
 
     public static final Callback.Transformer<MetricGroups, MetricGroups> identity = new Callback.Transformer<MetricGroups, MetricGroups>() {
@@ -96,15 +92,14 @@ public final class MetricGroups {
         return identity;
     }
 
-    public static MetricGroups nodeError(final UUID id, final URI uri,
-            final Map<String, String> tags, Exception e) {
+    public static MetricGroups nodeError(final UUID id, final URI uri, final Map<String, String> tags, Exception e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(NodeError.fromException(id, uri, tags, e));
         return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
     }
 
-    public static Callback.ErrorTransformer<MetricGroups> nodeError(
-            final UUID id, final URI uri, final Map<String, String> shard) {
+    public static Callback.ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri,
+            final Map<String, String> shard) {
         return new Callback.ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
@@ -113,15 +108,13 @@ public final class MetricGroups {
         };
     }
 
-    public static MetricGroups seriesError(final Map<String, String> tags,
-            Exception e) {
+    public static MetricGroups seriesError(final Map<String, String> tags, Exception e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(SeriesError.fromException(tags, e));
         return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
     }
 
-    public static Callback.ErrorTransformer<MetricGroups> seriesError(
-            final Map<String, String> shard) {
+    public static Callback.ErrorTransformer<MetricGroups> seriesError(final Map<String, String> shard) {
         return new Callback.ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
@@ -130,13 +123,11 @@ public final class MetricGroups {
         };
     }
 
-    public static MetricGroups fromResult(List<MetricGroup> groups,
-            Statistics statistics) {
+    public static MetricGroups fromResult(List<MetricGroup> groups, Statistics statistics) {
         return new MetricGroups(groups, statistics, EMPTY_ERRORS);
     }
 
-    public static MetricGroups build(List<MetricGroup> groups,
-            Statistics statistics, List<RequestError> errors) {
+    public static MetricGroups build(List<MetricGroup> groups, Statistics statistics, List<RequestError> errors) {
         if (errors == null)
             throw new NullPointerException();
 

@@ -23,11 +23,9 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
 @RequiredArgsConstructor
-public final class CacheGetResolver implements
-        Callback.Resolver<CacheBackendGetResult> {
+public final class CacheGetResolver implements Callback.Resolver<CacheBackendGetResult> {
     static final String CQL_QUERY = "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
-    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer
-            .get();
+    private static final CacheKeySerializer cacheKeySerializer = CacheKeySerializer.get();
 
     private final Keyspace keyspace;
     private final ColumnFamily<Integer, String> columnFamily;
@@ -48,13 +46,10 @@ public final class CacheGetResolver implements
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         for (final long base : bases) {
-            final CacheKey cacheKey = new CacheKey(CacheKey.VERSION,
-                    key.getFilter(), key.getGroup(), aggregation, base);
+            final CacheKey cacheKey = new CacheKey(CacheKey.VERSION, key.getFilter(), key.getGroup(), aggregation, base);
 
-            final OperationResult<CqlResult<Integer, String>> op = keyspace
-                    .prepareQuery(columnFamily).withCql(CQL_QUERY)
-                    .asPreparedStatement()
-                    .withByteBufferValue(cacheKey, cacheKeySerializer)
+            final OperationResult<CqlResult<Integer, String>> op = keyspace.prepareQuery(columnFamily)
+                    .withCql(CQL_QUERY).asPreparedStatement().withByteBufferValue(cacheKey, cacheKeySerializer)
                     .execute();
 
             final CqlResult<Integer, String> result = op.getResult();
@@ -62,13 +57,10 @@ public final class CacheGetResolver implements
 
             for (final Row<Integer, String> row : rows) {
                 final ColumnList<String> columns = row.getColumns();
-                final int offset = columns.getColumnByIndex(0)
-                        .getIntegerValue();
-                final double value = columns.getColumnByIndex(1)
-                        .getDoubleValue();
+                final int offset = columns.getColumnByIndex(0).getIntegerValue();
+                final double value = columns.getColumnByIndex(1).getDoubleValue();
 
-                final long timestamp = getDataPointTimestamp(base, columnSize,
-                        offset);
+                final long timestamp = getDataPointTimestamp(base, columnSize, offset);
 
                 if (timestamp < range.getStart() || timestamp > range.getEnd())
                     continue;
@@ -94,8 +86,7 @@ public final class CacheGetResolver implements
         return bases;
     }
 
-    private long getDataPointTimestamp(long base, long columnWidth,
-            int dataOffset) {
+    private long getDataPointTimestamp(long base, long columnWidth, int dataOffset) {
         return base + columnWidth * dataOffset;
     }
 }

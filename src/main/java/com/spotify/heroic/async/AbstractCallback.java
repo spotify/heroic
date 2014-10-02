@@ -14,19 +14,16 @@ import java.util.concurrent.Executor;
  */
 abstract class AbstractCallback<T> implements Callback<T> {
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries,
-            final Reducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
         final CallbackReducer.Handle<C> handle = new CallbackReducer.Handle<C>() {
             @Override
-            public void done(Collection<C> results,
-                    Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
+            public void done(Collection<C> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
+                    throws Exception {
                 if (!AbstractCallback.this.isReady())
                     return;
 
                 try {
-                    AbstractCallback.this.resolve(reducer.resolved(results,
-                            errors, cancelled));
+                    AbstractCallback.this.resolve(reducer.resolved(results, errors, cancelled));
                 } catch (final Exception error) {
                     AbstractCallback.this.fail(error);
                 }
@@ -37,8 +34,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries,
-            final StreamReducer<C, T> reducer) {
+    public <C> Callback<T> reduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
         final CallbackStreamReducer.Handle<C> handle = new CallbackStreamReducer.Handle<C>() {
             @Override
             public void finish(Callback<C> callback, C result) throws Exception {
@@ -46,26 +42,22 @@ abstract class AbstractCallback<T> implements Callback<T> {
             }
 
             @Override
-            public void error(Callback<C> callback, Exception error)
-                    throws Exception {
+            public void error(Callback<C> callback, Exception error) throws Exception {
                 reducer.failed(callback, error);
             }
 
             @Override
-            public void cancel(Callback<C> callback, CancelReason reason)
-                    throws Exception {
+            public void cancel(Callback<C> callback, CancelReason reason) throws Exception {
                 reducer.cancelled(callback, reason);
             }
 
             @Override
-            public void done(int successful, int failed, int cancelled)
-                    throws Exception {
+            public void done(int successful, int failed, int cancelled) throws Exception {
                 if (!AbstractCallback.this.isReady())
                     return;
 
                 try {
-                    AbstractCallback.this.resolve(reducer.resolved(successful,
-                            failed, cancelled));
+                    AbstractCallback.this.resolve(reducer.resolved(successful, failed, cancelled));
                 } catch (final Exception error) {
                     AbstractCallback.this.fail(error);
                 }
@@ -155,8 +147,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(final Transformer<T, C> transformer,
-            final ErrorTransformer<C> error) {
+    public <C> Callback<C> transform(final Transformer<T, C> transformer, final ErrorTransformer<C> error) {
         final Callback<C> callback = newCallback();
 
         register(new Handle<T>() {
@@ -210,8 +201,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public Callback<T> resolve(final Executor executor,
-            final Resolver<T> resolver) {
+    public Callback<T> resolve(final Executor executor, final Resolver<T> resolver) {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {

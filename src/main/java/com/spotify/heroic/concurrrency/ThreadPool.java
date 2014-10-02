@@ -15,8 +15,8 @@ import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.heroic.statistics.ThreadPoolReporterProvider;
 
 /**
- * An abstraction for the concept of having separate thread pools dedicated
- * towards reading vs. writing to separate filling one up.
+ * An abstraction for the concept of having separate thread pools dedicated towards reading vs. writing to separate
+ * filling one up.
  *
  * @author udoprog
  */
@@ -27,8 +27,7 @@ public class ThreadPool {
     public static int DEFAULT_THREADS = 20;
     public static int DEFAULT_QUEUE_SIZE = 10000;
 
-    public static ThreadPool create(String name, ThreadPoolReporter reporter,
-            Integer threads, Integer queueSize) {
+    public static ThreadPool create(String name, ThreadPoolReporter reporter, Integer threads, Integer queueSize) {
         if (threads == null)
             threads = DEFAULT_THREADS;
 
@@ -40,12 +39,11 @@ public class ThreadPool {
             size = queueSize;
         }
 
-        final ThreadPoolExecutor executor = new ThreadPoolExecutor(threads,
-                threads, 5000, TimeUnit.MILLISECONDS,
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(threads, threads, 5000, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<Runnable>(size, false));
 
-        final ThreadPoolReporter.Context context = reporter
-                .newThreadPoolContext(name, new ThreadPoolReporterProvider() {
+        final ThreadPoolReporter.Context context = reporter.newThreadPoolContext(name,
+                new ThreadPoolReporterProvider() {
                     @Override
                     public long getQueueSize() {
                         return executor.getQueue().size();
@@ -93,9 +91,7 @@ public class ThreadPool {
             log.debug("Gracefully shut down executor");
         } catch (final InterruptedException e) {
             final List<?> tasks = executor.shutdownNow();
-            log.error(
-                    "Failed to gracefully stop read executors ({} tasks(s) killed)",
-                    tasks.size(), e);
+            log.error("Failed to gracefully stop read executors ({} tasks(s) killed)", tasks.size(), e);
         }
 
         context.stop();

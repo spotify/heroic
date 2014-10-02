@@ -5,6 +5,6 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.model.DateRange;
 
 public interface PreparedQuery {
-    public Callback<MetricGroups> query(final DateRange range,
-            final AggregationGroup aggregationGroup) throws Exception;
+    public Callback<MetricGroups> query(final DateRange range, final AggregationGroup aggregationGroup)
+            throws Exception;
 }

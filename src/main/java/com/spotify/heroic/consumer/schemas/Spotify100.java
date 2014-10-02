@@ -42,19 +42,15 @@ public class Spotify100 implements ConsumerSchema {
         private final Double value;
 
         @JsonCreator
-        public static Metric create(@JsonProperty("version") String version,
-                @JsonProperty("key") String key,
-                @JsonProperty("host") String host,
-                @JsonProperty("time") Long time,
-                @JsonProperty("attributes") Map<String, String> attributes,
-                @JsonProperty("value") Double value) {
+        public static Metric create(@JsonProperty("version") String version, @JsonProperty("key") String key,
+                @JsonProperty("host") String host, @JsonProperty("time") Long time,
+                @JsonProperty("attributes") Map<String, String> attributes, @JsonProperty("value") Double value) {
             return new Metric(version, key, host, time, attributes, value);
         }
     }
 
     @Override
-    public void consume(Consumer consumer, byte[] message)
-            throws SchemaException {
+    public void consume(Consumer consumer, byte[] message) throws SchemaException {
         final Metric metric;
 
         try {
@@ -63,32 +59,24 @@ public class Spotify100 implements ConsumerSchema {
             throw new SchemaValidationException("Received invalid metric", e);
         }
         if (metric.getValue() == null) {
-            throw new SchemaValidationException(
-                    "Metric must have a value but this metric has a null value: "
-                            + metric);
+            throw new SchemaValidationException("Metric must have a value but this metric has a null value: " + metric);
         }
 
-        if (metric.getVersion() == null
-                || !SCHEMA_VERSION.equals(metric.getVersion()))
-            throw new SchemaValidationException(String.format(
-                    "Invalid version {}, expected {}", metric.getVersion(),
+        if (metric.getVersion() == null || !SCHEMA_VERSION.equals(metric.getVersion()))
+            throw new SchemaValidationException(String.format("Invalid version {}, expected {}", metric.getVersion(),
                     SCHEMA_VERSION));
 
         if (metric.getTime() == null)
-            throw new SchemaValidationException("'" + TIME
-                    + "' field must be defined: " + message);
+            throw new SchemaValidationException("'" + TIME + "' field must be defined: " + message);
 
         if (metric.getKey() == null)
-            throw new SchemaValidationException("'" + KEY
-                    + "' field must be defined: " + message);
+            throw new SchemaValidationException("'" + KEY + "' field must be defined: " + message);
 
-        final Map<String, String> tags = new HashMap<String, String>(
-                metric.getAttributes());
+        final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());
         tags.put(HOST, metric.getHost());
 
         final Series series = new Series(metric.getKey(), tags);
-        final DataPoint datapoint = new DataPoint(metric.getTime(),
-                metric.getValue());
+        final DataPoint datapoint = new DataPoint(metric.getTime(), metric.getValue());
         final List<DataPoint> data = new ArrayList<DataPoint>();
         data.add(datapoint);
 

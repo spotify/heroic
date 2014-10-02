@@ -14,25 +14,21 @@ public class WriteBatchResult {
     private final int requests;
 
     public WriteBatchResult merge(WriteBatchResult other) {
-        return new WriteBatchResult(this.ok && other.ok, this.requests
-                + other.requests);
+        return new WriteBatchResult(this.ok && other.ok, this.requests + other.requests);
     }
 
     @Slf4j
-    private static class Merger implements
-    Callback.Reducer<WriteBatchResult, WriteBatchResult> {
+    private static class Merger implements Callback.Reducer<WriteBatchResult, WriteBatchResult> {
         @Override
-        public WriteBatchResult resolved(Collection<WriteBatchResult> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                        throws Exception {
+        public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             for (final Exception e : errors)
                 log.error("Write batch failed", e);
 
             for (final CancelReason cancel : cancelled)
                 log.error("Write batch cancelled: {}", cancel);
 
-            WriteBatchResult result = new WriteBatchResult(errors.isEmpty()
-                    && cancelled.isEmpty(), 0);
+            WriteBatchResult result = new WriteBatchResult(errors.isEmpty() && cancelled.isEmpty(), 0);
 
             for (final WriteBatchResult r : results) {
                 result = result.merge(r);
@@ -48,8 +44,7 @@ public class WriteBatchResult {
         return merger;
     }
 
-    private static class ToBoolean implements
-            Callback.Transformer<WriteBatchResult, Boolean> {
+    private static class ToBoolean implements Callback.Transformer<WriteBatchResult, Boolean> {
         @Override
         public Boolean transform(WriteBatchResult result) throws Exception {
             return result.isOk();

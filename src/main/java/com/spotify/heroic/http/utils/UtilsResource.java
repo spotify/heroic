@@ -19,8 +19,7 @@ import com.spotify.heroic.metric.heroic.MetricsRowKeySerializer;
 @Path("/utils")
 public class UtilsResource {
     /**
-     * Encode/Decode functions, helpful when interacting with cassandra through
-     * cqlsh.
+     * Encode/Decode functions, helpful when interacting with cassandra through cqlsh.
      */
     @POST
     @Path("/decode-row-key")
@@ -64,8 +63,7 @@ public class UtilsResource {
         final byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
 
-        final String data = "0x"
-                + BaseEncoding.base16().encode(bytes).toLowerCase();
+        final String data = "0x" + BaseEncoding.base16().encode(bytes).toLowerCase();
         return data;
     }
 

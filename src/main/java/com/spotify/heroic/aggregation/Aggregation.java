@@ -50,9 +50,8 @@ public interface Aggregation {
     public Sampling getSampling();
 
     /**
-     * Get a guesstimate of how big of a memory the aggregation would need. This
-     * is for the invoker to make the decision whether or not to execute the
-     * aggregation.
+     * Get a guesstimate of how big of a memory the aggregation would need. This is for the invoker to make the decision
+     * whether or not to execute the aggregation.
      *
      * @return
      */

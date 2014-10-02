@@ -15,8 +15,7 @@ public class CustomExceptionMapper implements ExceptionMapper<Exception> {
     @Override
     public Response toResponse(Exception e) {
         log.error("Error in request", e);
-        return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ErrorMessage(e.getMessage()))
+        return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorMessage(e.getMessage()))
                 .type(MediaType.APPLICATION_JSON_TYPE).build();
     }
 }

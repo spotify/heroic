@@ -35,8 +35,7 @@ import com.spotify.heroic.model.Series;
 public final class LuceneUtils {
     public static final String KEY = "$$";
 
-    public static org.apache.lucene.search.Filter convertFilter(
-            final Filter filter) {
+    public static org.apache.lucene.search.Filter convertFilter(final Filter filter) {
         if (filter instanceof TrueFilter) {
             return new MatchAllDocsFilter();
         }
@@ -47,8 +46,7 @@ public final class LuceneUtils {
 
         if (filter instanceof AndFilter) {
             final AndFilter and = (AndFilter) filter;
-            final List<org.apache.lucene.search.Filter> filters = new ArrayList<>(
-                    and.getStatements().size());
+            final List<org.apache.lucene.search.Filter> filters = new ArrayList<>(and.getStatements().size());
 
             for (final Filter stmt : and.getStatements())
                 filters.add(convertFilter(stmt));
@@ -58,8 +56,7 @@ public final class LuceneUtils {
 
         if (filter instanceof OrFilter) {
             final OrFilter or = (OrFilter) filter;
-            final List<org.apache.lucene.search.Filter> filters = new ArrayList<>(
-                    or.getStatements().size());
+            final List<org.apache.lucene.search.Filter> filters = new ArrayList<>(or.getStatements().size());
 
             for (final Filter stmt : or.getStatements())
                 filters.add(convertFilter(stmt));
@@ -69,21 +66,18 @@ public final class LuceneUtils {
 
         if (filter instanceof NotFilter) {
             final NotFilter not = (NotFilter) filter;
-            return new org.elasticsearch.common.lucene.search.NotFilter(
-                    convertFilter(not.getFilter()));
+            return new org.elasticsearch.common.lucene.search.NotFilter(convertFilter(not.getFilter()));
         }
 
         if (filter instanceof MatchTagFilter) {
             final MatchTagFilter matchTag = (MatchTagFilter) filter;
-            return new TermFilter(new Term(matchTag.getTag(),
-                    matchTag.getValue()));
+            return new TermFilter(new Term(matchTag.getTag(), matchTag.getValue()));
         }
 
         if (filter instanceof StartsWithFilter) {
             final StartsWithFilter startsWith = (StartsWithFilter) filter;
 
-            return new PrefixFilter(new Term(startsWith.getTag(),
-                    startsWith.getValue()));
+            return new PrefixFilter(new Term(startsWith.getTag(), startsWith.getValue()));
         }
 
         if (filter instanceof RegexFilter) {
@@ -91,19 +85,15 @@ public final class LuceneUtils {
             return new RegexpFilter(new Term(regex.getTag(), regex.getValue()));
         }
 
-        /*
-         * if (filter instanceof HasTagFilter) { final HasTagFilter hasTag =
-         * (HasTagFilter) filter; return new TermFilter(new
-         * Term(matchTag.getTag(), matchTag.getValue())); }
-         */
+        /* if (filter instanceof HasTagFilter) { final HasTagFilter hasTag = (HasTagFilter) filter; return new
+         * TermFilter(new Term(matchTag.getTag(), matchTag.getValue())); } */
 
         if (filter instanceof MatchKeyFilter) {
             final MatchKeyFilter matchKey = (MatchKeyFilter) filter;
             return new TermFilter(new Term(KEY, matchKey.getValue()));
         }
 
-        throw new IllegalArgumentException("Invalid filter statement: "
-                + filter);
+        throw new IllegalArgumentException("Invalid filter statement: " + filter);
     }
 
     public static Document convert(Series series) {

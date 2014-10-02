@@ -40,8 +40,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @ToString
 public class LuceneMetadataBackend implements MetadataBackend {
-    private final StandardAnalyzer analyzer = new StandardAnalyzer(
-            Version.LUCENE_4_9);
+    private final StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
 
     @Inject
     @Named("directory")
@@ -65,43 +64,35 @@ public class LuceneMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<WriteBatchResult> write(Series series)
-            throws MetadataOperationException {
-        final IndexWriterConfig config = new IndexWriterConfig(
-                Version.LUCENE_4_9, analyzer);
+    public Callback<WriteBatchResult> write(Series series) throws MetadataOperationException {
+        final IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_9, analyzer);
 
         try (final IndexWriter writer = new IndexWriter(directory, config)) {
             final Document doc = LuceneUtils.convert(series);
             writer.addDocument(doc);
 
-            return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(
-                    true, 1));
+            return new ResolvedCallback<WriteBatchResult>(new WriteBatchResult(true, 1));
         } catch (final IOException e) {
-            throw new MetadataOperationException(
-                    "failed to open index directory", e);
+            throw new MetadataOperationException("failed to open index directory", e);
         }
     }
 
     @Override
-    public Callback<WriteBatchResult> writeBatch(List<Series> series)
-            throws MetadataOperationException {
+    public Callback<WriteBatchResult> writeBatch(List<Series> series) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<FindTags> findTags(Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindTags> findTags(Filter filter) throws MetadataOperationException {
 
-        final org.apache.lucene.search.Filter f = LuceneUtils
-                .convertFilter(filter);
+        final org.apache.lucene.search.Filter f = LuceneUtils.convertFilter(filter);
 
         final Map<String, Set<String>> tags = new HashMap<>();
 
         try (final DirectoryReader reader = DirectoryReader.open(directory)) {
             final IndexSearcher searcher = new IndexSearcher(reader);
 
-            final FilteredQuery query = new FilteredQuery(
-                    new MatchAllDocsQuery(), f);
+            final FilteredQuery query = new FilteredQuery(new MatchAllDocsQuery(), f);
 
             final TopDocs docs = searcher.search(query, Integer.MAX_VALUE);
 
@@ -113,31 +104,26 @@ public class LuceneMetadataBackend implements MetadataBackend {
 
             return new ResolvedCallback<>(new FindTags(tags, tags.size()));
         } catch (final IOException e) {
-            throw new MetadataOperationException(
-                    "failed to open index directory", e);
+            throw new MetadataOperationException("failed to open index directory", e);
         }
     }
 
     @Override
-    public void write(String id, Series series)
-            throws MetadataOperationException {
+    public void write(String id, Series series) throws MetadataOperationException {
     }
 
     @Override
-    public Callback<FindSeries> findSeries(Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindSeries> findSeries(Filter filter) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(Filter filter)
-            throws MetadataOperationException {
+    public Callback<DeleteSeries> deleteSeries(Filter filter) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<FindKeys> findKeys(Filter filter)
-            throws MetadataOperationException {
+    public Callback<FindKeys> findKeys(Filter filter) throws MetadataOperationException {
         return null;
     }
 

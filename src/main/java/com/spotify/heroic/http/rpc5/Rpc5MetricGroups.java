@@ -17,8 +17,7 @@ public final class Rpc5MetricGroups {
     private final List<RequestError> errors;
 
     @JsonCreator
-    public static Rpc5MetricGroups create(
-            @JsonProperty(value = "groups", required = true) List<MetricGroup> groups,
+    public static Rpc5MetricGroups create(@JsonProperty(value = "groups", required = true) List<MetricGroup> groups,
             @JsonProperty(value = "statistics", required = true) Statistics statistics,
             @JsonProperty(value = "errors", required = true) List<RequestError> errors) {
         return new Rpc5MetricGroups(groups, statistics, errors);

@@ -11,8 +11,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.statistics.ThreadPoolReporter;
 
 /**
- * An abstraction for the concept of having separate thread pools dedicated
- * towards reading vs. writing to separate filling one up.
+ * An abstraction for the concept of having separate thread pools dedicated towards reading vs. writing to separate
+ * filling one up.
  *
  * @author udoprog
  */
@@ -27,8 +27,7 @@ public class ReadWriteThreadPools {
         private final int writeQueueSize;
 
         @JsonCreator
-        public static Config create(
-                @JsonProperty("readThreads") Integer readThreads,
+        public static Config create(@JsonProperty("readThreads") Integer readThreads,
                 @JsonProperty("readQueueSize") Integer readQueueSize,
                 @JsonProperty("writeThreads") Integer writeThreads,
                 @JsonProperty("writeQueueSize") Integer writeQueueSize) {
@@ -44,8 +43,7 @@ public class ReadWriteThreadPools {
             if (writeQueueSize == null)
                 writeQueueSize = ThreadPool.DEFAULT_QUEUE_SIZE;
 
-            return new Config(readThreads, readQueueSize, writeThreads,
-                    writeQueueSize);
+            return new Config(readThreads, readQueueSize, writeThreads, writeQueueSize);
         }
 
         public static Config createDefault() {
@@ -53,11 +51,9 @@ public class ReadWriteThreadPools {
         }
 
         public ReadWriteThreadPools construct(ThreadPoolReporter reporter) {
-            final ThreadPool read = ThreadPool.create("read", reporter,
-                    readThreads, readQueueSize);
+            final ThreadPool read = ThreadPool.create("read", reporter, readThreads, readQueueSize);
 
-            final ThreadPool write = ThreadPool.create("write", reporter,
-                    writeThreads, writeQueueSize);
+            final ThreadPool write = ThreadPool.create("write", reporter, writeThreads, writeQueueSize);
 
             return new ReadWriteThreadPools(read, write);
         }

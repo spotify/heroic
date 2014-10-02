@@ -1,6 +1,5 @@
 package com.spotify.heroic.injection;
 
-
 public interface LifeCycle {
     public void start() throws Exception;
 

@@ -37,8 +37,7 @@ public class MetricBulkProcessor<T> {
      * @throws InterruptedException
      *             If interrupted during the write.
      */
-    public boolean enqueue(T write) throws InterruptedException,
-    BufferEnqueueException {
+    public boolean enqueue(T write) throws InterruptedException, BufferEnqueueException {
         if (stopped)
             return false;
 
@@ -47,8 +46,7 @@ public class MetricBulkProcessor<T> {
                 this.wait();
 
             if (failing)
-                throw new BufferEnqueueException(
-                        "Flushing is currently failing");
+                throw new BufferEnqueueException("Flushing is currently failing");
 
             if (stopped)
                 throw new BufferEnqueueException("Processor is stopped");

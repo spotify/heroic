@@ -83,8 +83,7 @@ public class ClusteredMetricManager implements LifeCycle {
     private final MetricBulkProcessor<BufferedWriteMetric> writeBulkProcessor = new MetricBulkProcessor<>(
             new MetricBulkProcessor.Flushable<BufferedWriteMetric>() {
                 @Override
-                public void flushWrites(List<BufferedWriteMetric> writes)
-                        throws Exception {
+                public void flushWrites(List<BufferedWriteMetric> writes) throws Exception {
                     log.info("Flushing {} write(s)", writes.size());
                     ClusteredMetricManager.this.flushWrites(writes);
                 }
@@ -95,22 +94,18 @@ public class ClusteredMetricManager implements LifeCycle {
      */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    public void flushWrites(List<BufferedWriteMetric> bufferedWrites)
-            throws Exception {
+    public void flushWrites(List<BufferedWriteMetric> bufferedWrites) throws Exception {
         final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
 
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
-        for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes
-                .entrySet()) {
+        for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
             callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
         }
 
         final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
             @Override
-            public WriteBatchResult resolved(
-                    Collection<WriteBatchResult> results,
-                    Collection<Exception> errors,
+            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 for (final Exception e : errors)
                     log.error("Write failed", e);
@@ -126,13 +121,11 @@ public class ClusteredMetricManager implements LifeCycle {
                     requests += r.getRequests();
                 }
 
-                return new WriteBatchResult(allOk && errors.isEmpty()
-                        && cancelled.isEmpty(), requests);
+                return new WriteBatchResult(allOk && errors.isEmpty() && cancelled.isEmpty(), requests);
             }
         };
 
-        final Callback<WriteBatchResult> callback = ConcurrentCallback
-                .newReduce(callbacks, reducer);
+        final Callback<WriteBatchResult> callback = ConcurrentCallback.newReduce(callbacks, reducer);
 
         final WriteBatchResult result;
 
@@ -146,8 +139,7 @@ public class ClusteredMetricManager implements LifeCycle {
             throw new Exception("Write batch failed (asynchronously)");
     }
 
-    private Map<String, List<BufferedWriteMetric>> groupByBackendGroup(
-            List<BufferedWriteMetric> writes) {
+    private Map<String, List<BufferedWriteMetric>> groupByBackendGroup(List<BufferedWriteMetric> writes) {
         final Map<String, List<BufferedWriteMetric>> groups = new HashMap<>();
 
         for (final BufferedWriteMetric w : writes) {
@@ -176,17 +168,14 @@ public class ClusteredMetricManager implements LifeCycle {
      * @throws MetricFormatException
      *             If the provided metric is invalid.
      */
-    public void bufferWrite(String backendGroup, WriteMetric write)
-            throws InterruptedException, BufferEnqueueException,
-            MetricFormatException {
+    public void bufferWrite(String backendGroup, WriteMetric write) throws InterruptedException,
+            BufferEnqueueException, MetricFormatException {
         final NodeRegistryEntry node = findNodeRegistryEntry(write);
 
         if (node == null)
-            throw new BufferEnqueueException(
-                    "Could not match write to any known node.");
+            throw new BufferEnqueueException("Could not match write to any known node.");
 
-        writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup,
-                write.getSeries(), write.getData()));
+        writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup, write.getSeries(), write.getData()));
     }
 
     /**
@@ -197,17 +186,15 @@ public class ClusteredMetricManager implements LifeCycle {
      * @return A callback that will be fired when the write is done or failed.
      * @throws BackendOperationException
      */
-    private Callback<WriteBatchResult> routeWrites(final String backendGroup,
-            List<BufferedWriteMetric> writes) throws BackendOperationException {
+    private Callback<WriteBatchResult> routeWrites(final String backendGroup, List<BufferedWriteMetric> writes)
+            throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.addAll(writeCluster(backendGroup, writes));
 
         final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
             @Override
-            public WriteBatchResult resolved(
-                    Collection<WriteBatchResult> results,
-                    Collection<Exception> errors,
+            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
                 for (final Exception e : errors) {
                     log.error("Remote write failed", e);
@@ -225,72 +212,58 @@ public class ClusteredMetricManager implements LifeCycle {
                     }
                 }
 
-                return new WriteBatchResult(ok, results.size() + errors.size()
-                        + cancelled.size());
+                return new WriteBatchResult(ok, results.size() + errors.size() + cancelled.size());
             }
         };
 
         return ConcurrentCallback.newReduce(callbacks, reducer);
     }
 
-    private List<Callback<WriteBatchResult>> writeCluster(
-            final String backendGroup, final List<BufferedWriteMetric> writes)
-            throws BackendOperationException {
+    private List<Callback<WriteBatchResult>> writeCluster(final String backendGroup,
+            final List<BufferedWriteMetric> writes) throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
-        final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
-                .create();
+        final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap.create();
 
         for (final BufferedWriteMetric w : writes) {
-            partitions.put(w.getNode(),
-                    new WriteMetric(w.getSeries(), w.getData()));
+            partitions.put(w.getNode(), new WriteMetric(w.getSeries(), w.getData()));
         }
 
-        for (final Map.Entry<NodeRegistryEntry, Collection<WriteMetric>> entry : partitions
-                .asMap().entrySet()) {
-            callbacks.add(entry.getKey().getClusterNode()
-                    .write(backendGroup, entry.getValue()));
+        for (final Map.Entry<NodeRegistryEntry, Collection<WriteMetric>> entry : partitions.asMap().entrySet()) {
+            callbacks.add(entry.getKey().getClusterNode().write(backendGroup, entry.getValue()));
         }
 
         return callbacks;
     }
 
-    public Callback<WriteBatchResult> write(MetricBackendGroup backend,
-            Collection<WriteMetric> writes) {
+    public Callback<WriteBatchResult> write(MetricBackendGroup backend, Collection<WriteMetric> writes) {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.add(backend.write(writes));
 
         if (callbacks.isEmpty())
-            return new CancelledCallback<WriteBatchResult>(
-                    CancelReason.NO_BACKENDS_AVAILABLE);
+            return new CancelledCallback<WriteBatchResult>(CancelReason.NO_BACKENDS_AVAILABLE);
 
-        return ConcurrentCallback.newReduce(callbacks,
-                WriteBatchResult.merger());
+        return ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger());
     }
 
-    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
-            throws MetricFormatException {
+    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write) throws MetricFormatException {
         if (!cluster.isReady())
             return null;
 
-        final NodeRegistryEntry node = cluster.findNode(write.getSeries()
-                .getTags(), NodeCapability.WRITE);
+        final NodeRegistryEntry node = cluster.findNode(write.getSeries().getTags(), NodeCapability.WRITE);
 
         if (node == null)
-            throw new MetricFormatException("Could not route: "
-                    + write.getSeries());
+            throw new MetricFormatException("Could not route: " + write.getSeries());
 
         return node;
     }
 
-    public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
-            final Filter filter, final List<String> groupBy,
-            final DateRange range, final AggregationGroup aggregation)
-                    throws MetricQueryException {
+    public Callback<QueryMetricsResult> queryMetrics(final String backendGroup, final Filter filter,
+            final List<String> groupBy, final DateRange range, final AggregationGroup aggregation)
+            throws MetricQueryException {
 
-        final Collection<NodeRegistryEntry> nodes = cluster
-                .findAllShards(NodeCapability.QUERY);
+        final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(NodeCapability.QUERY);
 
         final List<Callback<MetricGroups>> callbacks = Lists.newArrayList();
 
@@ -301,40 +274,34 @@ public class ClusteredMetricManager implements LifeCycle {
 
             final Map<String, String> shard = n.getMetadata().getTags();
 
-            final Callback<MetricGroups> query = n.getClusterNode().fullQuery(
-                    backendGroup, f, groupBy, rounded, aggregation);
+            final Callback<MetricGroups> query = n.getClusterNode().fullQuery(backendGroup, f, groupBy, rounded,
+                    aggregation);
 
-            callbacks.add(query.transform(MetricGroups.identity(), MetricGroups
-                    .nodeError(n.getMetadata().getId(), n.getUri(), shard)));
+            callbacks.add(query.transform(MetricGroups.identity(),
+                    MetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
         return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
-                .transform(new MetricGroupsTransformer(rounded))
-                .register(reporter.reportQueryMetrics());
+                .transform(new MetricGroupsTransformer(rounded)).register(reporter.reportQueryMetrics());
     }
 
     private Filter modifyFilter(NodeMetadata metadata, Filter filter) {
         final List<Filter> statements = new ArrayList<>();
         statements.add(filter);
 
-        for (final Map.Entry<String, String> entry : metadata.getTags()
-                .entrySet()) {
-            statements
-            .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+        for (final Map.Entry<String, String> entry : metadata.getTags().entrySet()) {
+            statements.add(new MatchTagFilter(entry.getKey(), entry.getValue()));
         }
 
         return new AndFilter(statements).optimize();
     }
 
-    public Callback<StreamMetricsResult> streamMetrics(
-            final String backendGroup, final Filter filter,
-            final List<String> groupBy, final DateRange range,
-            final AggregationGroup aggregation, MetricStream handle)
+    public Callback<StreamMetricsResult> streamMetrics(final String backendGroup, final Filter filter,
+            final List<String> groupBy, final DateRange range, final AggregationGroup aggregation, MetricStream handle)
             throws MetricQueryException {
         final DateRange rounded = roundRange(aggregation, range);
 
-        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
-                backendGroup, filter, groupBy);
+        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(backendGroup, filter, groupBy);
 
         final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
 
@@ -347,8 +314,7 @@ public class ClusteredMetricManager implements LifeCycle {
             public Callback<MetricGroups> query(DateRange range) {
                 log.info("{}: streaming chunk {}", streamId, range);
 
-                final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
-                        range, aggregation);
+                final PreparedQueryTransformer transformer = new PreparedQueryTransformer(range, aggregation);
 
                 return rows.transform(transformer);
             }
@@ -356,16 +322,14 @@ public class ClusteredMetricManager implements LifeCycle {
 
         final long chunk = rounded.diff() / RANGE_FACTOR;
 
-        streamChunks(callback, handle, streamingQuery, rounded,
-                rounded.start(rounded.end()), chunk, chunk);
+        streamChunks(callback, handle, streamingQuery, rounded, rounded.start(rounded.end()), chunk, chunk);
 
-        return callback.register(reporter.reportStreamMetrics()).register(
-                new Callback.Finishable() {
-                    @Override
-                    public void finished() throws Exception {
-                        log.info("{}: done streaming", streamId);
-                    }
-                });
+        return callback.register(reporter.reportStreamMetrics()).register(new Callback.Finishable() {
+            @Override
+            public void finished() throws Exception {
+                log.info("{}: done streaming", streamId);
+            }
+        });
     }
 
     private static final long RANGE_FACTOR = 20;
@@ -375,16 +339,13 @@ public class ClusteredMetricManager implements LifeCycle {
     }
 
     /**
-     * Streaming implementation that backs down in time in DIFF ms for each
-     * invocation.
+     * Streaming implementation that backs down in time in DIFF ms for each invocation.
      */
-    private void streamChunks(final Callback<StreamMetricsResult> callback,
-            final MetricStream handle, final StreamingQuery query,
-            final DateRange originalRange, final DateRange lastRange,
-            final long chunk, final long window) {
+    private void streamChunks(final Callback<StreamMetricsResult> callback, final MetricStream handle,
+            final StreamingQuery query, final DateRange originalRange, final DateRange lastRange, final long chunk,
+            final long window) {
         // decrease the range for the current chunk.
-        final DateRange currentRange = lastRange.start(Math.max(
-                lastRange.start() - window, originalRange.start()));
+        final DateRange currentRange = lastRange.start(Math.max(lastRange.start() - window, originalRange.start()));
 
         final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
             @Override
@@ -406,8 +367,7 @@ public class ClusteredMetricManager implements LifeCycle {
                     return;
 
                 try {
-                    handle.stream(callback, new QueryMetricsResult(
-                            originalRange, result));
+                    handle.stream(callback, new QueryMetricsResult(originalRange, result));
                 } catch (final Exception e) {
                     callback.fail(e);
                     return;
@@ -418,8 +378,7 @@ public class ClusteredMetricManager implements LifeCycle {
                     return;
                 }
 
-                streamChunks(callback, handle, query, originalRange,
-                        currentRange, chunk, window + chunk);
+                streamChunks(callback, handle, query, originalRange, currentRange, chunk, window + chunk);
             }
         };
 
@@ -427,15 +386,14 @@ public class ClusteredMetricManager implements LifeCycle {
         deferredExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                query.query(currentRange).register(callbackHandle)
-                        .register(reporter.reportStreamMetricsChunk());
+                query.query(currentRange).register(callbackHandle).register(reporter.reportStreamMetricsChunk());
             }
         });
     }
 
     /**
-     * Check if the query wants to hint at a specific interval. If that is the
-     * case, round the provided date to the specified interval.
+     * Check if the query wants to hint at a specific interval. If that is the case, round the provided date to the
+     * specified interval.
      *
      * @param query
      * @return
@@ -445,30 +403,24 @@ public class ClusteredMetricManager implements LifeCycle {
             return range;
 
         final Sampling sampling = aggregation.getSampling();
-        return range.rounded(sampling.getExtent()).rounded(sampling.getSize())
-                .shiftStart(-sampling.getExtent());
+        return range.rounded(sampling.getExtent()).rounded(sampling.getSize()).shiftStart(-sampling.getExtent());
     }
 
     /**
-     * Finds time series and routing the query to a specific remote Heroic
-     * instance.
+     * Finds time series and routing the query to a specific remote Heroic instance.
      *
      * @param criteria
      * @return
      */
-    private Callback<List<PreparedQuery>> findAndRouteTimeSeries(
-            final String backendGroup, final Filter filter,
+    private Callback<List<PreparedQuery>> findAndRouteTimeSeries(final String backendGroup, final Filter filter,
             final List<String> groupBy) {
         return findAllTimeSeries(filter, groupBy).transform(
-                new ClusteredFindAndRouteTransformer(cluster, filter, backendGroup,
-                        groupLimit, groupLoadLimit)).register(
-                                reporter.reportFindTimeSeries());
+                new ClusteredFindAndRouteTransformer(cluster, filter, backendGroup, groupLimit, groupLoadLimit))
+                .register(reporter.reportFindTimeSeries());
     }
 
-    private Callback<FindTimeSeriesGroups> findAllTimeSeries(
-            final Filter filter, List<String> groupBy) {
-        final FindSeriesTransformer transformer = new FindSeriesTransformer(
-                groupBy);
+    private Callback<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {
+        final FindSeriesTransformer transformer = new FindSeriesTransformer(groupBy);
         return metadata.findSeries(filter).transform(transformer);
     }
 

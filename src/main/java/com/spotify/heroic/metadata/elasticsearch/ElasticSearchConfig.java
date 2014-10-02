@@ -48,13 +48,9 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
     private final XContentBuilder mapping;
 
     @JsonCreator
-    public static ElasticSearchConfig create(
-            @JsonProperty("id") String id,
-            @JsonProperty("seeds") List<String> seeds,
-            @JsonProperty("clusterName") String clusterName,
-            @JsonProperty("index") String index,
-            @JsonProperty("type") String type,
-            @JsonProperty("nodeClient") Boolean nodeClient,
+    public static ElasticSearchConfig create(@JsonProperty("id") String id, @JsonProperty("seeds") List<String> seeds,
+            @JsonProperty("clusterName") String clusterName, @JsonProperty("index") String index,
+            @JsonProperty("type") String type, @JsonProperty("nodeClient") Boolean nodeClient,
 
             @JsonProperty("pools") ReadWriteThreadPools.Config pools,
 
@@ -95,13 +91,11 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
 
         final List<InetSocketTransportAddress> s = buildSeeds(seeds);
 
-        return new ElasticSearchConfig(id, pools, s, clusterName, index, type,
-                nodeClient, writeBulkActions, concurrentBulkRequests,
-                dumpInterval, mapping);
+        return new ElasticSearchConfig(id, pools, s, clusterName, index, type, nodeClient, writeBulkActions,
+                concurrentBulkRequests, dumpInterval, mapping);
     }
 
-    private static List<InetSocketTransportAddress> buildSeeds(
-            final List<String> rawSeeds) {
+    private static List<InetSocketTransportAddress> buildSeeds(final List<String> rawSeeds) {
         final List<InetSocketTransportAddress> seeds = new ArrayList<>();
 
         for (final String seed : rawSeeds) {
@@ -111,12 +105,10 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
         return seeds;
     }
 
-    private static InetSocketTransportAddress parseInetSocketTransportAddress(
-            final String seed) {
+    private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
             final String parts[] = seed.split(":");
-            return new InetSocketTransportAddress(parts[0],
-                    Integer.valueOf(parts[1]));
+            return new InetSocketTransportAddress(parts[0], Integer.valueOf(parts[1]));
         }
 
         return new InetSocketTransportAddress(seed, 9300);
@@ -130,8 +122,7 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
         b = b.startObject(type);
         b = b.startObject("properties");
 
-        b = b.startObject("key").field("type", "string")
-                .field("index", "not_analyzed").endObject();
+        b = b.startObject("key").field("type", "string").field("index", "not_analyzed").endObject();
 
         b = b.startObject("tags").field("type", "nested");
 
@@ -139,10 +130,8 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
             b = b.startObject("properties");
 
             {
-                b = b.startObject("value").field("type", "string")
-                        .field("index", "not_analyzed").endObject();
-                b = b.startObject("key").field("type", "string")
-                        .field("index", "not_analyzed").endObject();
+                b = b.startObject("value").field("type", "string").field("index", "not_analyzed").endObject();
+                b = b.startObject("key").field("type", "string").field("index", "not_analyzed").endObject();
             }
 
             b = b.endObject();
@@ -160,8 +149,7 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetadataBackendReporter reporter(
-                    MetadataBackendManagerReporter reporter) {
+            public MetadataBackendReporter reporter(MetadataBackendManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
 

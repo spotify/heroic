@@ -13,14 +13,12 @@ import com.spotify.heroic.metric.model.PreparedQuery;
 import com.spotify.heroic.model.DateRange;
 
 @RequiredArgsConstructor
-public final class PreparedQueryTransformer implements
-        Callback.DeferredTransformer<List<PreparedQuery>, MetricGroups> {
+public final class PreparedQueryTransformer implements Callback.DeferredTransformer<List<PreparedQuery>, MetricGroups> {
     private final DateRange rounded;
     private final AggregationGroup aggregation;
 
     @Override
-    public Callback<MetricGroups> transform(List<PreparedQuery> queries)
-            throws Exception {
+    public Callback<MetricGroups> transform(List<PreparedQuery> queries) throws Exception {
         final List<Callback<MetricGroups>> callbacks = new ArrayList<>();
 
         for (final PreparedQuery query : queries) {

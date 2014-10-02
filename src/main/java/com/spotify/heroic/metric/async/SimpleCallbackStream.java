@@ -20,43 +20,35 @@ import com.spotify.heroic.model.DataPoint;
 
 @Slf4j
 @RequiredArgsConstructor
-public final class SimpleCallbackStream implements
-Callback.StreamReducer<FetchData, MetricGroups> {
+public final class SimpleCallbackStream implements Callback.StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
 
     private final Queue<FetchData> results = new ConcurrentLinkedQueue<FetchData>();
 
     @Override
-    public void resolved(Callback<FetchData> callback, FetchData result)
-            throws Exception {
+    public void resolved(Callback<FetchData> callback, FetchData result) throws Exception {
         results.add(result);
     }
 
     @Override
-    public void failed(Callback<FetchData> callback, Exception error)
-            throws Exception {
+    public void failed(Callback<FetchData> callback, Exception error) throws Exception {
         log.error("Error encountered when processing request", error);
     }
 
     @Override
-    public void cancelled(Callback<FetchData> callback, CancelReason reason)
-            throws Exception {
+    public void cancelled(Callback<FetchData> callback, CancelReason reason) throws Exception {
         log.error("Cancel encountered when processing request", reason);
     }
 
     @Override
-    public MetricGroups resolved(int successful, int failed, int cancelled)
-            throws Exception {
+    public MetricGroups resolved(int successful, int failed, int cancelled) throws Exception {
         if (failed > 0)
-            throw new Exception(
-                    "Some time series could not be fetched from the database");
+            throw new Exception("Some time series could not be fetched from the database");
 
         final List<DataPoint> datapoints = joinRawResults();
 
-        final Statistics statistics = Statistics.builder()
-                .row(new Statistics.Row(successful, failed, cancelled))
-                .aggregator(new Statistics.Aggregator(datapoints.size(), 0, 0))
-                .build();
+        final Statistics statistics = Statistics.builder().row(new Statistics.Row(successful, failed, cancelled))
+                .aggregator(new Statistics.Aggregator(datapoints.size(), 0, 0)).build();
 
         final List<MetricGroup> groups = new ArrayList<MetricGroup>();
         groups.add(new MetricGroup(group, datapoints));

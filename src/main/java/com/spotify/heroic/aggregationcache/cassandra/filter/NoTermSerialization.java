@@ -7,8 +7,7 @@ import com.spotify.heroic.filter.NoTermFilter;
 import com.spotify.heroic.filter.NoTermFilterBuilder;
 
 @RequiredArgsConstructor
-public class NoTermSerialization<T extends NoTermFilter> implements
-FilterSerialization<T> {
+public class NoTermSerialization<T extends NoTermFilter> implements FilterSerialization<T> {
     private final NoTermFilterBuilder<T> builder;
 
     @Override

@@ -28,17 +28,14 @@ final class HttpGetRequestResolver<T> implements Callback.Resolver<T> {
             throw new RpcNodeException(target.getUri(), "request failed", e);
         }
 
-        final String contentType = response
-                .getHeaderString(HttpHeaders.CONTENT_TYPE);
+        final String contentType = response.getHeaderString(HttpHeaders.CONTENT_TYPE);
 
         if (contentType == null) {
-            throw new RpcNodeException(target.getUri(),
-                    "No Content-Type in response");
+            throw new RpcNodeException(target.getUri(), "No Content-Type in response");
         }
 
         if (!contentType.equals(MediaType.APPLICATION_JSON)) {
-            throw new RpcNodeException(target.getUri(),
-                    "Got body of unexpected Content-Type: " + contentType);
+            throw new RpcNodeException(target.getUri(), "Got body of unexpected Content-Type: " + contentType);
         }
 
         if (response.getStatusInfo().getFamily() != Status.Family.SUCCESSFUL) {

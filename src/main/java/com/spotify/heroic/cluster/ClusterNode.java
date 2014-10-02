@@ -19,16 +19,14 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
 public interface ClusterNode {
-    public Callback<MetricGroups> query(final String backendGroup,
-            final Filter filter, final Map<String, String> group,
-            final AggregationGroup aggregation, final DateRange range,
+    public Callback<MetricGroups> query(final String backendGroup, final Filter filter,
+            final Map<String, String> group, final AggregationGroup aggregation, final DateRange range,
             final Set<Series> series);
 
-    public Callback<WriteBatchResult> write(final String backendGroup,
-            Collection<WriteMetric> writes);
+    public Callback<WriteBatchResult> write(final String backendGroup, Collection<WriteMetric> writes);
 
-    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter,
-            List<String> groupBy, DateRange range, AggregationGroup aggregation);
+    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter, List<String> groupBy, DateRange range,
+            AggregationGroup aggregation);
 
     public Callback<FindTags> findTags(Filter filter);
 

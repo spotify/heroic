@@ -19,13 +19,12 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @RequiredArgsConstructor
-public class MetadataBackendManagerModule extends PrivateModule {
+public class MetadataModule extends PrivateModule {
     private final List<MetadataBackendConfig> backends;
 
     @JsonCreator
-    public static MetadataBackendManagerModule create(
-            @JsonProperty("backends") List<MetadataBackendConfig> backends) {
-        return new MetadataBackendManagerModule(backends);
+    public static MetadataModule create(@JsonProperty("backends") List<MetadataBackendConfig> backends) {
+        return new MetadataModule(backends);
     }
 
     @Provides
@@ -42,17 +41,15 @@ public class MetadataBackendManagerModule extends PrivateModule {
     }
 
     private void bindBackends(final Collection<MetadataBackendConfig> configs) {
-        final Multibinder<MetadataBackend> bindings = Multibinder.newSetBinder(
-                binder(), MetadataBackend.class, Names.named("backends"));
+        final Multibinder<MetadataBackend> bindings = Multibinder.newSetBinder(binder(), MetadataBackend.class,
+                Names.named("backends"));
 
         int i = 0;
 
         for (final MetadataBackendConfig config : configs) {
-            final String id = config.id() != null ? config.id() : config
-                    .buildId(i++);
+            final String id = config.id() != null ? config.id() : config.buildId(i++);
 
-            final Key<MetadataBackend> key = Key.get(MetadataBackend.class,
-                    Names.named(id));
+            final Key<MetadataBackend> key = Key.get(MetadataBackend.class, Names.named(id));
 
             install(config.module(key, id));
 

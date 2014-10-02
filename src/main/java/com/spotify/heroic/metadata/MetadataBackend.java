@@ -13,14 +13,11 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
 
 public interface MetadataBackend extends LifeCycle {
-    public Callback<WriteBatchResult> write(Series series)
-            throws MetadataOperationException;
+    public Callback<WriteBatchResult> write(Series series) throws MetadataOperationException;
 
-    public Callback<WriteBatchResult> writeBatch(List<Series> series)
-            throws MetadataOperationException;
+    public Callback<WriteBatchResult> writeBatch(List<Series> series) throws MetadataOperationException;
 
-    public Callback<FindTags> findTags(Filter filter)
-            throws MetadataOperationException;
+    public Callback<FindTags> findTags(Filter filter) throws MetadataOperationException;
 
     /**
      * Buffer a write for the specified series.
@@ -32,17 +29,13 @@ public interface MetadataBackend extends LifeCycle {
      * @throws MetadataOperationException
      *             If write could not be buffered.
      */
-    public void write(String id, Series series)
-            throws MetadataOperationException;
+    public void write(String id, Series series) throws MetadataOperationException;
 
-    public Callback<FindSeries> findSeries(Filter filter)
-            throws MetadataOperationException;
+    public Callback<FindSeries> findSeries(Filter filter) throws MetadataOperationException;
 
-    public Callback<DeleteSeries> deleteSeries(Filter filter)
-            throws MetadataOperationException;
+    public Callback<DeleteSeries> deleteSeries(Filter filter) throws MetadataOperationException;
 
-    public Callback<FindKeys> findKeys(Filter filter)
-            throws MetadataOperationException;
+    public Callback<FindKeys> findKeys(Filter filter) throws MetadataOperationException;
 
     public Callback<Void> refresh();
 

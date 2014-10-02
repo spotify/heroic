@@ -26,14 +26,10 @@ public class SemanticConsumerReporter implements ConsumerReporter {
 
         this.base = MetricId.build().tagged("component", COMPONENT, "id", id);
 
-        messageIn = registry.meter(base.tagged("what", "message-in", "unit",
-                Units.MESSAGE));
-        messageError = registry.meter(base.tagged("what", "message-error",
-                "unit", Units.FAILURE));
-        consumerSchemaError = registry.meter(base.tagged("what",
-                "consumer-schema-error", "unit", Units.FAILURE));
-        messageSize = registry.histogram(base.tagged("what", "message-size",
-                "unit", Units.BYTE));
+        messageIn = registry.meter(base.tagged("what", "message-in", "unit", Units.MESSAGE));
+        messageError = registry.meter(base.tagged("what", "message-error", "unit", Units.FAILURE));
+        consumerSchemaError = registry.meter(base.tagged("what", "consumer-schema-error", "unit", Units.FAILURE));
+        messageSize = registry.histogram(base.tagged("what", "message-size", "unit", Units.BYTE));
     }
 
     @Override

@@ -16,8 +16,7 @@ import com.spotify.heroic.http.rpc5.Rpc5ClusterNode;
 import com.spotify.heroic.metadata.MetadataBackendManager;
 
 @RequiredArgsConstructor
-public class NodeRegistryEntryTransformer implements
-        Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+public class NodeRegistryEntryTransformer implements Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
     private final HttpClientManager clients;
     private final URI uri;
     private final NodeRegistryEntry localEntry;
@@ -26,8 +25,7 @@ public class NodeRegistryEntryTransformer implements
 
     @Override
     public NodeRegistryEntry transform(NodeMetadata metadata) throws Exception {
-        if (useLocal
-                && metadata.getId().equals(localEntry.getMetadata().getId())) {
+        if (useLocal && metadata.getId().equals(localEntry.getMetadata().getId())) {
             return localEntry;
         }
 
@@ -36,8 +34,7 @@ public class NodeRegistryEntryTransformer implements
     }
 
     /**
-     * Pick the best cluster node implementation depending on the provided
-     * metadata.
+     * Pick the best cluster node implementation depending on the provided metadata.
      *
      * @param m
      * @return
@@ -49,8 +46,7 @@ public class NodeRegistryEntryTransformer implements
         final HttpClientSession client = clients.newSession(uri, base);
 
         if (m.getVersion() < 4) {
-            throw new RpcNodeException(uri, "Unsupported RPC version: "
-                    + m.getVersion());
+            throw new RpcNodeException(uri, "Unsupported RPC version: " + m.getVersion());
         }
 
         switch (m.getVersion()) {

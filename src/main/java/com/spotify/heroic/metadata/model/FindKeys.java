@@ -20,9 +20,8 @@ public class FindKeys {
     @Slf4j
     public static class Reducer implements Callback.Reducer<FindKeys, FindKeys> {
         @Override
-        public FindKeys resolved(Collection<FindKeys> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception {
+        public FindKeys resolved(Collection<FindKeys> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 

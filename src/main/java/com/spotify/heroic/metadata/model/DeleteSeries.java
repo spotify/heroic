@@ -14,12 +14,10 @@ public class DeleteSeries {
     private final int successful;
     private final int failed;
 
-    public static class Reducer implements
-    Callback.Reducer<DeleteSeries, DeleteSeries> {
+    public static class Reducer implements Callback.Reducer<DeleteSeries, DeleteSeries> {
         @Override
-        public DeleteSeries resolved(Collection<DeleteSeries> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                        throws Exception {
+        public DeleteSeries resolved(Collection<DeleteSeries> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
 
             if (!errors.isEmpty() || !cancelled.isEmpty())
                 throw new Exception("Delete failed");

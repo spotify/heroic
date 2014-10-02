@@ -32,12 +32,9 @@ public final class HeroicBackendConfig implements MetricBackendConfig {
     private final ReadWriteThreadPools.Config pools;
 
     @JsonCreator
-    public static HeroicBackendConfig create(
-            @JsonProperty("id") String id,
-            @JsonProperty("seeds") String seeds,
+    public static HeroicBackendConfig create(@JsonProperty("id") String id, @JsonProperty("seeds") String seeds,
             @JsonProperty("keyspace") String keyspace,
-            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
-            @JsonProperty("group") String group,
+            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost, @JsonProperty("group") String group,
             @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         if (seeds == null)
             seeds = DEFAULT_SEEDS;
@@ -54,8 +51,7 @@ public final class HeroicBackendConfig implements MetricBackendConfig {
         if (pools == null)
             pools = ReadWriteThreadPools.Config.createDefault();
 
-        return new HeroicBackendConfig(id, group, keyspace, seeds,
-                maxConnectionsPerHost, pools);
+        return new HeroicBackendConfig(id, group, keyspace, seeds, maxConnectionsPerHost, pools);
     }
 
     @Override
@@ -63,8 +59,7 @@ public final class HeroicBackendConfig implements MetricBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetricBackendReporter reporter(
-                    MetricBackendManagerReporter reporter) {
+            public MetricBackendReporter reporter(MetricBackendManagerReporter reporter) {
                 return reporter.newBackend(id);
             }
 

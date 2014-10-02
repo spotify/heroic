@@ -29,16 +29,13 @@ public class WriteResource {
 
     @POST
     @Path("/metrics")
-    public Response metrics(@QueryParam("backend") String backendGroup,
-            WriteMetrics write) throws Exception {
+    public Response metrics(@QueryParam("backend") String backendGroup, WriteMetrics write) throws Exception {
         try {
-            metrics.bufferWrite(backendGroup, new WriteMetric(
-                    write.getSeries(), write.getData()));
+            metrics.bufferWrite(backendGroup, new WriteMetric(write.getSeries(), write.getData()));
         } catch (final MetricFormatException e) {
             throw new Exception("Invalid write: " + e.getMessage());
         }
 
-        return Response.status(Response.Status.OK)
-                .entity(new WriteMetricsResponse(true)).build();
+        return Response.status(Response.Status.OK).entity(new WriteMetricsResponse(true)).build();
     }
 }

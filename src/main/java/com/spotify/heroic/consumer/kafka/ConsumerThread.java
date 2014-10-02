@@ -66,8 +66,7 @@ public final class ConsumerThread implements Runnable {
         log.info("{}: Stopped consuming.", topic);
     }
 
-    private void retryUntilSuccessful(final byte[] body)
-            throws InterruptedException {
+    private void retryUntilSuccessful(final byte[] body) throws InterruptedException {
         long sleep = INITIAL_SLEEP;
 
         while (shutdownLatch.getCount() > 0) {
@@ -103,11 +102,8 @@ public final class ConsumerThread implements Runnable {
     private void handleRetry(long sleep) throws InterruptedException {
         log.info("{}: Retrying in {} second(s)", topic, sleep);
 
-        /*
-         * decrementing the number of active consumers indicates an error to the
-         * consumer module. This makes sure that the status of the service is
-         * set to as 'failing'.
-         */
+        /* decrementing the number of active consumers indicates an error to the consumer module. This makes sure that
+         * the status of the service is set to as 'failing'. */
         consuming.decrementAndGet();
         shutdownLatch.await(sleep, TimeUnit.SECONDS);
         consuming.incrementAndGet();

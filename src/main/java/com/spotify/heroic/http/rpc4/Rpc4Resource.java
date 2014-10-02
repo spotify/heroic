@@ -27,8 +27,7 @@ public class Rpc4Resource {
     private static final HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups>() {
         @Override
         public Rpc4MetricGroups resume(MetricGroups value) throws Exception {
-            return new Rpc4MetricGroups(value.getGroups(),
-                    value.getStatistics(), value.getErrors());
+            return new Rpc4MetricGroups(value.getGroups(), value.getStatistics(), value.getErrors());
         }
     };
 
@@ -41,36 +40,28 @@ public class Rpc4Resource {
 
     @POST
     @Path("/query")
-    public void query(@Suspended final AsyncResponse response,
-            Rpc4QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = metrics.useGroup(
-                query.getBackendGroup()).groupedQuery(query.getGroup(),
-                query.getFilter(), query.getSeries(), query.getRange(),
-                        query.getAggregationGroup());
+    public void query(@Suspended final AsyncResponse response, Rpc4QueryBody query) throws Exception {
+        final Callback<MetricGroups> callback = metrics.useGroup(query.getBackendGroup()).groupedQuery(
+                query.getGroup(), query.getFilter(), query.getSeries(), query.getRange(), query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 
     @POST
     @Path("/write")
-    public void write(@Suspended final AsyncResponse response,
-            Rpc4WriteBody body) throws Exception {
-        final MetricBackendGroup backend = metrics.useGroup(body
-                .getBackendGroup());
+    public void write(@Suspended final AsyncResponse response, Rpc4WriteBody body) throws Exception {
+        final MetricBackendGroup backend = metrics.useGroup(body.getBackendGroup());
 
-        final Callback<WriteBatchResult> callback = backend.write(body
-                .getWrites());
+        final Callback<WriteBatchResult> callback = backend.write(body.getWrites());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
 
     @POST
     @Path("/full-query")
-    public void query(@Suspended final AsyncResponse response,
-            Rpc4FullQueryBody body) throws Exception {
-        final Callback<MetricGroups> callback = metrics.directQueryMetrics(
-                body.getBackendGroup(), body.getFilter(), body.getGroupBy(),
-                body.getRange(), body.getAggregation());
+    public void query(@Suspended final AsyncResponse response, Rpc4FullQueryBody body) throws Exception {
+        final Callback<MetricGroups> callback = metrics.directQueryMetrics(body.getBackendGroup(), body.getFilter(),
+                body.getGroupBy(), body.getRange(), body.getAggregation());
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }
 }

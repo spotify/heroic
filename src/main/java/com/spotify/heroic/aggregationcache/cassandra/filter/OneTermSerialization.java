@@ -8,8 +8,7 @@ import com.spotify.heroic.filter.OneTermFilter;
 import com.spotify.heroic.filter.OneTermFilterBuilder;
 
 @RequiredArgsConstructor
-public class OneTermSerialization<T extends OneTermFilter<O>, O> implements
-        FilterSerialization<T> {
+public class OneTermSerialization<T extends OneTermFilter<O>, O> implements FilterSerialization<T> {
     private final Serializer<O> serializer;
     private final OneTermFilterBuilder<T, O> builder;
 

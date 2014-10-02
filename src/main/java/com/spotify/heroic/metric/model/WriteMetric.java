@@ -15,8 +15,7 @@ public final class WriteMetric {
     private final List<DataPoint> data;
 
     @JsonCreator
-    public static WriteMetric create(
-            @JsonProperty(value = "series", required = true) Series series,
+    public static WriteMetric create(@JsonProperty(value = "series", required = true) Series series,
             @JsonProperty(value = "data", required = true) List<DataPoint> data) {
         return new WriteMetric(series, data);
     }

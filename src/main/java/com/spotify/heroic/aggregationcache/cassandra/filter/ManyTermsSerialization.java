@@ -12,10 +12,8 @@ import com.spotify.heroic.filter.ManyTermsFilter;
 import com.spotify.heroic.filter.ManyTermsFilterBuilder;
 
 @RequiredArgsConstructor
-public class ManyTermsSerialization<T extends ManyTermsFilter> implements
-FilterSerialization<T> {
-    private static final IntegerSerializer integerSerializer = IntegerSerializer
-            .get();
+public class ManyTermsSerialization<T extends ManyTermsFilter> implements FilterSerialization<T> {
+    private static final IntegerSerializer integerSerializer = IntegerSerializer.get();
 
     private final ManyTermsFilterBuilder<T> builder;
 

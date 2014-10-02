@@ -39,15 +39,12 @@ public class StatusResource {
 
         final StatusResponse.Cluster cluster = buildClusterStatus();
 
-        final boolean allOk = consumers.isOk() && backends.isOk()
-                && metadataBackends.isOk() && cluster.isOk();
+        final boolean allOk = consumers.isOk() && backends.isOk() && metadataBackends.isOk() && cluster.isOk();
 
-        final StatusResponse response = new StatusResponse(allOk, consumers,
-                backends, metadataBackends, cluster);
+        final StatusResponse response = new StatusResponse(allOk, consumers, backends, metadataBackends, cluster);
 
         if (!response.isOk())
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(response).build();
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(response).build();
 
         return Response.status(Response.Status.OK).entity(response).build();
     }
@@ -58,8 +55,7 @@ public class StatusResource {
         if (s == null)
             return new StatusResponse.Cluster(true, 0, 0);
 
-        return new StatusResponse.Cluster(s.getOnlineNodes() > 0,
-                s.getOnlineNodes(), s.getOfflineNodes());
+        return new StatusResponse.Cluster(s.getOnlineNodes() > 0, s.getOnlineNodes(), s.getOfflineNodes());
     }
 
     private StatusResponse.Backend buildBackendStatus() {
@@ -91,8 +87,7 @@ public class StatusResource {
             }
         }
 
-        return new StatusResponse.Consumer((available == ready) && allOk,
-                available, ready, errors);
+        return new StatusResponse.Consumer((available == ready) && allOk, available, ready, errors);
     }
 
     private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
@@ -105,7 +100,6 @@ public class StatusResource {
                 ready += 1;
         }
 
-        return new StatusResponse.MetadataBackend(available == ready,
-                available, ready);
+        return new StatusResponse.MetadataBackend(available == ready, available, ready);
     }
 }

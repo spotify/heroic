@@ -32,8 +32,7 @@ public class HeroicJerseyApplication extends ResourceConfig {
 
         GuiceBridge.getGuiceBridge().initializeGuiceBridge(serviceLocator);
 
-        final GuiceIntoHK2Bridge bridge = serviceLocator
-                .getService(GuiceIntoHK2Bridge.class);
+        final GuiceIntoHK2Bridge bridge = serviceLocator.getService(GuiceIntoHK2Bridge.class);
 
         bridge.bridgeGuiceInjector(HeroicMain.injector);
 

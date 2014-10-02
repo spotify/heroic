@@ -32,8 +32,7 @@ public class AggregationCache {
     private AggregationCacheReporter reporter;
 
     @RequiredArgsConstructor
-    private static final class BackendCacheGetHandle implements
-            Callback.Handle<CacheBackendGetResult> {
+    private static final class BackendCacheGetHandle implements Callback.Handle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
         private final Callback<CacheQueryResult> callback;
         private final DateRange range;
@@ -60,8 +59,7 @@ public class AggregationCache {
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(range);
-                callback.resolve(new CacheQueryResult(key, range, cached,
-                        misses));
+                callback.resolve(new CacheQueryResult(key, range, cached, misses));
                 reporter.reportGetMiss(misses.size());
                 return;
             }
@@ -71,8 +69,7 @@ public class AggregationCache {
             long current = range.getStart();
 
             for (final DataPoint d : cached) {
-                if (current + width != d.getTimestamp()
-                        && current < d.getTimestamp())
+                if (current + width != d.getTimestamp() && current < d.getTimestamp())
                     misses.add(range.modify(current, d.getTimestamp()));
 
                 current = d.getTimestamp();
@@ -87,8 +84,7 @@ public class AggregationCache {
     }
 
     @RequiredArgsConstructor
-    private final class BackendCachePutHandle implements
-            Callback.Handle<CacheBackendPutResult> {
+    private final class BackendCachePutHandle implements Callback.Handle<CacheBackendPutResult> {
         private final Callback<CachePutResult> callback;
 
         @Override
@@ -111,35 +107,28 @@ public class AggregationCache {
         return backend != null;
     }
 
-    public Callback<CacheQueryResult> get(Filter filter,
-            Map<String, String> group, final AggregationGroup aggregation,
+    public Callback<CacheQueryResult> get(Filter filter, Map<String, String> group, final AggregationGroup aggregation,
             DateRange range) throws CacheOperationException {
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");
 
-        final CacheBackendKey key = new CacheBackendKey(filter, group,
-                aggregation);
+        final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
         final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
 
-        backend.get(key, range).register(
-                new BackendCacheGetHandle(reporter, callback, range));
+        backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, range));
 
         return callback;
     }
 
-    public Callback<CachePutResult> put(Filter filter,
-            Map<String, String> group, AggregationGroup aggregation,
+    public Callback<CachePutResult> put(Filter filter, Map<String, String> group, AggregationGroup aggregation,
             List<DataPoint> datapoints) throws CacheOperationException {
-        final CacheBackendKey key = new CacheBackendKey(filter, group,
-                aggregation);
+        final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
         final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
 
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");
 
-        backend.put(key, datapoints)
-                .register(new BackendCachePutHandle(callback))
-                .register(reporter.reportPut());
+        backend.put(key, datapoints).register(new BackendCachePutHandle(callback)).register(reporter.reportPut());
 
         return callback;
     }

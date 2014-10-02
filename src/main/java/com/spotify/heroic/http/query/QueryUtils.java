@@ -15,8 +15,7 @@ public class QueryUtils {
         return defaultUnit;
     }
 
-    public static long parseSize(Long inputSize, final TimeUnit unit,
-            long defaultValue) {
+    public static long parseSize(Long inputSize, final TimeUnit unit, long defaultValue) {
         final long size;
 
         if (inputSize == null) {
@@ -26,14 +25,12 @@ public class QueryUtils {
         }
 
         if (size <= 0)
-            throw new IllegalArgumentException(
-                    "'size' must be a positive value");
+            throw new IllegalArgumentException("'size' must be a positive value");
 
         return size;
     }
 
-    public static long parseExtent(Long inputExtent, final TimeUnit unit,
-            final long size) {
+    public static long parseExtent(Long inputExtent, final TimeUnit unit, final long size) {
         final long extent;
 
         if (inputExtent == null) {
@@ -43,8 +40,7 @@ public class QueryUtils {
         }
 
         if (extent <= 0)
-            throw new IllegalArgumentException(
-                    "'extent' must be a positive value");
+            throw new IllegalArgumentException("'extent' must be a positive value");
 
         return extent;
     }

@@ -8,12 +8,10 @@ import com.spotify.heroic.filter.TwoTermsFilter;
 import com.spotify.heroic.filter.TwoTermsFilterBuilder;
 
 @RequiredArgsConstructor
-public final class TwoTermsSerialization<T extends TwoTermsFilter> implements
-FilterSerialization<T> {
+public final class TwoTermsSerialization<T extends TwoTermsFilter> implements FilterSerialization<T> {
     private final TwoTermsFilterBuilder<T> builder;
 
-    private static final SafeStringSerializer stringSerializer = SafeStringSerializer
-            .get();
+    private static final SafeStringSerializer stringSerializer = SafeStringSerializer.get();
 
     @Override
     public void serialize(Composite c, T obj) {

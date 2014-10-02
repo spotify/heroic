@@ -10,8 +10,7 @@ public class RpcWriteResult {
     private final boolean ok;
 
     @JsonCreator
-    public static RpcWriteResult create(
-            @JsonProperty(value = "ok", required = true) Boolean ok) {
+    public static RpcWriteResult create(@JsonProperty(value = "ok", required = true) Boolean ok) {
         return new RpcWriteResult(ok);
     }
 }

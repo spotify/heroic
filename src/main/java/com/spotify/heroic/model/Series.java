@@ -22,8 +22,7 @@ public class Series {
     }
 
     public Series modifyTags(Map<String, String> tags) {
-        final Map<String, String> modifiedTags = new HashMap<String, String>(
-                this.tags);
+        final Map<String, String> modifiedTags = new HashMap<String, String>(this.tags);
         modifiedTags.putAll(tags);
         return new Series(key, modifiedTags);
     }
@@ -33,8 +32,7 @@ public class Series {
     }
 
     @JsonCreator
-    public static Series create(
-            @JsonProperty(value = "key", required = true) String key,
+    public static Series create(@JsonProperty(value = "key", required = true) String key,
             @JsonProperty(value = "tags", required = true) Map<String, String> tags) {
         return new Series(key, tags);
     }

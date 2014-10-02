@@ -11,8 +11,7 @@ public class AverageAggregation extends BucketAggregation {
     }
 
     @JsonCreator
-    public static AverageAggregation create(
-            @JsonProperty("sampling") Sampling sampling) {
+    public static AverageAggregation create(@JsonProperty("sampling") Sampling sampling) {
         return new AverageAggregation(sampling);
     }
 

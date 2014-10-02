@@ -13,14 +13,12 @@ import com.spotify.heroic.filter.OneTermFilter;
 import com.spotify.heroic.filter.OneTermFilterBuilder;
 
 @RequiredArgsConstructor
-public class OneTermSerialization<T extends OneTermFilter<O>, O> implements
-        FilterSerialization<T> {
+public class OneTermSerialization<T extends OneTermFilter<O>, O> implements FilterSerialization<T> {
     private final OneTermFilterBuilder<T, O> builder;
     private final Class<O> type;
 
     @Override
-    public T deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+    public T deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
         final O first = p.readValueAs(type);
 
         if (p.nextToken() != JsonToken.END_ARRAY)
@@ -30,8 +28,7 @@ public class OneTermSerialization<T extends OneTermFilter<O>, O> implements
     }
 
     @Override
-    public void serialize(JsonGenerator g, T f) throws IOException,
-            JsonProcessingException {
+    public void serialize(JsonGenerator g, T f) throws IOException, JsonProcessingException {
         g.writeObject(f.first());
     }
 }

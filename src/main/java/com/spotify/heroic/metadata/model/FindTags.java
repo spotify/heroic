@@ -16,18 +16,15 @@ import com.spotify.heroic.async.CancelReason;
 
 @Data
 public class FindTags {
-    public static final FindTags EMPTY = new FindTags(
-            new HashMap<String, Set<String>>(), 0);
+    public static final FindTags EMPTY = new FindTags(new HashMap<String, Set<String>>(), 0);
 
     private final Map<String, Set<String>> tags;
     private final int size;
 
     /**
-     * Handle that tags is a deeply nested structure and copy it up until the
-     * closest immutable type.
+     * Handle that tags is a deeply nested structure and copy it up until the closest immutable type.
      */
-    private static void updateTags(final Map<String, Set<String>> data,
-            final Map<String, Set<String>> add) {
+    private static void updateTags(final Map<String, Set<String>> data, final Map<String, Set<String>> add) {
         for (final Map.Entry<String, Set<String>> entry : add.entrySet()) {
             Set<String> entries = data.get(entry.getKey());
 
@@ -46,9 +43,8 @@ public class FindTags {
         }
 
         @Override
-        public FindTags resolved(Collection<FindTags> results,
-                Collection<Exception> errors, Collection<CancelReason> cancelled)
-                        throws Exception {
+        public FindTags resolved(Collection<FindTags> results, Collection<Exception> errors,
+                Collection<CancelReason> cancelled) throws Exception {
             for (final Exception e : errors)
                 log.error("Query failed", e);
 
@@ -74,9 +70,7 @@ public class FindTags {
     }
 
     @JsonCreator
-    public static FindTags create(
-            @JsonProperty("tags") Map<String, Set<String>> tags,
-            @JsonProperty("size") int size) {
+    public static FindTags create(@JsonProperty("tags") Map<String, Set<String>> tags, @JsonProperty("size") int size) {
         return new FindTags(tags, size);
     }
 }

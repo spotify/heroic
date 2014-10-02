@@ -32,33 +32,22 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     private final Histogram writeBatchDuration;
 
-    public SemanticMetadataBackendReporter(SemanticMetricRegistry registry,
-            MetricId base) {
+    public SemanticMetadataBackendReporter(SemanticMetricRegistry registry, MetricId base) {
         this.registry = registry;
         this.id = base.tagged("component", COMPONENT);
 
-        refresh = new SemanticCallbackReporter(registry, id.tagged("what",
-                "refresh", "unit", Units.REFRESH));
-        findTags = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-tags", "unit", Units.LOOKUP));
-        findTagKeys = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-tag-keys", "unit", Units.LOOKUP));
-        findTimeSeries = new SemanticCallbackReporter(registry, id.tagged(
-                "what", "find-time-series", "unit", Units.LOOKUP));
-        findKeys = new SemanticCallbackReporter(registry, id.tagged("what",
-                "find-keys", "unit", Units.LOOKUP));
-        write = new SemanticCallbackReporter(registry, id.tagged("what",
-                "write", "unit", Units.WRITE));
-        writeCacheHit = registry.meter(id.tagged("what", "write-cache-hit",
-                "unit", Units.HIT));
-        writeCacheMiss = registry.meter(id.tagged("what", "write-cache-miss",
-                "unit", Units.MISS));
-        writeSuccess = registry.meter(id.tagged("what", "write-success",
-                "unit", Units.WRITE));
-        writeFailure = registry.meter(id.tagged("what", "write-failure",
-                "unit", Units.FAILURE));
-        writeBatchDuration = registry.histogram(id.tagged("what",
-                "write-bulk-duration", "unit", Units.MILLISECOND));
+        refresh = new SemanticCallbackReporter(registry, id.tagged("what", "refresh", "unit", Units.REFRESH));
+        findTags = new SemanticCallbackReporter(registry, id.tagged("what", "find-tags", "unit", Units.LOOKUP));
+        findTagKeys = new SemanticCallbackReporter(registry, id.tagged("what", "find-tag-keys", "unit", Units.LOOKUP));
+        findTimeSeries = new SemanticCallbackReporter(registry, id.tagged("what", "find-time-series", "unit",
+                Units.LOOKUP));
+        findKeys = new SemanticCallbackReporter(registry, id.tagged("what", "find-keys", "unit", Units.LOOKUP));
+        write = new SemanticCallbackReporter(registry, id.tagged("what", "write", "unit", Units.WRITE));
+        writeCacheHit = registry.meter(id.tagged("what", "write-cache-hit", "unit", Units.HIT));
+        writeCacheMiss = registry.meter(id.tagged("what", "write-cache-miss", "unit", Units.MISS));
+        writeSuccess = registry.meter(id.tagged("what", "write-success", "unit", Units.WRITE));
+        writeFailure = registry.meter(id.tagged("what", "write-failure", "unit", Units.FAILURE));
+        writeBatchDuration = registry.histogram(id.tagged("what", "write-bulk-duration", "unit", Units.MILLISECOND));
     }
 
     @Override
@@ -103,14 +92,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     @Override
     public void newWriteThreadPool(final ThreadPoolProvider provider) {
-        registry.register(
-                id.tagged("what", "write-thread-pool-size", "unit", Units.BYTE),
-                new Gauge<Integer>() {
-                    @Override
-                    public Integer getValue() {
-                        return provider.getQueueSize();
-                    }
-                });
+        registry.register(id.tagged("what", "write-thread-pool-size", "unit", Units.BYTE), new Gauge<Integer>() {
+            @Override
+            public Integer getValue() {
+                return provider.getQueueSize();
+            }
+        });
     }
 
     @Override

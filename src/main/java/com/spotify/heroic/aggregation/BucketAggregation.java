@@ -78,8 +78,7 @@ public abstract class BucketAggregation implements Aggregation {
 
         @Override
         public Result result() {
-            final List<DataPoint> result = new ArrayList<DataPoint>(
-                    buckets.length);
+            final List<DataPoint> result = new ArrayList<DataPoint>(buckets.length);
 
             for (final Bucket bucket : buckets) {
                 final long count = bucket.count.get();
@@ -88,15 +87,13 @@ public abstract class BucketAggregation implements Aggregation {
                 if (count == 0) {
                     d = new DataPoint(bucket.timestamp, Double.NaN);
                 } else {
-                    d = aggregator.build(bucket.timestamp, count,
-                            bucket.value.get());
+                    d = aggregator.build(bucket.timestamp, count, bucket.value.get());
                 }
 
                 result.add(d);
             }
 
-            final Statistics.Aggregator statistics = new Statistics.Aggregator(
-                    sampleSize, outOfBounds, uselessScan);
+            final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize, outOfBounds, uselessScan);
 
             return new Result(result, statistics);
         }
@@ -123,8 +120,7 @@ public abstract class BucketAggregation implements Aggregation {
         final DateRange range = original.rounded(sampling.getSize());
 
         final Bucket[] buckets = buildBuckets(range, size);
-        return new Session(this, buckets, range.start(), size,
-                sampling.getExtent());
+        return new Session(this, buckets, range.start(), size, sampling.getExtent());
     }
 
     private Bucket[] buildBuckets(final DateRange range, long size) {

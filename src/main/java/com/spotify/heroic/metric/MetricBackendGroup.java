@@ -58,18 +58,14 @@ public class MetricBackendGroup {
      * @return The result in the form of MetricGroups.
      * @throws BackendOperationException
      */
-    public Callback<MetricGroups> groupedQuery(final Map<String, String> group,
-            final Filter filter, final Set<Series> series,
-            final DateRange range, final AggregationGroup aggregation) {
-        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(
-                cache, filter, aggregation, range);
+    public Callback<MetricGroups> groupedQuery(final Map<String, String> group, final Filter filter,
+            final Set<Series> series, final DateRange range, final AggregationGroup aggregation) {
+        final TimeSeriesTransformer transformer = new TimeSeriesTransformer(cache, filter, aggregation, range);
 
-        return groupTimeseries(group, series).transform(transformer).register(
-                reporter.reportRpcQueryMetrics());
+        return groupTimeseries(group, series).transform(transformer).register(reporter.reportRpcQueryMetrics());
     }
 
-    public List<Callback<FetchData>> query(final Series series,
-            final DateRange range) {
+    public List<Callback<FetchData>> query(final Series series, final DateRange range) {
         final List<Callback<FetchData>> callbacks = new ArrayList<>();
 
         execute(new MetricBackendOperation() {
@@ -82,14 +78,12 @@ public class MetricBackendGroup {
         return callbacks;
     }
 
-    private Callback<List<GroupedSeries>> groupTimeseries(
-            final Map<String, String> group, final Set<Series> series) {
+    private Callback<List<GroupedSeries>> groupTimeseries(final Map<String, String> group, final Set<Series> series) {
         final List<GroupedSeries> grouped = new ArrayList<>();
 
         execute(new MetricBackendOperation() {
             @Override
-            public void run(final int disabled, final MetricBackend backend)
-                    throws Exception {
+            public void run(final int disabled, final MetricBackend backend) throws Exception {
                 // do not cache results if any backends are disabled or
                 // unavailable,
                 // because that would contribute to messed up results.
@@ -120,7 +114,6 @@ public class MetricBackendGroup {
             }
         });
 
-        return ConcurrentCallback.newReduce(callbacks,
-                WriteBatchResult.merger());
+        return ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger());
     }
 }

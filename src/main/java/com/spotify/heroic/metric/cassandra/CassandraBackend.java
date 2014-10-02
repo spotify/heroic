@@ -17,11 +17,9 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.spotify.heroic.metric.MetricBackend;
 
 /**
- * A partial and generic backend implementation for cassandra-based metric
- * backends.
+ * A partial and generic backend implementation for cassandra-based metric backends.
  *
- * The keyspace should be accessed using the {@link CassandraBackend#keyspace}
- * method.
+ * The keyspace should be accessed using the {@link CassandraBackend#keyspace} method.
  *
  * @author udoprog
  */
@@ -68,17 +66,15 @@ public abstract class CassandraBackend implements MetricBackend {
     public void start() throws Exception {
         log.info("Starting: {}", this);
 
-        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
-        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
+        final AstyanaxConfiguration config = new AstyanaxConfigurationImpl().setCqlVersion("3.0.0")
+                .setTargetCassandraVersion("2.0");
 
         context = new AstyanaxContext.Builder()
-        .withConnectionPoolConfiguration(
-                new ConnectionPoolConfigurationImpl(
-                        "HeroicConnectionPool").setPort(9160)
-                        .setMaxConnsPerHost(maxConnectionsPerHost)
-                        .setSeeds(seeds))
+                .withConnectionPoolConfiguration(
+                        new ConnectionPoolConfigurationImpl("HeroicConnectionPool").setPort(9160)
+                                .setMaxConnsPerHost(maxConnectionsPerHost).setSeeds(seeds))
                 .withAstyanaxConfiguration(config).forKeyspace(keyspaceName)
-                        .buildKeyspace(ThriftFamilyFactory.getInstance());
+                .buildKeyspace(ThriftFamilyFactory.getInstance());
 
         context.start();
         keyspace.set(context.getClient());

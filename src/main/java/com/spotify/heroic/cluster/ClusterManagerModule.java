@@ -22,11 +22,10 @@ import com.spotify.heroic.http.rpc.RpcResource;
 
 @RequiredArgsConstructor
 public class ClusterManagerModule extends PrivateModule {
-    private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key
-            .get(ClusterDiscovery.class);
+    private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key.get(ClusterDiscovery.class);
 
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet
-            .copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
+    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.copyOf(Sets.newHashSet(
+            NodeCapability.QUERY, NodeCapability.WRITE));
 
     public static final boolean DEFAULT_USE_LOCAL = false;
 
@@ -37,11 +36,9 @@ public class ClusterManagerModule extends PrivateModule {
     private final ClusterDiscoveryConfig discovery;
 
     @JsonCreator
-    public static ClusterManagerModule create(
-            @JsonProperty("discovery") ClusterDiscoveryConfig discovery,
+    public static ClusterManagerModule create(@JsonProperty("discovery") ClusterDiscoveryConfig discovery,
             @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities,
-            @JsonProperty("useLocal") Boolean useLocal,
+            @JsonProperty("capabilities") Set<NodeCapability> capabilities, @JsonProperty("useLocal") Boolean useLocal,
             @JsonProperty("threadPoolSize") Integer threadPoolSize) {
         if (capabilities == null)
             capabilities = DEFAULT_CAPABILITIES;
@@ -51,23 +48,19 @@ public class ClusterManagerModule extends PrivateModule {
 
         final UUID id = UUID.randomUUID();
 
-        return new ClusterManagerModule(tags, capabilities, id, useLocal,
-                discovery);
+        return new ClusterManagerModule(tags, capabilities, id, useLocal, discovery);
     }
 
-    public static NodeRegistryEntry buildLocalEntry(
-            ClusterNode localClusterNode, UUID localNodeId,
+    public static NodeRegistryEntry buildLocalEntry(ClusterNode localClusterNode, UUID localNodeId,
             Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
-                localNodeId, localNodeTags, capabilities);
+        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION, localNodeId, localNodeTags, capabilities);
         return new NodeRegistryEntry(null, localClusterNode, metadata);
     }
 
     @Provides
     @Named("localEntry")
     public NodeRegistryEntry localEntry(LocalClusterNode localClusterNode) {
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
-                localId, localTags, capabilities);
+        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION, localId, localTags, capabilities);
         return new NodeRegistryEntry(null, localClusterNode, metadata);
     }
 

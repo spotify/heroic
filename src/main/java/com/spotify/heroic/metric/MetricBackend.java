@@ -35,21 +35,17 @@ public interface MetricBackend extends LifeCycle {
     public Callback<WriteBatchResult> write(Collection<WriteMetric> writes);
 
     /**
-     * Query for data points that is part of the specified list of rows and
-     * range.
+     * Query for data points that is part of the specified list of rows and range.
      *
      * @param query
-     *            The query for fetching data points. The query contains rows
-     *            and a specified time range.
+     *            The query for fetching data points. The query contains rows and a specified time range.
      *
-     * @return A list of asynchronous data handlers for the resulting data
-     *         points. This is suitable to use with GroupQuery. There will be
-     *         one query per row.
+     * @return A list of asynchronous data handlers for the resulting data points. This is suitable to use with
+     *         GroupQuery. There will be one query per row.
      *
      * @throws QueryException
      */
-    public List<Callback<FetchData>> fetch(final Series series,
-            final DateRange range);
+    public List<Callback<FetchData>> fetch(final Series series, final DateRange range);
 
     /**
      * Gets the total number of columns that are in the given rows

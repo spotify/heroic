@@ -18,8 +18,8 @@ import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.http.HttpClientManagerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
-import com.spotify.heroic.metadata.MetadataBackendManagerModule;
-import com.spotify.heroic.metric.MetricBackendManagerModule;
+import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
@@ -32,21 +32,18 @@ public class HeroicConfig {
     private final String refreshClusterSchedule;
 
     private final ClusterManagerModule clusterManagerModule;
-    private final MetricBackendManagerModule metricBackendManagerModule;
-    private final MetadataBackendManagerModule metadataBackendManagerModule;
+    private final MetricModule metricModule;
+    private final MetadataModule metadataModule;
     private final AggregationCacheModule aggregationCacheModule;
     private final HttpClientManagerModule httpClientManagerModule;
     private final IngestionModule ingestionModule;
     private final List<ConsumerConfig> consumers;
 
     @JsonCreator
-    public static HeroicConfig create(
-            @JsonProperty("port") Integer port,
+    public static HeroicConfig create(@JsonProperty("port") Integer port,
             @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule,
-            @JsonProperty("cluster") ClusterManagerModule cluster,
-            @JsonProperty("metrics") MetricBackendManagerModule metrics,
-            @JsonProperty("metadata") MetadataBackendManagerModule metadata,
-            @JsonProperty("cache") AggregationCacheModule cache,
+            @JsonProperty("cluster") ClusterManagerModule cluster, @JsonProperty("metrics") MetricModule metrics,
+            @JsonProperty("metadata") MetadataModule metadata, @JsonProperty("cache") AggregationCacheModule cache,
             @JsonProperty("client") HttpClientManagerModule client,
             @JsonProperty("ingestion") IngestionModule ingestion,
             @JsonProperty("consumers") List<ConsumerConfig> consumers) {
@@ -68,12 +65,11 @@ public class HeroicConfig {
         if (consumers == null)
             consumers = new ArrayList<>();
 
-        return new HeroicConfig(port, refreshClusterSchedule, cluster, metrics,
-                metadata, cache, client, ingestion, consumers);
+        return new HeroicConfig(port, refreshClusterSchedule, cluster, metrics, metadata, cache, client, ingestion,
+                consumers);
     }
 
-    public static HeroicConfig parse(Path path, HeroicReporter reporter)
-            throws IOException {
+    public static HeroicConfig parse(Path path, HeroicReporter reporter) throws IOException {
         final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
         return mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
     }

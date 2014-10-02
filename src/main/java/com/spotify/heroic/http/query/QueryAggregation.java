@@ -11,8 +11,7 @@ import com.spotify.heroic.aggregation.AverageAggregation;
 import com.spotify.heroic.aggregation.SumAggregation;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({
-        @JsonSubTypes.Type(value = QueryAggregation.Sum.class, name = "sum"),
+@JsonSubTypes({ @JsonSubTypes.Type(value = QueryAggregation.Sum.class, name = "sum"),
         @JsonSubTypes.Type(value = QueryAggregation.Average.class, name = "average") })
 public interface QueryAggregation {
     @Data
@@ -25,8 +24,7 @@ public interface QueryAggregation {
         }
 
         @JsonCreator
-        public static Average create(
-                @JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
+        public static Average create(@JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
             return new Average(sampling);
         }
     }
@@ -41,8 +39,7 @@ public interface QueryAggregation {
         }
 
         @JsonCreator
-        public static Sum create(
-                @JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
+        public static Sum create(@JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
             return new Sum(sampling);
         }
     }

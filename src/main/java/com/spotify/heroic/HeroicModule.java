@@ -37,7 +37,6 @@ public class HeroicModule extends AbstractModule {
         bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
         bind(StoredMetricQueries.class).in(Scopes.SINGLETON);
 
-        bindListener(new IsSubclassOf(LifeCycle.class),
-                new CollectingTypeListener<LifeCycle>(lifecycles));
+        bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifecycles));
     }
 };

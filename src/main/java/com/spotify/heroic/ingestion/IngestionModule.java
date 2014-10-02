@@ -37,8 +37,7 @@ public class IngestionModule extends PrivateModule {
     }
 
     @JsonCreator
-    public static IngestionModule create(
-            @JsonProperty("updateMetadata") Boolean updateMetadata,
+    public static IngestionModule create(@JsonProperty("updateMetadata") Boolean updateMetadata,
             @JsonProperty("updateMetrics") Boolean updateMetrics) {
         if (updateMetadata == null) {
             updateMetadata = DEFAULT_UPDATE_METADATA;

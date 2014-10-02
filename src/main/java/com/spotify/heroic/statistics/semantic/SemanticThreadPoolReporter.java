@@ -14,8 +14,7 @@ public class SemanticThreadPoolReporter implements ThreadPoolReporter {
     private final MetricId id;
 
     @Override
-    public Context newThreadPoolContext(String threadpool,
-            final ThreadPoolReporterProvider provider) {
+    public Context newThreadPoolContext(String threadpool, final ThreadPoolReporterProvider provider) {
         final MetricId id = this.id.tagged("threadpool", threadpool);
 
         final MetricId queueSize = id.tagged("what", "queue-size");

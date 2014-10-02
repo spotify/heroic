@@ -36,11 +36,9 @@ public class CacheKey {
     private final long base;
 
     @JsonCreator
-    public static CacheKey create(@JsonProperty("version") Integer version,
-            @JsonProperty("filter") Filter filter,
+    public static CacheKey create(@JsonProperty("version") Integer version, @JsonProperty("filter") Filter filter,
             @JsonProperty("group") Map<String, String> group,
-            @JsonProperty("aggregation") AggregationGroup aggregation,
-            @JsonProperty("base") Long base) {
+            @JsonProperty("aggregation") AggregationGroup aggregation, @JsonProperty("base") Long base) {
         return new CacheKey(version, filter, group, aggregation, base);
     }
 }

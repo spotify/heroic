@@ -24,8 +24,7 @@ public class StaticListDiscoveryConfig implements ClusterDiscoveryConfig {
     private final List<URI> nodes;
 
     @JsonCreator
-    public static StaticListDiscoveryConfig create(
-            @JsonProperty("threadPoolSize") Integer threadPoolSize,
+    public static StaticListDiscoveryConfig create(@JsonProperty("threadPoolSize") Integer threadPoolSize,
             @JsonProperty("nodes") List<URI> nodes) {
         if (threadPoolSize == null)
             threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
