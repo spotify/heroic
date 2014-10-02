@@ -40,4 +40,4 @@ fi
 
 JAVA_OPTS=$(grep -v '^\s*#' $JVMARGS)
 
-exec env CLASSPATH="$JAR" java $JAVA_OPTS com.spotify.heroic.Main "$CONFIG"
+exec env CLASSPATH="$JAR" java $JAVA_OPTS com.spotify.heroic.HeroicMain "$CONFIG"

@@ -9,60 +9,21 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
-import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricBackendManager;
 import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
-import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.PreparedQuery;
-import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 
 @Slf4j
 @RequiredArgsConstructor
-public final class FindAndRouteTransformer implements
+public final class ClusteredFindAndRouteTransformer implements
 Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
-    @RequiredArgsConstructor
-    public static class ClusterQuery implements PreparedQuery {
-        private final String backendGroup;
-        private final ClusterNode node;
-        private final Filter filter;
-        private final Map<String, String> group;
-        private final Set<Series> series;
-
-        @Override
-        public Callback<MetricGroups> query(final DateRange range,
-                final AggregationGroup aggregation) {
-            return node.query(backendGroup, filter, group, aggregation, range,
-                    series);
-        }
-    };
-
-    @RequiredArgsConstructor
-    public static class LocalQuery implements PreparedQuery {
-        private final MetricBackendManager metrics;
-        private final String backendGroup;
-        private final Filter filter;
-        private final Map<String, String> group;
-        private final Set<Series> series;
-
-        @Override
-        public Callback<MetricGroups> query(final DateRange range,
-                final AggregationGroup aggregation) throws Exception {
-            return metrics.useGroup(backendGroup).groupedQuery(group, filter,
-                    series, range, aggregation);
-        }
-    };
-
-    private final MetricBackendManager metrics;
     private final ClusterManager cluster;
-    private final boolean localQuery;
     private final Filter filter;
     private final String backendGroup;
     private final int groupLimit;
@@ -93,13 +54,8 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
                                 + groupLoadLimit
                                 + " original time series would be loaded from Cassandra).");
 
-            final PreparedQuery query;
-
-            if (localQuery) {
-                query = localQuery(filter, entry.getKey(), series);
-            } else {
-                query = clusterQuery(filter, entry.getKey(), series);
-            }
+            final PreparedQuery query = clusterQuery(filter, entry.getKey(),
+                    series);
 
             if (query == null)
                 continue;
@@ -108,19 +64,6 @@ Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
         }
 
         return queries;
-    }
-
-    public PreparedQuery localQuery(Filter filter, Map<String, String> group,
-            Set<Series> series) {
-        final NodeMetadata metadata = cluster.getLocalEntry().getMetadata();
-
-        for (final Series s : series) {
-            if (!metadata.matchesTags(s.getTags()))
-                throw new IllegalArgumentException(
-                        "The current query is too heavy! (Global aggregation not permitted)");
-        }
-
-        return new LocalQuery(metrics, backendGroup, filter, group, series);
     }
 
     public PreparedQuery clusterQuery(Filter filter, Map<String, String> group,

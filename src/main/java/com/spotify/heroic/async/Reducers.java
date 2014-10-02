@@ -26,7 +26,7 @@ public final class Reducers {
 
     /**
      * A reducer that maps T -> List<T>.
-     * 
+     *
      * @return The reducer.
      */
     @SuppressWarnings("unchecked")
@@ -54,7 +54,7 @@ public final class Reducers {
 
     /**
      * A reducer that maps Set<T> -> Set<T> using a join operations.
-     * 
+     *
      * @return The reducer.
      */
     @SuppressWarnings("unchecked")
@@ -97,11 +97,34 @@ public final class Reducers {
 
     /**
      * A reducer that maps T -> Void.
-     * 
+     *
      * @return
      */
     @SuppressWarnings("unchecked")
     public static <T> Callback.Reducer<T, Void> toVoid() {
         return (Callback.Reducer<T, Void>) TO_VOID;
+    }
+
+    private static final Callback.Reducer<Boolean, Boolean> ALL = new Callback.Reducer<Boolean, Boolean>() {
+        @Override
+        public Boolean resolved(Collection<Boolean> results,
+                Collection<Exception> errors, Collection<CancelReason> cancelled)
+                throws Exception {
+            if (!errors.isEmpty() || !cancelled.isEmpty()) {
+                throw new Exception("Not all callbacks were resolved");
+            }
+
+            for (final Boolean b : results) {
+                if (!b) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    };
+
+    public static Callback.Reducer<Boolean, Boolean> all() {
+        return ALL;
     }
 }

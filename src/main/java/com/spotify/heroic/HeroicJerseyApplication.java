@@ -13,10 +13,15 @@ import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.spotify.heroic.http.HeroicResource;
 
+/**
+ * Contains global jersey configuration.
+ *
+ * @author udoprog
+ */
 @Slf4j
-public class WebApp extends ResourceConfig {
+public class HeroicJerseyApplication extends ResourceConfig {
     @Inject
-    public WebApp(ServiceLocator serviceLocator) {
+    public HeroicJerseyApplication(ServiceLocator serviceLocator) {
         log.info("Setting up Web Application");
 
         register(SseFeature.class);
@@ -30,7 +35,7 @@ public class WebApp extends ResourceConfig {
         final GuiceIntoHK2Bridge bridge = serviceLocator
                 .getService(GuiceIntoHK2Bridge.class);
 
-        bridge.bridgeGuiceInjector(Main.injector);
+        bridge.bridgeGuiceInjector(HeroicMain.injector);
 
     }
 }

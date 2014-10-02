@@ -14,7 +14,6 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricBackendManager;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
@@ -25,7 +24,7 @@ import com.spotify.heroic.model.Series;
 @Consumes(MediaType.APPLICATION_JSON)
 public class Rpc5Resource {
     @Inject
-    private MetricBackendManager metrics;
+    private MetricBackendManager localMetrics;
 
     @Inject
     private MetadataBackendManager localMetadata;
@@ -49,7 +48,7 @@ public class Rpc5Resource {
     @Path("/query")
     public void query(@Suspended final AsyncResponse response,
             Rpc5QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = metrics.useGroup(
+        final Callback<MetricGroups> callback = localMetrics.useGroup(
                 query.getBackendGroup()).groupedQuery(query.getGroup(),
                 query.getFilter(), query.getSeries(), query.getRange(),
                 query.getAggregationGroup());
@@ -61,11 +60,8 @@ public class Rpc5Resource {
     @Path("/write")
     public void write(@Suspended final AsyncResponse response,
             Rpc5WriteBody body) throws Exception {
-        final MetricBackendGroup backend = metrics.useGroup(body.getBackendGroup());
-
-        final Callback<WriteBatchResult> callback = metrics.write(backend,
-                body.getWrites());
-
+        final Callback<WriteBatchResult> callback = localMetrics.useGroup(
+                body.getBackendGroup()).write(body.getWrites());
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
 
@@ -73,7 +69,7 @@ public class Rpc5Resource {
     @Path("/full-query")
     public void query(@Suspended final AsyncResponse response,
             Rpc5FullQueryBody body) throws Exception {
-        final Callback<MetricGroups> callback = metrics.directQueryMetrics(
+        final Callback<MetricGroups> callback = localMetrics.directQueryMetrics(
                 body.getBackendGroup(), body.getFilter(), body.getGroupBy(),
                 body.getRange(), body.getAggregation());
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
@@ -114,6 +110,6 @@ public class Rpc5Resource {
     public void writeSeries(@Suspended final AsyncResponse response,
             Series series) {
         HttpAsyncUtils.handleAsyncResume(response,
-                localMetadata.writeSeries(series));
+                localMetadata.bufferWrite(series));
     }
 }

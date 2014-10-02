@@ -22,6 +22,7 @@
     <hk2.version>2.3.0</hk2.version>
     <jaxrs.version>2.4.2</jaxrs.version>
     <jetty.version>9.2.2.v20140723</jetty.version>
+    <lucene.version>4.9.1</lucene.version>
   </properties>
 
   <dependencies>
@@ -249,7 +250,19 @@
     <dependency>
       <groupId>org.elasticsearch</groupId>
       <artifactId>elasticsearch</artifactId>
-      <version>1.2.1</version>
+      <version>1.3.4</version>
+    </dependency>
+    
+    <!--  used by com.spotify.heroic.metadata.lucene -->
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>${lucene.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-codecs</artifactId>
+      <version>${lucene.version}</version>
     </dependency>
 
     <!-- logging -->

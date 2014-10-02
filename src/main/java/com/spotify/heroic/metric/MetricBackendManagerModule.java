@@ -33,7 +33,6 @@ public class MetricBackendManagerModule extends PrivateModule {
 
     private final List<MetricBackendConfig> backends;
     private final List<String> defaultBackends;
-    private final boolean updateMetadata;
     private final int groupLimit;
     private final int groupLoadLimit;
     private final long flushingInterval;
@@ -42,15 +41,11 @@ public class MetricBackendManagerModule extends PrivateModule {
     public static MetricBackendManagerModule create(
             @JsonProperty("backends") List<MetricBackendConfig> backends,
             @JsonProperty("defaultBackends") List<String> defaultBackends,
-            @JsonProperty("updateMetadata") Boolean updateMetadata,
             @JsonProperty("groupLimit") Integer groupLimit,
             @JsonProperty("groupLoadLimit") Integer groupLoadLimit,
             @JsonProperty("flushingInterval") Long flushingInterval) {
         if (backends == null)
             backends = new ArrayList<>();
-
-        if (updateMetadata == null)
-            updateMetadata = DEFAULT_UPDATE_METADATA;
 
         if (groupLimit == null)
             groupLimit = DEFAULT_GROUP_LIMIT;
@@ -62,7 +57,7 @@ public class MetricBackendManagerModule extends PrivateModule {
             flushingInterval = DEFAULT_FLUSHING_INTERVAL;
 
         return new MetricBackendManagerModule(backends, defaultBackends,
-                updateMetadata, groupLimit, groupLoadLimit, flushingInterval);
+                groupLimit, groupLoadLimit, flushingInterval);
     }
 
     @Inject
@@ -138,12 +133,6 @@ public class MetricBackendManagerModule extends PrivateModule {
     @Named("groupLoadLimit")
     public int groupLoadLimit() {
         return groupLoadLimit;
-    }
-
-    @Provides
-    @Named("updateMetadata")
-    public boolean updateMetadata() {
-        return updateMetadata;
     }
 
     @Override

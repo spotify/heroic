@@ -17,11 +17,11 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.concurrrency.ThreadPool;
-import com.spotify.heroic.config.ConfigUtils;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.statistics.ConsumerReporter;
+import com.spotify.heroic.utils.Reflection;
 
 @RequiredArgsConstructor
 public class KafkaConsumerConfig implements ConsumerConfig {
@@ -45,7 +45,7 @@ public class KafkaConsumerConfig implements ConsumerConfig {
         if (schema == null)
             throw new RuntimeException("'schema' not defined");
 
-        final ConsumerSchema schemaClass = ConfigUtils.instance(schema,
+        final ConsumerSchema schemaClass = Reflection.buildInstance(schema,
                 ConsumerSchema.class);
 
         if (topics == null || topics.isEmpty())

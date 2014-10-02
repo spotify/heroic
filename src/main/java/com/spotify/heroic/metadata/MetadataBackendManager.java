@@ -1,6 +1,7 @@
 package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -13,12 +14,14 @@ import lombok.extern.slf4j.Slf4j;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Reducers;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
@@ -51,7 +54,11 @@ public class MetadataBackendManager {
                 .register(reporter.reportFindTags());
     }
 
-    public Callback<String> writeSeries(Series series) {
+    public Callback<String> bufferWrite(WriteMetric write) {
+        return bufferWrite(write.getSeries());
+    }
+
+    public Callback<String> bufferWrite(Series series) {
         final String id = MetadataUtils.buildId(series);
 
         for (final MetadataBackend backend : backends) {
@@ -63,6 +70,17 @@ public class MetadataBackendManager {
         }
 
         return new ResolvedCallback<>(id);
+    }
+
+    public Callback<List<String>> bufferWrites(Collection<WriteMetric> writes) {
+        final List<Callback<String>> callbacks = new ArrayList<>();
+
+        for (final WriteMetric write : writes) {
+            callbacks.add(bufferWrite(write.getSeries()));
+        }
+
+        return ConcurrentCallback
+                .newReduce(callbacks, Reducers.<String> list());
     }
 
     public Callback<FindSeries> findSeries(final Filter filter) {

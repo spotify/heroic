@@ -3,79 +3,36 @@ port: 8080
 refreshClusterSchedule: "0 */5 * * * ?"
 
 cluster:
-  useLocal: false
+  useLocal: true
   tags:
     site: lon
   capabilities:
-    - QUERY
+    - WRITE
   discovery:
     type: static
     nodes:
-      - http://ash2-heroic-a1:8080
-      - http://ash2-heroic-a2:8080
-      - http://ash2-heroic-a3:8080
-      - http://ash2-heroic-a1:8081
-      - http://ash2-heroic-a2:8081
-      - http://ash2-heroic-a3:8081
-      - http://sjc1-heroic-a1:8080
-      - http://sjc1-heroic-a2:8080
-      - http://sjc1-heroic-a3:8080
-      - http://sjc1-heroic-a1:8081
-      - http://sjc1-heroic-a2:8081
-      - http://sjc1-heroic-a3:8081
-      - http://sto1-heroic-a1:8080
-      - http://sto1-heroic-a2:8080
-      - http://sto1-heroic-a3:8080
-      - http://sto1-heroic-a1:8081
-      - http://sto1-heroic-a2:8081
-      - http://sto1-heroic-a3:8081
-      - http://lon3-heroic-a1:8080
-      - http://lon3-heroic-a2:8080
-      - http://lon3-heroic-a3:8080
-      - http://lon3-heroic-a1:8081
-      - http://lon3-heroic-a2:8081
-      - http://lon3-heroic-a3:8081
-      - http://awsuse1-heroic-a1.shared.cloud:8080
-      - http://awsuse1-heroic-a2.shared.cloud:8080
-      - http://awsuse1-heroic-a1.shared.cloud:8081
-      - http://awsuse1-heroic-a2.shared.cloud:8081
-      - http://awseu3-heroic-a1.shared.cloud:8080
-      - http://awseu3-heroic-a2.shared.cloud:8080
-      - http://awseu3-heroic-a1.shared.cloud:8081
-      - http://awseu3-heroic-a2.shared.cloud:8081
+      - http://localhost:8080
 
 metrics:
   flushingInterval: 1000
-  updateMetadata: false
-  backends:
-    - type: heroic
-      group: heroic
-      seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
 
 metadata:
   backends:
-    - type: elasticsearch
-      clusterName: metalastic-production
-      index: heroic
-      type: metadata
-      seeds:
-        - lon2-heroex-a2.lon2.spotify.net
-        - lon2-heroex-a3.lon.spotify.net
-        - lon2-heroex-a4.lon2.spotify.net
+    - type: lucene
 
-cache:
-  backend:
-    type: cassandra
-    keyspace: aggregations
-    seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
+ingestion:
+  updateMetadata: true
+  updateMetrics: false
 
 consumers:
   - type: kafka
     schema: com.spotify.heroic.consumer.schemas.Spotify100
     topics:
-      - "metrics-awsuse1"
+      - "metrics-lon2"
+      - "metrics-lon3"
+      - "metrics-lon4"
     config:
       group.id: heroic-test
-      zookeeper.connect: awsuse1-kafkazookeeper-a1.shared.cloud.spotify.net,awsuse1-kafkazookeeper-a2.shared.cloud.spotify.net,awsuse1-kafkazookeeper-a3.shared.cloud.spotify.net/kafka-monitoring
+      zookeeper.connect: lon3-kafkazookeeper-a1,lon3-kafkazookeeper-a2,lon3-kafkazookeeper-a3/kafka-monitoring
       auto.offset.reset: smallest
       auto.commit.enable: true

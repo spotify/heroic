@@ -19,6 +19,9 @@ public class AggregationCacheModule extends PrivateModule {
     @JsonCreator
     public static AggregationCacheModule create(
             @JsonProperty("backend") AggregationCacheBackendConfig backend) {
+        if (backend == null)
+            backend = InMemoryAggregationCacheBackendConfig.create();
+
         return new AggregationCacheModule(backend);
     }
 
@@ -33,5 +36,9 @@ public class AggregationCacheModule extends PrivateModule {
         install(backend.module());
         bind(AggregationCache.class).in(Scopes.SINGLETON);
         expose(AggregationCache.class);
+    }
+
+    public static AggregationCacheModule createDefault() {
+        return create(null);
     }
 }

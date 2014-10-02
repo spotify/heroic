@@ -10,7 +10,7 @@ import kafka.message.MessageAndMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.ApplicationLifecycle;
+import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.SchemaValidationException;
@@ -22,7 +22,7 @@ public final class ConsumerThread implements Runnable {
     private static final long INITIAL_SLEEP = 5;
     private static final long MAX_SLEEP = 40;
 
-    private final ApplicationLifecycle lifecycle;
+    private final HeroicLifeCycle lifecycle;
     private final ConsumerReporter reporter;
     private final String topic;
     private final KafkaStream<byte[], byte[]> stream;

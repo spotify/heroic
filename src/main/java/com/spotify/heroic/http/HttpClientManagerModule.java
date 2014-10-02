@@ -60,7 +60,7 @@ public class HttpClientManagerModule extends PrivateModule {
     /**
      * Create a default instance.
      */
-    public static HttpClientManagerModule create() {
+    public static HttpClientManagerModule createDefault() {
         return create(null, null, null, null);
     }
 

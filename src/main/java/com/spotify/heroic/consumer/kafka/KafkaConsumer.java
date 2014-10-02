@@ -18,14 +18,14 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.ApplicationLifecycle;
+import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.concurrrency.ThreadPool;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.exceptions.WriteException;
-import com.spotify.heroic.metric.MetricBackendManager;
-import com.spotify.heroic.metric.MetricFormatException;
-import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.ingestion.FatalIngestionException;
+import com.spotify.heroic.ingestion.IngestionException;
+import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
@@ -49,10 +49,10 @@ public class KafkaConsumer implements Consumer {
     private ConsumerSchema schema;
 
     @Inject
-    private MetricBackendManager metric;
+    private IngestionManager ingestion;
 
     @Inject
-    private ApplicationLifecycle lifecycle;
+    private HeroicLifeCycle lifecycle;
 
     @Inject
     private ConsumerReporter reporter;
@@ -155,11 +155,11 @@ public class KafkaConsumer implements Consumer {
     @Override
     public void write(WriteMetric write) throws WriteException {
         try {
-            metric.bufferWrite(null, write);
-        } catch (InterruptedException | BufferEnqueueException e) {
-            throw new WriteException("Failed to write metric", e);
-        } catch (final MetricFormatException e) {
+            ingestion.write(write);
+        } catch (final IngestionException e) {
             log.error("Invalid write: {}", write, e);
+        } catch (final FatalIngestionException e) {
+            throw new WriteException("Failed to write metric", e);
         }
     }
 

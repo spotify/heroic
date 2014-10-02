@@ -96,6 +96,6 @@ public class Rpc4ClusterNode implements ClusterNode {
 
     @Override
     public Callback<String> writeSeries(Series series) {
-        return localMetadata.writeSeries(series);
+        return localMetadata.bufferWrite(series);
     }
 }

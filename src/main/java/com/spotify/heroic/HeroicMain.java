@@ -44,7 +44,6 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
-import com.spotify.heroic.config.HeroicConfig;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.injection.LifeCycle;
@@ -57,7 +56,7 @@ import com.spotify.metrics.jvm.GarbageCollectorMetricSet;
 import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
-public class Main {
+public class HeroicMain {
     public static final String DEFAULT_CONFIG = "heroic.yml";
 
     public static Injector injector;
@@ -74,19 +73,21 @@ public class Main {
     public static Injector setupInjector(final HeroicConfig config,
             final HeroicReporter reporter,
             final ScheduledExecutorService scheduledExecutor,
-            final ApplicationLifecycle lifecycle) throws Exception {
+            final HeroicLifeCycle lifecycle) throws Exception {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
 
-        modules.add(new MainModule(lifecycle, scheduledExecutor, lifecycles,
+        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles,
                 reporter));
-        modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
+        modules.add(new HeroicSchedulerModule(config
+                .getRefreshClusterSchedule()));
         modules.add(config.getHttpClientManagerModule());
         modules.add(config.getMetricBackendManagerModule());
         modules.add(config.getMetadataBackendManagerModule());
         modules.add(config.getClusterManagerModule());
         modules.add(config.getAggregationCacheModule());
+        modules.add(config.getIngestionModule());
 
         modules.addAll(setupConsumers(config, reporter));
 
@@ -141,7 +142,7 @@ public class Main {
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
-        final ApplicationLifecycle lifecycle = new ApplicationLifecycle() {
+        final HeroicLifeCycle lifecycle = new HeroicLifeCycle() {
             @Override
             public void awaitStartup() throws InterruptedException {
                 startupLatch.await();
@@ -231,8 +232,8 @@ public class Main {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath,
                     location == null ? null : location.getLineNr(),
-                    location == null ? null : location.getColumnNr(),
-                    e.getOriginalMessage()));
+                            location == null ? null : location.getColumnNr(),
+                                    e.getOriginalMessage()));
 
             if (log.isDebugEnabled())
                 log.debug("Configuration error", e);
@@ -256,14 +257,14 @@ public class Main {
         // Initialize and register GuiceFilter
         context.addFilter(GuiceFilter.class, "/*",
                 EnumSet.allOf(DispatcherType.class));
-        context.addEventListener(Main.LISTENER);
+        context.addEventListener(HeroicMain.LISTENER);
 
         // Initialize and register Jersey ServletContainer
         final ServletHolder jerseyServlet = context.addServlet(
                 ServletContainer.class, "/*");
         jerseyServlet.setInitOrder(1);
         jerseyServlet.setInitParameter("javax.ws.rs.Application",
-                WebApp.class.getName());
+                HeroicJerseyApplication.class.getName());
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();
 

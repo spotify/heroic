@@ -57,7 +57,7 @@ public class LocalClusterNode implements ClusterNode {
     public Callback<WriteBatchResult> write(String backendGroup,
             Collection<WriteMetric> writes) {
         try {
-            return metrics.write(metrics.useGroup(backendGroup), writes);
+            return metrics.useGroup(backendGroup).write(writes);
         } catch (final BackendOperationException e) {
             return new FailedCallback<>(e);
         }
@@ -92,6 +92,6 @@ public class LocalClusterNode implements ClusterNode {
 
     @Override
     public Callback<String> writeSeries(Series series) {
-        return localMetadata.writeSeries(series);
+        return localMetadata.bufferWrite(series);
     }
 }

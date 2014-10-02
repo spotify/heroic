@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,43 +17,45 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.aggregationcache.AggregationCache;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.NodeCapability;
+import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
+import com.spotify.heroic.metric.async.ClusteredFindAndRouteTransformer;
 import com.spotify.heroic.metric.async.FindSeriesTransformer;
-import com.spotify.heroic.metric.async.LocalFindAndRouteTransformer;
+import com.spotify.heroic.metric.async.MetricGroupsTransformer;
 import com.spotify.heroic.metric.async.PreparedQueryTransformer;
 import com.spotify.heroic.metric.error.BackendOperationException;
+import com.spotify.heroic.metric.error.BufferEnqueueException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
 import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.PreparedQuery;
+import com.spotify.heroic.metric.model.QueryMetricsResult;
+import com.spotify.heroic.metric.model.StreamMetricsResult;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
 @ToString(exclude = { "scheduledExecutor" })
-public class MetricBackendManager implements LifeCycle {
-    @Inject
-    @Named("backends")
-    private Map<String, List<MetricBackend>> backends;
-
-    @Inject
-    @Named("defaultBackends")
-    private List<MetricBackend> defaultBackends;
-
+public class ClusteredMetricManager implements LifeCycle {
     @Inject
     @Named("groupLimit")
     private int groupLimit;
@@ -71,7 +72,7 @@ public class MetricBackendManager implements LifeCycle {
     private MetricBackendManagerReporter reporter;
 
     @Inject
-    private AggregationCache cache;
+    private ClusterManager cluster;
 
     @Inject
     private ClusteredMetadataManager metadata;
@@ -85,7 +86,7 @@ public class MetricBackendManager implements LifeCycle {
                 public void flushWrites(List<BufferedWriteMetric> writes)
                         throws Exception {
                     log.info("Flushing {} write(s)", writes.size());
-                    MetricBackendManager.this.flushWrites(writes);
+                    ClusteredMetricManager.this.flushWrites(writes);
                 }
             });
 
@@ -163,57 +164,29 @@ public class MetricBackendManager implements LifeCycle {
         return groups;
     }
 
-    public List<MetricBackend> findBackends(Set<String> groups) {
-        final List<MetricBackend> result = new ArrayList<>();
+    /**
+     * Buffer a write to this backend, will block if the buffer is full.
+     *
+     * @param write
+     *            The write to buffer.
+     * @throws InterruptedException
+     *             If the write was interrupted.
+     * @throws BufferEnqueueException
+     *             If the provided metric could not be buffered.
+     * @throws MetricFormatException
+     *             If the provided metric is invalid.
+     */
+    public void bufferWrite(String backendGroup, WriteMetric write)
+            throws InterruptedException, BufferEnqueueException,
+            MetricFormatException {
+        final NodeRegistryEntry node = findNodeRegistryEntry(write);
 
-        for (final String group : groups) {
-            final List<MetricBackend> partial = findBackends(group);
+        if (node == null)
+            throw new BufferEnqueueException(
+                    "Could not match write to any known node.");
 
-            if (partial == null)
-                continue;
-
-            result.addAll(partial);
-        }
-
-        if (result.isEmpty())
-            return null;
-
-        return ImmutableList.copyOf(result);
-    }
-
-    public List<MetricBackend> findBackends(String group) {
-        if (group == null)
-            return null;
-
-        final List<MetricBackend> result = backends.get(group);
-
-        if (result == null || result.isEmpty())
-            return null;
-
-        return ImmutableList.copyOf(result);
-    }
-
-    public MetricBackend findOneBackend(String group) {
-        final List<MetricBackend> result = findBackends(group);
-
-        if (result.isEmpty())
-            return null;
-
-        if (result.size() > 1)
-            throw new IllegalStateException("Too many backends matching '"
-                    + group + "' are available: " + result);
-
-        return result.get(0);
-    }
-
-    public List<MetricBackend> getBackends() {
-        final List<MetricBackend> result = new ArrayList<>();
-
-        for (final Map.Entry<String, List<MetricBackend>> entry : backends
-                .entrySet())
-            result.addAll(entry.getValue());
-
-        return ImmutableList.copyOf(result);
+        writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup,
+                write.getSeries(), write.getData()));
     }
 
     /**
@@ -262,7 +235,7 @@ public class MetricBackendManager implements LifeCycle {
 
     private List<Callback<WriteBatchResult>> writeCluster(
             final String backendGroup, final List<BufferedWriteMetric> writes)
-                    throws BackendOperationException {
+            throws BackendOperationException {
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap
@@ -282,89 +255,198 @@ public class MetricBackendManager implements LifeCycle {
         return callbacks;
     }
 
-    public Callback<MetricGroups> directQueryMetrics(final String backendGroup,
-            final Filter filter, final List<String> groupBy,
-            final DateRange range, final AggregationGroup aggregation) {
-        final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
-                range, aggregation);
+    public Callback<WriteBatchResult> write(MetricBackendGroup backend,
+            Collection<WriteMetric> writes) {
+        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
-        return findAndRouteTimeSeries(backendGroup, filter, groupBy).transform(
-                transformer).register(reporter.reportQueryMetrics());
+        callbacks.add(backend.write(writes));
+
+        if (callbacks.isEmpty())
+            return new CancelledCallback<WriteBatchResult>(
+                    CancelReason.NO_BACKENDS_AVAILABLE);
+
+        return ConcurrentCallback.newReduce(callbacks,
+                WriteBatchResult.merger());
     }
+
+    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write)
+            throws MetricFormatException {
+        if (!cluster.isReady())
+            return null;
+
+        final NodeRegistryEntry node = cluster.findNode(write.getSeries()
+                .getTags(), NodeCapability.WRITE);
+
+        if (node == null)
+            throw new MetricFormatException("Could not route: "
+                    + write.getSeries());
+
+        return node;
+    }
+
+    public Callback<QueryMetricsResult> queryMetrics(final String backendGroup,
+            final Filter filter, final List<String> groupBy,
+            final DateRange range, final AggregationGroup aggregation)
+                    throws MetricQueryException {
+
+        final Collection<NodeRegistryEntry> nodes = cluster
+                .findAllShards(NodeCapability.QUERY);
+
+        final List<Callback<MetricGroups>> callbacks = Lists.newArrayList();
+
+        final DateRange rounded = roundRange(aggregation, range);
+
+        for (final NodeRegistryEntry n : nodes) {
+            final Filter f = modifyFilter(n.getMetadata(), filter);
+
+            final Map<String, String> shard = n.getMetadata().getTags();
+
+            final Callback<MetricGroups> query = n.getClusterNode().fullQuery(
+                    backendGroup, f, groupBy, rounded, aggregation);
+
+            callbacks.add(query.transform(MetricGroups.identity(), MetricGroups
+                    .nodeError(n.getMetadata().getId(), n.getUri(), shard)));
+        }
+
+        return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
+                .transform(new MetricGroupsTransformer(rounded))
+                .register(reporter.reportQueryMetrics());
+    }
+
+    private Filter modifyFilter(NodeMetadata metadata, Filter filter) {
+        final List<Filter> statements = new ArrayList<>();
+        statements.add(filter);
+
+        for (final Map.Entry<String, String> entry : metadata.getTags()
+                .entrySet()) {
+            statements
+            .add(new MatchTagFilter(entry.getKey(), entry.getValue()));
+        }
+
+        return new AndFilter(statements).optimize();
+    }
+
+    public Callback<StreamMetricsResult> streamMetrics(
+            final String backendGroup, final Filter filter,
+            final List<String> groupBy, final DateRange range,
+            final AggregationGroup aggregation, MetricStream handle)
+            throws MetricQueryException {
+        final DateRange rounded = roundRange(aggregation, range);
+
+        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(
+                backendGroup, filter, groupBy);
+
+        final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
+
+        final String streamId = Integer.toHexString(filter.hashCode());
+
+        log.info("{}: streaming {}", streamId, filter);
+
+        final StreamingQuery streamingQuery = new StreamingQuery() {
+            @Override
+            public Callback<MetricGroups> query(DateRange range) {
+                log.info("{}: streaming chunk {}", streamId, range);
+
+                final PreparedQueryTransformer transformer = new PreparedQueryTransformer(
+                        range, aggregation);
+
+                return rows.transform(transformer);
+            }
+        };
+
+        final long chunk = rounded.diff() / RANGE_FACTOR;
+
+        streamChunks(callback, handle, streamingQuery, rounded,
+                rounded.start(rounded.end()), chunk, chunk);
+
+        return callback.register(reporter.reportStreamMetrics()).register(
+                new Callback.Finishable() {
+                    @Override
+                    public void finished() throws Exception {
+                        log.info("{}: done streaming", streamId);
+                    }
+                });
+    }
+
+    private static final long RANGE_FACTOR = 20;
 
     public static interface StreamingQuery {
         public Callback<MetricGroups> query(final DateRange range);
     }
 
-    public MetricBackendGroup useDefaultGroup()
-            throws BackendOperationException {
-        return useGroup(null);
-    }
+    /**
+     * Streaming implementation that backs down in time in DIFF ms for each
+     * invocation.
+     */
+    private void streamChunks(final Callback<StreamMetricsResult> callback,
+            final MetricStream handle, final StreamingQuery query,
+            final DateRange originalRange, final DateRange lastRange,
+            final long chunk, final long window) {
+        // decrease the range for the current chunk.
+        final DateRange currentRange = lastRange.start(Math.max(
+                lastRange.start() - window, originalRange.start()));
 
-    public MetricBackendGroup useGroup(final String group)
-            throws BackendOperationException {
-        final List<MetricBackend> selected;
-
-        if (group == null) {
-            if (defaultBackends == null)
-                throw new BackendOperationException(
-                        "No default backend configured");
-
-            selected = defaultBackends;
-        } else {
-            selected = findBackends(group);
-        }
-
-        if (selected == null || selected.isEmpty())
-            throw new BackendOperationException(
-                    "No usable metric backends available");
-
-        return useAlive(selected);
-    }
-
-    public MetricBackendGroup useGroups(final Set<String> groups)
-            throws BackendOperationException {
-        final List<MetricBackend> selected;
-
-        if (groups == null) {
-            if (defaultBackends == null)
-                throw new BackendOperationException(
-                        "No default backend configured");
-
-            selected = defaultBackends;
-        } else {
-            selected = findBackends(groups);
-        }
-
-        if (selected == null || selected.isEmpty())
-            throw new BackendOperationException(
-                    "No usable metric backends available");
-
-        return useAlive(selected);
-    }
-
-    private MetricBackendGroup useAlive(List<MetricBackend> backends)
-            throws BackendOperationException {
-        final List<MetricBackend> alive = new ArrayList<MetricBackend>();
-
-        // Keep track of disabled partitions.
-        // This will have implications on;
-        // 1) If the result if an operation can be cached or not.
-        int disabled = 0;
-
-        for (final MetricBackend backend : backends) {
-            if (!backend.isReady()) {
-                ++disabled;
-                continue;
+        final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
+            @Override
+            public void cancelled(CancelReason reason) throws Exception {
+                log.warn("Streaming cancelled: {}", reason);
+                callback.cancel(reason);
             }
 
-            alive.add(backend);
-        }
+            @Override
+            public void failed(Exception e) throws Exception {
+                log.error("Streaming failed", e);
+                callback.fail(e);
+            }
 
-        if (alive.isEmpty())
-            throw new BackendOperationException("No alive backends available");
+            @Override
+            public void resolved(MetricGroups result) throws Exception {
+                // is cancelled?
+                if (!callback.isReady())
+                    return;
 
-        return new MetricBackendGroup(cache, reporter, disabled, alive);
+                try {
+                    handle.stream(callback, new QueryMetricsResult(
+                            originalRange, result));
+                } catch (final Exception e) {
+                    callback.fail(e);
+                    return;
+                }
+
+                if (currentRange.start() <= originalRange.start()) {
+                    callback.resolve(new StreamMetricsResult());
+                    return;
+                }
+
+                streamChunks(callback, handle, query, originalRange,
+                        currentRange, chunk, window + chunk);
+            }
+        };
+
+        /* Prevent long stack traces for very fast queries. */
+        deferredExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                query.query(currentRange).register(callbackHandle)
+                        .register(reporter.reportStreamMetricsChunk());
+            }
+        });
+    }
+
+    /**
+     * Check if the query wants to hint at a specific interval. If that is the
+     * case, round the provided date to the specified interval.
+     *
+     * @param query
+     * @return
+     */
+    private DateRange roundRange(AggregationGroup aggregation, DateRange range) {
+        if (aggregation == null)
+            return range;
+
+        final Sampling sampling = aggregation.getSampling();
+        return range.rounded(sampling.getExtent()).rounded(sampling.getSize())
+                .shiftStart(-sampling.getExtent());
     }
 
     /**
@@ -378,7 +460,7 @@ public class MetricBackendManager implements LifeCycle {
             final String backendGroup, final Filter filter,
             final List<String> groupBy) {
         return findAllTimeSeries(filter, groupBy).transform(
-                new LocalFindAndRouteTransformer(this, filter, backendGroup,
+                new ClusteredFindAndRouteTransformer(cluster, filter, backendGroup,
                         groupLimit, groupLoadLimit)).register(
                                 reporter.reportFindTimeSeries());
     }

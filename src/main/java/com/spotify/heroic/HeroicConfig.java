@@ -1,4 +1,4 @@
-package com.spotify.heroic.config;
+package com.spotify.heroic;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,6 +17,7 @@ import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.consumer.ConsumerConfig;
 import com.spotify.heroic.http.HttpClientManagerModule;
+import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataBackendManagerModule;
 import com.spotify.heroic.metric.MetricBackendManagerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -35,6 +36,7 @@ public class HeroicConfig {
     private final MetadataBackendManagerModule metadataBackendManagerModule;
     private final AggregationCacheModule aggregationCacheModule;
     private final HttpClientManagerModule httpClientManagerModule;
+    private final IngestionModule ingestionModule;
     private final List<ConsumerConfig> consumers;
 
     @JsonCreator
@@ -46,6 +48,7 @@ public class HeroicConfig {
             @JsonProperty("metadata") MetadataBackendManagerModule metadata,
             @JsonProperty("cache") AggregationCacheModule cache,
             @JsonProperty("client") HttpClientManagerModule client,
+            @JsonProperty("ingestion") IngestionModule ingestion,
             @JsonProperty("consumers") List<ConsumerConfig> consumers) {
         if (port == null)
             port = DEFAULT_PORT;
@@ -54,13 +57,19 @@ public class HeroicConfig {
             refreshClusterSchedule = DEFAULT_REFRESH_CLUSTER_SCHEDULE;
 
         if (client == null)
-            client = HttpClientManagerModule.create();
+            client = HttpClientManagerModule.createDefault();
+
+        if (cache == null)
+            cache = AggregationCacheModule.createDefault();
+
+        if (ingestion == null)
+            ingestion = IngestionModule.createDefault();
 
         if (consumers == null)
             consumers = new ArrayList<>();
 
         return new HeroicConfig(port, refreshClusterSchedule, cluster, metrics,
-                metadata, cache, client, consumers);
+                metadata, cache, client, ingestion, consumers);
     }
 
     public static HeroicConfig parse(Path path, HeroicReporter reporter)

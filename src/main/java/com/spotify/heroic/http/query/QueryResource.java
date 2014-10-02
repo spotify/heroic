@@ -45,7 +45,7 @@ import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.http.general.IdResponse;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.MetricQueryException;
 import com.spotify.heroic.metric.MetricStream;
 import com.spotify.heroic.metric.model.MetricGroup;
@@ -95,7 +95,7 @@ public class QueryResource {
     };
 
     @Inject
-    private MetricBackendManager metrics;
+    private ClusteredMetricManager metrics;
 
     @Inject
     private StoredMetricQueries storedQueries;
@@ -104,7 +104,7 @@ public class QueryResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response,
             @QueryParam("backend") String backendGroup, QueryMetrics query)
-            throws MetricQueryException {
+                    throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
 
         final Callback<QueryMetricsResult> callback = metrics.queryMetrics(

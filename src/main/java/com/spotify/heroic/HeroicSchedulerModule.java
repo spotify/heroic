@@ -5,10 +5,10 @@ import org.quartz.JobKey;
 
 import com.spotify.heroic.scheduler.RefreshClusterJob;
 
-public class SchedulerModule extends QuartzModule {
+public class HeroicSchedulerModule extends QuartzModule {
     private final String refreshClusterSchedule;
 
-    public SchedulerModule(final String refreshClusterSchedule) {
+    public HeroicSchedulerModule(final String refreshClusterSchedule) {
         super();
         this.refreshClusterSchedule = refreshClusterSchedule;
     }

@@ -1,6 +1,6 @@
 package com.spotify.heroic;
 
-public interface ApplicationLifecycle {
+public interface HeroicLifeCycle {
     /**
      * Wait until the application has been fully started. This should be used on
      * any threads which are spawned to make sure that the application is ready

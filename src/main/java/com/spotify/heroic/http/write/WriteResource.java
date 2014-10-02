@@ -11,7 +11,7 @@ import javax.ws.rs.core.Response;
 
 import lombok.Data;
 
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.MetricFormatException;
 import com.spotify.heroic.metric.model.WriteMetric;
 
@@ -20,7 +20,7 @@ import com.spotify.heroic.metric.model.WriteMetric;
 @Consumes(MediaType.APPLICATION_JSON)
 public class WriteResource {
     @Inject
-    private MetricBackendManager metrics;
+    private ClusteredMetricManager metrics;
 
     @Data
     public static final class Message {

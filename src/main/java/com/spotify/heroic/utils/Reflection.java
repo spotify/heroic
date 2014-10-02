@@ -1,9 +1,9 @@
-package com.spotify.heroic.config;
+package com.spotify.heroic.utils;
 
 import java.lang.reflect.Constructor;
 
-public final class ConfigUtils {
-    public static <T> T instance(String className, Class<T> expectedType) {
+public final class Reflection {
+    public static <T> T buildInstance(String className, Class<T> expectedType) {
         final Class<?> clazz;
 
         try {

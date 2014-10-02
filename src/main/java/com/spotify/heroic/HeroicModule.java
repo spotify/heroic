@@ -18,8 +18,8 @@ import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
-public class MainModule extends AbstractModule {
-    private final ApplicationLifecycle lifecycle;
+public class HeroicModule extends AbstractModule {
+    private final HeroicLifeCycle lifecycle;
     private final ScheduledExecutorService scheduledExecutor;
     private final Set<LifeCycle> lifecycles;
     private final HeroicReporter reporter;
@@ -32,7 +32,7 @@ public class MainModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(ApplicationLifecycle.class).toInstance(lifecycle);
+        bind(HeroicLifeCycle.class).toInstance(lifecycle);
         bind(ScheduledExecutorService.class).toInstance(scheduledExecutor);
         bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
         bind(StoredMetricQueries.class).in(Scopes.SINGLETON);
