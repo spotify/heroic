@@ -3,7 +3,7 @@ package com.spotify.heroic.http;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
@@ -11,7 +11,6 @@ import org.glassfish.jersey.client.ClientProperties;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -19,8 +18,8 @@ import com.spotify.heroic.concurrrency.ThreadPool;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.HttpClientManagerReporter;
 
-@Data
-public class HttpClientManagerConfig {
+@RequiredArgsConstructor
+public class HttpClientManagerModule extends PrivateModule {
     // 100 requests allowed to be pending.
     // these will be mostly blocking for a response.
     public static final int DEFAULT_THREADS = 100;
@@ -37,7 +36,7 @@ public class HttpClientManagerConfig {
     private final int readTimeout;
 
     @JsonCreator
-    public static HttpClientManagerConfig create(
+    public static HttpClientManagerModule create(
             @JsonProperty("threads") Integer threads,
             @JsonProperty("queueSize") Integer queueSize,
             @JsonProperty("connectTimeout") Integer connectTimeout,
@@ -54,51 +53,46 @@ public class HttpClientManagerConfig {
         if (readTimeout == null)
             readTimeout = DEFAULT_READ_TIMEOUT;
 
-        return new HttpClientManagerConfig(threads, queueSize, connectTimeout,
+        return new HttpClientManagerModule(threads, queueSize, connectTimeout,
                 readTimeout);
     }
 
     /**
      * Create a default instance.
      */
-    public static HttpClientManagerConfig create() {
+    public static HttpClientManagerModule create() {
         return create(null, null, null, null);
     }
 
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public ClientConfig config() {
-                final ClientConfig config = new ClientConfig();
-                config.register(JacksonJsonProvider.class);
+    @Provides
+    @Singleton
+    public ClientConfig config() {
+        final ClientConfig config = new ClientConfig();
+        config.register(JacksonJsonProvider.class);
 
-                config.property(ClientProperties.CONNECT_TIMEOUT,
-                        connectTimeout);
-                config.property(ClientProperties.READ_TIMEOUT, readTimeout);
+        config.property(ClientProperties.CONNECT_TIMEOUT, connectTimeout);
+        config.property(ClientProperties.READ_TIMEOUT, readTimeout);
 
-                return config;
-            }
+        return config;
+    }
 
-            @Inject
-            @Provides
-            @Singleton
-            public HttpClientManagerReporter reporter(HeroicReporter reporter) {
-                return reporter.newHttpClientManager();
-            }
+    @Inject
+    @Provides
+    @Singleton
+    public HttpClientManagerReporter reporter(HeroicReporter reporter) {
+        return reporter.newHttpClientManager();
+    }
 
-            @Provides
-            @Singleton
-            public ThreadPool executor(HttpClientManagerReporter reporter) {
-                return ThreadPool.create("request", reporter.newThreadPool(),
-                        threads, queueSize);
-            }
+    @Provides
+    @Singleton
+    public ThreadPool executor(HttpClientManagerReporter reporter) {
+        return ThreadPool.create("request", reporter.newThreadPool(), threads,
+                queueSize);
+    }
 
-            @Override
-            protected void configure() {
-                bind(HttpClientManager.class).in(Scopes.SINGLETON);
-                expose(HttpClientManager.class);
-            }
-        };
+    @Override
+    protected void configure() {
+        bind(HttpClientManager.class).in(Scopes.SINGLETON);
+        expose(HttpClientManager.class);
     }
 }

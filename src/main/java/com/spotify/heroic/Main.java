@@ -13,7 +13,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Singleton;
 import javax.servlet.DispatcherType;
 
 import lombok.extern.slf4j.Slf4j;
@@ -37,25 +36,18 @@ import org.quartz.SchedulerException;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.google.inject.AbstractModule;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.spotify.heroic.config.HeroicConfig;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerConfig;
-import com.spotify.heroic.http.query.QueryResource.StoredMetricQueries;
-import com.spotify.heroic.injection.IsSubclassOf;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.injection.LifeCycleTypeListener;
-import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.metrics.core.MetricId;
@@ -70,7 +62,7 @@ public class Main {
 
     public static Injector injector;
 
-    public static Set<LifeCycle> managed = new HashSet<>();
+    public static Set<LifeCycle> lifecycles = new HashSet<>();
 
     public static final GuiceServletContextListener LISTENER = new GuiceServletContextListener() {
         @Override
@@ -87,35 +79,16 @@ public class Main {
 
         final List<Module> modules = new ArrayList<Module>();
 
-        modules.add(new AbstractModule() {
-            @Provides
-            @Singleton
-            public HeroicReporter reporter() {
-                return reporter;
-            }
-
-            @Override
-            protected void configure() {
-                bind(ApplicationLifecycle.class).toInstance(lifecycle);
-                bind(ScheduledExecutorService.class).toInstance(
-                        scheduledExecutor);
-                bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
-                bind(StoredMetricQueries.class).in(Scopes.SINGLETON);
-
-                bindListener(new IsSubclassOf(LifeCycle.class),
-                        new LifeCycleTypeListener(managed));
-            }
-        });
-
+        modules.add(new MainModule(lifecycle, scheduledExecutor, lifecycles,
+                reporter));
         modules.add(new SchedulerModule(config.getRefreshClusterSchedule()));
+        modules.add(config.getHttpClientManagerModule());
+        modules.add(config.getMetricBackendManagerModule());
+        modules.add(config.getMetadataBackendManagerModule());
+        modules.add(config.getClusterManagerModule());
+        modules.add(config.getAggregationCacheModule());
 
-        modules.add(config.getClient().module());
-        modules.add(config.getMetrics().module());
-        modules.add(config.getMetadata().module());
-        modules.add(config.getCluster().module());
-        modules.add(config.getCache().module());
-
-        setupConsumers(config, reporter, modules);
+        modules.addAll(setupConsumers(config, reporter));
 
         final Injector injector = Guice.createInjector(modules);
 
@@ -128,8 +101,10 @@ public class Main {
         return injector;
     }
 
-    private static void setupConsumers(final HeroicConfig config,
-            final HeroicReporter reporter, final List<Module> modules) {
+    private static List<Module> setupConsumers(final HeroicConfig config,
+            final HeroicReporter reporter) {
+        final List<Module> modules = new ArrayList<>();
+
         int consumerCount = 0;
 
         for (final ConsumerConfig consumer : config.getConsumers()) {
@@ -138,6 +113,8 @@ public class Main {
             final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
             modules.add(consumer.module(key, reporter.newConsumer(id)));
         }
+
+        return modules;
     }
 
     public static void main(String[] args) throws Exception {
@@ -210,7 +187,7 @@ public class Main {
         boolean ok = true;
 
         /* fire Stoppable handlers */
-        for (final LifeCycle startable : managed) {
+        for (final LifeCycle startable : lifecycles) {
             log.info("Starting: {}", startable);
 
             try {
@@ -228,7 +205,7 @@ public class Main {
         boolean ok = true;
 
         /* fire Stoppable handlers */
-        for (final LifeCycle stoppable : managed) {
+        for (final LifeCycle stoppable : lifecycles) {
             log.info("Stopping: {}", stoppable);
 
             try {
@@ -254,8 +231,8 @@ public class Main {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath,
                     location == null ? null : location.getLineNr(),
-                            location == null ? null : location.getColumnNr(),
-                                    e.getOriginalMessage()));
+                    location == null ? null : location.getColumnNr(),
+                    e.getOriginalMessage()));
 
             if (log.isDebugEnabled())
                 log.debug("Configuration error", e);

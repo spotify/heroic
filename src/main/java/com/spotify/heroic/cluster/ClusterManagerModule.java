@@ -6,14 +6,13 @@ import java.util.UUID;
 
 import javax.inject.Named;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -21,8 +20,11 @@ import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.rpc.RpcResource;
 
-@Data
-public class ClusterManagerConfig {
+@RequiredArgsConstructor
+public class ClusterManagerModule extends PrivateModule {
+    private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key
+            .get(ClusterDiscovery.class);
+
     public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet
             .copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
 
@@ -35,7 +37,7 @@ public class ClusterManagerConfig {
     private final ClusterDiscoveryConfig discovery;
 
     @JsonCreator
-    public static ClusterManagerConfig create(
+    public static ClusterManagerModule create(
             @JsonProperty("discovery") ClusterDiscoveryConfig discovery,
             @JsonProperty("tags") Map<String, String> tags,
             @JsonProperty("capabilities") Set<NodeCapability> capabilities,
@@ -49,7 +51,7 @@ public class ClusterManagerConfig {
 
         final UUID id = UUID.randomUUID();
 
-        return new ClusterManagerConfig(tags, capabilities, id, useLocal,
+        return new ClusterManagerModule(tags, capabilities, id, useLocal,
                 discovery);
     }
 
@@ -61,39 +63,31 @@ public class ClusterManagerConfig {
         return new NodeRegistryEntry(null, localClusterNode, metadata);
     }
 
-    public Module module() {
-        final Key<ClusterDiscovery> discoveryKey = Key
-                .get(ClusterDiscovery.class);
+    @Provides
+    @Named("localEntry")
+    public NodeRegistryEntry localEntry(LocalClusterNode localClusterNode) {
+        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION,
+                localId, localTags, capabilities);
+        return new NodeRegistryEntry(null, localClusterNode, metadata);
+    }
 
-        return new PrivateModule() {
-            @Provides
-            @Named("localEntry")
-            public NodeRegistryEntry localEntry(
-                    LocalClusterNode localClusterNode) {
-                final NodeMetadata metadata = new NodeMetadata(
-                        RpcResource.VERSION, localId, localTags, capabilities);
-                return new NodeRegistryEntry(null, localClusterNode, metadata);
-            }
+    @Provides
+    @Named("useLocal")
+    public Boolean useLocal() {
+        return useLocal;
+    }
 
-            @Provides
-            @Named("useLocal")
-            public Boolean useLocal() {
-                return useLocal;
-            }
+    @Provides
+    @Named("localId")
+    public UUID localId() {
+        return localId;
+    }
 
-            @Provides
-            @Named("localId")
-            public UUID localId() {
-                return localId;
-            }
-
-            @Override
-            protected void configure() {
-                bind(LocalClusterNode.class).in(Scopes.SINGLETON);
-                bind(ClusterManager.class).in(Scopes.SINGLETON);
-                install(discovery.module(discoveryKey));
-                expose(ClusterManager.class);
-            }
-        };
+    @Override
+    protected void configure() {
+        bind(LocalClusterNode.class).in(Scopes.SINGLETON);
+        bind(ClusterManager.class).in(Scopes.SINGLETON);
+        install(discovery.module(DISCOVERY_KEY));
+        expose(ClusterManager.class);
     }
 }
