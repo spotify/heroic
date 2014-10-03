@@ -1,5 +1,6 @@
 package com.spotify.heroic.metadata;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -20,11 +21,21 @@ import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
 
 @RequiredArgsConstructor
 public class MetadataModule extends PrivateModule {
+    private static final List<MetadataBackendConfig> DEFAULT_BACKENDS = new ArrayList<>();
+
     private final List<MetadataBackendConfig> backends;
 
     @JsonCreator
     public static MetadataModule create(@JsonProperty("backends") List<MetadataBackendConfig> backends) {
+        if (backends == null) {
+            backends = DEFAULT_BACKENDS;
+        }
+
         return new MetadataModule(backends);
+    }
+
+    public static MetadataModule createDefault() {
+        return create(null);
     }
 
     @Provides

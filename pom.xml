@@ -252,7 +252,7 @@
       <artifactId>elasticsearch</artifactId>
       <version>1.3.4</version>
     </dependency>
-    
+
     <!--  used by com.spotify.heroic.metadata.lucene -->
     <dependency>
       <groupId>org.apache.lucene</groupId>
@@ -263,6 +263,13 @@
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-codecs</artifactId>
       <version>${lucene.version}</version>
+    </dependency>
+
+    <!-- graphing -->
+    <dependency>
+      <groupId>org.jfree</groupId>
+      <artifactId>jfreechart</artifactId>
+      <version>1.0.19</version>
     </dependency>
 
     <!-- logging -->

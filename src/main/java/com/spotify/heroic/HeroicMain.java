@@ -36,6 +36,7 @@ import org.quartz.SchedulerException;
 import com.codahale.metrics.jvm.MemoryUsageGaugeSet;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -76,7 +77,9 @@ public class HeroicMain {
 
         final List<Module> modules = new ArrayList<Module>();
 
-        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles, reporter));
+        final ObjectMapper mapper = new ObjectMapper();
+
+        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles, reporter, mapper));
         modules.add(new HeroicSchedulerModule(config.getRefreshClusterSchedule()));
         modules.add(config.getHttpClientManagerModule());
         modules.add(config.getMetricModule());

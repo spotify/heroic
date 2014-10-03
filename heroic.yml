@@ -6,34 +6,56 @@ cluster:
   useLocal: true
   tags:
     site: lon
-  capabilities:
-    - WRITE
-    - QUERY
   discovery:
     type: static
     nodes:
-      - http://localhost:8080
-
-metrics:
-  flushingInterval: 1000
+      - http://ash2-heroic-a1.spotify.net:8080
+      - http://ash2-heroic-a2.spotify.net:8080
+      - http://ash2-heroic-a3.spotify.net:8080
+      - http://lon3-heroic-a1.spotify.net:8080
+      - http://lon3-heroic-a2.spotify.net:8080
+      - http://lon3-heroic-a3.spotify.net:8080
+      - http://sjc1-heroic-a1.spotify.net:8080
+      - http://sjc1-heroic-a2.spotify.net:8080
+      - http://sjc1-heroic-a3.spotify.net:8080
+      - http://sjc1-heroic-a1.spotify.net:8081
+      - http://sjc1-heroic-a2.spotify.net:8081
+      - http://sjc1-heroic-a3.spotify.net:8081
+      - http://awsuse1-heroic-a1.shared.cloud.spotify.net:8081
+      - http://awsuse1-heroic-a2.shared.cloud.spotify.net:8081
+      - http://ash2-heroic-a1.spotify.net:8081
+      - http://ash2-heroic-a2.spotify.net:8081
+      - http://ash2-heroic-a3.spotify.net:8081
+      - http://sto1-heroic-a1.spotify.net:8080
+      - http://sto1-heroic-a2.spotify.net:8080
+      - http://sto1-heroic-a3.spotify.net:8080
+      - http://awseu3-heroic-a1.shared.cloud.spotify.net:8081
+      - http://awseu3-heroic-a2.shared.cloud.spotify.net:8081
+      - http://sto1-heroic-a1.spotify.net:8081
+      - http://sto1-heroic-a2.spotify.net:8081
+      - http://sto1-heroic-a3.spotify.net:8081
+      - http://awseu3-heroic-a1.shared.cloud.spotify.net:8080
+      - http://awseu3-heroic-a2.shared.cloud.spotify.net:8080
+      - http://lon3-heroic-a1.spotify.net:8081
+      - http://lon3-heroic-a2.spotify.net:8081
+      - http://lon3-heroic-a3.spotify.net:8081
+      - http://awsuse1-heroic-a1.shared.cloud.spotify.net:8080
+      - http://awsuse1-heroic-a2.shared.cloud.spotify.net:8080
 
 metadata:
   backends:
-    - type: lucene
-
-ingestion:
-  updateMetadata: true
-  updateMetrics: false
-
-consumers:
-  - type: kafka
-    schema: com.spotify.heroic.consumer.schemas.Spotify100
-    topics:
-      - "metrics-lon2"
-      - "metrics-lon3"
-      - "metrics-lon4"
-    config:
-      group.id: heroic-test2
-      zookeeper.connect: lon3-kafkazookeeper-a1.spotify.net,lon3-kafkazookeeper-a2.spotify.net,lon3-kafkazookeeper-a3.spotify.net/kafka-monitoring
-      auto.offset.reset: smallest
-      auto.commit.enable: true
+    - type: elasticsearch
+      clusterName: heroic-test
+      index: heroic
+      type: metadata
+      seeds:
+        - awseu3-heroic-a1.shared.cloud.spotify.net
+        - awseu3-heroic-a2.shared.cloud.spotify.net
+    - type: elasticsearch
+      clusterName: metalastic-production
+      index: heroic
+      type: metadata
+      seeds:
+        - lon2-heroex-a2.lon2.spotify.net
+        - lon2-heroex-a3.lon.spotify.net
+        - lon2-heroex-a4.lon2.spotify.net

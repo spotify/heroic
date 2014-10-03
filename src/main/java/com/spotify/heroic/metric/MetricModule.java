@@ -57,6 +57,10 @@ public class MetricModule extends PrivateModule {
         return new MetricModule(backends, defaultBackends, groupLimit, groupLoadLimit, flushingInterval);
     }
 
+    public static MetricModule createDefault() {
+        return create(null, null, null, null, null);
+    }
+
     @Inject
     @Provides
     @Singleton

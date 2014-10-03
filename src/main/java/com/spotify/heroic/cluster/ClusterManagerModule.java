@@ -51,6 +51,10 @@ public class ClusterManagerModule extends PrivateModule {
         return new ClusterManagerModule(tags, capabilities, id, useLocal, discovery);
     }
 
+    public static ClusterManagerModule createDefault() {
+        return create(null, null, null, null, null);
+    }
+
     public static NodeRegistryEntry buildLocalEntry(ClusterNode localClusterNode, UUID localNodeId,
             Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
         final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION, localNodeId, localNodeTags, capabilities);

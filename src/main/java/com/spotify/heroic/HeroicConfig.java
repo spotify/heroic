@@ -53,6 +53,15 @@ public class HeroicConfig {
         if (refreshClusterSchedule == null)
             refreshClusterSchedule = DEFAULT_REFRESH_CLUSTER_SCHEDULE;
 
+        if (cluster == null)
+            cluster = ClusterManagerModule.createDefault();
+
+        if (metrics == null)
+            metrics = MetricModule.createDefault();
+
+        if (metadata == null)
+            metadata = MetadataModule.createDefault();
+
         if (client == null)
             client = HttpClientManagerModule.createDefault();
 

@@ -1,5 +1,7 @@
 package com.spotify.heroic.http.query;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -8,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
 import javax.inject.Inject;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
@@ -31,7 +35,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.glassfish.jersey.media.sse.EventOutput;
 import org.glassfish.jersey.media.sse.OutboundEvent;
 import org.glassfish.jersey.media.sse.SseFeature;
+import org.jfree.chart.JFreeChart;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -97,11 +103,16 @@ public class QueryResource {
     @Inject
     private StoredMetricQueries storedQueries;
 
+    @Inject
+    private ObjectMapper mapper;
+
     @POST
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
             QueryMetrics query) throws MetricQueryException {
         final StoredQuery q = makeMetricsQuery(backendGroup, query);
+
+        log.info("Metrics: {}", q);
 
         final Callback<QueryMetricsResult> callback = metrics.queryMetrics(q.getBackendGroup(), q.getFilter(),
                 q.getGroupBy(), q.getRange(), q.getAggregation());
@@ -229,6 +240,50 @@ public class QueryResource {
         });
 
         return output;
+    }
+
+    private static final int DEFAULT_WIDTH = 600;
+
+    private static final int DEFAULT_HEIGHT = 400;
+
+    @GET
+    @Path("/render")
+    @Produces("image/png")
+    public Response render(@QueryParam("query") String query, @QueryParam("backend") String backendGroup,
+            @QueryParam("title") String title, @QueryParam("width") Integer width, @QueryParam("height") Integer height)
+            throws Exception {
+        if (query == null) {
+            throw new BadRequestException("'query' must be defined");
+        }
+
+        if (width == null) {
+            width = DEFAULT_WIDTH;
+        }
+
+        if (height == null) {
+            height = DEFAULT_HEIGHT;
+        }
+
+        final QueryMetrics queryMetrics = mapper.readValue(query, QueryMetrics.class);
+        final StoredQuery q = makeMetricsQuery(backendGroup, queryMetrics);
+
+        log.info("Render: {}", q);
+
+        Callback<QueryMetricsResult> callback = metrics.queryMetrics(q.getBackendGroup(), q.getFilter(),
+                q.getGroupBy(), q.getRange(), q.getAggregation());
+
+        final QueryMetricsResult result = callback.get();
+
+        final String graphTitle = title == null ? "Heroic Graph" : title;
+
+        JFreeChart chart = ChartUtils.createChart(result.getMetricGroups(), graphTitle);
+
+        BufferedImage image = chart.createBufferedImage(width, height);
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", buffer);
+
+        return Response.ok(buffer.toByteArray()).build();
     }
 
     /**
