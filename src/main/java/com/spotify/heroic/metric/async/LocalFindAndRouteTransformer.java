@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metric.model.PreparedQuery;
 import com.spotify.heroic.model.Series;
@@ -18,7 +18,7 @@ import com.spotify.heroic.model.Series;
 @RequiredArgsConstructor
 public final class LocalFindAndRouteTransformer implements
         Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
-    private final MetricBackendManager metrics;
+    private final MetricManager metrics;
     private final Filter filter;
     private final String backendGroup;
     private final int groupLimit;

@@ -41,12 +41,12 @@ import com.spotify.heroic.metric.model.PreparedQuery;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
 @ToString(exclude = { "scheduledExecutor" })
-public class MetricBackendManager implements LifeCycle {
+public class MetricManager implements LifeCycle {
     @Inject
     @Named("backends")
     private Map<String, List<MetricBackend>> backends;
@@ -68,7 +68,7 @@ public class MetricBackendManager implements LifeCycle {
     private long flushingInterval;
 
     @Inject
-    private MetricBackendManagerReporter reporter;
+    private MetricManagerReporter reporter;
 
     @Inject
     private AggregationCache cache;
@@ -84,7 +84,7 @@ public class MetricBackendManager implements LifeCycle {
                 @Override
                 public void flushWrites(List<BufferedWriteMetric> writes) throws Exception {
                     log.info("Flushing {} write(s)", writes.size());
-                    MetricBackendManager.this.flushWrites(writes);
+                    MetricManager.this.flushWrites(writes);
                 }
             });
 
@@ -272,11 +272,11 @@ public class MetricBackendManager implements LifeCycle {
                 reporter.reportQueryMetrics());
     }
 
-    public MetricBackendGroup useDefaultGroup() throws BackendOperationException {
+    public MetricBackends useDefaultGroup() throws BackendOperationException {
         return useGroup(null);
     }
 
-    public MetricBackendGroup useGroup(final String group) throws BackendOperationException {
+    public MetricBackends useGroup(final String group) throws BackendOperationException {
         final List<MetricBackend> selected;
 
         if (group == null) {
@@ -294,7 +294,7 @@ public class MetricBackendManager implements LifeCycle {
         return useAlive(selected);
     }
 
-    public MetricBackendGroup useGroups(final Set<String> groups) throws BackendOperationException {
+    public MetricBackends useGroups(final Set<String> groups) throws BackendOperationException {
         final List<MetricBackend> selected;
 
         if (groups == null) {
@@ -312,7 +312,7 @@ public class MetricBackendManager implements LifeCycle {
         return useAlive(selected);
     }
 
-    private MetricBackendGroup useAlive(List<MetricBackend> backends) throws BackendOperationException {
+    private MetricBackends useAlive(List<MetricBackend> backends) throws BackendOperationException {
         final List<MetricBackend> alive = new ArrayList<MetricBackend>();
 
         // Keep track of disabled partitions.
@@ -332,7 +332,7 @@ public class MetricBackendManager implements LifeCycle {
         if (alive.isEmpty())
             throw new BackendOperationException("No alive backends available");
 
-        return new MetricBackendGroup(cache, reporter, disabled, alive);
+        return new MetricBackends(cache, reporter, disabled, alive);
     }
 
     /**

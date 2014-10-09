@@ -12,7 +12,7 @@ import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchKeyFilter;
 import com.spotify.heroic.filter.MatchTagFilter;
-import com.spotify.heroic.metric.MetricQueryException;
+import com.spotify.heroic.metric.exceptions.MetricQueryException;
 import com.spotify.heroic.model.DateRange;
 
 @Data

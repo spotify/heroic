@@ -23,17 +23,17 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
-public class MetadataBackendManager {
+public class MetadataManager {
     @Inject
     @Named("backends")
     private Set<MetadataBackend> backends;
 
     @Inject
-    private MetadataBackendManagerReporter reporter;
+    private MetadataManagerReporter reporter;
 
     public List<MetadataBackend> getBackends() {
         return ImmutableList.copyOf(backends);

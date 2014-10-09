@@ -5,10 +5,10 @@ import javax.inject.Named;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.ClusteredMetricManager;
-import com.spotify.heroic.metric.MetricFormatException;
 import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.metric.exceptions.MetricFormatException;
 import com.spotify.heroic.metric.model.WriteMetric;
 
 @Slf4j
@@ -22,7 +22,7 @@ public class IngestionManager {
     private boolean updateMetrics;
 
     @Inject
-    private MetadataBackendManager metadata;
+    private MetadataManager metadata;
 
     @Inject
     private ClusteredMetricManager metrics;
@@ -34,7 +34,7 @@ public class IngestionManager {
 
         if (updateMetrics) {
             try {
-                metrics.bufferWrite(null, write);
+                metrics.write(null, write);
             } catch (InterruptedException | BufferEnqueueException e) {
                 throw new FatalIngestionException("Failed to buffer up metric", e);
             } catch (final MetricFormatException e) {

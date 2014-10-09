@@ -24,13 +24,13 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 
 @Slf4j
 @RequiredArgsConstructor
-public class MetricBackendGroup {
+public class MetricBackends {
     private final AggregationCache cache;
-    private final MetricBackendManagerReporter reporter;
+    private final MetricManagerReporter reporter;
     private final int disabled;
     private final List<MetricBackend> backends;
 

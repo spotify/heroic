@@ -13,7 +13,7 @@ import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcNodeException;
 import com.spotify.heroic.http.rpc4.Rpc4ClusterNode;
 import com.spotify.heroic.http.rpc5.Rpc5ClusterNode;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 
 @RequiredArgsConstructor
 public class NodeRegistryEntryTransformer implements Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
@@ -21,7 +21,7 @@ public class NodeRegistryEntryTransformer implements Callback.Transformer<NodeMe
     private final URI uri;
     private final NodeRegistryEntry localEntry;
     private final boolean useLocal;
-    private final MetadataBackendManager localMetadata;
+    private final MetadataManager localMetadata;
 
     @Override
     public NodeRegistryEntry transform(NodeMetadata metadata) throws Exception {

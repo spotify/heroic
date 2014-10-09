@@ -22,7 +22,7 @@ import com.spotify.heroic.cluster.async.MetadataUriTransformer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 
 /**
  * Handles management of cluster state.
@@ -51,7 +51,7 @@ public class ClusterManager implements LifeCycle {
     private ClusterDiscovery discovery;
 
     @Inject
-    private MetadataBackendManager localMetadata;
+    private MetadataManager localMetadata;
 
     @Inject
     private HttpClientManager clients;

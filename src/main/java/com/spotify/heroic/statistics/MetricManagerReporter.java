@@ -1,6 +1,6 @@
 package com.spotify.heroic.statistics;
 
-public interface MetricBackendManagerReporter {
+public interface MetricManagerReporter {
     CallbackReporter.Context reportGetAllRows();
 
     CallbackReporter.Context reportQueryMetrics();

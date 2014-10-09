@@ -12,7 +12,7 @@ import javax.ws.rs.core.Response;
 import lombok.Data;
 
 import com.spotify.heroic.metric.ClusteredMetricManager;
-import com.spotify.heroic.metric.MetricFormatException;
+import com.spotify.heroic.metric.exceptions.MetricFormatException;
 import com.spotify.heroic.metric.model.WriteMetric;
 
 @Path("/write")
@@ -31,7 +31,7 @@ public class WriteResource {
     @Path("/metrics")
     public Response metrics(@QueryParam("backend") String backendGroup, WriteMetrics write) throws Exception {
         try {
-            metrics.bufferWrite(backendGroup, new WriteMetric(write.getSeries(), write.getData()));
+            metrics.write(backendGroup, new WriteMetric(write.getSeries(), write.getData()));
         } catch (final MetricFormatException e) {
             throw new Exception("Invalid write: " + e.getMessage());
         }

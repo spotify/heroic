@@ -12,8 +12,8 @@ import javax.ws.rs.core.MediaType;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metric.MetricBackendGroup;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricBackends;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 
@@ -22,7 +22,7 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 @Consumes(MediaType.APPLICATION_JSON)
 public class Rpc4Resource {
     @Inject
-    private MetricBackendManager metrics;
+    private MetricManager metrics;
 
     private static final HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc4MetricGroups>() {
         @Override
@@ -50,7 +50,7 @@ public class Rpc4Resource {
     @POST
     @Path("/write")
     public void write(@Suspended final AsyncResponse response, Rpc4WriteBody body) throws Exception {
-        final MetricBackendGroup backend = metrics.useGroup(body.getBackendGroup());
+        final MetricBackends backend = metrics.useGroup(body.getBackendGroup());
 
         final Callback<WriteBatchResult> callback = backend.write(body.getWrites());
 

@@ -6,8 +6,8 @@ import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.HttpClientManagerReporter;
-import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
@@ -15,13 +15,13 @@ public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
     @Override
-    public MetricBackendManagerReporter newMetricBackendManager() {
-        return new SemanticMetricBackendManagerReporter(registry);
+    public MetricManagerReporter newMetricBackendManager() {
+        return new SemanticMetricManagerReporter(registry);
     }
 
     @Override
-    public MetadataBackendManagerReporter newMetadataBackendManager() {
-        return new SemanticMetadataBackendManagerReporter(registry);
+    public MetadataManagerReporter newMetadataBackendManager() {
+        return new SemanticMetadataManagerReporter(registry);
     }
 
     @Override

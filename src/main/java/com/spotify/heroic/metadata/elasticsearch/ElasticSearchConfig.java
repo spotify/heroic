@@ -22,7 +22,7 @@ import com.google.inject.Provides;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataBackendConfig;
-import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataManagerReporter;
 import com.spotify.heroic.statistics.MetadataBackendReporter;
 
 @RequiredArgsConstructor
@@ -149,7 +149,7 @@ public final class ElasticSearchConfig implements MetadataBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetadataBackendReporter reporter(MetadataBackendManagerReporter reporter) {
+            public MetadataBackendReporter reporter(MetadataManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
 

@@ -22,8 +22,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.CancelledCallback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
@@ -34,19 +32,18 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
-import com.spotify.heroic.metric.async.FindSeriesTransformer;
 import com.spotify.heroic.metric.async.MetricGroupsTransformer;
-import com.spotify.heroic.metric.error.BackendOperationException;
 import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.metric.exceptions.MetricFormatException;
+import com.spotify.heroic.metric.exceptions.MetricQueryException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
-import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.QueryMetricsResult;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
@@ -65,7 +62,7 @@ public class ClusteredMetricManager implements LifeCycle {
     private long flushingInterval;
 
     @Inject
-    private MetricBackendManagerReporter reporter;
+    private MetricManagerReporter reporter;
 
     @Inject
     private ClusterManager cluster;
@@ -81,55 +78,30 @@ public class ClusteredMetricManager implements LifeCycle {
                 @Override
                 public void flushWrites(List<BufferedWriteMetric> writes) throws Exception {
                     log.info("Flushing {} write(s)", writes.size());
-                    ClusteredMetricManager.this.flushWrites(writes);
+                    ClusteredMetricManager.this.write(writes);
                 }
             });
 
-    /**
-     * Used for deferring work to avoid deep stack traces.
-     */
     private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
 
-    public void flushWrites(List<BufferedWriteMetric> bufferedWrites) throws Exception {
+    public void write(List<BufferedWriteMetric> bufferedWrites) throws Exception {
         final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
 
         final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
 
         for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
-            callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
-        }
+            final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap.create();
 
-        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
-            @Override
-            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                for (final Exception e : errors)
-                    log.error("Write failed", e);
-
-                for (final CancelReason cancel : cancelled)
-                    log.error("Write cancelled: {}", cancel);
-
-                boolean allOk = true;
-                int requests = 0;
-
-                for (final WriteBatchResult r : results) {
-                    allOk = allOk && r.isOk();
-                    requests += r.getRequests();
-                }
-
-                return new WriteBatchResult(allOk && errors.isEmpty() && cancelled.isEmpty(), requests);
+            for (final BufferedWriteMetric w : entry.getValue()) {
+                partitions.put(w.getNode(), new WriteMetric(w.getSeries(), w.getData()));
             }
-        };
 
-        final Callback<WriteBatchResult> callback = ConcurrentCallback.newReduce(callbacks, reducer);
-
-        final WriteBatchResult result;
-
-        try {
-            result = callback.get();
-        } catch (final Exception e) {
-            throw new Exception("Write batch failed", e);
+            for (final Map.Entry<NodeRegistryEntry, Collection<WriteMetric>> e : partitions.asMap().entrySet()) {
+                callbacks.add(e.getKey().getClusterNode().write(entry.getKey(), e.getValue()));
+            }
         }
+
+        final WriteBatchResult result = ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger()).get();
 
         if (!result.isOk())
             throw new Exception("Write batch failed (asynchronously)");
@@ -164,98 +136,17 @@ public class ClusteredMetricManager implements LifeCycle {
      * @throws MetricFormatException
      *             If the provided metric is invalid.
      */
-    public void bufferWrite(String backendGroup, WriteMetric write) throws InterruptedException,
-            BufferEnqueueException, MetricFormatException {
-        final NodeRegistryEntry node = findNodeRegistryEntry(write);
+    public void write(String backendGroup, WriteMetric write) throws InterruptedException, BufferEnqueueException,
+            MetricFormatException {
+        final NodeRegistryEntry node = cluster.findNode(write.getSeries().getTags(), NodeCapability.WRITE);
 
         if (node == null)
-            throw new BufferEnqueueException("Could not match write to any known node.");
+            throw new BufferEnqueueException("Could not find node to write to for: " + write.getSeries());
 
         writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup, write.getSeries(), write.getData()));
     }
 
-    /**
-     * Perform a write that could be routed to other cluster nodes.
-     *
-     * @param writes
-     *            Writes to perform.
-     * @return A callback that will be fired when the write is done or failed.
-     * @throws BackendOperationException
-     */
-    private Callback<WriteBatchResult> routeWrites(final String backendGroup, List<BufferedWriteMetric> writes)
-            throws BackendOperationException {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
-
-        callbacks.addAll(writeCluster(backendGroup, writes));
-
-        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
-            @Override
-            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                for (final Exception e : errors) {
-                    log.error("Remote write failed", e);
-                }
-
-                for (final CancelReason reason : cancelled) {
-                    log.error("Remote write cancelled: " + reason.getMessage());
-                }
-
-                boolean ok = errors.isEmpty() && cancelled.isEmpty();
-
-                if (ok) {
-                    for (final WriteBatchResult r : results) {
-                        ok = ok && r.isOk();
-                    }
-                }
-
-                return new WriteBatchResult(ok, results.size() + errors.size() + cancelled.size());
-            }
-        };
-
-        return ConcurrentCallback.newReduce(callbacks, reducer);
-    }
-
-    private List<Callback<WriteBatchResult>> writeCluster(final String backendGroup,
-            final List<BufferedWriteMetric> writes) throws BackendOperationException {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
-
-        final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap.create();
-
-        for (final BufferedWriteMetric w : writes) {
-            partitions.put(w.getNode(), new WriteMetric(w.getSeries(), w.getData()));
-        }
-
-        for (final Map.Entry<NodeRegistryEntry, Collection<WriteMetric>> entry : partitions.asMap().entrySet()) {
-            callbacks.add(entry.getKey().getClusterNode().write(backendGroup, entry.getValue()));
-        }
-
-        return callbacks;
-    }
-
-    public Callback<WriteBatchResult> write(MetricBackendGroup backend, Collection<WriteMetric> writes) {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
-
-        callbacks.add(backend.write(writes));
-
-        if (callbacks.isEmpty())
-            return new CancelledCallback<WriteBatchResult>(CancelReason.NO_BACKENDS_AVAILABLE);
-
-        return ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger());
-    }
-
-    private NodeRegistryEntry findNodeRegistryEntry(final WriteMetric write) throws MetricFormatException {
-        if (!cluster.isReady())
-            return null;
-
-        final NodeRegistryEntry node = cluster.findNode(write.getSeries().getTags(), NodeCapability.WRITE);
-
-        if (node == null)
-            throw new MetricFormatException("Could not route: " + write.getSeries());
-
-        return node;
-    }
-
-    public Callback<QueryMetricsResult> queryMetrics(final String backendGroup, final Filter filter,
+    public Callback<QueryMetricsResult> query(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation)
             throws MetricQueryException {
 
@@ -292,10 +183,6 @@ public class ClusteredMetricManager implements LifeCycle {
         return new AndFilter(statements).optimize();
     }
 
-    public static interface StreamingQuery {
-        public Callback<MetricGroups> query(final DateRange range);
-    }
-
     /**
      * Check if the query wants to hint at a specific interval. If that is the case, round the provided date to the
      * specified interval.
@@ -309,11 +196,6 @@ public class ClusteredMetricManager implements LifeCycle {
 
         final Sampling sampling = aggregation.getSampling();
         return range.rounded(sampling.getExtent()).rounded(sampling.getSize()).shiftStart(-sampling.getExtent());
-    }
-
-    private Callback<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {
-        final FindSeriesTransformer transformer = new FindSeriesTransformer(groupBy);
-        return metadata.findSeries(filter).transform(transformer);
     }
 
     public void scheduleFlush() {

@@ -22,7 +22,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 
 @RequiredArgsConstructor
 public class MetricModule extends PrivateModule {
@@ -64,7 +64,7 @@ public class MetricModule extends PrivateModule {
     @Inject
     @Provides
     @Singleton
-    public MetricBackendManagerReporter reporter(HeroicReporter reporter) {
+    public MetricManagerReporter reporter(HeroicReporter reporter) {
         return reporter.newMetricBackendManager();
     }
 
@@ -135,8 +135,8 @@ public class MetricModule extends PrivateModule {
     @Override
     protected void configure() {
         bindBackends(backends);
-        bind(MetricBackendManager.class).in(Scopes.SINGLETON);
-        expose(MetricBackendManager.class);
+        bind(MetricManager.class).in(Scopes.SINGLETON);
+        expose(MetricManager.class);
         bind(ClusteredMetricManager.class).in(Scopes.SINGLETON);
         expose(ClusteredMetricManager.class);
     }

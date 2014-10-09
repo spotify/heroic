@@ -15,12 +15,12 @@ import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.FailedCallback;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.error.BackendOperationException;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
@@ -31,10 +31,10 @@ import com.spotify.heroic.model.Series;
 @NoArgsConstructor
 public class LocalClusterNode implements ClusterNode {
     @Inject
-    private MetricBackendManager metrics;
+    private MetricManager metrics;
 
     @Inject
-    private MetadataBackendManager localMetadata;
+    private MetadataManager localMetadata;
 
     @Inject
     @Named("localId")

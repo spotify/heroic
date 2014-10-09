@@ -59,7 +59,7 @@ public class RenderResource {
 
         log.info("Render: {}", q);
 
-        final Callback<QueryMetricsResult> callback = metrics.queryMetrics(q.getBackendGroup(), q.getFilter(),
+        final Callback<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(),
                 q.getGroupBy(), q.getRange(), q.getAggregation());
 
         final QueryMetricsResult result = callback.get();

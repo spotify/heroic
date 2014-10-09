@@ -19,8 +19,8 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.general.DataResponse;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.MetricBackendGroup;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metric.MetricBackends;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.migrator.SeriesMigrator;
 
 @Path("/")
@@ -28,7 +28,7 @@ import com.spotify.heroic.migrator.SeriesMigrator;
 @Consumes(MediaType.APPLICATION_JSON)
 public class HeroicResource {
     @Inject
-    private MetricBackendManager metrics;
+    private MetricManager metrics;
 
     @Inject
     private SeriesMigrator seriesMigrator;
@@ -45,8 +45,8 @@ public class HeroicResource {
     @Path("/migrate/{source}/{target}")
     public Response migrate(@PathParam("source") String sourceGroup, @PathParam("target") String targetGroup,
             @QueryParam("history") Long history, Filter filter) throws Exception {
-        final MetricBackendGroup source = metrics.useGroup(sourceGroup);
-        final MetricBackendGroup target = metrics.useGroup(targetGroup);
+        final MetricBackends source = metrics.useGroup(sourceGroup);
+        final MetricBackends target = metrics.useGroup(targetGroup);
 
         if (source == null)
             return Response.status(Response.Status.BAD_REQUEST)

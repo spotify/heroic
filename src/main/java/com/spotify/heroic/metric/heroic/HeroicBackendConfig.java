@@ -14,8 +14,8 @@ import com.google.inject.Scopes;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendConfig;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 
 @Data
 public final class HeroicBackendConfig implements MetricBackendConfig {
@@ -59,7 +59,7 @@ public final class HeroicBackendConfig implements MetricBackendConfig {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetricBackendReporter reporter(MetricBackendManagerReporter reporter) {
+            public MetricBackendReporter reporter(MetricManagerReporter reporter) {
                 return reporter.newBackend(id);
             }
 

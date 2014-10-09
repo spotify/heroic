@@ -17,7 +17,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.MetadataBackendManagerReporter;
+import com.spotify.heroic.statistics.MetadataManagerReporter;
 
 @RequiredArgsConstructor
 public class MetadataModule extends PrivateModule {
@@ -40,15 +40,15 @@ public class MetadataModule extends PrivateModule {
 
     @Provides
     @Singleton
-    public MetadataBackendManagerReporter reporter(HeroicReporter reporter) {
+    public MetadataManagerReporter reporter(HeroicReporter reporter) {
         return reporter.newMetadataBackendManager();
     }
 
     @Override
     protected void configure() {
         bindBackends(backends);
-        bind(MetadataBackendManager.class).in(Scopes.SINGLETON);
-        expose(MetadataBackendManager.class);
+        bind(MetadataManager.class).in(Scopes.SINGLETON);
+        expose(MetadataManager.class);
     }
 
     private void bindBackends(final Collection<MetadataBackendConfig> configs) {

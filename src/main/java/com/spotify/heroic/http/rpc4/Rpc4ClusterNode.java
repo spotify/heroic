@@ -13,7 +13,7 @@ import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
@@ -28,7 +28,7 @@ import com.spotify.heroic.model.Series;
 public class Rpc4ClusterNode implements ClusterNode {
     private final HttpClientSession client;
 
-    private final MetadataBackendManager localMetadata;
+    private final MetadataManager localMetadata;
 
     private static final Callback.Transformer<Rpc4MetricGroups, MetricGroups> QUERY = new Callback.Transformer<Rpc4MetricGroups, MetricGroups>() {
         @Override

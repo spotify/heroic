@@ -13,8 +13,8 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
-import com.spotify.heroic.metadata.MetadataBackendManager;
-import com.spotify.heroic.metric.MetricBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.model.Series;
@@ -24,10 +24,10 @@ import com.spotify.heroic.model.Series;
 @Consumes(MediaType.APPLICATION_JSON)
 public class Rpc5Resource {
     @Inject
-    private MetricBackendManager localMetrics;
+    private MetricManager localMetrics;
 
     @Inject
-    private MetadataBackendManager localMetadata;
+    private MetadataManager localMetadata;
 
     private static final HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups> QUERY = new HttpAsyncUtils.Resume<MetricGroups, Rpc5MetricGroups>() {
         @Override

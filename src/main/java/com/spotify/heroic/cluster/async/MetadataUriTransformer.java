@@ -16,14 +16,14 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
 import com.spotify.heroic.http.HttpClientSession;
 import com.spotify.heroic.http.rpc.RpcMetadata;
-import com.spotify.heroic.metadata.MetadataBackendManager;
+import com.spotify.heroic.metadata.MetadataManager;
 
 @Data
 public final class MetadataUriTransformer implements Callback.DeferredTransformer<Collection<URI>, Void> {
     private final boolean useLocal;
 
     private final NodeRegistryEntry localEntry;
-    private final MetadataBackendManager localMetadata;
+    private final MetadataManager localMetadata;
     private final HttpClientManager clients;
     private final AtomicReference<NodeRegistry> registry;
 

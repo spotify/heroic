@@ -3,11 +3,11 @@ package com.spotify.heroic.statistics.semantic;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import com.spotify.heroic.statistics.CallbackReporter;
 import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.MetricBackendManagerReporter;
+import com.spotify.heroic.statistics.MetricManagerReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
-public class SemanticMetricBackendManagerReporter implements MetricBackendManagerReporter {
+public class SemanticMetricManagerReporter implements MetricManagerReporter {
     private static final String COMPONENT = "metric-backend-manager";
 
     private final SemanticMetricRegistry registry;
@@ -20,7 +20,7 @@ public class SemanticMetricBackendManagerReporter implements MetricBackendManage
     private final CallbackReporter findRowGroups;
     private final CallbackReporter write;
 
-    public SemanticMetricBackendManagerReporter(SemanticMetricRegistry registry) {
+    public SemanticMetricManagerReporter(SemanticMetricRegistry registry) {
         this.registry = registry;
 
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
