@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.http.render;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -15,7 +15,7 @@ import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.model.DataPoint;
 
-public final class ChartUtils {
+public final class RenderUtils {
     private static final List<Color> COLORS = new ArrayList<>();
 
     static {

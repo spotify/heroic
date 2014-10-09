@@ -272,10 +272,6 @@ public class MetricBackendManager implements LifeCycle {
                 reporter.reportQueryMetrics());
     }
 
-    public static interface StreamingQuery {
-        public Callback<MetricGroups> query(final DateRange range);
-    }
-
     public MetricBackendGroup useDefaultGroup() throws BackendOperationException {
         return useGroup(null);
     }

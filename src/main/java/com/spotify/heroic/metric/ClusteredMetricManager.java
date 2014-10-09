@@ -34,18 +34,14 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
-import com.spotify.heroic.metric.async.ClusteredFindAndRouteTransformer;
 import com.spotify.heroic.metric.async.FindSeriesTransformer;
 import com.spotify.heroic.metric.async.MetricGroupsTransformer;
-import com.spotify.heroic.metric.async.PreparedQueryTransformer;
 import com.spotify.heroic.metric.error.BackendOperationException;
 import com.spotify.heroic.metric.error.BufferEnqueueException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
 import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metric.model.MetricGroups;
-import com.spotify.heroic.metric.model.PreparedQuery;
 import com.spotify.heroic.metric.model.QueryMetricsResult;
-import com.spotify.heroic.metric.model.StreamMetricsResult;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
@@ -296,99 +292,8 @@ public class ClusteredMetricManager implements LifeCycle {
         return new AndFilter(statements).optimize();
     }
 
-    public Callback<StreamMetricsResult> streamMetrics(final String backendGroup, final Filter filter,
-            final List<String> groupBy, final DateRange range, final AggregationGroup aggregation, MetricStream handle)
-            throws MetricQueryException {
-        final DateRange rounded = roundRange(aggregation, range);
-
-        final Callback<List<PreparedQuery>> rows = findAndRouteTimeSeries(backendGroup, filter, groupBy);
-
-        final Callback<StreamMetricsResult> callback = new ConcurrentCallback<StreamMetricsResult>();
-
-        final String streamId = Integer.toHexString(filter.hashCode());
-
-        log.info("{}: streaming {}", streamId, filter);
-
-        final StreamingQuery streamingQuery = new StreamingQuery() {
-            @Override
-            public Callback<MetricGroups> query(DateRange range) {
-                log.info("{}: streaming chunk {}", streamId, range);
-
-                final PreparedQueryTransformer transformer = new PreparedQueryTransformer(range, aggregation);
-
-                return rows.transform(transformer);
-            }
-        };
-
-        final long chunk = rounded.diff() / RANGE_FACTOR;
-
-        streamChunks(callback, handle, streamingQuery, rounded, rounded.start(rounded.end()), chunk, chunk);
-
-        return callback.register(reporter.reportStreamMetrics()).register(new Callback.Finishable() {
-            @Override
-            public void finished() throws Exception {
-                log.info("{}: done streaming", streamId);
-            }
-        });
-    }
-
-    private static final long RANGE_FACTOR = 20;
-
     public static interface StreamingQuery {
         public Callback<MetricGroups> query(final DateRange range);
-    }
-
-    /**
-     * Streaming implementation that backs down in time in DIFF ms for each invocation.
-     */
-    private void streamChunks(final Callback<StreamMetricsResult> callback, final MetricStream handle,
-            final StreamingQuery query, final DateRange originalRange, final DateRange lastRange, final long chunk,
-            final long window) {
-        // decrease the range for the current chunk.
-        final DateRange currentRange = lastRange.start(Math.max(lastRange.start() - window, originalRange.start()));
-
-        final Callback.Handle<MetricGroups> callbackHandle = new Callback.Handle<MetricGroups>() {
-            @Override
-            public void cancelled(CancelReason reason) throws Exception {
-                log.warn("Streaming cancelled: {}", reason);
-                callback.cancel(reason);
-            }
-
-            @Override
-            public void failed(Exception e) throws Exception {
-                log.error("Streaming failed", e);
-                callback.fail(e);
-            }
-
-            @Override
-            public void resolved(MetricGroups result) throws Exception {
-                // is cancelled?
-                if (!callback.isReady())
-                    return;
-
-                try {
-                    handle.stream(callback, new QueryMetricsResult(originalRange, result));
-                } catch (final Exception e) {
-                    callback.fail(e);
-                    return;
-                }
-
-                if (currentRange.start() <= originalRange.start()) {
-                    callback.resolve(new StreamMetricsResult());
-                    return;
-                }
-
-                streamChunks(callback, handle, query, originalRange, currentRange, chunk, window + chunk);
-            }
-        };
-
-        /* Prevent long stack traces for very fast queries. */
-        deferredExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                query.query(currentRange).register(callbackHandle).register(reporter.reportStreamMetricsChunk());
-            }
-        });
     }
 
     /**
@@ -404,19 +309,6 @@ public class ClusteredMetricManager implements LifeCycle {
 
         final Sampling sampling = aggregation.getSampling();
         return range.rounded(sampling.getExtent()).rounded(sampling.getSize()).shiftStart(-sampling.getExtent());
-    }
-
-    /**
-     * Finds time series and routing the query to a specific remote Heroic instance.
-     *
-     * @param criteria
-     * @return
-     */
-    private Callback<List<PreparedQuery>> findAndRouteTimeSeries(final String backendGroup, final Filter filter,
-            final List<String> groupBy) {
-        return findAllTimeSeries(filter, groupBy).transform(
-                new ClusteredFindAndRouteTransformer(cluster, filter, backendGroup, groupLimit, groupLoadLimit))
-                .register(reporter.reportFindTimeSeries());
     }
 
     private Callback<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {

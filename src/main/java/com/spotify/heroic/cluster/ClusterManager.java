@@ -132,4 +132,14 @@ public class ClusterManager implements LifeCycle {
 
         return registry.getOnlineNodes() > 0;
     }
+
+    public boolean isAnyV(Collection<NodeRegistryEntry> nodes, int version) {
+        for (final NodeRegistryEntry node : nodes) {
+            if (node.getMetadata().getVersion() <= version) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ConcurrentCallback;
 import com.spotify.heroic.cluster.ClusterManager;
@@ -19,6 +21,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.Series;
 
+@Slf4j
 public class ClusteredMetadataManager {
     @Inject
     private ClusterManager cluster;
@@ -31,10 +34,23 @@ public class ClusteredMetadataManager {
         public Callback<T> run(NodeRegistryEntry node);
     }
 
+    /**
+     * TODO Remove short path for v4 when all of the cluster is v5.
+     *
+     * @param capability
+     * @param reducer
+     * @param op
+     * @return
+     */
     public <T> Callback<T> run(NodeCapability capability, Callback.Reducer<T, T> reducer, ClusterOperation<T> op) {
         final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(capability);
 
         final List<Callback<T>> requests = new ArrayList<>(nodes.size());
+
+        if (cluster.isAnyV(nodes, 4)) {
+            log.warn("Using short path because we found one v4 node");
+            return op.run(nodes.iterator().next());
+        }
 
         for (final NodeRegistryEntry node : nodes) {
             requests.add(op.run(node));
