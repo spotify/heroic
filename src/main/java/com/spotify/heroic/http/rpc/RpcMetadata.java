@@ -1,5 +1,6 @@
 package com.spotify.heroic.http.rpc;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -10,12 +11,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.cluster.NodeCapability;
-import com.spotify.heroic.cluster.model.NodeMetadata;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class RpcMetadata {
     public static final int DEFAULT_VERSION = 0;
+
+    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = new HashSet<>();
+    static {
+        DEFAULT_CAPABILITIES.add(NodeCapability.QUERY);
+    }
 
     private final int version;
     private final UUID id;
@@ -30,7 +35,7 @@ public class RpcMetadata {
             version = DEFAULT_VERSION;
 
         if (capabilities == null)
-            capabilities = NodeMetadata.DEFAULT_CAPABILITIES;
+            capabilities = DEFAULT_CAPABILITIES;
 
         if (id == null)
             throw new IllegalArgumentException("'id' must be specified");

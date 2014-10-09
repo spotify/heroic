@@ -51,4 +51,8 @@ public class StaticListDiscoveryConfig implements ClusterDiscoveryConfig {
             }
         };
     }
+
+    public static ClusterDiscoveryConfig createDefault() {
+        return create(null, null);
+    }
 }

@@ -1,6 +1,5 @@
 package com.spotify.heroic.cluster.model;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -11,11 +10,6 @@ import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
 public class NodeMetadata {
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = new HashSet<>();
-    static {
-        DEFAULT_CAPABILITIES.add(NodeCapability.QUERY);
-    }
-
     private final int version;
     private final UUID id;
     private final Map<String, String> tags;

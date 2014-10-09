@@ -12,13 +12,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.spotify.heroic.cluster.discovery.StaticListDiscoveryConfig;
 import com.spotify.heroic.cluster.model.NodeMetadata;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.rpc.RpcResource;
 
 @RequiredArgsConstructor
 public class ClusterManagerModule extends PrivateModule {
@@ -46,6 +46,9 @@ public class ClusterManagerModule extends PrivateModule {
         if (useLocal == null)
             useLocal = DEFAULT_USE_LOCAL;
 
+        if (discovery == null)
+            discovery = StaticListDiscoveryConfig.createDefault();
+
         final UUID id = UUID.randomUUID();
 
         return new ClusterManagerModule(tags, capabilities, id, useLocal, discovery);
@@ -55,17 +58,10 @@ public class ClusterManagerModule extends PrivateModule {
         return create(null, null, null, null, null);
     }
 
-    public static NodeRegistryEntry buildLocalEntry(ClusterNode localClusterNode, UUID localNodeId,
-            Map<String, String> localNodeTags, Set<NodeCapability> capabilities) {
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION, localNodeId, localNodeTags, capabilities);
-        return new NodeRegistryEntry(null, localClusterNode, metadata);
-    }
-
     @Provides
-    @Named("localEntry")
-    public NodeRegistryEntry localEntry(LocalClusterNode localClusterNode) {
-        final NodeMetadata metadata = new NodeMetadata(RpcResource.VERSION, localId, localTags, capabilities);
-        return new NodeRegistryEntry(null, localClusterNode, metadata);
+    @Exposed
+    public NodeMetadata localMetadata() {
+        return ClusterRPC.localMetadata(localId, localTags, capabilities);
     }
 
     @Provides
@@ -83,8 +79,11 @@ public class ClusterManagerModule extends PrivateModule {
     @Override
     protected void configure() {
         bind(LocalClusterNode.class).in(Scopes.SINGLETON);
-        bind(ClusterManager.class).in(Scopes.SINGLETON);
         install(discovery.module(DISCOVERY_KEY));
+
+        bind(ClusterRPC.class).in(Scopes.SINGLETON);
+
+        bind(ClusterManager.class).in(Scopes.SINGLETON);
         expose(ClusterManager.class);
     }
 }

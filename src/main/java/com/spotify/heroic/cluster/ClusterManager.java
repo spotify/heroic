@@ -6,11 +6,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +18,7 @@ import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.ResolvedCallback;
 import com.spotify.heroic.cluster.async.MetadataUriTransformer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.HttpClientManager;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.MetadataManager;
 
 /**
  * Handles management of cluster state.
@@ -39,22 +35,10 @@ import com.spotify.heroic.metadata.MetadataManager;
 @ToString
 public class ClusterManager implements LifeCycle {
     @Inject
-    @Named("localEntry")
-    @Getter
-    private NodeRegistryEntry localEntry;
-
-    @Inject
-    @Named("useLocal")
-    private boolean useLocal;
-
-    @Inject
     private ClusterDiscovery discovery;
 
     @Inject
-    private MetadataManager localMetadata;
-
-    @Inject
-    private HttpClientManager clients;
+    private ClusterRPC rpc;
 
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
 
@@ -94,14 +78,13 @@ public class ClusterManager implements LifeCycle {
     public Callback<Void> refresh() {
         if (discovery == null) {
             log.info("No discovery mechanism configured");
-            registry.set(new NodeRegistry(Lists.newArrayList(localEntry), 1));
+            registry.set(new NodeRegistry(Lists.newArrayList(rpc.localEntry()), 1));
             return new ResolvedCallback<Void>(null);
         }
 
         log.info("Cluster refresh in progress");
 
-        return discovery.find().transform(
-                new MetadataUriTransformer(useLocal, localEntry, localMetadata, clients, registry));
+        return discovery.find().transform(new MetadataUriTransformer(rpc, registry));
     }
 
     public ClusterManager.Statistics getStatistics() {

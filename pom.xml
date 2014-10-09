@@ -18,7 +18,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jersey.version>2.11</jersey.version>
+    <jersey.version>2.13</jersey.version>
     <hk2.version>2.3.0</hk2.version>
     <jaxrs.version>2.4.2</jaxrs.version>
     <jetty.version>9.2.2.v20140723</jetty.version>
@@ -129,11 +129,6 @@
     <dependency>
       <groupId>org.glassfish.jersey.containers</groupId>
       <artifactId>jersey-container-jetty-http</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.glassfish.jersey.media</groupId>
-      <artifactId>jersey-media-sse</artifactId>
       <version>${jersey.version}</version>
     </dependency>
     <dependency>
