@@ -20,4 +20,4 @@ override_dh_auto_clean:
 
 override_dh_auto_build:
 	$(MVN) -Ddeb.skip=true package
-	mv target/heroic-0.0.1-SNAPSHOT.jar target/heroic.jar
+	mv heroic-service/target/heroic-0.0.1-SNAPSHOT.jar heroic-service/target/heroic.jar
