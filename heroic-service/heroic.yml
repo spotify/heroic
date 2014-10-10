@@ -44,18 +44,18 @@ cluster:
 
 metrics:
   backends:
-    - type: .Cassandra2
+    - type: cassandra2
 
 metadata:
   backends:
-    - type: .ElasticSearch
+    - type: elasticsearch
       clusterName: heroic-test
       index: heroic
       type: metadata
       seeds:
         - awseu3-heroic-a1.shared.cloud.spotify.net
         - awseu3-heroic-a2.shared.cloud.spotify.net
-    - type: .ElasticSearch
+    - type: elasticsearch
       clusterName: metalastic-production
       index: heroic
       type: metadata

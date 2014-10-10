@@ -1,0 +1,3 @@
+com.spotify.heroic.metric.cassandra2
+com.spotify.heroic.metadata.elasticsearch
+com.spotify.heroic.metadata.lucene

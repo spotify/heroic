@@ -78,9 +78,4 @@ public class HeroicConfig {
         return new HeroicConfig(port, refreshClusterSchedule, cluster, metrics, metadata, cache, client, ingestion,
                 consumers);
     }
-
-    public static HeroicConfig parse(Path path, HeroicReporter reporter) throws IOException {
-        final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        return mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
-    }
 }

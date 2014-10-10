@@ -1,6 +1,10 @@
 package com.spotify.heroic;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,6 +37,8 @@ import org.quartz.SchedulerException;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -53,6 +59,14 @@ import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
 public class HeroicService {
+    /**
+     * Which resource file to load modules from.
+     */
+    private static final String HEROIC_MODULES = "heroic.modules";
+
+    /**
+     * Default configuration path.
+     */
     public static final String DEFAULT_CONFIG = "heroic.yml";
 
     public static Set<LifeCycle> lifecycles = new HashSet<>();
@@ -102,17 +116,24 @@ public class HeroicService {
 
     public static void main(String[] args) throws Exception {
         final String configPath;
+        final String modulesPath;
 
-        if (args.length < 1) {
-            configPath = DEFAULT_CONFIG;
-        } else {
+        if (args.length > 0) {
             configPath = args[0];
+        } else {
+            configPath = DEFAULT_CONFIG;
+        }
+
+        if (args.length > 1) {
+            modulesPath = args[1];
+        } else {
+            modulesPath = null;
         }
 
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        final HeroicConfig config = setupConfig(configPath, reporter);
+        final HeroicConfig config = setupConfig(configPath, modulesPath, reporter);
 
         if (config == null) {
             System.exit(1);
@@ -199,13 +220,41 @@ public class HeroicService {
         return ok;
     }
 
-    private static HeroicConfig setupConfig(final String configPath, final HeroicReporter reporter) throws IOException {
+    private static HeroicConfig setupConfig(final String configPath, final String modulesPath,
+            final HeroicReporter reporter) throws IOException {
         log.info("Loading configuration from: {}", configPath);
 
         final HeroicConfig config;
+        final Path path = Paths.get(configPath);
+
+        final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+
+        final HeroicContext context = new HeroicContext() {
+            @Override
+            public void register(String name, Class<?> type) {
+                mapper.registerSubtypes(new NamedType(type, name));
+            }
+        };
+
+        {
+            final List<URL> moduleLocations = new ArrayList<>();
+
+            if (modulesPath != null) {
+                moduleLocations.add(new File(modulesPath).toURI().toURL());
+            }
+
+            final ClassLoader loader = HeroicService.class.getClassLoader();
+            moduleLocations.add(loader.getResource(HEROIC_MODULES));
+
+            List<HeroicModuleEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
+
+            for (final HeroicModuleEntryPoint entry : modules) {
+                entry.setup(context);
+            }
+        }
 
         try {
-            config = HeroicConfig.parse(Paths.get(configPath), reporter);
+            config = mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath, location == null ? null : location.getLineNr(),

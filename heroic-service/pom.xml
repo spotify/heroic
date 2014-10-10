@@ -22,12 +22,17 @@
 
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-cassandra2-metric</artifactId>
+      <artifactId>heroic-cassandra2</artifactId>
     </dependency>
 
     <dependency>
       <groupId>com.spotify.heroic.metadata</groupId>
-      <artifactId>heroic-elasticsearch-metadata</artifactId>
+      <artifactId>heroic-elasticsearch</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic.metadata</groupId>
+      <artifactId>heroic-lucene</artifactId>
     </dependency>
 
     <dependency>
