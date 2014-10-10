@@ -14,10 +14,10 @@ import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
 public class AggregationCacheModule extends PrivateModule {
-    private final AggregationCacheBackendConfig backend;
+    private final AggregationCacheBackendModule backend;
 
     @JsonCreator
-    public static AggregationCacheModule create(@JsonProperty("backend") AggregationCacheBackendConfig backend) {
+    public static AggregationCacheModule create(@JsonProperty("backend") AggregationCacheBackendModule backend) {
         if (backend == null)
             backend = InMemoryAggregationCacheBackendConfig.create();
 

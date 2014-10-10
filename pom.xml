@@ -13,9 +13,13 @@
     <module>heroic-component</module>
     <module>heroic-core</module>
     <module>heroic-service</module>
-    <module>metric/heroic-cassandra2</module>
-    <module>metadata/heroic-lucene</module>
-    <module>metadata/heroic-elasticsearch</module>
+    <module>metric/cassandra2</module>
+    <module>metadata/lucene</module>
+    <module>metadata/elasticsearch</module>
+    <module>discovery/simple</module>
+    <module>aggregation/simple</module>
+    <module>consumer/kafka</module>
+    <module>aggregationcache/cassandra2</module>
   </modules>
 
   <licenses>
@@ -49,17 +53,37 @@
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
-        <artifactId>heroic-cassandra2</artifactId>
+        <artifactId>heroic-metric-cassandra2</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic.metadata</groupId>
-        <artifactId>heroic-elasticsearch</artifactId>
+        <artifactId>heroic-metadata-elasticsearch</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic.metadata</groupId>
-        <artifactId>heroic-lucene</artifactId>
+        <artifactId>heroic-metadata-lucene</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.discovery</groupId>
+        <artifactId>heroic-discovery-simple</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.aggregation</groupId>
+        <artifactId>heroic-aggregation-simple</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.consumer</groupId>
+        <artifactId>heroic-consumer-kafka</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.aggregationcache</groupId>
+        <artifactId>heroic-aggregationcache-cassandra2</artifactId>
         <version>${project.version}</version>
       </dependency>
 

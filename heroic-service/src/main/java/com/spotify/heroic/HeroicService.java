@@ -16,6 +16,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.ws.rs.core.MediaType;
+
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.logging.log4j.LogManager;
@@ -37,17 +39,25 @@ import org.quartz.SchedulerException;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.inject.AbstractModule;
+import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.aggregation.AggregationGroupSerializer;
+import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.consumer.ConsumerConfig;
+import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.injection.CollectingTypeListener;
+import com.spotify.heroic.injection.IsSubclassOf;
 import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.metrics.core.MetricId;
@@ -59,6 +69,8 @@ import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
 public class HeroicService {
+    private static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
+
     /**
      * Which resource file to load modules from.
      */
@@ -71,15 +83,48 @@ public class HeroicService {
 
     public static Set<LifeCycle> lifecycles = new HashSet<>();
 
+    public static Module setupEarlyModule() {
+        final ObjectMapper jsonObjectMapper = new ObjectMapper();
+        final ObjectMapper configObjectMapper = new ObjectMapper(new YAMLFactory());
+
+        return new AbstractModule() {
+            @Override
+            protected void configure() {
+                bind(AggregationSerializer.class).in(Scopes.SINGLETON);
+                bind(AggregationGroupSerializer.class).in(Scopes.SINGLETON);
+
+                bind(ObjectMapper.class).annotatedWith(Names.named(MediaType.APPLICATION_JSON)).toInstance(
+                        jsonObjectMapper);
+                bind(ObjectMapper.class).annotatedWith(Names.named(APPLICATION_HEROIC_CONFIG)).toInstance(
+                        configObjectMapper);
+
+                bind(ConfigurationContext.class).to(ConfigurationContextImpl.class);
+                bind(JSONContext.class).to(JSONContextImpl.class);
+            }
+        };
+    }
+
     public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter,
-            final ScheduledExecutorService scheduledExecutor, final HeroicLifeCycle lifecycle) throws Exception {
+            final ScheduledExecutorService scheduledExecutor, final HeroicLifeCycle lifecycle, final Module earlyModule)
+            throws Exception {
         log.info("Building Guice Injector");
 
         final List<Module> modules = new ArrayList<Module>();
 
-        final ObjectMapper mapper = new ObjectMapper();
+        modules.add(earlyModule);
 
-        modules.add(new HeroicModule(lifecycle, scheduledExecutor, lifecycles, reporter, mapper));
+        // register root components.
+        modules.add(new AbstractModule() {
+            @Override
+            protected void configure() {
+                bind(HeroicReporter.class).toInstance(reporter);
+                bind(HeroicLifeCycle.class).toInstance(lifecycle);
+                bind(ScheduledExecutorService.class).toInstance(scheduledExecutor);
+                bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
+                bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifecycles));
+            }
+        });
+
         modules.add(new HeroicSchedulerModule(config.getRefreshClusterSchedule()));
         modules.add(config.getHttpClientManagerModule());
         modules.add(config.getMetricModule());
@@ -88,7 +133,14 @@ public class HeroicService {
         modules.add(config.getAggregationCacheModule());
         modules.add(config.getIngestionModule());
 
-        modules.addAll(setupConsumers(config, reporter));
+        modules.add(new AbstractModule() {
+            @Override
+            protected void configure() {
+                for (Module m : setupConsumers(config, reporter, binder())) {
+                    install(m);
+                }
+            }
+        });
 
         final Injector injector = Guice.createInjector(modules);
 
@@ -100,15 +152,18 @@ public class HeroicService {
         return injector;
     }
 
-    private static List<Module> setupConsumers(final HeroicConfig config, final HeroicReporter reporter) {
+    private static List<Module> setupConsumers(final HeroicConfig config, final HeroicReporter reporter, Binder binder) {
+        final Multibinder<Consumer> bindings = Multibinder.newSetBinder(binder, Consumer.class);
+
         final List<Module> modules = new ArrayList<>();
 
         int consumerCount = 0;
 
-        for (final ConsumerConfig consumer : config.getConsumers()) {
+        for (final ConsumerModule consumer : config.getConsumers()) {
             final String id = consumer.id() != null ? consumer.id() : consumer.buildId(consumerCount++);
             final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
             modules.add(consumer.module(key, reporter.newConsumer(id)));
+            bindings.addBinding().to(key);
         }
 
         return modules;
@@ -133,7 +188,12 @@ public class HeroicService {
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        final HeroicConfig config = setupConfig(configPath, modulesPath, reporter);
+        /* Setup the early injector, which only has access to the things which should be accessible by pluggable
+         * components. */
+        final Module early = setupEarlyModule();
+        final Injector earlyInjector = Guice.createInjector(early);
+
+        final HeroicConfig config = setupConfig(configPath, modulesPath, reporter, earlyInjector);
 
         if (config == null) {
             System.exit(1);
@@ -151,7 +211,7 @@ public class HeroicService {
             }
         };
 
-        final Injector injector = setupInjector(config, reporter, scheduledExecutor, lifecycle);
+        final Injector injector = setupInjector(config, reporter, scheduledExecutor, lifecycle, early);
 
         final Server server = setupHttpServer(config, injector);
         final FastForwardReporter ffwd = setupReporter(registry);
@@ -221,20 +281,11 @@ public class HeroicService {
     }
 
     private static HeroicConfig setupConfig(final String configPath, final String modulesPath,
-            final HeroicReporter reporter) throws IOException {
+            final HeroicReporter reporter, final Injector earlyInjector) throws IOException {
         log.info("Loading configuration from: {}", configPath);
 
         final HeroicConfig config;
         final Path path = Paths.get(configPath);
-
-        final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-
-        final HeroicContext context = new HeroicContext() {
-            @Override
-            public void register(String name, Class<?> type) {
-                mapper.registerSubtypes(new NamedType(type, name));
-            }
-        };
 
         {
             final List<URL> moduleLocations = new ArrayList<>();
@@ -246,12 +297,17 @@ public class HeroicService {
             final ClassLoader loader = HeroicService.class.getClassLoader();
             moduleLocations.add(loader.getResource(HEROIC_MODULES));
 
-            List<HeroicModuleEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
+            List<HeroicEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
 
-            for (final HeroicModuleEntryPoint entry : modules) {
-                entry.setup(context);
+            for (final HeroicEntryPoint entry : modules) {
+                // inject members of an entry point and run.
+                earlyInjector.injectMembers(entry);
+                entry.setup();
             }
         }
+
+        final ObjectMapper mapper = earlyInjector.getInstance(Key.get(ObjectMapper.class,
+                Names.named(APPLICATION_HEROIC_CONFIG)));
 
         try {
             config = mapper.readValue(Files.newInputStream(path), HeroicConfig.class);

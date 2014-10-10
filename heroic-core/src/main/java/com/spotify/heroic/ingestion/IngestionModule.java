@@ -32,7 +32,7 @@ public class IngestionModule extends PrivateModule {
 
     @Override
     protected void configure() {
-        bind(IngestionManager.class).in(Scopes.SINGLETON);
+        bind(IngestionManager.class).to(IngestionManagerImpl.class).in(Scopes.SINGLETON);
         expose(IngestionManager.class);
     }
 

@@ -3,6 +3,8 @@ package com.spotify.heroic.model;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
@@ -19,8 +21,10 @@ public class CacheKeySerializer extends AbstractSerializer<CacheKey> {
     private static final MapSerializer<String, String> groupSerializer = new MapSerializer<String, String>(
             SafeUTF8Type.instance, SafeUTF8Type.instance);
     private static final FilterSerializer filterSerializer = FilterSerializer.get();
-    private static final AggregationGroupSerializer aggregationSerializer = AggregationGroupSerializer.get();
     private static final LongSerializer longSerializer = LongSerializer.get();
+
+    @Inject
+    private AggregationGroupSerializer aggregationSerializer;
 
     @Override
     public ByteBuffer toByteBuffer(CacheKey obj) {
@@ -51,11 +55,5 @@ public class CacheKeySerializer extends AbstractSerializer<CacheKey> {
         final Long base = composite.get(4, longSerializer);
 
         return new CacheKey(version, filter, group, aggregation, base);
-    }
-
-    private static final CacheKeySerializer instance = new CacheKeySerializer();
-
-    public static CacheKeySerializer get() {
-        return instance;
     }
 }

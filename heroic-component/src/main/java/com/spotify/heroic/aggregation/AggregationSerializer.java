@@ -8,8 +8,6 @@ import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.CompositeSerializer;
 import com.netflix.astyanax.serializers.ShortSerializer;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.SamplingSerializer;
 
 /**
  * Serializes aggregation configurations.
@@ -18,55 +16,22 @@ import com.spotify.heroic.model.SamplingSerializer;
  * 
  * @author udoprog
  */
-class AggregationSerializer extends AbstractSerializer<Aggregation> {
-    public interface Serializer<T> {
+public class AggregationSerializer extends AbstractSerializer<Aggregation> {
+    public static interface Serializer<T> {
         void serialize(Composite composite, T value);
 
         T deserialize(Composite composite);
     }
 
-    private static final SamplingSerializer resolutionSerializer = SamplingSerializer.get();
     private static final ShortSerializer shortSerializer = ShortSerializer.get();
     private static final CompositeSerializer compositeSerializer = CompositeSerializer.get();
 
-    private static final Map<Class<? extends Aggregation>, Short> T_TO_ID = new HashMap<Class<? extends Aggregation>, Short>();
-    private static final Map<Short, Serializer<? extends Aggregation>> SERIALIZERS = new HashMap<Short, Serializer<? extends Aggregation>>();
+    private final Map<Class<? extends Aggregation>, Short> T_TO_ID = new HashMap<Class<? extends Aggregation>, Short>();
+    private final Map<Short, Serializer<? extends Aggregation>> SERIALIZERS = new HashMap<Short, Serializer<? extends Aggregation>>();
 
-    private static final short SUM_AGGREGATION = 0x0001;
-    private static final short AVERAGE_AGGREGATION = 0x0002;
-
-    /**
-     * Sets up all static mappings and assert that they are unique.
-     */
-    static {
-        T_TO_ID.put(SumAggregation.class, SUM_AGGREGATION);
-        T_TO_ID.put(AverageAggregation.class, AVERAGE_AGGREGATION);
-
-        SERIALIZERS.put(SUM_AGGREGATION, new Serializer<SumAggregation>() {
-            @Override
-            public void serialize(Composite composite, SumAggregation value) {
-                composite.addComponent(value.getSampling(), resolutionSerializer);
-            }
-
-            @Override
-            public SumAggregation deserialize(Composite composite) {
-                final Sampling sampling = composite.get(0, resolutionSerializer);
-                return new SumAggregation(sampling);
-            }
-        });
-
-        SERIALIZERS.put(AVERAGE_AGGREGATION, new Serializer<AverageAggregation>() {
-            @Override
-            public void serialize(Composite composite, AverageAggregation value) {
-                composite.addComponent(value.getSampling(), resolutionSerializer);
-            }
-
-            @Override
-            public AverageAggregation deserialize(Composite composite) {
-                final Sampling sampling = composite.get(0, resolutionSerializer);
-                return new AverageAggregation(sampling);
-            }
-        });
+    public <T extends Aggregation> void register(Class<T> clazz, short id, Serializer<T> serializer) {
+        T_TO_ID.put(clazz, id);
+        SERIALIZERS.put(id, serializer);
     }
 
     @Override
@@ -100,11 +65,5 @@ class AggregationSerializer extends AbstractSerializer<Aggregation> {
         final Serializer<Aggregation> serializer = (Serializer<Aggregation>) SERIALIZERS.get(typeId);
 
         return serializer.deserialize(aggregation);
-    }
-
-    private static final AggregationSerializer instance = new AggregationSerializer();
-
-    public static AggregationSerializer get() {
-        return instance;
     }
 }

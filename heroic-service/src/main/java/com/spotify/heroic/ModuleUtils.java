@@ -12,10 +12,10 @@ import java.util.List;
 public class ModuleUtils {
     public static final String ENTRY_POINT_CLASS_NAME = "EntryPoint";
 
-    public static List<HeroicModuleEntryPoint> loadModules(List<URL> moduleLocations) throws IOException {
+    public static List<HeroicEntryPoint> loadModules(List<URL> moduleLocations) throws IOException {
         final ClassLoader loader = HeroicService.class.getClassLoader();
 
-        final List<HeroicModuleEntryPoint> modules = new ArrayList<>();
+        final List<HeroicEntryPoint> modules = new ArrayList<>();
 
         for (URL input : moduleLocations) {
             final InputStream inputStream = input.openStream();
@@ -28,9 +28,9 @@ public class ModuleUtils {
         return modules;
     }
 
-    private static List<HeroicModuleEntryPoint> loadModule(final ClassLoader loader, final BufferedReader reader)
+    private static List<HeroicEntryPoint> loadModule(final ClassLoader loader, final BufferedReader reader)
             throws IOException {
-        final List<HeroicModuleEntryPoint> children = new ArrayList<>();
+        final List<HeroicEntryPoint> children = new ArrayList<>();
 
         while (true) {
             final String line = reader.readLine();
@@ -56,7 +56,7 @@ public class ModuleUtils {
                         + "'", e);
             }
 
-            if (!(HeroicModuleEntryPoint.class.isAssignableFrom(clazz))) {
+            if (!(HeroicEntryPoint.class.isAssignableFrom(clazz))) {
                 throw new RuntimeException("Not a ModuleEntryPoint: " + clazz.toString());
             }
 
@@ -70,10 +70,10 @@ public class ModuleUtils {
                 throw new RuntimeException("Security exception when getting constructor for: " + clazz.toString(), e);
             }
 
-            final HeroicModuleEntryPoint entryPoint;
+            final HeroicEntryPoint entryPoint;
 
             try {
-                entryPoint = (HeroicModuleEntryPoint) constructor.newInstance();
+                entryPoint = (HeroicEntryPoint) constructor.newInstance();
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException("Failed to create instance of: " + clazz.toString(), e);
             }

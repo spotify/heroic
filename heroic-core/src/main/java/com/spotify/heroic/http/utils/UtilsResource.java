@@ -2,6 +2,7 @@ package com.spotify.heroic.http.utils;
 
 import java.nio.ByteBuffer;
 
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -16,10 +17,13 @@ import com.spotify.heroic.model.CacheKeySerializer;
 
 @Path("/utils")
 public class UtilsResource {
+    @Inject
+    private CacheKeySerializer cacheKeySerializer;
+
     /**
      * Encode/Decode functions, helpful when interacting with cassandra through cqlsh.
      */
-    /*@POST
+    /* @POST
      * 
      * @Path("/decode-row-key")
      * 
@@ -42,7 +46,7 @@ public class UtilsResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public Response decodeCacheKey(final String data) {
-        final CacheKey key = decode(data, CacheKeySerializer.get());
+        final CacheKey key = decode(data, cacheKeySerializer);
         return Response.status(Response.Status.OK).entity(key).build();
     }
 
@@ -51,7 +55,7 @@ public class UtilsResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public Response encodeCacheKey(final CacheKey key) {
-        final String data = encode(key, CacheKeySerializer.get());
+        final String data = encode(key, cacheKeySerializer);
         return Response.status(Response.Status.OK).entity(data).build();
     }
 

@@ -10,7 +10,7 @@ import com.google.inject.Scopes;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 
-public class InMemoryAggregationCacheBackendConfig implements AggregationCacheBackendConfig {
+public class InMemoryAggregationCacheBackendConfig implements AggregationCacheBackendModule {
     @JsonCreator
     public static InMemoryAggregationCacheBackendConfig create() {
         return new InMemoryAggregationCacheBackendConfig();

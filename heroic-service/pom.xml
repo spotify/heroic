@@ -22,17 +22,37 @@
 
     <dependency>
       <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-cassandra2</artifactId>
+      <artifactId>heroic-metric-cassandra2</artifactId>
     </dependency>
 
     <dependency>
       <groupId>com.spotify.heroic.metadata</groupId>
-      <artifactId>heroic-elasticsearch</artifactId>
+      <artifactId>heroic-metadata-elasticsearch</artifactId>
     </dependency>
 
     <dependency>
       <groupId>com.spotify.heroic.metadata</groupId>
-      <artifactId>heroic-lucene</artifactId>
+      <artifactId>heroic-metadata-lucene</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic.discovery</groupId>
+      <artifactId>heroic-discovery-simple</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic.aggregation</groupId>
+      <artifactId>heroic-aggregation-simple</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic.consumer</groupId>
+      <artifactId>heroic-consumer-kafka</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic.aggregationcache</groupId>
+      <artifactId>heroic-aggregationcache-cassandra2</artifactId>
     </dependency>
 
     <dependency>

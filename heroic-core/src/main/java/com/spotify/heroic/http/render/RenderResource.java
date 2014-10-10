@@ -5,11 +5,13 @@ import java.io.ByteArrayOutputStream;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class RenderResource {
     private static final int DEFAULT_HEIGHT = 400;
 
     @Inject
+    @Named(MediaType.APPLICATION_JSON)
     private ObjectMapper mapper;
 
     @Inject
@@ -41,7 +44,7 @@ public class RenderResource {
     @Produces("image/png")
     public Response render(@QueryParam("query") String query, @QueryParam("backend") String backendGroup,
             @QueryParam("title") String title, @QueryParam("width") Integer width, @QueryParam("height") Integer height)
-                    throws Exception {
+            throws Exception {
         if (query == null) {
             throw new BadRequestException("'query' must be defined");
         }
@@ -59,8 +62,8 @@ public class RenderResource {
 
         log.info("Render: {}", q);
 
-        final Callback<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(),
-                q.getGroupBy(), q.getRange(), q.getAggregation());
+        final Callback<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
+                q.getRange(), q.getAggregation());
 
         final QueryMetricsResult result = callback.get();
 

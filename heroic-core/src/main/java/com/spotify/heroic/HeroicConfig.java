@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
-import com.spotify.heroic.consumer.ConsumerConfig;
+import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.http.HttpClientManagerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataManagerModule;
@@ -38,7 +38,7 @@ public class HeroicConfig {
     private final AggregationCacheModule aggregationCacheModule;
     private final HttpClientManagerModule httpClientManagerModule;
     private final IngestionModule ingestionModule;
-    private final List<ConsumerConfig> consumers;
+    private final List<ConsumerModule> consumers;
 
     @JsonCreator
     public static HeroicConfig create(@JsonProperty("port") Integer port,
@@ -47,7 +47,7 @@ public class HeroicConfig {
             @JsonProperty("metadata") MetadataManagerModule metadata, @JsonProperty("cache") AggregationCacheModule cache,
             @JsonProperty("client") HttpClientManagerModule client,
             @JsonProperty("ingestion") IngestionModule ingestion,
-            @JsonProperty("consumers") List<ConsumerConfig> consumers) {
+            @JsonProperty("consumers") List<ConsumerModule> consumers) {
         if (port == null)
             port = DEFAULT_PORT;
 

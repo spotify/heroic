@@ -1,3 +1,11 @@
 com.spotify.heroic.metric.cassandra2
 com.spotify.heroic.metadata.elasticsearch
 com.spotify.heroic.metadata.lucene
+
+com.spotify.heroic.cluster.discovery.simple
+
+com.spotify.heroic.aggregation.simple
+
+com.spotify.heroic.consumer.kafka
+
+com.spotify.heroic.aggregationcache.cassandra2
