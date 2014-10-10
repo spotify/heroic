@@ -16,7 +16,6 @@ import com.spotify.heroic.async.DefaultStreamReducer;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.async.Reducers;
-import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -73,7 +72,7 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return new ResolvedFuture<>(id);
+        return Futures.resolved(id);
     }
 
     @Override

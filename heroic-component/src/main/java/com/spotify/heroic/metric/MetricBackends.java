@@ -13,7 +13,6 @@ import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.AggregationCache;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.async.TimeSeriesTransformer;
 import com.spotify.heroic.metric.error.BackendOperationException;
@@ -97,7 +96,7 @@ public class MetricBackends {
             }
         });
 
-        return new ResolvedFuture<>(grouped);
+        return Futures.resolved(grouped);
     }
 
     /**

@@ -12,7 +12,6 @@ import org.elasticsearch.index.query.FilterBuilder;
 import com.spotify.heroic.async.DeferredTransformer;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
@@ -49,7 +48,7 @@ public class FindTagsTransformer implements DeferredTransformer<FindTagKeys, Fin
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedFuture<FindTags>(FindTags.EMPTY);
+            return Futures.resolved(FindTags.EMPTY);
 
         return Futures.resolve(executor, new FindTagsResolver(client, index, type, f, key));
     }

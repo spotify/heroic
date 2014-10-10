@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.MediaType;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -11,6 +12,8 @@ import org.jvnet.hk2.guice.bridge.api.GuiceIntoHK2Bridge;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.name.Names;
 import com.spotify.heroic.http.HeroicResource;
 
 /**
@@ -26,7 +29,8 @@ public class HeroicJerseyApplication extends ResourceConfig {
     public static void setInjector(Injector injector) {
         HeroicJerseyApplication.injector = injector;
 
-        final ObjectMapper mapper = injector.getInstance(ObjectMapper.class);
+        final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class,
+                Names.named(MediaType.APPLICATION_JSON)));
 
         if (mapper == null) {
             throw new IllegalStateException("No ObjectMapper available in injector");

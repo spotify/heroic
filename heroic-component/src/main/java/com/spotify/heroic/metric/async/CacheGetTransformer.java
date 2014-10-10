@@ -11,7 +11,6 @@ import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
 import com.spotify.heroic.async.DeferredTransformer;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.model.DataPoint;
@@ -48,7 +47,7 @@ public abstract class CacheGetTransformer implements DeferredTransformer<CacheQu
             final Statistics stat = Statistics.builder().cache(new Statistics.Cache(datapoints.size(), 0, 0, 0))
                     .build();
 
-            return new ResolvedFuture<MetricGroups>(MetricGroups.fromResult(groups, stat));
+            return Futures.resolved(MetricGroups.fromResult(groups, stat));
         }
 
         /**

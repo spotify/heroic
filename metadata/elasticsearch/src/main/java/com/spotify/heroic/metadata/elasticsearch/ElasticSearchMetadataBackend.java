@@ -47,7 +47,6 @@ import com.google.common.cache.CacheBuilder;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -384,7 +383,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedFuture<FindSeries>(FindSeries.EMPTY);
+            return Futures.resolved(FindSeries.EMPTY);
 
         return Futures.resolve(pools.read(), new FindSeriesResolver(client, index, type, f)).register(
                 reporter.reportFindTimeSeries());
@@ -400,7 +399,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedFuture<DeleteSeries>(DeleteSeries.EMPTY);
+            return Futures.resolved(DeleteSeries.EMPTY);
 
         return Futures.resolve(pools.write(), new DeleteTimeSeriesResolver(client, index, type, f));
     }
@@ -415,7 +414,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedFuture<FindTagKeys>(FindTagKeys.EMPTY);
+            return Futures.resolved(FindTagKeys.EMPTY);
 
         return Futures.resolve(pools.read(), new FindTagKeysResolver(client, index, type, f)).register(
                 reporter.reportFindTagKeys());
@@ -431,7 +430,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedFuture<FindKeys>(FindKeys.EMPTY);
+            return Futures.resolved(FindKeys.EMPTY);
 
         return Futures.resolve(pools.read(), new FindKeysResolver(client, index, type, f)).register(
                 reporter.reportFindKeys());
@@ -456,7 +455,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
 
     @Override
     public Future<Void> refresh() {
-        return new ResolvedFuture<Void>(null);
+        return Futures.resolved(null);
     }
 
     @Override

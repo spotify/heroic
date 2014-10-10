@@ -9,7 +9,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.spotify.heroic.async.Future;
-import com.spotify.heroic.async.ResolvedFuture;
+import com.spotify.heroic.async.Futures;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public interface ClusterDiscoveryModule {
@@ -20,7 +20,7 @@ public interface ClusterDiscoveryModule {
 
         @Override
         public Future<Collection<URI>> find() {
-            return new ResolvedFuture<Collection<URI>>(new ArrayList<URI>());
+            return Futures.<Collection<URI>> resolved(new ArrayList<URI>());
         }
 
         public static ClusterDiscoveryModule module() {

@@ -25,7 +25,7 @@ import org.apache.lucene.store.Lock;
 import org.apache.lucene.util.Version;
 
 import com.spotify.heroic.async.Future;
-import com.spotify.heroic.async.ResolvedFuture;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataOperationException;
@@ -73,7 +73,7 @@ public class LuceneMetadataBackend implements MetadataBackend {
                 LuceneUtils.update(tags, doc);
             }
 
-            return new ResolvedFuture<>(new FindTags(tags, sampleSize));
+            return Futures.resolved(new FindTags(tags, sampleSize));
         } catch (final IOException e) {
             throw new MetadataOperationException("failed to open index directory", e);
         }

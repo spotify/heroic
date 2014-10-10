@@ -12,7 +12,7 @@ import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
 import com.spotify.heroic.async.Future;
-import com.spotify.heroic.async.ResolvedFuture;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
@@ -41,7 +41,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         if (width == 0) {
-            return new ResolvedFuture<CacheBackendGetResult>(new CacheBackendGetResult(key, datapoints));
+            return Futures.resolved(new CacheBackendGetResult(key, datapoints));
         }
 
         final long start = range.getStart() - range.getStart() % width;
@@ -56,7 +56,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             datapoints.add(d);
         }
 
-        return new ResolvedFuture<>(new CacheBackendGetResult(key, datapoints));
+        return Futures.resolved(new CacheBackendGetResult(key, datapoints));
     }
 
     @Override
@@ -73,7 +73,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final long width = aggregator.getSampling().getSize();
 
         if (width == 0) {
-            return new ResolvedFuture<CacheBackendPutResult>(new CacheBackendPutResult());
+            return Futures.resolved(new CacheBackendPutResult());
         }
 
         for (final DataPoint d : datapoints) {
@@ -89,7 +89,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             entry.put(timestamp, d);
         }
 
-        return new ResolvedFuture<>(new CacheBackendPutResult());
+        return Futures.resolved(new CacheBackendPutResult());
     }
 
     @Override

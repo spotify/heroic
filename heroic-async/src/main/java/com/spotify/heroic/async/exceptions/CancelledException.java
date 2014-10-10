@@ -1,4 +1,7 @@
-package com.spotify.heroic.async;
+package com.spotify.heroic.async.exceptions;
+
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Future;
 
 import lombok.Getter;
 

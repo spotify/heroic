@@ -3,6 +3,9 @@ package com.spotify.heroic.async;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+import com.spotify.heroic.async.exceptions.CancelledException;
+import com.spotify.heroic.async.exceptions.FailedException;
+
 /**
  * Interface for asynchronous callbacks with the ability to subscribe to interesting events.
  *

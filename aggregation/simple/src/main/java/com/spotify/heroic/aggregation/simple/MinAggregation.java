@@ -1,34 +1,16 @@
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.aggregation.model.QueryAggregation;
-import com.spotify.heroic.aggregation.model.QuerySampling;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Sampling;
 
 @JsonSerialize
+@JsonTypeName("min")
 public class MinAggregation extends BucketAggregation<MinBucket> {
-    @Data
-    public static class Query implements QueryAggregation {
-        private final QuerySampling sampling;
-
-        @Override
-        public Aggregation build() {
-            return new MinAggregation(sampling.build());
-        }
-
-        @JsonCreator
-        public static Query create(@JsonProperty(value = "sampling", required = true) QuerySampling sampling) {
-            return new Query(sampling);
-        }
-    }
-
     public MinAggregation(Sampling sampling) {
         super(sampling);
     }

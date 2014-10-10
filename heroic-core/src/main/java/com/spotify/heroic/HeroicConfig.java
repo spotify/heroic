@@ -1,8 +1,5 @@
 package com.spotify.heroic;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,9 +8,6 @@ import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -21,7 +15,6 @@ import com.spotify.heroic.http.HttpClientManagerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
-import com.spotify.heroic.statistics.HeroicReporter;
 
 @RequiredArgsConstructor
 @Data
@@ -43,8 +36,10 @@ public class HeroicConfig {
     @JsonCreator
     public static HeroicConfig create(@JsonProperty("port") Integer port,
             @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule,
-            @JsonProperty("cluster") ClusterManagerModule cluster, @JsonProperty("metrics") MetricManagerModule metrics,
-            @JsonProperty("metadata") MetadataManagerModule metadata, @JsonProperty("cache") AggregationCacheModule cache,
+            @JsonProperty("cluster") ClusterManagerModule cluster,
+            @JsonProperty("metrics") MetricManagerModule metrics,
+            @JsonProperty("metadata") MetadataManagerModule metadata,
+            @JsonProperty("cache") AggregationCacheModule cache,
             @JsonProperty("client") HttpClientManagerModule client,
             @JsonProperty("ingestion") IngestionModule ingestion,
             @JsonProperty("consumers") List<ConsumerModule> consumers) {

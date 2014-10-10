@@ -170,7 +170,7 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
         final DateRange newRange = range.modify(base, base + MetricsRowKey.MAX_WIDTH - 1);
 
         if (newRange.isEmpty())
-            return null;
+            return Futures.cancelled(new CancelReason("empty query range"));
 
         final MetricsRowKey rowKey = new MetricsRowKey(series, base);
 

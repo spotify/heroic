@@ -9,52 +9,16 @@ cluster:
   discovery:
     type: static
     nodes:
-      - http://ash2-heroic-a1.spotify.net:8080
-      - http://ash2-heroic-a2.spotify.net:8080
-      - http://ash2-heroic-a3.spotify.net:8080
-      - http://lon3-heroic-a1.spotify.net:8080
-      - http://lon3-heroic-a2.spotify.net:8080
-      - http://lon3-heroic-a3.spotify.net:8080
-      - http://sjc1-heroic-a1.spotify.net:8080
-      - http://sjc1-heroic-a2.spotify.net:8080
-      - http://sjc1-heroic-a3.spotify.net:8080
-      - http://sjc1-heroic-a1.spotify.net:8081
-      - http://sjc1-heroic-a2.spotify.net:8081
-      - http://sjc1-heroic-a3.spotify.net:8081
-      - http://awsuse1-heroic-a1.shared.cloud.spotify.net:8081
-      - http://awsuse1-heroic-a2.shared.cloud.spotify.net:8081
-      - http://ash2-heroic-a1.spotify.net:8081
-      - http://ash2-heroic-a2.spotify.net:8081
-      - http://ash2-heroic-a3.spotify.net:8081
-      - http://sto1-heroic-a1.spotify.net:8080
-      - http://sto1-heroic-a2.spotify.net:8080
-      - http://sto1-heroic-a3.spotify.net:8080
-      - http://awseu3-heroic-a1.shared.cloud.spotify.net:8081
-      - http://awseu3-heroic-a2.shared.cloud.spotify.net:8081
-      - http://sto1-heroic-a1.spotify.net:8081
-      - http://sto1-heroic-a2.spotify.net:8081
-      - http://sto1-heroic-a3.spotify.net:8081
-      - http://awseu3-heroic-a1.shared.cloud.spotify.net:8080
-      - http://awseu3-heroic-a2.shared.cloud.spotify.net:8080
-      - http://lon3-heroic-a1.spotify.net:8081
-      - http://lon3-heroic-a2.spotify.net:8081
-      - http://lon3-heroic-a3.spotify.net:8081
-      - http://awsuse1-heroic-a1.shared.cloud.spotify.net:8080
-      - http://awsuse1-heroic-a2.shared.cloud.spotify.net:8080
+      - http://localhost:8080
 
 metrics:
   backends:
     - type: cassandra2
+      group: heroic
+      seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
 
 metadata:
   backends:
-    - type: elasticsearch
-      clusterName: heroic-test
-      index: heroic
-      type: metadata
-      seeds:
-        - awseu3-heroic-a1.shared.cloud.spotify.net
-        - awseu3-heroic-a2.shared.cloud.spotify.net
     - type: elasticsearch
       clusterName: metalastic-production
       index: heroic

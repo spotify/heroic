@@ -24,7 +24,7 @@ public class EntryPoint implements HeroicEntryPoint {
 
     @Override
     public void setup() {
-        heroicContext.registerAggregation("sum", SumAggregation.class, SumAggregation.Query.class, SUM,
+        heroicContext.registerAggregation(SumAggregation.class, SumAggregationQuery.class, SUM,
                 new AggregationSerializer.Serializer<SumAggregation>() {
                     @Override
                     public SumAggregation deserialize(Composite composite) {
@@ -38,8 +38,8 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation("average", AverageAggregation.class, AverageAggregation.Query.class,
-                AVERAGE, new Serializer<AverageAggregation>() {
+        heroicContext.registerAggregation(AverageAggregation.class, AverageAggregationQuery.class, AVERAGE,
+                new Serializer<AverageAggregation>() {
                     @Override
                     public void serialize(Composite composite, AverageAggregation value) {
                         composite.addComponent(value.getSampling(), resolutionSerializer);
@@ -52,7 +52,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation("min", MinAggregation.class, MinAggregation.Query.class, MIN,
+        heroicContext.registerAggregation(MinAggregation.class, MinAggregationQuery.class, MIN,
                 new AggregationSerializer.Serializer<MinAggregation>() {
                     @Override
                     public MinAggregation deserialize(Composite composite) {
@@ -66,7 +66,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation("min", MaxAggregation.class, MaxAggregation.Query.class, MAX,
+        heroicContext.registerAggregation(MaxAggregation.class, MaxAggregationQuery.class, MAX,
                 new AggregationSerializer.Serializer<MaxAggregation>() {
                     @Override
                     public MaxAggregation deserialize(Composite composite) {

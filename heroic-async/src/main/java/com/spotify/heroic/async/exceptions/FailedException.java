@@ -1,4 +1,6 @@
-package com.spotify.heroic.async;
+package com.spotify.heroic.async.exceptions;
+
+import com.spotify.heroic.async.Future;
 
 /**
  * Exception thrown by {@link Future#get} when a callback has failed.

@@ -5,16 +5,18 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.StreamReducer;
 import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.model.Statistics;
 
+@Slf4j
 @RequiredArgsConstructor
 public class AggregatedCallbackStream implements StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
@@ -27,6 +29,7 @@ public class AggregatedCallbackStream implements StreamReducer<FetchData, Metric
 
     @Override
     public void failed(Future<FetchData> callback, Exception error) throws Exception {
+        log.error("Request failed: " + error.toString(), error);
     }
 
     @Override
