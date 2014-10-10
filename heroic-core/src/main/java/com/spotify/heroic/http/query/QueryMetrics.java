@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.model.QueryAggregation;
 import com.spotify.heroic.filter.Filter;
 
 @Data
@@ -31,7 +32,7 @@ public class QueryMetrics {
         final List<Aggregation> aggregators = new ArrayList<>(this.aggregators.size());
 
         for (final QueryAggregation aggregation : this.aggregators) {
-            aggregators.add(aggregation.makeAggregation());
+            aggregators.add(aggregation.build());
         }
 
         return aggregators;

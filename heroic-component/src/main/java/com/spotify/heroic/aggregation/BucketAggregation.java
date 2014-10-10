@@ -2,38 +2,24 @@ package com.spotify.heroic.aggregation;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.Data;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Statistics;
 
 @Data
-public abstract class BucketAggregation implements Aggregation {
+public abstract class BucketAggregation<T extends Bucket> implements Aggregation {
     @Data
-    protected static final class Bucket {
-        private final long timestamp;
-        private final AtomicInteger count = new AtomicInteger(0);
-        private final AtomicDouble value = new AtomicDouble(0);
-
-        public static int getApproximateMemoryUse() {
-            // Long + AtomicInteger + AtomicDouble
-            return 8 + 10 + 10;
-        }
-    }
-
-    @Data
-    private static final class Session implements Aggregation.Session {
+    private static final class Session<T extends Bucket> implements Aggregation.Session {
         private long sampleSize = 0;
         private long outOfBounds = 0;
         private long uselessScan = 0;
 
-        private final BucketAggregation aggregator;
-        private final Bucket[] buckets;
+        private final BucketAggregation<T> aggregator;
+        private final T[] buckets;
         private final long offset;
         private final long size;
         private final long extent;
@@ -58,14 +44,13 @@ public abstract class BucketAggregation implements Aggregation {
 
                     final Bucket bucket = buckets[i];
 
-                    final long c = bucket.timestamp - first;
+                    final long c = bucket.timestamp() - first;
 
                     // check that the current bucket is _within_ the extent.
                     if (!(c >= 0 && c <= extent))
                         continue;
 
-                    bucket.value.addAndGet(d.getValue());
-                    bucket.count.incrementAndGet();
+                    bucket.update(d);
                 }
             }
 
@@ -80,17 +65,8 @@ public abstract class BucketAggregation implements Aggregation {
         public Result result() {
             final List<DataPoint> result = new ArrayList<DataPoint>(buckets.length);
 
-            for (final Bucket bucket : buckets) {
-                final long count = bucket.count.get();
-                final DataPoint d;
-
-                if (count == 0) {
-                    d = new DataPoint(bucket.timestamp, Double.NaN);
-                } else {
-                    d = aggregator.build(bucket.timestamp, count, bucket.value.get());
-                }
-
-                result.add(d);
+            for (final T bucket : buckets) {
+                result.add(aggregator.build(bucket));
             }
 
             final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize, outOfBounds, uselessScan);
@@ -106,35 +82,29 @@ public abstract class BucketAggregation implements Aggregation {
     }
 
     @Override
-    public long getCalculationMemoryMagnitude(DateRange range) {
-        final long width = sampling.getSize();
-        final long diff = range.diff();
-        final long count = diff / width;
-        final int bucketSize = Bucket.getApproximateMemoryUse();
-        return count * bucketSize;
-    }
-
-    @Override
     public Aggregation.Session session(DateRange original) {
         final long size = sampling.getSize();
         final DateRange range = original.rounded(sampling.getSize());
 
-        final Bucket[] buckets = buildBuckets(range, size);
-        return new Session(this, buckets, range.start(), size, sampling.getExtent());
+        final T[] buckets = buildBuckets(range, size);
+        return new Session<T>(this, buckets, range.start(), size, sampling.getExtent());
     }
 
-    private Bucket[] buildBuckets(final DateRange range, long size) {
+    private T[] buildBuckets(final DateRange range, long size) {
         final long start = range.start();
         final long count = range.diff() / size;
 
-        final Bucket[] buckets = new Bucket[(int) count];
+        @SuppressWarnings("unchecked")
+        final T[] buckets = (T[]) new Object[(int) count];
 
         for (int i = 0; i < count; i++) {
-            buckets[i] = new Bucket(start + size * i + size);
+            buckets[i] = buildBucket(start + size * i + size);
         }
 
         return buckets;
     }
 
-    abstract protected DataPoint build(long timestamp, long count, double value);
+    abstract protected T buildBucket(long timestamp);
+
+    abstract protected DataPoint build(T bucket);
 }

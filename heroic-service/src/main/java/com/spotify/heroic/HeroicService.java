@@ -99,7 +99,7 @@ public class HeroicService {
                         configObjectMapper);
 
                 bind(ConfigurationContext.class).to(ConfigurationContextImpl.class);
-                bind(JSONContext.class).to(JSONContextImpl.class);
+                bind(HeroicContext.class).to(HeroicContextImpl.class);
             }
         };
     }

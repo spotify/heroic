@@ -1,8 +1,8 @@
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.utils;
 
 import java.util.concurrent.TimeUnit;
 
-public class QueryUtils {
+public class TimeUtils {
     public static TimeUnit parseUnitName(String unitName, TimeUnit defaultUnit) {
         if (unitName == null)
             return defaultUnit;
@@ -25,7 +25,7 @@ public class QueryUtils {
         }
 
         if (size <= 0)
-            throw new IllegalArgumentException("'size' must be a positive value");
+            throw new IllegalArgumentException("size must be a positive value");
 
         return size;
     }
@@ -40,7 +40,7 @@ public class QueryUtils {
         }
 
         if (extent <= 0)
-            throw new IllegalArgumentException("'extent' must be a positive value");
+            throw new IllegalArgumentException("extent must be a positive value");
 
         return extent;
     }

@@ -26,25 +26,28 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
     private static final ShortSerializer shortSerializer = ShortSerializer.get();
     private static final CompositeSerializer compositeSerializer = CompositeSerializer.get();
 
-    private final Map<Class<? extends Aggregation>, Short> T_TO_ID = new HashMap<Class<? extends Aggregation>, Short>();
-    private final Map<Short, Serializer<? extends Aggregation>> SERIALIZERS = new HashMap<Short, Serializer<? extends Aggregation>>();
+    private final Map<Class<? extends Aggregation>, Short> types = new HashMap<>();
+    private final Map<Short, Serializer<? extends Aggregation>> serializers = new HashMap<>();
 
     public <T extends Aggregation> void register(Class<T> clazz, short id, Serializer<T> serializer) {
-        T_TO_ID.put(clazz, id);
-        SERIALIZERS.put(id, serializer);
+        if (types.put(clazz, id) != null) {
+            throw new IllegalArgumentException("A type with the id '" + Short.toString(id) + "' is already registered.");
+        }
+
+        serializers.put(id, serializer);
     }
 
     @Override
     public ByteBuffer toByteBuffer(Aggregation obj) {
         final Composite composite = new Composite();
-        final Short typeId = T_TO_ID.get(obj.getClass());
+        final Short typeId = types.get(obj.getClass());
 
         if (typeId == null) {
             throw new RuntimeException("Type is not a serializable aggregate: " + obj.getClass());
         }
 
         @SuppressWarnings("unchecked")
-        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) SERIALIZERS.get(typeId);
+        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) serializers.get(typeId);
 
         final Composite aggregation = new Composite();
         serializer.serialize(aggregation, obj);
@@ -62,7 +65,7 @@ public class AggregationSerializer extends AbstractSerializer<Aggregation> {
         final Composite aggregation = composite.get(1, compositeSerializer);
 
         @SuppressWarnings("unchecked")
-        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) SERIALIZERS.get(typeId);
+        final Serializer<Aggregation> serializer = (Serializer<Aggregation>) serializers.get(typeId);
 
         return serializer.deserialize(aggregation);
     }

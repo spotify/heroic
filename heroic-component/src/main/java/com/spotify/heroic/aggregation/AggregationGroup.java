@@ -59,22 +59,6 @@ public class AggregationGroup {
         return new Session(first, rest);
     }
 
-    /**
-     * Get a guesstimate of how big of a memory all aggregations would need. This is for the invoker to make the
-     * decision whether or not to execute the aggregation.
-     *
-     * @return
-     */
-    public long getCalculationMemoryMagnitude(DateRange range) {
-        long sum = 0;
-
-        for (final Aggregation aggregator : aggregations) {
-            sum += aggregator.getCalculationMemoryMagnitude(range);
-        }
-
-        return sum;
-    }
-
     @JsonCreator
     public static AggregationGroup create(
             @JsonProperty(value = "aggregations", required = true) List<Aggregation> aggregations,

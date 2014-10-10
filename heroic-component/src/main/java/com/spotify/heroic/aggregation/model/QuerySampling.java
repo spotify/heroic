@@ -1,4 +1,4 @@
-package com.spotify.heroic.http.query;
+package com.spotify.heroic.aggregation.model;
 
 import java.util.concurrent.TimeUnit;
 
@@ -6,8 +6,8 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.utils.TimeUtils;
 
 @Data
 public class QuerySampling {
@@ -20,13 +20,13 @@ public class QuerySampling {
     @JsonCreator
     public static QuerySampling create(@JsonProperty("unit") String unitName, @JsonProperty("value") Long inputSize,
             @JsonProperty("extent") Long inputExtent) {
-        final TimeUnit unit = QueryUtils.parseUnitName(unitName, DEFAULT_UNIT);
-        final long size = QueryUtils.parseSize(inputSize, unit, DEFAULT_VALUE);
-        final long extent = QueryUtils.parseExtent(inputExtent, unit, size);
+        final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
+        final long size = TimeUtils.parseSize(inputSize, unit, DEFAULT_VALUE);
+        final long extent = TimeUtils.parseExtent(inputExtent, unit, size);
         return new QuerySampling(size, extent);
     }
 
-    public Sampling makeSampling() {
+    public Sampling build() {
         return new Sampling(size, extent);
     }
 }

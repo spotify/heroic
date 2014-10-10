@@ -3,6 +3,8 @@ package com.spotify.heroic.aggregation;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.Data;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,18 +32,38 @@ public class BucketAggregationTest {
         return new IterableBuilder();
     }
 
-    public BucketAggregation setup(Sampling sampling) {
-        return new BucketAggregation(sampling) {
+    @Data
+    public static class TestBucket implements Bucket {
+        private final long timestamp;
+        private double sum;
+
+        public void update(DataPoint d) {
+            sum += d.getValue();
+        }
+
+        @Override
+        public long timestamp() {
+            return timestamp;
+        }
+    }
+
+    public BucketAggregation<TestBucket> setup(Sampling sampling) {
+        return new BucketAggregation<TestBucket>(sampling) {
             @Override
-            protected DataPoint build(long timestamp, long count, double value) {
-                return new DataPoint(timestamp, value);
+            protected TestBucket buildBucket(long timestamp) {
+                return new TestBucket(timestamp);
+            }
+
+            @Override
+            protected DataPoint build(TestBucket bucket) {
+                return new DataPoint(bucket.timestamp, bucket.sum);
             }
         };
     }
 
     @Test
     public void testSameSampling() {
-        final BucketAggregation a = setup(new Sampling(1000, 1000));
+        final BucketAggregation<TestBucket> a = setup(new Sampling(1000, 1000));
         final Aggregation.Session session = a.session(new DateRange(1000, 3000));
         session.update(build().add(new DataPoint(1000, 50.0)).add(new DataPoint(1000, 50.0))
                 .add(new DataPoint(2000, 50.0)).result());
@@ -58,7 +80,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testShorterExtent() {
-        final BucketAggregation a = setup(new Sampling(1000, 500));
+        final BucketAggregation<TestBucket> a = setup(new Sampling(1000, 500));
         final Aggregation.Session session = a.session(new DateRange(1000, 3000));
         session.update(build().add(new DataPoint(1000, 50.0)).add(new DataPoint(2499, 50.0))
                 .add(new DataPoint(2500, 50.0)).result());
@@ -75,7 +97,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testUnevenSampling() {
-        final BucketAggregation a = setup(new Sampling(999, 499));
+        final BucketAggregation<TestBucket> a = setup(new Sampling(999, 499));
         final Aggregation.Session session = a.session(new DateRange(1000, 3000));
         session.update(build().add(new DataPoint(999, 50.0)).add(new DataPoint(999, 50.0))
                 .add(new DataPoint(2598, 50.0)).result());

@@ -9,8 +9,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.utils.TimeUtils;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),
@@ -43,7 +43,7 @@ public interface QueryDateRange {
 
         @JsonCreator
         public static Relative create(@JsonProperty("unit") String unitName, @JsonProperty("value") Long value) {
-            final TimeUnit unit = QueryUtils.parseUnitName(unitName, DEFAULT_UNIT);
+            final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
 
             if (value == null)
                 value = DEFAULT_VALUE;
