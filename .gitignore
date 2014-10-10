@@ -1,5 +1,9 @@
 dependency-reduced-pom.xml
-*.log
-.*
 target
+*.log
+.*.un~
 *~
+.*.swp
+.classpath
+.project
+.settings
