@@ -3,8 +3,8 @@ package com.spotify.heroic.cluster;
 import java.net.URI;
 import java.util.Collection;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 
 public interface ClusterDiscovery {
-    Callback<Collection<URI>> find();
+    Future<Collection<URI>> find();
 }

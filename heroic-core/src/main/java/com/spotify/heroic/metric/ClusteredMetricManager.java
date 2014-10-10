@@ -21,8 +21,8 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeMetadata;
@@ -87,7 +87,7 @@ public class ClusteredMetricManager implements LifeCycle {
     public void write(List<BufferedWriteMetric> bufferedWrites) throws Exception {
         final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
 
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
         for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
             final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap.create();
@@ -101,7 +101,7 @@ public class ClusteredMetricManager implements LifeCycle {
             }
         }
 
-        final WriteBatchResult result = ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger()).get();
+        final WriteBatchResult result = Futures.reduce(callbacks, WriteBatchResult.merger()).get();
 
         if (!result.isOk())
             throw new Exception("Write batch failed (asynchronously)");
@@ -146,13 +146,12 @@ public class ClusteredMetricManager implements LifeCycle {
         writeBulkProcessor.enqueue(new BufferedWriteMetric(node, backendGroup, write.getSeries(), write.getData()));
     }
 
-    public Callback<QueryMetricsResult> query(final String backendGroup, final Filter filter,
-            final List<String> groupBy, final DateRange range, final AggregationGroup aggregation)
-            throws MetricQueryException {
+    public Future<QueryMetricsResult> query(final String backendGroup, final Filter filter, final List<String> groupBy,
+            final DateRange range, final AggregationGroup aggregation) throws MetricQueryException {
 
         final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(NodeCapability.QUERY);
 
-        final List<Callback<MetricGroups>> callbacks = Lists.newArrayList();
+        final List<Future<MetricGroups>> callbacks = Lists.newArrayList();
 
         final DateRange rounded = roundRange(aggregation, range);
 
@@ -161,15 +160,15 @@ public class ClusteredMetricManager implements LifeCycle {
 
             final Map<String, String> shard = n.getMetadata().getTags();
 
-            final Callback<MetricGroups> query = n.getClusterNode().fullQuery(backendGroup, f, groupBy, rounded,
+            final Future<MetricGroups> query = n.getClusterNode().fullQuery(backendGroup, f, groupBy, rounded,
                     aggregation);
 
             callbacks.add(query.transform(MetricGroups.identity(),
                     MetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
-        return ConcurrentCallback.newReduce(callbacks, MetricGroups.merger())
-                .transform(new MetricGroupsTransformer(rounded)).register(reporter.reportQueryMetrics());
+        return Futures.reduce(callbacks, MetricGroups.merger()).transform(new MetricGroupsTransformer(rounded))
+                .register(reporter.reportQueryMetrics());
     }
 
     private Filter modifyFilter(NodeMetadata metadata, Filter filter) {

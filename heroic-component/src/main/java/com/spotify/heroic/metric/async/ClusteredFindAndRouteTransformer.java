@@ -9,7 +9,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Transformer;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeCapability;
@@ -22,7 +22,7 @@ import com.spotify.heroic.model.Series;
 @Slf4j
 @RequiredArgsConstructor
 public final class ClusteredFindAndRouteTransformer implements
-        Callback.Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
+        Transformer<FindTimeSeriesGroups, List<PreparedQuery>> {
     private final ClusterManager cluster;
     private final Filter filter;
     private final String backendGroup;

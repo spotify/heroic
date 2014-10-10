@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.AggregationCache;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.async.TimeSeriesTransformer;
 import com.spotify.heroic.metric.error.BackendOperationException;
@@ -62,15 +62,15 @@ public class MetricBackends {
      * @return The result in the form of MetricGroups.
      * @throws BackendOperationException
      */
-    public Callback<MetricGroups> groupedQuery(final Map<String, String> group, final Filter filter,
+    public Future<MetricGroups> groupedQuery(final Map<String, String> group, final Filter filter,
             final Set<Series> series, final DateRange range, final AggregationGroup aggregation) {
         final TimeSeriesTransformer transformer = new TimeSeriesTransformer(cache, filter, aggregation, range);
 
         return groupTimeseries(group, series).transform(transformer).register(reporter.reportRpcQueryMetrics());
     }
 
-    public List<Callback<FetchData>> query(final Series series, final DateRange range) {
-        final List<Callback<FetchData>> callbacks = new ArrayList<>();
+    public List<Future<FetchData>> query(final Series series, final DateRange range) {
+        final List<Future<FetchData>> callbacks = new ArrayList<>();
 
         execute(new BackendOp() {
             @Override
@@ -82,7 +82,7 @@ public class MetricBackends {
         return callbacks;
     }
 
-    private Callback<List<GroupedSeries>> groupTimeseries(final Map<String, String> group, final Set<Series> series) {
+    private Future<List<GroupedSeries>> groupTimeseries(final Map<String, String> group, final Set<Series> series) {
         final List<GroupedSeries> grouped = new ArrayList<>();
 
         execute(new BackendOp() {
@@ -97,7 +97,7 @@ public class MetricBackends {
             }
         });
 
-        return new ResolvedCallback<>(grouped);
+        return new ResolvedFuture<>(grouped);
     }
 
     /**
@@ -108,8 +108,8 @@ public class MetricBackends {
      * @return A callback indicating how the writes went.
      * @throws BackendOperationException
      */
-    public Callback<WriteBatchResult> write(final Collection<WriteMetric> writes) {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+    public Future<WriteBatchResult> write(final Collection<WriteMetric> writes) {
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
         execute(new BackendOp() {
             @Override
@@ -118,6 +118,6 @@ public class MetricBackends {
             }
         });
 
-        return ConcurrentCallback.newReduce(callbacks, WriteBatchResult.merger());
+        return Futures.reduce(callbacks, WriteBatchResult.merger());
     }
 }

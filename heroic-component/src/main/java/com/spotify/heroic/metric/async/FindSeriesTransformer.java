@@ -8,7 +8,7 @@ import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Transformer;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.model.Series;
@@ -19,7 +19,7 @@ import com.spotify.heroic.model.Series;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class FindSeriesTransformer implements Callback.Transformer<FindSeries, FindTimeSeriesGroups> {
+public class FindSeriesTransformer implements Transformer<FindSeries, FindTimeSeriesGroups> {
     private final List<String> groupBy;
 
     @Override

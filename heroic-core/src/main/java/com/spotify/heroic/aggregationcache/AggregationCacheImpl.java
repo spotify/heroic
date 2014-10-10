@@ -15,9 +15,10 @@ import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
 import com.spotify.heroic.aggregationcache.model.CachePutResult;
 import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.FutureHandle;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
@@ -32,9 +33,9 @@ public class AggregationCacheImpl implements AggregationCache {
     private AggregationCacheReporter reporter;
 
     @RequiredArgsConstructor
-    private static final class BackendCacheGetHandle implements Callback.Handle<CacheBackendGetResult> {
+    private static final class BackendCacheGetHandle implements FutureHandle<CacheBackendGetResult> {
         private final AggregationCacheReporter reporter;
-        private final Callback<CacheQueryResult> callback;
+        private final Future<CacheQueryResult> callback;
         private final DateRange range;
 
         @Override
@@ -84,8 +85,8 @@ public class AggregationCacheImpl implements AggregationCache {
     }
 
     @RequiredArgsConstructor
-    private final class BackendCachePutHandle implements Callback.Handle<CacheBackendPutResult> {
-        private final Callback<CachePutResult> callback;
+    private final class BackendCachePutHandle implements FutureHandle<CacheBackendPutResult> {
+        private final Future<CachePutResult> callback;
 
         @Override
         public void cancelled(CancelReason reason) throws Exception {
@@ -109,13 +110,13 @@ public class AggregationCacheImpl implements AggregationCache {
     }
 
     @Override
-    public Callback<CacheQueryResult> get(Filter filter, Map<String, String> group, final AggregationGroup aggregation,
+    public Future<CacheQueryResult> get(Filter filter, Map<String, String> group, final AggregationGroup aggregation,
             DateRange range) throws CacheOperationException {
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");
 
         final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
-        final Callback<CacheQueryResult> callback = new ConcurrentCallback<CacheQueryResult>();
+        final Future<CacheQueryResult> callback = Futures.future();
 
         backend.get(key, range).register(new BackendCacheGetHandle(reporter, callback, range));
 
@@ -123,10 +124,10 @@ public class AggregationCacheImpl implements AggregationCache {
     }
 
     @Override
-    public Callback<CachePutResult> put(Filter filter, Map<String, String> group, AggregationGroup aggregation,
+    public Future<CachePutResult> put(Filter filter, Map<String, String> group, AggregationGroup aggregation,
             List<DataPoint> datapoints) throws CacheOperationException {
         final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
-        final Callback<CachePutResult> callback = new ConcurrentCallback<CachePutResult>();
+        final Future<CachePutResult> callback = Futures.future();
 
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");

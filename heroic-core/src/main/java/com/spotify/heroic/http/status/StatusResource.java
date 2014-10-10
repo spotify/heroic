@@ -97,8 +97,8 @@ public class StatusResource {
 
         int ready = 0;
 
-        for (final MetadataBackend metadata : metadata.getBackends()) {
-            if (metadata.isReady())
+        for (final MetadataBackend backend : metadata.getBackends()) {
+            if (backend.isReady())
                 ready += 1;
         }
 

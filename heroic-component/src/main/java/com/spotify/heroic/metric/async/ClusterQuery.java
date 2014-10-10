@@ -6,7 +6,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.model.MetricGroups;
@@ -23,7 +23,7 @@ public class ClusterQuery implements PreparedQuery {
     private final Set<Series> series;
 
     @Override
-    public Callback<MetricGroups> query(final DateRange range, final AggregationGroup aggregation) {
+    public Future<MetricGroups> query(final DateRange range, final AggregationGroup aggregation) {
         return node.query(backendGroup, filter, group, aggregation, range, series);
     }
 };

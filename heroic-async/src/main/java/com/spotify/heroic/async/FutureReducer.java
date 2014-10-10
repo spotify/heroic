@@ -7,24 +7,21 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Implementation of {@link Callback#reduce(List, Callback.Reducer)}.
+ * Implementation of {@link Future#reduce(List, Reducer)}.
  *
  * @author udoprog
  *
  * @param <T>
  */
-@Slf4j
-class CallbackReducer<T> implements Callback.Cancellable {
+class FutureReducer<T> implements Cancellable {
     public static interface Handle<T> {
         void done(Collection<T> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
                 throws Exception;
     }
 
     private final AtomicInteger countdown;
-    private final List<Callback<T>> callbacks;
+    private final List<Future<T>> callbacks;
     private final Handle<T> handle;
     private volatile boolean done = false;
 
@@ -32,11 +29,11 @@ class CallbackReducer<T> implements Callback.Cancellable {
     private final Queue<T> results = new ConcurrentLinkedQueue<T>();
     private final Queue<CancelReason> cancelled = new ConcurrentLinkedQueue<CancelReason>();
 
-    private final Callback.Handle<T> listener = new Callback.Handle<T>() {
+    private final FutureHandle<T> listener = new FutureHandle<T>() {
         @Override
         public void failed(Exception e) throws Exception {
             errors.add(e);
-            CallbackReducer.this.checkIn();
+            FutureReducer.this.checkIn();
         }
 
         @Override
@@ -46,23 +43,23 @@ class CallbackReducer<T> implements Callback.Cancellable {
                         "CallbackGroup cannot handle null results (due to using a Queue for storing results)");
 
             results.add(result);
-            CallbackReducer.this.checkIn();
+            FutureReducer.this.checkIn();
         }
 
         @Override
         public void cancelled(CancelReason reason) throws Exception {
             cancelled.add(reason);
-            CallbackReducer.this.checkIn();
+            FutureReducer.this.checkIn();
         }
     };
 
-    public CallbackReducer(Collection<Callback<T>> callbacks, Handle<T> handle) {
+    public FutureReducer(Collection<Future<T>> callbacks, Handle<T> handle) {
         this.countdown = new AtomicInteger(callbacks.size());
-        this.callbacks = new ArrayList<Callback<T>>(callbacks);
+        this.callbacks = new ArrayList<Future<T>>(callbacks);
         this.handle = handle;
         this.done = false;
 
-        for (final Callback<T> callback : callbacks)
+        for (final Future<T> callback : callbacks)
             callback.register(listener);
 
         if (this.callbacks.isEmpty())
@@ -88,7 +85,7 @@ class CallbackReducer<T> implements Callback.Cancellable {
         try {
             handle.done(results, errors, cancelled);
         } catch (final Exception e) {
-            log.error("Failed to call handler", e);
+            throw new RuntimeException("Failed to call Handle#done", e);
         }
 
         done = true;
@@ -97,7 +94,7 @@ class CallbackReducer<T> implements Callback.Cancellable {
     /* cancel all queries in this group */
     @Override
     public void cancelled(CancelReason reason) {
-        for (final Callback<T> callback : callbacks) {
+        for (final Future<T> callback : callbacks) {
             callback.cancel(reason);
         }
     }

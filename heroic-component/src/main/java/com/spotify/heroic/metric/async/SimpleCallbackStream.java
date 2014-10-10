@@ -10,8 +10,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.StreamReducer;
 import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
@@ -20,23 +21,23 @@ import com.spotify.heroic.model.Statistics;
 
 @Slf4j
 @RequiredArgsConstructor
-public final class SimpleCallbackStream implements Callback.StreamReducer<FetchData, MetricGroups> {
+public final class SimpleCallbackStream implements StreamReducer<FetchData, MetricGroups> {
     private final Map<String, String> group;
 
     private final Queue<FetchData> results = new ConcurrentLinkedQueue<FetchData>();
 
     @Override
-    public void resolved(Callback<FetchData> callback, FetchData result) throws Exception {
+    public void resolved(Future<FetchData> callback, FetchData result) throws Exception {
         results.add(result);
     }
 
     @Override
-    public void failed(Callback<FetchData> callback, Exception error) throws Exception {
+    public void failed(Future<FetchData> callback, Exception error) throws Exception {
         log.error("Error encountered when processing request", error);
     }
 
     @Override
-    public void cancelled(Callback<FetchData> callback, CancelReason reason) throws Exception {
+    public void cancelled(Future<FetchData> callback, CancelReason reason) throws Exception {
         log.error("Cancel encountered when processing request", reason);
     }
 

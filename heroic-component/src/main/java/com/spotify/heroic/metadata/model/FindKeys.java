@@ -7,8 +7,8 @@ import java.util.Set;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 
 @Data
 public class FindKeys {
@@ -19,7 +19,7 @@ public class FindKeys {
     private final int duplicates;
 
     @Slf4j
-    public static class Reducer implements Callback.Reducer<FindKeys, FindKeys> {
+    public static class SelfReducer implements Reducer<FindKeys, FindKeys> {
         @Override
         public FindKeys resolved(Collection<FindKeys> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -48,9 +48,9 @@ public class FindKeys {
         }
     }
 
-    private static final Reducer reducer = new Reducer();
+    private static final SelfReducer reducer = new SelfReducer();
 
-    public static Reducer reduce() {
+    public static Reducer<FindKeys, FindKeys> reduce() {
         return reducer;
     }
 }

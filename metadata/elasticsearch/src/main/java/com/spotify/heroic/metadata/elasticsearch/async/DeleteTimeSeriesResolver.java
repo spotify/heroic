@@ -11,12 +11,12 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 
 @Slf4j
 @RequiredArgsConstructor
-public class DeleteTimeSeriesResolver implements Callback.Resolver<DeleteSeries> {
+public class DeleteTimeSeriesResolver implements Resolver<DeleteSeries> {
     private final Client client;
     private final String index;
     private final String type;

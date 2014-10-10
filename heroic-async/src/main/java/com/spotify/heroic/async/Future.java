@@ -1,6 +1,5 @@
 package com.spotify.heroic.async;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -20,7 +19,7 @@ import java.util.concurrent.Executor;
  * @param <T>
  *            The type being realized in the callback's finish method.
  */
-public interface Callback<T> {
+public interface Future<T> {
     public static enum State {
         // state when it's not been resolved, failed or cancelled.
         READY,
@@ -28,112 +27,11 @@ public interface Callback<T> {
         FAILED, RESOLVED, CANCELLED
     }
 
-    public static interface Cancellable {
-        void cancelled(CancelReason reason) throws Exception;
-    }
+    public Future<T> cancel(CancelReason reason);
 
-    public static interface Finishable {
-        void finished() throws Exception;
-    }
+    public Future<T> fail(Exception error);
 
-    public static interface Handle<T> {
-        void cancelled(CancelReason reason) throws Exception;
-
-        void failed(Exception e) throws Exception;
-
-        void resolved(T result) throws Exception;
-    }
-
-    public static interface ObjectHandle extends Handle<Object> {
-    }
-
-    /**
-     * Simplified abstraction on top of CallbackGroup meant to reduce the result of multiple queries into one.
-     *
-     * Will be called when the entire result is available. If this is undesirable, use {@link #StreamReducer}.
-     *
-     * @author udoprog
-     */
-    public static interface Reducer<C, R> {
-        R resolved(Collection<C> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
-                throws Exception;
-    }
-
-    public static interface StreamReducer<C, R> {
-        /**
-         * Implement to trigger on one resolved.
-         */
-        void resolved(Callback<C> callback, C result) throws Exception;
-
-        /**
-         * Implement to trigger on one failed.
-         */
-        void failed(Callback<C> callback, Exception error) throws Exception;
-
-        /**
-         * Implement to trigger on one cancelled.
-         */
-        void cancelled(Callback<C> callback, CancelReason reason) throws Exception;
-
-        /**
-         * Implement to fire when all callbacks have been resolved.
-         */
-        R resolved(int successful, int failed, int cancelled) throws Exception;
-    }
-
-    /**
-     * Convenience class that can be used to extend and implement only a subset of the functionality of
-     * {@link StreamReducer}.
-     *
-     * Note: {@link StreamReducer#resolved(int, int, int)} is the minimal required implementation since it is not
-     * provided here.
-     *
-     * @author udoprog
-     */
-    public static abstract class DefaultStreamReducer<C, R> implements StreamReducer<C, R> {
-        /**
-         * Override to trigger on one resolved.
-         */
-        @Override
-        public void resolved(Callback<C> callback, C result) throws Exception {
-        }
-
-        /**
-         * Override to trigger on one failed.
-         */
-        @Override
-        public void failed(Callback<C> callback, Exception error) throws Exception {
-        }
-
-        /**
-         * Override to trigger on one cancelled.
-         */
-        @Override
-        public void cancelled(Callback<C> callback, CancelReason reason) throws Exception {
-        }
-    }
-
-    public static interface DeferredTransformer<C, R> {
-        Callback<R> transform(C result) throws Exception;
-    }
-
-    public static interface Transformer<C, R> {
-        R transform(C result) throws Exception;
-    }
-
-    public static interface ErrorTransformer<R> {
-        R transform(Exception e) throws Exception;
-    }
-
-    public static interface Resolver<R> {
-        R resolve() throws Exception;
-    }
-
-    public Callback<T> cancel(CancelReason reason);
-
-    public Callback<T> fail(Exception error);
-
-    public Callback<T> resolve(T result);
+    public Future<T> resolve(T result);
 
     /**
      * Resolve this callback asynchronously using the resolver. This is a common pattern which is provided because the
@@ -153,7 +51,7 @@ public interface Callback<T> {
      *            The resolver to use for resolving this callback.
      * @return This callback.
      */
-    public Callback<T> resolve(Executor executor, Resolver<T> resolver);
+    public Future<T> resolve(Executor executor, Resolver<T> resolver);
 
     /**
      * Register functions to be fired for any of the possible events for a callback.
@@ -164,7 +62,7 @@ public interface Callback<T> {
      *            Contains functions to be fired.
      * @return This callback.
      */
-    public Callback<T> register(Handle<T> handle);
+    public Future<T> register(FutureHandle<T> handle);
 
     /**
      * Same as {@link #register(Handle<T>)}, but for Handle<Object> types which don't care for the result of the
@@ -174,7 +72,7 @@ public interface Callback<T> {
      *            Contains functions to be fired.
      * @return This callback.
      */
-    public Callback<T> register(ObjectHandle handle);
+    public Future<T> register(ObjectHandle handle);
 
     /**
      * Register a function to be fired if this callback is finished (either cancelled or failed).
@@ -183,7 +81,7 @@ public interface Callback<T> {
      *            Function to be fired.
      * @return This callback.
      */
-    public Callback<T> register(Finishable finishable);
+    public Future<T> register(Finishable finishable);
 
     /**
      * Register a function to be fired if this callback is cancelled.
@@ -192,7 +90,7 @@ public interface Callback<T> {
      *            Function to be fired.
      * @return This callback.
      */
-    public Callback<T> register(Cancellable cancellable);
+    public Future<T> register(Cancellable cancellable);
 
     /**
      * Make this callback depend on another and vice-versa.
@@ -201,7 +99,7 @@ public interface Callback<T> {
      *            Callback to depend on.
      * @return This callback.
      */
-    public Callback<T> register(Callback<T> callback);
+    public Future<T> register(Future<T> callback);
 
     /**
      * Check if callback is ready.
@@ -245,7 +143,7 @@ public interface Callback<T> {
      *            Function responsible for reducing the collection into a single object.
      * @return A new callback with the generic value <T>.
      */
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final Reducer<C, T> reducer);
+    public <C> Future<T> reduce(List<Future<C>> callbacks, final Reducer<C, T> reducer);
 
     /**
      * Resolve the value of a callback using a collection of callbacks. Similar to {@link #reduce(List, Reducer)} but
@@ -293,7 +191,7 @@ public interface Callback<T> {
      *            Function responsible for reducing the collection into a single object.
      * @return A new callback with the generic value <T>.
      */
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, final StreamReducer<C, T> reducer);
+    public <C> Future<T> reduce(List<Future<C>> callbacks, final StreamReducer<C, T> reducer);
 
     /**
      * Transforms the value of one callback into another using a deferred transformer function.
@@ -323,7 +221,7 @@ public interface Callback<T> {
      *            The function to use when transforming the value.
      * @return A callback of type <C> which resolves with the transformed value.
      */
-    public <C> Callback<C> transform(DeferredTransformer<T, C> transformer);
+    public <C> Future<C> transform(DeferredTransformer<T, C> transformer);
 
     /**
      * Transforms the value of this callback into another type using a transformer function.
@@ -351,9 +249,9 @@ public interface Callback<T> {
      * @param transformer
      * @return
      */
-    public <C> Callback<C> transform(Transformer<T, C> transformer);
+    public <C> Future<C> transform(Transformer<T, C> transformer);
 
-    public <C> Callback<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error);
+    public <C> Future<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error);
 
     /**
      * Block until result is available.

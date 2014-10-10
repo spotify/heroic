@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.general.ErrorMessage;
@@ -64,7 +64,7 @@ public class MetadataResource {
 
         log.info("/tags: {} {}", query, filter);
 
-        final Callback<FindTags> callback = metadata.findTags(filter);
+        final Future<FindTags> callback = metadata.findTags(filter);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, TAGS);
     }
@@ -94,7 +94,7 @@ public class MetadataResource {
 
         log.info("/keys: {} {}", query, filter);
 
-        final Callback<FindKeys> callback = metadata.findKeys(filter);
+        final Future<FindKeys> callback = metadata.findKeys(filter);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, KEYS);
     }
@@ -115,7 +115,7 @@ public class MetadataResource {
             return;
         }
 
-        final Callback<String> callback = metadata.write(series);
+        final Future<String> callback = metadata.write(series);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
@@ -148,7 +148,7 @@ public class MetadataResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final Callback<FindSeries> callback = metadata.findSeries(filter);
+        final Future<FindSeries> callback = metadata.findSeries(filter);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, GET_SERIES);
     }
@@ -177,7 +177,7 @@ public class MetadataResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final Callback<DeleteSeries> callback = metadata.deleteSeries(filter);
+        final Future<DeleteSeries> callback = metadata.deleteSeries(filter);
 
         HttpAsyncUtils.handleAsyncResume(response, callback, DELETE_SERIES);
     }

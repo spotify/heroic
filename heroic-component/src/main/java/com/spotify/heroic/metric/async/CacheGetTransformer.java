@@ -8,9 +8,10 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregationcache.AggregationCache;
 import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.DeferredTransformer;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.model.DataPoint;
@@ -23,12 +24,12 @@ import com.spotify.heroic.model.Statistics;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public abstract class CacheGetTransformer implements Callback.DeferredTransformer<CacheQueryResult, MetricGroups> {
+public abstract class CacheGetTransformer implements DeferredTransformer<CacheQueryResult, MetricGroups> {
     private final AggregationCache cache;
 
     @Override
-    public Callback<MetricGroups> transform(CacheQueryResult cacheResult) throws Exception {
-        final List<Callback<MetricGroups>> missQueries = new ArrayList<Callback<MetricGroups>>();
+    public Future<MetricGroups> transform(CacheQueryResult cacheResult) throws Exception {
+        final List<Future<MetricGroups>> missQueries = new ArrayList<Future<MetricGroups>>();
 
         for (final DateRange miss : cacheResult.getMisses()) {
             missQueries.add(cacheMiss(cacheResult.getKey().getGroup(), miss));
@@ -47,14 +48,14 @@ public abstract class CacheGetTransformer implements Callback.DeferredTransforme
             final Statistics stat = Statistics.builder().cache(new Statistics.Cache(datapoints.size(), 0, 0, 0))
                     .build();
 
-            return new ResolvedCallback<MetricGroups>(MetricGroups.fromResult(groups, stat));
+            return new ResolvedFuture<MetricGroups>(MetricGroups.fromResult(groups, stat));
         }
 
         /**
          * Merge with queried data.
          */
-        return ConcurrentCallback.newReduce(missQueries, new MergeCacheMisses(cache, cacheResult));
+        return Futures.reduce(missQueries, new MergeCacheMisses(cache, cacheResult));
     }
 
-    public abstract Callback<MetricGroups> cacheMiss(Map<String, String> group, DateRange miss) throws Exception;
+    public abstract Future<MetricGroups> cacheMiss(Map<String, String> group, DateRange miss) throws Exception;
 }

@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 
 @Data
 public class FindTags {
@@ -38,10 +38,7 @@ public class FindTags {
     }
 
     @Slf4j
-    public static class Reducer implements Callback.Reducer<FindTags, FindTags> {
-        private Reducer() {
-        }
-
+    public static class SelfReducer implements Reducer<FindTags, FindTags> {
         @Override
         public FindTags resolved(Collection<FindTags> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -63,9 +60,9 @@ public class FindTags {
         }
     }
 
-    private static final Reducer reducer = new Reducer();
+    private static final SelfReducer reducer = new SelfReducer();
 
-    public static Reducer reduce() {
+    public static Reducer<FindTags, FindTags> reduce() {
         return reducer;
     }
 

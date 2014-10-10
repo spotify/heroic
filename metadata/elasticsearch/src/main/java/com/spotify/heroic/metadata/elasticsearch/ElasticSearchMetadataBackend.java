@@ -44,11 +44,10 @@ import org.elasticsearch.node.NodeBuilder;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.CancelledCallback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -350,7 +349,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindTags> findTags(final Filter filter) throws MetadataOperationException {
+    public Future<FindTags> findTags(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
@@ -376,65 +375,65 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindSeries> findSeries(final Filter filter) throws MetadataOperationException {
+    public Future<FindSeries> findSeries(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedCallback<FindSeries>(FindSeries.EMPTY);
+            return new ResolvedFuture<FindSeries>(FindSeries.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(), new FindSeriesResolver(client, index, type, f)).register(
+        return Futures.resolve(pools.read(), new FindSeriesResolver(client, index, type, f)).register(
                 reporter.reportFindTimeSeries());
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(final Filter filter) throws MetadataOperationException {
+    public Future<DeleteSeries> deleteSeries(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedCallback<DeleteSeries>(DeleteSeries.EMPTY);
+            return new ResolvedFuture<DeleteSeries>(DeleteSeries.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.write(), new DeleteTimeSeriesResolver(client, index, type, f));
+        return Futures.resolve(pools.write(), new DeleteTimeSeriesResolver(client, index, type, f));
     }
 
     @Override
-    public Callback<FindTagKeys> findTagKeys(final Filter filter) throws MetadataOperationException {
+    public Future<FindTagKeys> findTagKeys(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindTagKeys>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedCallback<FindTagKeys>(FindTagKeys.EMPTY);
+            return new ResolvedFuture<FindTagKeys>(FindTagKeys.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(), new FindTagKeysResolver(client, index, type, f)).register(
+        return Futures.resolve(pools.read(), new FindTagKeysResolver(client, index, type, f)).register(
                 reporter.reportFindTagKeys());
     }
 
     @Override
-    public Callback<FindKeys> findKeys(final Filter filter) throws MetadataOperationException {
+    public Future<FindKeys> findKeys(final Filter filter) throws MetadataOperationException {
         final Client client = client();
 
         if (client == null)
-            return new CancelledCallback<FindKeys>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedCallback<FindKeys>(FindKeys.EMPTY);
+            return new ResolvedFuture<FindKeys>(FindKeys.EMPTY);
 
-        return ConcurrentCallback.newResolve(pools.read(), new FindKeysResolver(client, index, type, f)).register(
+        return Futures.resolve(pools.read(), new FindKeysResolver(client, index, type, f)).register(
                 reporter.reportFindKeys());
     }
 
@@ -456,8 +455,8 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<Void> refresh() {
-        return new ResolvedCallback<Void>(null);
+    public Future<Void> refresh() {
+        return new ResolvedFuture<Void>(null);
     }
 
     @Override

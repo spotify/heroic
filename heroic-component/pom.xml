@@ -20,6 +20,12 @@
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-async</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
@@ -43,6 +49,7 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>

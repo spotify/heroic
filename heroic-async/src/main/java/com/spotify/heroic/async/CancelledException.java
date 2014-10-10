@@ -3,7 +3,7 @@ package com.spotify.heroic.async;
 import lombok.Getter;
 
 /**
- * Exception thrown by {@link Callback#get} when a callback has been cancelled.
+ * Exception thrown by {@link Future#get} when a callback has been cancelled.
  *
  * @author udoprog
  */

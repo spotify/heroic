@@ -7,8 +7,8 @@ import java.util.Set;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.model.Series;
 
 @Data
@@ -20,7 +20,7 @@ public class FindSeries {
     private final int duplicates;
 
     @Slf4j
-    public static class Reducer implements Callback.Reducer<FindSeries, FindSeries> {
+    public static class SelfReducer implements Reducer<FindSeries, FindSeries> {
         @Override
         public FindSeries resolved(Collection<FindSeries> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -49,9 +49,9 @@ public class FindSeries {
         }
     };
 
-    private static final Reducer reducer = new Reducer();
+    private static final SelfReducer reducer = new SelfReducer();
 
-    public static Reducer reduce() {
+    public static Reducer<FindSeries, FindSeries> reduce() {
         return reducer;
     }
 }

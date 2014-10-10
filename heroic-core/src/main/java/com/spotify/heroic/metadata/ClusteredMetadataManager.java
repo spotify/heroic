@@ -9,8 +9,9 @@ import javax.inject.Inject;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
@@ -31,7 +32,7 @@ public class ClusteredMetadataManager {
     }
 
     public static interface ClusterOperation<T> {
-        public Callback<T> run(NodeRegistryEntry node);
+        public Future<T> run(NodeRegistryEntry node);
     }
 
     /**
@@ -42,10 +43,10 @@ public class ClusteredMetadataManager {
      * @param op
      * @return
      */
-    public <T> Callback<T> run(NodeCapability capability, Callback.Reducer<T, T> reducer, ClusterOperation<T> op) {
+    public <T> Future<T> run(NodeCapability capability, Reducer<T, T> reducer, ClusterOperation<T> op) {
         final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(capability);
 
-        final List<Callback<T>> requests = new ArrayList<>(nodes.size());
+        final List<Future<T>> requests = new ArrayList<>(nodes.size());
 
         if (cluster.isAnyV(nodes, 4)) {
             log.warn("Using short path because we found one v4 node");
@@ -56,10 +57,10 @@ public class ClusteredMetadataManager {
             requests.add(op.run(node));
         }
 
-        return ConcurrentCallback.newReduce(requests, reducer);
+        return Futures.reduce(requests, reducer);
     }
 
-    public <T> Callback<T> run(Map<String, String> tags, NodeCapability capability, ClusterOperation<T> op) {
+    public <T> Future<T> run(Map<String, String> tags, NodeCapability capability, ClusterOperation<T> op) {
         final NodeRegistryEntry node = cluster.findNode(tags, capability);
 
         if (node == null) {
@@ -69,46 +70,46 @@ public class ClusteredMetadataManager {
         return op.run(node);
     }
 
-    public Callback<FindTags> findTags(final Filter filter) {
+    public Future<FindTags> findTags(final Filter filter) {
         return run(NodeCapability.QUERY, FindTags.reduce(), new ClusterOperation<FindTags>() {
             @Override
-            public Callback<FindTags> run(NodeRegistryEntry node) {
+            public Future<FindTags> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findTags(filter);
             }
         });
     }
 
-    public Callback<FindKeys> findKeys(final Filter filter) {
+    public Future<FindKeys> findKeys(final Filter filter) {
         return run(NodeCapability.QUERY, FindKeys.reduce(), new ClusterOperation<FindKeys>() {
             @Override
-            public Callback<FindKeys> run(NodeRegistryEntry node) {
+            public Future<FindKeys> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findKeys(filter);
             }
         });
     }
 
-    public Callback<FindSeries> findSeries(final Filter filter) {
+    public Future<FindSeries> findSeries(final Filter filter) {
         return run(NodeCapability.QUERY, FindSeries.reduce(), new ClusterOperation<FindSeries>() {
             @Override
-            public Callback<FindSeries> run(NodeRegistryEntry node) {
+            public Future<FindSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findSeries(filter);
             }
         });
     }
 
-    public Callback<DeleteSeries> deleteSeries(final Filter filter) {
+    public Future<DeleteSeries> deleteSeries(final Filter filter) {
         return run(NodeCapability.WRITE, DeleteSeries.reduce(), new ClusterOperation<DeleteSeries>() {
             @Override
-            public Callback<DeleteSeries> run(NodeRegistryEntry node) {
+            public Future<DeleteSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().deleteSeries(filter);
             }
         });
     }
 
-    public Callback<String> write(final Series series) {
+    public Future<String> write(final Series series) {
         return run(series.getTags(), NodeCapability.WRITE, new ClusterOperation<String>() {
             @Override
-            public Callback<String> run(NodeRegistryEntry node) {
+            public Future<String> run(NodeRegistryEntry node) {
                 return node.getClusterNode().writeSeries(series);
             }
         });

@@ -10,6 +10,7 @@
   <name>heroic-parent</name>
 
   <modules>
+    <module>heroic-async</module>
     <module>heroic-component</module>
     <module>heroic-core</module>
     <module>heroic-service</module>
@@ -41,6 +42,11 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-async</artifactId>
+        <version>${project.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-component</artifactId>

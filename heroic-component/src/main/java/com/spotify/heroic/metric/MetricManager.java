@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.error.BackendOperationException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
@@ -22,7 +22,7 @@ public interface MetricManager {
 
     public List<MetricBackend> getBackends();
 
-    public Callback<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
+    public Future<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation);
 
     public MetricBackends useDefaultGroup() throws BackendOperationException;

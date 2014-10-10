@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jfree.chart.JFreeChart;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.http.query.QueryMetrics;
 import com.spotify.heroic.http.query.QueryPrepared;
 import com.spotify.heroic.metric.ClusteredMetricManager;
@@ -62,7 +62,7 @@ public class RenderResource {
 
         log.info("Render: {}", q);
 
-        final Callback<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
+        final Future<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
                 q.getRange(), q.getAggregation());
 
         final QueryMetricsResult result = callback.get();

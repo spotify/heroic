@@ -1,9 +1,9 @@
 package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Finishable;
 
 public interface HeroicTimer {
-    public interface Context extends Callback.Finishable {
+    public interface Context extends Finishable {
         long stop();
     }
 

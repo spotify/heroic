@@ -12,7 +12,7 @@ import java.util.Set;
  * @author udoprog
  */
 public final class Reducers {
-    private interface ListReducer<T> extends Callback.Reducer<T, List<T>> {
+    private interface ListReducer<T> extends Reducer<T, List<T>> {
     }
 
     private static final ListReducer<Object> LIST = new ListReducer<Object>() {
@@ -29,11 +29,11 @@ public final class Reducers {
      * @return The reducer.
      */
     @SuppressWarnings("unchecked")
-    public static <T> Callback.Reducer<T, List<T>> list() {
+    public static <T> Reducer<T, List<T>> list() {
         return (ListReducer<T>) LIST;
     }
 
-    private interface JoinSets<T> extends Callback.Reducer<Set<T>, Set<T>> {
+    private interface JoinSets<T> extends Reducer<Set<T>, Set<T>> {
     }
 
     private static final JoinSets<Object> JOIN_SETS = new JoinSets<Object>() {
@@ -56,11 +56,11 @@ public final class Reducers {
      * @return The reducer.
      */
     @SuppressWarnings("unchecked")
-    public static <T> Callback.Reducer<Set<T>, Set<T>> joinSets() {
+    public static <T> Reducer<Set<T>, Set<T>> joinSets() {
         return (JoinSets<T>) JOIN_SETS;
     }
 
-    private interface JoinLists<T> extends Callback.Reducer<List<T>, List<T>> {
+    private interface JoinLists<T> extends Reducer<List<T>, List<T>> {
     }
 
     private static final JoinLists<Object> JOIN_LISTS = new JoinLists<Object>() {
@@ -79,11 +79,11 @@ public final class Reducers {
     };
 
     @SuppressWarnings("unchecked")
-    public static <T> Callback.Reducer<List<T>, List<T>> joinLists() {
+    public static <T> Reducer<List<T>, List<T>> joinLists() {
         return (JoinLists<T>) JOIN_LISTS;
     }
 
-    private static final Callback.Reducer<Object, Void> TO_VOID = new Callback.Reducer<Object, Void>() {
+    private static final Reducer<Object, Void> TO_VOID = new Reducer<Object, Void>() {
         @Override
         public Void resolved(Collection<Object> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -97,11 +97,11 @@ public final class Reducers {
      * @return
      */
     @SuppressWarnings("unchecked")
-    public static <T> Callback.Reducer<T, Void> toVoid() {
-        return (Callback.Reducer<T, Void>) TO_VOID;
+    public static <T> Reducer<T, Void> toVoid() {
+        return (Reducer<T, Void>) TO_VOID;
     }
 
-    private static final Callback.Reducer<Boolean, Boolean> ALL = new Callback.Reducer<Boolean, Boolean>() {
+    private static final Reducer<Boolean, Boolean> ALL = new Reducer<Boolean, Boolean>() {
         @Override
         public Boolean resolved(Collection<Boolean> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -119,7 +119,7 @@ public final class Reducers {
         }
     };
 
-    public static Callback.Reducer<Boolean, Boolean> all() {
+    public static Reducer<Boolean, Boolean> all() {
         return ALL;
     }
 }

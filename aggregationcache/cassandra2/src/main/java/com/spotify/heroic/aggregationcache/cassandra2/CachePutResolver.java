@@ -10,13 +10,13 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
 
 @RequiredArgsConstructor
-final class CachePutResolver implements Callback.Resolver<CacheBackendPutResult> {
+final class CachePutResolver implements Resolver<CacheBackendPutResult> {
     private static final String CQL_STMT = "INSERT INTO aggregations_1200 (aggregation_key, data_offset, data_value) VALUES(?, ?, ?)";
 
     private final CacheKeySerializer cacheKeySerializer;

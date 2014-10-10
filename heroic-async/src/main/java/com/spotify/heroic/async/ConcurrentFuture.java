@@ -3,9 +3,6 @@ package com.spotify.heroic.async;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * A class implementing the callback pattern concurrently in a way that any thread can use the callback instance in a
@@ -39,9 +36,8 @@ import lombok.extern.slf4j.Slf4j;
  * @param <T>
  *            The type being deferred.
  */
-@Slf4j
-public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callback<T> {
-    private List<Handle<T>> handlers = new LinkedList<Handle<T>>();
+class ConcurrentFuture<T> extends AbstractFuture<T> implements Future<T> {
+    private List<FutureHandle<T>> handlers = new LinkedList<FutureHandle<T>>();
     private List<Cancellable> cancellables = new LinkedList<Cancellable>();
     private List<Finishable> finishables = new LinkedList<Finishable>();
 
@@ -52,7 +48,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
     private T result;
 
     @Override
-    public Callback<T> fail(Exception error) {
+    public Future<T> fail(Exception error) {
         if (state != State.READY)
             return this;
 
@@ -64,7 +60,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
             this.error = error;
         }
 
-        for (final Handle<T> handle : handlers)
+        for (final FutureHandle<T> handle : handlers)
             callFailed(handle);
 
         for (final Finishable finishable : finishables)
@@ -75,7 +71,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
     }
 
     @Override
-    public Callback<T> resolve(T result) {
+    public Future<T> resolve(T result) {
         if (state != State.READY)
             return this;
 
@@ -87,7 +83,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
             this.result = result;
         }
 
-        for (final Handle<T> handle : handlers)
+        for (final FutureHandle<T> handle : handlers)
             callResolved(handle);
 
         for (final Finishable finishable : finishables)
@@ -99,7 +95,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
     }
 
     @Override
-    public Callback<T> cancel(CancelReason reason) {
+    public Future<T> cancel(CancelReason reason) {
         if (state != State.READY)
             return this;
 
@@ -111,7 +107,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
             this.cancelReason = reason;
         }
 
-        for (final Handle<T> handle : handlers)
+        for (final FutureHandle<T> handle : handlers)
             callCancelled(handle);
 
         for (final Cancellable cancellable : cancellables)
@@ -126,7 +122,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
     }
 
     @Override
-    public Callback<T> register(Handle<T> handle) {
+    public Future<T> register(FutureHandle<T> handle) {
         switch (addHandler(handle)) {
         case RESOLVED:
             callResolved(handle);
@@ -146,12 +142,12 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
 
     @SuppressWarnings("unchecked")
     @Override
-    public Callback<T> register(ObjectHandle handle) {
-        return register((Handle<T>) handle);
+    public Future<T> register(ObjectHandle handle) {
+        return register((FutureHandle<T>) handle);
     }
 
     @Override
-    public Callback<T> register(Finishable finishable) {
+    public Future<T> register(Finishable finishable) {
         if (addFinishable(finishable) != State.READY)
             callFinished(finishable);
 
@@ -159,7 +155,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
     }
 
     @Override
-    public Callback<T> register(Cancellable cancellable) {
+    public Future<T> register(Cancellable cancellable) {
         if (addCancellable(cancellable) == State.CANCELLED)
             callCancelled(cancellable);
 
@@ -180,28 +176,19 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
         finishables = null;
     }
 
-    private void callResolved(Handle<T> handle) {
+    private void callResolved(FutureHandle<T> handle) {
         try {
             handle.resolved(result);
         } catch (final Exception e) {
-            log.error("Handle#resolve(T): failed", e);
-            callFailed(handle, e);
+            throw new RuntimeException("Handle#resolved(T): failed", e);
         }
     }
 
-    private void callFailed(Handle<T> handle) {
+    private void callFailed(FutureHandle<T> handle) {
         try {
             handle.failed(error);
         } catch (final Exception e) {
-            log.error("Handle#failed(Exception): failed", e);
-        }
-    }
-
-    private void callFailed(Handle<T> handle, Exception error) {
-        try {
-            handle.failed(error);
-        } catch (final Exception e) {
-            log.error("Handle#failed(Exception): failed", e);
+            throw new RuntimeException("Handle#failed(Exception): failed", e);
         }
     }
 
@@ -209,7 +196,7 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
         try {
             finishable.finished();
         } catch (final Exception e) {
-            log.error("Finishable#finished(): failed", e);
+            throw new RuntimeException("Finishable#finished(): failed", e);
         }
     }
 
@@ -217,24 +204,24 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
         try {
             cancellable.cancelled(cancelReason);
         } catch (final Exception e) {
-            log.error("Cancellable#cancelled(CancelReason): failed", e);
+            throw new RuntimeException("Cancellable#cancelled(CancelReason): failed", e);
         }
     }
 
-    private void callCancelled(Handle<T> handle) {
+    private void callCancelled(FutureHandle<T> handle) {
         try {
             handle.cancelled(cancelReason);
         } catch (final Exception e) {
-            log.error("Cancellable#cancelled(CancelReason): failed", e);
+            throw new RuntimeException("Cancellable#cancelled(CancelReason): failed", e);
         }
     }
 
     @Override
-    protected <C> Callback<C> newCallback() {
-        return new ConcurrentCallback<C>();
+    protected <C> Future<C> newCallback() {
+        return new ConcurrentFuture<C>();
     }
 
-    private State addHandler(Handle<T> handle) {
+    private State addHandler(FutureHandle<T> handle) {
         synchronized (state) {
             if (state != State.READY)
                 return state;
@@ -265,37 +252,6 @@ public class ConcurrentCallback<T> extends AbstractCallback<T> implements Callba
         }
 
         return State.READY;
-    }
-
-    /**
-     * Helper functions.
-     */
-
-    /**
-     * Creates a new concurrent callback using the specified resolver.
-     * 
-     * @see {@link Callback#resolve(Executor, com.spotify.heroic.async.Callback.Resolver)}
-     */
-    public static <C> Callback<C> newResolve(Executor executor, final Resolver<C> resolver) {
-        return new ConcurrentCallback<C>().resolve(executor, resolver);
-    }
-
-    /**
-     * Creates a new concurrent callback using the specified reducer.
-     * 
-     * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.Reducer)}
-     */
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
-        return new ConcurrentCallback<T>().reduce(queries, reducer);
-    }
-
-    /**
-     * Creates a new concurrent callback using the specified stream reducer.
-     * 
-     * @see {@link Callback#reduce(List, com.spotify.heroic.async.Callback.StreamReducer)}
-     */
-    public static <C, T> Callback<T> newReduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
-        return new ConcurrentCallback<T>().reduce(queries, reducer);
     }
 
     @Override

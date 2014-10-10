@@ -9,9 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.FilterBuilder;
 
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.DeferredTransformer;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.AndFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
@@ -21,7 +22,7 @@ import com.spotify.heroic.metadata.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
-public class FindTagsTransformer implements Callback.DeferredTransformer<FindTagKeys, FindTags> {
+public class FindTagsTransformer implements DeferredTransformer<FindTagKeys, FindTags> {
     private final Executor executor;
     private final Client client;
     private final String index;
@@ -29,28 +30,28 @@ public class FindTagsTransformer implements Callback.DeferredTransformer<FindTag
     private final Filter filter;
 
     @Override
-    public Callback<FindTags> transform(FindTagKeys result) throws Exception {
-        final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
+    public Future<FindTags> transform(FindTagKeys result) throws Exception {
+        final List<Future<FindTags>> callbacks = new ArrayList<Future<FindTags>>();
 
         for (final String key : result.getKeys()) {
             callbacks.add(findSingle(key));
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce());
+        return Futures.reduce(callbacks, FindTags.reduce());
     }
 
     /**
      * Finds a single set of tags, excluding any criteria for this specific set of tags.
      */
-    private Callback<FindTags> findSingle(final String key) {
+    private Future<FindTags> findSingle(final String key) {
         final Filter filter = removeKeyFromFilter(this.filter, key);
 
         final FilterBuilder f = ElasticSearchUtils.convertFilter(filter);
 
         if (f == null)
-            return new ResolvedCallback<FindTags>(FindTags.EMPTY);
+            return new ResolvedFuture<FindTags>(FindTags.EMPTY);
 
-        return ConcurrentCallback.newResolve(executor, new FindTagsResolver(client, index, type, f, key));
+        return Futures.resolve(executor, new FindTagsResolver(client, index, type, f, key));
     }
 
     private Filter removeKeyFromFilter(Filter filter, String key) {

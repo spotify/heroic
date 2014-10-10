@@ -5,8 +5,9 @@ import java.util.Collection;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
+import com.spotify.heroic.async.Transformer;
 
 @Data
 public class WriteBatchResult {
@@ -18,7 +19,7 @@ public class WriteBatchResult {
     }
 
     @Slf4j
-    private static class Merger implements Callback.Reducer<WriteBatchResult, WriteBatchResult> {
+    private static class Merger implements Reducer<WriteBatchResult, WriteBatchResult> {
         @Override
         public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -44,7 +45,7 @@ public class WriteBatchResult {
         return merger;
     }
 
-    private static class ToBoolean implements Callback.Transformer<WriteBatchResult, Boolean> {
+    private static class ToBoolean implements Transformer<WriteBatchResult, Boolean> {
         @Override
         public Boolean transform(WriteBatchResult result) throws Exception {
             return result.isOk();

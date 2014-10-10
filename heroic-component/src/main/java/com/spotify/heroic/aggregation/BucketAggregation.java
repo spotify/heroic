@@ -19,7 +19,7 @@ public abstract class BucketAggregation<T extends Bucket> implements Aggregation
         private long uselessScan = 0;
 
         private final BucketAggregation<T> aggregator;
-        private final T[] buckets;
+        private final List<T> buckets;
         private final long offset;
         private final long size;
         private final long extent;
@@ -39,10 +39,10 @@ public abstract class BucketAggregation<T extends Bucket> implements Aggregation
                 for (long start = first; start < last; start += size) {
                     int i = (int) ((start - offset) / size);
 
-                    if (i < 0 || i >= buckets.length)
+                    if (i < 0 || i >= buckets.size())
                         continue;
 
-                    final Bucket bucket = buckets[i];
+                    final Bucket bucket = buckets.get(i);
 
                     final long c = bucket.timestamp() - first;
 
@@ -63,7 +63,7 @@ public abstract class BucketAggregation<T extends Bucket> implements Aggregation
 
         @Override
         public Result result() {
-            final List<DataPoint> result = new ArrayList<DataPoint>(buckets.length);
+            final List<DataPoint> result = new ArrayList<DataPoint>(buckets.size());
 
             for (final T bucket : buckets) {
                 result.add(aggregator.build(bucket));
@@ -86,19 +86,18 @@ public abstract class BucketAggregation<T extends Bucket> implements Aggregation
         final long size = sampling.getSize();
         final DateRange range = original.rounded(sampling.getSize());
 
-        final T[] buckets = buildBuckets(range, size);
+        final List<T> buckets = buildBuckets(range, size);
         return new Session<T>(this, buckets, range.start(), size, sampling.getExtent());
     }
 
-    private T[] buildBuckets(final DateRange range, long size) {
+    private List<T> buildBuckets(final DateRange range, long size) {
         final long start = range.start();
         final long count = range.diff() / size;
 
-        @SuppressWarnings("unchecked")
-        final T[] buckets = (T[]) new Object[(int) count];
+        final List<T> buckets = new ArrayList<T>((int) count);
 
         for (int i = 0; i < count; i++) {
-            buckets[i] = buildBucket(start + size * i + size);
+            buckets.add(buildBucket(start + size * i + size));
         }
 
         return buckets;

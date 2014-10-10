@@ -17,8 +17,9 @@ import com.spotify.heroic.aggregationcache.CacheOperationException;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CachePutResult;
 import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.RequestError;
@@ -27,7 +28,7 @@ import com.spotify.heroic.model.Statistics;
 
 @Slf4j
 @RequiredArgsConstructor
-final class MergeCacheMisses implements Callback.Reducer<MetricGroups, MetricGroups> {
+final class MergeCacheMisses implements Reducer<MetricGroups, MetricGroups> {
     @Data
     private static final class JoinResult {
         private final Map<Long, DataPoint> resultSet;
@@ -57,9 +58,9 @@ final class MergeCacheMisses implements Callback.Reducer<MetricGroups, MetricGro
         return MetricGroups.build(groups, joinResults.getStatistics(), joinResults.getErrors());
     }
 
-    private List<Callback<CachePutResult>> updateCache(Map<Map<String, String>, List<DataPoint>> cacheUpdates)
+    private List<Future<CachePutResult>> updateCache(Map<Map<String, String>, List<DataPoint>> cacheUpdates)
             throws CacheOperationException {
-        final List<Callback<CachePutResult>> queries = new ArrayList<Callback<CachePutResult>>(cacheUpdates.size());
+        final List<Future<CachePutResult>> queries = new ArrayList<Future<CachePutResult>>(cacheUpdates.size());
 
         for (final Map.Entry<Map<String, String>, List<DataPoint>> update : cacheUpdates.entrySet()) {
             final Map<String, String> group = update.getKey();

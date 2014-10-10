@@ -12,66 +12,66 @@ import java.util.concurrent.Executor;
  * @param <T>
  *            The value type of the callback.
  */
-abstract class AbstractCallback<T> implements Callback<T> {
+abstract class AbstractFuture<T> implements Future<T> {
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries, final Reducer<C, T> reducer) {
-        final CallbackReducer.Handle<C> handle = new CallbackReducer.Handle<C>() {
+    public <C> Future<T> reduce(List<Future<C>> queries, final Reducer<C, T> reducer) {
+        final FutureReducer.Handle<C> handle = new FutureReducer.Handle<C>() {
             @Override
             public void done(Collection<C> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
                     throws Exception {
-                if (!AbstractCallback.this.isReady())
+                if (!AbstractFuture.this.isReady())
                     return;
 
                 try {
-                    AbstractCallback.this.resolve(reducer.resolved(results, errors, cancelled));
+                    AbstractFuture.this.resolve(reducer.resolved(results, errors, cancelled));
                 } catch (final Exception error) {
-                    AbstractCallback.this.fail(error);
+                    AbstractFuture.this.fail(error);
                 }
             }
         };
 
-        return register(new CallbackReducer<C>(queries, handle));
+        return register(new FutureReducer<C>(queries, handle));
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> queries, final StreamReducer<C, T> reducer) {
-        final CallbackStreamReducer.Handle<C> handle = new CallbackStreamReducer.Handle<C>() {
+    public <C> Future<T> reduce(List<Future<C>> queries, final StreamReducer<C, T> reducer) {
+        final StreamReducerCallback<C> handle = new StreamReducerCallback<C>() {
             @Override
-            public void finish(Callback<C> callback, C result) throws Exception {
+            public void finish(Future<C> callback, C result) throws Exception {
                 reducer.resolved(callback, result);
             }
 
             @Override
-            public void error(Callback<C> callback, Exception error) throws Exception {
+            public void error(Future<C> callback, Exception error) throws Exception {
                 reducer.failed(callback, error);
             }
 
             @Override
-            public void cancel(Callback<C> callback, CancelReason reason) throws Exception {
+            public void cancel(Future<C> callback, CancelReason reason) throws Exception {
                 reducer.cancelled(callback, reason);
             }
 
             @Override
             public void done(int successful, int failed, int cancelled) throws Exception {
-                if (!AbstractCallback.this.isReady())
+                if (!AbstractFuture.this.isReady())
                     return;
 
                 try {
-                    AbstractCallback.this.resolve(reducer.resolved(successful, failed, cancelled));
+                    AbstractFuture.this.resolve(reducer.resolved(successful, failed, cancelled));
                 } catch (final Exception error) {
-                    AbstractCallback.this.fail(error);
+                    AbstractFuture.this.fail(error);
                 }
             }
         };
 
-        return register(new CallbackStreamReducer<C>(queries, handle));
+        return register(new StreamReducerImplementation<C>(queries, handle));
     }
 
     @Override
-    public <C> Callback<C> transform(final DeferredTransformer<T, C> transformer) {
-        final Callback<C> callback = newCallback();
+    public <C> Future<C> transform(final DeferredTransformer<T, C> transformer) {
+        final Future<C> callback = newCallback();
 
-        register(new Handle<T>() {
+        register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 callback.cancel(reason);
@@ -84,9 +84,9 @@ abstract class AbstractCallback<T> implements Callback<T> {
 
             @Override
             public void resolved(T result) throws Exception {
-                final Callback<C> transform = transformer.transform(result);
+                final Future<C> transform = transformer.transform(result);
 
-                callback.register(new Callback.Handle<C>() {
+                callback.register(new FutureHandle<C>() {
                     @Override
                     public void cancelled(CancelReason reason) throws Exception {
                         transform.cancel(reason);
@@ -103,7 +103,7 @@ abstract class AbstractCallback<T> implements Callback<T> {
                     }
                 });
 
-                transform.register(new Callback.Handle<C>() {
+                transform.register(new FutureHandle<C>() {
                     @Override
                     public void cancelled(CancelReason reason) throws Exception {
                         callback.cancel(reason);
@@ -122,15 +122,15 @@ abstract class AbstractCallback<T> implements Callback<T> {
             }
         });
 
-        callback.register(new Callback.Handle<C>() {
+        callback.register(new FutureHandle<C>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                AbstractCallback.this.cancel(reason);
+                AbstractFuture.this.cancel(reason);
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                AbstractCallback.this.fail(e);
+                AbstractFuture.this.fail(e);
             }
 
             @Override
@@ -142,15 +142,15 @@ abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(final Transformer<T, C> transformer) {
+    public <C> Future<C> transform(final Transformer<T, C> transformer) {
         return transform(transformer, null);
     }
 
     @Override
-    public <C> Callback<C> transform(final Transformer<T, C> transformer, final ErrorTransformer<C> error) {
-        final Callback<C> callback = newCallback();
+    public <C> Future<C> transform(final Transformer<T, C> transformer, final ErrorTransformer<C> error) {
+        final Future<C> callback = newCallback();
 
-        register(new Handle<T>() {
+        register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 callback.cancel(reason);
@@ -181,15 +181,15 @@ abstract class AbstractCallback<T> implements Callback<T> {
             }
         });
 
-        callback.register(new Callback.Handle<C>() {
+        callback.register(new FutureHandle<C>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                AbstractCallback.this.cancel(reason);
+                AbstractFuture.this.cancel(reason);
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                AbstractCallback.this.fail(e);
+                AbstractFuture.this.fail(e);
             }
 
             @Override
@@ -201,17 +201,17 @@ abstract class AbstractCallback<T> implements Callback<T> {
     }
 
     @Override
-    public Callback<T> resolve(final Executor executor, final Resolver<T> resolver) {
+    public Future<T> resolve(final Executor executor, final Resolver<T> resolver) {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                if (!AbstractCallback.this.isReady())
+                if (!AbstractFuture.this.isReady())
                     return;
 
                 try {
-                    AbstractCallback.this.resolve(resolver.resolve());
+                    AbstractFuture.this.resolve(resolver.resolve());
                 } catch (final Exception error) {
-                    AbstractCallback.this.fail(error);
+                    AbstractFuture.this.fail(error);
                 }
             }
         };
@@ -219,15 +219,15 @@ abstract class AbstractCallback<T> implements Callback<T> {
         try {
             executor.execute(runnable);
         } catch (final Exception e) {
-            AbstractCallback.this.fail(e);
+            AbstractFuture.this.fail(e);
         }
 
         return this;
     }
 
     @Override
-    public Callback<T> register(final Callback<T> callback) {
-        register(new Handle<T>() {
+    public Future<T> register(final Future<T> callback) {
+        register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 callback.cancel(reason);
@@ -244,25 +244,25 @@ abstract class AbstractCallback<T> implements Callback<T> {
             }
         });
 
-        callback.register(new Handle<T>() {
+        callback.register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
-                AbstractCallback.this.cancel(reason);
+                AbstractFuture.this.cancel(reason);
             }
 
             @Override
             public void failed(Exception e) throws Exception {
-                AbstractCallback.this.fail(e);
+                AbstractFuture.this.fail(e);
             }
 
             @Override
             public void resolved(T result) throws Exception {
-                AbstractCallback.this.resolve(result);
+                AbstractFuture.this.resolve(result);
             }
         });
 
         return this;
     }
 
-    protected abstract <C> Callback<C> newCallback();
+    protected abstract <C> Future<C> newCallback();
 }

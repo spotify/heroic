@@ -6,8 +6,9 @@ import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.FutureHandle;
 import com.spotify.heroic.http.general.ErrorMessage;
 
 public final class HttpAsyncUtils {
@@ -15,7 +16,7 @@ public final class HttpAsyncUtils {
         public R resume(T value) throws Exception;
     }
 
-    public static <T> void handleAsyncResume(final AsyncResponse response, final Callback<T> callback) {
+    public static <T> void handleAsyncResume(final AsyncResponse response, final Future<T> callback) {
         HttpAsyncUtils.<T, T> handleAsyncResume(response, callback, HttpAsyncUtils.<T> passthrough());
     }
 
@@ -29,9 +30,9 @@ public final class HttpAsyncUtils {
      * @param resume
      *            The resume implementation.
      */
-    public static <T, R> void handleAsyncResume(final AsyncResponse response, final Callback<T> callback,
+    public static <T, R> void handleAsyncResume(final AsyncResponse response, final Future<T> callback,
             final Resume<T, R> resume) {
-        callback.register(new Callback.Handle<T>() {
+        callback.register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
                 response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -53,7 +54,7 @@ public final class HttpAsyncUtils {
         HttpAsyncUtils.setupAsyncHandling(response, callback);
     }
 
-    private static void setupAsyncHandling(final AsyncResponse response, final Callback<?> callback) {
+    private static void setupAsyncHandling(final AsyncResponse response, final Future<?> callback) {
         response.setTimeoutHandler(new TimeoutHandler() {
             @Override
             public void handleTimeout(AsyncResponse asyncResponse) {

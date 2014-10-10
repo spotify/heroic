@@ -15,12 +15,12 @@ import org.mockito.Mockito;
  * @param <T>
  *            Type of the callback implementation to test.
  */
-public abstract class AbstractCallbackTest<T extends Callback<Object>> {
+public abstract class AbstractFutureTest<T extends Future<Object>> {
     private static final Object REFERENCE = new Object();
     private static final Exception ERROR = Mockito.mock(Exception.class);
 
     @Getter
-    private Callback.Handle<Object> handle;
+    private FutureHandle<Object> handle;
 
     @Getter
     private T callback;
@@ -28,7 +28,7 @@ public abstract class AbstractCallbackTest<T extends Callback<Object>> {
     @SuppressWarnings("unchecked")
     @Before
     public void before() {
-        handle = Mockito.mock(Callback.Handle.class);
+        handle = Mockito.mock(FutureHandle.class);
         callback = newCallback();
     }
 

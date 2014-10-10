@@ -4,8 +4,8 @@ import java.util.Collection;
 
 import lombok.Data;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 
 @Data
 public class DeleteSeries {
@@ -13,7 +13,7 @@ public class DeleteSeries {
 
     private final int deleted;
 
-    public static class Reducer implements Callback.Reducer<DeleteSeries, DeleteSeries> {
+    public static class SelfReducer implements Reducer<DeleteSeries, DeleteSeries> {
         @Override
         public DeleteSeries resolved(Collection<DeleteSeries> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -31,9 +31,9 @@ public class DeleteSeries {
         }
     };
 
-    private static final Reducer reducer = new Reducer();
+    private static final SelfReducer reducer = new SelfReducer();
 
-    public static Reducer reduce() {
+    public static Reducer<DeleteSeries, DeleteSeries> reduce() {
         return reducer;
     }
 }

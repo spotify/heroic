@@ -28,11 +28,10 @@ import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.CancelledCallback;
-import com.spotify.heroic.async.ConcurrentCallback;
-import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.cassandra2.model.MetricsRowKey;
@@ -67,18 +66,18 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
     private static final String INSERT_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
 
     @Override
-    public Callback<WriteBatchResult> write(WriteMetric write) {
+    public Future<WriteBatchResult> write(WriteMetric write) {
         final Collection<WriteMetric> writes = new ArrayList<WriteMetric>();
         writes.add(write);
         return write(writes);
     }
 
     @Override
-    public Callback<WriteBatchResult> write(final Collection<WriteMetric> writes) {
+    public Future<WriteBatchResult> write(final Collection<WriteMetric> writes) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final MutationBatch mutation = keyspace.prepareMutationBatch().setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
@@ -100,7 +99,7 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
             }
         }
 
-        final Callback.Resolver<WriteBatchResult> resolver = new Callback.Resolver<WriteBatchResult>() {
+        final Resolver<WriteBatchResult> resolver = new Resolver<WriteBatchResult>() {
             @Override
             public WriteBatchResult resolve() throws Exception {
                 mutation.execute();
@@ -108,7 +107,7 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
             }
         };
 
-        return ConcurrentCallback.newResolve(pools.write(), resolver).register(reporter.reportWriteBatch());
+        return Futures.resolve(pools.write(), resolver).register(reporter.reportWriteBatch());
     }
 
     /**
@@ -122,13 +121,13 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
      * @return
      */
     @SuppressWarnings("unused")
-    private Callback<Integer> writeCQL(final MetricsRowKey rowKey, final List<DataPoint> datapoints) {
+    private Future<Integer> writeCQL(final MetricsRowKey rowKey, final List<DataPoint> datapoints) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<Integer>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
-        return ConcurrentCallback.newResolve(pools.read(), new Callback.Resolver<Integer>() {
+        return Futures.resolve(pools.read(), new Resolver<Integer>() {
             @Override
             public Integer resolve() throws Exception {
                 for (final DataPoint d : datapoints) {
@@ -147,11 +146,11 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
     }
 
     @Override
-    public List<Callback<FetchData>> fetch(final Series series, final DateRange range) {
-        final List<Callback<FetchData>> queries = new ArrayList<Callback<FetchData>>();
+    public List<Future<FetchData>> fetch(final Series series, final DateRange range) {
+        final List<Future<FetchData>> queries = new ArrayList<Future<FetchData>>();
 
         for (final long base : buildBases(range)) {
-            final Callback<FetchData> partial = buildQuery(series, base, range);
+            final Future<FetchData> partial = buildQuery(series, base, range);
 
             if (partial == null)
                 continue;
@@ -162,11 +161,11 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
         return queries;
     }
 
-    private Callback<FetchData> buildQuery(final Series series, long base, final DateRange range) {
+    private Future<FetchData> buildQuery(final Series series, long base, final DateRange range) {
         final Keyspace keyspace = keyspace();
 
         if (keyspace == null)
-            return new CancelledCallback<FetchData>(CancelReason.BACKEND_DISABLED);
+            return Futures.cancelled(CancelReason.BACKEND_DISABLED);
 
         final DateRange newRange = range.modify(base, base + MetricsRowKey.MAX_WIDTH - 1);
 
@@ -182,7 +181,7 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
         final RowQuery<MetricsRowKey, Integer> dataQuery = keyspace.prepareQuery(METRICS_CF).getRow(rowKey)
                 .autoPaginate(true).withColumnRange(columnRange);
 
-        final Callback.Resolver<FetchData> resolver = new Callback.Resolver<FetchData>() {
+        final Resolver<FetchData> resolver = new Resolver<FetchData>() {
             @Override
             public FetchData resolve() throws Exception {
                 final OperationResult<ColumnList<Integer>> result = dataQuery.execute();
@@ -191,12 +190,12 @@ public class Cassandra2Backend extends Cassandra2BackendBase implements MetricBa
             }
         };
 
-        return ConcurrentCallback.newResolve(pools.read(), resolver);
+        return Futures.resolve(pools.read(), resolver);
     }
 
     @Override
-    public Callback<Long> getColumnCount(Series series, DateRange range) {
-        return new FailedCallback<Long>(new Exception("not implemented"));
+    public Future<Long> getColumnCount(Series series, DateRange range) {
+        return Futures.failed(new Exception("not implemented"));
     }
 
     @Override

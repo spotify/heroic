@@ -17,7 +17,7 @@ import javax.ws.rs.core.MediaType;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.exceptions.MetricQueryException;
@@ -61,7 +61,7 @@ public class QueryResource {
 
         log.info("Metrics: {}", q);
 
-        final Callback<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(),
+        final Future<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(),
                 q.getGroupBy(), q.getRange(), q.getAggregation());
 
         response.setTimeout(300, TimeUnit.SECONDS);

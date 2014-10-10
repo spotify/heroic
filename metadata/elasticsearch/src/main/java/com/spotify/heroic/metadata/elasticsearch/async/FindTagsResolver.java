@@ -20,12 +20,12 @@ import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
-public class FindTagsResolver implements Callback.Resolver<FindTags> {
+public class FindTagsResolver implements Resolver<FindTags> {
     private final Client client;
     private final String index;
     private final String type;

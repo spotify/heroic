@@ -9,8 +9,8 @@ import javax.inject.Named;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 
 @RequiredArgsConstructor
@@ -20,7 +20,7 @@ public class StaticListDiscovery implements ClusterDiscovery {
     private List<URI> nodes;
 
     @Override
-    public Callback<Collection<URI>> find() {
-        return new ResolvedCallback<Collection<URI>>(nodes);
+    public Future<Collection<URI>> find() {
+        return new ResolvedFuture<Collection<URI>>(nodes);
     }
 }

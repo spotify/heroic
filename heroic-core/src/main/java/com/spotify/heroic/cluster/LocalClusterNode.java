@@ -12,8 +12,8 @@ import javax.inject.Named;
 import lombok.NoArgsConstructor;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.FailedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.DeleteSeries;
@@ -41,53 +41,52 @@ public class LocalClusterNode implements ClusterNode {
     private UUID id;
 
     @Override
-    public Callback<MetricGroups> query(final String backendGroup, final Filter filter,
-            final Map<String, String> group, final AggregationGroup aggregation, final DateRange range,
-            final Set<Series> series) {
+    public Future<MetricGroups> query(final String backendGroup, final Filter filter, final Map<String, String> group,
+            final AggregationGroup aggregation, final DateRange range, final Set<Series> series) {
         try {
             return metrics.useGroup(backendGroup).groupedQuery(group, filter, series, range, aggregation);
         } catch (final BackendOperationException e) {
-            return new FailedCallback<>(e);
+            return Futures.failed(e);
         }
     }
 
     @Override
-    public Callback<WriteBatchResult> write(String backendGroup, Collection<WriteMetric> writes) {
+    public Future<WriteBatchResult> write(String backendGroup, Collection<WriteMetric> writes) {
         try {
             return metrics.useGroup(backendGroup).write(writes);
         } catch (final BackendOperationException e) {
-            return new FailedCallback<>(e);
+            return Futures.failed(e);
         }
     }
 
     @Override
-    public Callback<MetricGroups> fullQuery(String backendGroup, Filter filter, List<String> groupBy, DateRange range,
+    public Future<MetricGroups> fullQuery(String backendGroup, Filter filter, List<String> groupBy, DateRange range,
             AggregationGroup aggregation) {
         return metrics.directQueryMetrics(backendGroup, filter, groupBy, range, aggregation);
     }
 
     @Override
-    public Callback<FindTags> findTags(Filter filter) {
+    public Future<FindTags> findTags(Filter filter) {
         return localMetadata.findTags(filter);
     }
 
     @Override
-    public Callback<FindKeys> findKeys(Filter filter) {
+    public Future<FindKeys> findKeys(Filter filter) {
         return localMetadata.findKeys(filter);
     }
 
     @Override
-    public Callback<FindSeries> findSeries(Filter filter) {
+    public Future<FindSeries> findSeries(Filter filter) {
         return localMetadata.findSeries(filter);
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(Filter filter) {
+    public Future<DeleteSeries> deleteSeries(Filter filter) {
         return localMetadata.deleteSeries(filter);
     }
 
     @Override
-    public Callback<String> writeSeries(Series series) {
+    public Future<String> writeSeries(Series series) {
         return localMetadata.bufferWrite(series);
     }
 }

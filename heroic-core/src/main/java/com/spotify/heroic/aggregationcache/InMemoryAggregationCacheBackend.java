@@ -11,8 +11,8 @@ import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
@@ -26,7 +26,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     private final Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
 
     @Override
-    public synchronized Callback<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
+    public synchronized Future<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
             throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
@@ -41,7 +41,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
         if (width == 0) {
-            return new ResolvedCallback<CacheBackendGetResult>(new CacheBackendGetResult(key, datapoints));
+            return new ResolvedFuture<CacheBackendGetResult>(new CacheBackendGetResult(key, datapoints));
         }
 
         final long start = range.getStart() - range.getStart() % width;
@@ -56,11 +56,11 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             datapoints.add(d);
         }
 
-        return new ResolvedCallback<>(new CacheBackendGetResult(key, datapoints));
+        return new ResolvedFuture<>(new CacheBackendGetResult(key, datapoints));
     }
 
     @Override
-    public synchronized Callback<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints)
+    public synchronized Future<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints)
             throws CacheOperationException {
         Map<Long, DataPoint> entry = cache.get(key);
 
@@ -73,7 +73,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final long width = aggregator.getSampling().getSize();
 
         if (width == 0) {
-            return new ResolvedCallback<CacheBackendPutResult>(new CacheBackendPutResult());
+            return new ResolvedFuture<CacheBackendPutResult>(new CacheBackendPutResult());
         }
 
         for (final DataPoint d : datapoints) {
@@ -89,7 +89,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             entry.put(timestamp, d);
         }
 
-        return new ResolvedCallback<>(new CacheBackendPutResult());
+        return new ResolvedFuture<>(new CacheBackendPutResult());
     }
 
     @Override

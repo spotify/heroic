@@ -3,7 +3,7 @@ package com.spotify.heroic.metric;
 import java.util.Collection;
 import java.util.List;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.FetchData;
@@ -21,7 +21,7 @@ public interface MetricBackend extends LifeCycle {
      * @param write
      * @return
      */
-    public Callback<WriteBatchResult> write(WriteMetric write);
+    public Future<WriteBatchResult> write(WriteMetric write);
 
     /**
      * Write a collection of datapoints for a specific time series.
@@ -32,7 +32,7 @@ public interface MetricBackend extends LifeCycle {
      *            Datapoints to write.
      * @return A callback indicating if the write was successful or not.
      */
-    public Callback<WriteBatchResult> write(Collection<WriteMetric> writes);
+    public Future<WriteBatchResult> write(Collection<WriteMetric> writes);
 
     /**
      * Query for data points that is part of the specified list of rows and range.
@@ -45,7 +45,7 @@ public interface MetricBackend extends LifeCycle {
      *
      * @throws QueryException
      */
-    public List<Callback<FetchData>> fetch(final Series series, final DateRange range);
+    public List<Future<FetchData>> fetch(final Series series, final DateRange range);
 
     /**
      * Gets the total number of columns that are in the given rows
@@ -53,7 +53,7 @@ public interface MetricBackend extends LifeCycle {
      * @param rows
      * @return
      */
-    public Callback<Long> getColumnCount(final Series series, DateRange range);
+    public Future<Long> getColumnCount(final Series series, DateRange range);
 
     @Override
     public boolean isReady();

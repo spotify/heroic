@@ -91,7 +91,7 @@ public class BucketAggregationTest {
 
         final List<DataPoint> d = result.getResult();
         Assert.assertEquals(2, d.size());
-        Assert.assertEquals(new DataPoint(2000, Double.NaN), d.get(0));
+        Assert.assertEquals(new DataPoint(2000, 0.0), d.get(0));
         Assert.assertEquals(new DataPoint(3000, 50.0), d.get(1));
     }
 
@@ -108,7 +108,7 @@ public class BucketAggregationTest {
 
         final List<DataPoint> d = result.getResult();
         Assert.assertEquals(2, d.size());
-        Assert.assertEquals(new DataPoint(1998, Double.NaN), d.get(0));
+        Assert.assertEquals(new DataPoint(1998, 0.0), d.get(0));
         Assert.assertEquals(new DataPoint(2997, 50.0), d.get(1));
     }
 }

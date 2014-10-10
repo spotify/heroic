@@ -6,7 +6,7 @@ import java.util.Map;
 
 import lombok.Data;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.injection.LifeCycle;
 
@@ -33,7 +33,7 @@ public interface ClusterManager extends LifeCycle {
 
     public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability);
 
-    public Callback<Void> refresh();
+    public Future<Void> refresh();
 
     public Statistics getStatistics();
 

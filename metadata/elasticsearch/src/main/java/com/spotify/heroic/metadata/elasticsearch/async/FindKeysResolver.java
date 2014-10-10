@@ -14,12 +14,12 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchUtils;
 import com.spotify.heroic.metadata.model.FindKeys;
 
 @RequiredArgsConstructor
-public class FindKeysResolver implements Callback.Resolver<FindKeys> {
+public class FindKeysResolver implements Resolver<FindKeys> {
     private final Client client;
     private final String index;
     private final String type;

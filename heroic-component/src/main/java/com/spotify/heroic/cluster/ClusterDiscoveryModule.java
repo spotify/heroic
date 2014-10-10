@@ -8,8 +8,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.ResolvedFuture;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public interface ClusterDiscoveryModule {
@@ -19,8 +19,8 @@ public interface ClusterDiscoveryModule {
         private static Null instance = new Null();
 
         @Override
-        public Callback<Collection<URI>> find() {
-            return new ResolvedCallback<Collection<URI>>(new ArrayList<URI>());
+        public Future<Collection<URI>> find() {
+            return new ResolvedFuture<Collection<URI>>(new ArrayList<URI>());
         }
 
         public static ClusterDiscoveryModule module() {

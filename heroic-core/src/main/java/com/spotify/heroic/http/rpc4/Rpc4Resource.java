@@ -9,7 +9,7 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.http.HttpAsyncUtils;
 import com.spotify.heroic.http.rpc.RpcWriteResult;
 import com.spotify.heroic.metric.MetricBackends;
@@ -41,7 +41,7 @@ public class Rpc4Resource {
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response, Rpc4QueryBody query) throws Exception {
-        final Callback<MetricGroups> callback = metrics.useGroup(query.getBackendGroup()).groupedQuery(
+        final Future<MetricGroups> callback = metrics.useGroup(query.getBackendGroup()).groupedQuery(
                 query.getGroup(), query.getFilter(), query.getSeries(), query.getRange(), query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
@@ -52,7 +52,7 @@ public class Rpc4Resource {
     public void write(@Suspended final AsyncResponse response, Rpc4WriteBody body) throws Exception {
         final MetricBackends backend = metrics.useGroup(body.getBackendGroup());
 
-        final Callback<WriteBatchResult> callback = backend.write(body.getWrites());
+        final Future<WriteBatchResult> callback = backend.write(body.getWrites());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, WRITE);
     }
@@ -60,7 +60,7 @@ public class Rpc4Resource {
     @POST
     @Path("/full-query")
     public void query(@Suspended final AsyncResponse response, Rpc4FullQueryBody body) throws Exception {
-        final Callback<MetricGroups> callback = metrics.directQueryMetrics(body.getBackendGroup(), body.getFilter(),
+        final Future<MetricGroups> callback = metrics.directQueryMetrics(body.getBackendGroup(), body.getFilter(),
                 body.getGroupBy(), body.getRange(), body.getAggregation());
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }

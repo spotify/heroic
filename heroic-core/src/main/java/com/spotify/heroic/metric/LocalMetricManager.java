@@ -23,9 +23,10 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.AggregationCache;
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
@@ -96,13 +97,13 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
     public void flushWrites(List<BufferedWriteMetric> bufferedWrites) throws Exception {
         final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
 
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
         for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
             callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
         }
 
-        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
+        final Reducer<WriteBatchResult, WriteBatchResult> reducer = new Reducer<WriteBatchResult, WriteBatchResult>() {
             @Override
             public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
@@ -124,7 +125,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
             }
         };
 
-        final Callback<WriteBatchResult> callback = ConcurrentCallback.newReduce(callbacks, reducer);
+        final Future<WriteBatchResult> callback = Futures.reduce(callbacks, reducer);
 
         final WriteBatchResult result;
 
@@ -214,13 +215,13 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
      * @return A callback that will be fired when the write is done or failed.
      * @throws BackendOperationException
      */
-    private Callback<WriteBatchResult> routeWrites(final String backendGroup, List<BufferedWriteMetric> writes)
+    private Future<WriteBatchResult> routeWrites(final String backendGroup, List<BufferedWriteMetric> writes)
             throws BackendOperationException {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
         callbacks.addAll(writeCluster(backendGroup, writes));
 
-        final Callback.Reducer<WriteBatchResult, WriteBatchResult> reducer = new Callback.Reducer<WriteBatchResult, WriteBatchResult>() {
+        final Reducer<WriteBatchResult, WriteBatchResult> reducer = new Reducer<WriteBatchResult, WriteBatchResult>() {
             @Override
             public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
                     Collection<CancelReason> cancelled) throws Exception {
@@ -244,12 +245,12 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
             }
         };
 
-        return ConcurrentCallback.newReduce(callbacks, reducer);
+        return Futures.reduce(callbacks, reducer);
     }
 
-    private List<Callback<WriteBatchResult>> writeCluster(final String backendGroup,
+    private List<Future<WriteBatchResult>> writeCluster(final String backendGroup,
             final List<BufferedWriteMetric> writes) throws BackendOperationException {
-        final List<Callback<WriteBatchResult>> callbacks = new ArrayList<>();
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
         final Multimap<NodeRegistryEntry, WriteMetric> partitions = LinkedListMultimap.create();
 
@@ -264,7 +265,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         return callbacks;
     }
 
-    public Callback<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
+    public Future<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation) {
         final PreparedQueryTransformer transformer = new PreparedQueryTransformer(range, aggregation);
 
@@ -341,14 +342,14 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
      * @param criteria
      * @return
      */
-    private Callback<List<PreparedQuery>> findAndRouteTimeSeries(final String backendGroup, final Filter filter,
+    private Future<List<PreparedQuery>> findAndRouteTimeSeries(final String backendGroup, final Filter filter,
             final List<String> groupBy) {
         return findAllTimeSeries(filter, groupBy).transform(
                 new LocalFindAndRouteTransformer(this, filter, backendGroup, groupLimit, groupLoadLimit)).register(
                 reporter.reportFindTimeSeries());
     }
 
-    private Callback<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {
+    private Future<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {
         final FindSeriesTransformer transformer = new FindSeriesTransformer(groupBy);
         return metadata.findSeries(filter).transform(transformer);
     }

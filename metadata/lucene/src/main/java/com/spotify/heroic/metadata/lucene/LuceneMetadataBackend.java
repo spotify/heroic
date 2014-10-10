@@ -24,8 +24,8 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.Lock;
 import org.apache.lucene.util.Version;
 
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataOperationException;
@@ -53,7 +53,7 @@ public class LuceneMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindTags> findTags(Filter filter) throws MetadataOperationException {
+    public Future<FindTags> findTags(Filter filter) throws MetadataOperationException {
 
         final org.apache.lucene.search.Filter f = LuceneUtils.convertFilter(filter);
 
@@ -73,7 +73,7 @@ public class LuceneMetadataBackend implements MetadataBackend {
                 LuceneUtils.update(tags, doc);
             }
 
-            return new ResolvedCallback<>(new FindTags(tags, sampleSize));
+            return new ResolvedFuture<>(new FindTags(tags, sampleSize));
         } catch (final IOException e) {
             throw new MetadataOperationException("failed to open index directory", e);
         }
@@ -94,27 +94,27 @@ public class LuceneMetadataBackend implements MetadataBackend {
     }
 
     @Override
-    public Callback<FindSeries> findSeries(Filter filter) throws MetadataOperationException {
+    public Future<FindSeries> findSeries(Filter filter) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(Filter filter) throws MetadataOperationException {
+    public Future<DeleteSeries> deleteSeries(Filter filter) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<FindKeys> findKeys(Filter filter) throws MetadataOperationException {
+    public Future<FindKeys> findKeys(Filter filter) throws MetadataOperationException {
         return null;
     }
 
     @Override
-    public Callback<Void> refresh() {
+    public Future<Void> refresh() {
         return null;
     }
 
     @Override
-    public Callback<FindTagKeys> findTagKeys(Filter filter) throws MetadataOperationException {
+    public Future<FindTagKeys> findTagKeys(Filter filter) throws MetadataOperationException {
         return null;
     }
 

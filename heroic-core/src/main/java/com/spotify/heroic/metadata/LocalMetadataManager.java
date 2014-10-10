@@ -12,10 +12,11 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.DefaultStreamReducer;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.async.Reducers;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -41,8 +42,8 @@ public class LocalMetadataManager implements MetadataManager {
     }
 
     @Override
-    public Callback<FindTags> findTags(final Filter filter) {
-        final List<Callback<FindTags>> callbacks = new ArrayList<Callback<FindTags>>();
+    public Future<FindTags> findTags(final Filter filter) {
+        final List<Future<FindTags>> callbacks = new ArrayList<Future<FindTags>>();
 
         for (final MetadataBackend backend : backends) {
             try {
@@ -52,16 +53,16 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindTags.reduce()).register(reporter.reportFindTags());
+        return Futures.reduce(callbacks, FindTags.reduce()).register(reporter.reportFindTags());
     }
 
     @Override
-    public Callback<String> bufferWrite(WriteMetric write) {
+    public Future<String> bufferWrite(WriteMetric write) {
         return bufferWrite(write.getSeries());
     }
 
     @Override
-    public Callback<String> bufferWrite(Series series) {
+    public Future<String> bufferWrite(Series series) {
         final String id = MetadataUtils.buildId(series);
 
         for (final MetadataBackend backend : backends) {
@@ -72,23 +73,23 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return new ResolvedCallback<>(id);
+        return new ResolvedFuture<>(id);
     }
 
     @Override
-    public Callback<List<String>> bufferWrites(Collection<WriteMetric> writes) {
-        final List<Callback<String>> callbacks = new ArrayList<>();
+    public Future<List<String>> bufferWrites(Collection<WriteMetric> writes) {
+        final List<Future<String>> callbacks = new ArrayList<>();
 
         for (final WriteMetric write : writes) {
             callbacks.add(bufferWrite(write.getSeries()));
         }
 
-        return ConcurrentCallback.newReduce(callbacks, Reducers.<String> list());
+        return Futures.reduce(callbacks, Reducers.<String> list());
     }
 
     @Override
-    public Callback<FindSeries> findSeries(final Filter filter) {
-        final List<Callback<FindSeries>> callbacks = new ArrayList<Callback<FindSeries>>();
+    public Future<FindSeries> findSeries(final Filter filter) {
+        final List<Future<FindSeries>> callbacks = new ArrayList<Future<FindSeries>>();
 
         for (final MetadataBackend backend : backends) {
             try {
@@ -98,12 +99,12 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindSeries.reduce()).register(reporter.reportFindTimeSeries());
+        return Futures.reduce(callbacks, FindSeries.reduce()).register(reporter.reportFindTimeSeries());
     }
 
     @Override
-    public Callback<DeleteSeries> deleteSeries(final Filter filter) {
-        final List<Callback<DeleteSeries>> callbacks = new ArrayList<Callback<DeleteSeries>>();
+    public Future<DeleteSeries> deleteSeries(final Filter filter) {
+        final List<Future<DeleteSeries>> callbacks = new ArrayList<Future<DeleteSeries>>();
 
         for (final MetadataBackend backend : backends) {
             try {
@@ -113,12 +114,12 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, DeleteSeries.reduce());
+        return Futures.reduce(callbacks, DeleteSeries.reduce());
     }
 
     @Override
-    public Callback<FindKeys> findKeys(final Filter filter) {
-        final List<Callback<FindKeys>> callbacks = new ArrayList<Callback<FindKeys>>();
+    public Future<FindKeys> findKeys(final Filter filter) {
+        final List<Future<FindKeys>> callbacks = new ArrayList<Future<FindKeys>>();
 
         for (final MetadataBackend backend : backends) {
             try {
@@ -128,18 +129,18 @@ public class LocalMetadataManager implements MetadataManager {
             }
         }
 
-        return ConcurrentCallback.newReduce(callbacks, FindKeys.reduce()).register(reporter.reportFindKeys());
+        return Futures.reduce(callbacks, FindKeys.reduce()).register(reporter.reportFindKeys());
     }
 
     @Override
-    public Callback<Boolean> refresh() {
-        final List<Callback<Void>> callbacks = new ArrayList<Callback<Void>>();
+    public Future<Boolean> refresh() {
+        final List<Future<Void>> callbacks = new ArrayList<Future<Void>>();
 
         for (final MetadataBackend backend : backends) {
             callbacks.add(backend.refresh());
         }
 
-        return ConcurrentCallback.newReduce(callbacks, new Callback.DefaultStreamReducer<Void, Boolean>() {
+        return Futures.reduce(callbacks, new DefaultStreamReducer<Void, Boolean>() {
             @Override
             public Boolean resolved(int successful, int failed, int cancelled) throws Exception {
                 return failed == 0 && cancelled == 0;

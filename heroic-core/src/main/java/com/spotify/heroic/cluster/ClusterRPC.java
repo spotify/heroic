@@ -11,7 +11,8 @@ import javax.inject.Named;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Transformer;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
@@ -43,7 +44,7 @@ public class ClusterRPC {
     private boolean useLocal;
 
     @Data
-    private static class EntryTransformer implements Callback.Transformer<NodeMetadata, NodeRegistryEntry> {
+    private static class EntryTransformer implements Transformer<NodeMetadata, NodeRegistryEntry> {
         private final HttpClientManager clients;
         private final NodeRegistryEntry localEntry;
         private final boolean useLocal;
@@ -83,14 +84,14 @@ public class ClusterRPC {
         }
     }
 
-    private Callback.Transformer<NodeMetadata, NodeRegistryEntry> transformerFor(URI uri) {
+    private Transformer<NodeMetadata, NodeRegistryEntry> transformerFor(URI uri) {
         return new EntryTransformer(clients, localEntry(), useLocal, metadata, uri);
     }
 
-    private Callback<NodeMetadata> metadataFor(URI uri) {
+    private Future<NodeMetadata> metadataFor(URI uri) {
         final HttpClientSession client = clients.newSession(uri, "rpc");
 
-        final Callback.Transformer<RpcMetadata, NodeMetadata> transformer = new Callback.Transformer<RpcMetadata, NodeMetadata>() {
+        final Transformer<RpcMetadata, NodeMetadata> transformer = new Transformer<RpcMetadata, NodeMetadata>() {
             @Override
             public NodeMetadata transform(final RpcMetadata r) throws Exception {
                 return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(), r.getCapabilities());
@@ -110,7 +111,7 @@ public class ClusterRPC {
      * @param uri
      * @return
      */
-    public Callback<NodeRegistryEntry> resolve(URI uri) {
+    public Future<NodeRegistryEntry> resolve(URI uri) {
         return metadataFor(uri).transform(transformerFor(uri));
     }
 

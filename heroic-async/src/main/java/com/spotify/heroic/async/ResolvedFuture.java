@@ -3,8 +3,6 @@ package com.spotify.heroic.async;
 import java.util.List;
 import java.util.concurrent.Executor;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * A callback which has already been resolved as 'resolved'.
  *
@@ -12,52 +10,51 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @param <T>
  */
-@Slf4j
-public class ResolvedCallback<T> implements Callback<T> {
+public class ResolvedFuture<T> implements Future<T> {
     private final T value;
 
-    public ResolvedCallback(T value) {
+    public ResolvedFuture(T value) {
         this.value = value;
     }
 
     /* all of these should do nothing. */
     @Override
-    public Callback<T> fail(Exception error) {
+    public Future<T> fail(Exception error) {
         return this;
     }
 
     @Override
-    public Callback<T> resolve(T result) {
+    public Future<T> resolve(T result) {
         return this;
     }
 
     @Override
-    public Callback<T> cancel(CancelReason reason) {
+    public Future<T> cancel(CancelReason reason) {
         return this;
     }
 
     @Override
-    public Callback<T> register(Callback.Cancellable cancellable) {
+    public Future<T> register(Cancellable cancellable) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, Callback.Reducer<C, T> reducer) {
+    public <C> Future<T> reduce(List<Future<C>> callbacks, Reducer<C, T> reducer) {
         return this;
     }
 
     @Override
-    public <C> Callback<T> reduce(List<Callback<C>> callbacks, StreamReducer<C, T> reducer) {
+    public <C> Future<T> reduce(List<Future<C>> callbacks, StreamReducer<C, T> reducer) {
         return this;
     }
 
     /* all of these should be immediately resolved. */
     @Override
-    public Callback<T> register(Callback.Handle<T> handle) {
+    public Future<T> register(FutureHandle<T> handle) {
         try {
             handle.resolved(value);
         } catch (final Exception e) {
-            log.error("Failed to call handle finish callback", e);
+            throw new RuntimeException("Failed to call handle finish callback", e);
         }
 
         return this;
@@ -65,23 +62,23 @@ public class ResolvedCallback<T> implements Callback<T> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public Callback<T> register(ObjectHandle handle) {
-        return register((Handle<T>) handle);
+    public Future<T> register(ObjectHandle handle) {
+        return register((FutureHandle<T>) handle);
     }
 
     @Override
-    public Callback<T> register(Callback.Finishable finishable) {
+    public Future<T> register(Finishable finishable) {
         try {
             finishable.finished();
         } catch (final Exception e) {
-            log.error("Failed to call finish callback", e);
+            throw new RuntimeException("Failed to call finish callback", e);
         }
 
         return this;
     }
 
     @Override
-    public Callback<T> register(Callback<T> callback) {
+    public Future<T> register(Future<T> callback) {
         callback.resolve(value);
         return this;
     }
@@ -93,34 +90,34 @@ public class ResolvedCallback<T> implements Callback<T> {
     }
 
     @Override
-    public <C> Callback<C> transform(DeferredTransformer<T, C> transformer) {
+    public <C> Future<C> transform(DeferredTransformer<T, C> transformer) {
         try {
             return transformer.transform(value);
         } catch (final Exception e) {
-            return new FailedCallback<C>(e);
+            return new FailedFuture<C>(e);
         }
     }
 
     @Override
-    public <C> Callback<C> transform(Transformer<T, C> transformer) {
+    public <C> Future<C> transform(Transformer<T, C> transformer) {
         return transform(transformer, null);
     }
 
     @Override
-    public <C> Callback<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error) {
+    public <C> Future<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error) {
         try {
-            return new ResolvedCallback<C>(transformer.transform(value));
+            return new ResolvedFuture<C>(transformer.transform(value));
         } catch (final Exception e) {
             try {
-                return new ResolvedCallback<>(error.transform(e));
+                return new ResolvedFuture<>(error.transform(e));
             } catch (final Exception e2) {
-                return new FailedCallback<C>(e2);
+                return new FailedFuture<C>(e2);
             }
         }
     }
 
     @Override
-    public Callback<T> resolve(Executor executor, Resolver<T> resolver) {
+    public Future<T> resolve(Executor executor, Resolver<T> resolver) {
         return this;
     }
 

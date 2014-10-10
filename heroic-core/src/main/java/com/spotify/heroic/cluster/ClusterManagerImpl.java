@@ -13,8 +13,8 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.Lists;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ResolvedCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.ResolvedFuture;
 import com.spotify.heroic.cluster.async.MetadataUriTransformer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.injection.LifeCycle;
@@ -72,11 +72,11 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     }
 
     @Override
-    public Callback<Void> refresh() {
+    public Future<Void> refresh() {
         if (discovery == null) {
             log.info("No discovery mechanism configured");
             registry.set(new NodeRegistry(Lists.newArrayList(rpc.localEntry()), 1));
-            return new ResolvedCallback<Void>(null);
+            return new ResolvedFuture<Void>(null);
         }
 
         log.info("Cluster refresh in progress");

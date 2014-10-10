@@ -8,13 +8,13 @@ import javax.ws.rs.core.Response.Status;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.http.general.ErrorMessage;
 import com.spotify.heroic.http.rpc.RpcNodeException;
 import com.spotify.heroic.http.rpc.RpcRemoteException;
 
 @RequiredArgsConstructor
-final class HttpGetRequestResolver<T> implements Callback.Resolver<T> {
+final class HttpGetRequestResolver<T> implements Resolver<T> {
     private final Class<T> bodyType;
     private final WebTarget target;
 

@@ -15,9 +15,9 @@ import javax.inject.Inject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackends;
@@ -63,7 +63,7 @@ public class SeriesMigrator {
 
         private void executeOne(final String session, final MetricBackends source, final MetricBackends target,
                 final DateRange range) throws Exception {
-            final Callback.Reducer<FetchData, List<DataPoint>> reducer = new Callback.Reducer<FetchData, List<DataPoint>>() {
+            final Reducer<FetchData, List<DataPoint>> reducer = new Reducer<FetchData, List<DataPoint>>() {
                 @Override
                 public List<DataPoint> resolved(Collection<FetchData> results, Collection<Exception> errors,
                         Collection<CancelReason> cancelled) throws Exception {
@@ -87,7 +87,7 @@ public class SeriesMigrator {
                 }
             };
 
-            final List<DataPoint> datapoints = ConcurrentCallback.newReduce(source.query(series, range), reducer).get();
+            final List<DataPoint> datapoints = Futures.reduce(source.query(series, range), reducer).get();
 
             log.info(String.format("%s: Writing %d datapoint(s) for series: %s", session, datapoints.size(), series));
 
@@ -95,8 +95,8 @@ public class SeriesMigrator {
         }
     };
 
-    public void migrate(long history, final MetricBackends source, final MetricBackends target,
-            final Filter filter) throws Exception {
+    public void migrate(long history, final MetricBackends source, final MetricBackends target, final Filter filter)
+            throws Exception {
         final Set<Series> series;
 
         try {

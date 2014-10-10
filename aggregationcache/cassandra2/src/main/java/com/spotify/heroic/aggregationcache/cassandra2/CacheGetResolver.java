@@ -16,14 +16,14 @@ import com.netflix.astyanax.model.Rows;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.model.CacheKey;
 import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 
 @RequiredArgsConstructor
-public final class CacheGetResolver implements Callback.Resolver<CacheBackendGetResult> {
+public final class CacheGetResolver implements Resolver<CacheBackendGetResult> {
     static final String CQL_QUERY = "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
 
     private final CacheKeySerializer cacheKeySerializer;

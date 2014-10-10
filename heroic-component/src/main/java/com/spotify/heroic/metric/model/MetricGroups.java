@@ -15,9 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.Callback.Transformer;
+import com.spotify.heroic.async.ErrorTransformer;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
+import com.spotify.heroic.async.Transformer;
 import com.spotify.heroic.model.Statistics;
 
 @Data
@@ -44,7 +45,7 @@ public final class MetricGroups {
     }
 
     @Slf4j
-    private static class Merger implements Callback.Reducer<MetricGroups, MetricGroups> {
+    private static class Merger implements Reducer<MetricGroups, MetricGroups> {
         @Override
         public MetricGroups resolved(Collection<MetricGroups> results, Collection<Exception> errors,
                 Collection<CancelReason> cancelled) throws Exception {
@@ -82,7 +83,7 @@ public final class MetricGroups {
         return new MetricGroups(groups, this.statistics.merge(other.statistics), errors);
     }
 
-    public static final Callback.Transformer<MetricGroups, MetricGroups> identity = new Callback.Transformer<MetricGroups, MetricGroups>() {
+    public static final Transformer<MetricGroups, MetricGroups> identity = new Transformer<MetricGroups, MetricGroups>() {
         @Override
         public MetricGroups transform(MetricGroups result) throws Exception {
             return result;
@@ -99,9 +100,9 @@ public final class MetricGroups {
         return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
     }
 
-    public static Callback.ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri,
+    public static ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri,
             final Map<String, String> shard) {
-        return new Callback.ErrorTransformer<MetricGroups>() {
+        return new ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
                 return MetricGroups.nodeError(id, uri, shard, e);
@@ -115,8 +116,8 @@ public final class MetricGroups {
         return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
     }
 
-    public static Callback.ErrorTransformer<MetricGroups> seriesError(final Map<String, String> shard) {
-        return new Callback.ErrorTransformer<MetricGroups>() {
+    public static ErrorTransformer<MetricGroups> seriesError(final Map<String, String> shard) {
+        return new ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
                 return MetricGroups.seriesError(shard, e);

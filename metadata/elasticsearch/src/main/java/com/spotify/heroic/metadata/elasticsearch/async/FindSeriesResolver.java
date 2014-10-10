@@ -16,14 +16,14 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 
-import com.spotify.heroic.async.Callback;
+import com.spotify.heroic.async.Resolver;
 import com.spotify.heroic.metadata.elasticsearch.ElasticSearchMetadataBackend;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.model.Series;
 
 @Slf4j
 @RequiredArgsConstructor
-public class FindSeriesResolver implements Callback.Resolver<FindSeries> {
+public class FindSeriesResolver implements Resolver<FindSeries> {
     private final Client client;
     private final String index;
     private final String type;

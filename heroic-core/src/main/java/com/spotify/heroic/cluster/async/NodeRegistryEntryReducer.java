@@ -8,15 +8,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.async.Callback;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.cluster.NodeRegistry;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.rpc.RpcNodeException;
 
 @Data
 @Slf4j
-public final class NodeRegistryEntryReducer implements Callback.Reducer<NodeRegistryEntry, Void> {
+public final class NodeRegistryEntryReducer implements Reducer<NodeRegistryEntry, Void> {
     private final AtomicReference<NodeRegistry> registry;
     private final Collection<URI> nodes;
 

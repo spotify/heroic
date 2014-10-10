@@ -1,7 +1,7 @@
 package com.spotify.heroic.async;
 
 /**
- * Exception thrown by {@link Callback#get} when a callback has failed.
+ * Exception thrown by {@link Future#get} when a callback has failed.
  *
  * The cause of this exception will contain the reason for the failure.
  *

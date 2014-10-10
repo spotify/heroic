@@ -18,8 +18,8 @@ import com.spotify.heroic.aggregationcache.CacheOperationException;
 import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.async.Callback;
-import com.spotify.heroic.async.ConcurrentCallback;
+import com.spotify.heroic.async.Future;
+import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.model.DataPoint;
@@ -48,20 +48,18 @@ public class Cassandra2AggregationCacheBackend implements AggregationCacheBacken
     private AggregationCacheBackendReporter reporter;
 
     @Override
-    public Callback<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range)
-            throws CacheOperationException {
+    public Future<CacheBackendGetResult> get(final CacheBackendKey key, DateRange range) throws CacheOperationException {
         final Keyspace keyspace = this.keyspace.get();
 
         if (keyspace == null) {
             throw new IllegalStateException("keyspace not available");
         }
 
-        return ConcurrentCallback.newResolve(pool.read(), new CacheGetResolver(cacheKeySerializer, keyspace, CQL3_CF,
-                key, range));
+        return Futures.resolve(pool.read(), new CacheGetResolver(cacheKeySerializer, keyspace, CQL3_CF, key, range));
     }
 
     @Override
-    public Callback<CacheBackendPutResult> put(final CacheBackendKey key, final List<DataPoint> datapoints)
+    public Future<CacheBackendPutResult> put(final CacheBackendKey key, final List<DataPoint> datapoints)
             throws CacheOperationException {
         final Keyspace keyspace = this.keyspace.get();
 
@@ -69,8 +67,8 @@ public class Cassandra2AggregationCacheBackend implements AggregationCacheBacken
             throw new IllegalStateException("keyspace not available");
         }
 
-        return ConcurrentCallback.newResolve(pool.write(), new CachePutResolver(cacheKeySerializer, keyspace, CQL3_CF,
-                key, datapoints));
+        return Futures.resolve(pool.write(), new CachePutResolver(cacheKeySerializer, keyspace, CQL3_CF, key,
+                datapoints));
     }
 
     @Override
