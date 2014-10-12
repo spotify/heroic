@@ -9,8 +9,8 @@ public class SumBucketTest {
     @Test
     public void testDefault() {
         SumBucket b = new SumBucket(0);
-        Assert.assertEquals(Double.NaN, b.value(), 0.0);
-        Assert.assertEquals(0, b.count(), 0.0);
+        Assert.assertEquals(0.0, b.value(), 0.0);
+        Assert.assertEquals(0, b.count());
     }
 
     @Test

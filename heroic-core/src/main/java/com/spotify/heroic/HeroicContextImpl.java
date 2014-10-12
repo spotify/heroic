@@ -17,8 +17,8 @@ public class HeroicContextImpl implements HeroicContext {
     private AggregationSerializer aggregationSerializer;
 
     @Override
-    public <T extends Aggregation, R extends AggregationQuery> void registerAggregation(Class<T> type,
-            Class<R> queryType, short id, AggregationSerializer.Serializer<T> serializer) {
+    public <T extends Aggregation, R extends AggregationQuery> void aggregation(short id, Class<T> type,
+            Class<R> queryType, AggregationSerializer.Serializer<T> serializer) {
         mapper.registerSubtypes(type, queryType);
         aggregationSerializer.register(type, id, serializer);
     }

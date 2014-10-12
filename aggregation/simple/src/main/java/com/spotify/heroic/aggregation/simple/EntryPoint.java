@@ -16,7 +16,7 @@ public class EntryPoint implements HeroicEntryPoint {
     private SamplingSerializer resolutionSerializer;
 
     @Inject
-    private HeroicContext heroicContext;
+    private HeroicContext ctx;
 
     private static final DoubleSerializer doubleSerializer = DoubleSerializer.get();
 
@@ -29,7 +29,7 @@ public class EntryPoint implements HeroicEntryPoint {
 
     @Override
     public void setup() {
-        heroicContext.registerAggregation(SumAggregation.class, SumAggregationQuery.class, SUM,
+        ctx.aggregation(SUM, SumAggregation.class, SumAggregationQuery.class,
                 new AggregationSerializer.Serializer<SumAggregation>() {
                     @Override
                     public SumAggregation deserialize(Composite composite) {
@@ -43,7 +43,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation(AverageAggregation.class, AverageAggregationQuery.class, AVERAGE,
+        ctx.aggregation(AVERAGE, AverageAggregation.class, AverageAggregationQuery.class,
                 new Serializer<AverageAggregation>() {
                     @Override
                     public void serialize(Composite composite, AverageAggregation value) {
@@ -57,7 +57,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation(MinAggregation.class, MinAggregationQuery.class, MIN,
+        ctx.aggregation(MIN, MinAggregation.class, MinAggregationQuery.class,
                 new AggregationSerializer.Serializer<MinAggregation>() {
                     @Override
                     public MinAggregation deserialize(Composite composite) {
@@ -71,7 +71,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation(MaxAggregation.class, MaxAggregationQuery.class, MAX,
+        ctx.aggregation(MAX, MaxAggregation.class, MaxAggregationQuery.class,
                 new AggregationSerializer.Serializer<MaxAggregation>() {
                     @Override
                     public MaxAggregation deserialize(Composite composite) {
@@ -85,7 +85,7 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation(StdDevAggregation.class, StdDevAggregationQuery.class, STDDEV,
+        ctx.aggregation(STDDEV, StdDevAggregation.class, StdDevAggregationQuery.class,
                 new AggregationSerializer.Serializer<StdDevAggregation>() {
                     @Override
                     public StdDevAggregation deserialize(Composite composite) {
@@ -99,19 +99,21 @@ public class EntryPoint implements HeroicEntryPoint {
                     }
                 });
 
-        heroicContext.registerAggregation(QuantileAggregation.class, QuantileAggregationQuery.class, QUANTILE,
+        ctx.aggregation(QUANTILE, QuantileAggregation.class, QuantileAggregationQuery.class,
                 new AggregationSerializer.Serializer<QuantileAggregation>() {
                     @Override
                     public QuantileAggregation deserialize(Composite composite) {
                         final Sampling sampling = composite.get(0, resolutionSerializer);
                         final Double q = composite.get(1, doubleSerializer);
-                        return new QuantileAggregation(sampling, q);
+                        final Double error = composite.get(2, doubleSerializer);
+                        return new QuantileAggregation(sampling, q, error);
                     }
 
                     @Override
                     public void serialize(Composite composite, QuantileAggregation value) {
                         composite.addComponent(value.getSampling(), resolutionSerializer);
                         composite.addComponent(value.getQ(), doubleSerializer);
+                        composite.addComponent(value.getError(), doubleSerializer);
                     }
                 });
     }
