@@ -10,18 +10,18 @@ import com.spotify.heroic.aggregation.model.AggregationQuery;
 import com.spotify.heroic.aggregation.model.AggregationSampling;
 
 @Data
-@JsonTypeName("average")
-public class AverageAggregationQuery implements AggregationQuery {
+@JsonTypeName("stddev")
+public class StdDevAggregationQuery implements AggregationQuery {
     private final AggregationSampling sampling;
 
     @Override
     public Aggregation build() {
-        return new AverageAggregation(sampling.build());
+        return new StdDevAggregation(sampling.build());
     }
 
     @JsonCreator
-    public static AverageAggregationQuery create(
+    public static StdDevAggregationQuery create(
             @JsonProperty(value = "sampling", required = true) AggregationSampling sampling) {
-        return new AverageAggregationQuery(sampling);
+        return new StdDevAggregationQuery(sampling);
     }
 }

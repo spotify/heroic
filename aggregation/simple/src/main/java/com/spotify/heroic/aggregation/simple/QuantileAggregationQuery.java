@@ -10,18 +10,25 @@ import com.spotify.heroic.aggregation.model.AggregationQuery;
 import com.spotify.heroic.aggregation.model.AggregationSampling;
 
 @Data
-@JsonTypeName("average")
-public class AverageAggregationQuery implements AggregationQuery {
+@JsonTypeName("quantile")
+public class QuantileAggregationQuery implements AggregationQuery {
+    public static final double DEFAULT_QUANTILE = 0.5;
+
     private final AggregationSampling sampling;
+    private final double q;
 
     @Override
     public Aggregation build() {
-        return new AverageAggregation(sampling.build());
+        return new QuantileAggregation(sampling.build(), q);
     }
 
     @JsonCreator
-    public static AverageAggregationQuery create(
-            @JsonProperty(value = "sampling", required = true) AggregationSampling sampling) {
-        return new AverageAggregationQuery(sampling);
+    public static QuantileAggregationQuery create(
+            @JsonProperty(value = "sampling", required = true) AggregationSampling sampling, @JsonProperty("q") Double q) {
+        if (q == null) {
+            q = DEFAULT_QUANTILE;
+        }
+
+        return new QuantileAggregationQuery(sampling, q);
     }
 }

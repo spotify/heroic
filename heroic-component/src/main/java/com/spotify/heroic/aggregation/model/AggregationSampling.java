@@ -10,7 +10,7 @@ import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.utils.TimeUtils;
 
 @Data
-public class QuerySampling {
+public class AggregationSampling {
     private static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
     public static final long DEFAULT_VALUE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES);
 
@@ -18,12 +18,12 @@ public class QuerySampling {
     private final long extent;
 
     @JsonCreator
-    public static QuerySampling create(@JsonProperty("unit") String unitName, @JsonProperty("value") Long inputSize,
+    public static AggregationSampling create(@JsonProperty("unit") String unitName, @JsonProperty("value") Long inputSize,
             @JsonProperty("extent") Long inputExtent) {
         final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
         final long size = TimeUtils.parseSize(inputSize, unit, DEFAULT_VALUE);
         final long extent = TimeUtils.parseExtent(inputExtent, unit, size);
-        return new QuerySampling(size, extent);
+        return new AggregationSampling(size, extent);
     }
 
     public Sampling build() {

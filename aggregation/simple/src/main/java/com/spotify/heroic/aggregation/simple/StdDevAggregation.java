@@ -9,29 +9,24 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Sampling;
 
 @JsonSerialize
-@JsonTypeName("sum")
-public class SumAggregation extends BucketAggregation<SumBucket> {
-    public SumAggregation(Sampling sampling) {
+@JsonTypeName("min")
+public class StdDevAggregation extends BucketAggregation<StdDevBucket> {
+    public StdDevAggregation(Sampling sampling) {
         super(sampling);
     }
 
     @JsonCreator
-    public static SumAggregation create(@JsonProperty("sampling") Sampling sampling) {
-        return new SumAggregation(sampling);
+    public static StdDevAggregation create(@JsonProperty("sampling") Sampling sampling) {
+        return new StdDevAggregation(sampling);
     }
 
     @Override
-    protected SumBucket buildBucket(long timestamp) {
-        return new SumBucket(timestamp);
+    protected StdDevBucket buildBucket(long timestamp) {
+        return new StdDevBucket(timestamp);
     }
 
     @Override
-    protected DataPoint build(SumBucket bucket) {
-        final long count = bucket.count();
-
-        if (count == 0)
-            return new DataPoint(bucket.timestamp(), Double.NaN);
-
+    protected DataPoint build(StdDevBucket bucket) {
         return new DataPoint(bucket.timestamp(), bucket.value());
     }
 }

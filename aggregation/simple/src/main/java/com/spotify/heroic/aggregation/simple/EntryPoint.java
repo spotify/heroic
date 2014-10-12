@@ -3,6 +3,7 @@ package com.spotify.heroic.aggregation.simple;
 import javax.inject.Inject;
 
 import com.netflix.astyanax.model.Composite;
+import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicEntryPoint;
 import com.spotify.heroic.aggregation.AggregationSerializer;
@@ -17,10 +18,14 @@ public class EntryPoint implements HeroicEntryPoint {
     @Inject
     private HeroicContext heroicContext;
 
+    private static final DoubleSerializer doubleSerializer = DoubleSerializer.get();
+
     private static final short SUM = 0x0001;
     private static final short AVERAGE = 0x0002;
     private static final short MAX = 0x0011;
     private static final short MIN = 0x0012;
+    private static final short STDDEV = 0x0021;
+    private static final short QUANTILE = 0x0022;
 
     @Override
     public void setup() {
@@ -77,6 +82,36 @@ public class EntryPoint implements HeroicEntryPoint {
                     @Override
                     public void serialize(Composite composite, MaxAggregation value) {
                         composite.addComponent(value.getSampling(), resolutionSerializer);
+                    }
+                });
+
+        heroicContext.registerAggregation(StdDevAggregation.class, StdDevAggregationQuery.class, STDDEV,
+                new AggregationSerializer.Serializer<StdDevAggregation>() {
+                    @Override
+                    public StdDevAggregation deserialize(Composite composite) {
+                        final Sampling sampling = composite.get(0, resolutionSerializer);
+                        return new StdDevAggregation(sampling);
+                    }
+
+                    @Override
+                    public void serialize(Composite composite, StdDevAggregation value) {
+                        composite.addComponent(value.getSampling(), resolutionSerializer);
+                    }
+                });
+
+        heroicContext.registerAggregation(QuantileAggregation.class, QuantileAggregationQuery.class, QUANTILE,
+                new AggregationSerializer.Serializer<QuantileAggregation>() {
+                    @Override
+                    public QuantileAggregation deserialize(Composite composite) {
+                        final Sampling sampling = composite.get(0, resolutionSerializer);
+                        final Double q = composite.get(1, doubleSerializer);
+                        return new QuantileAggregation(sampling, q);
+                    }
+
+                    @Override
+                    public void serialize(Composite composite, QuantileAggregation value) {
+                        composite.addComponent(value.getSampling(), resolutionSerializer);
+                        composite.addComponent(value.getQ(), doubleSerializer);
                     }
                 });
     }

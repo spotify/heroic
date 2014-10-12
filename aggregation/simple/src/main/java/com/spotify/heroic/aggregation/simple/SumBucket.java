@@ -8,6 +8,14 @@ import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.model.DataPoint;
 
+/**
+ * Bucket that keeps track of the amount of data points seen, and there summed value.
+ *
+ * Take care to not blindly trust {@link #value()} since it is initialized to 0 for simplicity. Always check
+ * {@link #count()}, which if zero indicates that the {@link #value()} is undefined (e.g. NaN).
+ *
+ * @author udoprog
+ */
 @Data
 public class SumBucket implements Bucket {
     private final long timestamp;
