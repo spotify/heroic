@@ -2,9 +2,7 @@ package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -23,6 +21,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.utils.BackendGroups;
 
 @RequiredArgsConstructor
 public class MetricManagerModule extends PrivateModule {
@@ -70,48 +69,8 @@ public class MetricManagerModule extends PrivateModule {
 
     @Provides
     @Named("backends")
-    public Map<String, List<MetricBackend>> buildBackends(Set<MetricBackend> backends) {
-        final Map<String, List<MetricBackend>> groups = new HashMap<>();
-
-        for (final MetricBackend backend : backends) {
-            List<MetricBackend> group = groups.get(backend.getGroup());
-
-            if (group == null) {
-                group = new ArrayList<>();
-                groups.put(backend.getGroup(), group);
-            }
-
-            group.add(backend);
-        }
-
-        return groups;
-    }
-
-    @Provides
-    @Named("defaultBackends")
-    public List<MetricBackend> defaultBackends(@Named("backends") Map<String, List<MetricBackend>> backends) {
-        if (defaultBackends == null) {
-            final List<MetricBackend> result = new ArrayList<>();
-
-            for (final Map.Entry<String, List<MetricBackend>> entry : backends.entrySet()) {
-                result.addAll(entry.getValue());
-            }
-
-            return result;
-        }
-
-        final List<MetricBackend> result = new ArrayList<>();
-
-        for (final String defaultBackend : defaultBackends) {
-            final List<MetricBackend> someResult = backends.get(defaultBackend);
-
-            if (someResult == null)
-                throw new IllegalArgumentException("No backend(s) available with id : " + defaultBackend);
-
-            result.addAll(someResult);
-        }
-
-        return result;
+    public BackendGroups<MetricBackend> defaultBackends(Set<MetricBackend> configured) {
+        return BackendGroups.build(configured, defaultBackends);
     }
 
     @Provides

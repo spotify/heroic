@@ -11,8 +11,9 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.utils.Grouped;
 
-public interface MetricBackend extends LifeCycle {
+public interface MetricBackend extends LifeCycle, Grouped {
     public String getGroup();
 
     /**

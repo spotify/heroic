@@ -9,7 +9,7 @@ import com.spotify.heroic.ingestion.exceptions.FatalIngestionException;
 import com.spotify.heroic.ingestion.exceptions.IngestionException;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.ClusteredMetricManager;
-import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.metric.exceptions.BufferEnqueueException;
 import com.spotify.heroic.metric.exceptions.MetricFormatException;
 import com.spotify.heroic.metric.model.WriteMetric;
 

@@ -12,7 +12,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Future;
-import com.spotify.heroic.async.Transformer;
+import com.spotify.heroic.async.Transform;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.http.HttpClientManager;
@@ -44,7 +44,7 @@ public class ClusterRPC {
     private boolean useLocal;
 
     @Data
-    private static class EntryTransformer implements Transformer<NodeMetadata, NodeRegistryEntry> {
+    private static class EntryTransformer implements Transform<NodeMetadata, NodeRegistryEntry> {
         private final HttpClientManager clients;
         private final NodeRegistryEntry localEntry;
         private final boolean useLocal;
@@ -84,14 +84,14 @@ public class ClusterRPC {
         }
     }
 
-    private Transformer<NodeMetadata, NodeRegistryEntry> transformerFor(URI uri) {
+    private Transform<NodeMetadata, NodeRegistryEntry> transformerFor(URI uri) {
         return new EntryTransformer(clients, localEntry(), useLocal, metadata, uri);
     }
 
     private Future<NodeMetadata> metadataFor(URI uri) {
         final HttpClientSession client = clients.newSession(uri, "rpc");
 
-        final Transformer<RpcMetadata, NodeMetadata> transformer = new Transformer<RpcMetadata, NodeMetadata>() {
+        final Transform<RpcMetadata, NodeMetadata> transformer = new Transform<RpcMetadata, NodeMetadata>() {
             @Override
             public NodeMetadata transform(final RpcMetadata r) throws Exception {
                 return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(), r.getCapabilities());

@@ -17,8 +17,8 @@ import com.spotify.heroic.aggregationcache.CacheOperationException;
 import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CachePutResult;
 import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
-import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.metric.model.MetricGroup;
 import com.spotify.heroic.metric.model.MetricGroups;
@@ -41,8 +41,7 @@ final class MergeCacheMisses implements Reducer<MetricGroups, MetricGroups> {
     private final CacheQueryResult cacheResult;
 
     @Override
-    public MetricGroups resolved(Collection<MetricGroups> results, Collection<Exception> errors,
-            Collection<CancelReason> cancelled) throws Exception {
+    public MetricGroups resolved(Collection<MetricGroups> results, Collection<CancelReason> cancelled) throws Exception {
 
         final MergeCacheMisses.JoinResult joinResults = joinResults(results);
         final List<MetricGroup> groups = buildDataPointGroups(joinResults);

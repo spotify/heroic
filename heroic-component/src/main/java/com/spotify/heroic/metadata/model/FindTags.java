@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,17 +36,9 @@ public class FindTags {
         }
     }
 
-    @Slf4j
     public static class SelfReducer implements Reducer<FindTags, FindTags> {
         @Override
-        public FindTags resolved(Collection<FindTags> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception {
-            for (final Exception e : errors)
-                log.error("Query failed", e);
-
-            if (!errors.isEmpty() || !cancelled.isEmpty())
-                throw new Exception("Query failed");
-
+        public FindTags resolved(Collection<FindTags> results, Collection<CancelReason> cancelled) throws Exception {
             final HashMap<String, Set<String>> tags = new HashMap<String, Set<String>>();
             int size = 0;
 

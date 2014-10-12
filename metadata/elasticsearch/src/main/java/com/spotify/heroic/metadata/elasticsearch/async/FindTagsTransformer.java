@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.index.query.FilterBuilder;
 
-import com.spotify.heroic.async.DeferredTransformer;
+import com.spotify.heroic.async.DelayedTransform;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.filter.AndFilter;
@@ -21,7 +21,7 @@ import com.spotify.heroic.metadata.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 
 @RequiredArgsConstructor
-public class FindTagsTransformer implements DeferredTransformer<FindTagKeys, FindTags> {
+public class FindTagsTransformer implements DelayedTransform<FindTagKeys, FindTags> {
     private final Executor executor;
     private final Client client;
     private final String index;

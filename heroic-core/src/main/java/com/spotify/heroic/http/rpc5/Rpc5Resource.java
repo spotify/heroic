@@ -46,7 +46,7 @@ public class Rpc5Resource {
     @POST
     @Path("/query")
     public void query(@Suspended final AsyncResponse response, Rpc5QueryBody query) throws Exception {
-        final Future<MetricGroups> callback = localMetrics.useGroup(query.getBackendGroup()).groupedQuery(
+        final Future<MetricGroups> callback = localMetrics.useGroup(query.getBackendGroup()).query(
                 query.getGroup(), query.getFilter(), query.getSeries(), query.getRange(), query.getAggregationGroup());
 
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);

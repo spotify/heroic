@@ -10,15 +10,14 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
-import com.spotify.heroic.async.ErrorTransformer;
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.ErrorTransformer;
 import com.spotify.heroic.async.Reducer;
-import com.spotify.heroic.async.Transformer;
+import com.spotify.heroic.async.Transform;
 import com.spotify.heroic.model.Statistics;
 
 @Data
@@ -44,17 +43,10 @@ public final class MetricGroups {
         return new MetricGroups(groups, statistics, errors);
     }
 
-    @Slf4j
-    private static class Merger implements Reducer<MetricGroups, MetricGroups> {
+    private static class SelfReducer implements Reducer<MetricGroups, MetricGroups> {
         @Override
-        public MetricGroups resolved(Collection<MetricGroups> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception {
-            for (final Exception e : errors)
-                log.error("Query failed", e);
-
-            for (final CancelReason cancel : cancelled)
-                log.error("Query cancelled: {}", cancel);
-
+        public MetricGroups resolved(Collection<MetricGroups> results, Collection<CancelReason> cancelled)
+                throws Exception {
             MetricGroups groups = MetricGroups.EMPTY;
 
             for (final MetricGroups r : results) {
@@ -65,9 +57,9 @@ public final class MetricGroups {
         }
     }
 
-    private static final Merger merger = new Merger();
+    private static final SelfReducer merger = new SelfReducer();
 
-    public static Merger merger() {
+    public static SelfReducer merger() {
         return merger;
     }
 
@@ -83,14 +75,14 @@ public final class MetricGroups {
         return new MetricGroups(groups, this.statistics.merge(other.statistics), errors);
     }
 
-    public static final Transformer<MetricGroups, MetricGroups> identity = new Transformer<MetricGroups, MetricGroups>() {
+    public static final Transform<MetricGroups, MetricGroups> identity = new Transform<MetricGroups, MetricGroups>() {
         @Override
         public MetricGroups transform(MetricGroups result) throws Exception {
             return result;
         }
     };
 
-    public static Transformer<MetricGroups, MetricGroups> identity() {
+    public static Transform<MetricGroups, MetricGroups> identity() {
         return identity;
     }
 
@@ -100,8 +92,7 @@ public final class MetricGroups {
         return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
     }
 
-    public static ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri,
-            final Map<String, String> shard) {
+    public static ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri, final Map<String, String> shard) {
         return new ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {

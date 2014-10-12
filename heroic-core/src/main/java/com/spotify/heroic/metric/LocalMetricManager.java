@@ -3,11 +3,11 @@ package com.spotify.heroic.metric;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -18,31 +18,27 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.aggregationcache.AggregationCache;
-import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.DelayedTransform;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
-import com.spotify.heroic.metric.async.FindSeriesTransformer;
-import com.spotify.heroic.metric.async.LocalFindAndRouteTransformer;
-import com.spotify.heroic.metric.async.PreparedQueryTransformer;
-import com.spotify.heroic.metric.error.BackendOperationException;
+import com.spotify.heroic.metadata.model.FindSeries;
+import com.spotify.heroic.metric.exceptions.BackendOperationException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
-import com.spotify.heroic.metric.model.FindTimeSeriesGroups;
 import com.spotify.heroic.metric.model.MetricGroups;
-import com.spotify.heroic.metric.model.PreparedQuery;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.utils.BackendGroups;
 
 @Slf4j
 @NoArgsConstructor
@@ -50,11 +46,7 @@ import com.spotify.heroic.statistics.MetricManagerReporter;
 public class LocalMetricManager implements MetricManager, LifeCycle {
     @Inject
     @Named("backends")
-    private Map<String, List<MetricBackend>> backends;
-
-    @Inject
-    @Named("defaultBackends")
-    private List<MetricBackend> defaultBackends;
+    private BackendGroups<MetricBackend> backends;
 
     @Inject
     @Named("groupLimit")
@@ -89,122 +81,8 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
                 }
             });
 
-    /**
-     * Used for deferring work to avoid deep stack traces.
-     */
-    private final Executor deferredExecutor = Executors.newFixedThreadPool(10);
-
-    public void flushWrites(List<BufferedWriteMetric> bufferedWrites) throws Exception {
-        final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
-
-        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
-
-        for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
-            callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
-        }
-
-        final Reducer<WriteBatchResult, WriteBatchResult> reducer = new Reducer<WriteBatchResult, WriteBatchResult>() {
-            @Override
-            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                for (final Exception e : errors)
-                    log.error("Write failed", e);
-
-                for (final CancelReason cancel : cancelled)
-                    log.error("Write cancelled: {}", cancel);
-
-                boolean allOk = true;
-                int requests = 0;
-
-                for (final WriteBatchResult r : results) {
-                    allOk = allOk && r.isOk();
-                    requests += r.getRequests();
-                }
-
-                return new WriteBatchResult(allOk && errors.isEmpty() && cancelled.isEmpty(), requests);
-            }
-        };
-
-        final Future<WriteBatchResult> callback = Futures.reduce(callbacks, reducer);
-
-        final WriteBatchResult result;
-
-        try {
-            result = callback.get();
-        } catch (final Exception e) {
-            throw new Exception("Write batch failed", e);
-        }
-
-        if (!result.isOk())
-            throw new Exception("Write batch failed (asynchronously)");
-    }
-
-    private Map<String, List<BufferedWriteMetric>> groupByBackendGroup(List<BufferedWriteMetric> writes) {
-        final Map<String, List<BufferedWriteMetric>> groups = new HashMap<>();
-
-        for (final BufferedWriteMetric w : writes) {
-            List<BufferedWriteMetric> group = groups.get(w.getBackendGroup());
-
-            if (group == null) {
-                group = new ArrayList<>();
-                groups.put(w.getBackendGroup(), group);
-            }
-
-            group.add(w);
-        }
-
-        return groups;
-    }
-
-    public List<MetricBackend> findBackends(Set<String> groups) {
-        final List<MetricBackend> result = new ArrayList<>();
-
-        for (final String group : groups) {
-            final List<MetricBackend> partial = findBackends(group);
-
-            if (partial == null)
-                continue;
-
-            result.addAll(partial);
-        }
-
-        if (result.isEmpty())
-            return null;
-
-        return ImmutableList.copyOf(result);
-    }
-
-    public List<MetricBackend> findBackends(String group) {
-        if (group == null)
-            return null;
-
-        final List<MetricBackend> result = backends.get(group);
-
-        if (result == null || result.isEmpty())
-            return null;
-
-        return ImmutableList.copyOf(result);
-    }
-
-    public MetricBackend findOneBackend(String group) {
-        final List<MetricBackend> result = findBackends(group);
-
-        if (result.isEmpty())
-            return null;
-
-        if (result.size() > 1)
-            throw new IllegalStateException("Too many backends matching '" + group + "' are available: " + result);
-
-        return result.get(0);
-    }
-
     public List<MetricBackend> getBackends() {
-        final List<MetricBackend> result = new ArrayList<>();
-
-        for (final Map.Entry<String, List<MetricBackend>> entry : backends.entrySet())
-            result.addAll(entry.getValue());
-
-        return ImmutableList.copyOf(result);
+        return backends.all();
     }
 
     /**
@@ -221,31 +99,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
 
         callbacks.addAll(writeCluster(backendGroup, writes));
 
-        final Reducer<WriteBatchResult, WriteBatchResult> reducer = new Reducer<WriteBatchResult, WriteBatchResult>() {
-            @Override
-            public WriteBatchResult resolved(Collection<WriteBatchResult> results, Collection<Exception> errors,
-                    Collection<CancelReason> cancelled) throws Exception {
-                for (final Exception e : errors) {
-                    log.error("Remote write failed", e);
-                }
-
-                for (final CancelReason reason : cancelled) {
-                    log.error("Remote write cancelled: " + reason.getMessage());
-                }
-
-                boolean ok = errors.isEmpty() && cancelled.isEmpty();
-
-                if (ok) {
-                    for (final WriteBatchResult r : results) {
-                        ok = ok && r.isOk();
-                    }
-                }
-
-                return new WriteBatchResult(ok, results.size() + errors.size() + cancelled.size());
-            }
-        };
-
-        return Futures.reduce(callbacks, reducer);
+        return Futures.reduce(callbacks, WriteBatchResult.merger());
     }
 
     private List<Future<WriteBatchResult>> writeCluster(final String backendGroup,
@@ -267,10 +121,76 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
 
     public Future<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation) {
-        final PreparedQueryTransformer transformer = new PreparedQueryTransformer(range, aggregation);
+        return metadata.findSeries(filter).register(reporter.reportFindTimeSeries())
+                .transform(findAllTimeSeries(groupBy, backendGroup, filter, range, aggregation))
+                .register(reporter.reportQueryMetrics());
+    }
 
-        return findAndRouteTimeSeries(backendGroup, filter, groupBy).transform(transformer).register(
-                reporter.reportQueryMetrics());
+    private DelayedTransform<FindSeries, MetricGroups> findAllTimeSeries(final List<String> groupBy,
+            final String backendGroup, final Filter filter, final DateRange range, final AggregationGroup aggregation) {
+        return new DelayedTransform<FindSeries, MetricGroups>() {
+            @Override
+            public Future<MetricGroups> transform(final FindSeries result) throws Exception {
+                final Map<Map<String, String>, Set<Series>> groups = setupMetricGroups(groupBy, result);
+
+                if (groups.size() > groupLimit)
+                    throw new IllegalArgumentException("The current query is too heavy! (More than " + groupLimit
+                            + " timeseries would be sent to your browser).");
+
+                final List<Future<MetricGroups>> futures = new ArrayList<>();
+
+                for (final Entry<Map<String, String>, Set<Series>> entry : groups.entrySet()) {
+                    final Map<String, String> key = entry.getKey();
+
+                    try {
+                        futures.add(runQuery(key, backendGroup, filter, range, aggregation, entry.getValue()));
+                    } catch (Exception e) {
+                        futures.add(Futures.resolved(MetricGroups.seriesError(key, e)));
+                    }
+                }
+
+                return Futures.reduce(futures, MetricGroups.merger());
+            }
+
+            private Future<MetricGroups> runQuery(final Map<String, String> key, final String backendGroup,
+                    final Filter filter, final DateRange range, final AggregationGroup aggregation,
+                    final Set<Series> series) throws BackendOperationException {
+                if (series.isEmpty())
+                    throw new IllegalArgumentException("No series found in group");
+
+                if (series.size() > groupLoadLimit)
+                    throw new IllegalArgumentException("More than " + groupLoadLimit
+                            + " original time series would be loaded from the backend.");
+
+                return useGroup(backendGroup).query(key, filter, series, range, aggregation);
+            }
+
+            private Map<Map<String, String>, Set<Series>> setupMetricGroups(final List<String> groupBy,
+                    final FindSeries result) {
+                final Map<Map<String, String>, Set<Series>> groups = new HashMap<>();
+
+                for (final Series series : result.getSeries()) {
+                    final Map<String, String> key = new HashMap<>();
+
+                    if (groupBy != null) {
+                        for (final String group : groupBy) {
+                            key.put(group, series.getTags().get(group));
+                        }
+                    }
+
+                    Set<Series> group = groups.get(key);
+
+                    if (group == null) {
+                        group = new HashSet<>();
+                        groups.put(key, group);
+                    }
+
+                    group.add(series);
+                }
+
+                return groups;
+            }
+        };
     }
 
     public MetricBackends useDefaultGroup() throws BackendOperationException {
@@ -281,12 +201,14 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         final List<MetricBackend> selected;
 
         if (group == null) {
-            if (defaultBackends == null)
+            final List<MetricBackend> defaults = backends.defaults();
+
+            if (defaults == null)
                 throw new BackendOperationException("No default backend configured");
 
-            selected = defaultBackends;
+            selected = defaults;
         } else {
-            selected = findBackends(group);
+            selected = backends.find(group);
         }
 
         if (selected == null || selected.isEmpty())
@@ -299,12 +221,14 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         final List<MetricBackend> selected;
 
         if (groups == null) {
-            if (defaultBackends == null)
+            final List<MetricBackend> defaults = backends.defaults();
+
+            if (defaults == null)
                 throw new BackendOperationException("No default backend configured");
 
-            selected = defaultBackends;
+            selected = defaults;
         } else {
-            selected = findBackends(groups);
+            selected = backends.find(groups);
         }
 
         if (selected == null || selected.isEmpty())
@@ -333,25 +257,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         if (alive.isEmpty())
             throw new BackendOperationException("No alive backends available");
 
-        return new MetricBackends(cache, reporter, disabled, alive);
-    }
-
-    /**
-     * Finds time series and routing the query to a specific remote Heroic instance.
-     *
-     * @param criteria
-     * @return
-     */
-    private Future<List<PreparedQuery>> findAndRouteTimeSeries(final String backendGroup, final Filter filter,
-            final List<String> groupBy) {
-        return findAllTimeSeries(filter, groupBy).transform(
-                new LocalFindAndRouteTransformer(this, filter, backendGroup, groupLimit, groupLoadLimit)).register(
-                reporter.reportFindTimeSeries());
-    }
-
-    private Future<FindTimeSeriesGroups> findAllTimeSeries(final Filter filter, List<String> groupBy) {
-        final FindSeriesTransformer transformer = new FindSeriesTransformer(groupBy);
-        return metadata.findSeries(filter).transform(transformer);
+        return new MetricBackendsImpl(cache, reporter, disabled, alive);
     }
 
     public void scheduleFlush() {
@@ -383,5 +289,45 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
     @Override
     public boolean isReady() {
         return false;
+    }
+
+    private void flushWrites(List<BufferedWriteMetric> bufferedWrites) throws Exception {
+        final Map<String, List<BufferedWriteMetric>> writes = groupByBackendGroup(bufferedWrites);
+
+        final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
+
+        for (final Map.Entry<String, List<BufferedWriteMetric>> entry : writes.entrySet()) {
+            callbacks.add(routeWrites(entry.getKey(), entry.getValue()));
+        }
+
+        final Future<WriteBatchResult> callback = Futures.reduce(callbacks, WriteBatchResult.merger());
+
+        final WriteBatchResult result;
+
+        try {
+            result = callback.get();
+        } catch (final Exception e) {
+            throw new Exception("Write batch failed", e);
+        }
+
+        if (!result.isOk())
+            throw new Exception("Write batch failed (asynchronously)");
+    }
+
+    private Map<String, List<BufferedWriteMetric>> groupByBackendGroup(List<BufferedWriteMetric> writes) {
+        final Map<String, List<BufferedWriteMetric>> groups = new HashMap<>();
+
+        for (final BufferedWriteMetric w : writes) {
+            List<BufferedWriteMetric> group = groups.get(w.getBackendGroup());
+
+            if (group == null) {
+                group = new ArrayList<>();
+                groups.put(w.getBackendGroup(), group);
+            }
+
+            group.add(w);
+        }
+
+        return groups;
     }
 }

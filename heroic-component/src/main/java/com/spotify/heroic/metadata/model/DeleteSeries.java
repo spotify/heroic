@@ -15,12 +15,8 @@ public class DeleteSeries {
 
     public static class SelfReducer implements Reducer<DeleteSeries, DeleteSeries> {
         @Override
-        public DeleteSeries resolved(Collection<DeleteSeries> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception {
-
-            if (!errors.isEmpty() || !cancelled.isEmpty())
-                throw new Exception("Delete failed");
-
+        public DeleteSeries resolved(Collection<DeleteSeries> results, Collection<CancelReason> cancelled)
+                throws Exception {
             int deleted = 0;
 
             for (final DeleteSeries result : results) {

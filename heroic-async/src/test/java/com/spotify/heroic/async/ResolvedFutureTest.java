@@ -30,7 +30,7 @@ public class ResolvedFutureTest {
     @Test
     public void testTransform() throws Exception {
         final Future<Boolean> c = Futures.resolved(true);
-        final Transformer<Boolean, Integer> transformer = Mockito.mock(Transformer.class);
+        final Transform<Boolean, Integer> transformer = Mockito.mock(Transform.class);
         Mockito.when(transformer.transform(true)).thenReturn(42);
         c.transform(transformer).register(handle);
     }
@@ -38,7 +38,7 @@ public class ResolvedFutureTest {
     @Test
     public void testDeferredTransform() throws Exception {
         final Future<Boolean> c = Futures.resolved(true);
-        final DeferredTransformer<Boolean, Integer> transformer = Mockito.mock(DeferredTransformer.class);
+        final DelayedTransform<Boolean, Integer> transformer = Mockito.mock(DelayedTransform.class);
         Mockito.when(transformer.transform(true)).thenReturn(Futures.resolved(42));
         c.transform(transformer).register(handle);
     }

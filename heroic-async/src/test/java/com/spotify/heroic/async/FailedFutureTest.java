@@ -31,7 +31,7 @@ public class FailedFutureTest {
     @Test
     public void testTransform() throws Exception {
         final Future<Boolean> c = Futures.failed(error);
-        final Transformer<Boolean, Integer> transformer = Mockito.mock(Transformer.class);
+        final Transform<Boolean, Integer> transformer = Mockito.mock(Transform.class);
         c.transform(transformer).register(handle);
         Mockito.verify(transformer, Mockito.never()).transform(Mockito.anyBoolean());
     }
@@ -39,7 +39,7 @@ public class FailedFutureTest {
     @Test
     public void testDeferredTransform() throws Exception {
         final Future<Boolean> c = Futures.failed(error);
-        final DeferredTransformer<Boolean, Integer> transformer = Mockito.mock(DeferredTransformer.class);
+        final DelayedTransform<Boolean, Integer> transformer = Mockito.mock(DelayedTransform.class);
         c.transform(transformer).register(handle);
         Mockito.verify(transformer, Mockito.never()).transform(Mockito.anyBoolean());
     }

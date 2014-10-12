@@ -23,6 +23,7 @@ import com.google.common.collect.Multimap;
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.async.Transform;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeMetadata;
@@ -32,8 +33,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MatchTagFilter;
 import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.ClusteredMetadataManager;
-import com.spotify.heroic.metric.async.MetricGroupsTransformer;
-import com.spotify.heroic.metric.error.BufferEnqueueException;
+import com.spotify.heroic.metric.exceptions.BufferEnqueueException;
 import com.spotify.heroic.metric.exceptions.MetricFormatException;
 import com.spotify.heroic.metric.exceptions.MetricQueryException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
@@ -167,8 +167,17 @@ public class ClusteredMetricManager implements LifeCycle {
                     MetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
-        return Futures.reduce(callbacks, MetricGroups.merger()).transform(new MetricGroupsTransformer(rounded))
+        return Futures.reduce(callbacks, MetricGroups.merger()).transform(toQueryMetricsResult(rounded))
                 .register(reporter.reportQueryMetrics());
+    }
+
+    private Transform<MetricGroups, QueryMetricsResult> toQueryMetricsResult(final DateRange rounded) {
+        return new Transform<MetricGroups, QueryMetricsResult>() {
+            @Override
+            public QueryMetricsResult transform(MetricGroups result) throws Exception {
+                return new QueryMetricsResult(rounded, result);
+            }
+        };
     }
 
     private Filter modifyFilter(NodeMetadata metadata, Filter filter) {

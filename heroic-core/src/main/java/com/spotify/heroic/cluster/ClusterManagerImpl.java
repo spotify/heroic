@@ -1,5 +1,7 @@
 package com.spotify.heroic.cluster;
 
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -13,10 +15,13 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.Lists;
+import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.DelayedTransform;
+import com.spotify.heroic.async.ErrorReducer;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
-import com.spotify.heroic.cluster.async.MetadataUriTransformer;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import com.spotify.heroic.http.rpc.RpcNodeException;
 import com.spotify.heroic.injection.LifeCycle;
 
 /**
@@ -80,8 +85,52 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         }
 
         log.info("Cluster refresh in progress");
+        return discovery.find().transform(updateRegistry());
+    }
 
-        return discovery.find().transform(new MetadataUriTransformer(rpc, registry));
+    private DelayedTransform<Collection<URI>, Void> updateRegistry() {
+        return new DelayedTransform<Collection<URI>, Void>() {
+            @Override
+            public Future<Void> transform(final Collection<URI> nodes) throws Exception {
+                final List<Future<NodeRegistryEntry>> callbacks = new ArrayList<>(nodes.size());
+
+                for (final URI uri : nodes)
+                    callbacks.add(rpc.resolve(uri));
+
+                return Futures.reduce(callbacks, addEntriesToRegistry(nodes.size()));
+            }
+        };
+    }
+
+    private ErrorReducer<NodeRegistryEntry, Void> addEntriesToRegistry(final int size) {
+        return new ErrorReducer<NodeRegistryEntry, Void>() {
+            @Override
+            public Void reduce(Collection<NodeRegistryEntry> results, Collection<CancelReason> cancelled,
+                    Collection<Exception> errors) throws Exception {
+                for (final Exception error : errors)
+                    handleError(error);
+
+                for (final CancelReason reason : cancelled)
+                    log.error("Metadata refresh cancelled: " + reason);
+
+                log.info(String.format("Updated cluster registry with %d nodes (%d failed, %d cancelled)",
+                        results.size(), errors.size(), cancelled.size()));
+
+                registry.set(new NodeRegistry(new ArrayList<>(results), size));
+                return null;
+            }
+
+            private void handleError(final Exception error) {
+                if (error instanceof RpcNodeException) {
+                    final RpcNodeException e = (RpcNodeException) error;
+                    final String cause = e.getCause() == null ? "no cause" : e.getCause().getMessage();
+                    log.error(String.format("Failed to refresh metadata for %s: %s (%s)", e.getUri(), e.getMessage(),
+                            cause));
+                } else {
+                    log.error("Failed to refresh metadata", error);
+                }
+            }
+        };
     }
 
     @Override

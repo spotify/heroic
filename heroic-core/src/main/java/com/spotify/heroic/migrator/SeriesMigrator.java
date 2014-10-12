@@ -65,17 +65,8 @@ public class SeriesMigrator {
                 final DateRange range) throws Exception {
             final Reducer<FetchData, List<DataPoint>> reducer = new Reducer<FetchData, List<DataPoint>>() {
                 @Override
-                public List<DataPoint> resolved(Collection<FetchData> results, Collection<Exception> errors,
-                        Collection<CancelReason> cancelled) throws Exception {
-                    for (final Exception e : errors)
-                        log.error("{}: Failed to read entry", session, e);
-
-                    for (final CancelReason reason : cancelled)
-                        log.error("{}, Entry read cancelled: {}", session, reason);
-
-                    if (errors.size() > 0 || cancelled.size() > 0)
-                        throw new Exception("Errors during read");
-
+                public List<DataPoint> resolved(Collection<FetchData> results, Collection<CancelReason> cancelled)
+                        throws Exception {
                     final List<DataPoint> datapoints = new ArrayList<>();
 
                     for (final FetchData r : results)
@@ -87,7 +78,7 @@ public class SeriesMigrator {
                 }
             };
 
-            final List<DataPoint> datapoints = Futures.reduce(source.query(series, range), reducer).get();
+            final List<DataPoint> datapoints = Futures.reduce(source.fetchAll(series, range), reducer).get();
 
             log.info(String.format("%s: Writing %d datapoint(s) for series: %s", session, datapoints.size(), series));
 

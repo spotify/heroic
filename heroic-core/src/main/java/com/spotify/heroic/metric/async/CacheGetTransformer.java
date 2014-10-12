@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregationcache.AggregationCache;
 import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
-import com.spotify.heroic.async.DeferredTransformer;
+import com.spotify.heroic.async.DelayedTransform;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.metric.model.MetricGroup;
@@ -23,7 +23,7 @@ import com.spotify.heroic.model.Statistics;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public abstract class CacheGetTransformer implements DeferredTransformer<CacheQueryResult, MetricGroups> {
+public abstract class CacheGetTransformer implements DelayedTransform<CacheQueryResult, MetricGroups> {
     private final AggregationCache cache;
 
     @Override

@@ -5,7 +5,7 @@ refreshClusterSchedule: "0 */5 * * * ?"
 cluster:
   useLocal: true
   tags:
-    site: lon
+    site: sto
   discovery:
     type: static
     nodes:
@@ -15,7 +15,7 @@ metrics:
   backends:
     - type: cassandra2
       group: heroic
-      seeds: lon3-kairosdbcassandra-a2:9160,lon3-kairosdbcassandra-a3:9160,lon3-kairosdbcassandra-a4:9160
+      seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
 
 metadata:
   backends:

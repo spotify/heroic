@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.Reducer;
@@ -18,17 +17,9 @@ public class FindKeys {
     private final int size;
     private final int duplicates;
 
-    @Slf4j
     public static class SelfReducer implements Reducer<FindKeys, FindKeys> {
         @Override
-        public FindKeys resolved(Collection<FindKeys> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception {
-            for (final Exception e : errors)
-                log.error("Query failed", e);
-
-            if (!errors.isEmpty() || !cancelled.isEmpty())
-                throw new Exception("Query failed");
-
+        public FindKeys resolved(Collection<FindKeys> results, Collection<CancelReason> cancelled) throws Exception {
             final Set<String> keys = new HashSet<>();
             int size = 0;
             int duplicates = 0;

@@ -21,7 +21,7 @@ import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.error.BackendOperationException;
+import com.spotify.heroic.metric.exceptions.BackendOperationException;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
@@ -44,7 +44,7 @@ public class LocalClusterNode implements ClusterNode {
     public Future<MetricGroups> query(final String backendGroup, final Filter filter, final Map<String, String> group,
             final AggregationGroup aggregation, final DateRange range, final Set<Series> series) {
         try {
-            return metrics.useGroup(backendGroup).groupedQuery(group, filter, series, range, aggregation);
+            return metrics.useGroup(backendGroup).query(group, filter, series, range, aggregation);
         } catch (final BackendOperationException e) {
             return Futures.failed(e);
         }

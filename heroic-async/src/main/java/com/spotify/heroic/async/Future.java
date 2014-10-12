@@ -7,27 +7,29 @@ import com.spotify.heroic.async.exceptions.CancelledException;
 import com.spotify.heroic.async.exceptions.FailedException;
 
 /**
- * Interface for asynchronous callbacks with the ability to subscribe to interesting events.
+ * Interface for asynchronous futures with the ability to subscribe to interesting events.
  *
  * The available events are.
  *
  * <ul>
- * <li>resolved, for when a callback has been resolved with a value.</li>
- * <li>failed, for when a callback failed to resolve because of an exception.</li>
- * <li>cancelled, for when a callback will not resolve, with a reason {@link CancelReason}.</li>
+ * <li>resolved, for when a future has been resolved with a value.</li>
+ * <li>failed, for when a future failed to resolve because of an exception.</li>
+ * <li>cancelled, for when a future will not resolve, with a reason {@link CancelReason}.</li>
  * </ul>
  *
  * @author udoprog
  *
  * @param <T>
- *            The type being realized in the callback's finish method.
+ *            The type being realized in the future's finish method.
  */
 public interface Future<T> {
     public static enum State {
         // state when it's not been resolved, failed or cancelled.
         READY,
         // every other state.
-        FAILED, RESOLVED, CANCELLED
+        FAILED, RESOLVED, CANCELLED,
+        // mid-flight finalizing.
+        FINALIZING
     }
 
     public Future<T> cancel(CancelReason reason);
@@ -37,33 +39,33 @@ public interface Future<T> {
     public Future<T> resolve(T result);
 
     /**
-     * Resolve this callback asynchronously using the resolver. This is a common pattern which is provided because the
+     * Resolve this future asynchronously using the resolver. This is a common pattern which is provided because the
      * implementation details are important.
      *
-     * 1. Since anything scheduled on an executor is viable for execution 'later', the callback might have already been
+     * 1. Since anything scheduled on an executor is viable for execution 'later', the future might have already been
      * resolved or cancelled. It is therefore important to check {@link #isReady()} before calling {@link #resolve(T)}.
      *
-     * 2. Since the resolving context might throw an exception, it is important that this caught and that the callback
-     * is marked as 'failed' appropriately by calling {@link #fail(Exception)}.
+     * 2. Since the resolving context might throw an exception, it is important that this caught and that the future is
+     * marked as 'failed' appropriately by calling {@link #fail(Exception)}.
      *
      * If you are willing to ensure these two behaviors, the Executor can be used directly.
      *
      * @param executor
      *            Executor to schedule the resolver task on.
      * @param resolver
-     *            The resolver to use for resolving this callback.
-     * @return This callback.
+     *            The resolver to use for resolving this future.
+     * @return This future.
      */
     public Future<T> resolve(Executor executor, Resolver<T> resolver);
 
     /**
-     * Register functions to be fired for any of the possible events for a callback.
+     * Register functions to be fired for any of the possible events for a future.
      *
      * These events are; cancelled, failed or resolved.
      *
      * @param handle
      *            Contains functions to be fired.
-     * @return This callback.
+     * @return This future.
      */
     public Future<T> register(FutureHandle<T> handle);
 
@@ -73,110 +75,112 @@ public interface Future<T> {
      *
      * @param handle
      *            Contains functions to be fired.
-     * @return This callback.
+     * @return This future.
      */
     public Future<T> register(ObjectHandle handle);
 
     /**
-     * Register a function to be fired if this callback is finished (either cancelled or failed).
+     * Register a function to be fired if this future is finished (either cancelled or failed).
      *
      * @param finishable
      *            Function to be fired.
-     * @return This callback.
+     * @return This future.
      */
     public Future<T> register(Finishable finishable);
 
     /**
-     * Register a function to be fired if this callback is cancelled.
+     * Register a function to be fired if this future is cancelled.
      *
      * @param cancellable
      *            Function to be fired.
-     * @return This callback.
+     * @return This future.
      */
     public Future<T> register(Cancellable cancellable);
 
     /**
-     * Make this callback depend on another and vice-versa.
+     * Make this future depend on another and vice-versa.
      *
-     * @param callback
-     *            Callback to depend on.
-     * @return This callback.
+     * @param future
+     *            Future to depend on.
+     * @return This future.
      */
-    public Future<T> register(Future<T> callback);
+    public Future<T> register(Future<T> future);
 
     /**
-     * Check if callback is ready.
+     * Check if future is ready.
      *
-     * If not, any operation associated with the callback should be avoided as much as possible, because;
+     * If not, any operation associated with the future should be avoided as much as possible, because;
      *
      * a) A result is already available. b) Some other required part of the computation failed, meaning that a result is
      * useless anyways. c) The request was cancelled.
      *
-     * @return Boolean indiciating if this callback is ready or not.
+     * @return Boolean indiciating if this future is ready or not.
      */
     public boolean isReady();
 
     /**
-     * Resolve the value of a callback using a collection of callbacks.
+     * Resolve the value of a future using a collection of futures.
      *
      * <pre>
-     * List<Callback<C>> - *using reducer* -> Callback<T> (this)
+     * List<Future<C>> - *using reducer* -> Future<T> (this)
      * </pre>
      *
-     * The group will be connected to this callback in that it's result will finish this callback and any cancellations
-     * of this callback will cancel the entire group.
+     * The group will be connected to this future in that it's result will finish this future and any cancellations of
+     * this future will cancel the entire group.
      *
      * <pre>
      * {@code
-     *   List<Callback<Integer>> callbacks = asyncListOperation();
+     *   List<Future<Integer>> futures = asyncListOperation();
      * 
-     *   Callback<Integer> callback = ConcurrentCallback.newReduce(callbacks, Callback.Reducer<Integer, Integer>() {
+     *   Future<Integer> future = ConcurrentFuture.newReduce(futures, Future.Reducer<Integer, Integer>() {
      *     Integer resolved(Collection<Integer> results, Collection<Exception> errors, Collection<CancelReason> cancelled) {
      *       return sum(results);
      *     }
      *   }
      * 
-     *   # use callback
+     *   # use future
      * }
      * </pre>
      *
-     * @param callbacks
-     *            Collection of callbacks to reduce.
+     * @param futures
+     *            Collection of futures to reduce.
      * @param reducer
      *            Function responsible for reducing the collection into a single object.
-     * @return A new callback with the generic value <T>.
+     * @return A new future with the generic value <T>.
      */
-    public <C> Future<T> reduce(List<Future<C>> callbacks, final Reducer<C, T> reducer);
+    public <C> Future<T> reduce(List<Future<C>> futures, final Reducer<C, T> reducer);
+
+    public <C> Future<T> reduce(List<Future<C>> futures, final ErrorReducer<C, T> error);
 
     /**
-     * Resolve the value of a callback using a collection of callbacks. Similar to {@link #reduce(List, Reducer)} but
-     * using the {@link StreamReducer} to receive results as they arrive. The benefit of a streamed approach is that
+     * Resolve the value of a future using a collection of futures. Similar to {@link #reduce(List, Reducer)} but using
+     * the {@link StreamReducer} to receive results as they arrive. The benefit of a streamed approach is that
      * intermittent results do not have to be kept in memory.
      *
      * <pre>
      * {@code
-     * List<Callback<C>> - *using stream reducer* -> Callback<T> (this)
+     * List<Future<C>> - *using stream reducer* -> Future<T> (this)
      * }
      * </pre>
      *
-     * The group will be connected to this callback in that it's result will finish this callback. Any cancellations of
-     * this callback will cancel the entire collection of callbacks.
+     * The group will be connected to this future in that it's result will finish this future. Any cancellations of this
+     * future will cancel the entire collection of futures.
      *
      * <pre>
      * {@code
-     *   List<Callback<Integer>> callbacks = asyncListOperation();
+     *   List<Future<Integer>> futures = asyncListOperation();
      * 
-     *   Callback<Integer> callback = ConcurrentCallback.newReduce(callbacks, new Callback.StreamReducer<Integer, Integer>() {
+     *   Future<Integer> future = ConcurrentFuture.newReduce(futures, new Future.StreamReducer<Integer, Integer>() {
      *     final AtomicInteger value = new AtomicInteger(0);
      * 
-     *     void finish(Callback<Integer> callback, Integer result) {
+     *     void finish(Future<Integer> future, Integer result) {
      *       value.addAndGet(result);
      *     }
      * 
-     *     void failed(Callback<Integer> callback, Exception error) {
+     *     void failed(Future<Integer> future, Exception error) {
      *     }
      * 
-     *     void cancel(Callback<Integer> callback, CancelReason reason) throws Exception {
+     *     void cancel(Future<Integer> future, CancelReason reason) throws Exception {
      *     }
      * 
      *     Double resolved(int successful, int failed, int cancelled) throws Exception {
@@ -184,35 +188,35 @@ public interface Future<T> {
      *     }
      *   });
      * 
-     *   # use callback
+     *   # use future
      * }
      * </pre>
      *
-     * @param callbacks
-     *            Collection of callbacks to reduce.
+     * @param futures
+     *            Collection of futures to reduce.
      * @param reducer
      *            Function responsible for reducing the collection into a single object.
-     * @return A new callback with the generic value <T>.
+     * @return A new future with the generic value <T>.
      */
-    public <C> Future<T> reduce(List<Future<C>> callbacks, final StreamReducer<C, T> reducer);
+    public <C> Future<T> reduce(List<Future<C>> futures, final StreamReducer<C, T> reducer);
 
     /**
-     * Transforms the value of one callback into another using a deferred transformer function.
+     * Transforms the value of one future into another using a deferred transformer function.
      *
      * <pre>
-     * Callback<T> (this) - *using deferred transformer* -> Callback<C>
+     * Future<T> (this) - *using deferred transformer* -> Future<C>
      * </pre>
      *
-     * A deferred transformer is expected to return a compatible callback that when resolved will resolve the callback
-     * that this function returns.
+     * A deferred transformer is expected to return a compatible future that when resolved will resolve the future that
+     * this function returns.
      *
      * <pre>
      * {@code
-     *   Callback<Integer> first = asyncOperation();
+     *   Future<Integer> first = asyncOperation();
      * 
-     *   Callback<Double> second = callback.transform(new Transformer<Integer, Double>() {
-     *     void transform(Integer result, Callback<Double> callback) {
-     *       callback.finish(result.doubleValue());
+     *   Future<Double> second = first.transform(new Transformer<Integer, Double>() {
+     *     void transform(Integer result, Future<Double> future) {
+     *       future.finish(result.doubleValue());
      *     }
      *   };
      * 
@@ -222,24 +226,24 @@ public interface Future<T> {
      *
      * @param transformer
      *            The function to use when transforming the value.
-     * @return A callback of type <C> which resolves with the transformed value.
+     * @return A future of type <C> which resolves with the transformed value.
      */
-    public <C> Future<C> transform(DeferredTransformer<T, C> transformer);
+    public <C> Future<C> transform(DelayedTransform<T, C> transformer);
 
     /**
-     * Transforms the value of this callback into another type using a transformer function.
+     * Transforms the value of this future into another type using a transformer function.
      *
      * <pre>
-     * Callback<T> (this) - *using transformer* -> Callback<C>
+     * Future<T> (this) - *using transformer* -> Future<C>
      * </pre>
      *
      * Use this if the transformation performed does not require any more async operations.
      *
      * <pre>
      * {@code
-     *   Callback<Integer> first = asyncOperation();
+     *   Future<Integer> first = asyncOperation();
      * 
-     *   Callback<Double> second = callback.transform(new Transformer<Integer, Double>() {
+     *   Future<Double> second = future.transform(new Transformer<Integer, Double>() {
      *     Double transform(Integer result) {
      *       return result.doubleValue();
      *     }
@@ -252,16 +256,16 @@ public interface Future<T> {
      * @param transformer
      * @return
      */
-    public <C> Future<C> transform(Transformer<T, C> transformer);
+    public <C> Future<C> transform(Transform<T, C> transformer);
 
-    public <C> Future<C> transform(Transformer<T, C> transformer, ErrorTransformer<C> error);
+    public <C> Future<C> transform(Transform<T, C> transformer, ErrorTransformer<C> error);
 
     /**
      * Block until result is available.
      *
-     * @return The result of this callback being resolved.
+     * @return The result of this future being resolved.
      * @throws Exception
-     *             If the callback being resolved threw an exception.
+     *             If the future being resolved threw an exception.
      */
     public T get() throws InterruptedException, CancelledException, FailedException;
 }

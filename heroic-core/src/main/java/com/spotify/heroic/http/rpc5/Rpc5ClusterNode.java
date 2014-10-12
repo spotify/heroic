@@ -9,7 +9,7 @@ import lombok.Data;
 
 import com.spotify.heroic.aggregation.AggregationGroup;
 import com.spotify.heroic.async.Future;
-import com.spotify.heroic.async.Transformer;
+import com.spotify.heroic.async.Transform;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.http.HttpClientSession;
@@ -28,14 +28,14 @@ import com.spotify.heroic.model.Series;
 public class Rpc5ClusterNode implements ClusterNode {
     private final HttpClientSession client;
 
-    private static final Transformer<Rpc5MetricGroups, MetricGroups> QUERY = new Transformer<Rpc5MetricGroups, MetricGroups>() {
+    private static final Transform<Rpc5MetricGroups, MetricGroups> QUERY = new Transform<Rpc5MetricGroups, MetricGroups>() {
         @Override
         public MetricGroups transform(Rpc5MetricGroups result) throws Exception {
             return MetricGroups.build(result.getGroups(), result.getStatistics(), result.getErrors());
         }
     };
 
-    private static final Transformer<RpcWriteResult, WriteBatchResult> WRITE = new Transformer<RpcWriteResult, WriteBatchResult>() {
+    private static final Transform<RpcWriteResult, WriteBatchResult> WRITE = new Transform<RpcWriteResult, WriteBatchResult>() {
         @Override
         public WriteBatchResult transform(RpcWriteResult result) throws Exception {
             return new WriteBatchResult(result.isOk(), 1);

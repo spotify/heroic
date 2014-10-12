@@ -10,6 +10,5 @@ import java.util.Collection;
  * @author udoprog
  */
 public interface Reducer<C, R> {
-    R resolved(Collection<C> results, Collection<Exception> errors, Collection<CancelReason> cancelled)
-            throws Exception;
+    R resolved(Collection<C> results, Collection<CancelReason> cancelled) throws Exception;
 }

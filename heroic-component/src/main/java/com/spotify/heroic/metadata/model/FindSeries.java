@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.Reducer;
@@ -19,17 +18,9 @@ public class FindSeries {
     private final int size;
     private final int duplicates;
 
-    @Slf4j
     public static class SelfReducer implements Reducer<FindSeries, FindSeries> {
         @Override
-        public FindSeries resolved(Collection<FindSeries> results, Collection<Exception> errors,
-                Collection<CancelReason> cancelled) throws Exception {
-            for (final Exception e : errors)
-                log.error("Query failed", e);
-
-            if (!errors.isEmpty() || !cancelled.isEmpty())
-                throw new Exception("Query failed");
-
+        public FindSeries resolved(Collection<FindSeries> results, Collection<CancelReason> cancelled) throws Exception {
             final Set<Series> series = new HashSet<Series>();
             int size = 0;
             int duplicates = 0;
