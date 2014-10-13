@@ -14,10 +14,11 @@ MVN=${MAVEN} -D maven.test.skip=true -D user.home=$(MAVEN_HOME) -s debian/settin
 	dh $@
 
 override_dh_auto_clean:
+	rm -f heroic.jar
 	rm -rf build
 	rm -rf $(MAVEN_HOME)
 	$(MVN) clean
 
 override_dh_auto_build:
 	$(MVN) -Ddeb.skip=true package
-	mv heroic-service/target/heroic-0.0.1-SNAPSHOT.jar heroic-service/target/heroic.jar
+	mv heroic-service/target/heroic-service-0.0.1-SNAPSHOT.jar heroic.jar
