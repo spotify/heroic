@@ -7,6 +7,7 @@ import java.util.Map;
 import lombok.Data;
 
 import com.spotify.heroic.async.Future;
+import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.injection.LifeCycle;
 

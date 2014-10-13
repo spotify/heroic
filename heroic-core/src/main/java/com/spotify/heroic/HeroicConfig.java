@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.consumer.ConsumerModule;
-import com.spotify.heroic.http.HttpClientManagerModule;
+import com.spotify.heroic.httpclient.HttpClientManagerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;

@@ -17,6 +17,7 @@ import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeMetadata;
 
 @RequiredArgsConstructor

@@ -13,7 +13,7 @@ import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.NodeCapability;
+import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.model.DeleteSeries;

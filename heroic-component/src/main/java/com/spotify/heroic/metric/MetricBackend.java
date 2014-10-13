@@ -14,6 +14,7 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.utils.Grouped;
 
 public interface MetricBackend extends LifeCycle, Grouped {
+    @Override
     public String getGroup();
 
     /**

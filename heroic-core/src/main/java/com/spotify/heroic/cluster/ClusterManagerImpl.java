@@ -20,8 +20,9 @@ import com.spotify.heroic.async.DelayedTransform;
 import com.spotify.heroic.async.ErrorReducer;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Futures;
+import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.rpc.RpcNodeException;
+import com.spotify.heroic.httpclient.exceptions.RpcNodeException;
 import com.spotify.heroic.injection.LifeCycle;
 
 /**

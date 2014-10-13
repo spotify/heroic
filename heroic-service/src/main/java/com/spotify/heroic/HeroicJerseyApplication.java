@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.name.Names;
+import com.spotify.heroic.cluster.httprpc.HttpRpcResource;
 import com.spotify.heroic.http.HeroicResource;
 
 /**
@@ -63,6 +64,7 @@ public class HeroicJerseyApplication extends ResourceConfig {
 
         // Resources.
         packages(HeroicResource.class.getPackage().getName());
+        packages(HttpRpcResource.class.getPackage().getName());
 
         register(JacksonFeature.class);
     }

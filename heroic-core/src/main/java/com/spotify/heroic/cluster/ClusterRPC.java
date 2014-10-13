@@ -13,14 +13,16 @@ import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.Transform;
+import com.spotify.heroic.cluster.httprpc.HttpRpcMetadata;
+import com.spotify.heroic.cluster.httprpc.rpc4.Rpc4ClusterNode;
+import com.spotify.heroic.cluster.httprpc.rpc5.Rpc5ClusterNode;
+import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.model.NodeMetadataImpl;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.http.HttpClientManager;
-import com.spotify.heroic.http.HttpClientSession;
-import com.spotify.heroic.http.rpc.RpcMetadata;
-import com.spotify.heroic.http.rpc.RpcNodeException;
-import com.spotify.heroic.http.rpc4.Rpc4ClusterNode;
-import com.spotify.heroic.http.rpc5.Rpc5ClusterNode;
+import com.spotify.heroic.httpclient.HttpClientManager;
+import com.spotify.heroic.httpclient.HttpClientSession;
+import com.spotify.heroic.httpclient.exceptions.RpcNodeException;
 import com.spotify.heroic.metadata.MetadataManager;
 
 @RequiredArgsConstructor
@@ -91,14 +93,14 @@ public class ClusterRPC {
     private Future<NodeMetadata> metadataFor(URI uri) {
         final HttpClientSession client = clients.newSession(uri, "rpc");
 
-        final Transform<RpcMetadata, NodeMetadata> transformer = new Transform<RpcMetadata, NodeMetadata>() {
+        final Transform<HttpRpcMetadata, NodeMetadata> transformer = new Transform<HttpRpcMetadata, NodeMetadata>() {
             @Override
-            public NodeMetadata transform(final RpcMetadata r) throws Exception {
-                return new NodeMetadata(r.getVersion(), r.getId(), r.getTags(), r.getCapabilities());
+            public NodeMetadata transform(final HttpRpcMetadata r) throws Exception {
+                return new NodeMetadataImpl(r.getVersion(), r.getId(), r.getTags(), r.getCapabilities());
             }
         };
 
-        return client.get(RpcMetadata.class, "metadata").transform(transformer);
+        return client.get(HttpRpcMetadata.class, "metadata").transform(transformer);
     }
 
     public NodeRegistryEntry localEntry() {
@@ -117,6 +119,6 @@ public class ClusterRPC {
 
     public static NodeMetadata localMetadata(UUID localId, Map<String, String> localTags,
             Set<NodeCapability> capabilities) {
-        return new NodeMetadata(CURRENT_VERSION, localId, localTags, capabilities);
+        return new NodeMetadataImpl(CURRENT_VERSION, localId, localTags, capabilities);
     }
 }
