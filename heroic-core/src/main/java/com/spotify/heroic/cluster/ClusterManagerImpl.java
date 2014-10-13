@@ -79,7 +79,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
 
     @Override
     public Future<Void> refresh() {
-        if (discovery == null) {
+        if (discovery instanceof ClusterDiscoveryModule.Null) {
             log.info("No discovery mechanism configured");
             registry.set(new NodeRegistry(Lists.newArrayList(rpc.localEntry()), 1));
             return Futures.resolved(null);
