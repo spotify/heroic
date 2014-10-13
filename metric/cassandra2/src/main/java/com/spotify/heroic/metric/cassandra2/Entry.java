@@ -5,7 +5,7 @@ import javax.inject.Inject;
 import com.spotify.heroic.ConfigurationContext;
 import com.spotify.heroic.HeroicEntryPoint;
 
-public class EntryPoint implements HeroicEntryPoint {
+public class Entry implements HeroicEntryPoint {
     @Inject
     private ConfigurationContext config;
 

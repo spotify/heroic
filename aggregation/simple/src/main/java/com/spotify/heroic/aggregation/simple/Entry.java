@@ -11,7 +11,7 @@ import com.spotify.heroic.aggregation.AggregationSerializer.Serializer;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.SamplingSerializer;
 
-public class EntryPoint implements HeroicEntryPoint {
+public class Entry implements HeroicEntryPoint {
     @Inject
     private SamplingSerializer resolutionSerializer;
 

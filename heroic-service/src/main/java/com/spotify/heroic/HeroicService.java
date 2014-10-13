@@ -2,6 +2,7 @@ package com.spotify.heroic;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,8 +16,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import javax.ws.rs.core.MediaType;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +36,7 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 
 import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -69,6 +69,7 @@ import com.spotify.metrics.jvm.ThreadStatesMetricSet;
 
 @Slf4j
 public class HeroicService {
+    private static final String APPLICATION_JSON = "application/json";
     private static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
 
     /**
@@ -93,8 +94,7 @@ public class HeroicService {
                 bind(AggregationSerializer.class).in(Scopes.SINGLETON);
                 bind(AggregationGroupSerializer.class).in(Scopes.SINGLETON);
 
-                bind(ObjectMapper.class).annotatedWith(Names.named(MediaType.APPLICATION_JSON)).toInstance(
-                        jsonObjectMapper);
+                bind(ObjectMapper.class).annotatedWith(Names.named(APPLICATION_JSON)).toInstance(jsonObjectMapper);
                 bind(ObjectMapper.class).annotatedWith(Names.named(APPLICATION_HEROIC_CONFIG)).toInstance(
                         configObjectMapper);
 
@@ -107,7 +107,7 @@ public class HeroicService {
     public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter,
             final ScheduledExecutorService scheduledExecutor, final HeroicLifeCycle lifecycle, final Module earlyModule)
             throws Exception {
-        log.info("Building Guice Injector");
+        log.info("Building Primary Injector");
 
         final List<Module> modules = new ArrayList<Module>();
 
@@ -136,7 +136,7 @@ public class HeroicService {
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {
-                for (Module m : setupConsumers(config, reporter, binder())) {
+                for (final Module m : setupConsumers(config, reporter, binder())) {
                     install(m);
                 }
             }
@@ -157,10 +157,10 @@ public class HeroicService {
 
         final List<Module> modules = new ArrayList<>();
 
-        int consumerCount = 0;
+        int index = 0;
 
         for (final ConsumerModule consumer : config.getConsumers()) {
-            final String id = consumer.id() != null ? consumer.id() : consumer.buildId(consumerCount++);
+            final String id = consumer.id() != null ? consumer.id() : consumer.buildId(index++);
             final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
             modules.add(consumer.module(key, reporter.newConsumer(id)));
             bindings.addBinding().to(key);
@@ -188,12 +188,9 @@ public class HeroicService {
         final SemanticMetricRegistry registry = new SemanticMetricRegistry();
         final HeroicReporter reporter = new SemanticHeroicReporter(registry);
 
-        /* Setup the early injector, which only has access to the things which should be accessible by pluggable
-         * components. */
         final Module early = setupEarlyModule();
-        final Injector earlyInjector = Guice.createInjector(early);
 
-        final HeroicConfig config = setupConfig(configPath, modulesPath, reporter, earlyInjector);
+        final HeroicConfig config = setupConfig(configPath, modulesPath, reporter, early);
 
         if (config == null) {
             System.exit(1);
@@ -249,7 +246,7 @@ public class HeroicService {
 
         /* fire Stoppable handlers */
         for (final LifeCycle startable : lifecycles) {
-            log.info("Starting: {}", startable);
+            log.info("Starting {}", startable);
 
             try {
                 startable.start();
@@ -267,7 +264,7 @@ public class HeroicService {
 
         /* fire Stoppable handlers */
         for (final LifeCycle stoppable : lifecycles) {
-            log.info("Stopping: {}", stoppable);
+            log.info("Stopping {}", stoppable);
 
             try {
                 stoppable.stop();
@@ -281,36 +278,64 @@ public class HeroicService {
     }
 
     private static HeroicConfig setupConfig(final String configPath, final String modulesPath,
-            final HeroicReporter reporter, final Injector earlyInjector) throws IOException {
+            final HeroicReporter reporter, final Module early) throws Exception {
         log.info("Loading configuration from: {}", configPath);
 
-        final HeroicConfig config;
         final Path path = Paths.get(configPath);
 
-        {
-            final List<URL> moduleLocations = new ArrayList<>();
+        /* Setup the early injector, which only has access to the things which should be accessible by pluggable
+         * components. */
+        final Injector earlyInjector = Guice.createInjector(early);
 
-            if (modulesPath != null) {
-                moduleLocations.add(new File(modulesPath).toURI().toURL());
-            }
+        loadModules(modulesPath, earlyInjector);
 
-            final ClassLoader loader = HeroicService.class.getClassLoader();
-            moduleLocations.add(loader.getResource(HEROIC_MODULES));
+        return parseConfig(configPath, earlyInjector, path);
+    }
 
-            List<HeroicEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
+    /**
+     * Load modules from the specified modules configuration file and wire up those components with early injection.
+     * 
+     * @param path
+     *            Optional argument path to load modules from.
+     * @param injector
+     *            Injector to wire up modules using.
+     * @throws MalformedURLException
+     * @throws IOException
+     */
+    private static void loadModules(final String path, final Injector injector) throws Exception {
+        final List<URL> moduleLocations = new ArrayList<>();
 
-            for (final HeroicEntryPoint entry : modules) {
-                // inject members of an entry point and run.
-                earlyInjector.injectMembers(entry);
-                entry.setup();
-            }
+        final ClassLoader loader = HeroicService.class.getClassLoader();
+        final URL heroicModules = loader.getResource(HEROIC_MODULES);
+
+        if (heroicModules != null) {
+            moduleLocations.add(heroicModules);
+        } else {
+            log.warn("No modules loaded from classpath {}, functionality of the service will be severly limited",
+                    HEROIC_MODULES);
         }
 
+        if (path != null) {
+            moduleLocations.add(new File(path).toURI().toURL());
+        }
+
+        List<HeroicEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
+
+        for (final HeroicEntryPoint entry : modules) {
+            log.info("Loading Module: {}", entry.getClass().getPackage().getName());
+            // inject members of an entry point and run them.
+            injector.injectMembers(entry);
+            entry.setup();
+        }
+    }
+
+    private static HeroicConfig parseConfig(final String configPath, final Injector earlyInjector, final Path path)
+            throws IOException, JsonParseException {
         final ObjectMapper mapper = earlyInjector.getInstance(Key.get(ObjectMapper.class,
                 Names.named(APPLICATION_HEROIC_CONFIG)));
 
         try {
-            config = mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
+            return mapper.readValue(Files.newInputStream(path), HeroicConfig.class);
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
             log.error(String.format("%s[%d:%d]: %s", configPath, location == null ? null : location.getLineNr(),
@@ -321,8 +346,6 @@ public class HeroicService {
 
             return null;
         }
-
-        return config;
     }
 
     private static Server setupHttpServer(final HeroicConfig config, Injector injector) throws IOException {

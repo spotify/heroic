@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ModuleUtils {
-    public static final String ENTRY_POINT_CLASS_NAME = "EntryPoint";
+    public static final String ENTRY_CLASS_NAME = "Entry";
 
     public static List<HeroicEntryPoint> loadModules(List<URL> moduleLocations) throws IOException {
         final ClassLoader loader = HeroicService.class.getClassLoader();
@@ -45,7 +45,7 @@ public class ModuleUtils {
                 continue;
             }
 
-            final String className = String.format("%s.%s", packageName, ENTRY_POINT_CLASS_NAME);
+            final String className = String.format("%s.%s", packageName, ENTRY_CLASS_NAME);
 
             final Class<?> clazz;
 
