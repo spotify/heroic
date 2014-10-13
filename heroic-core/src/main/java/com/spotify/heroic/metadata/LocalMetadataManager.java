@@ -23,7 +23,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
@@ -33,7 +33,7 @@ public class LocalMetadataManager implements MetadataManager {
     private Set<MetadataBackend> backends;
 
     @Inject
-    private MetadataManagerReporter reporter;
+    private LocalMetadataManagerReporter reporter;
 
     @Override
     public List<MetadataBackend> getBackends() {

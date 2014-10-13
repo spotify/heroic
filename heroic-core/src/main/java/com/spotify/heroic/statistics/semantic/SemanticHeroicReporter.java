@@ -3,11 +3,14 @@ package com.spotify.heroic.statistics.semantic;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.statistics.AggregationCacheReporter;
+import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
+import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.HttpClientManagerReporter;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendsReporter;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
 @RequiredArgsConstructor
@@ -15,12 +18,12 @@ public class SemanticHeroicReporter implements HeroicReporter {
     private final SemanticMetricRegistry registry;
 
     @Override
-    public MetricManagerReporter newMetricBackendManager() {
-        return new SemanticMetricManagerReporter(registry);
+    public LocalMetricManagerReporter newLocalMetricBackendManager() {
+        return new SemanticLocalMetricManagerReporter(registry);
     }
 
     @Override
-    public MetadataManagerReporter newMetadataBackendManager() {
+    public LocalMetadataManagerReporter newLocalMetadataBackendManager() {
         return new SemanticMetadataManagerReporter(registry);
     }
 
@@ -37,5 +40,20 @@ public class SemanticHeroicReporter implements HeroicReporter {
     @Override
     public HttpClientManagerReporter newHttpClientManager() {
         return new SemanticHttpClientManagerReporter(registry);
+    }
+
+    @Override
+    public ClusteredMetricManagerReporter newClusteredMetricBackendManager() {
+        return new SemanticClusteredMetricManagerReporter(registry);
+    }
+
+    @Override
+    public ClusteredMetadataManagerReporter newClusteredMetadataBackendManager() {
+        return new SemanticClusteredMetadataManagerReporter(registry);
+    }
+
+    @Override
+    public MetricBackendsReporter newMetricBackendsReporter() {
+        return new SemanticMetricBackendsReporter(registry);
     }
 }

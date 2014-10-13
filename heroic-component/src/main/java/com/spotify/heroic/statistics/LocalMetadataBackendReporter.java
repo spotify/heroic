@@ -1,17 +1,17 @@
 package com.spotify.heroic.statistics;
 
-public interface MetadataBackendReporter {
-    public CallbackReporter.Context reportRefresh();
+public interface LocalMetadataBackendReporter {
+    public FutureReporter.Context reportRefresh();
 
-    public CallbackReporter.Context reportFindTags();
+    public FutureReporter.Context reportFindTags();
 
-    public CallbackReporter.Context reportFindTagKeys();
+    public FutureReporter.Context reportFindTagKeys();
 
-    public CallbackReporter.Context reportFindTimeSeries();
+    public FutureReporter.Context reportFindTimeSeries();
 
-    public CallbackReporter.Context reportFindKeys();
+    public FutureReporter.Context reportFindKeys();
 
-    public CallbackReporter.Context reportWrite();
+    public FutureReporter.Context reportWrite();
 
     public void reportWriteCacheHit();
 

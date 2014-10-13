@@ -26,13 +26,13 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendsReporter;
 
 @Slf4j
 @RequiredArgsConstructor
 public class MetricBackendsImpl implements MetricBackends {
+    private final MetricBackendsReporter reporter;
     private final AggregationCache cache;
-    private final MetricManagerReporter reporter;
     private final int disabled;
     private final List<MetricBackend> backends;
 
@@ -50,6 +50,7 @@ public class MetricBackendsImpl implements MetricBackends {
         }
     }
 
+    @Override
     public List<Future<FetchData>> fetchAll(final Series series, final DateRange range) {
         final List<Future<FetchData>> callbacks = new ArrayList<>();
 
@@ -77,6 +78,7 @@ public class MetricBackendsImpl implements MetricBackends {
      * @return The result in the form of MetricGroups.
      * @throws BackendOperationException
      */
+    @Override
     public Future<MetricGroups> query(final Map<String, String> group, final Filter filter, final Set<Series> series,
             final DateRange range, final AggregationGroup aggregation) {
         final List<Future<MetricGroups>> grouped = new ArrayList<>();
@@ -101,7 +103,7 @@ public class MetricBackendsImpl implements MetricBackends {
             }
         });
 
-        return Futures.reduce(grouped, MetricGroups.merger()).register(reporter.reportQueryMetrics());
+        return Futures.reduce(grouped, MetricGroups.merger()).register(reporter.reportQuery());
     }
 
     /**
@@ -112,6 +114,7 @@ public class MetricBackendsImpl implements MetricBackends {
      * @return A callback indicating how the writes went.
      * @throws BackendOperationException
      */
+    @Override
     public Future<WriteBatchResult> write(final Collection<WriteMetric> writes) {
         final List<Future<WriteBatchResult>> callbacks = new ArrayList<>();
 
@@ -122,7 +125,7 @@ public class MetricBackendsImpl implements MetricBackends {
             }
         });
 
-        return Futures.reduce(callbacks, WriteBatchResult.merger());
+        return Futures.reduce(callbacks, WriteBatchResult.merger()).register(reporter.reportWrite());
     }
 
     /**
@@ -130,7 +133,7 @@ public class MetricBackendsImpl implements MetricBackends {
      */
     private Future<MetricGroups> cachedFetch(final MetricBackend backend, final Map<String, String> group,
             final Filter filter, final Set<Series> series, DateRange range, final AggregationGroup aggregation)
-            throws CacheOperationException {
+                    throws CacheOperationException {
         final CacheGetTransformer transformer = new CacheGetTransformer(cache) {
             @Override
             public Future<MetricGroups> cacheMiss(Map<String, String> group, DateRange missedRange) throws Exception {
@@ -154,10 +157,10 @@ public class MetricBackendsImpl implements MetricBackends {
 
     /**
      * Return a modified range if an aggregation is specified.
-     * 
+     *
      * Aggregations require a range to get modified according to their extent in order to 'fetch' datapoints for the
      * entire aggregation range.
-     * 
+     *
      * @param range
      *            The range to modify.
      * @param aggregation

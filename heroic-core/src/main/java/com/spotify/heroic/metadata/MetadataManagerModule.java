@@ -16,8 +16,9 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 @RequiredArgsConstructor
 public class MetadataManagerModule extends PrivateModule {
@@ -40,15 +41,25 @@ public class MetadataManagerModule extends PrivateModule {
 
     @Provides
     @Singleton
-    public MetadataManagerReporter reporter(HeroicReporter reporter) {
-        return reporter.newMetadataBackendManager();
+    public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
+        return reporter.newLocalMetadataBackendManager();
+    }
+
+    @Provides
+    @Singleton
+    public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
+        return reporter.newClusteredMetadataBackendManager();
     }
 
     @Override
     protected void configure() {
         bindBackends(backends);
+
         bind(MetadataManager.class).to(LocalMetadataManager.class).in(Scopes.SINGLETON);
         expose(MetadataManager.class);
+
+        bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
+        expose(ClusteredMetadataManager.class);
     }
 
     private void bindBackends(final Collection<MetadataModule> configs) {

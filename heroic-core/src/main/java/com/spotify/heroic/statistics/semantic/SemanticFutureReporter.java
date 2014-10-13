@@ -4,12 +4,12 @@ import lombok.RequiredArgsConstructor;
 
 import com.codahale.metrics.Meter;
 import com.spotify.heroic.async.CancelReason;
-import com.spotify.heroic.statistics.CallbackReporter;
+import com.spotify.heroic.statistics.FutureReporter;
 import com.spotify.heroic.statistics.HeroicTimer;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
-public class SemanticCallbackReporter implements CallbackReporter {
+public class SemanticFutureReporter implements FutureReporter {
     private final SemanticHeroicTimer timer;
     private final Meter cancelled;
     private final Meter failed;
@@ -38,7 +38,7 @@ public class SemanticCallbackReporter implements CallbackReporter {
         }
     }
 
-    public SemanticCallbackReporter(SemanticMetricRegistry registry, MetricId id) {
+    public SemanticFutureReporter(SemanticMetricRegistry registry, MetricId id) {
         final String what = id.getTags().get("what");
 
         if (what == null)

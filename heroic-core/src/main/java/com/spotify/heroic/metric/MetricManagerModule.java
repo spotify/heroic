@@ -19,8 +19,10 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendsReporter;
 import com.spotify.heroic.utils.BackendGroups;
 
 @RequiredArgsConstructor
@@ -63,8 +65,22 @@ public class MetricManagerModule extends PrivateModule {
     @Inject
     @Provides
     @Singleton
-    public MetricManagerReporter reporter(HeroicReporter reporter) {
-        return reporter.newMetricBackendManager();
+    public LocalMetricManagerReporter localReporter(HeroicReporter reporter) {
+        return reporter.newLocalMetricBackendManager();
+    }
+
+    @Inject
+    @Provides
+    @Singleton
+    public MetricBackendsReporter metricBackendsReporter(HeroicReporter reporter) {
+        return reporter.newMetricBackendsReporter();
+    }
+
+    @Inject
+    @Provides
+    @Singleton
+    public ClusteredMetricManagerReporter clusteredReporter(HeroicReporter reporter) {
+        return reporter.newClusteredMetricBackendManager();
     }
 
     @Provides

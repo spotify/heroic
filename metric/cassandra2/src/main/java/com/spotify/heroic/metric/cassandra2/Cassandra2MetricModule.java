@@ -15,7 +15,7 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 
 @Data
 public final class Cassandra2MetricModule implements MetricModule {
@@ -59,7 +59,7 @@ public final class Cassandra2MetricModule implements MetricModule {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetricBackendReporter reporter(MetricManagerReporter reporter) {
+            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
                 return reporter.newBackend(id);
             }
 

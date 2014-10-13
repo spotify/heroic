@@ -37,7 +37,8 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendsReporter;
 import com.spotify.heroic.utils.BackendGroups;
 
 @Slf4j
@@ -61,7 +62,10 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
     private long flushingInterval;
 
     @Inject
-    private MetricManagerReporter reporter;
+    private MetricBackendsReporter backendsReporter;
+
+    @Inject
+    private LocalMetricManagerReporter reporter;
 
     @Inject
     private AggregationCache cache;
@@ -81,6 +85,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
                 }
             });
 
+    @Override
     public List<MetricBackend> getBackends() {
         return backends.all();
     }
@@ -119,14 +124,15 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         return callbacks;
     }
 
-    public Future<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
+    @Override
+    public Future<MetricGroups> queryMetrics(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation) {
-        return metadata.findSeries(filter).register(reporter.reportFindTimeSeries())
-                .transform(findAllTimeSeries(groupBy, backendGroup, filter, range, aggregation))
+        return metadata.findSeries(filter).register(reporter.reportFindSeries())
+                .transform(runQueries(groupBy, backendGroup, filter, range, aggregation))
                 .register(reporter.reportQueryMetrics());
     }
 
-    private DelayedTransform<FindSeries, MetricGroups> findAllTimeSeries(final List<String> groupBy,
+    private DelayedTransform<FindSeries, MetricGroups> runQueries(final List<String> groupBy,
             final String backendGroup, final Filter filter, final DateRange range, final AggregationGroup aggregation) {
         return new DelayedTransform<FindSeries, MetricGroups>() {
             @Override
@@ -144,7 +150,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
 
                     try {
                         futures.add(runQuery(key, backendGroup, filter, range, aggregation, entry.getValue()));
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         futures.add(Futures.resolved(MetricGroups.seriesError(key, e)));
                     }
                 }
@@ -193,10 +199,12 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         };
     }
 
+    @Override
     public MetricBackends useDefaultGroup() throws BackendOperationException {
         return useGroup(null);
     }
 
+    @Override
     public MetricBackends useGroup(final String group) throws BackendOperationException {
         final List<MetricBackend> selected;
 
@@ -217,6 +225,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         return useAlive(selected);
     }
 
+    @Override
     public MetricBackends useGroups(final Set<String> groups) throws BackendOperationException {
         final List<MetricBackend> selected;
 
@@ -257,9 +266,10 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         if (alive.isEmpty())
             throw new BackendOperationException("No alive backends available");
 
-        return new MetricBackendsImpl(cache, reporter, disabled, alive);
+        return new MetricBackendsImpl(backendsReporter, cache, disabled, alive);
     }
 
+    @Override
     public void scheduleFlush() {
         if (writeBulkProcessor.isStopped())
             return;
@@ -305,7 +315,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
         final WriteBatchResult result;
 
         try {
-            result = callback.get();
+            result = callback.register(reporter.reportFlushWrites()).get();
         } catch (final Exception e) {
             throw new Exception("Write batch failed", e);
         }

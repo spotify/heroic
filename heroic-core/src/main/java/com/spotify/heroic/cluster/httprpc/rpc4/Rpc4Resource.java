@@ -60,7 +60,7 @@ public class Rpc4Resource {
     @POST
     @Path("full-query")
     public void query(@Suspended final AsyncResponse response, Rpc4FullQueryBody body) throws Exception {
-        final Future<MetricGroups> callback = metrics.directQueryMetrics(body.getBackendGroup(), body.getFilter(),
+        final Future<MetricGroups> callback = metrics.queryMetrics(body.getBackendGroup(), body.getFilter(),
                 body.getGroupBy(), body.getRange(), body.getAggregation());
         HttpAsyncUtils.handleAsyncResume(response, callback, QUERY);
     }

@@ -18,8 +18,8 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 @RequiredArgsConstructor
 public final class LuceneMetadataModule implements MetadataModule {
@@ -45,7 +45,7 @@ public final class LuceneMetadataModule implements MetadataModule {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetadataBackendReporter reporter(MetadataManagerReporter reporter) {
+            public LocalMetadataBackendReporter reporter(LocalMetadataManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
 

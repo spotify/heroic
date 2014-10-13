@@ -1,21 +1,21 @@
 package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.statistics.CallbackReporter;
-import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.FutureReporter.Context;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
-public class SemanticMetadataManagerReporter implements MetadataManagerReporter {
+public class SemanticMetadataManagerReporter implements LocalMetadataManagerReporter {
     private static final String COMPONENT = "metadata-backend-manager";
 
     private final SemanticMetricRegistry registry;
 
-    private final CallbackReporter refresh;
-    private final CallbackReporter findTags;
-    private final CallbackReporter findTimeSeries;
-    private final CallbackReporter findKeys;
+    private final FutureReporter refresh;
+    private final FutureReporter findTags;
+    private final FutureReporter findTimeSeries;
+    private final FutureReporter findKeys;
 
     private final MetricId id;
 
@@ -24,15 +24,15 @@ public class SemanticMetadataManagerReporter implements MetadataManagerReporter 
 
         this.registry = registry;
 
-        refresh = new SemanticCallbackReporter(registry, id.tagged("what", "refresh", "unit", Units.REFRESH));
-        findTags = new SemanticCallbackReporter(registry, id.tagged("what", "find-tags", "unit", Units.LOOKUP));
-        findTimeSeries = new SemanticCallbackReporter(registry, id.tagged("what", "find-time-series", "unit",
+        refresh = new SemanticFutureReporter(registry, id.tagged("what", "refresh", "unit", Units.REFRESH));
+        findTags = new SemanticFutureReporter(registry, id.tagged("what", "find-tags", "unit", Units.LOOKUP));
+        findTimeSeries = new SemanticFutureReporter(registry, id.tagged("what", "find-time-series", "unit",
                 Units.LOOKUP));
-        findKeys = new SemanticCallbackReporter(registry, id.tagged("what", "find-keys", "unit", Units.LOOKUP));
+        findKeys = new SemanticFutureReporter(registry, id.tagged("what", "find-keys", "unit", Units.LOOKUP));
     }
 
     @Override
-    public CallbackReporter.Context reportRefresh() {
+    public FutureReporter.Context reportRefresh() {
         return refresh.setup();
     }
 
@@ -52,7 +52,7 @@ public class SemanticMetadataManagerReporter implements MetadataManagerReporter 
     }
 
     @Override
-    public MetadataBackendReporter newMetadataBackend(String id) {
-        return new SemanticMetadataBackendReporter(registry, this.id.tagged("backend", id));
+    public LocalMetadataBackendReporter newMetadataBackend(String id) {
+        return new SemanticLocalMetadataBackendReporter(registry, this.id.tagged("backend", id));
     }
 }

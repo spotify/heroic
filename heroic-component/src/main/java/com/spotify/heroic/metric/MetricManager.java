@@ -13,7 +13,7 @@ import com.spotify.heroic.model.DateRange;
 public interface MetricManager {
     public List<MetricBackend> getBackends();
 
-    public Future<MetricGroups> directQueryMetrics(final String backendGroup, final Filter filter,
+    public Future<MetricGroups> queryMetrics(final String backendGroup, final Filter filter,
             final List<String> groupBy, final DateRange range, final AggregationGroup aggregation);
 
     public MetricBackends useDefaultGroup() throws BackendOperationException;

@@ -62,7 +62,7 @@ public class LocalClusterNode implements ClusterNode {
     @Override
     public Future<MetricGroups> fullQuery(String backendGroup, Filter filter, List<String> groupBy, DateRange range,
             AggregationGroup aggregation) {
-        return metrics.directQueryMetrics(backendGroup, filter, groupBy, range, aggregation);
+        return metrics.queryMetrics(backendGroup, filter, groupBy, range, aggregation);
     }
 
     @Override

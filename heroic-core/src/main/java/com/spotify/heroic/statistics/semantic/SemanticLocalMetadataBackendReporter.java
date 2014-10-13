@@ -3,26 +3,26 @@ package com.spotify.heroic.statistics.semantic;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
-import com.spotify.heroic.statistics.CallbackReporter;
-import com.spotify.heroic.statistics.CallbackReporter.Context;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.FutureReporter;
+import com.spotify.heroic.statistics.FutureReporter.Context;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.ThreadPoolProvider;
 import com.spotify.heroic.statistics.ThreadPoolReporter;
 import com.spotify.metrics.core.MetricId;
 import com.spotify.metrics.core.SemanticMetricRegistry;
 
-public class SemanticMetadataBackendReporter implements MetadataBackendReporter {
+public class SemanticLocalMetadataBackendReporter implements LocalMetadataBackendReporter {
     private static final String COMPONENT = "metadata-backend";
 
     private final SemanticMetricRegistry registry;
     private final MetricId id;
 
-    private final CallbackReporter refresh;
-    private final CallbackReporter findTags;
-    private final CallbackReporter findTagKeys;
-    private final CallbackReporter findTimeSeries;
-    private final CallbackReporter findKeys;
-    private final CallbackReporter write;
+    private final FutureReporter refresh;
+    private final FutureReporter findTags;
+    private final FutureReporter findTagKeys;
+    private final FutureReporter findTimeSeries;
+    private final FutureReporter findKeys;
+    private final FutureReporter write;
 
     private final Meter writeSuccess;
     private final Meter writeFailure;
@@ -32,17 +32,17 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
 
     private final Histogram writeBatchDuration;
 
-    public SemanticMetadataBackendReporter(SemanticMetricRegistry registry, MetricId base) {
+    public SemanticLocalMetadataBackendReporter(SemanticMetricRegistry registry, MetricId base) {
         this.registry = registry;
         this.id = base.tagged("component", COMPONENT);
 
-        refresh = new SemanticCallbackReporter(registry, id.tagged("what", "refresh", "unit", Units.REFRESH));
-        findTags = new SemanticCallbackReporter(registry, id.tagged("what", "find-tags", "unit", Units.LOOKUP));
-        findTagKeys = new SemanticCallbackReporter(registry, id.tagged("what", "find-tag-keys", "unit", Units.LOOKUP));
-        findTimeSeries = new SemanticCallbackReporter(registry, id.tagged("what", "find-time-series", "unit",
+        refresh = new SemanticFutureReporter(registry, id.tagged("what", "refresh", "unit", Units.REFRESH));
+        findTags = new SemanticFutureReporter(registry, id.tagged("what", "find-tags", "unit", Units.LOOKUP));
+        findTagKeys = new SemanticFutureReporter(registry, id.tagged("what", "find-tag-keys", "unit", Units.LOOKUP));
+        findTimeSeries = new SemanticFutureReporter(registry, id.tagged("what", "find-time-series", "unit",
                 Units.LOOKUP));
-        findKeys = new SemanticCallbackReporter(registry, id.tagged("what", "find-keys", "unit", Units.LOOKUP));
-        write = new SemanticCallbackReporter(registry, id.tagged("what", "write", "unit", Units.WRITE));
+        findKeys = new SemanticFutureReporter(registry, id.tagged("what", "find-keys", "unit", Units.LOOKUP));
+        write = new SemanticFutureReporter(registry, id.tagged("what", "write", "unit", Units.WRITE));
         writeCacheHit = registry.meter(id.tagged("what", "write-cache-hit", "unit", Units.HIT));
         writeCacheMiss = registry.meter(id.tagged("what", "write-cache-miss", "unit", Units.MISS));
         writeSuccess = registry.meter(id.tagged("what", "write-success", "unit", Units.WRITE));
@@ -51,12 +51,12 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     }
 
     @Override
-    public CallbackReporter.Context reportRefresh() {
+    public FutureReporter.Context reportRefresh() {
         return refresh.setup();
     }
 
     @Override
-    public CallbackReporter.Context reportFindTags() {
+    public FutureReporter.Context reportFindTags() {
         return findTags.setup();
     }
 
@@ -66,17 +66,17 @@ public class SemanticMetadataBackendReporter implements MetadataBackendReporter 
     }
 
     @Override
-    public CallbackReporter.Context reportFindTimeSeries() {
+    public FutureReporter.Context reportFindTimeSeries() {
         return findTimeSeries.setup();
     }
 
     @Override
-    public CallbackReporter.Context reportFindKeys() {
+    public FutureReporter.Context reportFindKeys() {
         return findKeys.setup();
     }
 
     @Override
-    public CallbackReporter.Context reportWrite() {
+    public FutureReporter.Context reportWrite() {
         return write.setup();
     }
 

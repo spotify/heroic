@@ -43,7 +43,7 @@ import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.statistics.MetricManagerReporter;
+import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 
 @Slf4j
 @NoArgsConstructor
@@ -62,7 +62,7 @@ public class ClusteredMetricManager implements LifeCycle {
     private long flushingInterval;
 
     @Inject
-    private MetricManagerReporter reporter;
+    private ClusteredMetricManagerReporter reporter;
 
     @Inject
     private ClusterManager cluster;
@@ -101,7 +101,8 @@ public class ClusteredMetricManager implements LifeCycle {
             }
         }
 
-        final WriteBatchResult result = Futures.reduce(callbacks, WriteBatchResult.merger()).get();
+        final WriteBatchResult result = Futures.reduce(callbacks, WriteBatchResult.merger())
+                .register(reporter.reportWrite()).get();
 
         if (!result.isOk())
             throw new Exception("Write batch failed (asynchronously)");
@@ -160,15 +161,16 @@ public class ClusteredMetricManager implements LifeCycle {
 
             final Map<String, String> shard = n.getMetadata().getTags();
 
-            final Future<MetricGroups> query = n.getClusterNode().fullQuery(backendGroup, f, groupBy, rounded,
-                    aggregation);
+            final Future<MetricGroups> query = n.getClusterNode()
+                    .fullQuery(backendGroup, f, groupBy, rounded, aggregation)
+                    .register(reporter.reportShardFullQuery(n.getMetadata()));
 
             callbacks.add(query.transform(MetricGroups.identity(),
                     MetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
         return Futures.reduce(callbacks, MetricGroups.merger()).transform(toQueryMetricsResult(rounded))
-                .register(reporter.reportQueryMetrics());
+                .register(reporter.reportQuery());
     }
 
     private Transform<MetricGroups, QueryMetricsResult> toQueryMetricsResult(final DateRange rounded) {

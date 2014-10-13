@@ -62,7 +62,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTagKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 
 @Slf4j
 @ToString
@@ -80,7 +80,7 @@ public class ElasticSearchMetadataBackend implements MetadataBackend {
     private ReadWriteThreadPools pools;
 
     @Inject
-    private MetadataBackendReporter reporter;
+    private LocalMetadataBackendReporter reporter;
 
     @Inject
     @Named("seeds")

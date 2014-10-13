@@ -22,8 +22,8 @@ import com.google.inject.Provides;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.statistics.MetadataBackendReporter;
-import com.spotify.heroic.statistics.MetadataManagerReporter;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 @RequiredArgsConstructor
 public final class ElasticSearchMetadataModule implements MetadataModule {
@@ -149,7 +149,7 @@ public final class ElasticSearchMetadataModule implements MetadataModule {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetadataBackendReporter reporter(MetadataManagerReporter reporter) {
+            public LocalMetadataBackendReporter reporter(LocalMetadataManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
 
@@ -217,7 +217,7 @@ public final class ElasticSearchMetadataModule implements MetadataModule {
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(MetadataBackendReporter reporter) {
+            public ReadWriteThreadPools pools(LocalMetadataBackendReporter reporter) {
                 return pools.construct(reporter.newThreadPool());
             }
 

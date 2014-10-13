@@ -57,7 +57,6 @@ import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.injection.CollectingTypeListener;
 import com.spotify.heroic.injection.IsSubclassOf;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.semantic.SemanticHeroicReporter;
 import com.spotify.metrics.core.MetricId;
@@ -106,7 +105,7 @@ public class HeroicService {
 
     public static Injector setupInjector(final HeroicConfig config, final HeroicReporter reporter,
             final ScheduledExecutorService scheduledExecutor, final HeroicLifeCycle lifecycle, final Module earlyModule)
-            throws Exception {
+                    throws Exception {
         log.info("Building Primary Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -120,7 +119,6 @@ public class HeroicService {
                 bind(HeroicReporter.class).toInstance(reporter);
                 bind(HeroicLifeCycle.class).toInstance(lifecycle);
                 bind(ScheduledExecutorService.class).toInstance(scheduledExecutor);
-                bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
                 bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifecycles));
             }
         });
@@ -294,7 +292,7 @@ public class HeroicService {
 
     /**
      * Load modules from the specified modules configuration file and wire up those components with early injection.
-     * 
+     *
      * @param path
      *            Optional argument path to load modules from.
      * @param injector
@@ -319,7 +317,7 @@ public class HeroicService {
             moduleLocations.add(new File(path).toURI().toURL());
         }
 
-        List<HeroicEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
+        final List<HeroicEntryPoint> modules = ModuleUtils.loadModules(moduleLocations);
 
         for (final HeroicEntryPoint entry : modules) {
             log.info("Loading Module: {}", entry.getClass().getPackage().getName());

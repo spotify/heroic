@@ -21,11 +21,15 @@ import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 
 @Slf4j
 public class ClusteredMetadataManager {
     @Inject
     private ClusterManager cluster;
+
+    @Inject
+    private ClusteredMetadataManagerReporter reporter;
 
     public boolean isReady() {
         return cluster.isReady();
@@ -76,7 +80,7 @@ public class ClusteredMetadataManager {
             public Future<FindTags> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findTags(filter);
             }
-        });
+        }).register(reporter.reportFindTags());
     }
 
     public Future<FindKeys> findKeys(final Filter filter) {
@@ -85,7 +89,7 @@ public class ClusteredMetadataManager {
             public Future<FindKeys> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findKeys(filter);
             }
-        });
+        }).register(reporter.reportFindKeys());
     }
 
     public Future<FindSeries> findSeries(final Filter filter) {
@@ -94,7 +98,7 @@ public class ClusteredMetadataManager {
             public Future<FindSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().findSeries(filter);
             }
-        });
+        }).register(reporter.reportFindSeries());
     }
 
     public Future<DeleteSeries> deleteSeries(final Filter filter) {
@@ -103,7 +107,7 @@ public class ClusteredMetadataManager {
             public Future<DeleteSeries> run(NodeRegistryEntry node) {
                 return node.getClusterNode().deleteSeries(filter);
             }
-        });
+        }).register(reporter.reportDeleteSeries());
     }
 
     public Future<String> write(final Series series) {
@@ -112,6 +116,6 @@ public class ClusteredMetadataManager {
             public Future<String> run(NodeRegistryEntry node) {
                 return node.getClusterNode().writeSeries(series);
             }
-        });
+        }).register(reporter.reportWrite());
     }
 }
