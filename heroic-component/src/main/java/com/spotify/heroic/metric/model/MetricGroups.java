@@ -98,6 +98,7 @@ public final class MetricGroups {
         return new ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
+                log.error("Encountered error in transform", e);
                 return MetricGroups.nodeError(id, uri, shard, e);
             }
         };
