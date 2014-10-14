@@ -151,6 +151,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
                     try {
                         futures.add(runQuery(key, backendGroup, filter, range, aggregation, entry.getValue()));
                     } catch (final Exception e) {
+                        log.error("Failed to run query {}", filter, e);
                         futures.add(Futures.resolved(MetricGroups.seriesError(key, e)));
                     }
                 }

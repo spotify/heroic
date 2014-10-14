@@ -10,6 +10,7 @@ import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -20,6 +21,7 @@ import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.async.Transform;
 import com.spotify.heroic.model.Statistics;
 
+@Slf4j
 @Data
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MetricGroups {
@@ -111,6 +113,7 @@ public final class MetricGroups {
         return new ErrorTransformer<MetricGroups>() {
             @Override
             public MetricGroups transform(Exception e) throws Exception {
+                log.error("Encountered error in transform", e);
                 return MetricGroups.seriesError(shard, e);
             }
         };
