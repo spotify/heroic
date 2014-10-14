@@ -28,7 +28,7 @@ import com.spotify.heroic.async.Futures;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metadata.ClusteredMetadataManager;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metric.exceptions.BackendOperationException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
@@ -71,7 +71,7 @@ public class LocalMetricManager implements MetricManager, LifeCycle {
     private AggregationCache cache;
 
     @Inject
-    private ClusteredMetadataManager metadata;
+    private MetadataManager metadata;
 
     @Inject
     private ScheduledExecutorService scheduledExecutor;
