@@ -2,6 +2,7 @@ package com.spotify.heroic.http.render;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
@@ -43,8 +44,9 @@ public class RenderResource {
     @Path("image")
     @Produces("image/png")
     public Response render(@QueryParam("query") String query, @QueryParam("backend") String backendGroup,
-            @QueryParam("title") String title, @QueryParam("width") Integer width, @QueryParam("height") Integer height)
-                    throws Exception {
+            @QueryParam("title") String title, @QueryParam("width") Integer width,
+            @QueryParam("height") Integer height, @QueryParam("highlight") String highlightRaw,
+            @QueryParam("threshold") Double threshold) throws Exception {
         if (query == null) {
             throw new BadRequestException("'query' must be defined");
         }
@@ -57,6 +59,14 @@ public class RenderResource {
             height = DEFAULT_HEIGHT;
         }
 
+        final Map<String, String> highlight;
+
+        if (highlightRaw != null) {
+            highlight = mapper.readValue(highlightRaw, Map.class);
+        } else {
+            highlight = null;
+        }
+
         final QueryMetrics queryMetrics = mapper.readValue(query, QueryMetrics.class);
         final QueryPrepared q = QueryPrepared.create(backendGroup, queryMetrics);
 
@@ -67,9 +77,7 @@ public class RenderResource {
 
         final QueryMetricsResult result = callback.get();
 
-        final String graphTitle = title == null ? "Heroic Graph" : title;
-
-        final JFreeChart chart = RenderUtils.createChart(result.getMetricGroups(), graphTitle);
+        final JFreeChart chart = RenderUtils.createChart(result.getMetricGroups(), title, highlight, threshold, height);
 
         final BufferedImage image = chart.createBufferedImage(width, height);
 
