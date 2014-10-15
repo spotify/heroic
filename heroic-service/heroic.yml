@@ -3,27 +3,42 @@ port: 8080
 refreshClusterSchedule: "0 */5 * * * ?"
 
 cluster:
-  useLocal: true
   tags:
     site: sto
+  capabilities:
+    - QUERY
   discovery:
     type: static
     nodes:
-      - http://localhost:8080
-
-metrics:
-  backends:
-    - type: cassandra2
-      group: heroic
-      seeds: sto3-kairosdbcassandra-a1.spotify.net:9160,sto3-kairosdbcassandra-a2.spotify.net:9160,sto3-kairosdbcassandra-a3.spotify.net:9160
-
-metadata:
-  backends:
-    - type: elasticsearch
-      clusterName: metalastic-production
-      index: heroic
-      type: metadata
-      seeds:
-        - lon2-heroex-a2.lon2.spotify.net
-        - lon2-heroex-a3.lon.spotify.net
-        - lon2-heroex-a4.lon2.spotify.net
+      - http://ash2-heroic-a1:8080
+      - http://ash2-heroic-a2:8080
+      - http://ash2-heroic-a3:8080
+      - http://ash2-heroic-a1:8081
+      - http://ash2-heroic-a2:8081
+      - http://ash2-heroic-a3:8081
+      - http://sjc1-heroic-a1:8080
+      - http://sjc1-heroic-a2:8080
+      - http://sjc1-heroic-a3:8080
+      - http://sjc1-heroic-a1:8081
+      - http://sjc1-heroic-a2:8081
+      - http://sjc1-heroic-a3:8081
+      - http://sto1-heroic-a1:8080
+      - http://sto1-heroic-a2:8080
+      - http://sto1-heroic-a3:8080
+      - http://sto1-heroic-a1:8081
+      - http://sto1-heroic-a2:8081
+      - http://sto1-heroic-a3:8081
+      - http://lon3-heroic-a1:8080
+      - http://lon3-heroic-a2:8080
+      - http://lon3-heroic-a3:8080
+      - http://lon3-heroic-a1:8081
+      - http://lon3-heroic-a2:8081
+      - http://lon3-heroic-a3:8081
+      - http://awsuse1-heroic-a1.shared.cloud:8080
+      - http://awsuse1-heroic-a2.shared.cloud:8080
+      - http://awsuse1-heroic-a1.shared.cloud:8081
+      - http://awsuse1-heroic-a2.shared.cloud:8081
+      - http://awseu3-heroic-a1.shared.cloud:8080
+      - http://awseu3-heroic-a2.shared.cloud:8080
+      - http://awseu3-heroic-a1.shared.cloud:8081
+      - http://awseu3-heroic-a2.shared.cloud:8081
