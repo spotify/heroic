@@ -3,13 +3,11 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Sampling;
 
-@JsonSerialize
-@JsonTypeName("min")
+@JsonTypeName("stddev")
 public class StdDevAggregation extends BucketAggregation<StdDevBucket> {
     public StdDevAggregation(Sampling sampling) {
         super(sampling);
