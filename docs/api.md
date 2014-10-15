@@ -685,7 +685,7 @@ MetricGroup:
 ###### Example
 ```json
 {
-  "errors: [
+  "errors": [
     {
       "type": "node",
       "nodeId": "abcd-efgh",
