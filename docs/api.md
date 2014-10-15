@@ -43,11 +43,27 @@ curl -H "Content-Type: application/json" http://heroic/write/metrics -d '{"serie
 
 # Metadata
 
-### GET /metadata/tags (alias /tags)
+### POST /metadata/tags (alias /tags) [MetadataQueryBody](#metadataquerybody)
 
 Use to query for tags.
 
-+ Response ```200``` (application/json) [MetadataTags](#metadatatags)
++ Response ```200``` (application/json) [MetadataTagsResponse](#metadatatagsresponse)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
+
+### POST /metadata/keys (alias /keys) [MetadataQueryBody](#metadataquerybody)
+
+Use to query for tags.
+
++ Response ```200``` (application/json) [MetadataKeysResponse](#metadatakeysresponse)
++ Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
+
+### GET /metadata/series [MetadataQueryBody](#metadataquerybody)
+
+Use to query for series.
+
+This is the way to return the exact combination of series that are available.
+
++ Response ```200``` (application/json) [MetadataSeriesResponse](#metadataseriesresponse)
 + Response ```4xx``` or ```5xx``` (application/json) [ErrorMessage](#errormessage)
 
 # RPC Endpoints
@@ -92,7 +108,7 @@ ErrorMessage:
 
 # Metadata Types
 
-### MetadataTags
+### MetadataTagsResponse
 
 This object represents a set of available tags and all their corresponding values.
 
@@ -101,9 +117,61 @@ The result structure is an object that maps tag keys with all their correspondin
 ###### Structure
 
 ```yml
-MetadataTags:
-  result: {String: [String, ..], ..} 
+MetadataTagsResponse:
+  result: required {String: [String, ..], ..}
+  # The number of samples that was scanned.
   sampleSize: required Number
+```
+
+### MetadataKeysResponse
+
+This object represents a set of available keys matching the specified filter.
+
+###### Structure
+
+```yml
+MetadataKeysResponse:
+  result: required [String, ..]
+  # The number of samples that was scanned.
+  sampleSize: required Number
+```
+
+### MetadataSeriesResponse
+
+Contains a detailed list of all matching series.
+
+###### Structure
+
+```yml
+MetadataSeriesResponse:
+  # A list of returned series.
+  result: required [Series, ..]
+  # The number of samples that was scanned.
+  sampleSize: required Number
+```
+
+### MetadataQueryBody
+
+This object represents a query for metadata.
+
+It contains filtering mechanisms for very fine-grained selections.
+
+###### Structure
+
+```yml
+MetadataQueryBody:
+    # A general set of filters. Gives the most amount of control using the filtering types.
+    # If this is combined with the other mechanisms, the generated filters will be put in a long and statements alongside this.
+    filter: optional Filter
+    # Only include time series which match the exact key.
+    # deprecated: Use 'filter' instead with a ["key", String] statement.
+    matchKey: optional String
+    # Only include time series which matches the exact key/value combination.
+    # deprecated: Use 'filter' instead with multiple ["=", String, String] statements.
+    matchTags: optional {String: String, ..}
+    # Only include time series which has the following tags.
+    # deprecated: Use 'filter' instead with multiple ["+", String] statements.
+    hasTags: optional [String, ..]
 ```
 
 # RPC Types
@@ -418,6 +486,8 @@ A filter statement is a recursive structure that allows you to define a filter f
 ###### Structure
 
 ```yml
+Filter:AndFilter | OrFilter | Notfilter | MatchKeyFilter | MatchTagFilter | HasTagFilter | StartsWithFilter | RegExpFilter
+
 # Match only if all child filter statements match.
 AndFilter: ["and", Filter, ..]
 
@@ -435,6 +505,12 @@ MatchTagFilter: ["=", String, String]
 
 # Match if a time series has the specified tag.
 HasTagFilter: ["+", String]
+
+# Match if a tag starts with the specified value.
+StartsWithFilter: ["^", String, String]
+
+# Match if a tag matches a specific regular expression.
+RegExpFilter: ["~", String, String]
 ```
 
 ###### Example
@@ -555,31 +631,76 @@ The result of a query.
 
 ###### Structure
 ```yml
+RequestError: NodeError | ShardError
+
+# Indicates that a request to an entire node failed permanently.
+# A node typically indicates one single instance of heroic.
+NodeError:
+  type: required "node"
+  # Id of the node that failed.
+  nodeId: required String
+  # URI of the node that failed.
+  nodeUri: required String
+  # Shard tags of the node that failed.
+  tags: required {String: String, ..}
+  # Error message describing why the node failed.
+  error: required String
+  # Boolean indicating weither the node failure was due to an internal (local) or external (remote) error.
+  internal: required Boolean
+
+# Error indicating that a single series in the result failed.
+# Example: This would happen if all rows associated with a single series could not be fetched from the database.
+SeriesError:
+  type: required "series"
+  # The tags of the series that failed.
+  tags: required {String: String, ..}
+  # Error message describing why the series failed.
+  error: required String
+  # Weither the failure was internal (local) or external (remote).
+  internal: required Boolean
+
 MetricsResponse:
   # The range which this result contains.
   range: required DateRange
+  errors: required [RequestError, ..]
   # An array of results.
-  result: required [ResultGroup, ..]
+  result: required [MetricGroup, ..]
   # Statistics about the current query.
   # This field should be inspected for errors which will have caused the result
   # to be inconsistent.
   statistics: required Statistics
   
-ResultGroup:
+MetricGroup:
   # An unique hash for this specific time series.
   hash: required String
-  # The key of the time series.
-  key: required String
   # The tags of the time series group (only for groupBy).
   # If groupBy for the request is empty, this will be an empty object.
   tags: required {String: String, ..}
   # An array of data points.
   values: required [DataPoint, ..]
+  # deprecated: Key is no longer being set.
+  key: null
 ```
 
 ###### Example
 ```json
 {
+  "errors: [
+    {
+      "type": "node",
+      "nodeId": "abcd-efgh",
+      "nodeUri": "http://example.com",
+      "tags": {"site": "lon"},
+      "error": "Connection refused",
+      "internal": true
+    },
+    {
+      "type": "series",
+      "tags": {"site": "lon"},
+      "error": "Aggregation too heavy, too many rows from the database would have to be fetched to satisfy the request!",
+      "internal": true
+    }
+  ]
   "result": [
     {
       "hash": "deadbeef",
