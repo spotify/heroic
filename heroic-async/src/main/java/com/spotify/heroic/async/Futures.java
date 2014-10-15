@@ -47,7 +47,14 @@ public final class Futures {
 
             @Override
             public void resolved(C result) throws Exception {
-                final Future<T> transform = transformer.transform(result);
+                final Future<T> transform;
+
+                try {
+                    transform = transformer.transform(result);
+                } catch (final Exception e) {
+                    target.fail(e);
+                    return;
+                }
 
                 target.register(new FutureHandle<T>() {
                     @Override
@@ -149,7 +156,7 @@ public final class Futures {
 
     /**
      * Creates a new concurrent callback using the specified resolver.
-     * 
+     *
      * @see {@link Future#resolve(Executor, com.spotify.heroic.async.Future.Resolver)}
      */
     public static <C> Future<C> resolve(Executor executor, final Resolver<C> resolver) {
@@ -187,7 +194,7 @@ public final class Futures {
 
     /**
      * Creates a new concurrent callback using the specified reducer.
-     * 
+     *
      * @see {@link Future#reduce(List, com.spotify.heroic.async.Future.Reducer)}
      */
     public static <C, T> Future<T> reduce(List<Future<C>> queries, final Reducer<C, T> reducer) {
@@ -200,7 +207,7 @@ public final class Futures {
 
     /**
      * Creates a new concurrent callback using the specified stream reducer.
-     * 
+     *
      * @see {@link Future#reduce(List, com.spotify.heroic.async.Future.StreamReducer)}
      */
     public static <C, T> Future<T> reduce(List<Future<C>> queries, final StreamReducer<C, T> reducer) {
@@ -875,9 +882,9 @@ public final class Futures {
 
     /**
      * Create a bi-directional link between future <code>a</code> and future <code>b</code>.
-     * 
+     *
      * If either is resolved, failed, or cancelled. The other one will be notified to the same effect.
-     * 
+     *
      * @param a
      *            First future to link.
      * @param b
