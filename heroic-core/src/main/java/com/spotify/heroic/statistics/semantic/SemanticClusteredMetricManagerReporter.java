@@ -41,7 +41,7 @@ public class SemanticClusteredMetricManagerReporter implements ClusteredMetricMa
         final MetricId id = MetricId.build().tagged("component", COMPONENT);
         this.query = new SemanticFutureReporter(registry, id.tagged("what", "query", "unit", Units.READ));
         this.write = new SemanticFutureReporter(registry, id.tagged("what", "write", "unit", Units.WRITE));
-        this.shardQueryBase = id.tagged("what", "whard-query", "unit", Units.READ);
+        this.shardQueryBase = id.tagged("what", "shard-query", "unit", Units.READ);
     }
 
     @Override

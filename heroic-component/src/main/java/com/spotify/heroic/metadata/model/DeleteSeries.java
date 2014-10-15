@@ -4,6 +4,8 @@ import java.util.Collection;
 
 import lombok.Data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.Reducer;
 
@@ -31,5 +33,10 @@ public class DeleteSeries {
 
     public static Reducer<DeleteSeries, DeleteSeries> reduce() {
         return reducer;
+    }
+
+    @JsonCreator
+    public static DeleteSeries create(@JsonProperty("deleted") int deleted) {
+        return new DeleteSeries(deleted);
     }
 }

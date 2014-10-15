@@ -6,6 +6,8 @@ import java.util.Set;
 
 import lombok.Data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.async.CancelReason;
 import com.spotify.heroic.async.Reducer;
 import com.spotify.heroic.model.Series;
@@ -44,5 +46,11 @@ public class FindSeries {
 
     public static Reducer<FindSeries, FindSeries> reduce() {
         return reducer;
+    }
+
+    @JsonCreator
+    public static FindSeries create(@JsonProperty("series") Set<Series> series, @JsonProperty("size") int size,
+            @JsonProperty("duplicates") int duplicates) {
+        return new FindSeries(series, size, duplicates);
     }
 }

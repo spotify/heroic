@@ -6,11 +6,15 @@ import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 
-import com.spotify.heroic.async.Future;
+import lombok.extern.slf4j.Slf4j;
+
 import com.spotify.heroic.async.CancelReason;
+import com.spotify.heroic.async.Future;
 import com.spotify.heroic.async.FutureHandle;
+import com.spotify.heroic.async.exceptions.MultiException;
 import com.spotify.heroic.httpclient.model.ErrorMessage;
 
+@Slf4j
 public final class HttpAsyncUtils {
     public interface Resume<T, R> {
         public R resume(T value) throws Exception;
@@ -35,12 +39,20 @@ public final class HttpAsyncUtils {
         callback.register(new FutureHandle<T>() {
             @Override
             public void cancelled(CancelReason reason) throws Exception {
+                log.error("Request cancelled: {}", reason);
                 response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                         .entity(new ErrorMessage("Request cancelled: " + reason)).build());
             }
 
             @Override
             public void failed(Exception e) throws Exception {
+                if (e instanceof MultiException) {
+                    log.error("Request failed (multiple causes)");
+                    MultiException.logError(log, (MultiException) e);
+                } else {
+                    log.error("Request failed", e);
+                }
+
                 response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                         .entity(new ErrorMessage(e.getMessage())).build());
             }

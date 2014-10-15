@@ -44,7 +44,7 @@ public class RenderResource {
     @Produces("image/png")
     public Response render(@QueryParam("query") String query, @QueryParam("backend") String backendGroup,
             @QueryParam("title") String title, @QueryParam("width") Integer width, @QueryParam("height") Integer height)
-            throws Exception {
+                    throws Exception {
         if (query == null) {
             throw new BadRequestException("'query' must be defined");
         }
