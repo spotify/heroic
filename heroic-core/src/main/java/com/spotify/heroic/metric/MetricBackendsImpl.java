@@ -93,7 +93,7 @@ public class MetricBackendsImpl implements MetricBackends {
 
                 final Future<MetricGroups> fetch;
 
-                if (!cache.isConfigured() || noCache) {
+                if (cache.isConfigured() && !noCache) {
                     fetch = cachedFetch(backend, group, filter, series, range, aggregation);
                 } else {
                     fetch = fetch(backend, group, series, range, aggregation);
@@ -133,7 +133,7 @@ public class MetricBackendsImpl implements MetricBackends {
      */
     private Future<MetricGroups> cachedFetch(final MetricBackend backend, final Map<String, String> group,
             final Filter filter, final Set<Series> series, DateRange range, final AggregationGroup aggregation)
-                    throws CacheOperationException {
+            throws CacheOperationException {
         final CacheGetTransformer transformer = new CacheGetTransformer(cache) {
             @Override
             public Future<MetricGroups> cacheMiss(Map<String, String> group, DateRange missedRange) throws Exception {
