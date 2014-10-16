@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.metric.model.RequestError;
+import com.spotify.heroic.metric.model.ShardedMetricGroup;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Statistics;
@@ -25,20 +26,23 @@ public class QueryMetricsResponse {
         public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException,
                 JsonProcessingException {
 
-            final Map<Map<String, String>, List<DataPoint>> result = (Map<Map<String, String>, List<DataPoint>>) value;
+            final List<ShardedMetricGroup> result = (List<ShardedMetricGroup>) value;
 
             g.writeStartArray();
 
-            for (final Map.Entry<Map<String, String>, List<DataPoint>> entry : result.entrySet()) {
-                final Map<String, String> tags = entry.getKey();
-                final List<DataPoint> datapoints = entry.getValue();
+            for (final ShardedMetricGroup group : result) {
+                final Map<String, String> tags = group.getGroup();
+                final List<DataPoint> datapoints = group.getDatapoints();
 
                 g.writeStartObject();
                 g.writeFieldName("hash");
-                g.writeString(Integer.toHexString(tags.hashCode()));
+                g.writeString(Integer.toHexString(group.hashCode()));
 
                 g.writeFieldName("key");
                 g.writeNull();
+
+                g.writeFieldName("shard");
+                g.writeObject(group.getShard());
 
                 g.writeFieldName("tags");
                 g.writeObject(tags);
@@ -58,7 +62,7 @@ public class QueryMetricsResponse {
 
     @Getter
     @JsonSerialize(using = ResultSerializer.class)
-    private final Map<Map<String, String>, List<DataPoint>> result;
+    private final List<ShardedMetricGroup> result;
 
     @Getter
     private final Statistics statistics;

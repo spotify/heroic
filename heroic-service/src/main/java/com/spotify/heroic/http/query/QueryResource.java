@@ -1,8 +1,5 @@
 package com.spotify.heroic.http.query;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -15,15 +12,18 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.simple.AverageAggregation;
 import com.spotify.heroic.async.Future;
 import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.exceptions.MetricQueryException;
-import com.spotify.heroic.metric.model.MetricGroup;
-import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.QueryMetricsResult;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.model.ShardedMetricGroups;
+import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.utils.HttpAsyncUtils;
 
 @Slf4j
@@ -31,22 +31,17 @@ import com.spotify.heroic.utils.HttpAsyncUtils;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
-    private static final HttpAsyncUtils.Resume<QueryMetricsResult, QueryMetricsResponse> WRITE_METRICS = new HttpAsyncUtils.Resume<QueryMetricsResult, QueryMetricsResponse>() {
+    @Data
+    private static final class MetricsResumer implements
+            HttpAsyncUtils.Resume<QueryMetricsResult, QueryMetricsResponse> {
+        private final Aggregation aggregation;
+        private final DateRange range;
+
         @Override
         public QueryMetricsResponse resume(QueryMetricsResult result) throws Exception {
-            final MetricGroups groups = result.getMetricGroups();
-            final Map<Map<String, String>, List<DataPoint>> data = makeData(groups.getGroups());
-            return new QueryMetricsResponse(result.getQueryRange(), data, groups.getStatistics(), groups.getErrors());
-        }
-
-        private Map<Map<String, String>, List<DataPoint>> makeData(List<MetricGroup> groups) {
-            final Map<Map<String, String>, List<DataPoint>> data = new HashMap<>();
-
-            for (final MetricGroup group : groups) {
-                data.put(group.getGroup(), group.getDatapoints());
-            }
-
-            return data;
+            final ShardedMetricGroups groups = result.getMetricGroups();
+            return new QueryMetricsResponse(result.getQueryRange(), groups.getGroups(), groups.getStatistics(),
+                    groups.getErrors());
         }
     };
 
@@ -61,11 +56,14 @@ public class QueryResource {
 
         log.info("Metrics: {}", q);
 
-        final Future<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(),
-                q.getGroupBy(), q.getRange(), q.getAggregation());
+        final Future<QueryMetricsResult> callback = metrics.query(q.getBackendGroup(), q.getFilter(), q.getGroupBy(),
+                q.getRange(), q.getAggregation());
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        HttpAsyncUtils.handleAsyncResume(response, callback, WRITE_METRICS);
+        final Sampling sampling = q.getAggregation() != null ? q.getAggregation().getSampling() : null;
+        final Aggregation aggregation = sampling != null ? new AverageAggregation(sampling) : null;
+
+        HttpAsyncUtils.handleAsyncResume(response, callback, new MetricsResumer(aggregation, q.getRange()));
     }
 }

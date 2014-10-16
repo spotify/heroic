@@ -14,8 +14,8 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
-import com.spotify.heroic.metric.model.MetricGroup;
-import com.spotify.heroic.metric.model.MetricGroups;
+import com.spotify.heroic.metric.model.ShardedMetricGroup;
+import com.spotify.heroic.metric.model.ShardedMetricGroups;
 import com.spotify.heroic.model.DataPoint;
 
 public final class RenderUtils {
@@ -25,15 +25,15 @@ public final class RenderUtils {
         COLORS.add(Color.BLUE);
     }
 
-    public static JFreeChart createChart(final MetricGroups groups, final String title, Map<String, String> highlight,
-            Double threshold, int height) {
+    public static JFreeChart createChart(final ShardedMetricGroups groups, final String title,
+            Map<String, String> highlight, Double threshold, int height) {
         final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
 
         final XYSeriesCollection dataset = new XYSeriesCollection();
 
         int i = 0;
 
-        for (final MetricGroup group : groups.getGroups()) {
+        for (final ShardedMetricGroup group : groups.getGroups()) {
             if (highlight != null && !highlight.equals(group.getGroup())) {
                 continue;
             }

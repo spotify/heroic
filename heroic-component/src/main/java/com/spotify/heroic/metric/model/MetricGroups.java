@@ -1,11 +1,9 @@
 package com.spotify.heroic.metric.model;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -36,9 +34,8 @@ public final class MetricGroups {
     private final List<RequestError> errors;
 
     @JsonCreator
-    public static MetricGroups create(@JsonProperty(value = "groups", required = true) List<MetricGroup> groups,
-            @JsonProperty(value = "statistics", required = true) Statistics statistics,
-            @JsonProperty(value = "errors", required = false) List<RequestError> errors) {
+    public static MetricGroups create(@JsonProperty("groups") List<MetricGroup> groups,
+            @JsonProperty("statistics") Statistics statistics, @JsonProperty("errors") List<RequestError> errors) {
         if (errors == null)
             errors = EMPTY_ERRORS;
 
@@ -86,22 +83,6 @@ public final class MetricGroups {
 
     public static Transform<MetricGroups, MetricGroups> identity() {
         return identity;
-    }
-
-    public static MetricGroups nodeError(final UUID id, final URI uri, final Map<String, String> tags, Exception e) {
-        final List<RequestError> errors = Lists.newArrayList();
-        errors.add(NodeError.fromException(id, uri, tags, e));
-        return new MetricGroups(EMPTY_GROUPS, Statistics.EMPTY, errors);
-    }
-
-    public static ErrorTransformer<MetricGroups> nodeError(final UUID id, final URI uri, final Map<String, String> shard) {
-        return new ErrorTransformer<MetricGroups>() {
-            @Override
-            public MetricGroups transform(Exception e) throws Exception {
-                log.error("Encountered error in transform", e);
-                return MetricGroups.nodeError(id, uri, shard, e);
-            }
-        };
     }
 
     public static MetricGroups seriesError(final Map<String, String> tags, Exception e) {

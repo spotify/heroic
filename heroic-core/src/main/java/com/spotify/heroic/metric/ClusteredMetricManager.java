@@ -39,6 +39,7 @@ import com.spotify.heroic.metric.exceptions.MetricQueryException;
 import com.spotify.heroic.metric.model.BufferedWriteMetric;
 import com.spotify.heroic.metric.model.MetricGroups;
 import com.spotify.heroic.metric.model.QueryMetricsResult;
+import com.spotify.heroic.metric.model.ShardedMetricGroups;
 import com.spotify.heroic.metric.model.WriteBatchResult;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DateRange;
@@ -149,11 +150,8 @@ public class ClusteredMetricManager implements LifeCycle {
 
     public Future<QueryMetricsResult> query(final String backendGroup, final Filter filter, final List<String> groupBy,
             final DateRange range, final AggregationGroup aggregation) throws MetricQueryException {
-
         final Collection<NodeRegistryEntry> nodes = cluster.findAllShards(NodeCapability.QUERY);
-
-        final List<Future<MetricGroups>> callbacks = Lists.newArrayList();
-
+        final List<Future<ShardedMetricGroups>> callbacks = Lists.newArrayList();
         final DateRange rounded = roundRange(aggregation, range);
 
         for (final NodeRegistryEntry n : nodes) {
@@ -165,18 +163,18 @@ public class ClusteredMetricManager implements LifeCycle {
                     .fullQuery(backendGroup, f, groupBy, rounded, aggregation)
                     .register(reporter.reportShardFullQuery(n.getMetadata()));
 
-            callbacks.add(query.transform(MetricGroups.identity(),
-                    MetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
+            callbacks.add(query.transform(ShardedMetricGroups.toSharded(shard),
+                    ShardedMetricGroups.nodeError(n.getMetadata().getId(), n.getUri(), shard)));
         }
 
-        return Futures.reduce(callbacks, MetricGroups.merger()).transform(toQueryMetricsResult(rounded))
+        return Futures.reduce(callbacks, ShardedMetricGroups.merger()).transform(toQueryMetricsResult(rounded))
                 .register(reporter.reportQuery());
     }
 
-    private Transform<MetricGroups, QueryMetricsResult> toQueryMetricsResult(final DateRange rounded) {
-        return new Transform<MetricGroups, QueryMetricsResult>() {
+    private Transform<ShardedMetricGroups, QueryMetricsResult> toQueryMetricsResult(final DateRange rounded) {
+        return new Transform<ShardedMetricGroups, QueryMetricsResult>() {
             @Override
-            public QueryMetricsResult transform(MetricGroups result) throws Exception {
+            public QueryMetricsResult transform(ShardedMetricGroups result) throws Exception {
                 return new QueryMetricsResult(rounded, result);
             }
         };
