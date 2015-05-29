@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+if [[ ! -d output ]]; then
+    mkdir output
+fi
+
+if [[ ! -d output/.git ]]; then
+    pushd output
+        git init
+        git remote add origin git@github.com:spotify/heroic
+    popd
+fi
+
+pushd output
+    git fetch -a origin gh-pages
+    git checkout gh-pages
+    git reset --hard origin/gh-pages
+popd
+
+./lingon.js build
+
+pushd output
+    git add -A
+    git commit -m "[gh-pages] release $(date --rfc-3339=seconds)"
+    git push origin gh-pages
+popd
