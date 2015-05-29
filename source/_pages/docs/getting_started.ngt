@@ -1,0 +1,30 @@
+<h2>Getting Started</h2>
+
+<p>
+  For getting start, you'll need the following systems in place.
+</p>
+
+<ul>
+  <li>An Elasticsearch cluster</li>
+  <li>A Cassandra cluster</li>
+  <li>Kafka with ZooKeeper</li>
+</ul>
+
+<div class="callout callout-danger">
+  <h4>This page does not describe industry best practices</h4>
+  <p>
+    You should consider the result of this an <em>experiment</em>, it is not recommended to operate the system like this in a production infrastructure.
+  </p>
+</div>
+
+<h3>Elasticsearch<h3>
+
+<pre><code language="bash">echo $hello</code></pre>
+
+<h3>Cassandra<h3>
+
+<pre><code language="bash">echo $hello</code></pre>
+
+<h3>Kafka and ZooKeeper<h3>
+
+<pre><code language="bash">echo $hello</code></pre>

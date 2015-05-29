@@ -1,0 +1,47 @@
+<!doctype html>
+<html ng-app="hdoc" ng-controller="HeroicDocumentationCtrl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Heroic Documentation">
+  <meta name="author" content="Heroic Maintainers">
+  <base href="/">
+
+  <title>Heroic Documentation</title>
+
+  <link href="index.css" rel="stylesheet" />
+  <script src="index.js"  type="text/javascript"></script>
+</head>
+<body>
+  <div class="container">
+  <nav class="navbar navbar-default">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Heroic</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li ui-sref-active="active">
+          <a ui-sref="landing" href="#">Landing</a>
+        </li>
+
+        <li ui-sref-active="active">
+          <a ui-sref="docs">Documentation</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  </div>
+
+  <div class="container">
+    <ui-view></ui-view>
+  </div>
+</body>
+</html>

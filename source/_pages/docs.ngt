@@ -1,0 +1,21 @@
+<div class="row">
+  <div class="col-md-3">
+    <ul class="nav">
+      <li ui-sref-active="active">
+        <a ui-sref="docs.architecture">Architecture</a>
+      </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.getting_started">Getting Started</a>
+      </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.data_model">Data Model</a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="col-md-9">
+    <ui-view></ui-view>
+  </div>
+</div>

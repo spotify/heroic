@@ -1,0 +1,22 @@
+<div class="jumbotron">
+  <h1>Heroic</h1>
+  <p>A Highly Scalable Time Series Database</p>
+</div>
+
+<div class="row">
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.architecture">Architecture</a></h4>
+    <p>Start here, the 10k overview</p>
+  </div>
+
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.getting_started">Getting Started</a></h4>
+    <p>Land on the ground running</p>
+  </div>
+
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.data_model">Data Model</a></h4>
+    <p>Dimensional, semantic from the source time series</p>
+    <p>"Data, what does it even mean?"</p>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+{
+  "name": "heroic-documentation",
+  "description": "Heroic Documentation",
+  "version": "0.0.1",
+  "author": {
+    "name": "Heroic Maintainers"
+  },
+  "scripts": {
+    "test": "./lingon.js build && ./node_modules/karma/bin/karma start test/karma.conf.js"
+  },
+  "devDependencies": {
+    "bower": "1.3.8",
+    "gulp-autoprefixer": "2.2.0",
+    "gulp-html2js": "0.0.1",
+    "gulp-ng-annotate": "^0.5.2",
+    "lingon": "2.2.3"
+  }
+}
