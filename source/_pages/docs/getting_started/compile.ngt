@@ -1,42 +1,37 @@
 <h2>Compilation</h2>
 
-<ul>
-  <li><a href="#why">Why Compile</a></li>
-  <li><a href="#steps">Steps</a></li>
-</ul>
-
-<h3 id="why">
-  Why Compile
-</h3>
+<div class="callout callout-danger">
+  <h4>
+    Unstable Project
+  </h4>
+  <p>
+    In order to run Heroic, you currently have to compile your own jar.
+    This is because the project should currently be considered unstable.
+  </p>
+</div>
 
 <p>
-We do not provide jar files for Heroic, so you will need to compile your own
-from sources in order to use it.
+  Get the Heroic source from github.
 </p>
 
-<h3 id="steps">
-  Steps
-</h3>
-
-<p>
-Get the Heroic source from github.
 <pre><code language="bash">
 $ git clone https://github.com/spotify/heroic.git
 </code></pre>
-</p>
 
 <p>
-Go to the cloned directory and run maven
+  Go to the cloned directory and run maven
+</p>
+
 <pre><code language="bash">
 $ cd heroic
 $ mvn clean package
 </code></pre>
-</p>
 
 <p>
-The previous command will generate a new .jar file, which you can use to run
-heroic.
-<pre>
-heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT.jar
-</pre>
+  The previous command will generate a new .jar file, which you can use to run
+  heroic.
 </p>
+
+<pre><code language="bash">
+$ java -cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT.jar com.spotify.heroic.HeroicService &lt;config&gt;
+</code></pre>

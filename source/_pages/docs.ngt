@@ -13,9 +13,8 @@
             <a ui-sref="docs.getting_started.installation">Installation</a>
           </li>
 
-        <ul class="nav">
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.compile">Compile</a>
+            <a ui-sref="docs.getting_started.compile">Compilation</a>
           </li>
 
           <li ui-sref-active="active">
