@@ -47,7 +47,7 @@ CREATE TABLE heroic.metrics (
 cqlsh < heroic.cql
 </code></pre>
 
-<h3>Heroic API</h3>
+<h3>Heroic: API</h3>
 
 <p>
   TODO: Briefly, what is an API node?
@@ -64,3 +64,46 @@ cluster:
     nodes:
       - nativerpc://localhost:1394
 </pre></code>
+
+<p>
+  Start Heroic API node
+</p>
+
+<pre><code language="bash">
+ java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
+</code></pre>
+
+<p>
+  Test that the node is running properly. Healthy instances should produce a
+  output like the following
+</p>
+
+<pre><code language="bash">
+ curl http://localhost:8080/status
+</code></pre>
+<pre><code language="json">
+{
+  "ok": true,
+  "consumers": {
+    "ok": true,
+    "available": 0,
+    "ready": 0,
+    "errors": 0
+  },
+  "backends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "metadataBackends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "cluster": {
+    "ok": true,
+    "onlineNodes": 1,
+    "offlineNodes": 0
+  }
+}
+</code></pre>
