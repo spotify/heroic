@@ -3,3 +3,4 @@
 //= include '../../bower_components/prism/components/prism-css.js'
 //= include '../../bower_components/prism/components/prism-sql.js'
 //= include './prism-yaml.js'
+//= include './prism-json.js'
