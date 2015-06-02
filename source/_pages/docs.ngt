@@ -10,10 +10,6 @@
 
         <ul class="nav">
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.dependencies">Dependencies</a>
-          </li>
-
-          <li ui-sref-active="active">
             <a ui-sref="docs.getting_started.installation">Installation</a>
           </li>
 

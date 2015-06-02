@@ -10,8 +10,8 @@
 </h3>
 
 <p>
-  Heroic uses the <code>heroic</code> column family, which has to be configured
-  using <code>cqlsh</code>.
+  Heroic (by default) uses the <code>heroic</code> keyspace, which has to be
+  configured using <code>cqlsh</code>.
 </p>
 
 <pre><code language="sql">
@@ -29,10 +29,38 @@ CREATE TABLE heroic.metrics (
 ) WITH COMPACT STORAGE;
 </code></pre>
 
-<h3 id="elasticsearch">
-  Elasticsearch
-</h3>
+<p>
+  Copy the above CQL into a file <code>heroic.cql</code> and run <code>cqlsh</code>
+  like the following.
+</p>
+
+<div class="callout callout-danger">
+  <h4>COMPACT STORAGE</h4>
+  <p>
+    The <code>COMPACT STORAGE</code> directive is required on the metrics table
+    since Heroic supports writing data with Thrift.
+    See <a href="http://docs.datastax.com/en/cql/3.0/cql/cql_reference/create_table_r.html?scroll=reference_ds_v3f_vfk_xj__using-compact-storage">Datastax Documentation</a> for details.
+  </p>
+</div>
+
+<pre><code language="sql">
+cqlsh < heroic.cql
+</code></pre>
+
+<h3>Heroic API</h3>
 
 <p>
-  Heroic will create a number of templates the first time it connects to Elasticsearch.
+  TODO: Briefly, what is an API node?
 </p>
+
+<pre><code language="yaml">
+port: 8080
+
+cluster:
+  protocols:
+    - type: native
+  discovery:
+    type: static
+    nodes:
+      - native://localhost:8080
+</pre></code>
