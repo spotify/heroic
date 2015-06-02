@@ -58,9 +58,9 @@ port: 8080
 
 cluster:
   protocols:
-    - type: native
+    - type: nativerpc
   discovery:
     type: static
     nodes:
-      - native://localhost:8080
+      - nativerpc://localhost:1394
 </pre></code>
