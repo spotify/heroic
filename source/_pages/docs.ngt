@@ -6,7 +6,21 @@
       </li>
 
       <li ui-sref-active="active">
-        <a ui-sref="docs.getting_started">Getting Started</a>
+        <a ui-sref="docs.getting_started.index">Getting Started</a>
+
+        <ul class="nav">
+          <li ui-sref-active="active">
+            <a ui-sref="docs.getting_started.dependencies">Dependencies</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.getting_started.installation">Installation</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.getting_started.configuration">Configuration</a>
+          </li>
+        </ul>
       </li>
 
       <li ui-sref-active="active">

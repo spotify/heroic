@@ -3,6 +3,9 @@
     '_pages/docs.ngt',
     '_pages/docs/architecture.ngt',
     '_pages/docs/getting_started.ngt',
+    '_pages/docs/getting_started/dependencies.ngt',
+    '_pages/docs/getting_started/installation.ngt',
+    '_pages/docs/getting_started/configuration.ngt',
     '_pages/docs/data_model.ngt'
   ]);
 
@@ -22,8 +25,25 @@
         templateUrl: '_pages/docs/architecture.ngt'
       })
       .state('docs.getting_started', {
+        abstract: true,
         url: '/getting_started',
+        template: '<ui-view></ui-view>'
+      })
+      .state('docs.getting_started.index', {
+        url: '',
         templateUrl: '_pages/docs/getting_started.ngt'
+      })
+      .state('docs.getting_started.dependencies', {
+        url: '/installation',
+        templateUrl: '_pages/docs/getting_started/dependencies.ngt'
+      })
+      .state('docs.getting_started.installation', {
+        url: '/installation',
+        templateUrl: '_pages/docs/getting_started/installation.ngt'
+      })
+      .state('docs.getting_started.configuration', {
+        url: '/configuration',
+        templateUrl: '_pages/docs/getting_started/configuration.ngt'
       })
       .state('docs.data_model', {
         url: '/data_model',
