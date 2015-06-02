@@ -5,6 +5,7 @@
     '_pages/docs/getting_started.ngt',
     '_pages/docs/getting_started/installation.ngt',
     '_pages/docs/getting_started/configuration.ngt',
+    '_pages/docs/getting_started/compile.ngt',
     '_pages/docs/data_model.ngt'
   ]);
 
@@ -35,6 +36,10 @@
       .state('docs.getting_started.installation', {
         url: '/installation',
         templateUrl: '_pages/docs/getting_started/installation.ngt'
+      })
+      .state('docs.getting_started.compile', {
+        url: '/compile',
+        templateUrl: '_pages/docs/getting_started/compile.ngt'
       })
       .state('docs.getting_started.configuration', {
         url: '/configuration',
