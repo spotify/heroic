@@ -18,7 +18,8 @@
 
   m.controller('HeroicDocumentationCtrl', HeroicDocumentationCtrl);
 
-  m.config(function($stateProvider, $urlRouterProvider) {
+  m.config(function($stateProvider, $urlRouterProvider, $locationProvider) {
+    $locationProvider.html5Mode(true);
     $urlRouterProvider.otherwise("/landing");
   });
 
