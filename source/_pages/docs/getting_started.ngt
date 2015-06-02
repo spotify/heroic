@@ -54,3 +54,47 @@ cd apache-cassandra-&lt;version&gt;</code></pre>
 </p>
 
 <pre><code language="bash">bin/cassandra -f</code></pre>
+
+<h3>
+  Elasticsearch
+<h3>
+
+<h4>
+  <img src="/images/debian.25.png"></img>
+  Debian
+</h4>
+
+<p>
+  Follow instructions on <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-repositories.html</a>
+</p>
+
+<p>
+  After you have the package installed, edit the configuration file <em>/etc/default/elasticsearch</em> and uncomment the lines defining variables LOG_DIR, DATA_DIR, WORK_DIR, CONF_DIR and CONF_FILE.
+</p>
+
+<p>
+  Now you may start the service:
+<pre><code language="bash">sudo systemctl start elasticsearch</code></pre>
+</p>
+
+<h4>
+  <img src="/images/tux.25.png"></img>
+  Generic Linux
+</h4>
+
+<p>
+  Download .tar.gz from <a href="https://www.elastic.co/downloads/elasticsearch">https://www.elastic.co/downloads/elasticsearch</a>
+</p>
+
+<p>
+  Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
+</p>
+
+<pre><code language="bash">tar -xvf elasticsearch-&lt;version&gt;-bin.tar.gz
+cd elasticsearch-&lt;version&gt;</code></pre>
+
+<p>
+  Run Elasticsearch
+</p>
+
+<pre><code language="bash">bin/elasticsearch</code></pre>
