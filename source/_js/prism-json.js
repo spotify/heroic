@@ -1,5 +1,5 @@
 Prism.languages.json = {
-    'property': /"(\b|\B)[\w-]+"(?=\s*:)/ig,
+    'keyword': /"(\b|\B)[\w-]+"(?=\s*:)/ig,
     'string': /"(?!:)(\\?[^'"])*?"(?!:)/g,
     'number': /\b-?(0x[\dA-Fa-f]+|\d*\.?\d+([Ee]-?\d+)?)\b/g,
     'function': {

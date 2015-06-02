@@ -62,7 +62,7 @@ cluster:
   discovery:
     type: static
     nodes:
-      - nativerpc://localhost:1394
+      - "nativerpc://localhost:1394"
 </pre></code>
 
 <p>

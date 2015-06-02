@@ -1,11 +1,12 @@
 Prism.languages.yaml = {
+  'string': /"(?!:)(\\?[^'"])*?"(?!:)/g,
   'prolog': /(---|\.\.\.)[^\r\n]*(\r?\n|$)/g,
   'comment': /#[^\r\n]*(\r?\n|$)/g,
   'number': /\b-?(0x[\dA-Fa-f]+|\d*\.?\d+)\b/g,
-  'attr-name': /[a-zA-Z0-9_-]+\:/gi
+  'keyword': /[a-zA-Z0-9_-]+\:/gi
 };
 
-Prism.languages.insertBefore('yaml', 'attr-name', {
+Prism.languages.insertBefore('yaml', 'keyword', {
   'important': {
     pattern: /\s+(\||\>|-)/g,
     inside: {
