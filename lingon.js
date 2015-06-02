@@ -7,6 +7,7 @@ var ngAnnotate        = require('gulp-ng-annotate');
 
 lingon.config.sourcePath = 'source';
 lingon.config.buildPath = 'output';
+lingon.config.server.catchAll = 'index.html';
 
 lingon.preProcessors.push('ngt', function(params) {
   return html2js({
