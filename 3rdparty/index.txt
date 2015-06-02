@@ -1,0 +1,5 @@
+Tux.svg: (source/images/tux.*)
+http://en.wikipedia.org/wiki/Linux#/media/File:Tux.svg
+
+Debian Logo: (source/images/debian.*)
+https://www.debian.org/logos/

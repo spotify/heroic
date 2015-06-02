@@ -17,14 +17,40 @@
   </p>
 </div>
 
-<h3>Elasticsearch<h3>
+<h3>
+</h3>
 
-<pre><code language="bash">echo $hello</code></pre>
+<h3>
+  Cassandra
+<h3>
 
-<h3>Cassandra<h3>
+<h4>
+  <img src="/images/debian.25.png"></img>
+  Debian
+</h4>
 
-<pre><code language="bash">echo $hello</code></pre>
+<p>
+  Follow instructions on <a href="http://wiki.apache.org/cassandra/DebianPackaging">http://wiki.apache.org/cassandra/DebianPackaging</a>
+</p>
 
-<h3>Kafka and ZooKeeper<h3>
+<h4>
+  <img src="/images/tux.25.png"></img>
+  Generic Linux
+</h4>
 
-<pre><code language="bash">echo $hello</code></pre>
+<p>
+  Download .tar.gz from <a href="http://cassandra.apache.org/download/">http://cassandra.apache.org/download/</a>
+</p>
+
+<p>
+  Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
+</p>
+
+<pre><code language="bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
+cd apache-cassandra-&lt;version&gt;</code></pre>
+
+<p>
+  Run cassandra (<code language="bash">-f</code> keeps it in the foreground)
+</p>
+
+<pre><code language="bash">bin/cassandra -f</code></pre>
