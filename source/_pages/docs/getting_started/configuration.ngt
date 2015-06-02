@@ -2,11 +2,11 @@
 
 <ul>
   <li><a href="#cassandra">Configuring Cassandra</a></li>
-  <li>Configuring Kafka</li>
+  <li><a href="#heroic">Configuring Heroic</a></li>
 </ul>
 
 <h3 id="cassandra">
-  Cassandra
+  Configuring Cassandra
 </h3>
 
 <p>
@@ -34,6 +34,10 @@ CREATE TABLE heroic.metrics (
   like the following.
 </p>
 
+<pre><code language="sql">
+cqlsh < heroic.cql
+</code></pre>
+
 <div class="callout callout-danger">
   <h4>COMPACT STORAGE</h4>
   <p>
@@ -43,17 +47,50 @@ CREATE TABLE heroic.metrics (
   </p>
 </div>
 
-<pre><code language="sql">
-cqlsh < heroic.cql
-</code></pre>
-
-<h3>Heroic: API</h3>
+<h3>Configuring Heroic</h3>
 
 <p>
-  TODO: Briefly, what is an API node?
+  The following configuration assumes that you've managed to either download or
+  build the heroic project.
+</p>
+
+<p>
+
+<p>
+  We will look into setting up three different <em>kinds</em> of heroic nodes,
+  each with a different purpose.
+</p>
+
+<ul>
+  <li>An <a href="#heroic-api-node">API Node</a>, designated to receive user traffic</li>
+  <li>A <a href="#heroic-data-node">Data Node</a>, designated to process requests received by the API nodes</li>
+  <li>A <a href="#heroic-consumer-node">Consumer Node</a>, designated to consume data from Kafka topics</li>
+</ul>
+
+<p>
+  All the different node types run the same code, the only difference is how
+  they are configured.
+</p>
+
+<div class="callout callout-info">
+  <h4>One, or more roles?</h4>
+  <p>
+    All the nodes use the same type of configuration, but they are configured
+    to do different things.
+    A single node can have one or more role, the exact setup depends on how you
+    wish to scale the system.
+  </p>
+</div>
+
+<h4 id="heroic-api-node">API Node</h4>
+
+<p>
+  API nodes are nodes designated to receive user traffic over HTTP.
+  The following is the minimal required configuration in order to set one up.
 </p>
 
 <pre><code language="yaml">
+# heroic.yaml
 port: 8080
 
 cluster:
@@ -65,23 +102,80 @@ cluster:
       - "nativerpc://localhost:1394"
 </pre></code>
 
+<h4 id="heroic-data-node">API Node</h4>
+
 <p>
-  Start Heroic API node
+  Data nodes are designated to process requests for the API nodes.
+  They are responsible for fetching and aggregating metrics from a backend.
+</p>
+
+<p>
+  Data nodes must have the <code>QUERY</code> node capability, as seen in
+  <code>cluster.capabilities</code>.
+</p>
+
+<p>
+  The following configuration shows how to setup a data nodes that fetches
+  metrics from Cassandra, and uses Elasticsearch for metadata and suggestions.
+</p>
+
+<pre><code language="yaml">
+# heroic.yaml
+port: 8080
+
+cluster:
+  protocols:
+    - type: nativerpc
+  capabilities:
+    - QUERY
+  discovery:
+    type: static
+    nodes:
+      - "nativerpc://localhost:1394"
+
+metrics:
+  backends:
+    - type: datastax
+      seeds:
+        - localhost
+
+metadata:
+  backends:
+    - type: elasticsearch
+      connection:
+        index:
+          type: rotating
+          pattern: heroic-metadata-v1-%s
+        seeds:
+          - localhost
+
+suggest:
+  backends:
+    - type: elasticsearch
+      connection:
+        index:
+          type: rotating
+          pattern: heroic-suggest-v1-%s
+        seeds:
+          - localhost
+</pre></code>
+
+<h4>Run a Heroic Node</h4>
+
+<pre><code language="bash">
+$ java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
+</code></pre>
+
+<h4>Testing that a node Works</h4>
+
+<p>
+  Test that the node is running properly.
+  Healthy instances should produce a output like the following.
 </p>
 
 <pre><code language="bash">
- java -cp heroic.jar com.spotify.heroic.HeroicService heroic.yaml
-</code></pre>
-
-<p>
-  Test that the node is running properly. Healthy instances should produce a
-  output like the following
-</p>
-
-<pre><code language="bash">
- curl http://localhost:8080/status
-</code></pre>
-<pre><code language="json">
+$ curl http://localhost:8080/status
+</code><code language="json">
 {
   "ok": true,
   "consumers": {
