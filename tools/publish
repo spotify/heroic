@@ -1,5 +1,7 @@
 #!/bin/bash
 
+remote=public
+
 set -e
 
 if [[ ! -d output ]]; then
@@ -9,14 +11,14 @@ fi
 if [[ ! -d output/.git ]]; then
     pushd output
         git init
-        git remote add origin git@github.com:spotify/heroic
+        git remote add $remote git@github.com:spotify/heroic
     popd
 fi
 
 pushd output
-    git fetch -a origin gh-pages
+    git fetch -a $remote gh-pages
     git checkout gh-pages
-    git reset --hard origin/gh-pages
+    git reset --hard $remote/gh-pages
 popd
 
 ./lingon.js build
@@ -24,5 +26,5 @@ popd
 pushd output
     git add -A
     git commit -m "[gh-pages] release $(date --rfc-3339=seconds)"
-    git push origin gh-pages
+    git push $remote gh-pages
 popd
