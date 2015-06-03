@@ -19,7 +19,7 @@
   m.controller('HeroicDocumentationCtrl', HeroicDocumentationCtrl);
 
   m.config(function($stateProvider, $urlRouterProvider, $locationProvider) {
-    $locationProvider.html5Mode(true).hashPrefix('?');
+    $locationProvider.html5Mode(false).hashPrefix('!');
     $urlRouterProvider.otherwise("/landing");
   });
 
@@ -32,6 +32,35 @@
 
         $element.addClass('language-' + $attr.language);
         Prism.highlightElement($element[0]);
+      }
+    };
+  });
+
+  m.directive('a', function($location, $anchorScroll) {
+    return {
+      restrict: 'E',
+      link: function($scope, $element, $attr) {
+        if (!$attr.href)
+          return;
+
+        var href = $attr.href;
+
+        if (href[0] !== '#')
+          return;
+
+        if (href[1] === '!')
+          return;
+
+        var hash = href.substring(1, href.length);
+
+        $element.on('click', function(e) {
+          e.preventDefault();
+          var old = $location.hash();
+          $location.hash(hash);
+          $anchorScroll();
+          $location.hash(old);
+          return false;
+        });
       }
     };
   });
