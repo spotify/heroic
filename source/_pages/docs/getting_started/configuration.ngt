@@ -47,6 +47,42 @@ cqlsh < heroic.cql
   </p>
 </div>
 
+<h3 id="elasticsearch">
+  Configuring ElasticSearch
+</h3>
+
+<p>
+  Heroic attempts to configure ElasticSearch as soon as the service starts.
+</p>
+
+<p>
+  After the first startup the following templates should have been created.
+</p>
+
+<ul>
+  <li><b>heroic-metadata</b></li>
+  <li><b>heroic-suggest</b></li>
+</ul>
+
+<p>
+  Heroic suggest also requires dynamic scripting to be enabled, you do this by
+  adding the following to your elasticsearch.yml
+</p>
+
+<pre><code language="yaml">
+script:
+  disable_dynamic: false
+</pre></code>
+
+<div class="callout callout-danger">
+  <h4>Enabling Dynamic Scripting</h4>
+  <p>
+    Enabling dynamic scripting for a public Elasticsearch instance is a
+    security risk. Make sure that your server is on a private network.
+    See <a href="https://github.com/elastic/elasticsearch/issues/10091">bug #10091</a>
+  </p>
+</div>
+
 <h3>Configuring Heroic</h3>
 
 <p>
