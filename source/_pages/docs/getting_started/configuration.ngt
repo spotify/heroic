@@ -102,7 +102,7 @@ cluster:
       - "nativerpc://localhost:1394"
 </pre></code>
 
-<h4 id="heroic-data-node">API Node</h4>
+<h4 id="heroic-data-node">Data Node</h4>
 
 <p>
   Data nodes are designated to process requests for the API nodes.
@@ -158,6 +158,37 @@ suggest:
           pattern: heroic-suggest-v1-%s
         seeds:
           - localhost
+</pre></code>
+
+<h4 id="heroic-data-node">Consumer Node</h4>
+
+<p>
+  A consumer node is responsible for reading data from kafka, and writing it
+  into the configured backends.
+</p>
+
+<p>
+  The below configuration is just an extension to the data node configuration
+  above, by adding consumers you are instructing the service to act as a
+  consumer.
+</p>
+
+<pre><code language="yaml">
+# heroic.yaml
+port: 8080
+
+# Data Node configuration...
+
+consumers:
+  - type: kafka
+    schema: com.spotify.heroic.consumer.schemas.Spotify100
+    topics:
+      - "metrics"
+    config:
+      group.id: heroic-consumer
+      zookeeper.connect: localhost
+      auto.offset.reset: smallest
+      auto.commit.enable: true
 </pre></code>
 
 <h4>Run a Heroic Node</h4>

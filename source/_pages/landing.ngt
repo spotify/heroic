@@ -10,7 +10,7 @@
   </div>
 
   <div class="col-md-3">
-    <h4><a ui-sref="docs.getting_started">Getting Started</a></h4>
+    <h4><a ui-sref="docs.getting_started.index">Getting Started</a></h4>
     <p>Land on the ground running</p>
   </div>
 
