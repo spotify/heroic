@@ -25,7 +25,7 @@
 <h3>
 
 <h4>
-  <img src="/images/debian.25.png"></img>
+  <img src="images/debian.25.png"></img>
   Install on Debian
 </h4>
 
@@ -34,7 +34,7 @@
 </p>
 
 <h4>
-  <img src="/images/tux.25.png"></img>
+  <img src="images/tux.25.png"></img>
   Install on Other Linux
 </h4>
 
@@ -68,7 +68,7 @@ bin/cassandra -f
 <h3>
 
 <h4>
-  <img src="/images/debian.25.png"></img>
+  <img src="images/debian.25.png"></img>
   Debian
 </h4>
 
@@ -86,7 +86,7 @@ bin/cassandra -f
 </p>
 
 <h4>
-  <img src="/images/tux.25.png"></img>
+  <img src="images/tux.25.png"></img>
   Generic Linux
 </h4>
 
@@ -110,7 +110,7 @@ cd elasticsearch-&lt;version&gt;</code></pre>
 <h3 id="kafka">Kafka</h3>
 
 <h4>
-  <img src="/images/tux.25.png"></img>
+  <img src="images/tux.25.png"></img>
   Install on Other Linux
 </h4>
 
