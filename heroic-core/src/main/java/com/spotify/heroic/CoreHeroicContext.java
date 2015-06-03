@@ -1,0 +1,102 @@
+package com.spotify.heroic;
+
+import javax.inject.Inject;
+
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationBuilder;
+import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.AggregationSerializer;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.Filter.MultiArgs;
+import com.spotify.heroic.filter.Filter.NoArg;
+import com.spotify.heroic.filter.Filter.OneArg;
+import com.spotify.heroic.filter.Filter.TwoArgs;
+import com.spotify.heroic.filter.FilterJsonDeserializer;
+import com.spotify.heroic.filter.FilterJsonSerialization;
+import com.spotify.heroic.filter.FilterJsonSerializer;
+import com.spotify.heroic.filter.FilterSerializer;
+import com.spotify.heroic.filter.MultiArgumentsFilter;
+import com.spotify.heroic.filter.NoArgumentFilter;
+import com.spotify.heroic.filter.OneArgumentFilter;
+import com.spotify.heroic.filter.TwoArgumentsFilter;
+
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.serializer.Serializer;
+
+public class CoreHeroicContext implements HeroicContext {
+    @Inject
+    private AggregationSerializer aggregationSerializer;
+
+    @Inject
+    private FilterSerializer filterSerializer;
+
+    @Inject
+    private FilterJsonSerializer filterJsonSerializer;
+
+    @Inject
+    private FilterJsonDeserializer filterJsonDeserializer;
+
+    @Inject
+    private AsyncFramework async;
+
+    private final Object $lock = new Object();
+    private volatile ResolvableFuture<Void> startedFuture;
+
+    @Override
+    public <T extends Aggregation, R extends AggregationQuery<T>> void aggregation(String id, Class<T> type,
+            Class<R> queryType, Serializer<T> serializer, AggregationBuilder<T> builder) {
+        aggregationSerializer.register(id, type, serializer, builder);
+        aggregationSerializer.registerQuery(id, queryType);
+    }
+
+    @Override
+    public <T extends OneArg<A>, I extends T, A> void filter(String id, Class<T> type, Class<I> impl,
+            OneArgumentFilter<T, A> builder, Serializer<A> first) {
+        filterJson(id, type, impl, builder);
+        filterSerializer.register(id, type, builder, first);
+    }
+
+    @Override
+    public <T extends TwoArgs<A, B>, I extends T, A, B> void filter(String id, Class<T> type, Class<I> impl,
+            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second) {
+        filterJson(id, type, impl, builder);
+        filterSerializer.register(id, type, builder, first, second);
+    }
+
+    @Override
+    public <T extends MultiArgs<A>, I extends T, A> void filter(String id, Class<T> type, Class<I> impl,
+            MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
+        filterJson(id, type, impl, builder);
+        filterSerializer.register(id, type, builder, term);
+    }
+
+    @Override
+    public <T extends NoArg, I extends T> void filter(String id, Class<T> type, Class<I> impl,
+            NoArgumentFilter<T> builder) {
+        filterJson(id, type, impl, builder);
+        filterSerializer.register(id, type, builder);
+    }
+
+    public <T extends Filter, I extends T> void filterJson(String id, Class<T> type, Class<I> impl,
+            FilterJsonSerialization<T> serialization) {
+        filterJsonSerializer.register(impl, serialization);
+        filterJsonDeserializer.register(id, serialization);
+    }
+
+    @Override
+    public AsyncFuture<Void> startedFuture() {
+        synchronized ($lock) {
+            if (this.startedFuture == null)
+                this.startedFuture = async.future();
+        }
+
+        return this.startedFuture;
+    }
+
+    public void resolveCoreFuture() {
+        if (this.startedFuture != null)
+            this.startedFuture.resolve(null);
+    }
+}

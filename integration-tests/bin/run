@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+import os
+import sys
+import subprocess as sp
+import contextlib
+import unittest
+import importlib
+
+@contextlib.contextmanager
+def in_dir(directory):
+    original = os.getcwd()
+    os.chdir(directory)
+
+    try:
+        yield
+    finally:
+        os.chdir(original)
+
+def find_tests(tests):
+    for d in os.listdir(tests):
+        base, ext = os.path.splitext(d)
+
+        if base.startswith('.') or ext != '.py' or base in ['__init__', 'helpers']:
+            continue
+
+        yield "tests.{}".format(base)
+
+def main(program, args):
+    root = os.path.abspath(os.path.join(os.path.dirname(program), ".."))
+    tests_dir = os.path.join(root, 'tests')
+
+    build_root = os.path.dirname(root)
+    pom_xml = os.path.join(build_root, 'pom.xml')
+    heroic_jar = os.path.join(build_root, 'heroic-dist', 'target', 'heroic-dist-0.0.1-SNAPSHOT.jar')
+
+    sys.path.append(root)
+
+    # build heroic jar if necessary.
+    if not os.path.isfile(heroic_jar):
+        if not os.path.isfile(pom_xml):
+            raise Exception("no such file: {}".format(pom_xml))
+
+        with in_dir(build_root):
+            sp.call(["mvn", "clean", "package"])
+
+    if not os.path.isfile(heroic_jar):
+        raise Exception("no such jar: {}".format(pom_xml))
+
+    import tests.helpers as h
+    h.setup(heroic_jar=heroic_jar)
+
+    loader = unittest.TestLoader()
+
+    suites = []
+
+    for test in find_tests(tests_dir):
+        m = importlib.import_module(test)
+        suites.append(loader.loadTestsFromModule(m))
+
+    runner = unittest.TextTestRunner(verbosity=2)
+
+    results = []
+
+    for suite in suites:
+        results.append(runner.run(suite))
+
+    if not all(r.errors == 0 for r in results):
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[0], sys.argv[1:]))

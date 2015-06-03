@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" shutdownHook="disable">
+  <Appenders>
+    <Console name="primary" target="SYSTEM_OUT">
+      <PatternLayout alwaysWriteExceptions="false" pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=white, DEBUG=green bold, TRACE=blue}"/>
+    </Console>
+  </Appenders> 
+  <Loggers>
+    <Logger name="com.spotify.heroic.mrpc" level="WARN" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="com.spotify.heroic.http" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="org.eclipse.jetty.server.RequestLog" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="com.spotify.heroic" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="org.elasticsearch" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="kafka.consumer" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Logger name="io.netty" level="INFO" additivity="false">
+      <AppenderRef ref="primary" />
+    </Logger>
+    <Root level="INFO">
+      <AppenderRef ref="primary" />
+    </Root>
+  </Loggers>
+</Configuration>

@@ -1,0 +1,190 @@
+# vim: filetype=yaml
+port: 8080
+
+# Schedule for refreshing cluster metadata.
+refreshClusterSchedule: "0 */1 * * * ?"
+
+# Cluster configuration.
+cluster:
+  # Local ID.
+  # @default Generated UUID.
+  #id: 88b3f090-49f8-43fe-b30e-5ce0e3889884
+  # When communicating with self, avoid using the network.
+  # @default false
+  #useLocal: false
+  # Node capabilities.
+  #  * QUERY Node can be queried for data (api node).
+  #  * WRITE Node can be written to.
+  # @default ["QUERY", "WRITE"]
+  capabilities:
+    - QUERY
+  # Discovery mechanism
+  discovery:
+    ## Static discovery mechanism.
+    type: static
+    nodes:
+      - native://localhost:8100
+  # RPC mechanism
+  rpc:
+    type: native
+    host: 0.0.0.0
+    port: 8100
+    parentThreads: 2
+    childThreads: 10
+
+# Metrics configuration.
+metrics:
+  backends:
+    ## Cassandra 2 backend.
+    #- type: cassandra2
+    #  # Unique id for this backend.
+    #  # @default Generated.
+    #  #id: null
+    #  # Backend group name.
+    #  # @default "heroic"
+    #  #group: heroic
+    #  # Keyspace.
+    #  # @default "heroic"
+    #  #keyspace: heroic
+    #  # Seeds.
+    #  # @default empty
+    #  #seeds:
+    #  #  - localhost
+    #  # Max number of connections per host in cluster.
+    #  #maxConnectionsPerHost: 50
+    ## Generated (infinite) metrics.
+    # The generator is consistent so the same queried time series will always
+    # result in the same generated values (given the same configuration here!).
+    - type: generated
+      generator:
+        ## Generate a consistent random time series.
+        type: random
+        # Minimum y-position.
+        # @default -100
+        #min: -100
+        # Maximum y-position.
+        # @default 1000
+        #max: 1000
+        # Step between each data point in milliseconds.
+        # @default 10 seconds (in milliseconds)
+        #step: 10000
+        # Range around y-position that a value can be randomly generated.
+        # @default 50
+        #range: 50
+        ## Generate a consistent sine curve time series.
+        #type: sine
+        # Absolute peak value.
+        # @default 1000
+        #magnitude: 1000d
+        # How long time in milliseconds for a complete sine curve.
+        # @default One day (in milliseconds).
+        #period: 86400000
+
+# Metadata backend configuration.
+metadata:
+  backends:
+    ## Lucene metadata.
+    - type: lucene
+      seed:
+        ## Randomly generated metadata.
+        type: random
+        # Random seed, set if you want consistency.
+        # @default Randomly generated.
+        seed: 0
+    ## ElasticSearch-based metadata.
+    #- type: elasticsearch
+    #  # Backend id, if not specified it will be generated.
+    #  # @default null
+    #  #id: null
+    #  # Name of elasticsearch cluster.
+    #  # @default "elasticsearch"
+    #  #clusterName: elasticsearch
+    #  # ElasticSearch index.
+    #  # @default "heroic"
+    #  #index:
+    #  # Index mapping to use
+    #  # @default Single
+    #  #  #type: single
+    #  #  # Single index type that only operates on a single index.
+    #  #  #index: heroic
+    #  #  # Rotating index type that creates new indices over time.
+    #  #  #type: rotating
+    #  #  # Pattern to use when creating index.
+    #  #  # The pattern must contain a single '%s' that will be
+    #  #  # replaced with the base time stamp of the index.
+    #  #  # @default "heroic-%s"
+    #  #  #pattern: heroic-%s
+    #  #  # Interval in milliseconds that each index is valid.
+    #  #  # @default: 604800000 (one week)
+    #  #  #interval: 604800000
+    #  # Use node client transport.
+    #  # If true, heroic will join ElasticSearch as a read-only node.
+    #  # @default false
+    #  #nodeClient: false
+    #  # How many buffered write actions are allowed.
+    #  # @default 1000
+    #  #writeBulkActions: 1000
+    #  # Bulk dump interval in seconds.
+    #  # @default 1
+    #  #dumpInterval: 1
+    #  # How many requests are sent to the server in bulk.
+    #  # @default 5
+    #  #concurrentBulkRequests: 5
+    #  #Seed nodes (required).
+    #  seeds:
+    #    - localhost:9200
+
+# Data consumers.
+#consumers:
+#  - type: kafka
+#    # Id for consumer.
+#    # @default Generated
+#    #id: null
+#    # Topics to consume from (required).
+#    topics:
+#      - "metrics"
+#    # Schema to use when consuming (required).
+#    # The fully qualified class name of a schema implementation for consuming.
+#    #schema: com.spotify.heroic.consumer.schemas.Spotify100
+#    # Threads per topic.
+#    # @default 2
+#    #threadsPerTopic: 2
+#    # Kafka configuration.
+#    # The provided map will be passed in directly as the kafka configuration.
+#    # For available configuration options, see:
+#    #   https://kafka.apache.org/08/configuration.html#consumerconfigs
+#    #config:
+#    #  zookeeper.connect: localhost:2181
+#    #  group.id: heroic
+
+## Aggregation cache.
+#cache:
+#  backend:
+#    ## In-memory based aggregation cache.
+#    #type: memory
+#    ## Cassandra based cache.
+#    #type: cassandra2
+#    #  # Keyspace.
+#    #  # @default "heroic"
+#    #  #keyspace: heroic
+#    #  # Seeds.
+#    #  # @default empty
+#    #  #seeds:
+#    #  #  - localhost
+#    #  # Max number of connections per host in cluster.
+#    #  #maxConnectionsPerHost: 50
+
+## Http client configuration.
+#client:
+#  # Number of threads to use for client requests.
+#  # @default 100
+#  #threads: 100
+#  # Max amounts of pending requests, if all client threads are occupied.
+#  # @default 100
+#  #queueSize: 100
+#  # Timeout in milliseconds for establishing a client connection.
+#  # @default 2000
+#  #connectTimeout: 2000
+#  # Timeout in milliseconds for reading from a server.
+#  # @default 120000
+#  #readTimeout: 120000

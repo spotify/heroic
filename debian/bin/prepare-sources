@@ -1,0 +1,17 @@
+#!/bin/bash
+
+release=$1
+version=$2
+
+if [[ -z $release || -z $version ]]; then
+    echo "Usage: $0 <release> <version>"
+    exit 1
+fi
+
+sedexpr="-e s/\\bRELEASE\\b/$release/g"
+sedexpr="$sedexpr -e s/\\bVERSION\\b/$version/g"
+
+for input in debian/*.in; do
+    output=$(sed $sedexpr <<< ${input%%.in})
+    sed $sedexpr < $input > $output
+done

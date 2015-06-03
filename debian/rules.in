@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+
+MAVEN_HOME=debian/maven_home
+JAVA_HOME=/usr/lib/jvm/default-java
+
+MVN=debian/mvn.sh
+
+BUILD=build
+
+HEROIC_JAR=$(BUILD)/heroic-full.jar
+HEROIC=$(BUILD)/heroic-RELEASE
+HEROICSH=$(BUILD)/heroicsh-RELEASE
+HEROIC_STATUS=$(BUILD)/heroic-status-RELEASE
+
+%:
+	dh $@
+
+override_dh_auto_clean:
+	rm -rf $(BUILD)
+	rm -rf $(MAVEN_HOME)
+	$(MVN) clean
+
+override_dh_auto_build:
+	$(MVN) -Ddeb.skip=true package
+	mkdir -p $(BUILD)
+	cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT.jar $(HEROIC_JAR)
+	cp debian/bin/heroic $(HEROIC)
+	cp debian/bin/heroicsh $(HEROICSH)
+	cp debian/bin/heroic-status $(HEROIC_STATUS)
