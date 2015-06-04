@@ -1,5 +1,10 @@
 <h2>Getting Started</h2>
 
 <p>
-  This section will cover documentation for how to get you up and running quickly.
+This section of the documentation will cover how to <a ui-sref="^.installation">install</a> and <a ui-sref="^.configuration">configure</a> Heroic from nothing, to a running <em>experimental</em> system.
+</p>
+
+<p>
+  Heroic as a project is still in an <b>Alpha</b> stage, use at your own risk,
+  and if you find the time to, please <a git-href>contribute</a>.
 </p>

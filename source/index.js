@@ -19,9 +19,35 @@
 
   m.controller('HeroicDocumentationCtrl', HeroicDocumentationCtrl);
 
-  m.config(function($stateProvider, $urlRouterProvider, $locationProvider) {
+  m.config(function($stateProvider, $urlRouterProvider, $locationProvider, githubProvider) {
     $locationProvider.html5Mode(false).hashPrefix('!');
     $urlRouterProvider.otherwise("/index");
+    githubProvider.setUrl('https://github.com/spotify/heroic');
+  });
+
+  m.provider('github', function() {
+    var githubUrl = null;
+    var githubBranch = 'master';
+
+    this.setUrl = function(url) {
+      githubUrl = url;
+    };
+
+    this.setBranch = function(branch) {
+      githubBranch = branch;
+    };
+
+    this.$get = function() {
+      return {
+        url: githubUrl,
+        relativeUrl: function(path) {
+          return githubUrl + '/' + path;
+        },
+        blobUrl: function(path) {
+          return githubUrl + '/blob/' + githubBranch + '/' + path;
+        }
+      };
+    };
   });
 
   m.directive('code', function() {
@@ -62,6 +88,33 @@
           $location.hash(old);
           return false;
         });
+      }
+    };
+  });
+
+  m.directive('gitHrefJava', function(github) {
+    return {
+      restrict: 'A',
+      link: function($scope, $element, $attr) {
+        var href = $attr.gitHrefJava;
+        var colon = href.indexOf(':');
+
+        if (colon == -1)
+          return;
+
+        var component = href.substring(0, colon);
+        var path = href.substring(colon + 1, href.length).replace(/\./g, '/') + '.java';
+        var newHref = component + '/src/main/java/' + path;
+        $element.attr('href', github.blobUrl(newHref));
+      }
+    };
+  });
+
+  m.directive('gitHref', function(github) {
+    return {
+      restrict: 'A',
+      link: function($scope, $element, $attr) {
+        $element.attr('href', github.relativeUrl($attr.gitHref));
       }
     };
   });

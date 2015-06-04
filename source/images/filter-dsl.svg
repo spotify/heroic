@@ -96,13 +96,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.979899"
-     inkscape:cx="404.06346"
+     inkscape:cx="314.41242"
      inkscape:cy="235.04093"
      inkscape:document-units="px"
-     inkscape:current-layer="g6893"
+     inkscape:current-layer="g3852"
      showgrid="false"
      inkscape:window-width="2560"
-     inkscape:window-height="1534"
+     inkscape:window-height="1374"
      inkscape:window-x="0"
      inkscape:window-y="27"
      inkscape:window-maximized="1" />
@@ -114,7 +114,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -138,9 +138,10 @@
        transform="translate(-21.055939,50.000001)">
       <g
          transform="translate(28.403215,-6.2109869)"
-         id="g3852">
+         id="g3852"
+         style="opacity:1">
         <rect
-           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985"
            width="230"
            height="30"
@@ -158,13 +159,14 @@
              id="tspan3796-2"
              x="128.65434"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">a {host=a, what=foo, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">a {host=a, what=foo, ..}</tspan></text>
       </g>
       <g
          transform="translate(28.403215,37.363476)"
-         id="g3852-8">
+         id="g3852-8"
+         style="opacity:1">
         <rect
-           style="opacity:0.98000004;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-27"
            width="230"
            height="30"
@@ -182,13 +184,14 @@
              id="tspan3796-2-7"
              x="128.65434"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">a {host=b, what=foo, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">a {host=b, what=foo, ..}</tspan></text>
       </g>
       <g
          transform="translate(28.403215,80.937989)"
-         id="g3852-6">
+         id="g3852-6"
+         style="opacity:1">
         <rect
-           style="opacity:0.98000003999999996;fill:#ffd664;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#ffd664;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-3"
            width="230"
            height="30"
@@ -206,13 +209,14 @@
              id="tspan3796-2-0"
              x="128.38579"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">b {host=b, what=bar, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">b {host=b, what=bar, ..}</tspan></text>
       </g>
       <g
          transform="translate(28.403215,124.51246)"
-         id="g3852-2">
+         id="g3852-2"
+         style="opacity:1">
         <rect
-           style="opacity:0.98000004;fill:#ffd664;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#ffd664;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-9"
            width="230"
            height="30"
@@ -230,13 +234,14 @@
              id="tspan3796-2-6"
              x="128.38579"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">b {host=a, what=bar, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">b {host=a, what=bar, ..}</tspan></text>
       </g>
       <g
          transform="translate(28.403215,168.08693)"
-         id="g3852-61">
+         id="g3852-61"
+         style="opacity:1">
         <rect
-           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-28"
            width="230"
            height="30"
@@ -254,13 +259,13 @@
              id="tspan3796-2-2"
              x="128.65434"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">a {host=a, what=foo, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">a {host=a, what=foo, ..}</tspan></text>
       </g>
       <g
          transform="translate(28.403215,211.66142)"
          id="g3852-86">
         <rect
-           style="opacity:0.98000004;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:1;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-5"
            width="230"
            height="30"
@@ -278,7 +283,7 @@
              id="tspan3796-2-66"
              x="128.65434"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">a {host=b, what=bar, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">a {host=b, what=bar, ..}</tspan></text>
       </g>
     </g>
     <g
@@ -288,7 +293,7 @@
          transform="translate(-20,0)"
          id="g6893">
         <rect
-           style="opacity:0.98000003999999996;fill:#648cff;fill-opacity:1;fill-rule:nonzero;stroke:none"
+           style="opacity:1;fill:#648cff;fill-opacity:1;fill-rule:nonzero;stroke:none"
            id="rect6887"
            width="210.11174"
            height="70.710678"
@@ -298,7 +303,7 @@
            transform="translate(0,652.36218)" />
         <path
            sodipodi:type="star"
-           style="opacity:0.98000003999999996;fill:#648cff;fill-opacity:1;fill-rule:nonzero;stroke:none"
+           style="opacity:1;fill:#648cff;fill-opacity:1;fill-rule:nonzero;stroke:none"
            id="path6891"
            sodipodi:sides="3"
            sodipodi:cx="356.8364"
@@ -315,7 +320,7 @@
            inkscape:transform-center-x="-11.243002" />
       </g>
       <g
-         transform="translate(24.911178,33.326944)"
+         transform="translate(24.911178,32.016397)"
          id="g4832">
         <text
            xml:space="preserve"
@@ -324,7 +329,7 @@
            y="813.67352"
            id="text4828"
            sodipodi:linespacing="125%"><tspan
-             style="font-size:20px"
+             style="font-size:16px"
              sodipodi:role="line"
              id="tspan4830"
              x="368.1366"
@@ -333,12 +338,13 @@
     </g>
     <g
        id="g4780-7"
-       transform="translate(485.8909,64.637009)">
+       transform="translate(485.8909,64.637009)"
+       style="opacity:1">
       <g
          transform="translate(49.111342,81.305112)"
          id="g3852-8-9">
         <rect
-           style="opacity:0.98000004;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+           style="opacity:0.98000003999999996;fill:#aad282;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
            id="rect2985-27-0"
            width="230"
            height="30"
@@ -356,7 +362,7 @@
              id="tspan3796-2-7-7"
              x="128.65434"
              y="754.95923"
-             style="font-size:20px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Trebuchet MS;-inkscape-font-specification:Trebuchet MS">a {host=b, what=foo, ..}</tspan></text>
+             style="font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;font-family:Sans;-inkscape-font-specification:Sans">a {host=b, what=foo, ..}</tspan></text>
       </g>
     </g>
   </g>

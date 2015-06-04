@@ -19,4 +19,12 @@
     <p>Dimensional, semantic from the source time series</p>
     <p>"Data, what does it even mean?"</p>
   </div>
+
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.filter_dsl">Rich Filtering</a></h4>
+    <p>
+      Leverage multi-dimensional time series using a comprehensive and
+      expressive filtering language
+    </p>
+  </div>
 </div>

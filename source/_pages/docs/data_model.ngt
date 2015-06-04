@@ -10,24 +10,85 @@
 </p>
 
 <p>
-  Each <em>series</em> have a set of data points associated with them.
+  A series represents <em>something</em> over time, where <em>something</em> is
+  currently either a set of data points, or events.
+</p>
+
+<h3>Data Points</h3>
+
+<p>
+  Class:
+  <a git-href-java="heroic-component:com.spotify.heroic.model.DataPoint">
+    com.spotify.heroic.model.DataPoint
+  </a>
+</p>
+
+<p>
   Each data point stores the timestamp at which they were sampled, and the
   value which they carry.
 </p>
 
 <p>
-  The <em>timestamp</em> is represented as a 64-bit number (long), which
+  The <em>timestamp</em> is stored as a 64-bit number (long), which
   represents the number of milliseconds since the unix epoch.
 </p>
 
 <p>
-  The <em>value</em> is a 64-bit floating point number (double).
+  The <em>value</em> is stored as a 64-bit floating point number (double).
 </p>
+
+<p>
+  A data point is then typically represented as a JSON array, with two elements.
+</p>
+
+<pre><code language="json">
+[&lt;timestamp&gt;, &lt;value&gt;]
+</pre></code>
+
+<h3>Events</h3>
+
+<p>
+  Class:
+  <a git-href-java="heroic-component:com.spotify.heroic.model.Event">
+    com.spotify.heroic.model.Event
+  </a>
+</p>
+
+<div class="callout callout-danger">
+  <h4>Experimental</h4>
+  <p>
+    Events are currently experimental and not supported by the Cassandra
+    backend.
+  </p>
+</div>
+
+<p>
+  Each event stores the <em>timestamp</em> at which they were sampled, and a
+  JSON payload (preferrably small).
+</p>
+
+<p>
+  The <em>timestamp</em> is stored as a 64-bit number (long), which
+  represents the number of milliseconds since the unix epoch.
+</p>
+
+<p>
+  The <em>payload</em> is a JSON payload stored as an arbitrarily sized
+  binary blob.
+</p>
+
+<p>
+  An event is typically represented as a JSON array, with two elements.
+</p>
+
+<pre><code language="json">
+[&lt;timestamp&gt;, {&lt;payload&gt;}]
+</pre></code>
 
 <h3>Semantic Series</h3>
 
 <p>
-  We strongly encourage (but do not enforce) the concept of semantic series.
+  We strongly encourage (but do not force) the concept of semantic series.
 </p>
 
 <p>
@@ -48,6 +109,7 @@
     "host": "database.example.com",
     "site": "lon",
     "what": "cpu-idle-percentage",
+    "system-component": "cpu",
     "cpu-type": "idle",
     "unit": "%"
   }
@@ -60,5 +122,60 @@
 </p>
 
 <pre><code language="ts">
-system { host=database.example.com, site=lon, what=cpu-idle-percentage, cpu-type=idle, unit=% }
+system { host=database.example.com, site=lon, what=cpu-idle-percentage, ... }
 </pre></code>
+
+<p>
+  The need for semantic metrics becomes more apparent when you start to reason
+  about <em>how to model</em> series for certain use cases using a traditional,
+  hierarchical model.
+</p>
+
+<p>
+  Assume that the above series was stored in a hierarchical time series
+  database like the following.
+</p>
+
+<pre><code>database.example.com.system.cpu-idle-percentage</code></pre>
+
+<ul>
+  <li>
+    The lack of <em>keys</em> makes deciphering a hierarchy challenging.
+  </li>
+  <li>
+    The growth in the number of branches in the hierarchy becomes an
+    organizational burden.
+  </li>
+  <li>
+    Growth in the number of series limits discovery.
+  </li>
+  <li>
+    The structure of the hierarchy determines <em>how</em> things are discovered.
+  </li>
+  <li>
+    The filtering, or selecting of series is limited (e.g. wildcard).
+  </li>
+</ul>
+
+<p>
+  By promiting the use of tags, and a convention over which tags should be used
+  <em>how</em>, the problem becomes more manageable.
+</p>
+
+<p>
+  Instead of a strict hierarchy where discovery and expression is limited, you
+  can have a multi-dimensional system that enables strong correlations and
+  natural groupings.
+</p>
+
+<p>
+  Conversely, if a given convention is followed, an administrator learning what
+  a specific tag like <code>what</code> <em>means</em> will find it easier to
+  navigate unknown contexts where that tag is used.
+</p>
+
+<h3>References</h3>
+
+<ul>
+  <li><a href="http://metrics20.org">Metrics 2.0 "An emerging set of conventions, standards and concepts around timeseries metrics metadata" by Dieter Plaetinck</a></li>
+</ul>
