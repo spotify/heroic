@@ -1,6 +1,7 @@
 (function() {
   var m = angular.module('hdoc.docs', [
     '_pages/docs.ngt',
+    '_pages/docs/index.ngt',
     '_pages/docs/architecture.ngt',
     '_pages/docs/getting_started.ngt',
     '_pages/docs/getting_started/installation.ngt',
@@ -19,7 +20,15 @@
     $stateProvider
       .state('docs', {
         url: "/docs",
-        templateUrl: "_pages/docs.ngt"
+        templateUrl: "_pages/docs.ngt",
+        controller: function($state) {
+          if ($state.is('docs'))
+            $state.go('docs.index');
+        }
+      })
+      .state('docs.index', {
+        url: "/index",
+        templateUrl: "_pages/docs/index.ngt"
       })
       .state('docs.architecture', {
         url: '/architecture',

@@ -14,22 +14,22 @@
 </head>
 <body>
   <div class="container">
-  <nav class="navbar navbar-default">
+  <nav class="navbar navbar-default" ng-init="navbarToggle = false">
     <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+      <button type="button" class="navbar-toggle collapsed" ng-click="navbarToggle = !navbarToggle">
         <span class="sr-only">Toggle navigation</span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
         <span class="icon-bar"></span>
       </button>
-      <a class="navbar-brand" href="#">Heroic</a>
+
+      <a class="navbar-brand" ui-sref="index">Heroic</a>
     </div>
 
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+    <div class="collapse navbar-collapse" collapse="!navbarToggle">
       <ul class="nav navbar-nav">
         <li ui-sref-active="active">
-          <a ui-sref="landing" href="#">Landing</a>
+          <a ui-sref="index" href="#">Index</a>
         </li>
 
         <li ui-sref-active="active">

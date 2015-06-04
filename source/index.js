@@ -9,7 +9,8 @@
 (function() {
   var m = angular.module('hdoc', [
     'ui.router',
-    'hdoc.landing',
+    'ui.bootstrap',
+    'hdoc.index',
     'hdoc.docs'
   ]);
 
@@ -20,7 +21,7 @@
 
   m.config(function($stateProvider, $urlRouterProvider, $locationProvider) {
     $locationProvider.html5Mode(false).hashPrefix('!');
-    $urlRouterProvider.otherwise("/landing");
+    $urlRouterProvider.otherwise("/index");
   });
 
   m.directive('code', function() {

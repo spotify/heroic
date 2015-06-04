@@ -76,6 +76,23 @@
 
 <img style="width: 100%;" src="images/sharding.svg"></img>
 
+<h3>Failure Tolerance</h3>
+
+<p>
+  The system tries to be as transparent as possible in the face of problems,
+  and for each request that fans out to a shard there is the potential that an
+  error prevents the result from being computed.
+</p>
+
+<p>
+  In the case of an unrecoverable error, the shards which were successfully
+  queried will still return an result, but the fact that a shard is failing
+  will be clearly communicated in the result. It will then be up to the client
+  to decide how to manage that circumstance.
+</p>
+
+<img style="width: 100%;" src="images/errors.svg"></img>
+
 <h3>Overview</h3>
 
 <p>
