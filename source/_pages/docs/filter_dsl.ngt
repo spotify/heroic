@@ -1,0 +1,150 @@
+<h2>Filter DSL</h2>
+
+<p>
+  Heroic uses a JSON-based DSL to define filters.
+  A filter reduces the number of selected time series, if no filter (or the <a href="#filter-true">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
+</p>
+
+<img style="width: 100%;" src="images/filter-dsl.svg"></img>
+
+<p>
+  This filter can either be expressed using <a href="#dsl-json">JSON</a>, or as
+  <a href="#dsl-parsable">a parsable DSL</a>.
+
+  Because the parsable syntax is more human friendly, examples will be written
+  using it, like the following.
+</p>
+
+<pre><code language="hql">
+$key = "hello kitty" and host = foo.example.com
+</code></pre>
+
+<h3 id="json-dsl">JSON</h3>
+
+<p>
+  A filter expressed as JSON a syntax tree which follows polish notation.
+</p>
+
+<p>
+  JSON is typically used when a filter is built programatically, because the
+  syntax is unambigious in terms of precedence and escaping.
+  There is also a ton of language support for it, and it meshes well with
+  restful APIs.
+</p>
+
+<p>
+  The following is an example filter expressed both in a parsable form, and
+  in JSON.
+</p>
+
+<pre><code language="hql">
+$key = "hello kitty" and host = foo.example.com
+</code><code language="json">
+["and", ["$key", "hello kitty"], ["=", "host", "foo.example.com"]]
+</code></pre>
+
+<h3 id="json-dsl">Parsable DSL</h3>
+
+<p>
+  The parsable form was developed to make it easier for humans to express
+  filters in a manner which is most convenient.
+  The language is infix, and simple strings do not have to be escaped (e.g. <code language="hql">host</code> vs. <code language="json">"host"</code>)
+</p>
+
+<div class="callout callout-danger">
+  <h4>Experimental</h4>
+  <p>
+    The parsable DSL should currently be considered experimental and might be
+    subject to future changes.
+  </p>
+</div>
+
+<h3>Statements</h3>
+
+<div class="table-responsive">
+<table class="table table-bordered">
+  <tr>
+    <th colspan="3"><h4>Primitives</h4></th>
+  </tr>
+
+  <tr>
+    <th></th>
+    <th>DSL</th>
+    <th>JSON</th>
+  </tr>
+
+  <tr>
+    <th scope="row">Simple String</th>
+    <td><pre><code language="hql">hello.world</code></pre></td>
+    <td><pre><code language="json">"hello.world"</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Quoted String</th>
+    <td><pre><code language="hql">"hello world"</code></pre></td>
+    <td><pre><code language="json">"hello world"</code></pre></td>
+  </tr>
+
+  <tr>
+    <th colspan="3"><h4>Boolean Operators</h4></th>
+  </tr>
+
+  <tr>
+    <th scope="row">And</th>
+    <td><pre><code language="hql">&lt;a&gt; and &lt;b&gt;</code></pre></td>
+    <td><pre><code language="json">["and", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Or</th>
+    <td><pre><code language="hql">&lt;a&gt; or &lt;b&gt;</code></pre></td>
+    <td><pre><code language="json">["or", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Not</th>
+    <td><pre><code language="hql">!&lt;a&gt;</code></pre></td>
+    <td><pre><code language="json">["not", &lt;a&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th colspan="3"><h4>Operators</h4></th>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Matches</th>
+    <td><pre><code language="hql">&lt;a&gt; = &lt;b&gt;</code></pre></td>
+    <td><pre><code language="json">["=", &lt;a&gt;, &lt;b&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Does Not Match</th>
+    <td><pre><code language="hql">&lt;a&gt; != &lt;b&gt;</code></pre></td>
+    <td><pre><code language="json">["not", ["=", &lt;a&gt;, &lt;b&gt;]]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Key Matches</th>
+    <td><pre><code language="hql">$key = &lt;a&gt;</code></pre></td>
+    <td><pre><code language="json">["key", &lt;a&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Key Does Not Match</th>
+    <td><pre><code language="hql">$key != &lt;a&gt;</code></pre></td>
+    <td><pre><code language="json">["not", ["key", &lt;a&gt;]]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag Exists</th>
+    <td><pre><code language="hql">+&lt;a&gt;</code></pre></td>
+    <td><pre><code language="json">["+", &lt;a&gt;]</code></pre></td>
+  </tr>
+
+  <tr>
+    <th scope="row">Tag In</th>
+    <td><pre><code language="hql">&lt;a&gt; in [&lt;b&gt;, &lt;c&gt;]</code></pre></td>
+    <td><pre><code language="json">["or", ["=", &lt;a&gt;, &lt;b&gt;], ["=", &lt;a&gt;, &lt;c&gt;]]</code></pre></td>
+  </tr>
+</table>
+</div>

@@ -1,1 +1,83 @@
 <h2>Architecture</h2>
+
+<p>
+  The following document will look at the architecture of a Heroic installation
+  at scale.
+</p>
+
+<p>
+  Heroic relies on technology which has been proved to operate at scale under
+  the load that we expect such a system to receive.
+</p>
+
+<h3>Metric Transport: Kafka</h3>
+
+<blockquote cite="http://kafka.apache.org/">
+  <p>Kafka has a modern cluster-centric design that offers strong durability and
+  fault-tolerance guarantees.</p>
+  <footer><cite title="Source Title"><a href="http://kafka.apache.org/">http://kafka.apache.org/</a></cite></footer>
+</blockquote>
+
+<p>
+  We primarily use Kafka for transporting metrics of each host (or instance),
+  into Heroic.
+  This translates into Heroic being a <em>push-based</em> system.
+  Kafka also acts as an intermediate indirection layer, allowing you to perform
+  system administration tasks on the consumers without causing disruptions on
+  consumers.
+</p>
+
+<p>
+  Because each <em>host</em> is reponsible for transporting the metrics, heroic
+  does not have to perform any type of discovery, the first time a new
+  time-series becomes visible in the pipeline it will be registered.
+</p>
+
+<h3>Storage: Cassandra</h3>
+
+<p>
+  Metrics are stored in Cassandra clusters, in a manner which avoids huge rows.
+</p>
+
+<h3>Metadata: Elasticsearch</h3>
+
+<p>
+  We use Elasticsearch to store and make metadata available to a heroic
+  cluster. It is the primary component that drives Heroic's <a ui-sref="docs.filter_dsl">filter DSL</a>.
+</p>
+
+<p>
+  Elasticsearch has proven to have fairly significant stability concerns, but
+  heroic uses it in a way so it acts as a non-primary storage and can rapidly be
+  rebuilt.
+</p>
+
+<p>
+  We also use Elasticsearch to drive <a ui-sref="docs.suggestions">suggestions</a>.
+</p>
+
+<h3>Global Sharding</h3>
+
+<p>
+  Heroic has rudimentary support for sharding that allows multiple independant
+  clusters serve a single client.
+</p>
+
+<p>
+  We use this to reduce the amount of inter-geographical traffic by allowing
+  one cluster to operate completely within one datacenter.
+</p>
+
+<p>
+  A client querying a single heroic node will cause it to fan out to all
+  clusters that it knows about, process the request (locally), and then finally
+  merge the request for the client.
+</p>
+
+<img style="width: 100%;" src="images/sharding.svg"></img>
+
+<h3>Overview</h3>
+
+<p>
+  The following is a diagram showcasing how a single
+</p>

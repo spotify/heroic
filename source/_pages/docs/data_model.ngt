@@ -1,5 +1,64 @@
 <h2>Data Model</h2>
 
 <p>
-
+  A series is identified by <em>key</em>, and a unique set of <em>tags</em>.
 </p>
+
+<p>
+  Keys, tag keys, and tag values can contain any valid unicode string,
+  internally they are stored in UTF-8.
+</p>
+
+<p>
+  Each <em>series</em> have a set of data points associated with them.
+  Each data point stores the timestamp at which they were sampled, and the
+  value which they carry.
+</p>
+
+<p>
+  The <em>timestamp</em> is represented as a 64-bit number (long), which
+  represents the number of milliseconds since the unix epoch.
+</p>
+
+<p>
+  The <em>value</em> is a 64-bit floating point number (double).
+</p>
+
+<h3>Semantic Series</h3>
+
+<p>
+  We strongly encourage (but do not enforce) the concept of semantic series.
+</p>
+
+<p>
+  The idea behind semantic series is to move away from obscure identifiers and
+  introduce metrics that are structured in a way that makes it easier for a
+  human and a computer to reason about.
+</p>
+
+<p>
+  So a series like the idle cpu utilization for a host could be identified as the
+  following.
+</p>
+
+<pre><code language="json">
+{
+  "key": "system",
+  "tags": {
+    "host": "database.example.com",
+    "site": "lon",
+    "what": "cpu-idle-percentage",
+    "cpu-type": "idle",
+    "unit": "%"
+  }
+}
+</pre></code>
+
+<p>
+  This can also be represented in a more compact, human readable format as
+  below.
+</p>
+
+<pre><code language="ts">
+system { host=database.example.com, site=lon, what=cpu-idle-percentage, cpu-type=idle, unit=% }
+</pre></code>

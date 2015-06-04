@@ -26,6 +26,10 @@
       <li ui-sref-active="active">
         <a ui-sref="docs.data_model">Data Model</a>
       </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.filter_dsl">Filter DSL</a>
+      </li>
     </ul>
   </div>
 

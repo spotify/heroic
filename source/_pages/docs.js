@@ -6,7 +6,8 @@
     '_pages/docs/getting_started/installation.ngt',
     '_pages/docs/getting_started/configuration.ngt',
     '_pages/docs/getting_started/compile.ngt',
-    '_pages/docs/data_model.ngt'
+    '_pages/docs/data_model.ngt',
+    '_pages/docs/filter_dsl.ngt'
   ]);
 
   function DocumentationCtrl() {
@@ -44,6 +45,10 @@
       .state('docs.getting_started.configuration', {
         url: '/configuration',
         templateUrl: '_pages/docs/getting_started/configuration.ngt'
+      })
+      .state('docs.filter_dsl', {
+        url: '/filter_dsl',
+        templateUrl: '_pages/docs/filter_dsl.ngt'
       })
       .state('docs.data_model', {
         url: '/data_model',

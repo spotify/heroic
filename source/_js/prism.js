@@ -4,3 +4,5 @@
 //= include '../../bower_components/prism/components/prism-sql.js'
 //= include './prism-yaml.js'
 //= include './prism-json.js'
+//= include './prism-hql.js'
+//= include './prism-ts.js'
