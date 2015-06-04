@@ -21,6 +21,7 @@ pushd output
     git reset --hard $remote/gh-pages
 popd
 
+sed 's/<base href="\/">/<base href="\/heroic\/">/' -i source/index.html
 ./lingon.js build
 
 pushd output
