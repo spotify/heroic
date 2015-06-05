@@ -1,26 +1,36 @@
 <div class="api-type">
-  <h4 ng-attr-id="{{id}}">
+  <h3 ng-show="!!name" ng-attr-id="{{id}}">
     <span ng-if="!!name">{{name}}</span>
-  </h4>
+
+    <a ng-hide="fields.length === 0" class="btn btn-structure-doc btn-default btn-xs pull-right" href ng-click="showStructureDoc = !showStructureDoc" title="show/hide documentation">
+      <span>Structure</span>
+      <span ng-hide="showStructureDoc" class="glyphicon glyphicon-menu-down"></span>
+      <span ng-show="showStructureDoc" class="glyphicon glyphicon-menu-up"></span>
+    </a>
+  </h3>
 
   <div class="doc">
     <ng-transclude></ng-transclude>
   </div>
 
-  <div class="structure-doc">
-    <h4>Structure</h4>
+  <div class="structure-doc" ng-show="!!showStructureDoc">
+    <h4 ng-if="!structural">Structure</h4>
 
     <div class="table-responsive">
     <table class="table table-bordered">
       <tr>
-        <th>Field</th>
-        <th>Type</th>
+        <th ng-if="!structural">Field</th>
+        <th ng-if="!structural">Type</th>
+        <th ng-if="structural">Structure</th>
         <th>Purpose</th>
       </tr>
 
       <tr ng-repeat="f in fields">
-        <td>
-          <code>{{f.name}}</code>&nbsp;<em ng-show="f.required">required</em>
+        <td ng-if="!structural">
+          <code>{{f.name}}</code>&nbsp;<small ng-if="f.required">
+            <em class="sr-only">required</em>
+            <span class="glyphicon glyphicon-check" popover="required field" popover-trigger="mouseenter"></span>
+          </small>
         </td>
         <td api-field-bind="f.type"></td>
         <td api-field-bind="f.purpose"></td>

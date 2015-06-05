@@ -1,6 +1,6 @@
-<h2>API</h2>
+<h1>API</h1>
 
-<h3>Endpoints</h3>
+<h2>Endpoints</h2>
 
 <api-endpoint path="/status" method="GET">
   <p>
@@ -127,18 +127,248 @@
     </codeblock>
   </api-accept>
 
-  <api-response status="200">
-    <h4>Example <span class="status">200</span> Response</h4>
-    <pre><code language="json">{}</code></pre>
+  <api-response>
+    <h4>Example Response</h4>
+
+    <api-type>
+      <api-field name="range" type-json="{start: <number>, end: <number}">
+        The range in time for which to query
+      </api-field>
+
+      <api-field name="errors" type-array-href="RequestError">
+        Potential errors returned either from different shards or for specific
+        time series. The presence of an error does not cause the entire query
+        to fail, instead it is up to the client to use this information to
+        decide if the response is reliable enough.
+      </api-field>
+
+      <api-field name="result" type-array-href="MetricGroup">
+        An array of result groups.
+      </api-field>
+
+      <api-field name="statistics" type-href="MetricsQueryStatistics">
+        Statistics about the current query.
+        This field should be inspected for errors which will have caused the result
+        to be inconsistent.
+      </api-field>
+    </api-type>
+
+    <codeblock language="json">
+    {
+      "errors": [
+        {
+          "type": "node",
+          "nodeId": "abcd-efgh",
+          "nodeUri": "http://example.com",
+          "tags": {"site": "lon"},
+          "error": "Connection refused",
+          "internal": true
+        },
+        {
+          "type": "series",
+          "tags": {"site": "lon"},
+          "error": "Aggregation too heavy, too many rows from the database would have to be fetched to satisfy the request!",
+          "internal": true
+        }
+      ],
+      "result": [
+        {
+          "hash": "deadbeef",
+          "tags": {"foo": "bar"},
+          "values": [[1300000000000, 42.0]]
+        },
+        {
+          "hash": "beefdead",
+          "tags": {"foo": "baz"},
+          "values": [[1300000000000, 42.0]]
+        }
+      ],
+      "range": {},
+      "statistics": {}
+    }
+    </codeblock>
   </api-response>
 </api-endpoint>
 
-<h3>Types</h3>
 
-<api-type name="QueryDateRange">
+<api-endpoint path="/write/metrics" method="POST">
   <p>
-    Class:
-    <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+    Used for writing data into heroic directly.
+  </p>
+
+  <api-accept curl-data='{"series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}}, "data":[[1300000000000, 42.0], [1300001000000, 84.0]]}'>
+    <api-type>
+      <api-field name="series" required="true" type-href="Series">
+        <p>Time series to write data to.</p>
+      </api-field>
+
+      <api-field name="data" required="true" type-array-href="DataPoint">
+        <p>Data to write.</p>
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}},
+      "data": [[1300000000000, 42.0], [1300001000000, 84.0]]
+    }
+    </codeblock>
+  </api-accept>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <codeblock language="json">
+    {
+      "ok": true
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/tags" method="POST">
+  <p>
+    Query for available tag combinations.
+  </p>
+
+  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+    <api-type>
+      <api-field required="true" name="filter" type-href="Filter">
+        A filter to use when quering for tags.
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {"filter": ["and", ["key", "system"], ["=", "role", "database"]]}
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <codeblock language="json">
+    {
+      "result": {
+        "role": ["database", "webfrontend"],
+        "host": ["database.example.com", "webfrontend.example.com"]
+      },
+      "sampleSize": 2
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/keys" method="POST">
+  <p>
+    Use to query for keys.
+  </p>
+
+  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+    <api-type>
+      <api-field required="true" name="filter" type-href="Filter">
+        A filter to use when quering for tags.
+      </api-field>
+    </api-type>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {"filter": ["and", ["key", "system"], ["=", "role", "database"]]}
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    {
+      "result": ["foo", "bar"],
+      "sampleSize": 5
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<h2>Types</h2>
+
+<api-type name="Series">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.Series</a>
+  </p>
+
+  <p>
+    See the <a ui-sref="^.data_model({'#': 'series'})">Series section in Data Model</a>
+    for details about <em>what</em> a series is.
+  </p>
+
+  <api-field required="true" name="key" type-json='<string>'>
+    Key of the series.
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='{<string>: <string>, ...}'>
+    Tags of the series.
+  </api-field>
+</api-type>
+
+<api-type name="DataPoint" kind="structural">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.DataPoint</a>
+  </p>
+
+  <p>
+    See the <a ui-sref="^.data_model({'#': 'data-points'})">Data Points section in Data Model</a>
+    for more details about <em>what</em> a data point is.
+  </p>
+
+  <api-field required="true" name="datapoint" type-json='[<timestamp>, <value>]'>
+    <p>
+      A single datapoint.
+    </p>
+
+    <p>
+      The <code language="json">&lt;timestamp&gt;</code> is the number of milliseconds since unix epoch.
+    </p>
+
+    <p>
+      The <code language="json">&lt;value&gt;</code> is the sample value.
+    </p>
+  </api-field>
+</api-type>
+
+<api-type kind="structural" name="Filter">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.filter.Filter</a>
+  </p>
+
+  <p>
+    The structure of a filter is explained in detail in
+    the <a ui-sref="docs.filter_dsl">Filter DSL</a> documentation.
+    This will only be a brief, syntactical overview.
+  </p>
+
+  <api-field name="and" type-json='["and", <filter>, ...]'>
+    A boolean 'and' operation, evaluates to <code language="json">true</code> if <em>all</em> of the nested <code language="json">&lt;filter&gt;</code>'s are <code language="json">true</code>, otherwise <code language="json">true</code>.
+  </api-field>
+
+  <api-field name="or" type-json='["or", <filter>, ...]'>
+    A boolean 'or' operation, evaluates to <code language="json">true</code> if <em>any</em> of the nested <code language="json">&lt;filter&gt;</code>'s are <code language="json">true</code>, otherwise <code language="json">false</code>.
+  </api-field>
+
+  <api-field name="not" type-json='["not", <filter>]'>
+    A boolean 'not' operation, evaluates to <code language="json">true</code> if the nested <code language="json">&lt;filter&gt;</code> is <code language="json">false</code>.
+  </api-field>
+</api-type>
+
+<!-- anchor to use when linking to QueryDateRange -->
+<span api-type-id="QueryDateRange"></span>
+
+<api-type name="QueryDateRange.Absolute">
+  <p>
+    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+  </p>
+
+  <p>
+    An absolute time span.
   </p>
 
   <api-field required="true" name="type" type-json='"absolute"'>
@@ -152,13 +382,44 @@
   <api-field required="true" name="end" type-json='<number>'>
     Ending timestamp in milliseconds from the unix epoch.
   </api-field>
+</api-type>
+
+<api-type name="QueryDateRange.Relative">
+  <p>
+    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+  </p>
+
+  <p>
+    Relative date ranges range from <em>the current</em> time, to a specific
+    point in the past.
+  </p>
+
+  <p>
+    This object tells the distance to the point in the past.
+  </p>
 
   <api-field required="true" name="type" type-json='"relative"'>
     Type of the relative date range.
   </api-field>
 
-  <api-field name="unit" type-json='"MILLISECONDS" | "SECONDS" | "MINUTES" | "HOURS" | "DAYS" | "WEEKS" | "MONTHS"'>
-    Unit to use for <code>value</code>
+  <api-field name="unit" type-json='<string>'>
+    <p>
+      Unit to use for <code>value</code>
+    </p>
+
+    <p>
+      <code>unit</code> must be one of.
+    </p>
+
+    <ul class="list-inline">
+      <li><code language="json">"MILLISECONDS"</code></li>
+      <li><code language="json">"SECONDS"</code></li>
+      <li><code language="json">"MINUTES"</code></li>
+      <li><code language="json">"HOURS"</code></li>
+      <li><code language="json">"DAYS"</code></li>
+      <li><code language="json">"WEEKS"</code></li>
+      <li><code language="json">"MONTHS"</code></li>
+    </ul>
   </api-field>
 
   <api-field name="value" type-json='<number>'>

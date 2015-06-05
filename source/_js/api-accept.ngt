@@ -12,7 +12,7 @@
   <span ng-if="!isEmpty" class="content-type">{{contentType}}</span>
 
   <a ng-show="!isEmpty" class="btn btn-doc btn-default btn-xs pull-right" href ng-click="showDoc = !showDoc" title="show/hide documentation">
-    <span>Doc</span>
+    <span>Request Doc</span>
     <span ng-hide="showDoc" class="glyphicon glyphicon-menu-down"></span>
     <span ng-show="showDoc" class="glyphicon glyphicon-menu-up"></span>
   </a>

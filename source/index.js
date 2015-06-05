@@ -27,6 +27,16 @@
     githubProvider.setUrl('https://github.com/spotify/heroic');
   });
 
+  m.run(function($rootScope) {
+    $rootScope.$on('$stateChangeStart', function() {
+      console.log('start', arguments);
+    });
+
+    $rootScope.$on('$stateChangeError', function() {
+      console.log('error', arguments);
+    });
+  });
+
   m.provider('github', function() {
     var githubUrl = null;
     var githubBranch = 'master';
@@ -61,35 +71,6 @@
 
         $element.addClass('language-' + $attr.language);
         Prism.highlightElement($element[0]);
-      }
-    };
-  });
-
-  m.directive('a', function($location, $anchorScroll) {
-    return {
-      restrict: 'E',
-      link: function($scope, $element, $attr) {
-        if (!$attr.href)
-          return;
-
-        var href = $attr.href;
-
-        if (href[0] !== '#')
-          return;
-
-        if (href[1] === '!')
-          return;
-
-        var hash = href.substring(1, href.length);
-
-        $element.on('click', function(e) {
-          e.preventDefault();
-          var old = $location.hash();
-          $location.hash(hash);
-          $anchorScroll();
-          $location.hash(old);
-          return false;
-        });
       }
     };
   });

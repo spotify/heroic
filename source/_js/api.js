@@ -41,21 +41,36 @@
     };
   });
 
-  function nameToId(name) {
-    return name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  function nameToAnchor(name) {
+    if (!name)
+      throw new Error('name must be defined');
+
+    name = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    name = name.replace(/[\._]/g, '-');
+    return 'api-types-' + name;
   }
+
+  m.directive('apiTypeId', function() {
+    return {
+      link: function($scope, $element, $attr) {
+        $element.attr('id', nameToAnchor($attr.apiTypeId));
+      }
+    };
+  });
 
   m.directive('apiType', function() {
     return {
+      scope: {},
       restrict: 'E',
       transclude: true,
       templateUrl: '_js/api-type.ngt',
       replace: true,
       compile: function($element, $attr, transclude) {
         return function($scope, $element, $attr) {
-          $scope.showStructure = true;
+          $scope.structural = $attr.kind === 'structural';
           $scope.name = $attr.name || null;
-          $scope.id = $scope.name !== null ? 'api-type-' + nameToId($scope.name) : null;
+          $scope.id = $scope.name !== null ? nameToAnchor($scope.name) : null;
+          $scope.showStructureDoc = $scope.name === null;
         };
       },
       controller: function ApiTypeCtrl($scope) {
@@ -83,22 +98,60 @@
     };
   });
 
-  m.directive('apiField', function($sce) {
-    function compileType($attr) {
-      if (!!$attr.typeHref) {
-        var aCode = angular.element('<code>');
-        var a = angular.element('<a>');
-        a.attr('href', '#api-type-' + nameToId($attr.typeHref));
-        aCode.text($attr.typeHref);
-        a.append(aCode);
-        return a;
-      }
+  m.directive('apiField', function($sce, $state) {
+    function compileTypeHref(typeHref) {
+      var code = angular.element('<code>');
+      var a = angular.element('<a>');
+      var glyph = angular.element('<span class="glyphicon glyphicon-link">');
+      var smallGlyph = angular.element('<small>');
+      smallGlyph.append(glyph);
 
-      if (!!$attr.typeJson) {
-        var code = angular.element('<code language="json">');
-        code.text($attr.typeJson);
-        return code;
-      }
+      var href = $state.href('.', {'#': nameToAnchor(typeHref)});
+
+      a.attr('href', href);
+      code.text(typeHref);
+
+      a.append(code);
+      a.append(smallGlyph);
+
+      return a;
+    }
+
+    function compileTypeArrayHref(typeArrayHref) {
+      var code = angular.element('<code>');
+      var a = angular.element('<a>');
+      var glyph = angular.element('<span class="glyphicon glyphicon-link">');
+      var smallGlyph = angular.element('<small>');
+      smallGlyph.append(glyph);
+
+      var href = $state.href('.', {'#': nameToAnchor(typeArrayHref)});
+
+      a.attr('href', href);
+      code.text("[" + typeArrayHref + ", ...]");
+
+      a.append(code);
+      a.append(smallGlyph);
+
+      return a;
+    }
+
+    function compileTypeJson(typeJson) {
+      var code = angular.element('<code language="json">');
+
+      code.text(typeJson);
+
+      return code;
+    }
+
+    function compileType($attr) {
+      if (!!$attr.typeHref)
+        return compileTypeHref($attr.typeHref);
+
+      if (!!$attr.typeArrayHref)
+        return compileTypeArrayHref($attr.typeArrayHref);
+
+      if (!!$attr.typeJson)
+        return compileTypeJson($attr.typeJson);
 
       var noType = angular.element('<em>');
       noType.text('no type');

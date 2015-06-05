@@ -14,13 +14,11 @@
   currently either a set of data points, or events.
 </p>
 
-<h3>Data Points</h3>
+<h3 id="data-points">Data Points</h3>
 
 <p>
-  Class:
-  <a git-href-java="heroic-component:com.spotify.heroic.model.DataPoint">
-    com.spotify.heroic.model.DataPoint
-  </a>
+  Java Class:
+  <a git-href-java="heroic-component">com.spotify.heroic.model.DataPoint</a>
 </p>
 
 <p>
@@ -45,11 +43,10 @@
 [&lt;timestamp&gt;, &lt;value&gt;]
 </pre></code>
 
-<h3>Events</h3>
+<h3 id="events">Events</h3>
 
 <p>
-  Class:
-  <a git-href-java="heroic-component">com.spotify.heroic.model.Event</a>
+  Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.Event</a>
 </p>
 
 <div class="callout callout-danger">
@@ -83,10 +80,10 @@
 [&lt;timestamp&gt;, {&lt;payload&gt;}]
 </pre></code>
 
-<h3>Semantic Series</h3>
+<h3 id="series">Semantic Series</h3>
 
 <p>
-  We strongly encourage (but do not force) the concept of semantic series.
+  We strongly encourage the concept of semantic series.
 </p>
 
 <p>
