@@ -101,11 +101,17 @@
         var href = $attr.gitHrefJava;
         var colon = href.indexOf(':');
 
-        if (colon == -1)
-          return;
+        var component, path;
 
-        var component = href.substring(0, colon);
-        var path = href.substring(colon + 1, href.length).replace(/\./g, '/') + '.java';
+        if (colon == -1) {
+          component = href;
+          path = $element.text();
+        } else {
+          component = href.substring(0, colon);
+          path = href.substring(colon + 1, href.length);
+        }
+
+        path = path.replace(/\./g, '/') + '.java';
         var newHref = component + '/src/main/java/' + path;
         $element.attr('href', github.blobUrl(newHref));
       }

@@ -49,9 +49,7 @@
 
 <p>
   Class:
-  <a git-href-java="heroic-component:com.spotify.heroic.model.Event">
-    com.spotify.heroic.model.Event
-  </a>
+  <a git-href-java="heroic-component">com.spotify.heroic.model.Event</a>
 </p>
 
 <div class="callout callout-danger">

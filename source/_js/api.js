@@ -2,7 +2,8 @@
   var m = angular.module('hdoc.api', [
     '_js/api-endpoint.ngt',
     '_js/api-response.ngt',
-    '_js/api-accept.ngt'
+    '_js/api-accept.ngt',
+    '_js/api-type.ngt'
   ]);
 
   m.directive('apiEndpoint', function() {
@@ -36,6 +37,90 @@
         $scope.status = $scope.status || '200';
         $scope.contentType = $scope.contentType || 'application/json';
         $scope.showDoc = false;
+      }
+    };
+  });
+
+  function nameToId(name) {
+    return name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  m.directive('apiType', function() {
+    return {
+      restrict: 'E',
+      transclude: true,
+      templateUrl: '_js/api-type.ngt',
+      replace: true,
+      compile: function($element, $attr, transclude) {
+        return function($scope, $element, $attr) {
+          $scope.showStructure = true;
+          $scope.name = $attr.name || null;
+          $scope.id = $scope.name !== null ? 'api-type-' + nameToId($scope.name) : null;
+        };
+      },
+      controller: function ApiTypeCtrl($scope) {
+        $scope.fields = [];
+
+        this.addField = function(field) {
+          $scope.fields.push(field);
+        };
+      }
+    };
+  });
+
+  m.directive('apiFieldBind', function($compile) {
+    return {
+      link: function($scope, $element, $attr) {
+        $scope.$watch($attr.apiFieldBind, function(element) {
+          if (!element)
+            return;
+
+          $element.children().remove();
+          $element.append(element);
+          $compile(element)($scope);
+        });
+      }
+    };
+  });
+
+  m.directive('apiField', function($sce) {
+    function compileType($attr) {
+      if (!!$attr.typeHref) {
+        var aCode = angular.element('<code>');
+        var a = angular.element('<a>');
+        a.attr('href', '#api-type-' + nameToId($attr.typeHref));
+        aCode.text($attr.typeHref);
+        a.append(aCode);
+        return a;
+      }
+
+      if (!!$attr.typeJson) {
+        var code = angular.element('<code language="json">');
+        code.text($attr.typeJson);
+        return code;
+      }
+
+      var noType = angular.element('<em>');
+      noType.text('no type');
+      return noType;
+    }
+
+    return {
+      require: '^apiType',
+      compile: function($element, $attr, $transclude) {
+        return function($scope, $element, $attr, type) {
+          var compiledType = compileType($attr);
+
+          var field = {
+            name: $attr.name,
+            required: $attr.required === 'true' ? true : false,
+            type: compiledType,
+            purpose: $element.clone().contents()
+          };
+
+          $element.remove();
+          type.addField(field);
+        };
       }
     };
   });

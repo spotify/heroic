@@ -1,5 +1,7 @@
 <h2>API</h2>
 
+<h3>Endpoints</h3>
+
 <api-endpoint path="/status" method="GET">
   <p>
     Query for the status of a heroic instance.
@@ -79,66 +81,39 @@
   </p>
 
   <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregators": []}'>
-    <h4>Structure</h4>
+    <api-type>
+      <api-field required="true" name="range" type-href="QueryDateRange">
+        The range in time for which to query
+      </api-field>
 
-    <div class="table-responsive">
-    <table class="table table-bordered">
-      <tr>
-        <th>Field</th>
-        <th>Required</th>
-        <th>Purpose</th>
-      </tr>
+      <api-field name="filter">
+        <p>
+          A statement used to filter down the selected time series.
+          Each individual filtering field (<code>filter</code>, <code>key</code>, <code>tags</code>, and <code>hasTags</code>) may be empty.
+          At least one must be specified to make up a valid filter.
+        </p>
 
-      <tr>
-        <td><code>range</code></td>
-        <td>yes</td>
-        <td>The range in time for which to query</td>
-      </tr>
+        <p>
+          See <a ui-sref="docs.filter_dsl">Filter DSL</a> for details on how to build a filter.
+        </p>
+      </api-field>
 
-      <tr>
-        <td><code>filter</code></td>
-        <td>no</td>
-        <td>
-          <p>
-            A statement used to filter down the selected time series.
-            Each individual filtering field (<code>filter</code>, <code>key</code>, <code>tags</code>, and <code>hasTags</code>) may be empty.
-            At least one must be specified to make up a valid filter.
-          </p>
+      <api-field name="aggregators">
+        Aggregators used to downsample the response.
+      </api-field>
 
-          <p>
-            See <a ui-sref="docs.filter_dsl">Filter DSL</a> for details on how to build a filter.
-          </p>
-        </td>
-      </tr>
+      <api-field name="groupBy">
+        <p>
+          Will create several result groups from the given keys.
+          Series will be aggregated on a per-group basis.
+        </p>
 
-      <tr>
-        <td><code>aggregators</code></td>
-        <td>no</td>
-        <td>
-          Aggregators used to downsample the response.
-        </td>
-      </tr>
+        <h5>Example 1.</h5>
 
-      <tr>
-        <td><code>groupBy</code></td>
-        <td>no</td>
-        <td>
-          <p>
-            Will create several result groups from the given keys.
-          </p>
-
-          <p>
-            Series will be aggregated on a per-group basis.
-          </p>
-
-          <h5>Example 1.</h5>
-
-          Given time series <code language="json">{"a": 1, "b": 2}</code> and <code language="json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code language="json">["a", "b"]</code>
-          the returned result groups would be <code language="json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.
-        </td>
-      </tr>
-    </table>
-    </div>
+        Given time series <code language="json">{"a": 1, "b": 2}</code> and <code language="json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code language="json">["a", "b"]</code>
+        the returned result groups would be <code language="json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.
+      </api-field>
+    </api-type>
 
     <h4>Example Request</h4>
 
@@ -157,3 +132,36 @@
     <pre><code language="json">{}</code></pre>
   </api-response>
 </api-endpoint>
+
+<h3>Types</h3>
+
+<api-type name="QueryDateRange">
+  <p>
+    Class:
+    <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"absolute"'>
+    Type of the absolute date range.
+  </api-field>
+
+  <api-field required="true" name="start" type-json='<number>'>
+    Starting timestamp in milliseconds from the unix epoch.
+  </api-field>
+
+  <api-field required="true" name="end" type-json='<number>'>
+    Ending timestamp in milliseconds from the unix epoch.
+  </api-field>
+
+  <api-field required="true" name="type" type-json='"relative"'>
+    Type of the relative date range.
+  </api-field>
+
+  <api-field name="unit" type-json='"MILLISECONDS" | "SECONDS" | "MINUTES" | "HOURS" | "DAYS" | "WEEKS" | "MONTHS"'>
+    Unit to use for <code>value</code>
+  </api-field>
+
+  <api-field name="value" type-json='<number>'>
+    How many <code>unit</code> timespans back in time this date starts.
+  </api-field>
+</api-type>

@@ -1,0 +1,31 @@
+<div class="api-type">
+  <h4 ng-attr-id="{{id}}">
+    <span ng-if="!!name">{{name}}</span>
+  </h4>
+
+  <div class="doc">
+    <ng-transclude></ng-transclude>
+  </div>
+
+  <div class="structure-doc">
+    <h4>Structure</h4>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Purpose</th>
+      </tr>
+
+      <tr ng-repeat="f in fields">
+        <td>
+          <code>{{f.name}}</code>&nbsp;<em ng-show="f.required">required</em>
+        </td>
+        <td api-field-bind="f.type"></td>
+        <td api-field-bind="f.purpose"></td>
+      </tr>
+    </table>
+    </div>
+  </div>
+</div>
