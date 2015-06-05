@@ -14,34 +14,35 @@
 
   <api-response status="200">
     <h4>Example <span class="status">200</span> Response</h4>
-    <pre><code language="json">
-{
-  "ok": true,
-  "consumers": {
-    "ok": true,
-    "available": 0,
-    "ready": 0,
-    "errors": 0,
-    "consumingThreads": 1,
-    "totalThreads": 1
-  },
-  "backends": {
-    "ok": true,
-    "available": 0,
-    "ready": 0
-  },
-  "metadataBackends": {
-    "ok": true,
-    "available": 0,
-    "ready": 0
-  },
-  "cluster": {
-    "ok": true,
-    "onlineNodes": 1,
-    "offlineNodes": 0
-  }
-}
-    </code></pre>
+
+    <codeblock language="json">
+    {
+      "ok": true,
+      "consumers": {
+        "ok": true,
+        "available": 0,
+        "ready": 0,
+        "errors": 0,
+        "consumingThreads": 1,
+        "totalThreads": 1
+      },
+      "backends": {
+        "ok": true,
+        "available": 0,
+        "ready": 0
+      },
+      "metadataBackends": {
+        "ok": true,
+        "available": 0,
+        "ready": 0
+      },
+      "cluster": {
+        "ok": true,
+        "onlineNodes": 1,
+        "offlineNodes": 0
+      }
+    }
+    </codeblock>
   </api-response>
 
   <api-response status="503">
@@ -55,20 +56,20 @@
       The below document shows that there is something wrong with the configured consumers, in this case it is because the number of <code>consumingThreads</code> is not the same as the <code>totalThreads</code>
     </p>
 
-    <pre><code language="json">
-{
-  "ok": false,
-  "consumers": {
-    "ok": false,
-    "available": 0,
-    "ready": 0,
-    "errors": 0,
-    "consumingThreads": 0,
-    "totalThreads": 1
-  },
-  ...
-}
-    </code></pre>
+    <codeblock language="json">
+    {
+      "ok": false,
+      "consumers": {
+        "ok": false,
+        "available": 0,
+        "ready": 0,
+        "errors": 0,
+        "consumingThreads": 0,
+        "totalThreads": 1
+      },
+      ...
+    }
+    </codeblock>
   </api-response>
 </api-endpoint>
 
@@ -141,14 +142,14 @@
 
     <h4>Example Request</h4>
 
-<pre><code language="json">
-{
-  "range": {"type": "relative"},
-  "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
-  "groupBy": ["site"],
-  "aggregators": []
-}
-</code></pre>
+    <codeblock language="json">
+    {
+      "range": {"type": "relative"},
+      "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
+      "groupBy": ["site"],
+      "aggregators": []
+    }
+    </codeblock>
   </api-accept>
 
   <api-response status="200">

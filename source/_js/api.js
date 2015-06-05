@@ -31,7 +31,8 @@
       transclude: true,
       replace: true,
       templateUrl: '_js/api-response.ngt',
-      controller: function ApiResponseCtrl($scope) {
+      require: '^apiEndpoint',
+      link: function($scope, $element, $attr, endpoint) {
         $scope.status = $scope.status || '200';
         $scope.contentType = $scope.contentType || 'application/json';
         $scope.showDoc = false;

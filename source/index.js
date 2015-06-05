@@ -120,4 +120,79 @@
       }
     };
   });
+
+  /**
+   * Helper directive for creating indented code blocks.
+   *
+   * Will setup, and compile a code block containing <pre><code language=...>.
+   *
+   * @param content Specify dynamic content of the code block.
+   * @param language Specify the language of the code block.
+   */
+  m.directive('codeblock', function($compile) {
+    var LINESEP = /[\n\r]+/;
+
+    function stripText($element) {
+      var text = $element.text();
+      var previous = $element[0].previousSibling;
+      var prefix = null;
+
+      // if previous node is text.
+      if (previous.nodeType === 3) {
+        var parts = previous.nodeValue.split(LINESEP);
+        prefix = parts[parts.length - 1];
+      }
+
+      if (prefix !== null) {
+        var lines = text.split(LINESEP);
+        var result = [];
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+
+          if (line.length < prefix.length) {
+            result.push(line);
+            continue;
+          }
+
+          result.push(line.substring(prefix.length, line.length));
+        }
+
+        text = result.join('\n');
+      }
+
+      return text;
+    }
+
+    return {
+      link: function($scope, $element, $attr) {
+        var children = $element.children();
+        var pre = angular.element('<pre>');
+        var code = angular.element('<code>');
+
+        if (!!$attr.language)
+          code.attr('language', $attr.language);
+
+        pre.append(code);
+
+        if (!!$attr.content) {
+          $element.replaceWith(pre);
+
+          $scope.$watch($attr.content, function(content) {
+            content = content || '';
+            code.text(content);
+            $compile(pre)($scope);
+          });
+
+          return;
+        }
+
+        var text = stripText($element);
+
+        $element.replaceWith(pre);
+        code.text(text);
+        $compile(pre)($scope);
+      }
+    };
+  });
 })();

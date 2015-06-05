@@ -25,7 +25,7 @@
 
   <div ng-if="curl !== null" ng-show="showCurl">
     <h4>Example Curl</h4>
-    <pre><code language="bash" ng-bind-html="curl"></code></pre>
+    <codeblock language="bash" content="curl"></codeblock>
   </div>
 
   <div ng-if="!isEmpty" class="accept-doc" ng-show="showDoc"><ng-transclude /></div>
