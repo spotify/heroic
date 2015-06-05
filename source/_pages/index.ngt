@@ -28,3 +28,10 @@
     </p>
   </div>
 </div>
+
+<div class="row">
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.api">API Documentation</a></h4>
+    <p>Learn how to interact with Heroic's Restful API</p>
+  </div>
+</div>

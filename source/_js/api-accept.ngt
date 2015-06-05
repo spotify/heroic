@@ -1,0 +1,32 @@
+<div class="api-accept">
+  <span class="icon glyphicon glyphicon-upload" title="Accept"></span>
+  <span ng-if="isEmpty">
+    <em>Does not accept a body</em>
+    <span
+        class="glyphicon glyphicon-question-sign"
+        popover="Sending a body will cause a 400 error to be returned"
+        popover-title="Request body is not supported"
+        popover-trigger="mouseenter"></span>
+  </span>
+
+  <span ng-if="!isEmpty" class="content-type">{{contentType}}</span>
+
+  <a ng-show="!isEmpty" class="btn btn-doc btn-default btn-xs pull-right" href ng-click="showDoc = !showDoc" title="show/hide documentation">
+    <span>Doc</span>
+    <span ng-hide="showDoc" class="glyphicon glyphicon-menu-down"></span>
+    <span ng-show="showDoc" class="glyphicon glyphicon-menu-up"></span>
+  </a>
+
+  <a ng-show="curl !== null" class="btn btn-curl btn-default btn-xs pull-right" href ng-click="showCurl = !showCurl" title="show/hide example curl">
+    <span>Curl</span>
+    <span ng-hide="showCurl" class="glyphicon glyphicon-menu-down"></span>
+    <span ng-show="showCurl" class="glyphicon glyphicon-menu-up"></span>
+  </a>
+
+  <div ng-if="curl !== null" ng-show="showCurl">
+    <h4>Example Curl</h4>
+    <pre><code language="bash" ng-bind-html="curl"></code></pre>
+  </div>
+
+  <div ng-if="!isEmpty" class="accept-doc" ng-show="showDoc"><ng-transclude /></div>
+</div>

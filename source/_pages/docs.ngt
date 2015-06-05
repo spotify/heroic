@@ -30,6 +30,10 @@
       <li ui-sref-active="active">
         <a ui-sref="docs.filter_dsl">Filter DSL</a>
       </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.api">API</a>
+      </li>
     </ul>
   </div>
 

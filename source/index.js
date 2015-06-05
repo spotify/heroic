@@ -1,9 +1,10 @@
 //= include '../bower_components/angular/angular.js'
-//= include '../bower_components/angular-ui-bootstrap-bower/ui-bootstrap.js'
+//= include '../bower_components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js'
 //= include '../bower_components/angular-ui-router/release/angular-ui-router.js'
 
 //= include 'templates.js'
 //= include '_js/prism.js'
+//= include '_js/api.js'
 //= include '_pages/*.js'
 
 (function() {
@@ -11,7 +12,8 @@
     'ui.router',
     'ui.bootstrap',
     'hdoc.index',
-    'hdoc.docs'
+    'hdoc.docs',
+    'hdoc.api'
   ]);
 
   function HeroicDocumentationCtrl() {

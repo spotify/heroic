@@ -8,7 +8,8 @@
     '_pages/docs/getting_started/configuration.ngt',
     '_pages/docs/getting_started/compile.ngt',
     '_pages/docs/data_model.ngt',
-    '_pages/docs/filter_dsl.ngt'
+    '_pages/docs/filter_dsl.ngt',
+    '_pages/docs/api.ngt'
   ]);
 
   function DocumentationCtrl() {
@@ -62,6 +63,10 @@
       .state('docs.data_model', {
         url: '/data_model',
         templateUrl: '_pages/docs/data_model.ngt'
+      })
+      .state('docs.api', {
+        url: '/api',
+        templateUrl: '_pages/docs/api.ngt'
       });
   });
 })();

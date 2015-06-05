@@ -1,0 +1,5 @@
+<div class="api-endpoint">
+  <h3><span class="method">{{method}}</span>: <span class="path">{{path}}</span></h3>
+
+  <ng-transclude></ng-transclude>
+</div>

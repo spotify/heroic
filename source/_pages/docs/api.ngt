@@ -1,0 +1,158 @@
+<h2>API</h2>
+
+<api-endpoint path="/status" method="GET">
+  <p>
+    Query for the status of a heroic instance.
+  </p>
+
+  <p>
+    The status code <span class="status">503</span> is used to indicate to load balancers that a service is
+    not available for requests right now.
+  </p>
+
+  <api-accept empty="true"></api-accept>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">
+{
+  "ok": true,
+  "consumers": {
+    "ok": true,
+    "available": 0,
+    "ready": 0,
+    "errors": 0,
+    "consumingThreads": 1,
+    "totalThreads": 1
+  },
+  "backends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "metadataBackends": {
+    "ok": true,
+    "available": 0,
+    "ready": 0
+  },
+  "cluster": {
+    "ok": true,
+    "onlineNodes": 1,
+    "offlineNodes": 0
+  }
+}
+    </code></pre>
+  </api-response>
+
+  <api-response status="503">
+    <h4>Example <span class="status">503</span> Response</h4>
+
+    <p>
+      A <span class="status">503</span> will still return a response body, however the root key <code>.ok</code> will have the value <code>false</code>.
+    </p>
+
+    <p>
+      The below document shows that there is something wrong with the configured consumers, in this case it is because the number of <code>consumingThreads</code> is not the same as the <code>totalThreads</code>
+    </p>
+
+    <pre><code language="json">
+{
+  "ok": false,
+  "consumers": {
+    "ok": false,
+    "available": 0,
+    "ready": 0,
+    "errors": 0,
+    "consumingThreads": 0,
+    "totalThreads": 1
+  },
+  ...
+}
+    </code></pre>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/query/metrics" method="POST">
+  <p>
+    Query and aggregate metrics.
+  </p>
+
+  <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregators": []}'>
+    <h4>Structure</h4>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Required</th>
+        <th>Purpose</th>
+      </tr>
+
+      <tr>
+        <td><code>range</code></td>
+        <td>yes</td>
+        <td>The range in time for which to query</td>
+      </tr>
+
+      <tr>
+        <td><code>filter</code></td>
+        <td>no</td>
+        <td>
+          <p>
+            A statement used to filter down the selected time series.
+            Each individual filtering field (<code>filter</code>, <code>key</code>, <code>tags</code>, and <code>hasTags</code>) may be empty.
+            At least one must be specified to make up a valid filter.
+          </p>
+
+          <p>
+            See <a ui-sref="docs.filter_dsl">Filter DSL</a> for details on how to build a filter.
+          </p>
+        </td>
+      </tr>
+
+      <tr>
+        <td><code>aggregators</code></td>
+        <td>no</td>
+        <td>
+          Aggregators used to downsample the response.
+        </td>
+      </tr>
+
+      <tr>
+        <td><code>groupBy</code></td>
+        <td>no</td>
+        <td>
+          <p>
+            Will create several result groups from the given keys.
+          </p>
+
+          <p>
+            Series will be aggregated on a per-group basis.
+          </p>
+
+          <h5>Example 1.</h5>
+
+          Given time series <code language="json">{"a": 1, "b": 2}</code> and <code language="json">{"b": 3, "c": 4}</code>, and a <code>groupBy</code> of <code language="json">["a", "b"]</code>
+          the returned result groups would be <code language="json">[{"a": 1, "b": 2}, {"a": null, "b": 3}]</code>.
+        </td>
+      </tr>
+    </table>
+    </div>
+
+    <h4>Example Request</h4>
+
+<pre><code language="json">
+{
+  "range": {"type": "relative"},
+  "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]],
+  "groupBy": ["site"],
+  "aggregators": []
+}
+</code></pre>
+  </api-accept>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">{}</code></pre>
+  </api-response>
+</api-endpoint>

@@ -1,0 +1,13 @@
+<div class="api-response">
+  <span class="icon glyphicon glyphicon-download" title="Response {{status}}"></span>
+  <span class="status">{{status}}</span>
+  <span class="content-type">{{contentType}}</span>
+
+  <a class="btn btn-doc btn-default btn-xs pull-right" href ng-click="showDoc = !showDoc" title="show/hide documentation">
+    <span>Doc</span>
+    <span ng-hide="showDoc" class="glyphicon glyphicon-menu-down"></span>
+    <span ng-show="showDoc" class="glyphicon glyphicon-menu-up"></span>
+  </a>
+
+  <div class="response-doc" ng-show="showDoc"><ng-transclude /></div>
+</div>
