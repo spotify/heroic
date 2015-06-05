@@ -1,4 +1,5 @@
 <h2>API</h2>
+<h3>Endpoints</h3>
 
 <api-endpoint path="/status" method="GET">
   <p>
@@ -85,6 +86,7 @@
     <table class="table table-bordered">
       <tr>
         <th>Field</th>
+        <th>Type</th>
         <th>Required</th>
         <th>Purpose</th>
       </tr>
@@ -121,6 +123,7 @@
 
       <tr>
         <td><code>groupBy</code></td>
+        <td><code language="json">[&lt;string&gt;, ...]</code></td>
         <td>no</td>
         <td>
           <p>
@@ -152,8 +155,255 @@
     </codeblock>
   </api-accept>
 
-  <api-response status="200">
-    <h4>Example <span class="status">200</span> Response</h4>
-    <pre><code language="json">{}</code></pre>
+  <api-response>
+    <h4>Example Response</h4>
+    <pre><code language="json">
+    {
+      "errors": [
+        {
+          "type": "node",
+          "nodeId": "abcd-efgh",
+          "nodeUri": "http://example.com",
+          "tags": {"site": "lon"},
+          "error": "Connection refused",
+          "internal": true
+        },
+        {
+          "type": "series",
+          "tags": {"site": "lon"},
+          "error": "Aggregation too heavy, too many rows from the database would have to be fetched to satisfy the request!",
+          "internal": true
+        }
+      ],
+      "result": [
+        {
+          "hash": "deadbeef",
+          "tags": {"foo": "bar"},
+          "values": [[1300000000000, 42.0]]
+        },
+        {
+          "hash": "beefdead",
+          "tags": {"foo": "baz"},
+          "values": [[1300000000000, 42.0]]
+        }
+      ],
+      "range": {},
+      "statistics": {}
+    }
+    </code></pre>
+    <h4>Structure</h4>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Purpose</th>
+      </tr>
+
+      <tr>
+        <td><code>range</code></td>
+        <td>QueryDateRange</td>
+        <td>The range in time for which to query</td>
+      </tr>
+
+      <tr>
+        <td><code>errors</code></td>
+        <td>[RequestError, ...]</td>
+        <td>
+          <p>
+          Potential errors returned either from different shards or for specific time series. The presence of an error does not cause the entire query to fail, instead it is up to the client to use this information to decide if the response is reliable enough.
+          </p>
+        </td>
+      </tr>
+
+      <tr>
+        <td><code>result</code></td>
+        <td>[MetricGroup, ...]</td>
+        <td>
+          An array of result groups.
+        </td>
+      </tr>
+
+      <tr>
+        <td><code>statistics</code></td>
+        <td>MetricsQueryStatistics</td>
+        <td>
+          Statistics about the current query.
+          This field should be inspected for errors which will have caused the result
+          to be inconsistent.
+        </td>
+      </tr>
+    </table>
+    </div>
   </api-response>
 </api-endpoint>
+
+
+<api-endpoint path="/write/metrics" method="POST">
+  <p>
+    Used for writing data into heroic directly.
+  </p>
+
+  <api-accept curl-data='{"series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}}, "data":[[1300000000000, 42.0], [1300001000000, 84.0]]}'>
+    <h4>Structure</h4>
+
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Purpose</th>
+      </tr>
+
+      <tr>
+        <td><code>series</code></td>
+        <td>Series</td>
+        <td>yes</td>
+        <td>Time series to write data to.</td>
+      </tr>
+
+      <tr>
+        <td><code>data</code></td>
+        <td>[DataPoint, ...]</td>
+        <td>yes</td>
+        <td>Data to write.</td>
+      </tr>
+    </table>
+    </div>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}},
+      "data": [[1300000000000, 42.0], [1300001000000, 84.0]]
+    }
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">
+    {
+      "ok": true
+    }
+    </code></pre>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/tags" method="POST">
+    <p>
+      Use to query for tags.
+    </p>
+  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+    <h4>Structure</h4>
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Purpose</th>
+      </tr>
+      <tr>
+        <td>filter</td>
+        <td>Filter</td>
+        <td>no</td>
+        <td>
+          A general set of filters. Gives the most amount of control using the filtering types.
+        If this is combined with matchKey, matchTags, or hasTags, the generated filter will be an and statement combining all of the specified criteria.
+        </td>
+      </tr>
+    </table>
+    </div>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    {
+      "filter": ["and", ["key", "system"], ["=", "role", "database"]]
+    }
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">
+    {
+      "result": {
+        "role": ["database", "webfrontend"],
+        "host": ["database.example.com", "webfrontend.example.com"]
+      },
+      "sampleSize": 2
+    }
+    </code></pre>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/keys" method="POST">
+    <p>
+      Use to query for keys.
+    </p>
+  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+    <h4>Structure</h4>
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Purpose</th>
+      </tr>
+      <tr>
+        <td>Field</td>
+        <td>Type</td>
+        <td>Required</td>
+        <td>Purpose</td>
+      </tr>
+    </table>
+    </div>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">
+    </code></pre>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/query/metrics" method="POST">
+  <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregators": []}'>
+    <h4>Structure</h4>
+    <div class="table-responsive">
+    <table class="table table-bordered">
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Purpose</th>
+      </tr>
+      <tr>
+        <td>Field</td>
+        <td>Type</td>
+        <td>Required</td>
+        <td>Purpose</td>
+      </tr>
+    </table>
+    </div>
+
+    <h4>Example Request</h4>
+
+    <codeblock language="json">
+    </codeblock>
+  </api-accept>
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+    <pre><code language="json">
+    </code></pre>
+  </api-response>
+</api-endpoint>
+
