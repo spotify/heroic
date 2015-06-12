@@ -141,8 +141,6 @@ public class MetricManagerModule extends PrivateModule {
         bind(MetricManager.class).toInstance(
                 new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit, fetchParallelism));
         expose(MetricManager.class);
-        bind(ClusteredMetricManager.class).toInstance(new CoreClusteredMetricManager());
-        expose(ClusteredMetricManager.class);
     }
 
     private void bindBackends(final Collection<MetricModule> configs) {

@@ -93,9 +93,6 @@ public class MetadataManagerModule extends PrivateModule {
 
         bind(MetadataManager.class).to(LocalMetadataManager.class).in(Scopes.SINGLETON);
         expose(MetadataManager.class);
-
-        bind(ClusteredMetadataManager.class).in(Scopes.SINGLETON);
-        expose(ClusteredMetadataManager.class);
     }
 
     private void bindBackends(final Collection<MetadataModule> configs) {
