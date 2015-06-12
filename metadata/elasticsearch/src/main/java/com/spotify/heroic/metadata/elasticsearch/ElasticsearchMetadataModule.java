@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -31,8 +32,7 @@ import javax.inject.Singleton;
 
 import lombok.ToString;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,7 +44,6 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
@@ -76,62 +75,14 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
     }
 
-    private static Map<String, XContentBuilder> mappings() throws IOException {
-        final Map<String, XContentBuilder> mappings = new HashMap<>();
-        mappings.put("metadata", buildMetadataMapping());
+    private Map<String, Map<String, Object>> mappings() throws IOException {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", JsonXContent.jsonXContent.createParser(inputStreamFromResource("metadata.v1.json")).map());
         return mappings;
     }
 
-    private static XContentBuilder buildMetadataMapping() throws IOException {
-        final XContentBuilder b = XContentFactory.jsonBuilder();
-
-        // @formatter:off
-        b.startObject();
-          b.startObject(ElasticsearchUtils.TYPE_METADATA);
-            b.startObject("properties");
-              b.startObject(ElasticsearchUtils.SERIES_KEY);
-                b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-
-              b.startObject(ElasticsearchUtils.SERIES_TAGS);
-                b.field("type", "nested");
-                b.startObject("properties");
-                  b.startObject(ElasticsearchUtils.TAGS_KEY);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.TAGS_VALUE);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-            b.endObject();
-          b.endObject();
-        b.endObject();
-        // @formatter:on
-
-        return b;
+    private InputStream inputStreamFromResource(String string) {
+        return getClass().getClassLoader().getResourceAsStream(string);
     }
 
     @Override
@@ -159,7 +110,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Provides
             @Inject
             public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
-                return builder.construct(TEMPLATE_NAME, mappings());
+                return builder.constructDefaultSettings(TEMPLATE_NAME, mappings());
             }
 
             @Override
