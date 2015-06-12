@@ -102,4 +102,33 @@ public class StandaloneClientSetup implements ClientSetup {
             node.stop();
         }
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String clusterName;
+        private String root;
+        private Map<String, String> settings;
+
+        public Builder clusterName(String clusterName) {
+            this.clusterName = clusterName;
+            return this;
+        }
+
+        public Builder root(String root) {
+            this.root = root;
+            return this;
+        }
+
+        public Builder settings(Map<String, String> settings) {
+            this.settings = settings;
+            return this;
+        }
+
+        public StandaloneClientSetup build() throws IOException {
+            return new StandaloneClientSetup(clusterName, root, settings);
+        }
+    }
 }
