@@ -33,7 +33,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,10 +41,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.http.ErrorMessage;
-import com.spotify.heroic.metadata.ClusteredMetadataManager;
 import com.spotify.heroic.metadata.model.CountSeries;
 import com.spotify.heroic.metadata.model.DeleteSeries;
 import com.spotify.heroic.metadata.model.FindKeys;
@@ -55,7 +53,6 @@ import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.suggest.ClusteredSuggestManager;
 import com.spotify.heroic.suggest.model.KeySuggest;
 import com.spotify.heroic.suggest.model.TagKeyCount;
 import com.spotify.heroic.suggest.model.TagSuggest;
@@ -77,10 +74,7 @@ public class MetadataResource {
     private HttpAsyncUtils httpAsync;
 
     @Inject
-    private ClusteredMetadataManager metadata;
-
-    @Inject
-    private ClusteredSuggestManager suggest;
+    private ClusterManager cluster;
 
     @Inject
     private MetadataResourceCache cache;
@@ -92,15 +86,8 @@ public class MetadataResource {
     @POST
     @Path("/tags")
     public void tags(@Suspended final AsyncResponse response, MetadataQueryBody query) throws ExecutionException {
-        if (!metadata.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Metadata is not ready")).build());
-            return;
-        }
-
-        if (query == null) {
+        if (query == null)
             query = MetadataQueryBody.create();
-        }
 
         final Filter filter = query.makeFilter(filters);
 
@@ -114,15 +101,8 @@ public class MetadataResource {
     @POST
     @Path("/keys")
     public void keys(@Suspended final AsyncResponse response, MetadataQueryBody query) throws ExecutionException {
-        if (!metadata.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Metadata is not ready")).build());
-            return;
-        }
-
-        if (query == null) {
+        if (query == null)
             query = MetadataQueryBody.create();
-        }
 
         final Filter filter = query.makeFilter(filters);
 
@@ -143,15 +123,8 @@ public class MetadataResource {
     @PUT
     @Path("/series")
     public void addSeries(@Suspended final AsyncResponse response, Series series) {
-        if (!metadata.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Metadata not ready")).build());
-            return;
-        }
-
         final DateRange range = DateRange.now();
-        final AsyncFuture<WriteResult> callback = metadata.write(null, range, series);
-
+        final AsyncFuture<WriteResult> callback = cluster.useDefaultGroup().writeSeries(range, series);
         httpAsync.handleAsyncResume(response, callback, WRITE);
     }
 
@@ -159,15 +132,8 @@ public class MetadataResource {
     @Path("/series")
     public void getTimeSeries(@Suspended final AsyncResponse response, MetadataQueryBody query)
             throws JsonParseException, JsonMappingException, IOException {
-        if (!metadata.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Cache is not ready")).build());
-            return;
-        }
-
-        if (query == null) {
+        if (query == null)
             query = MetadataQueryBody.create();
-        }
 
         final Filter filter = query.makeFilter(filters);
 
@@ -177,7 +143,7 @@ public class MetadataResource {
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final AsyncFuture<FindSeries> callback = metadata.findSeries(null,
+        final AsyncFuture<FindSeries> callback = cluster.useDefaultGroup().findSeries(
                 RangeFilter.filterFor(filter, query.getRange(), query.getLimit()));
 
         httpAsync.handleAsyncResume(response, callback);
@@ -186,21 +152,17 @@ public class MetadataResource {
     @DELETE
     @Path("/series")
     public void deleteTimeSeries(@Suspended final AsyncResponse response, MetadataQueryBody query) {
-        if (!metadata.isReady()) {
-            response.resume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                    .entity(new ErrorMessage("Metadata is not ready")).build());
-            return;
-        }
+        if (query == null)
+            query = MetadataQueryBody.create();
 
         final Filter filter = query.makeFilter(filters);
 
-        if (filter == null) {
+        if (filter == null)
             throw new IllegalArgumentException("Filter must not be empty when querying");
-        }
 
         log.info("/timeseries: {} {}", query, filter);
 
-        final AsyncFuture<DeleteSeries> callback = metadata.deleteSeries(null,
+        final AsyncFuture<DeleteSeries> callback = cluster.useDefaultGroup().deleteSeries(
                 RangeFilter.filterFor(filter, query.getRange()));
 
         httpAsync.handleAsyncResume(response, callback);
@@ -212,7 +174,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataCount.createDefault();
 
-        final AsyncFuture<CountSeries> callback = metadata.countSeries(null,
+        final AsyncFuture<CountSeries> callback = cluster.useDefaultGroup().countSeries(
                 RangeFilter.filterFor(request.getFilter(), request.getRange()));
 
         httpAsync.handleAsyncResume(response, callback);
@@ -224,7 +186,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataTagKeySuggest.createDefault();
 
-        final AsyncFuture<TagKeyCount> callback = metadata.tagKeyCount(null,
+        final AsyncFuture<TagKeyCount> callback = cluster.useDefaultGroup().tagKeyCount(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()));
 
         httpAsync.handleAsyncResume(response, callback);
@@ -236,7 +198,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataKeySuggest.createDefault();
 
-        final AsyncFuture<KeySuggest> callback = suggest.keySuggest(null,
+        final AsyncFuture<KeySuggest> callback = cluster.useDefaultGroup().keySuggest(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getMatch(),
                 request.getKey());
 
@@ -260,7 +222,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataTagSuggest.createDefault();
 
-        final AsyncFuture<TagSuggest> callback = suggest.tagSuggest(null,
+        final AsyncFuture<TagSuggest> callback = cluster.useDefaultGroup().tagSuggest(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getMatch(),
                 request.getKey(), request.getValue());
 
@@ -273,7 +235,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataTagValueSuggest.createDefault();
 
-        final AsyncFuture<TagValueSuggest> callback = suggest.tagValueSuggest(null,
+        final AsyncFuture<TagValueSuggest> callback = cluster.useDefaultGroup().tagValueSuggest(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getKey());
 
         httpAsync.handleAsyncResume(response, callback);
@@ -285,7 +247,7 @@ public class MetadataResource {
         if (request == null)
             request = MetadataTagValuesSuggest.createDefault();
 
-        final AsyncFuture<TagValuesSuggest> callback = suggest.tagValuesSuggest(null,
+        final AsyncFuture<TagValuesSuggest> callback = cluster.useDefaultGroup().tagValuesSuggest(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()),
                 request.getExclude(), request.getGroupLimit());
 

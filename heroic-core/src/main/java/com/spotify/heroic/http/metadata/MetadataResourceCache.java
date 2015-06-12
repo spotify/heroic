@@ -31,7 +31,7 @@ import lombok.Data;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.spotify.heroic.metadata.ClusteredMetadataManager;
+import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.metadata.model.FindKeys;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.RangeFilter;
@@ -41,13 +41,13 @@ import eu.toolchain.async.FutureDone;
 
 public class MetadataResourceCache {
     @Inject
-    private ClusteredMetadataManager metadata;
+    private ClusterManager cluster;
 
     private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags = CacheBuilder.newBuilder().maximumSize(10000)
             .expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
                 @Override
                 public AsyncFuture<FindTags> load(Entry e) {
-                    return metadata.findTags(e.getGroup(), e.getFilter());
+                    return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
                 }
             });
 
@@ -75,7 +75,7 @@ public class MetadataResourceCache {
             .expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
                 @Override
                 public AsyncFuture<FindKeys> load(Entry e) {
-                    return metadata.findKeys(e.getGroup(), e.getFilter());
+                    return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
                 }
             });
 
