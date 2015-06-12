@@ -44,7 +44,6 @@ import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.QuerySource;
 import com.spotify.heroic.grammar.SelectDSL;
-import com.spotify.heroic.metric.MetricQuery;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Event;
@@ -157,7 +156,7 @@ public class QueryBuilder {
         return this;
     }
 
-    public MetricQuery build() {
+    public Query build() {
         if (queryString != null)
             return parseQuery(queryString);
 
@@ -171,7 +170,7 @@ public class QueryBuilder {
         if (filter instanceof Filter.True)
             throw new IllegalArgumentException("a valid filter must be defined, not: true");
 
-        return new MetricQuery(backendGroup, filter, groupBy, range, aggregation, disableCache, source);
+        return new Query(backendGroup, filter, groupBy, range, aggregation, disableCache, source);
     }
 
     /**
@@ -204,7 +203,7 @@ public class QueryBuilder {
         return filters.and(statements).optimize();
     }
 
-    private MetricQuery parseQuery(String query) {
+    private Query parseQuery(String query) {
         final QueryDSL q = parser.parseQuery(query);
 
         final FromDSL from = q.getSource();
@@ -217,7 +216,7 @@ public class QueryBuilder {
         final DateRange range = roundedRange(aggregation, from.getRange());
         final List<String> group = groupBy == null ? null : groupBy.getGroupBy();
 
-        return new MetricQuery(null, filter, group, range, aggregation, true, source);
+        return new Query(null, filter, group, range, aggregation, true, source);
     }
 
     private Class<? extends TimeData> convertQuerySource(final FromDSL s) {
