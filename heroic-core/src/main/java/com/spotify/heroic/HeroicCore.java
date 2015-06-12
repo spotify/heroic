@@ -509,6 +509,8 @@ public class HeroicCore {
 
             @Override
             protected void configure() {
+                bind(QueryManager.class).to(CoreQueryManager.class).in(Scopes.SINGLETON);
+
                 if (server)
                     bind(HeroicServer.class).in(Scopes.SINGLETON);
 
