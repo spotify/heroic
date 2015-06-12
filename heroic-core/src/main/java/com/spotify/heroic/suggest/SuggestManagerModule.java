@@ -90,9 +90,6 @@ public class SuggestManagerModule extends PrivateModule {
 
         bind(SuggestManager.class).to(LocalSuggestManager.class).in(Scopes.SINGLETON);
         expose(SuggestManager.class);
-
-        bind(ClusteredSuggestManager.class).in(Scopes.SINGLETON);
-        expose(ClusteredSuggestManager.class);
     }
 
     private void bindBackends(final Collection<SuggestModule> configs) {
