@@ -158,7 +158,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
 
     @Override
     public Aggregation.Session session(Class<?> out, DateRange original) {
-        if (!in.isAssignableFrom(in))
+        if (!in.isAssignableFrom(out))
             throw new IllegalStateException("invalid input type [" + out + " => " + in + "]");
 
         final long size = sampling.getSize();
