@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.consumer.kafka;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,11 +37,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
@@ -58,13 +61,13 @@ import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.async.ResolvableFuture;
 
 @Slf4j
-@RequiredArgsConstructor
 public class KafkaConsumerModule implements ConsumerModule {
     public static final int DEFAULT_THREADS_PER_TOPIC = 2;
+    public static final Map<String, String> DEFAULT_CONFIG = new HashMap<String, String>();
 
     private final String id;
-    private final List<String> topics;
     private final int threads;
+    private final List<String> topics;
     private final Map<String, String> config;
     private final ConsumerSchema schema;
 
@@ -73,24 +76,16 @@ public class KafkaConsumerModule implements ConsumerModule {
     private final AtomicLong errors = new AtomicLong();
 
     @JsonCreator
-    public static KafkaConsumerModule create(@JsonProperty("id") String id, @JsonProperty("schema") String schema,
-            @JsonProperty("topics") List<String> topics, @JsonProperty("threadsPerTopic") Integer threads,
-            @JsonProperty("config") Map<String, String> config) {
-        if (threads == null)
-            threads = DEFAULT_THREADS_PER_TOPIC;
+    public KafkaConsumerModule(@JsonProperty("id") String id,
+            @JsonProperty("threadsPerTopic") Integer threads, @JsonProperty("topics") List<String> topics,
+            @JsonProperty("config") Map<String, String> config, @JsonProperty("schema") String schema) {
+        checkArgument(topics != null && !topics.isEmpty(), "'topics' must be defined and non-empty", topics);
 
-        if (schema == null)
-            throw new RuntimeException("'schema' not defined");
-
-        final ConsumerSchema schemaClass = ReflectionUtils.buildInstance(schema, ConsumerSchema.class);
-
-        if (topics == null || topics.isEmpty())
-            throw new RuntimeException("'topics' must be defined and non-empty");
-
-        if (config == null)
-            config = new HashMap<String, String>();
-
-        return new KafkaConsumerModule(id, topics, threads, config, schemaClass);
+        this.id = id;
+        this.threads = Optional.fromNullable(threads).or(DEFAULT_THREADS_PER_TOPIC);
+        this.topics = topics;
+        this.config = Optional.fromNullable(config).or(DEFAULT_CONFIG);
+        this.schema = ReflectionUtils.buildInstance(checkNotNull(schema), ConsumerSchema.class);
     }
 
     @Override
@@ -218,5 +213,46 @@ public class KafkaConsumerModule implements ConsumerModule {
     @Override
     public String buildId(int i) {
         return String.format("kafka#%d", i);
+    }
+    
+    public static Builder builder() {
+        return new Builder();
+    }
+    
+    public static class Builder {
+        private String id;
+        private Integer threads;
+        private List<String> topics;
+        private Map<String, String> config;
+        private String schema;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder threads(int threads) {
+            this.threads = threads;
+            return this;
+        }
+
+        public Builder topics(List<String> topics) {
+            this.topics = topics;
+            return this;
+        }
+
+        public Builder config(Map<String, String> config) {
+            this.config = config;
+            return this;
+        }
+
+        public Builder schema(String schema) {
+            this.schema = schema;
+            return this;
+        }
+
+        public KafkaConsumerModule build() {
+            return new KafkaConsumerModule(id, threads, topics, config, schema);
+        }
     }
 }
