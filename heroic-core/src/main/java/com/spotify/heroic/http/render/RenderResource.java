@@ -39,10 +39,10 @@ import org.jfree.chart.JFreeChart;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.http.query.QueryMetrics;
 import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.MetricQuery;
-import com.spotify.heroic.metric.MetricQueryBuilder;
 import com.spotify.heroic.metric.MetricResult;
 
 @Path("render")
@@ -102,7 +102,7 @@ public class RenderResource {
     }
 
     @SuppressWarnings("deprecation")
-    private MetricQueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
+    private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
         return metrics.newRequest().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
                 .backendGroup(backendGroup).queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())

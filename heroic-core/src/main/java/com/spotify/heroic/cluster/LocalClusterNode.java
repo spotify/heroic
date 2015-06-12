@@ -105,6 +105,11 @@ public class LocalClusterNode implements ClusterNode {
         private final String group;
 
         @Override
+        public ClusterNode node() {
+            return LocalClusterNode.this;
+        }
+
+        @Override
         public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter, List<String> groupBy,
                 DateRange range, Aggregation aggregation, boolean disableCache) {
             return metrics().query(source, filter, groupBy, range, aggregation, disableCache);

@@ -31,7 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.model.Statistics;
 
 import eu.toolchain.async.Collector;
@@ -118,5 +120,16 @@ public final class ResultGroups {
 
     public static ResultGroups build(List<ResultGroup> groups, List<RequestError> errors, Statistics statistics) {
         return new ResultGroups(groups, errors, statistics);
+    }
+
+    public static Transform<Throwable, ResultGroups> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, ResultGroups>() {
+            @Override
+            public ResultGroups transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY);
+            }
+        };
     }
 }

@@ -45,12 +45,12 @@ import lombok.Data;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.model.NodeCapability;
 import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 import com.spotify.heroic.metric.ClusteredMetricManager;
 import com.spotify.heroic.metric.MetricQuery;
-import com.spotify.heroic.metric.MetricQueryBuilder;
 import com.spotify.heroic.metric.MetricResult;
 import com.spotify.heroic.metric.model.ShardedResultGroups;
 import com.spotify.heroic.utils.HttpAsyncUtils;
@@ -149,7 +149,7 @@ public class QueryResource {
     }
 
     @SuppressWarnings("deprecation")
-    private MetricQueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
+    private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
         return metrics.newRequest().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
                 .backendGroup(backendGroup).queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())

@@ -432,6 +432,11 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
             private final String group;
 
             @Override
+            public ClusterNode node() {
+                return NativeRpcClusterNode.this;
+            }
+
+            @Override
             public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter,
                     List<String> groupBy, DateRange range, Aggregation aggregation, boolean disableCache) {
                 return request(METRICS_QUERY, new RpcQuery(source, filter, groupBy, range, aggregation, disableCache),

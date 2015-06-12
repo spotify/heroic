@@ -437,4 +437,20 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
 
         return protocol.connect(uri).transform(localTransform);
     }
+
+    @Override
+    public ClusterNodeGroup useDefaultGroup() {
+        return useGroup(null);
+    }
+
+    @Override
+    public ClusterNodeGroup useGroup(String group) {
+        final List<ClusterNode.Group> groups = new ArrayList<>();
+
+        for (final NodeRegistryEntry e : findAllShards(null)) {
+            groups.add(e.getClusterNode().useGroup(group));
+        }
+
+        return new CoreClusterNodeGroup(async, groups);
+    }
 }
