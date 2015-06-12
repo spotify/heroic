@@ -29,7 +29,7 @@ import java.util.Set;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
@@ -55,21 +55,21 @@ import com.spotify.heroic.utils.GroupedUtils;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
 
-@RequiredArgsConstructor
+@ToString
 public final class ElasticsearchMetadataModule implements MetadataModule {
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String TEMPLATE_NAME = "heroic-metadata";
 
     private final String id;
     private final Set<String> groups;
-    private final ManagedConnectionFactory connection;
     private final ReadWriteThreadPools.Config pools;
+    private final ManagedConnectionFactory connection;
 
     @JsonCreator
     public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("pools") ReadWriteThreadPools.Config pools) throws Exception {
+            @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
@@ -179,5 +179,46 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     @Override
     public String buildId(int i) {
         return String.format("elasticsearch#%d", i);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String id;
+        private String group;
+        private Set<String> groups;
+        private ManagedConnectionFactory connection;
+        private ReadWriteThreadPools.Config pools;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder group(String group) {
+            this.group = group;
+            return this;
+        }
+
+        public Builder group(Set<String> groups) {
+            this.groups = groups;
+            return this;
+        }
+
+        public Builder connection(ManagedConnectionFactory connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        public Builder pools(ReadWriteThreadPools.Config pools) {
+            this.pools = pools;
+            return this;
+        }
+
+        public ElasticsearchMetadataModule build() {
+            return new ElasticsearchMetadataModule(id, group, groups, connection, pools);
+        }
     }
 }
