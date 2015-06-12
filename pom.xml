@@ -21,6 +21,7 @@
     <module>metric/datastax</module>
     <module>metric/generated</module>
     <module>metric/bigtable</module>
+    <module>metric/memory</module>
     <module>metadata/elasticsearch</module>
     <module>suggest/elasticsearch</module>
     <module>discovery/simple</module>
@@ -114,6 +115,11 @@
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
         <artifactId>heroic-metric-generated</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.metric</groupId>
+        <artifactId>heroic-metric-memory</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
