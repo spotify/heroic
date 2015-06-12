@@ -30,6 +30,7 @@ import javax.inject.Inject;
 import lombok.ToString;
 
 import com.google.common.collect.Lists;
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
@@ -147,8 +148,8 @@ public class CoreClusteredMetricManager implements ClusteredMetricManager, LifeC
         };
     }
 
-    public MetricQueryBuilder newRequest() {
-        return new MetricQueryBuilder(aggregations, filters, parser);
+    public QueryBuilder newRequest() {
+        return new QueryBuilder(aggregations, filters, parser);
     }
 
     @Override

@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -44,6 +44,7 @@ import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.QuerySource;
 import com.spotify.heroic.grammar.SelectDSL;
+import com.spotify.heroic.metric.MetricQuery;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Event;
@@ -51,7 +52,7 @@ import com.spotify.heroic.model.TimeData;
 
 @Slf4j
 @RequiredArgsConstructor
-public class MetricQueryBuilder {
+public class QueryBuilder {
     private final AggregationFactory aggregations;
     private final FilterFactory filters;
     private final QueryParser parser;
@@ -73,7 +74,7 @@ public class MetricQueryBuilder {
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be built using
      *             {@link FilterFactory#matchKey(String)}.
      */
-    public MetricQueryBuilder key(String key) {
+    public QueryBuilder key(String key) {
         this.key = key;
         return this;
     }
@@ -84,7 +85,7 @@ public class MetricQueryBuilder {
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be built using
      *             {@link FilterFactory#matchTag(String, String)}.
      */
-    public MetricQueryBuilder tags(Map<String, String> tags) {
+    public QueryBuilder tags(Map<String, String> tags) {
         checkNotNull(tags, "tags must not be null");
         this.tags = tags;
         return this;
@@ -95,7 +96,7 @@ public class MetricQueryBuilder {
      * 
      * @deprecated Use {@link #aggregation(Aggregation)} with the appropriate {@link GroupAggregation} instead.
      */
-    public MetricQueryBuilder groupBy(List<String> groupBy) {
+    public QueryBuilder groupBy(List<String> groupBy) {
         this.groupBy = groupBy;
         return this;
     }
@@ -105,7 +106,7 @@ public class MetricQueryBuilder {
      * 
      * Note: This range might be rounded to accommodate the sampling period of a given aggregation.
      */
-    public MetricQueryBuilder range(DateRange range) {
+    public QueryBuilder range(DateRange range) {
         checkNotNull(range, "range must not be null");
         checkArgument(!range.isEmpty(), "range must not be empty");
         checkArgument(range.start() < range.end(), "range start must come before end");
@@ -116,7 +117,7 @@ public class MetricQueryBuilder {
     /**
      * Specify a backend group to use.
      */
-    public MetricQueryBuilder backendGroup(String backendGroup) {
+    public QueryBuilder backendGroup(String backendGroup) {
         this.backendGroup = backendGroup;
         return this;
     }
@@ -124,7 +125,7 @@ public class MetricQueryBuilder {
     /**
      * Specify a filter to use.
      */
-    public MetricQueryBuilder filter(Filter filter) {
+    public QueryBuilder filter(Filter filter) {
         this.filter = filter;
         return this;
     }
@@ -133,7 +134,7 @@ public class MetricQueryBuilder {
      * Specify a query string to use, this will override most other aggregations and use the built-in
      * {@link QueryParser}.
      */
-    public MetricQueryBuilder queryString(String queryString) {
+    public QueryBuilder queryString(String queryString) {
         this.queryString = queryString;
         return this;
     }
@@ -141,17 +142,17 @@ public class MetricQueryBuilder {
     /**
      * Specify an aggregation to use.
      */
-    public MetricQueryBuilder aggregation(Aggregation aggregation) {
+    public QueryBuilder aggregation(Aggregation aggregation) {
         this.aggregation = aggregation;
         return this;
     }
 
-    public MetricQueryBuilder source(Class<? extends TimeData> source) {
+    public QueryBuilder source(Class<? extends TimeData> source) {
         this.source = source;
         return this;
     }
 
-    public MetricQueryBuilder disableCache(boolean disableCache) {
+    public QueryBuilder disableCache(boolean disableCache) {
         this.disableCache = disableCache;
         return this;
     }

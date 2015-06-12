@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
+import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.filter.FilterFactory;
@@ -21,7 +22,7 @@ public class MetricQueryBuilderTest {
     private QueryParser parser;
     private Aggregation aggregation;
 
-    private MetricQueryBuilder builder;
+    private QueryBuilder builder;
 
     private final DateRange NON_EMPTY = new DateRange(1000, 2000);
     private final DateRange EMPTY = new DateRange(2000, 2000);
@@ -32,7 +33,7 @@ public class MetricQueryBuilderTest {
 
     @Before
     public void setup() {
-        builder = new MetricQueryBuilder(aggregations, filters, parser);
+        builder = new QueryBuilder(aggregations, filters, parser);
         aggregations = Mockito.mock(AggregationFactory.class);
         filters = Mockito.mock(FilterFactory.class);
         parser = Mockito.mock(QueryParser.class);

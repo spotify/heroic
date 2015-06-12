@@ -83,4 +83,8 @@ public interface ClusterManager extends LifeCycle {
     public static interface ClusterOperation<T> {
         public AsyncFuture<T> run(NodeRegistryEntry node);
     }
+
+    public ClusterNodeGroup useDefaultGroup();
+
+    public ClusterNodeGroup useGroup(String group);
 }

@@ -55,6 +55,8 @@ public interface ClusterNode {
     public Group useGroup(String group);
 
     public interface Group {
+        public ClusterNode node();
+
         public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter, List<String> groupBy,
                 DateRange range, Aggregation aggregation, boolean disableCache);
 

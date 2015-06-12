@@ -19,17 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic;
 
-import com.spotify.heroic.QueryBuilder;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
+import java.util.List;
 
-import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
 
-public interface ClusteredMetricManager {
-    public AsyncFuture<MetricResult> queryOnNode(MetricQuery request, NodeRegistryEntry node);
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeData;
 
-    public AsyncFuture<MetricResult> query(MetricQuery request);
-
-    public QueryBuilder newRequest();
+@Data
+public class Query {
+    private final String backendGroup;
+    private final Filter filter;
+    private final List<String> groupBy;
+    private final DateRange range;
+    private final Aggregation aggregation;
+    private final boolean disableCache;
+    private final Class<? extends TimeData> source;
 }

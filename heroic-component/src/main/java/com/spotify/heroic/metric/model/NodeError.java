@@ -28,6 +28,8 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.exceptions.UserException;
 
 /**
@@ -48,6 +50,13 @@ public class NodeError implements RequestError {
             @JsonProperty("tags") Map<String, String> tags, @JsonProperty("error") String error,
             @JsonProperty("internal") Boolean internal) {
         return new NodeError(nodeId, node, tags, error, internal);
+    }
+
+    public static NodeError fromThrowable(ClusterNode c, Throwable e) {
+        final NodeMetadata m = c.metadata();
+        final String message = errorMessage(e);
+        final boolean internal = !(e instanceof UserException);
+        return new NodeError(m.getId(), c.toString(), m.getTags(), message, internal);
     }
 
     public static NodeError fromThrowable(final UUID nodeId, final String node, final Map<String, String> shard,
