@@ -84,4 +84,27 @@ public class TransportClientSetup implements ClientSetup {
 
         return new InetSocketTransportAddress(seed, DEFAULT_PORT);
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String clusterName;
+        private List<String> seeds;
+
+        public Builder clusterName(String clusterName) {
+            this.clusterName = clusterName;
+            return this;
+        }
+
+        public Builder seeds(List<String> seeds) {
+            this.seeds = seeds;
+            return this;
+        }
+
+        public TransportClientSetup build() {
+            return new TransportClientSetup(clusterName, seeds);
+        }
+    }
 }

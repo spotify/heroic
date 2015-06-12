@@ -113,4 +113,27 @@ public class SuggestManagerModule extends PrivateModule {
             bindings.addBinding().to(key);
         }
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private List<SuggestModule> backends;
+        private List<String> defaultBackends;
+
+        public Builder backends(List<SuggestModule> backends) {
+            this.backends = backends;
+            return this;
+        }
+
+        public Builder defaultBackends(List<String> defaultBackends) {
+            this.defaultBackends = defaultBackends;
+            return this;
+        }
+
+        public SuggestManagerModule build() {
+            return new SuggestManagerModule(backends, defaultBackends);
+        }
+    }
 }

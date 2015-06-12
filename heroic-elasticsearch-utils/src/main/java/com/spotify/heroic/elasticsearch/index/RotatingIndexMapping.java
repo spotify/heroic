@@ -153,4 +153,39 @@ public class RotatingIndexMapping implements IndexMapping {
             }
         };
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private Long interval;
+        private Integer maxReadIndices;
+        private Integer maxWriteIndices;
+        private String pattern;
+
+        public Builder interval(Long interval) {
+            this.interval = interval;
+            return this;
+        }
+
+        public Builder maxReadIndices(Integer maxReadIndices) {
+            this.maxReadIndices = maxReadIndices;
+            return this;
+        }
+
+        public Builder maxWriteIndices(Integer maxWriteIndices) {
+            this.maxWriteIndices = maxWriteIndices;
+            return this;
+        }
+
+        public Builder pattern(String pattern) {
+            this.pattern = pattern;
+            return this;
+        }
+
+        public RotatingIndexMapping build() {
+            return new RotatingIndexMapping(interval, maxReadIndices, maxWriteIndices, pattern);
+        }
+    }
 }

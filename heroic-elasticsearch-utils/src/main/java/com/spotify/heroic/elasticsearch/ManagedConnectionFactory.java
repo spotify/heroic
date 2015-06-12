@@ -37,7 +37,6 @@ import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateReque
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.bulk.BulkProcessor.Builder;
 import org.elasticsearch.action.bulk.BulkProcessor.Listener;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -247,7 +246,7 @@ public class ManagedConnectionFactory {
     }
 
     private BulkProcessor configureBulkProcessor(final Client client) {
-        final Builder builder = BulkProcessor.builder(client, new Listener() {
+        final BulkProcessor.Builder builder = BulkProcessor.builder(client, new Listener() {
             @Override
             public void beforeBulk(long executionId, BulkRequest request) {
             }
@@ -291,5 +290,71 @@ public class ManagedConnectionFactory {
         final BulkProcessor bulkProcessor = builder.build();
 
         return bulkProcessor;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private String clusterName;
+        private List<String> seeds;
+        private Boolean nodeClient;
+        private Integer concurrentBulkRequests;
+        private Integer flushInterval;
+        private Integer bulkActions;
+        private IndexMapping index;
+        private String templateName;
+        private ClientSetup clientSetup;
+
+        public Builder clusterName(String clusterName) {
+            this.clusterName = clusterName;
+            return this;
+        }
+
+        public Builder clusterName(List<String> seeds) {
+            this.seeds = seeds;
+            return this;
+        }
+
+        public Builder nodeClient(Boolean nodeClient) {
+            this.nodeClient = nodeClient;
+            return this;
+        }
+
+        public Builder nodeClient(Integer concurrentBulkRequests) {
+            this.concurrentBulkRequests = concurrentBulkRequests;
+            return this;
+        }
+
+        public Builder flushInterval(Integer flushInterval) {
+            this.flushInterval = flushInterval;
+            return this;
+        }
+
+        public Builder bulkActions(Integer bulkActions) {
+            this.bulkActions = bulkActions;
+            return this;
+        }
+
+        public Builder index(IndexMapping index) {
+            this.index = index;
+            return this;
+        }
+
+        public Builder templateName(String templateName) {
+            this.templateName = templateName;
+            return this;
+        }
+
+        public Builder clientSetup(ClientSetup clientSetup) {
+            this.clientSetup = clientSetup;
+            return this;
+        }
+
+        public ManagedConnectionFactory build() {
+            return new ManagedConnectionFactory(clusterName, seeds, nodeClient, concurrentBulkRequests, flushInterval,
+                    bulkActions, index, templateName, clientSetup);
+        }
     }
 };

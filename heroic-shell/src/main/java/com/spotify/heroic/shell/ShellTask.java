@@ -10,7 +10,7 @@ import eu.toolchain.async.AsyncFuture;
 public interface ShellTask {
     public ShellTaskParams params();
 
-    public void configure(HeroicCore.Builder builder);
+    public void standaloneConfig(HeroicCore.Builder builder, ShellTaskParams params);
 
     public AsyncFuture<Void> run(PrintWriter out, ShellTaskParams params) throws Exception;
 }

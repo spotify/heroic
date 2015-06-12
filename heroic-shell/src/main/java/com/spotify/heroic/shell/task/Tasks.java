@@ -21,17 +21,31 @@
 
 package com.spotify.heroic.shell.task;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.HeroicCore;
+import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
+import com.spotify.heroic.elasticsearch.TransportClientSetup;
+import com.spotify.heroic.elasticsearch.index.SingleIndexMapping;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.MetadataManagerModule;
+import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.suggest.SuggestManagerModule;
+import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 public final class Tasks {
     public static Filter setupFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
@@ -63,11 +77,77 @@ public final class Tasks {
         return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
 
+    public static void standaloneElasticsearchConfig(HeroicCore.Builder builder, ElasticSearchParams params) {
+        final List<String> seeds = Arrays.asList(StringUtils.split(params.getSeeds(), ','));
+
+        final String clusterName = params.getClusterName();
+
+        builder.profile(new HeroicProfile() {
+            @Override
+            public HeroicConfig build() throws Exception {
+                // @formatter:off
+
+                final TransportClientSetup clientSetup = TransportClientSetup.builder()
+                    .clusterName(clusterName)
+                    .seeds(seeds)
+                .build();
+
+                return HeroicConfig.builder()
+                        .metadata(
+                            MetadataManagerModule.builder()
+                            .backends(
+                                ImmutableList.<MetadataModule>of(
+                                    ElasticsearchMetadataModule.builder()
+                                    .connection(setupConnection(clientSetup, "metadata"))
+                                    .writesPerSecond(0d)
+                                    .build()
+                                )
+                            ).build()
+                        )
+                        .suggest(
+                            SuggestManagerModule.builder()
+                            .backends(
+                                ImmutableList.<SuggestModule>of(
+                                    ElasticsearchSuggestModule.builder()
+                                    .connection(setupConnection(clientSetup, "suggest"))
+                                    .writesPerSecond(0d)
+                                    .build()
+                                )
+                            )
+                            .build()
+                        )
+
+                .build();
+                // @formatter:on
+            }
+
+            private ManagedConnectionFactory setupConnection(TransportClientSetup clientSetup, final String index) {
+                // @formatter:off
+                return ManagedConnectionFactory.builder()
+                    .clientSetup(clientSetup)
+                    .index(SingleIndexMapping.builder().index(index).build())
+                    .build();
+                // @formatter:on
+            }
+
+            @Override
+            public String description() {
+                return "load metadata form a file";
+            }
+        });
+    }
+
     public static interface QueryParams {
         public List<String> getQuery();
 
         public DateRange getRange();
 
         public int getLimit();
+    }
+
+    public static interface ElasticSearchParams {
+        public String getSeeds();
+
+        public String getClusterName();
     }
 }

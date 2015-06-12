@@ -294,4 +294,64 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     public String buildId(int i) {
         return String.format("elasticsearch-suggest#%d", i);
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String id;
+        private String group;
+        private Set<String> groups;
+        private ManagedConnectionFactory connection;
+        private ReadWriteThreadPools.Config pools;
+        private Double writesPerSecond;
+        private Long writeCacheDurationMinutes;
+        private String templateName;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder group(String group) {
+            this.group = group;
+            return this;
+        }
+
+        public Builder group(Set<String> groups) {
+            this.groups = groups;
+            return this;
+        }
+
+        public Builder pools(ReadWriteThreadPools.Config pools) {
+            this.pools = pools;
+            return this;
+        }
+
+        public Builder connection(ManagedConnectionFactory connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        public Builder writesPerSecond(Double writesPerSecond) {
+            this.writesPerSecond = writesPerSecond;
+            return this;
+        }
+
+        public Builder writeCacheDurationMinutes(Long writeCacheDurationMinutes) {
+            this.writeCacheDurationMinutes = writeCacheDurationMinutes;
+            return this;
+        }
+
+        public Builder templateName(String templateName) {
+            this.templateName = templateName;
+            return this;
+        }
+
+        public ElasticsearchSuggestModule build() {
+            return new ElasticsearchSuggestModule(id, group, groups, pools, connection, writesPerSecond,
+                    writeCacheDurationMinutes, templateName);
+        }
+    }
 }

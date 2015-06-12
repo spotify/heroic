@@ -42,7 +42,6 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
 import com.spotify.heroic.HeroicCore;
-import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.HeroicModules;
 
 import eu.toolchain.async.AsyncFuture;
@@ -113,19 +112,23 @@ public class CoreBridge {
             return;
 
         if (params.output() == null || "-".equals(params.output())) {
-            runStandaloneTask(task, new PrintWriter(System.out), params);
+            runTask(task, new PrintWriter(System.out), params);
             return;
         }
 
         final OutputStream output = Files.newOutputStream(Paths.get(params.output()));
 
         try (final PrintWriter out = new PrintWriter(output)) {
-            runStandaloneTask(task, out, params);
+            runTask(task, out, params);
         }
     }
 
-    public static void runStandaloneTask(ShellTask task, PrintWriter out, ShellTaskParams params) {
-        final HeroicCore core = setupBuilder(false, params.config()).build();
+    public static void runTask(ShellTask task, PrintWriter out, ShellTaskParams params) {
+        final HeroicCore.Builder builder = setupBuilder(false, params.config());
+
+        task.standaloneConfig(builder, params);
+
+        final HeroicCore core = builder.build();
 
         try {
             core.start();
@@ -212,9 +215,14 @@ public class CoreBridge {
         private final Callable<String> status;
     }
 
-    public static Builder setupBuilder(boolean server, String config) {
-        return HeroicCore.builder().server(server).configPath(CoreBridge.parseConfigPath(config))
+    public static HeroicCore.Builder setupBuilder(boolean server, String config) {
+        HeroicCore.Builder builder = HeroicCore.builder().server(server)
                 .modules(HeroicModules.ALL_MODULES)
                 .oneshot(true);
+
+        if (config != null)
+            builder.configPath(CoreBridge.parseConfigPath(config));
+
+        return builder;
     }
 }

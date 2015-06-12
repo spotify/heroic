@@ -33,6 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
@@ -97,6 +98,7 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 
 @RequiredArgsConstructor
+@ToString(of = { "connection" })
 public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, Grouped {
     private static final StandardAnalyzer analyzer = new StandardAnalyzer();
     public static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
