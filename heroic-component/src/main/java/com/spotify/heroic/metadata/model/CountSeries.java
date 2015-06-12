@@ -95,4 +95,15 @@ public class CountSeries {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends CountSeries> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, CountSeries>() {
+            @Override
+            public CountSeries transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new CountSeries(errors, 0, false);
+            }
+        };
+    }
 }

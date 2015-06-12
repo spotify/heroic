@@ -165,4 +165,15 @@ public class TagValuesSuggest {
         private final TreeSet<String> values = new TreeSet<>();
         private boolean limited;
     }
+
+    public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, TagValuesSuggest>() {
+            @Override
+            public TagValuesSuggest transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new TagValuesSuggest(errors, EMPTY_SUGGESTIONS, false);
+            }
+        };
+    }
 }

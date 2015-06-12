@@ -65,7 +65,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<FindTags>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.findTags(filter));
+            futures.add(g.findTags(filter).catchFailed(FindTags.nodeError(g)));
         }
 
         return async.collect(futures, FindTags.reduce());
@@ -76,7 +76,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<FindKeys>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.findKeys(filter));
+            futures.add(g.findKeys(filter).catchFailed(FindKeys.nodeError(g)));
         }
 
         return async.collect(futures, FindKeys.reduce());
@@ -87,7 +87,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<FindSeries>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.findSeries(filter));
+            futures.add(g.findSeries(filter).catchFailed(FindSeries.nodeError(g)));
         }
 
         return async.collect(futures, FindSeries.reduce(filter.getLimit()));
@@ -98,7 +98,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<DeleteSeries>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.deleteSeries(filter));
+            futures.add(g.deleteSeries(filter).catchFailed(DeleteSeries.nodeError(g)));
         }
 
         return async.collect(futures, DeleteSeries.reduce());
@@ -109,7 +109,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<CountSeries>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.countSeries(filter));
+            futures.add(g.countSeries(filter).catchFailed(CountSeries.nodeError(g)));
         }
 
         return async.collect(futures, CountSeries.reduce());
@@ -120,7 +120,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<TagKeyCount>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagKeyCount(filter));
+            futures.add(g.tagKeyCount(filter).catchFailed(TagKeyCount.nodeError(g)));
         }
 
         return async.collect(futures, TagKeyCount.reduce(filter.getLimit()));
@@ -131,7 +131,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<TagSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagSuggest(filter, options, key, value));
+            futures.add(g.tagSuggest(filter, options, key, value).catchFailed(TagSuggest.nodeError(g)));
         }
 
         return async.collect(futures, TagSuggest.reduce(filter.getLimit()));
@@ -142,7 +142,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<KeySuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.keySuggest(filter, options, key));
+            futures.add(g.keySuggest(filter, options, key).catchFailed(KeySuggest.nodeError(g)));
         }
 
         return async.collect(futures, KeySuggest.reduce(filter.getLimit()));
@@ -153,7 +153,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<TagValuesSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagValuesSuggest(filter, exclude, groupLimit));
+            futures.add(g.tagValuesSuggest(filter, exclude, groupLimit).catchFailed(TagValuesSuggest.nodeError(g)));
         }
 
         return async.collect(futures, TagValuesSuggest.reduce(filter.getLimit(), groupLimit));
@@ -164,7 +164,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<TagValueSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagValueSuggest(filter, key));
+            futures.add(g.tagValueSuggest(filter, key).catchFailed(TagValueSuggest.nodeError(g)));
         }
 
         return async.collect(futures, TagValueSuggest.reduce(filter.getLimit()));
@@ -175,7 +175,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<WriteResult>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.writeSeries(range, series));
+            futures.add(g.writeSeries(range, series).catchFailed(WriteResult.nodeError(g)));
         }
 
         return async.collect(futures, WriteResult.merger());
@@ -186,7 +186,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
         final List<AsyncFuture<WriteResult>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.writeMetric(write));
+            futures.add(g.writeMetric(write).catchFailed(WriteResult.nodeError(g)));
         }
 
         return async.collect(futures, WriteResult.merger());

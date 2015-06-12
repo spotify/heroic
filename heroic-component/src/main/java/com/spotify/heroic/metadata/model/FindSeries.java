@@ -115,4 +115,15 @@ public class FindSeries {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends FindSeries> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, FindSeries>() {
+            @Override
+            public FindSeries transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new FindSeries(errors, EMPTY_SERIES, 0, 0);
+            }
+        };
+    }
 }

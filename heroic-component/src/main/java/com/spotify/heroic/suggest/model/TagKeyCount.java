@@ -148,4 +148,15 @@ public class TagKeyCount {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends TagKeyCount> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, TagKeyCount>() {
+            @Override
+            public TagKeyCount transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new TagKeyCount(errors, EMPTY_SUGGESTIONS, false);
+            }
+        };
+    }
 }

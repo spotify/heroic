@@ -30,36 +30,52 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterNode;
 
 import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
 
 @Data
 public class WriteResult {
-    public static final WriteResult EMPTY = new WriteResult(ImmutableList.<Long> of());
+    public static final List<RequestError> EMPTY_ERRORS = ImmutableList.of();
+    private static final List<Long> EMPTY_TIMES = ImmutableList.<Long> of();
 
+    public static final WriteResult EMPTY = new WriteResult(EMPTY_ERRORS, EMPTY_TIMES);
+
+    private final List<RequestError> errors;
     private final List<Long> times;
 
+    public WriteResult(List<Long> times) {
+        this.errors = EMPTY_ERRORS;
+        this.times = times;
+    }
+
     @JsonCreator
-    public WriteResult(@JsonProperty("times") List<Long> times) {
+    public WriteResult(@JsonProperty("errors") List<RequestError> errors, @JsonProperty("times") List<Long> times) {
+        this.errors = errors;
         this.times = times;
     }
 
     public static WriteResult of(Collection<Long> times) {
-        return new WriteResult(ImmutableList.copyOf(times));
+        return new WriteResult(EMPTY_ERRORS, ImmutableList.copyOf(times));
     }
 
     public static WriteResult of(long executionTime) {
-        return new WriteResult(ImmutableList.of(executionTime));
+        return new WriteResult(EMPTY_ERRORS, ImmutableList.of(executionTime));
     }
 
     public static WriteResult of() {
-        return new WriteResult(ImmutableList.<Long> of());
+        return new WriteResult(EMPTY_ERRORS, EMPTY_TIMES);
     }
 
     public WriteResult merge(WriteResult other) {
-        final List<Long> executionTime = new ArrayList<>(this.times);
-        executionTime.addAll(other.times);
-        return new WriteResult(executionTime);
+        final List<RequestError> errors = new ArrayList<>(this.errors);
+        errors.addAll(other.errors);
+
+        final List<Long> times = new ArrayList<>(this.times);
+        times.addAll(other.times);
+
+        return new WriteResult(errors, times);
     }
 
     private static class Merger implements Collector<WriteResult, WriteResult> {
@@ -78,5 +94,16 @@ public class WriteResult {
 
     public static Merger merger() {
         return merger;
+    }
+
+    public static Transform<Throwable, WriteResult> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, WriteResult>() {
+            @Override
+            public WriteResult transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new WriteResult(errors, EMPTY_TIMES);
+            }
+        };
     }
 }

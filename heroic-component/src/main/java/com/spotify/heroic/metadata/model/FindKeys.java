@@ -109,4 +109,15 @@ public class FindKeys {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends FindKeys> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, FindKeys>() {
+            @Override
+            public FindKeys transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new FindKeys(errors, EMPTY_KEYS, 0, 0);
+            }
+        };
+    }
 }
