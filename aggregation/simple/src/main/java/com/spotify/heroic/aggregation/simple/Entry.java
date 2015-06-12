@@ -73,6 +73,25 @@ public class Entry implements HeroicModule {
                     }
                 });
 
+        ctx.aggregation(SpreadAggregation.NAME, SpreadAggregation.class, SpreadAggregationQuery.class,
+                new Serializer<SpreadAggregation>() {
+                    @Override
+                    public void serialize(SerialWriter buffer, SpreadAggregation value) throws IOException {
+                        resolutionSerializer.serialize(buffer, value.getSampling());
+                    }
+
+                    @Override
+                    public SpreadAggregation deserialize(SerialReader buffer) throws IOException {
+                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
+                        return new SpreadAggregation(sampling);
+                    }
+                }, new SamplingAggregationBuilder<SpreadAggregation>() {
+                    @Override
+                    protected SpreadAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
+                        return new SpreadAggregation(sampling);
+                    }
+                });
+
         ctx.aggregation(SumAggregation.NAME, SumAggregation.class, SumAggregationQuery.class,
                 new Serializer<SumAggregation>() {
                     @Override

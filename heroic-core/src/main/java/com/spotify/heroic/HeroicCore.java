@@ -110,6 +110,8 @@ import com.spotify.heroic.model.SamplingSerializer;
 import com.spotify.heroic.model.SamplingSerializerImpl;
 import com.spotify.heroic.model.SeriesSerializer;
 import com.spotify.heroic.model.SeriesSerializerImpl;
+import com.spotify.heroic.model.Spread;
+import com.spotify.heroic.model.SpreadSerializer;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -490,6 +492,9 @@ public class HeroicCore {
 
                 module.addSerializer(Event.class, new EventSerializer.Serializer());
                 module.addDeserializer(Event.class, new EventSerializer.Deserializer());
+
+                module.addSerializer(Spread.class, new SpreadSerializer.Serializer());
+                module.addDeserializer(Spread.class, new SpreadSerializer.Deserializer());
 
                 final ObjectMapper mapper = new ObjectMapper();
 
