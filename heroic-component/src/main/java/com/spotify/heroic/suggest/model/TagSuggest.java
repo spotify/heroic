@@ -154,8 +154,8 @@ public class TagSuggest {
         @JsonCreator
         public Suggestion(@JsonProperty("score") Float score, @JsonProperty("key") String key,
                 @JsonProperty("value") String value) {
-            this.score = checkNotNull(score, "value must not be null");
-            this.key = checkNotNull(key, "value must not be null");
+            this.score = checkNotNull(score, "score must not be null");
+            this.key = checkNotNull(key, "key must not be null");
             this.value = value;
         }
     }
@@ -168,6 +168,17 @@ public class TagSuggest {
                 final ClusterNode c = node.getClusterNode();
                 return new TagSuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
                         m.getTags(), e)), EMPTY_SUGGESTIONS);
+            }
+        };
+    }
+
+    public static Transform<Throwable, ? extends TagSuggest> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, TagSuggest>() {
+            @Override
+            public TagSuggest transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new TagSuggest(errors, EMPTY_SUGGESTIONS);
             }
         };
     }

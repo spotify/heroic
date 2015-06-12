@@ -128,4 +128,15 @@ public class KeySuggest {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends KeySuggest> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, KeySuggest>() {
+            @Override
+            public KeySuggest transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new KeySuggest(errors, EMPTY_SUGGESTIONS);
+            }
+        };
+    }
 }
