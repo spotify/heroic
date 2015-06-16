@@ -40,13 +40,21 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.profile.GeneratedProfile;
+import com.spotify.heroic.reflection.ResourceException;
+import com.spotify.heroic.reflection.ResourceFileLoader;
+import com.spotify.heroic.reflection.ResourceInstance;
+
+import eu.toolchain.async.Transform;
 
 @Slf4j
 public class HeroicService {
     public static interface Configuration {
         void configure(HeroicCore.Builder builder, Parameters parameters);
     }
+
+    public static final String CONFIGURATION_RESOURCE = "com.spotify.heroic.HeroicService.Configuration";
 
     /**
      * Default configuration path.
@@ -109,8 +117,12 @@ public class HeroicService {
 
         configureBuilder(builder, params);
 
-        if (configuration != null)
-            configuration.configure(builder, params);
+        try {
+            loadResourceConfigurations(builder, params);
+        } catch (final ResourceException e) {
+            log.error("Failed to load configurators from resource: {}", e.getMessage(), e);
+            throw e;
+        }
 
         final HeroicCore core = builder.build();
 
@@ -137,6 +149,25 @@ public class HeroicService {
         /* block until core stops */
         core.join();
         System.exit(0);
+    }
+
+    private static void loadResourceConfigurations(final Builder builder, final Parameters params)
+            throws ResourceException {
+        final ClassLoader loader = Configuration.class.getClassLoader();
+
+        final List<ResourceInstance<Configuration>> configs = ResourceFileLoader.loadInstances(
+                CONFIGURATION_RESOURCE, loader,
+                Configuration.class);
+
+        for (final ResourceInstance<Configuration> config : configs) {
+            config.invoke(new Transform<Configuration, Void>() {
+                @Override
+                public Void transform(Configuration result) throws Exception {
+                    result.configure(builder, params);
+                    return null;
+                }
+            });
+        }
     }
 
     private static void configureBuilder(final HeroicCore.Builder builder, final Parameters params) {
