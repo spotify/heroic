@@ -106,6 +106,8 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DataPointSerializer;
 import com.spotify.heroic.model.Event;
 import com.spotify.heroic.model.EventSerializer;
+import com.spotify.heroic.model.MetricType;
+import com.spotify.heroic.model.MetricTypeSerializer;
 import com.spotify.heroic.model.SamplingSerializer;
 import com.spotify.heroic.model.SamplingSerializerImpl;
 import com.spotify.heroic.model.SeriesSerializer;
@@ -495,6 +497,9 @@ public class HeroicCore {
 
                 module.addSerializer(Spread.class, new SpreadSerializer.Serializer());
                 module.addDeserializer(Spread.class, new SpreadSerializer.Deserializer());
+
+                module.addSerializer(MetricType.class, new MetricTypeSerializer.Serializer());
+                module.addDeserializer(MetricType.class, new MetricTypeSerializer.Deserializer());
 
                 final ObjectMapper mapper = new ObjectMapper();
 
