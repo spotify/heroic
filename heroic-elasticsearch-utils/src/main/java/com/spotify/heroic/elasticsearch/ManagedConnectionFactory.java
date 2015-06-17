@@ -25,6 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -37,7 +38,6 @@ import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateReque
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.bulk.BulkProcessor.Builder;
 import org.elasticsearch.action.bulk.BulkProcessor.Listener;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -49,6 +49,7 @@ import org.elasticsearch.common.compress.CompressedString;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -75,6 +76,7 @@ public class ManagedConnectionFactory {
     public static final int DEFAULT_BULK_ACTIONS = 1000;
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
     public static final Map<String, XContentBuilder> EMPTY_MAPPINGS = ImmutableMap.of();
+    public static final Map<String, Object> DEFAULT_TEMPLATE_SETTINGS = ImmutableMap.of();
 
     @Inject
     private LocalMetadataBackendReporter reporter;
@@ -139,10 +141,32 @@ public class ManagedConnectionFactory {
         };
     }
 
+    /**
+     * @deprecated Use {@link #construct(String, Map)}.
+     */
+    public Managed<Connection> construct(final String defaultTemplateName, final Map<String, XContentBuilder> mappings) {
+        final Map<String, Map<String, Object>> newMappings = new HashMap<>();
+
+        for (final Map.Entry<String, XContentBuilder> e : mappings.entrySet()) {
+            try {
+                newMappings.put(e.getKey(), JsonXContent.jsonXContent.createParser(e.getValue().bytes()).map());
+            } catch (IOException e1) {
+                throw new RuntimeException("failed to convert XContentBuilder to map");
+            }
+        }
+
+        return construct(defaultTemplateName, newMappings, DEFAULT_TEMPLATE_SETTINGS);
+    }
+
+    public Managed<Connection> constructDefaultSettings(final String defaultTemplateName,
+            final Map<String, Map<String, Object>> mappings) {
+        return construct(defaultTemplateName, mappings, DEFAULT_TEMPLATE_SETTINGS);
+    }
+
     public Managed<Connection> construct(final String defaultTemplateName,
-            final Map<String, XContentBuilder> suggestedMappings) {
+            final Map<String, Map<String, Object>> suggestedMappings, final Map<String, Object> settings) {
         final String templateName = Optional.fromNullable(this.templateName).or(defaultTemplateName);
-        final Map<String, XContentBuilder> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
+        final Map<String, Map<String, Object>> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
 
         return async.managed(new ManagedSetup<Connection>() {
             @Override
@@ -152,7 +176,7 @@ public class ManagedConnectionFactory {
                     public Connection call() throws Exception {
                         final Client client = clientSetup.setup();
 
-                        configureMapping(client, templateName, mappings);
+                        configureMapping(client, templateName, mappings, settings);
 
                         final BulkProcessor bulk = configureBulkProcessor(client);
 
@@ -180,30 +204,42 @@ public class ManagedConnectionFactory {
         });
     }
 
-    private void configureMapping(Client client, String templateName, Map<String, XContentBuilder> mappings)
+    private void configureMapping(Client client, String templateName, Map<String, Map<String, Object>> mappings, Map<String, Object> settings)
             throws Exception {
         final IndicesAdminClient indices = client.admin().indices();
 
-        if (isTemplateUpToDate(indices, templateName, mappings))
+        if (isTemplateUpToDate(indices, templateName, mappings, settings)) {
+            log.info("[{}] template is up to date", templateName);
             return;
+        }
 
-        createTemplate(indices, templateName, mappings);
+        log.info("[{}] template is _not_ up to date", templateName);
+        createTemplate(indices, templateName, mappings, settings);
     }
 
     private boolean isTemplateUpToDate(IndicesAdminClient indices, String templateName,
-            Map<String, XContentBuilder> mappings) throws Exception {
+            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
         final GetIndexTemplatesResponse response = indices.getTemplates(
                 indices.prepareGetTemplates(templateName).request()).get(30, TimeUnit.SECONDS);
 
-        for (final IndexTemplateMetaData t : response.getIndexTemplates())
+        final List<IndexTemplateMetaData> templates = response.getIndexTemplates();
+
+        if (mappings.isEmpty() && templates.isEmpty())
+            return true;
+
+        for (final IndexTemplateMetaData t : templates) {
+            if (!settings.equals(t.getSettings().getAsMap()))
+                return false;
+
             if (t.getName().equals(templateName))
                 return compareTemplate(t, templateName, mappings);
+        }
 
         return false;
     }
 
     private boolean compareTemplate(final IndexTemplateMetaData t, String templateName,
-            Map<String, XContentBuilder> mappings) throws IOException {
+            Map<String, Map<String, Object>> mappings) throws IOException {
         if (t.getTemplate() == null)
             return false;
 
@@ -215,28 +251,35 @@ public class ManagedConnectionFactory {
         if (externalMappings == null || externalMappings.isEmpty())
             return false;
 
-        for (final Map.Entry<String, XContentBuilder> mapping : mappings.entrySet()) {
+        boolean same = true;
+
+        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
             final CompressedString external = externalMappings.get(mapping.getKey());
 
             if (external == null)
                 return false;
 
+            final Map<String, Object> externalJson = JsonXContent.jsonXContent.createParser(external.compressed()).map();
             // This is a fairly dirty way, but ES seems to preserve the original document in verbatim, so it works for
             // now.
-            if (!mapping.getValue().string().equals(external.string()))
-                return false;
+
+            if (!mapping.getValue().equals(externalJson)) {
+                log.warn("[{}] mapping for '{}' is not same", templateName, mapping.getKey());
+                same = false;
+            }
         }
 
-        return true;
+        return same;
     }
 
     private void createTemplate(final IndicesAdminClient indices, String templateName,
-            Map<String, XContentBuilder> mappings) throws Exception {
+            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
         final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
 
+        put.setSettings(settings);
         put.setTemplate(index.template());
 
-        for (final Map.Entry<String, XContentBuilder> mapping : mappings.entrySet()) {
+        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
             put.addMapping(mapping.getKey(), mapping.getValue());
         }
 
@@ -247,7 +290,7 @@ public class ManagedConnectionFactory {
     }
 
     private BulkProcessor configureBulkProcessor(final Client client) {
-        final Builder builder = BulkProcessor.builder(client, new Listener() {
+        final BulkProcessor.Builder builder = BulkProcessor.builder(client, new Listener() {
             @Override
             public void beforeBulk(long executionId, BulkRequest request) {
             }
@@ -291,5 +334,71 @@ public class ManagedConnectionFactory {
         final BulkProcessor bulkProcessor = builder.build();
 
         return bulkProcessor;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private String clusterName;
+        private List<String> seeds;
+        private Boolean nodeClient;
+        private Integer concurrentBulkRequests;
+        private Integer flushInterval;
+        private Integer bulkActions;
+        private IndexMapping index;
+        private String templateName;
+        private ClientSetup clientSetup;
+
+        public Builder clusterName(String clusterName) {
+            this.clusterName = clusterName;
+            return this;
+        }
+
+        public Builder clusterName(List<String> seeds) {
+            this.seeds = seeds;
+            return this;
+        }
+
+        public Builder nodeClient(Boolean nodeClient) {
+            this.nodeClient = nodeClient;
+            return this;
+        }
+
+        public Builder nodeClient(Integer concurrentBulkRequests) {
+            this.concurrentBulkRequests = concurrentBulkRequests;
+            return this;
+        }
+
+        public Builder flushInterval(Integer flushInterval) {
+            this.flushInterval = flushInterval;
+            return this;
+        }
+
+        public Builder bulkActions(Integer bulkActions) {
+            this.bulkActions = bulkActions;
+            return this;
+        }
+
+        public Builder index(IndexMapping index) {
+            this.index = index;
+            return this;
+        }
+
+        public Builder templateName(String templateName) {
+            this.templateName = templateName;
+            return this;
+        }
+
+        public Builder clientSetup(ClientSetup clientSetup) {
+            this.clientSetup = clientSetup;
+            return this;
+        }
+
+        public ManagedConnectionFactory build() {
+            return new ManagedConnectionFactory(clusterName, seeds, nodeClient, concurrentBulkRequests, flushInterval,
+                    bulkActions, index, templateName, clientSetup);
+        }
     }
 };

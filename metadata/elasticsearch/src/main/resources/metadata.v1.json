@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "properties": {
+      "key": {
+        "type": "string",
+        "fields": {
+          "raw": {
+            "type": "string",
+            "index": "not_analyzed",
+            "doc_values": true
+          }
+        }
+      },
+      "tags": {
+        "type": "nested",
+        "properties": {
+          "key": {
+            "type": "string",
+            "fields": {
+              "raw": {
+                "type": "string",
+                "index": "not_analyzed",
+                "doc_values": true
+              }
+            }
+          },
+          "value": {
+            "type": "string",
+            "fields": {
+              "raw": {
+                "type": "string",
+                "index": "not_analyzed",
+                "doc_values": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

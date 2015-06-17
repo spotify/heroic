@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.elasticsearch.client.Client;
@@ -38,21 +39,25 @@ import org.elasticsearch.node.NodeBuilder;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
+    public static final Map<String, String> DEFAULT_SETTINGS = ImmutableMap.of();
 
     private final String clusterName;
     private final Path root;
+    private final Map<String, String> settings;
 
     private final Object $lock = new Object();
     private final AtomicReference<Node> node = new AtomicReference<>();
 
     @JsonCreator
-    public StandaloneClientSetup(@JsonProperty("clusterName") String clusterName, @JsonProperty("root") String root)
+    public StandaloneClientSetup(@JsonProperty("clusterName") String clusterName, @JsonProperty("root") String root, @JsonProperty("settings") Map<String, String> settings)
             throws IOException {
         this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
         this.root = checkDataDirectory(Paths.get(Optional.fromNullable(root).or(temporaryDirectory())).toAbsolutePath());
+        this.settings = Optional.fromNullable(settings).or(DEFAULT_SETTINGS);
     }
 
     private Path checkDataDirectory(Path path) throws IOException {
@@ -80,11 +85,23 @@ public class StandaloneClientSetup implements ClientSetup {
             if (StandaloneClientSetup.this.node.get() != null)
                 throw new IllegalStateException("node already started");
 
-            final Settings settings = ImmutableSettings.builder().put("path.logs", root.resolve("logs"))
-                    .put("path.data", root.resolve("data")).put("node.name", InetAddress.getLocalHost().getHostName())
-                    .put("discovery.zen.ping.multicast.enabled", false).build();
+            // @formatter:off
+            final Settings settings = ImmutableSettings.builder()
+                .put("node.http.enabled", true)
+                .put("index.gateway.type", "none")
+                .put("index.store.type", "memory")
+                .put("index.number_of_shards", 1)
+                .put("index.number_of_replicas", 0)
+                .put("path.logs", root.resolve("logs"))
+                .put("path.data", root.resolve("data"))
+                .put("node.name", InetAddress.getLocalHost().getHostName())
+                .put("discovery.zen.ping.multicast.enabled", false)
+                .put("script.disable_dynamic", false)
+                .put(this.settings)
+                .build();
+            // @formatter:on
 
-            final Node node = NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
+            final Node node = NodeBuilder.nodeBuilder().settings(settings).local(true).clusterName(clusterName).node();
 
             StandaloneClientSetup.this.node.set(node);
             return node.client();
@@ -100,6 +117,35 @@ public class StandaloneClientSetup implements ClientSetup {
                 throw new IllegalStateException("node not running");
 
             node.stop();
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String clusterName;
+        private String root;
+        private Map<String, String> settings;
+
+        public Builder clusterName(String clusterName) {
+            this.clusterName = clusterName;
+            return this;
+        }
+
+        public Builder root(String root) {
+            this.root = root;
+            return this;
+        }
+
+        public Builder settings(Map<String, String> settings) {
+            this.settings = settings;
+            return this;
+        }
+
+        public StandaloneClientSetup build() throws IOException {
+            return new StandaloneClientSetup(clusterName, root, settings);
         }
     }
 }

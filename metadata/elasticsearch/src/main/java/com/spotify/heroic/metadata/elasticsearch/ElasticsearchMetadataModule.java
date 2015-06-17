@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -29,10 +30,9 @@ import java.util.Set;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -44,7 +44,6 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
@@ -55,83 +54,35 @@ import com.spotify.heroic.utils.GroupedUtils;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
 
-@RequiredArgsConstructor
+@ToString
 public final class ElasticsearchMetadataModule implements MetadataModule {
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String TEMPLATE_NAME = "heroic-metadata";
 
     private final String id;
     private final Set<String> groups;
-    private final ManagedConnectionFactory connection;
     private final ReadWriteThreadPools.Config pools;
+    private final ManagedConnectionFactory connection;
 
     @JsonCreator
     public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("pools") ReadWriteThreadPools.Config pools) throws Exception {
+            @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
     }
 
-    private static Map<String, XContentBuilder> mappings() throws IOException {
-        final Map<String, XContentBuilder> mappings = new HashMap<>();
-        mappings.put("metadata", buildMetadataMapping());
+    private Map<String, Map<String, Object>> mappings() throws IOException {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", JsonXContent.jsonXContent.createParser(inputStreamFromResource("metadata.v1.json")).map());
         return mappings;
     }
 
-    private static XContentBuilder buildMetadataMapping() throws IOException {
-        final XContentBuilder b = XContentFactory.jsonBuilder();
-
-        // @formatter:off
-        b.startObject();
-          b.startObject(ElasticsearchUtils.TYPE_METADATA);
-            b.startObject("properties");
-              b.startObject(ElasticsearchUtils.SERIES_KEY);
-                b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-
-              b.startObject(ElasticsearchUtils.SERIES_TAGS);
-                b.field("type", "nested");
-                b.startObject("properties");
-                  b.startObject(ElasticsearchUtils.TAGS_KEY);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.TAGS_VALUE);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-            b.endObject();
-          b.endObject();
-        b.endObject();
-        // @formatter:on
-
-        return b;
+    private InputStream inputStreamFromResource(String string) {
+        return getClass().getClassLoader().getResourceAsStream(string);
     }
 
     @Override
@@ -159,7 +110,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Provides
             @Inject
             public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
-                return builder.construct(TEMPLATE_NAME, mappings());
+                return builder.constructDefaultSettings(TEMPLATE_NAME, mappings());
             }
 
             @Override
@@ -179,5 +130,46 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     @Override
     public String buildId(int i) {
         return String.format("elasticsearch#%d", i);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String id;
+        private String group;
+        private Set<String> groups;
+        private ManagedConnectionFactory connection;
+        private ReadWriteThreadPools.Config pools;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder group(String group) {
+            this.group = group;
+            return this;
+        }
+
+        public Builder group(Set<String> groups) {
+            this.groups = groups;
+            return this;
+        }
+
+        public Builder connection(ManagedConnectionFactory connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        public Builder pools(ReadWriteThreadPools.Config pools) {
+            this.pools = pools;
+            return this;
+        }
+
+        public ElasticsearchMetadataModule build() {
+            return new ElasticsearchMetadataModule(id, group, groups, connection, pools);
+        }
     }
 }
