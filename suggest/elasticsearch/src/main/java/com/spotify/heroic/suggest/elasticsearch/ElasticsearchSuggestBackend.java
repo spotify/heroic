@@ -486,9 +486,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
             final String[] indices;
 
             try {
-                indices = c.indices(range);
+                indices = c.writeIndices(range);
             } catch (NoIndexSelectedException e) {
-                return async.cancelled();
+                return async.failed(e);
             }
 
             final String seriesId = Integer.toHexString(series.hashCode());

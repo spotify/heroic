@@ -75,8 +75,12 @@ public class Connection {
         return async.collectAndDiscard(futures);
     }
 
-    public String[] indices(DateRange range) throws NoIndexSelectedException {
-        return index.indices(range);
+    public String[] readIndices(DateRange range) throws NoIndexSelectedException {
+        return index.readIndices(range);
+    }
+
+    public String[] writeIndices(DateRange range) throws NoIndexSelectedException {
+        return index.writeIndices(range);
     }
 
     public SearchRequestBuilder search(DateRange range, String type) throws NoIndexSelectedException {

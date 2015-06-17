@@ -22,7 +22,7 @@
 package com.spotify.heroic.elasticsearch.index;
 
 import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 import lombok.ToString;
 
@@ -40,22 +40,26 @@ import com.spotify.heroic.model.DateRange;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {
-    private static final String[] STRING_ARRAY = new String[0];
-
     public static final long DEFAULT_INTERVAL = 3600 * 24 * 7 * 1000;
+    public static final int DEFAULT_MAX_READ_INDICES = 2;
+    public static final int DEFAULT_MAX_WRITE_INDICES = 1;
     public static final String DEFAULT_PATTERN = "heroic-%s";
-    public static final long DEFAULT_RETENTION = TimeUnit.MILLISECONDS.convert(28, TimeUnit.DAYS);
 
     private final long interval;
+    private final int maxReadIndices;
+    private final int maxWriteIndices;
     private final String pattern;
-    private final long retention;
 
     @JsonCreator
-    public RotatingIndexMapping(@JsonProperty("interval") Long interval, @JsonProperty("pattern") String pattern,
-            @JsonProperty("retention") Long retention) {
+    public RotatingIndexMapping(@JsonProperty("interval") Long interval,
+            @JsonProperty("maxReadIndices") Integer maxReadIndices,
+            @JsonProperty("maxWriteIndices") Integer maxWriteIndices, @JsonProperty("pattern") String pattern) {
         this.interval = Optional.fromNullable(interval).or(DEFAULT_INTERVAL);
+        this.maxReadIndices = verifyPositiveInt(Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
+                "maxReadIndices");
+        this.maxWriteIndices = verifyPositiveInt(Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
+                "maxWriteIndices");
         this.pattern = verifyPattern(Optional.fromNullable(pattern).or(DEFAULT_PATTERN));
-        this.retention = Optional.fromNullable(retention).or(DEFAULT_RETENTION);
     }
 
     private String verifyPattern(String pattern) {
@@ -65,59 +69,76 @@ public class RotatingIndexMapping implements IndexMapping {
         return pattern;
     }
 
+    private int verifyPositiveInt(int value, String name) {
+        if (value < 1) {
+            throw new IllegalArgumentException(name + "=" + value + "  is not a positive integer");
+        }
+
+        return value;
+    }
+
     @Override
     public String template() {
         return String.format(pattern, "*");
     }
 
-    @Override
-    public String[] indices(DateRange range) throws NoIndexSelectedException {
-        final long now = System.currentTimeMillis();
-        return indices(range, now);
-    }
+    private String[] indices(int maxIndices, long now) {
+        long curr = now - (now % interval);
+        final List<String> indices = new ArrayList<>();
 
-    protected String[] indices(DateRange range, long now) throws NoIndexSelectedException {
-        // the first date that we allow.
-        final long first = now - retention;
+        for (int i = 0; i < maxIndices; i++) {
+            long date = curr - (interval * i);
 
-        final DateRange rounded = range.rounded(interval);
-
-        final int size = (int) (rounded.diff() / interval) + 1;
-
-        final ArrayList<String> indices = new ArrayList<String>();
-
-        for (int i = 0; i < size; i++) {
-            long date = rounded.getStart() + (i * interval);
-
-            // skip date out of retention range.
-            if (date < first)
-                continue;
+            if (date < 0) {
+                break;
+            }
 
             indices.add(String.format(pattern, date));
         }
 
-        if (indices.isEmpty())
-            throw new NoIndexSelectedException();
+        return indices.toArray(new String[indices.size()]);
+    }
 
-        return indices.toArray(STRING_ARRAY);
+    protected String[] readIndices(long now) throws NoIndexSelectedException {
+        String[] indices = indices(maxReadIndices, now);
+
+        if (indices.length == 0) {
+            throw new NoIndexSelectedException();
+        }
+
+        return indices;
+    }
+
+    @Override
+    public String[] readIndices(DateRange range) throws NoIndexSelectedException {
+        return readIndices(System.currentTimeMillis());
+    }
+
+    protected String[] writeIndices(long now) {
+        return indices(maxWriteIndices, now);
+    }
+
+    @Override
+    public String[] writeIndices(DateRange range) {
+        return writeIndices(System.currentTimeMillis());
     }
 
     @Override
     public DeleteByQueryRequestBuilder deleteByQuery(final Client client, final DateRange range, final String type)
             throws NoIndexSelectedException {
-        return client.prepareDeleteByQuery(indices(range)).setIndicesOptions(options()).setTypes(type);
+        return client.prepareDeleteByQuery(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 
     @Override
     public SearchRequestBuilder search(final Client client, final DateRange range, final String type)
             throws NoIndexSelectedException {
-        return client.prepareSearch(indices(range)).setIndicesOptions(options()).setTypes(type);
+        return client.prepareSearch(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 
     @Override
     public CountRequestBuilder count(final Client client, final DateRange range, final String type)
             throws NoIndexSelectedException {
-        return client.prepareCount(indices(range)).setIndicesOptions(options()).setTypes(type);
+        return client.prepareCount(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 
     private IndicesOptions options() {
@@ -128,7 +149,7 @@ public class RotatingIndexMapping implements IndexMapping {
         return new Supplier<IndexMapping>() {
             @Override
             public IndexMapping get() {
-                return new RotatingIndexMapping(null, null, null);
+                return new RotatingIndexMapping(null, null, null, null);
             }
         };
     }

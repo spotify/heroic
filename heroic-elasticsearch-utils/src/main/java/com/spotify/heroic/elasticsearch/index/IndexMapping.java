@@ -36,7 +36,9 @@ import com.spotify.heroic.model.DateRange;
 public interface IndexMapping {
     public String template();
 
-    public String[] indices(DateRange range) throws NoIndexSelectedException;
+    public String[] readIndices(DateRange range) throws NoIndexSelectedException;
+
+    public String[] writeIndices(DateRange range) throws NoIndexSelectedException;
 
     public SearchRequestBuilder search(Client client, DateRange range, String type) throws NoIndexSelectedException;
 

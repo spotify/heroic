@@ -167,9 +167,9 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 final String[] indices;
 
                 try {
-                    indices = c.indices(range);
+                    indices = c.writeIndices(range);
                 } catch (NoIndexSelectedException e) {
-                    return async.cancelled();
+                    return async.failed(e);
                 }
 
                 for (final String index : indices) {

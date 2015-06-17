@@ -56,7 +56,12 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public String[] indices(DateRange range) {
+    public String[] readIndices(DateRange range) {
+        return indices;
+    }
+
+    @Override
+    public String[] writeIndices(DateRange range) {
         return indices;
     }
 
