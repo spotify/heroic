@@ -2,14 +2,19 @@
 
 release=$1
 version=$2
+dist=${3:-dist}
 
 if [[ -z $release || -z $version ]]; then
-    echo "Usage: $0 <release> <version>"
+    echo "Usage: $0 <release> <version> [dist]"
+    echo "  release - suffix of the generated debian package (example: heroic-api)"
+    echo "  version - debian version of the package"
+    echo "  dist - name of heroic module to use as distribution (default: \"dist\")"
     exit 1
 fi
 
 sedexpr="-e s/\\bRELEASE\\b/$release/g"
 sedexpr="$sedexpr -e s/\\bVERSION\\b/$version/g"
+sedexpr="$sedexpr -e s/\\bDIST\\b/$dist/g"
 
 for input in debian/*.in; do
     output=$(sed $sedexpr <<< ${input%%.in})

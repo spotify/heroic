@@ -18,12 +18,12 @@ HEROIC_STATUS=$(BUILD)/heroic-status-RELEASE
 override_dh_auto_clean:
 	rm -rf $(BUILD)
 	rm -rf $(MAVEN_HOME)
-	$(MVN) clean
+	MAVEN_HOME=$(MAVEN_HOME) $(MVN) clean
 
 override_dh_auto_build:
-	$(MVN) -Ddeb.skip=true package
+	MAVEN_HOME=$(MAVEN_HOME) $(MVN) -Ddeb.skip=true package
 	mkdir -p $(BUILD)
-	cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT.jar $(HEROIC_JAR)
+	cp heroic-DIST/target/heroic-DIST-0.0.1-SNAPSHOT.jar $(HEROIC_JAR)
 	cp debian/bin/heroic $(HEROIC)
 	cp debian/bin/heroicsh $(HEROICSH)
 	cp debian/bin/heroic-status $(HEROIC_STATUS)
