@@ -37,6 +37,7 @@ import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.metric.model.ResultGroup;
 import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.TagValues;
+import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
 import com.spotify.heroic.model.TimeData;
@@ -51,12 +52,12 @@ public final class SimpleCallbackStream<T extends TimeData> implements StreamCol
     private final Class<T> type;
 
     @Override
-    public void resolved(FetchData<T> result) throws Exception {
+    public void resolved(final FetchData<T> result) throws Exception {
         results.add(result);
     }
 
     @Override
-    public void failed(Throwable error) throws Exception {
+    public void failed(final Throwable error) throws Exception {
         log.error("Error encountered when processing request", error);
     }
 
@@ -65,8 +66,9 @@ public final class SimpleCallbackStream<T extends TimeData> implements StreamCol
         log.error("Request cancelled");
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public ResultGroups end(int successful, int failed, int cancelled) throws Exception {
+    public ResultGroups end(final int successful, final int failed, final int cancelled) throws Exception {
         if (failed > 0)
             throw new Exception("Some time series could not be fetched from the database");
 
@@ -91,15 +93,17 @@ public final class SimpleCallbackStream<T extends TimeData> implements StreamCol
 
         final List<ResultGroup> groups = new ArrayList<>();
 
-        for (final Map.Entry<Series, List<T>> e : results.entrySet()) {
-            Collections.sort(e.getValue());
-            groups.add(new ResultGroup(tagsFor(e.getKey()), e.getValue(), type));
+        if (DataPoint.class.isAssignableFrom(type)) {
+            for (final Map.Entry<Series, List<T>> e : results.entrySet()) {
+                Collections.sort(e.getValue());
+                groups.add(new ResultGroup.DataPointResultGroup(tagsFor(e.getKey()), (List<DataPoint>) e.getValue()));
+            }
         }
 
         return ResultGroups.fromResult(groups, stat);
     }
 
-    private List<TagValues> tagsFor(Series key) {
+    private List<TagValues> tagsFor(final Series key) {
         final List<TagValues> tags = new ArrayList<>();
 
         for (final Map.Entry<String, String> e : key.getTags().entrySet())

@@ -26,28 +26,50 @@ import java.util.List;
 import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.spotify.heroic.model.DataPoint;
 
-@Data
-public final class ResultGroup {
-    private final List<TagValues> tags;
-    private final List<?> values;
-    private final Class<?> type;
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(ResultGroup.DataPointResultGroup.class)})
+public interface ResultGroup {
 
-    @SuppressWarnings("unchecked")
-    public <T> List<T> valuesFor(Class<T> expected) {
-        if (!expected.isAssignableFrom(type))
-            throw new RuntimeException(String.format("incompatible payload type between %s (expected) and %s (actual)",
-                    expected.getCanonicalName(), type.getCanonicalName()));
+    public <T> List<T> valuesFor(final Class<T> expected);
+    public List<TagValues> getTags();
+    public List<?> getValues();
 
-        return (List<T>) values;
-    }
+    @JsonIgnore
+    public Class<?> getType();
 
-    @JsonCreator
-    public ResultGroup(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("values") List<?> values,
-            @JsonProperty("type") Class<?> type) {
-        this.tags = tags;
-        this.values = values;
-        this.type = type;
+    /**
+     * TODO change the type string from a class name
+     * @author mehrdad
+     *
+     */
+    @Data
+    @JsonTypeName("com.spotify.heroic.model.DataPoint")
+    static class DataPointResultGroup implements ResultGroup {
+        private final List<TagValues> tags;
+        private final List<DataPoint> values;
+        private final Class<DataPoint> type = DataPoint.class;
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> List<T> valuesFor(final Class<T> expected) {
+            if (!expected.isAssignableFrom(type))
+                throw new RuntimeException(String.format("incompatible payload type between %s (expected) and %s (actual)",
+                        expected.getCanonicalName(), type.getCanonicalName()));
+
+            return (List<T>) values;
+        }
+
+        @JsonCreator
+        public DataPointResultGroup(@JsonProperty("tags") final List<TagValues> tags, @JsonProperty("values") final List<DataPoint> values) {
+            this.tags = tags;
+            this.values = values;
+        }
     }
 }
