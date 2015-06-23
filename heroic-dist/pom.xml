@@ -43,7 +43,7 @@
     <!-- core -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-core</artifactId>
+      <artifactId>heroic-all</artifactId>
     </dependency>
 
     <dependency>
@@ -51,77 +51,11 @@
       <artifactId>heroic-shell</artifactId>
     </dependency>
 
-    <!-- metric backends -->
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-astyanax</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-datastax</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.metric</groupId>
-      <artifactId>heroic-metric-generated</artifactId>
-    </dependency>
-
-    <!-- metadata backends -->
-    <dependency>
-      <groupId>com.spotify.heroic.metadata</groupId>
-      <artifactId>heroic-metadata-elasticsearch</artifactId>
-    </dependency>
-
-    <!-- suggest backends -->
-    <dependency>
-      <groupId>com.spotify.heroic.suggest</groupId>
-      <artifactId>heroic-suggest-elasticsearch</artifactId>
-    </dependency>
-
-    <!-- discovery implementations -->
-    <dependency>
-      <groupId>com.spotify.heroic.discovery</groupId>
-      <artifactId>heroic-discovery-simple</artifactId>
-    </dependency>
-
-    <!-- aggregation methods -->
-    <dependency>
-      <groupId>com.spotify.heroic.aggregation</groupId>
-      <artifactId>heroic-aggregation-simple</artifactId>
-    </dependency>
-
-    <!-- consumer implementations -->
-    <dependency>
-      <groupId>com.spotify.heroic.consumer</groupId>
-      <artifactId>heroic-consumer-kafka</artifactId>
-    </dependency>
-
-    <!-- aggregation caching -->
-    <dependency>
-      <groupId>com.spotify.heroic.aggregationcache</groupId>
-      <artifactId>heroic-aggregationcache-cassandra2</artifactId>
-    </dependency>
-
-    <!-- rpc implementations -->
-    <dependency>
-      <groupId>com.spotify.heroic.rpc</groupId>
-      <artifactId>heroic-rpc-httprpc</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.spotify.heroic.rpc</groupId>
-      <artifactId>heroic-rpc-nativerpc</artifactId>
-    </dependency>
-
-    <!-- shell -->
+    <!-- argument parsing -->
     <dependency>
       <groupId>args4j</groupId>
       <artifactId>args4j</artifactId>
       <version>2.0.29</version>
-    </dependency>
-
-    <dependency>
-      <groupId>jline</groupId>
-      <artifactId>jline</artifactId>
-      <version>2.12</version>
     </dependency>
 
     <!-- testing -->

@@ -39,9 +39,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicCore.Builder;
+import com.spotify.heroic.HeroicModules;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
@@ -52,28 +52,6 @@ import eu.toolchain.async.Managed;
 public class CoreBridge {
     public static final Path[] DEFAULT_CONFIGS = new Path[] { Paths.get("heroic.yml"),
             Paths.get("/etc/heroic/heroic.yml") };
-
-    // @formatter:off
-    private static final List<String> MODULES = ImmutableList.<String>of(
-        "com.spotify.heroic.metric.astyanax",
-        "com.spotify.heroic.metric.datastax",
-        "com.spotify.heroic.metric.generated",
-
-        "com.spotify.heroic.metadata.elasticsearch",
-        "com.spotify.heroic.suggest.elasticsearch",
-
-        "com.spotify.heroic.cluster.discovery.simple",
-
-        "com.spotify.heroic.aggregation.simple",
-
-        "com.spotify.heroic.consumer.kafka",
-
-        "com.spotify.heroic.aggregationcache.cassandra2",
-
-        "com.spotify.heroic.rpc.httprpc",
-        "com.spotify.heroic.rpc.nativerpc"
-    );
-    // @formatter:on
 
     private final Managed<State> state;
 
@@ -234,7 +212,8 @@ public class CoreBridge {
     }
 
     public static Builder setupBuilder(boolean server, String config) {
-        return HeroicCore.builder().server(server).configPath(CoreBridge.parseConfigPath(config)).modules(MODULES)
+        return HeroicCore.builder().server(server).configPath(CoreBridge.parseConfigPath(config))
+                .modules(HeroicModules.ALL_MODULES)
                 .oneshot(true);
     }
 }
