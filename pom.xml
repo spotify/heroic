@@ -16,6 +16,7 @@
     <module>heroic-core</module>
     <module>heroic-shell</module>
     <module>heroic-parser</module>
+    <module>heroic-all</module>
     <module>metric/astyanax</module>
     <module>metric/datastax</module>
     <module>metric/generated</module>
@@ -68,6 +69,11 @@
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-parser</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-all</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

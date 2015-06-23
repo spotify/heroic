@@ -39,10 +39,10 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- core -->
+    <!-- all -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-core</artifactId>
+      <artifactId>heroic-all</artifactId>
     </dependency>
 
     <dependency>

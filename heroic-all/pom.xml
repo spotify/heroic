@@ -1,0 +1,87 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.spotify.heroic</groupId>
+    <artifactId>heroic-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>..</relativePath>
+  </parent>
+
+  <artifactId>heroic-all</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Heroic: Dependencies to All Components</name>
+
+  <description>
+  </description>
+
+  <dependencies>
+    <!-- core -->
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-core</artifactId>
+    </dependency>
+
+    <!-- metric backends -->
+    <dependency>
+      <groupId>com.spotify.heroic.metric</groupId>
+      <artifactId>heroic-metric-astyanax</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.metric</groupId>
+      <artifactId>heroic-metric-datastax</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.metric</groupId>
+      <artifactId>heroic-metric-generated</artifactId>
+    </dependency>
+
+    <!-- metadata backends -->
+    <dependency>
+      <groupId>com.spotify.heroic.metadata</groupId>
+      <artifactId>heroic-metadata-elasticsearch</artifactId>
+    </dependency>
+
+    <!-- suggest backends -->
+    <dependency>
+      <groupId>com.spotify.heroic.suggest</groupId>
+      <artifactId>heroic-suggest-elasticsearch</artifactId>
+    </dependency>
+
+    <!-- discovery implementations -->
+    <dependency>
+      <groupId>com.spotify.heroic.discovery</groupId>
+      <artifactId>heroic-discovery-simple</artifactId>
+    </dependency>
+
+    <!-- aggregation methods -->
+    <dependency>
+      <groupId>com.spotify.heroic.aggregation</groupId>
+      <artifactId>heroic-aggregation-simple</artifactId>
+    </dependency>
+
+    <!-- consumer implementations -->
+    <dependency>
+      <groupId>com.spotify.heroic.consumer</groupId>
+      <artifactId>heroic-consumer-kafka</artifactId>
+    </dependency>
+
+    <!-- aggregation caching -->
+    <dependency>
+      <groupId>com.spotify.heroic.aggregationcache</groupId>
+      <artifactId>heroic-aggregationcache-cassandra2</artifactId>
+    </dependency>
+
+    <!-- rpc implementations -->
+    <dependency>
+      <groupId>com.spotify.heroic.rpc</groupId>
+      <artifactId>heroic-rpc-httprpc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.rpc</groupId>
+      <artifactId>heroic-rpc-nativerpc</artifactId>
+    </dependency>
+  </dependencies>
+</project>

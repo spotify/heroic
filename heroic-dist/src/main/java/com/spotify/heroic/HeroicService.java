@@ -39,7 +39,6 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
 import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.reflection.ResourceException;
@@ -66,29 +65,6 @@ public class HeroicService {
     static {
         PROFILES.put("generated", new GeneratedProfile());
     }
-
-    // @formatter:off
-    private static final List<Class<?>> MODULES = ImmutableList.<Class<?>>of(
-        com.spotify.heroic.metric.astyanax.Entry.class,
-        com.spotify.heroic.metric.datastax.Entry.class,
-        com.spotify.heroic.metric.generated.Entry.class,
-
-        com.spotify.heroic.metadata.elasticsearch.Entry.class,
-        com.spotify.heroic.suggest.elasticsearch.Entry.class,
-        // com.spotify.heroic.suggest.lucene.Entry.class,
-
-        com.spotify.heroic.cluster.discovery.simple.Entry.class,
-
-        com.spotify.heroic.aggregation.simple.Entry.class,
-
-        com.spotify.heroic.consumer.kafka.Entry.class,
-
-        com.spotify.heroic.aggregationcache.cassandra2.Entry.class,
-
-        com.spotify.heroic.rpc.httprpc.Entry.class,
-        com.spotify.heroic.rpc.nativerpc.Entry.class
-    );
-    // @formatter:on
 
     public static void main(final String[] args) throws Exception {
         main(args, null);
@@ -193,7 +169,7 @@ public class HeroicService {
         if (params.profile != null)
             builder.profile(setupProfile(params.profile));
 
-        builder.modules(MODULES);
+        builder.modules(HeroicModules.ALL_MODULES);
     }
 
     private static HeroicProfile setupProfile(final String profile) {
