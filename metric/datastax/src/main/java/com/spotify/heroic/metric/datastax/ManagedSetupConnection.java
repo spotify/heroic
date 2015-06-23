@@ -50,9 +50,9 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
             + "WHERE metric_key = ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?");
 
     private static final String KEYS_UNBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics LIMIT ?";
-    private static final String KEYS_LEFTBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) >= token(?) LIMIT ?";
+    private static final String KEYS_LEFTBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?) LIMIT ?";
     private static final String KEYS_RIGHTBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) <= token(?) LIMIT ?";
-    private static final String KEYS_BOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) >= token(?) AND token(metric_key) <= token(?) LIMIT ?";
+    private static final String KEYS_BOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?) AND token(metric_key) <= token(?) LIMIT ?";
 
     private final AsyncFramework async;
     private final Collection<InetSocketAddress> seeds;
