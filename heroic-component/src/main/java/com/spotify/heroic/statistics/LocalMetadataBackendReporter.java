@@ -40,6 +40,8 @@ public interface LocalMetadataBackendReporter {
 
     public void reportWriteCacheMiss();
 
+    public void reportWriteDroppedByRateLimit();
+
     /**
      * report number of successful operations in a batch
      *
