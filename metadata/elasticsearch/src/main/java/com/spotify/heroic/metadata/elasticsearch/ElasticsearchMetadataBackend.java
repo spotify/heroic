@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -56,11 +55,11 @@ import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
+import com.spotify.heroic.elasticsearch.RateLimitExceededException;
+import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterModifier;
@@ -113,6 +112,9 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
     @Inject
     private Managed<Connection> connection;
 
+    @Inject
+    private RateLimitedCache<Pair<String, Series>, Boolean> writeCache;
+
     @Override
     public Set<String> getGroups() {
         return groups;
@@ -129,12 +131,6 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
     }
 
     private final ElasticsearchUtils.FilterContext CTX = ElasticsearchUtils.context();
-
-    /**
-     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
-     */
-    private final Cache<Pair<String, Series>, Boolean> writeCache = CacheBuilder.newBuilder().concurrencyLevel(4)
-            .expireAfterWrite(30, TimeUnit.MINUTES).build();
 
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
@@ -190,7 +186,11 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                         }
                     };
 
-                    writeCache.get(key, loader);
+                    try {
+                        writeCache.get(key, loader);
+                    } catch (RateLimitExceededException e) {
+                        reporter.reportWriteDroppedByRateLimit();
+                    }
                 }
 
                 return async.resolved(WriteResult.of(0));

@@ -25,18 +25,23 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -46,8 +51,10 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
+import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.utils.GroupedUtils;
@@ -57,6 +64,8 @@ import eu.toolchain.async.Managed;
 
 @RequiredArgsConstructor
 public final class ElasticsearchMetadataModule implements MetadataModule {
+    private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
+    private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String TEMPLATE_NAME = "heroic-metadata";
 
@@ -65,15 +74,20 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private final ManagedConnectionFactory connection;
     private final ReadWriteThreadPools.Config pools;
 
+    private final double writesPerSecond;
+    private final long writeCacheDurationMinutes;
+
     @JsonCreator
     public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("pools") ReadWriteThreadPools.Config pools) throws Exception {
+            @JsonProperty("pools") ReadWriteThreadPools.Config pools, @JsonProperty("writesPerSecond") Double writesPerSecond, @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes) throws Exception {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
+        this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
+        this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
     }
 
     private static Map<String, XContentBuilder> mappings() throws IOException {
@@ -162,6 +176,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
                 return builder.construct(TEMPLATE_NAME, mappings());
             }
 
+            @Provides
+            @Singleton
+            public RateLimitedCache<Pair<String, Series>, Boolean> writeCache() throws IOException {
+                RateLimiter rateLimiter = RateLimiter.create(writesPerSecond);
+                Cache<Pair<String, Series>, Boolean> cache = CacheBuilder.newBuilder().concurrencyLevel(4).expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
+                return new RateLimitedCache<>(cache, rateLimiter);
+            }
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
