@@ -31,7 +31,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
 
@@ -66,13 +65,13 @@ import org.elasticsearch.search.aggregations.metrics.max.MaxBuilder;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
+import com.spotify.heroic.elasticsearch.RateLimitExceededException;
+import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.injection.LifeCycle;
@@ -80,6 +79,7 @@ import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.model.KeySuggest;
 import com.spotify.heroic.suggest.model.MatchOptions;
@@ -110,6 +110,15 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
     @Inject
     private ReadWriteThreadPools pools;
 
+    @Inject
+    private LocalMetadataBackendReporter reporter;
+
+    /**
+     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
+     */
+    @Inject
+    private RateLimitedCache<Pair<String, Series>, Boolean> writeCache;
+
     private final Set<String> groups;
 
     // different locations for the series used in filtering.
@@ -121,11 +130,6 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
     private static final String[] TAG_SUGGEST_SOURCES = new String[] { ElasticsearchUtils.TAG_KEY,
             ElasticsearchUtils.TAG_VALUE };
 
-    /**
-     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
-     */
-    private final Cache<Pair<String, Series>, Boolean> writeCache = CacheBuilder.newBuilder().concurrencyLevel(4)
-            .expireAfterWrite(4, TimeUnit.HOURS).build();
 
     @Override
     public AsyncFuture<Void> start() throws Exception {
@@ -554,6 +558,8 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     writeCache.get(key, loader);
                 } catch (ExecutionException e) {
                     return async.failed(e);
+                } catch (RateLimitExceededException e) {
+                    reporter.reportWriteDroppedByRateLimit();
                 }
 
                 watch.stop();
