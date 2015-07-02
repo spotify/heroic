@@ -67,12 +67,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
     public static final String DEFAULT_GROUP = "elasticsearch";
-    public static final String TEMPLATE_NAME = "heroic-metadata";
+    public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
     private final String id;
     private final Set<String> groups;
     private final ManagedConnectionFactory connection;
     private final ReadWriteThreadPools.Config pools;
+    private final String templateName;
 
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
@@ -81,13 +82,16 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("pools") ReadWriteThreadPools.Config pools, @JsonProperty("writesPerSecond") Double writesPerSecond, @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes) throws Exception {
+            @JsonProperty("pools") ReadWriteThreadPools.Config pools, @JsonProperty("writesPerSecond") Double writesPerSecond, @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
+            @JsonProperty("templateName") String templateName) throws Exception {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.templateName = Optional.fromNullable(templateName).or(DEFAULT_TEMPLATE_NAME);
+
     }
 
     private static Map<String, XContentBuilder> mappings() throws IOException {
@@ -173,7 +177,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Provides
             @Inject
             public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
-                return builder.construct(TEMPLATE_NAME, mappings());
+                return builder.construct(templateName, mappings());
             }
 
             @Provides
