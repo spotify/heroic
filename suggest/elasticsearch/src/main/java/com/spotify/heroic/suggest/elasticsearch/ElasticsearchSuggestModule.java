@@ -62,7 +62,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
     public static final String DEFAULT_GROUP = "elasticsearch";
-    public static final String TEMPLATE_NAME = "heroic-suggest";
+    public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
 
     private final String id;
     private final Set<String> groups;
@@ -70,17 +70,22 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private final ManagedConnectionFactory connection;
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
+    private final String templateName;
 
     @JsonCreator
     public ElasticsearchSuggestModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools,
-            @JsonProperty("connection") ManagedConnectionFactory connection, @JsonProperty("writesPerSecond") Double writesPerSecond, @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes) {
+            @JsonProperty("connection") ManagedConnectionFactory connection,
+            @JsonProperty("writesPerSecond") Double writesPerSecond,
+            @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
+            @JsonProperty("templateName") String templateName) {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.templateName = DEFAULT_TEMPLATE_NAME;
     }
 
     private Map<String, XContentBuilder> mappings() throws IOException {
@@ -253,7 +258,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @Provides
             @Singleton
             public Managed<Connection> connection(ManagedConnectionFactory connection) throws IOException {
-                return connection.construct(TEMPLATE_NAME, mappings());
+                return connection.construct(templateName, mappings());
             }
 
             @Provides
