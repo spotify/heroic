@@ -111,13 +111,12 @@ public class CoreBridge {
             if (params.help())
                 return;
 
-            final HeroicCore core = HeroicCore.builder().server(false).configPath(parseConfigPath(params.config()))
-                    .build();
+            final HeroicCore core = setupBuilder(false, params.config()).build();
 
             try {
                 core.start();
             } catch (Exception e1) {
-                log.error("Failed to start core");
+                log.error("Failed to start core", e1);
                 core.shutdown();
                 return;
             }
