@@ -104,4 +104,15 @@ public class TagValueSuggest {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends TagValueSuggest> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, TagValueSuggest>() {
+            @Override
+            public TagValueSuggest transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new TagValueSuggest(errors, EMPTY_VALUES, DEFAULT_LIMITED);
+            }
+        };
+    }
 }

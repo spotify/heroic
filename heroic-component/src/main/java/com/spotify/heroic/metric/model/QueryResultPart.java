@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Statistics;
 
 import eu.toolchain.async.Collector;
@@ -39,60 +40,63 @@ import eu.toolchain.async.Transform;
 
 @Slf4j
 @Data
-public class ShardedResultGroups {
+public class QueryResultPart {
     private static final List<ShardedResultGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
     public static final List<ShardLatency> EMPTY_LATENCIES = ImmutableList.of();
 
-    private static final ShardedResultGroups EMPTY = new ShardedResultGroups(new ArrayList<ShardedResultGroup>(),
-            Statistics.EMPTY, EMPTY_ERRORS, EMPTY_LATENCIES);
-
+    /**
+     * Groups of results.
+     *
+     * Failed groups are omitted from here, {@link #errors} for these.
+     */
     private final List<ShardedResultGroup> groups;
+
+    /**
+     * Statistics about the query.
+     */
     private final Statistics statistics;
+
+    /**
+     * Errors that happened during the query.
+     */
     private final List<RequestError> errors;
+
+    /**
+     * Shard latencies associated with the query.
+     */
     private final List<ShardLatency> latencies;
 
-    private static class SelfReducer implements Collector<ShardedResultGroups, ShardedResultGroups> {
+    private static final Collector<QueryResultPart, QueryResultPart> collector = new Collector<QueryResultPart, QueryResultPart>() {
         @Override
-        public ShardedResultGroups collect(Collection<ShardedResultGroups> results) throws Exception {
-            ShardedResultGroups groups = ShardedResultGroups.EMPTY;
+        public QueryResultPart collect(Collection<QueryResultPart> results) throws Exception {
+            Statistics statistics = Statistics.EMPTY;
 
-            for (final ShardedResultGroups r : results) {
-                groups = groups.merge(r);
+            final List<ShardedResultGroup> groups = new ArrayList<>();
+            final List<RequestError> errors = new ArrayList<>();
+            final List<ShardLatency> latencies = new ArrayList<>();
+
+            for (final QueryResultPart result : results) {
+                statistics = statistics.merge(result.getStatistics());
+                groups.addAll(result.getGroups());
+                errors.addAll(result.getErrors());
+                latencies.addAll(result.getLatencies());
             }
 
-            return groups;
+            return new QueryResultPart(groups, statistics, errors, latencies);
         }
+    };
+
+    public static Collector<QueryResultPart, QueryResultPart> reduce() {
+        return collector;
     }
 
-    private static final SelfReducer merger = new SelfReducer();
-
-    public static SelfReducer merger() {
-        return merger;
-    }
-
-    public ShardedResultGroups merge(ShardedResultGroups other) {
-        final List<ShardedResultGroup> groups = Lists.newArrayList();
-        groups.addAll(this.groups);
-        groups.addAll(other.groups);
-
-        final List<RequestError> errors = Lists.newArrayList();
-        errors.addAll(this.errors);
-        errors.addAll(other.errors);
-
-        final List<ShardLatency> latencies = Lists.newArrayList();
-        latencies.addAll(this.latencies);
-        latencies.addAll(other.latencies);
-
-        return new ShardedResultGroups(groups, this.statistics.merge(other.statistics), errors, latencies);
-    }
-
-    public static Transform<ResultGroups, ShardedResultGroups> toSharded(final Map<String, String> shard) {
+    public static Transform<ResultGroups, QueryResultPart> toSharded(final DateRange range, final Map<String, String> shard) {
         final long start = System.currentTimeMillis();
 
-        return new Transform<ResultGroups, ShardedResultGroups>() {
+        return new Transform<ResultGroups, QueryResultPart>() {
             @Override
-            public ShardedResultGroups transform(ResultGroups result) throws Exception {
+            public QueryResultPart transform(ResultGroups result) throws Exception {
                 final List<ShardedResultGroup> groups = new ArrayList<>();
 
                 for (final ResultGroup group : result.getGroups()) {
@@ -103,25 +107,25 @@ public class ShardedResultGroups {
                 final long latency = end - start;
                 final ImmutableList<ShardLatency> latencies = ImmutableList.of(new ShardLatency(shard, latency));
 
-                return new ShardedResultGroups(groups, result.getStatistics(), result.getErrors(), latencies);
+                return new QueryResultPart(groups, result.getStatistics(), result.getErrors(), latencies);
             }
         };
     }
 
-    public static ShardedResultGroups nodeError(final UUID id, final String node, final Map<String, String> tags,
+    public static QueryResultPart nodeError(final UUID id, final String node, final Map<String, String> tags,
             Throwable e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(NodeError.fromThrowable(id, node, tags, e));
-        return new ShardedResultGroups(EMPTY_GROUPS, Statistics.EMPTY, errors, EMPTY_LATENCIES);
+        return new QueryResultPart(EMPTY_GROUPS, Statistics.EMPTY, errors, EMPTY_LATENCIES);
     }
 
-    public static Transform<Throwable, ShardedResultGroups> nodeError(final UUID id, final String node,
+    public static Transform<Throwable, QueryResultPart> nodeError(final UUID id, final String node,
             final Map<String, String> shard) {
         final long start = System.currentTimeMillis();
 
-        return new Transform<Throwable, ShardedResultGroups>() {
+        return new Transform<Throwable, QueryResultPart>() {
             @Override
-            public ShardedResultGroups transform(Throwable e) throws Exception {
+            public QueryResultPart transform(Throwable e) throws Exception {
                 log.error("Encountered error in transform", e);
                 final long end = System.currentTimeMillis();
                 final long latency = end - start;
@@ -129,7 +133,7 @@ public class ShardedResultGroups {
 
                 final List<RequestError> errors = Lists.newArrayList();
                 errors.add(NodeError.fromThrowable(id, node, shard, e));
-                return new ShardedResultGroups(EMPTY_GROUPS, Statistics.EMPTY, errors, latencies);
+                return new QueryResultPart(EMPTY_GROUPS, Statistics.EMPTY, errors, latencies);
             }
         };
     }

@@ -39,11 +39,11 @@ import org.jfree.chart.JFreeChart;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.spotify.heroic.Query;
+import com.spotify.heroic.QueryBuilder;
+import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.http.query.QueryMetrics;
-import com.spotify.heroic.metric.ClusteredMetricManager;
-import com.spotify.heroic.metric.MetricQuery;
-import com.spotify.heroic.metric.MetricQueryBuilder;
-import com.spotify.heroic.metric.MetricResult;
+import com.spotify.heroic.metric.model.QueryResult;
 
 @Path("render")
 public class RenderResource {
@@ -56,7 +56,7 @@ public class RenderResource {
     private ObjectMapper mapper;
 
     @Inject
-    private ClusteredMetricManager metrics;
+    private QueryManager query;
 
     @SuppressWarnings("unchecked")
     @GET
@@ -87,11 +87,11 @@ public class RenderResource {
         }
 
         final QueryMetrics queryMetrics = mapper.readValue(query, QueryMetrics.class);
-        final MetricQuery request = setupBuilder(backendGroup, queryMetrics).build();
+        final Query q = setupBuilder(backendGroup, queryMetrics).build();
 
-        final MetricResult result = metrics.query(request).get();
+        final QueryResult result = this.query.useDefaultGroup().query(q).get();
 
-        final JFreeChart chart = RenderUtils.createChart(result.getMetricGroups(), title, highlight, threshold, height);
+        final JFreeChart chart = RenderUtils.createChart(result.getGroups(), title, highlight, threshold, height);
 
         final BufferedImage image = chart.createBufferedImage(width, height);
 
@@ -102,8 +102,8 @@ public class RenderResource {
     }
 
     @SuppressWarnings("deprecation")
-    private MetricQueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
-        return metrics.newRequest().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
+    private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
+        return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
                 .backendGroup(backendGroup).queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
                 .aggregation(query.makeAggregation()).source(query.getSource());

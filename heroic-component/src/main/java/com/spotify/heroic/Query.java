@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.TimeData;
 
 @Data
-public class MetricQuery {
+public class Query {
     private final String backendGroup;
     private final Filter filter;
     private final List<String> groupBy;

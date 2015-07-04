@@ -253,6 +253,11 @@ public class HttpRpcResource {
             private final String group;
 
             @Override
+            public ClusterNode node() {
+                return HttpRpcClusterNode.this;
+            }
+
+            @Override
             public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter,
                     List<String> groupBy, DateRange range, Aggregation aggregation, boolean disableCache) {
                 return post(new RpcQuery(source, filter, groupBy, range, aggregation, disableCache),

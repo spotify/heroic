@@ -117,4 +117,15 @@ public class FindTags {
             }
         };
     }
+
+    public static Transform<Throwable, ? extends FindTags> nodeError(final ClusterNode.Group group) {
+        return new Transform<Throwable, FindTags>() {
+            @Override
+            public FindTags transform(Throwable e) throws Exception {
+                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
+                        e));
+                return new FindTags(errors, EMPTY_TAGS, 0);
+            }
+        };
+    }
 }
