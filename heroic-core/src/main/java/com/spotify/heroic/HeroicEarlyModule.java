@@ -5,7 +5,9 @@ import java.util.concurrent.ExecutorService;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -19,6 +21,8 @@ import com.spotify.heroic.aggregationcache.CacheKey_Serializer;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.DurationSerialization;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
@@ -125,6 +129,8 @@ public class HeroicEarlyModule extends AbstractModule {
         m.addMixIn(SuggestModule.class, TypeNameMixin.class);
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
 
+        m.registerModule(serialization());
+
         return m;
     }
 
@@ -145,5 +151,13 @@ public class HeroicEarlyModule extends AbstractModule {
         bind(ExecutorService.class).toInstance(executor);
 
         bind(JavaxRestFramework.class).toInstance(new CoreJavaxRestFramework());
+    }
+
+    public static Module serialization() {
+        final SimpleModule serializers = new SimpleModule("serialization");
+
+        serializers.addDeserializer(Duration.class, new DurationSerialization.Deserializer());
+
+        return serializers;
     }
 }
