@@ -85,7 +85,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
-        this.templateName = DEFAULT_TEMPLATE_NAME;
+        this.templateName = Optional.fromNullable(templateName).or(DEFAULT_TEMPLATE_NAME);
     }
 
     private Map<String, XContentBuilder> mappings() throws IOException {
