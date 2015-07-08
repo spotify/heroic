@@ -93,8 +93,7 @@ public class ChainAggregation implements Aggregation {
             throw new IllegalArgumentException("not a valid aggregation chain, step [" + out + " => " + in
                     + "] is not valid");
 
-        if (in != null)
-            out = in;
+        out = current.output();
 
         final Aggregation.Session first = current.session(out, range);
         final List<Aggregation.Session> rest = new ArrayList<Aggregation.Session>();
@@ -108,11 +107,8 @@ public class ChainAggregation implements Aggregation {
                 throw new IllegalArgumentException("not a valid aggregation chain, step [" + out + " => " + in
                         + "] is not valid");
 
-            if (in != null)
-                out = in;
-
+            out = current.output();
             rest.add(next.session(out, range));
-
             current = next;
         }
 
@@ -122,6 +118,13 @@ public class ChainAggregation implements Aggregation {
     private boolean matches(Class<?> out, Class<?> in) {
         if (in == null)
             return true;
+
+        if (out == null) {
+            if (in != null) {
+                throw new IllegalArgumentException("not a valid aggregation chain, step [*anything* => " + in
+                        + "] is not valid");
+            }
+        }
 
         return in.isAssignableFrom(out);
     }

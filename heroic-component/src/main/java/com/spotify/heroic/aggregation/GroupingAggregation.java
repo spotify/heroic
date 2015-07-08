@@ -71,7 +71,7 @@ public abstract class GroupingAggregation implements Aggregation {
 
     @Override
     public Session session(Class<?> out, DateRange range) {
-        return new GroupSession(out, range);
+        return new GroupSession(output(), range);
     }
 
     @Override
@@ -133,7 +133,7 @@ public abstract class GroupingAggregation implements Aggregation {
 
         @Override
         public Class<?> output() {
-            return output();
+            return out;
         }
     }
 }

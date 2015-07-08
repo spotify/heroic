@@ -138,7 +138,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
 
         @Override
         public Class<?> output() {
-            return output();
+            return out;
         }
     }
 

@@ -375,7 +375,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private Map<List<TagValues>, Set<Series>> setupMetricGroups(Aggregation aggregation, final Set<Series> series) {
-            final List<Aggregation.TraverseState> states = aggregation.traverse(convert(series));
+            final List<Aggregation.TraverseState> states = convert(aggregation, series);
 
             final Map<List<TagValues>, Set<Series>> results = new HashMap<>();
 
@@ -392,11 +392,14 @@ public class LocalMetricManager implements MetricManager {
             return results;
         }
 
-        private List<Aggregation.TraverseState> convert(Set<Series> series) {
+        private List<Aggregation.TraverseState> convert(Aggregation aggregation, Set<Series> series) {
             final List<Aggregation.TraverseState> groups = new ArrayList<>(series.size());
 
             for (final Series s : series)
                 groups.add(new Aggregation.TraverseState(s.getTags(), ImmutableSet.of(s)));
+
+            if (aggregation != null)
+                return aggregation.traverse(groups);
 
             return groups;
         }
@@ -426,6 +429,9 @@ public class LocalMetricManager implements MetricManager {
          * @return The original range if no aggregation is specified, otherwise a modified one.
          */
         private DateRange aggregateRange(final DateRange range, final Aggregation aggregation) {
+            if (aggregation == null)
+                return range;
+
             final Sampling sampling = aggregation.sampling();
 
             if (sampling == null)
@@ -437,7 +443,7 @@ public class LocalMetricManager implements MetricManager {
         private <T extends TimeData> StreamCollector<FetchData<T>, ResultGroups> aggregationReducer(Class<T> in,
                 List<TagValues> group, final DateRange range, final Aggregation aggregation,
                 final List<? extends AsyncFuture<?>> fetches) {
-            if (aggregation.sampling() == null)
+            if (aggregation == null || aggregation.sampling() == null)
                 return new SimpleCallbackStream<T>(in);
 
             final Class<?> expected = aggregation.input();
