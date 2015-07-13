@@ -88,6 +88,7 @@ public final class ElasticsearchUtils {
      * @see FilterContext
      */
     public static final String KEY = "key";
+    public static final String KEY_RAW = "key.raw";
     public static final String TAGS = "tags";
     public static final String TAGS_KEY = "key";
     public static final String TAGS_KEY_RAW = "key.raw";
@@ -185,7 +186,7 @@ public final class ElasticsearchUtils {
         }
 
         private FilterContext(List<String> path) {
-            this.seriesKey = path(path, KEY);
+            this.seriesKey = path(path, KEY_RAW);
             this.tags = path(path, TAGS);
             this.seriesId = path(path, ID);
             this.tagsKey = path(path, TAGS, TAGS_KEY_RAW);
