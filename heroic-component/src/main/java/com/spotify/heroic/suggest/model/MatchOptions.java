@@ -29,7 +29,7 @@ import com.google.common.base.Optional;
 
 @Data
 public class MatchOptions {
-    public static final boolean DEFAULT_FUZZY = true;
+    public static final boolean DEFAULT_FUZZY = false;
     public static final int DEFAULT_FUZZY_PREFIX_LENGTH = 2;
     public static final int DEFAULT_FUZZY_MAX_EXPANSIONS = 20;
     public static final boolean DEFAULT_TOKENIZE = false;

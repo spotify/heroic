@@ -39,7 +39,7 @@ public class MetadataTagSuggest {
     private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
     private static final int DEFAULT_LIMIT = 10;
     private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(TimeUnit.DAYS, 7);
-    private static MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(true).build();
+    private static MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(false).build();
 
     private final Filter filter;
     private final int limit;
