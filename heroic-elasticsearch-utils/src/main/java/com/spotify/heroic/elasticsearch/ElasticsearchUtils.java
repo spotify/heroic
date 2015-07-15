@@ -186,7 +186,7 @@ public final class ElasticsearchUtils {
         }
 
         private FilterContext(List<String> path) {
-            this.seriesKey = path(path, KEY_RAW);
+            this.seriesKey = path(path, KEY);
             this.tags = path(path, TAGS);
             this.seriesId = path(path, ID);
             this.tagsKey = path(path, TAGS, TAGS_KEY_RAW);

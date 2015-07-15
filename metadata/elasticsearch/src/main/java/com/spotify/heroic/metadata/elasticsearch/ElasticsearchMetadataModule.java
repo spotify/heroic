@@ -109,13 +109,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             b.startObject("properties");
               b.startObject(ElasticsearchUtils.SERIES_KEY);
                 b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
+                b.field("index", "not_analyzed");
+                b.field("doc_values", true);
               b.endObject();
 
               b.startObject(ElasticsearchUtils.SERIES_TAGS);
