@@ -21,11 +21,8 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import lombok.Data;
 
@@ -40,8 +37,7 @@ import com.spotify.heroic.model.TimeData;
 @Data
 public class CountBucket implements Bucket<TimeData> {
     private final long timestamp;
-    private final AtomicInteger count = new AtomicInteger(0);
-    private final Set<Integer> seen = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    private final AtomicLong count = new AtomicLong();
 
     public long timestamp() {
         return timestamp;

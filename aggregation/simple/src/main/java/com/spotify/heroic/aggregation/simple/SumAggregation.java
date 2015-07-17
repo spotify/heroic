@@ -51,11 +51,6 @@ public class SumAggregation extends BucketAggregation<DataPoint, DataPoint, SumB
 
     @Override
     protected DataPoint build(SumBucket bucket) {
-        final long count = bucket.count();
-
-        if (count == 0)
-            return new DataPoint(bucket.timestamp(), Double.NaN);
-
         return new DataPoint(bucket.timestamp(), bucket.value());
     }
 }

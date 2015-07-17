@@ -26,7 +26,7 @@ import java.util.Map;
 import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
-import com.spotify.heroic.aggregation.Bucket;
+import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
@@ -35,9 +35,9 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class MinBucket implements Bucket<DataPoint> {
+public class MinBucket implements DoubleBucket<DataPoint> {
     private final long timestamp;
-    private final AtomicDouble value = new AtomicDouble(Double.NaN);
+    private final AtomicDouble value = new AtomicDouble(Double.POSITIVE_INFINITY);
 
     public long timestamp() {
         return timestamp;
@@ -48,7 +48,7 @@ public class MinBucket implements Bucket<DataPoint> {
         while (true) {
             double current = value.get();
 
-            if (current != Double.NaN && current < d.getValue()) {
+            if (current < d.getValue()) {
                 break;
             }
 
@@ -58,7 +58,13 @@ public class MinBucket implements Bucket<DataPoint> {
         }
     }
 
+    @Override
     public double value() {
-        return value.get();
+        final double result = value.get();
+
+        if (Double.isInfinite(result))
+            return Double.NaN;
+
+        return result;
     }
 }

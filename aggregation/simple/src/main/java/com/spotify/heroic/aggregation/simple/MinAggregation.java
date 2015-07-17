@@ -32,7 +32,7 @@ import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class MinAggregation extends BucketAggregation<DataPoint, DataPoint, MinBucket> {
+public class MinAggregation extends BucketAggregation<DataPoint, DataPoint, StripedMinBucket> {
     public static final String NAME = "min";
 
     public MinAggregation(Sampling sampling) {
@@ -45,12 +45,12 @@ public class MinAggregation extends BucketAggregation<DataPoint, DataPoint, MinB
     }
 
     @Override
-    protected MinBucket buildBucket(long timestamp) {
-        return new MinBucket(timestamp);
+    protected StripedMinBucket buildBucket(long timestamp) {
+        return new StripedMinBucket(timestamp);
     }
 
     @Override
-    protected DataPoint build(MinBucket bucket) {
+    protected DataPoint build(StripedMinBucket bucket) {
         return new DataPoint(bucket.timestamp(), bucket.value());
     }
 }

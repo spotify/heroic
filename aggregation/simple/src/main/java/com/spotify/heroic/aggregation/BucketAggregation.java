@@ -31,8 +31,8 @@ import lombok.Data;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.aggregation.simple.MaxBucket;
-import com.spotify.heroic.aggregation.simple.MinBucket;
+import com.spotify.heroic.aggregation.simple.StripedMaxBucket;
+import com.spotify.heroic.aggregation.simple.StripedMinBucket;
 import com.spotify.heroic.aggregation.simple.SumBucket;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
@@ -56,8 +56,8 @@ import com.spotify.heroic.model.TimeData;
  *            The bucket type.
  *
  * @see SumBucket
- * @see MaxBucket
- * @see MinBucket
+ * @see StripedMaxBucket
+ * @see StripedMinBucket
  */
 @Data
 public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeData, T extends Bucket<IN>> implements

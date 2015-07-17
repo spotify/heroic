@@ -32,7 +32,7 @@ import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class MaxAggregation extends BucketAggregation<DataPoint, DataPoint, MaxBucket> {
+public class MaxAggregation extends BucketAggregation<DataPoint, DataPoint, StripedMaxBucket> {
     public static final String NAME = "max";
 
     public MaxAggregation(Sampling sampling) {
@@ -45,12 +45,12 @@ public class MaxAggregation extends BucketAggregation<DataPoint, DataPoint, MaxB
     }
 
     @Override
-    protected MaxBucket buildBucket(long timestamp) {
-        return new MaxBucket(timestamp);
+    protected StripedMaxBucket buildBucket(long timestamp) {
+        return new StripedMaxBucket(timestamp);
     }
 
     @Override
-    protected DataPoint build(MaxBucket bucket) {
+    protected DataPoint build(StripedMaxBucket bucket) {
         return new DataPoint(bucket.timestamp(), bucket.value());
     }
 }

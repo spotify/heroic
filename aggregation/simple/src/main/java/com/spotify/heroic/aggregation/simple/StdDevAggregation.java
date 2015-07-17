@@ -32,7 +32,7 @@ import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class StdDevAggregation extends BucketAggregation<DataPoint, DataPoint, StdDevBucket> {
+public class StdDevAggregation extends BucketAggregation<DataPoint, DataPoint, StripedStdDevBucket> {
     public static final String NAME = "stddev";
 
     public StdDevAggregation(Sampling sampling) {
@@ -45,12 +45,12 @@ public class StdDevAggregation extends BucketAggregation<DataPoint, DataPoint, S
     }
 
     @Override
-    protected StdDevBucket buildBucket(long timestamp) {
-        return new StdDevBucket(timestamp);
+    protected StripedStdDevBucket buildBucket(long timestamp) {
+        return new StripedStdDevBucket(timestamp);
     }
 
     @Override
-    protected DataPoint build(StdDevBucket bucket) {
+    protected DataPoint build(StripedStdDevBucket bucket) {
         return new DataPoint(bucket.timestamp(), bucket.value());
     }
 }

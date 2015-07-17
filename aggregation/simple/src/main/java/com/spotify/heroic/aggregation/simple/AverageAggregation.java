@@ -32,7 +32,7 @@ import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class AverageAggregation extends BucketAggregation<DataPoint, DataPoint, SumBucket> {
+public class AverageAggregation extends BucketAggregation<DataPoint, DataPoint, StripedAverageBucket> {
     public static final String NAME = "average";
 
     public AverageAggregation(Sampling sampling) {
@@ -45,12 +45,12 @@ public class AverageAggregation extends BucketAggregation<DataPoint, DataPoint, 
     }
 
     @Override
-    protected SumBucket buildBucket(long timestamp) {
-        return new SumBucket(timestamp);
+    protected StripedAverageBucket buildBucket(long timestamp) {
+        return new StripedAverageBucket(timestamp);
     }
 
     @Override
-    protected DataPoint build(SumBucket bucket) {
+    protected DataPoint build(StripedAverageBucket bucket) {
         final long count = bucket.count();
 
         if (count == 0)

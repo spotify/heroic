@@ -13,17 +13,17 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
-public class SumBucketTest {
+public class AverageBucketTest {
     private static final Map<String, String> tags = ImmutableMap.of();
 
     public Collection<? extends DoubleBucket<DataPoint>> buckets() {
-        return ImmutableList.<DoubleBucket<DataPoint>> of(new SumBucket(0l), new StripedSumBucket(0l));
+        return ImmutableList.<DoubleBucket<DataPoint>> of(new AverageBucket(0l), new StripedAverageBucket(0l));
     }
 
     @Test
     public void testZeroValue() {
         for (final DoubleBucket<DataPoint> bucket : buckets()) {
-            assertTrue(bucket.getClass().getSimpleName(), Double.isNaN(bucket.value()));
+            assertTrue(Double.isNaN(bucket.value()));
         }
     }
 
@@ -32,7 +32,7 @@ public class SumBucketTest {
         for (final DoubleBucket<DataPoint> bucket : buckets()) {
             bucket.update(tags, new DataPoint(0, 10.0));
             bucket.update(tags, new DataPoint(0, 20.0));
-            assertEquals(bucket.getClass().getSimpleName(), 30.0, bucket.value(), 0.0);
+            assertEquals(bucket.getClass().getSimpleName(), 15.0, bucket.value(), 0.0);
         }
     }
 }

@@ -22,49 +22,52 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
- * A bucket implementation that retains the largest (max) value seen.
+ * A lock-free implementation for calculating the standard deviation over many values.
+ *
+ * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog
  */
-@Data
-public class MaxBucket implements DoubleBucket<DataPoint> {
-    private final long timestamp;
-    private final AtomicDouble value = new AtomicDouble(Double.NEGATIVE_INFINITY);
+@RequiredArgsConstructor
+public class StripedStdDevBucket implements DoubleBucket<DataPoint> {
+    private final DoubleAdder sum = new DoubleAdder();
+    private final DoubleAdder sum2 = new DoubleAdder();
+    private final LongAdder count = new LongAdder();
 
+    private final long timestamp;
+
+    @Override
+    public void update(Map<String, String> tags, DataPoint d) {
+        final double value = d.getValue();
+
+        sum.add(value);
+        sum2.add(value * value);
+        count.increment();
+    }
+
+    @Override
     public long timestamp() {
         return timestamp;
     }
 
-    @Override
-    public void update(Map<String, String> tags, DataPoint d) {
-        while (true) {
-            double current = value.get();
-
-            if (current > d.getValue()) {
-                break;
-            }
-
-            if (value.compareAndSet(current, d.getValue())) {
-                break;
-            }
-        }
-    }
-
-    @Override
     public double value() {
-        final double result = value.get();
+        final long count = this.count.sum();
 
-        if (Double.isInfinite(result))
+        if (count == 0)
             return Double.NaN;
 
-        return result;
+        final double sum = this.sum.sum(), sum2 = this.sum2.sum();
+        final double mean = sum / count;
+
+        return Math.sqrt((sum2 / count) - (mean * mean));
     }
 }

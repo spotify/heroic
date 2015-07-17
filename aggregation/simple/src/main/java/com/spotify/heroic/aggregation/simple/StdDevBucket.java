@@ -22,31 +22,44 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.aggregation.Bucket;
+import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
+/**
+ * Bucket that calculates the standard deviation of all buckets seen.
+ *
+ * This uses Welford's method, as presented in http://www.johndcook.com/blog/standard_deviation/
+ *
+ * @author udoprog
+ */
 @RequiredArgsConstructor
-public class StdDevBucket implements Bucket<DataPoint> {
+public class StdDevBucket implements DoubleBucket<DataPoint> {
+    private static final Cell ZERO = new Cell(0.0, 0.0, 0);
+
     private final long timestamp;
-    private double mean = 0.0;
-    private double s = 0.0;
-    private long count = 0;
+    private AtomicReference<Cell> cell = new AtomicReference<>(ZERO);
 
     @Override
-    public synchronized void update(Map<String, String> tags, DataPoint d) {
-        double value = d.getValue();
+    public void update(Map<String, String> tags, DataPoint d) {
+        final double value = d.getValue();
 
-        long count = this.count + 1;
-        double delta = value - this.mean;
-        double mean = this.mean + delta / count;
-        double s = this.s + delta * (value - mean);
+        while (true) {
+            final Cell c = cell.get();
 
-        this.mean = mean;
-        this.s = s;
-        this.count = count;
+            final long count = c.count + 1;
+            final double delta = value - c.mean;
+            final double mean = c.mean + delta / count;
+            final double s = c.s + delta * (value - mean);
+
+            final Cell n = new Cell(mean, s, count);
+
+            if (cell.compareAndSet(c, n))
+                break;
+        }
     }
 
     @Override
@@ -54,10 +67,20 @@ public class StdDevBucket implements Bucket<DataPoint> {
         return timestamp;
     }
 
-    public synchronized double value() {
-        if (count <= 1)
+    @Override
+    public double value() {
+        final Cell c = cell.get();
+
+        if (c.count <= 1)
             return Double.NaN;
 
-        return Math.sqrt(s / (count - 1));
+        return Math.sqrt(c.s / (c.count - 1));
+    }
+
+    @RequiredArgsConstructor
+    private static class Cell {
+        private final double mean;
+        private final double s;
+        private final long count;
     }
 }

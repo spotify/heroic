@@ -22,12 +22,12 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
-import com.spotify.heroic.aggregation.Bucket;
+import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
@@ -39,10 +39,12 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class SumBucket implements Bucket<DataPoint> {
+public class SumBucket implements DoubleBucket<DataPoint> {
     private final long timestamp;
-    private final AtomicInteger count = new AtomicInteger(0);
-    private final AtomicDouble value = new AtomicDouble(0);
+    /* the sum of seen values */
+    private final AtomicDouble sum = new AtomicDouble();
+    /* if the sum is valid (e.g. has at least one value) */
+    private final AtomicBoolean valid = new AtomicBoolean();
 
     public long timestamp() {
         return timestamp;
@@ -50,15 +52,15 @@ public class SumBucket implements Bucket<DataPoint> {
 
     @Override
     public void update(Map<String, String> tags, DataPoint d) {
-        value.addAndGet(d.getValue());
-        count.incrementAndGet();
+        sum.addAndGet(d.getValue());
+        valid.compareAndSet(false, true);
     }
 
-    public long count() {
-        return count.get();
-    }
-
+    @Override
     public double value() {
-        return value.get();
+        if (!valid.get())
+            return Double.NaN;
+
+        return sum.get();
     }
 }

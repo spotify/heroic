@@ -22,22 +22,27 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
+import java.util.concurrent.atomic.DoubleAccumulator;
+import java.util.function.DoubleBinaryOperator;
 
 import lombok.Data;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
- * A bucket implementation that retains the largest (max) value seen.
+ * A min-bucket implementation intended to reduce cross-thread contention.
+ *
+ * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog
  */
 @Data
-public class MaxBucket implements DoubleBucket<DataPoint> {
+public class StripedMinBucket implements DoubleBucket<DataPoint> {
+    private static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
+
+    private final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
     private final long timestamp;
-    private final AtomicDouble value = new AtomicDouble(Double.NEGATIVE_INFINITY);
 
     public long timestamp() {
         return timestamp;
@@ -45,22 +50,12 @@ public class MaxBucket implements DoubleBucket<DataPoint> {
 
     @Override
     public void update(Map<String, String> tags, DataPoint d) {
-        while (true) {
-            double current = value.get();
-
-            if (current > d.getValue()) {
-                break;
-            }
-
-            if (value.compareAndSet(current, d.getValue())) {
-                break;
-            }
-        }
+        min.accumulate(d.getValue());
     }
 
     @Override
     public double value() {
-        final double result = value.get();
+        final double result = min.doubleValue();
 
         if (Double.isInfinite(result))
             return Double.NaN;

@@ -22,22 +22,28 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.DoubleAdder;
 
 import lombok.Data;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
- * A bucket implementation that retains the largest (max) value seen.
+ * Bucket that keeps track of the amount of data points seen, and there summed value.
+ *
+ * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog
  */
 @Data
-public class MaxBucket implements DoubleBucket<DataPoint> {
+public class StripedSumBucket implements DoubleBucket<DataPoint> {
     private final long timestamp;
-    private final AtomicDouble value = new AtomicDouble(Double.NEGATIVE_INFINITY);
+    /* the sum of all seen values */
+    private final DoubleAdder sum = new DoubleAdder();
+    /* if the sum is valid (e.g. has at least one value) */
+    private final AtomicBoolean valid = new AtomicBoolean();
 
     public long timestamp() {
         return timestamp;
@@ -45,26 +51,15 @@ public class MaxBucket implements DoubleBucket<DataPoint> {
 
     @Override
     public void update(Map<String, String> tags, DataPoint d) {
-        while (true) {
-            double current = value.get();
-
-            if (current > d.getValue()) {
-                break;
-            }
-
-            if (value.compareAndSet(current, d.getValue())) {
-                break;
-            }
-        }
+        sum.add(d.getValue());
+        valid.compareAndSet(false, true);
     }
 
     @Override
     public double value() {
-        final double result = value.get();
-
-        if (Double.isInfinite(result))
+        if (!valid.get())
             return Double.NaN;
 
-        return result;
+        return sum.sum();
     }
 }

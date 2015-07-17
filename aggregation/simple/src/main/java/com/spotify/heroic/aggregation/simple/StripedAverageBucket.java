@@ -22,22 +22,24 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
 
 import lombok.Data;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.model.DataPoint;
 
 /**
- * A bucket implementation that retains the largest (max) value seen.
+ * Bucket that calculates the average of all samples seen.
  *
  * @author udoprog
  */
 @Data
-public class MaxBucket implements DoubleBucket<DataPoint> {
+public class StripedAverageBucket implements DoubleBucket<DataPoint> {
     private final long timestamp;
-    private final AtomicDouble value = new AtomicDouble(Double.NEGATIVE_INFINITY);
+    private final DoubleAdder value = new DoubleAdder();
+    private final LongAdder count = new LongAdder();
 
     public long timestamp() {
         return timestamp;
@@ -45,26 +47,21 @@ public class MaxBucket implements DoubleBucket<DataPoint> {
 
     @Override
     public void update(Map<String, String> tags, DataPoint d) {
-        while (true) {
-            double current = value.get();
+        value.add(d.getValue());
+        count.increment();
+    }
 
-            if (current > d.getValue()) {
-                break;
-            }
-
-            if (value.compareAndSet(current, d.getValue())) {
-                break;
-            }
-        }
+    public long count() {
+        return count.sum();
     }
 
     @Override
     public double value() {
-        final double result = value.get();
+        final long count = this.count.sum();
 
-        if (Double.isInfinite(result))
+        if (count == 0)
             return Double.NaN;
 
-        return result;
+        return value.sum() / count;
     }
 }
