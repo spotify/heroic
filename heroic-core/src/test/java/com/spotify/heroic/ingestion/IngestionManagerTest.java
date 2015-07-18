@@ -2,12 +2,11 @@ package com.spotify.heroic.ingestion;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyCollection;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-
-import java.util.Collection;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -108,15 +107,17 @@ public class IngestionManagerTest {
     public void testDoWriteAll() throws BackendGroupException {
         final IngestionManagerImpl manager = setupIngestionManager(true, true, true);
 
+        final Collector<WriteResult, WriteResult> collector = (Collector<WriteResult, WriteResult>) any(Collector.class);
+
         doReturn(future).when(manager).doMetricWrite(write, metric);
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
-        doReturn(future).when(async).collect(any(Collection.class), any(Collector.class));
+        doReturn(future).when(async).collect(anyCollection(), collector);
 
         assertEquals(future, manager.doWrite(group, write));
 
         verify(manager).doMetricWrite(write, metric);
         verify(manager).doMetadataWrite(write, metadata, suggest);
-        verify(async).collect(any(Collection.class), any(Collector.class));
+        verify(async).collect(anyCollection(), collector);
     }
 
     @SuppressWarnings("unchecked")
@@ -124,14 +125,16 @@ public class IngestionManagerTest {
     public void testDoWriteNone() throws BackendGroupException {
         final IngestionManagerImpl manager = setupIngestionManager(false, false, false);
 
+        final Collector<WriteResult, WriteResult> collector = (Collector<WriteResult, WriteResult>) any(Collector.class);
+
         doReturn(future).when(manager).doMetricWrite(write, metric);
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
-        doReturn(future).when(async).collect(any(Collection.class), any(Collector.class));
+        doReturn(future).when(async).collect(anyCollection(), collector);
 
         assertEquals(future, manager.doWrite(group, write));
 
         verify(manager, never()).doMetricWrite(write, metric);
         verify(manager, never()).doMetadataWrite(write, metadata, suggest);
-        verify(async).collect(any(Collection.class), any(Collector.class));
+        verify(async).collect(anyCollection(), collector);
     }
 }
