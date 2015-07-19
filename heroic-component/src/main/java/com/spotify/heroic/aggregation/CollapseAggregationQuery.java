@@ -27,9 +27,13 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 
 @Data
 public class CollapseAggregationQuery implements AggregationQuery<CollapseAggregation> {
+    private static final List<AggregationQuery<?>> DEFAULT_EACH = ImmutableList.of();
+
     private final List<String> of;
     private final Aggregation each;
 
@@ -37,7 +41,7 @@ public class CollapseAggregationQuery implements AggregationQuery<CollapseAggreg
     public CollapseAggregationQuery(@JsonProperty("of") List<String> of,
             @JsonProperty("each") List<AggregationQuery<?>> each) {
         this.of = of;
-        this.each = new ChainAggregation(ChainAggregation.convertQueries(each));
+        this.each = ChainAggregation.convertQueries(Optional.fromNullable(each).or(DEFAULT_EACH));
     }
 
     @Override

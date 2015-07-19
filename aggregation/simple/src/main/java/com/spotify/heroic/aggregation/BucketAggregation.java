@@ -26,14 +26,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.LongAdder;
 
 import lombok.Data;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.aggregation.simple.StripedMaxBucket;
-import com.spotify.heroic.aggregation.simple.StripedMinBucket;
-import com.spotify.heroic.aggregation.simple.SumBucket;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
@@ -46,30 +44,27 @@ import com.spotify.heroic.model.TimeData;
  * A bucket aggregation is used to down-sample a lot of data into distinct buckets over time, making them useful for
  * presentation purposes. Buckets have to be thread safe.
  *
+ * @param <IN> The expected input data type.
+ * @param <OUT> The expected output data type.
+ * @param <T> The bucket type.
+ *
+ * @see Bucket
+ *
  * @author udoprog
- *
- * @param <IN>
- *            The expected input data type.
- * @param <OUT>
- *            The expected output data type.
- * @param <T>
- *            The bucket type.
- *
- * @see SumBucket
- * @see StripedMaxBucket
- * @see StripedMinBucket
  */
 @Data
 public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeData, T extends Bucket<IN>> implements
         Aggregation {
+    public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
+    public static final long MAX_BUCKET_COUNT = 100000l;
+
     private final static Map<String, String> EMPTY = ImmutableMap.of();
 
     @Data
-    private final class Session implements Aggregation.Session {
-        private long sampleSize = 0;
-        private long outOfBounds = 0;
-        private long uselessScan = 0;
+    private final class Session implements AggregationSession {
+        private final LongAdder sampleSize = new LongAdder();
 
+        private final Set<Series> series;
         private final List<T> buckets;
         private final long offset;
         private final long size;
@@ -77,16 +72,14 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
 
         @SuppressWarnings("unchecked")
         @Override
-        public void update(Group update) {
-            long outOfBounds = 0;
-            long sampleSize = 0;
-            long uselessScan = 0;
+        public void update(AggregationData update) {
+            // ignore incompatible updates
+            if (!out.isAssignableFrom(update.getOutput()))
+                return;
 
             final List<IN> input = (List<IN>) update.getValues();
 
             for (final IN d : input) {
-                ++sampleSize;
-
                 if (!d.valid())
                     continue;
 
@@ -111,15 +104,11 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
                 }
             }
 
-            synchronized (this) {
-                this.outOfBounds += outOfBounds;
-                this.sampleSize += sampleSize;
-                this.uselessScan += uselessScan;
-            }
+            sampleSize.add(input.size());
         }
 
         @Override
-        public Result result() {
+        public AggregationResult result() {
             final List<OUT> result = new ArrayList<OUT>(buckets.size());
 
             for (final T bucket : buckets) {
@@ -131,14 +120,9 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
                 result.add(d);
             }
 
-            final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize, outOfBounds, uselessScan);
-            final List<Group> updates = ImmutableList.of(new Group(Group.EMPTY_GROUP, result));
-            return new Result(updates, statistics);
-        }
-
-        @Override
-        public Class<?> output() {
-            return out;
+            final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize.sum(), 0l, 0l);
+            final List<AggregationData> updates = ImmutableList.of(new AggregationData(EMPTY_GROUP, series, result, out));
+            return new AggregationResult(updates, statistics);
         }
     }
 
@@ -157,43 +141,32 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
     }
 
     @Override
-    public Aggregation.Session session(Class<?> out, DateRange original) {
-        if (!in.isAssignableFrom(out))
-            throw new IllegalStateException("invalid input type [" + out + " => " + in + "]");
-
-        final long size = sampling.getSize();
-        final DateRange range = original.rounded(size);
-
-        final List<T> buckets = buildBuckets(range, size);
-        return new Session(buckets, range.start(), size, sampling.getExtent());
-    }
-
-    @Override
-    public List<TraverseState> traverse(List<TraverseState> states) {
+    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
         final Set<Series> series = new HashSet<Series>();
 
-        for (final TraverseState s : states)
+        for (final AggregationState s : states)
             series.addAll(s.getSeries());
 
-        return ImmutableList.of(new TraverseState(EMPTY, series));
+        final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
+
+        final long size = sampling.getSize();
+        final DateRange rounded = range.rounded(size);
+
+        final List<T> buckets = buildBuckets(rounded, size);
+        return new AggregationTraversal(out, new Session(series, buckets, range.start(), size, sampling.getExtent()));
     }
 
     @Override
-    public Sampling sampling() {
-        return sampling;
-    }
-
-    public Class<?> input() {
-        return in;
-    }
-
-    public Class<?> output() {
-        return out;
+    public long extent() {
+        return sampling.getExtent();
     }
 
     private List<T> buildBuckets(final DateRange range, long size) {
         final long start = range.start();
         final long count = range.diff() / size;
+
+        if (count < 1 || count > MAX_BUCKET_COUNT)
+            throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
 
         final List<T> buckets = new ArrayList<T>((int) count);
 

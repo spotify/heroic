@@ -61,7 +61,7 @@ public class AggregationCacheImpl implements AggregationCache {
         public CacheQueryResult transform(CacheBackendGetResult result) throws Exception {
             final CacheBackendKey key = result.getKey();
 
-            final long width = key.getAggregation().sampling().getSize();
+            final long width = key.getAggregation().extent();
 
             final List<DateRange> misses = new ArrayList<DateRange>();
 

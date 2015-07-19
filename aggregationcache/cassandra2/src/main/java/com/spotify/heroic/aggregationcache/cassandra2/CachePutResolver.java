@@ -50,7 +50,7 @@ final class CachePutResolver implements Callable<CacheBackendPutResult> {
     public CacheBackendPutResult call() throws Exception {
         final Keyspace keyspace = ctx.getClient();
         final Aggregation aggregation = key.getAggregation();
-        final long size = aggregation.sampling().getSize();
+        final long size = aggregation.extent();
         final long columnWidth = size * Cassandra2AggregationCacheBackend.WIDTH;
 
         for (final DataPoint d : datapoints) {

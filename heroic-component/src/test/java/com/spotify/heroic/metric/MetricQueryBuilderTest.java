@@ -14,7 +14,6 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Sampling;
 
 public class MetricQueryBuilderTest {
     private AggregationFactory aggregations;
@@ -26,7 +25,7 @@ public class MetricQueryBuilderTest {
 
     private final DateRange NON_EMPTY = new DateRange(1000, 2000);
     private final DateRange EMPTY = new DateRange(2000, 2000);
-    private final Sampling SAMPLING = new Sampling(2000, 100);
+    private final long extent = 100;
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -42,7 +41,7 @@ public class MetricQueryBuilderTest {
 
     private Aggregation mockAggregation() {
         final Aggregation aggregation = Mockito.mock(Aggregation.class);
-        Mockito.when(aggregation.sampling()).thenReturn(SAMPLING);
+        Mockito.when(aggregation.extent()).thenReturn(extent);
         return aggregation;
     }
 
@@ -54,10 +53,8 @@ public class MetricQueryBuilderTest {
 
     @Test
     public void testAggregation() {
-        assertEquals(
-                new MetricQuery(null, null, null, NON_EMPTY.rounded(SAMPLING.getSize()).shiftStart(
-                        -SAMPLING.getExtent()), aggregation, false, DataPoint.class), builder.range(NON_EMPTY)
-                        .aggregation(aggregation).build());
+        assertEquals(new MetricQuery(null, null, null, NON_EMPTY.shiftStart(-extent), aggregation, false,
+                DataPoint.class), builder.range(NON_EMPTY).aggregation(aggregation).build());
     }
 
     @Test

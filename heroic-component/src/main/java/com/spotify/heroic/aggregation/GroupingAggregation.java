@@ -21,19 +21,21 @@
 
 package com.spotify.heroic.aggregation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
 
@@ -43,25 +45,75 @@ public abstract class GroupingAggregation implements Aggregation {
     private final List<String> of;
     private final Aggregation each;
 
+    public GroupingAggregation(final List<String> of, final Aggregation each) {
+        this.of = of;
+        this.each = checkNotNull(each, "each");
+    }
+
+    /**
+     * Generate a key for the specific group.
+     * 
+     * @param input The input tags for the group.
+     * @return The keys for a specific group.
+     */
     protected abstract Map<String, String> key(Map<String, String> input);
 
     @Override
-    public List<TraverseState> traverse(List<TraverseState> states) {
-        final Map<Map<String, String>, TraverseState> output = new HashMap<>();
+    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
+        return traversal(map(states), range);
+    }
 
-        for (TraverseState s : states) {
-            final Map<String, String> k = key(s.getKey());
-            TraverseState state = output.get(k);
+    /**
+     * Traverse the given input states, and map them to their corresponding keys.
+     *
+     * @param states Input states to map.
+     * @return A mapping for the group key, to a set of series.
+     */
+    Map<Map<String, String>, Set<Series>> map(final List<AggregationState> states) {
+        final Map<Map<String, String>, Set<Series>> output = new HashMap<>();
 
-            if (state == null) {
-                state = new TraverseState(k, new HashSet<Series>());
-                output.put(k, state);
+        for (final AggregationState state : states) {
+            final Map<String, String> k = key(state.getKey());
+
+            Set<Series> series = output.get(k);
+
+            if (series == null) {
+                series = new HashSet<Series>();
+                output.put(k, series);
             }
 
-            state.getSeries().addAll(s.getSeries());
+            series.addAll(state.getSeries());
         }
 
-        return new ArrayList<>(output.values());
+        return output;
+    }
+
+    /**
+     * Setup traversal and the corresponding session from the given mapping.
+     *
+     * @param mapping The mapping of series.
+     * @param range The range to setup child sessions using.
+     * @return A new traversal instance.
+     */
+    AggregationTraversal traversal(final Map<Map<String, String>, Set<Series>> mapping, final DateRange range) {
+        final Map<Map<String, String>, AggregationSession> sessions = new HashMap<>();
+        final List<AggregationState> states = new ArrayList<>();
+
+        for (final Map.Entry<Map<String, String>, Set<Series>> e : mapping.entrySet()) {
+            final Set<Series> series = new HashSet<>();
+
+            final AggregationTraversal traversal = each.session(
+                    ImmutableList.of(new AggregationState(e.getKey(), e.getValue())),
+                    range);
+
+            for (final AggregationState state : traversal.getStates())
+                series.addAll(state.getSeries());
+
+            sessions.put(e.getKey(), traversal.getSession());
+            states.add(new AggregationState(e.getKey(), series));
+        }
+
+        return new AggregationTraversal(states, new GroupSession(sessions));
     }
 
     @Override
@@ -70,70 +122,39 @@ public abstract class GroupingAggregation implements Aggregation {
     }
 
     @Override
-    public Session session(Class<?> out, DateRange range) {
-        return new GroupSession(output(), range);
-    }
-
-    @Override
-    public Sampling sampling() {
-        return each.sampling();
-    }
-
-    @Override
-    public Class<?> input() {
-        return each.input();
-    }
-
-    @Override
-    public Class<?> output() {
-        return each.output();
+    public long extent() {
+        return each.extent();
     }
 
     @RequiredArgsConstructor
-    private final class GroupSession implements Session {
-        private final ConcurrentHashMap<Map<String, String>, Aggregation.Session> aggregations = new ConcurrentHashMap<>();
-
-        private final Class<?> out;
-        private final DateRange range;
+    private final class GroupSession implements AggregationSession {
+        private final Map<Map<String, String>, AggregationSession> sessions;
 
         @Override
-        public void update(Aggregation.Group group) {
+        public void update(AggregationData group) {
             final Map<String, String> key = key(group.getGroup());
-            Aggregation.Session session = aggregations.get(group);
+            AggregationSession session = sessions.get(key);
 
-            if (session == null) {
-                aggregations.putIfAbsent(key, each.session(out, range));
-                session = aggregations.get(key);
-            }
+            if (session == null)
+                throw new IllegalStateException(String.format("no session for %s", key));
 
-            session.update(new Group(key, group.getValues()));
+            // update using this groups key.
+            session.update(new AggregationData(key, group.getSeries(), group.getValues(), group.getOutput()));
         }
 
         @Override
-        public Result result() {
-            final List<Group> groups = new ArrayList<>();
+        public AggregationResult result() {
+            final List<AggregationData> groups = new ArrayList<>();
 
             Statistics.Aggregator statistics = Statistics.Aggregator.EMPTY;
 
-            for (final Map.Entry<Map<String, String>, Session> e : aggregations.entrySet()) {
-                Group group = new Group(e.getKey(), Group.EMPTY_VALUES);
-
-                final Result r = e.getValue().result();
-
-                for (final Group g : r.getResult())
-                    group = group.merge(g);
-
+            for (final Map.Entry<Map<String, String>, AggregationSession> e : sessions.entrySet()) {
+                final AggregationResult r = e.getValue().result();
                 statistics = statistics.merge(r.getStatistics());
-
-                groups.add(group);
+                groups.addAll(r.getResult());
             }
 
-            return new Result(groups, statistics);
-        }
-
-        @Override
-        public Class<?> output() {
-            return out;
+            return new AggregationResult(groups, statistics);
         }
     }
 }

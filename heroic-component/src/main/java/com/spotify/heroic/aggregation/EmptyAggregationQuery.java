@@ -21,23 +21,18 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Map;
+import lombok.Data;
 
-public interface Bucket<T> {
-    /**
-     * Provide a sample to a bucket.
-     *
-     * This method must be fully thread-safe.
-     *
-     * @param tags Tags for the sample.
-     * @param sample Sample for the update.
-     */
-    public void update(Map<String, String> tags, T sample);
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-    /**
-     * Get the timestamp for the bucket.
-     *
-     * @return The timestamp for the bucket.
-     */
-    public long timestamp();
+@Data
+public class EmptyAggregationQuery implements AggregationQuery<EmptyAggregation> {
+    @JsonCreator
+    public EmptyAggregationQuery() {
+    }
+
+    @Override
+    public EmptyAggregation build() {
+        return EmptyAggregation.INSTANCE;
+    }
 }

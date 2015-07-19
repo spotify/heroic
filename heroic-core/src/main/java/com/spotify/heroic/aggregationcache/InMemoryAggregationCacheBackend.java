@@ -35,7 +35,6 @@ import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Sampling;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -64,23 +63,21 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
 
         final Aggregation aggregation = key.getAggregation();
 
-        final Sampling sampling = aggregation.sampling();
+        final long extent = aggregation.extent();
 
-        if (sampling == null)
+        if (extent == 0)
             throw new CacheOperationException("provided aggregation is not cacheable");
-
-        final long width = sampling.getSize();
 
         final List<DataPoint> datapoints = new ArrayList<DataPoint>();
 
-        if (width == 0) {
+        if (extent == 0) {
             return async.resolved(new CacheBackendGetResult(key, datapoints));
         }
 
-        final long start = range.getStart() - range.getStart() % width;
-        final long end = range.getEnd() - range.getEnd() % width;
+        final long start = range.getStart() - range.getStart() % extent;
+        final long end = range.getEnd() - range.getEnd() % extent;
 
-        for (long i = start; i < end; i += width) {
+        for (long i = start; i < end; i += extent) {
             final DataPoint d = entry.get(i);
 
             if (d == null)
@@ -103,9 +100,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         final Aggregation aggregation = key.getAggregation();
-        final long width = aggregation.sampling().getSize();
+        final long extent = aggregation.extent();
 
-        if (width == 0)
+        if (extent == 0)
             return async.resolved(new CacheBackendPutResult());
 
         for (final DataPoint d : datapoints) {
@@ -115,7 +112,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             if (Double.isNaN(value))
                 continue;
 
-            if (timestamp % width != 0)
+            if (timestamp % extent != 0)
                 continue;
 
             entry.put(timestamp, d);

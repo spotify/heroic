@@ -55,7 +55,7 @@ public class MetricManagerModule extends PrivateModule {
     public static final long DEFAULT_FLUSHING_INTERVAL = 1000;
     public static final long DEFAULT_AGGREGATION_LIMIT = 10000;
     public static final long DEFAULT_DATA_LIMIT = 30000000;
-    public static final int DEFAULT_GROUP_FETCH_PARALLELISM = 2;
+    public static final int DEFAULT_FETCH_PARALLELISM = 100;
 
     private final List<MetricModule> backends;
     private final List<String> defaultBackends;
@@ -81,9 +81,9 @@ public class MetricManagerModule extends PrivateModule {
     private final long dataLimit;
 
     /**
-     * How many result groups a single session is allowed to fetch in parallel.
+     * How many data fetches are performed in parallel.
      */
-    private final int groupFetchParallelism;
+    private final int fetchParallelism;
 
     @JsonCreator
     public MetricManagerModule(@JsonProperty("backends") List<MetricModule> backends,
@@ -97,7 +97,7 @@ public class MetricManagerModule extends PrivateModule {
         this.seriesLimit = Optional.fromNullable(seriesLimit).or(DEFAULT_SERIES_LIMIT);
         this.aggregationLimit = Optional.fromNullable(aggregationLimit).or(DEFAULT_AGGREGATION_LIMIT);
         this.dataLimit = Optional.fromNullable(dataLimit).or(DEFAULT_DATA_LIMIT);
-        this.groupFetchParallelism = Optional.fromNullable(groupFetchParallelism).or(DEFAULT_GROUP_FETCH_PARALLELISM);
+        this.fetchParallelism = Optional.fromNullable(groupFetchParallelism).or(DEFAULT_FETCH_PARALLELISM);
     }
 
     public static Supplier<MetricManagerModule> defaultSupplier() {
@@ -139,7 +139,7 @@ public class MetricManagerModule extends PrivateModule {
     protected void configure() {
         bindBackends(backends);
         bind(MetricManager.class).toInstance(
-                new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit, groupFetchParallelism));
+                new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit, fetchParallelism));
         expose(MetricManager.class);
         bind(ClusteredMetricManager.class).toInstance(new CoreClusteredMetricManager());
         expose(ClusteredMetricManager.class);

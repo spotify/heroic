@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,12 +41,7 @@ public class GroupAggregation extends GroupingAggregation {
         super(of, each);
     }
 
-    /**
-     * Generate a key for this specific group.
-     * 
-     * @param tags The tags of a specific group.
-     * @return
-     */
+    @Override
     protected Map<String, String> key(final Map<String, String> tags) {
         final List<String> of = getOf();
 
@@ -65,21 +58,5 @@ public class GroupAggregation extends GroupingAggregation {
             key.put(o, tags.get(o));
 
         return key;
-    }
-
-    @ToString
-    @RequiredArgsConstructor
-    private static class GroupTraverseState {
-        private int count = 0;
-        private final TraverseState state;
-        private final Map<KeyValue, Integer> values = new HashMap<>();
-    }
-
-    @ToString
-    @RequiredArgsConstructor
-    @EqualsAndHashCode
-    private static class KeyValue {
-        private final String key;
-        private final String value;
     }
 }

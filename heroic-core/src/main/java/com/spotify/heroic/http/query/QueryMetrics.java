@@ -93,6 +93,6 @@ public class QueryMetrics {
     }
 
     public Aggregation makeAggregation() {
-        return new ChainAggregation(ChainAggregation.convertQueries(aggregators));
+        return ChainAggregation.convertQueries(aggregators);
     }
 }

@@ -61,7 +61,7 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
     private List<DataPoint> doGetRow() throws ConnectionException {
         final Keyspace keyspace = ctx.getClient();
         final Aggregation aggregation = key.getAggregation();
-        final long columnSize = aggregation.sampling().getSize();
+        final long columnSize = aggregation.extent();
 
         final List<Long> bases = calculateBases(columnSize);
 

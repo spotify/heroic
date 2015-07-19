@@ -29,9 +29,11 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.EmptyAggregation;
 import com.spotify.heroic.aggregation.GroupAggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -45,9 +47,9 @@ import com.spotify.heroic.grammar.SelectDSL;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.TimeData;
 
+@Slf4j
 @RequiredArgsConstructor
 public class MetricQueryBuilder {
     private final AggregationFactory aggregations;
@@ -60,7 +62,7 @@ public class MetricQueryBuilder {
     private Filter filter;
     private List<String> groupBy;
     private DateRange range;
-    private Aggregation aggregation;
+    private Aggregation aggregation = EmptyAggregation.INSTANCE;
     private boolean disableCache;
     private String queryString;
     private Class<? extends TimeData> source = DataPoint.class;
@@ -232,13 +234,14 @@ public class MetricQueryBuilder {
 
     private Aggregation convertQueryAggregation(final SelectDSL select) {
         if (select.getAggregation() == null)
-            return null;
+            return EmptyAggregation.INSTANCE;
 
         final AggregationValue a = select.getAggregation();
 
         try {
             return aggregations.build(a.getName(), a.getArguments(), a.getKeywordArguments());
         } catch (final Exception e) {
+            log.error("Failed to build aggregation", e);
             throw select.getContext().error(e);
         }
     }
@@ -254,13 +257,12 @@ public class MetricQueryBuilder {
         if (aggregation == null)
             return range;
 
-        final Sampling sampling = aggregation.sampling();
+        final long extent = aggregation.extent();
 
-        if (sampling == null)
+        if (extent == 0)
             return range;
 
-        final DateRange result = range.rounded(sampling.getExtent()).rounded(sampling.getSize())
-                .shiftStart(-sampling.getExtent());
+        final DateRange result = range.rounded(extent).shiftStart(-extent);
 
         if (result.isEmpty())
             throw new IllegalArgumentException("range rounds to empty range with the aggregation: " + aggregation);

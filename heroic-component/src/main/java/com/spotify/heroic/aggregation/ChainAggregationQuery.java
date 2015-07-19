@@ -37,7 +37,7 @@ public class ChainAggregationQuery implements AggregationQuery<ChainAggregation>
         if (chain == null || chain.isEmpty())
             throw new IllegalArgumentException("chain must be specified and non-empty");
 
-        this.chain = ChainAggregation.convertQueries(chain);
+        this.chain = ChainAggregation.convertQueriesAsList(chain);
     }
 
     @Override

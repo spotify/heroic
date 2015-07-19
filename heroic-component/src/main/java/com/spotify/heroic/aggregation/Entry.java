@@ -59,6 +59,23 @@ public class Entry implements HeroicModule {
         final Serializer<List<String>> list = s.list(s.string());
         final Serializer<List<Aggregation>> aggregations = s.list(aggregation);
 
+        ctx.aggregation(EmptyAggregation.NAME, EmptyAggregation.class, EmptyAggregationQuery.class,
+                new Serializer<EmptyAggregation>() {
+                    @Override
+                    public void serialize(SerialWriter buffer, EmptyAggregation value) throws IOException {
+                    }
+
+                    @Override
+                    public EmptyAggregation deserialize(SerialReader buffer) throws IOException {
+                        return EmptyAggregation.INSTANCE;
+                    }
+                }, new AggregationBuilder<EmptyAggregation>() {
+                    @Override
+                    public EmptyAggregation build(List<Value> args, Map<String, Value> keywords) {
+                        return EmptyAggregation.INSTANCE;
+                    }
+                });
+
         ctx.aggregation(GroupAggregation.NAME, GroupAggregation.class, GroupAggregationQuery.class,
                 new GroupingAggregationSerializer<GroupAggregation>(list, aggregation) {
                     @Override

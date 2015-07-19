@@ -131,6 +131,9 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     public DateRange shiftStart(long extent) {
+        if (extent == 0)
+            return this;
+
         return new DateRange(Math.max(start + extent, 0), end);
     }
 

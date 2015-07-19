@@ -49,7 +49,7 @@ public abstract class GroupingAggregationBuilder<T> implements AggregationBuilde
         if (args.size() > 1) {
             each = convertEach(args.subList(1, args.size()));
         } else {
-            each = new ChainAggregation(flatten(keywords.get("each")));
+            each = Aggregations.chain(flatten(keywords.get("each")));
         }
 
         return build(over, each);

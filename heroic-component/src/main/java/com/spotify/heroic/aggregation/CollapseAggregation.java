@@ -41,12 +41,7 @@ public class CollapseAggregation extends GroupingAggregation {
         super(of, each);
     }
 
-    /**
-     * Generate a key for this specific group.
-     * 
-     * @param tags The tags of a specific group.
-     * @return
-     */
+    @Override
     protected Map<String, String> key(final Map<String, String> tags) {
         final List<String> of = getOf();
 

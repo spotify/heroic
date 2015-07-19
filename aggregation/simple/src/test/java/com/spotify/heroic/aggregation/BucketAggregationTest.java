@@ -3,6 +3,7 @@ package com.spotify.heroic.aggregation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import lombok.Data;
 
@@ -10,11 +11,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.aggregation.Aggregation.Group;
-import com.spotify.heroic.aggregation.Aggregation.Result;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
 
 public class BucketAggregationTest {
@@ -64,13 +66,17 @@ public class BucketAggregationTest {
         };
     }
 
+    final Map<String, String> group = ImmutableMap.of();
+    final Set<Series> series = ImmutableSet.of();
+    final List<AggregationState> states = ImmutableList.of();
+
     @Test
     public void testSameSampling() {
         final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(1000, 1000));
-        final Aggregation.Session session = a.session(DataPoint.class, new DateRange(1000, 3000));
+        final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(1000, 50.0).add(2001, 50.0).result()));
 
-        final Result result = session.result();
+        final AggregationResult result = session.result();
 
         Assert.assertEquals(new Statistics.Aggregator(3, 0, 0), result.getStatistics());
         Assert.assertEquals(ImmutableList.of(group(build().add(2000, 100.0).add(3000, 50.0).result())),
@@ -80,10 +86,10 @@ public class BucketAggregationTest {
     @Test
     public void testShorterExtent() {
         final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(1000, 500));
-        final Aggregation.Session session = a.session(DataPoint.class, new DateRange(1000, 3000));
+        final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(2499, 50.0).add(2500, 50.0).result()));
 
-        final Result result = session.result();
+        final AggregationResult result = session.result();
 
         Assert.assertEquals(new Statistics.Aggregator(3, 0, 0), result.getStatistics());
         Assert.assertEquals(ImmutableList.of(group(build().add(2000, 0.0).add(3000, 50.0).result())),
@@ -93,17 +99,17 @@ public class BucketAggregationTest {
     @Test
     public void testUnevenSampling() {
         final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(999, 499));
-        final Aggregation.Session session = a.session(DataPoint.class, new DateRange(1000, 3000));
+        final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(999, 50.0).add(999, 50.0).add(2598, 50.0).result()));
 
-        final Result result = session.result();
+        final AggregationResult result = session.result();
 
         Assert.assertEquals(new Statistics.Aggregator(3, 0, 0), result.getStatistics());
         Assert.assertEquals(ImmutableList.of(group(build().add(1998, 0.0).add(2997, 50.0).result())),
                 result.getResult());
     }
 
-    private Group group(List<DataPoint> values) {
-        return new Group(Group.EMPTY_GROUP, values);
+    private AggregationData group(List<DataPoint> values) {
+        return new AggregationData(group, series, values, DataPoint.class);
     }
 }
