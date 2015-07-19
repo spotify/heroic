@@ -118,8 +118,8 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 return;
             }
 
-            log.info("Request {}: {} (type: {})", request.getEndpoint(), new String(request.getBody(), UTF8),
-                    handle.requestType());
+            if (log.isDebugEnabled())
+                log.debug("Request {}: {}", request.getEndpoint(), new String(request.getBody(), UTF8));
 
             // start sending heartbeat since we are now processing a request.
             setupHeartbeat(ch);
@@ -133,7 +133,9 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             handleFuture.transform(serialize()).on(new FutureFinished() {
                 @Override
                 public void finished() throws Exception {
-                    log.info("Response {}", request.getEndpoint());
+                    if (log.isDebugEnabled())
+                        log.debug("Response {}", request.getEndpoint());
+
                     // stop sending heartbeats when the future has been resolved.
                     // this will cause the other end to time out if a response is available, but its unable to pass the
                     // network.
