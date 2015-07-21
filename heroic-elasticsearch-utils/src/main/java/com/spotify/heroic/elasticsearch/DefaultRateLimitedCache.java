@@ -22,27 +22,14 @@ public class DefaultRateLimitedCache<K, V> implements RateLimitedCache<K, V> {
     private final RateLimiter rateLimiter;
 
     public V get(K key, final Callable<V> callable) throws ExecutionException, RateLimitExceededException {
-        final Callable<V> outer = new Callable<V>() {
-            @Override
-            public V call() throws Exception {
-                boolean canWrite = rateLimiter.tryAcquire();
+        final V shortcut = cache.getIfPresent(key);
 
-                if (!canWrite) {
-                    throw new RateLimitExceededException();
-                }
+        if (shortcut != null)
+            return shortcut;
 
-                return callable.call();
-            }
-        };
+        if (!rateLimiter.tryAcquire())
+            throw new RateLimitExceededException();
 
-        try {
-            return cache.get(key, outer);
-        } catch (ExecutionException e) {
-            if (e.getCause() instanceof RateLimitExceededException) {
-                throw new RateLimitExceededException(e);
-            }
-
-            throw e;
-        }
+        return cache.get(key, callable);
     }
 }
