@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.ingestion;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +33,7 @@ import com.google.inject.Singleton;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 
-@RequiredArgsConstructor
+@Data
 public class IngestionModule extends PrivateModule {
     public static final boolean DEFAULT_UPDATE_METRICS = true;
     public static final boolean DEFAULT_UPDATE_METADATA = true;

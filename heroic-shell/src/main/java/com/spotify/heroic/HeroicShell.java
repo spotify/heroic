@@ -59,8 +59,10 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.CoreBridge.State;
-import com.spotify.heroic.shell.CoreBridge.Task;
 import com.spotify.heroic.shell.QuoteParser;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Fetch;
 import com.spotify.heroic.shell.task.Keys;
 import com.spotify.heroic.shell.task.ListBackends;
@@ -72,7 +74,6 @@ import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.SuggestTag;
-import com.spotify.heroic.shell.task.Usage;
 import com.spotify.heroic.shell.task.WritePerformance;
 import com.spotify.heroic.utils.GroupMember;
 
@@ -96,9 +97,10 @@ public class HeroicShell {
         private boolean help;
     }
 
-    private static final Map<String, Class<? extends CoreBridge.Task>> tasks = new HashMap<>();
+    private static final Map<String, Class<? extends ShellTask>> tasks = new HashMap<>();
 
     static {
+        tasks.put("get", ConfigGet.class);
         tasks.put("keys", Keys.class);
         tasks.put("backends", ListBackends.class);
         tasks.put("fetch", Fetch.class);
@@ -153,7 +155,7 @@ public class HeroicShell {
 
         log.info("Wiring tasks...");
 
-        final Map<String, Task> tasks;
+        final Map<String, ShellTask> tasks;
 
         try {
             tasks = buildTasks(runner);
@@ -311,17 +313,17 @@ public class HeroicShell {
         });
     }
 
-    private static Map<String, Task> buildTasks(CoreBridge runner) throws Exception {
-        final Map<String, Task> tasks = new HashMap<>();
+    private static Map<String, ShellTask> buildTasks(CoreBridge runner) throws Exception {
+        final Map<String, ShellTask> tasks = new HashMap<>();
 
-        for (final Entry<String, Class<? extends Task>> e : HeroicShell.tasks.entrySet()) {
+        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.tasks.entrySet()) {
             tasks.put(e.getKey(), runner.setup(e.getValue()));
         }
 
         return tasks;
     }
 
-    private static void doReaderLoop(final Map<String, Task> tasks, final ConsoleReader reader, final CoreBridge runner)
+    private static void doReaderLoop(final Map<String, ShellTask> tasks, final ConsoleReader reader, final CoreBridge runner)
             throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());
 
@@ -342,7 +344,7 @@ public class HeroicShell {
         }
     }
 
-    private static boolean parseLine(final Map<String, Task> tasks, final ConsoleReader reader,
+    private static boolean parseLine(final Map<String, ShellTask> tasks, final ConsoleReader reader,
             final CoreBridge runner, String line, final PrintWriter out) throws Exception, IOException {
         if (line == null)
             return false;
@@ -366,8 +368,8 @@ public class HeroicShell {
             out.println("exit - Exit the shell");
             out.println("clear - Clear the shell");
 
-            for (final Map.Entry<String, Task> e : tasks.entrySet()) {
-                final Usage usage = e.getValue().getClass().getAnnotation(Usage.class);
+            for (final Map.Entry<String, ShellTask> e : tasks.entrySet()) {
+                final ShellTaskUsage usage = e.getValue().getClass().getAnnotation(ShellTaskUsage.class);
 
                 final String help;
 
@@ -387,7 +389,7 @@ public class HeroicShell {
         final String taskName = parts[0];
         final String[] commandArgs = args(parts);
 
-        final Task task = tasks.get(taskName);
+        final ShellTask task = tasks.get(taskName);
 
         if (task == null) {
             out.println("No such task '" + taskName + "'");

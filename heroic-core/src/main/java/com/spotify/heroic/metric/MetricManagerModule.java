@@ -28,7 +28,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,7 +46,7 @@ import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
 import com.spotify.heroic.utils.BackendGroups;
 
-@RequiredArgsConstructor
+@Data
 public class MetricManagerModule extends PrivateModule {
     private static final List<MetricModule> DEFAULT_BACKENDS = ImmutableList.of();
     public static final boolean DEFAULT_UPDATE_METADATA = false;

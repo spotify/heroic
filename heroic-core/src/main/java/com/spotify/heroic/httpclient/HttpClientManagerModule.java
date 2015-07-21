@@ -27,7 +27,7 @@ import javax.inject.Singleton;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
@@ -49,7 +49,7 @@ import com.spotify.heroic.statistics.HttpClientManagerReporter;
 
 import eu.toolchain.async.AsyncFramework;
 
-@RequiredArgsConstructor
+@Data
 public class HttpClientManagerModule extends PrivateModule {
     // 100 requests allowed to be pending.
     // these will be mostly blocking for a response.

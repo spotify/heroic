@@ -31,6 +31,7 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
 
 public final class Tasks {
     public static Filter setupFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
@@ -42,7 +43,7 @@ public final class Tasks {
         return parser.parseFilter(StringUtils.join(query, " "));
     }
 
-    public abstract static class QueryParamsBase implements QueryParams {
+    public abstract static class QueryParamsBase extends AbstractShellTaskParams implements QueryParams {
         private final DateRange defaultDateRange;
 
         public QueryParamsBase() {
@@ -57,16 +58,16 @@ public final class Tasks {
         }
     }
 
+    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
+        final Filter filter = setupFilter(filters, parser, params);
+        return new RangeFilter(filter, params.getRange(), params.getLimit());
+    }
+
     public static interface QueryParams {
         public List<String> getQuery();
 
         public DateRange getRange();
 
         public int getLimit();
-    }
-
-    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
-        final Filter filter = setupFilter(filters, parser, params);
-        return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
 }

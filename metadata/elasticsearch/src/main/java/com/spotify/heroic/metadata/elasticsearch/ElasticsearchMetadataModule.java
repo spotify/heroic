@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -64,7 +64,7 @@ import com.spotify.heroic.utils.GroupedUtils;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
 
-@RequiredArgsConstructor
+@Data
 public final class ElasticsearchMetadataModule implements MetadataModule {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;

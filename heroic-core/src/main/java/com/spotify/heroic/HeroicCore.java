@@ -509,6 +509,8 @@ public class HeroicCore {
 
             @Override
             protected void configure() {
+                bind(HeroicConfig.class).toInstance(config);
+
                 if (server)
                     bind(HeroicServer.class).in(Scopes.SINGLETON);
 

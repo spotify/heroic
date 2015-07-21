@@ -37,14 +37,16 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.CountSeries;
 import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Usage("Count how much metadata matches a given query")
-public class MetadataCount implements CoreBridge.Task {
+@ShellTaskUsage("Count how much metadata matches a given query")
+public class MetadataCount extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, MetadataCount.class);
     }
@@ -59,12 +61,12 @@ public class MetadataCount implements CoreBridge.Task {
     private FilterFactory filters;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
         // final Filter filter = Tasks.setupFilter(filters, parser, params);
@@ -80,15 +82,9 @@ public class MetadataCount implements CoreBridge.Task {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase implements CoreBridge.BaseParams, Tasks.QueryParams {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
-        private String config;
-
+    private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
-
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
 
         @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
         @Getter
@@ -97,15 +93,5 @@ public class MetadataCount implements CoreBridge.Task {
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
-
-        @Override
-        public String config() {
-            return config;
-        }
-
-        @Override
-        public boolean help() {
-            return help;
-        }
     }
 }

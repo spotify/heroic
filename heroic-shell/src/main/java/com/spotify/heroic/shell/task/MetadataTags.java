@@ -39,14 +39,16 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Usage("Get tags")
-public class MetadataTags implements CoreBridge.Task {
+@ShellTaskUsage("Get tags")
+public class MetadataTags extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, MetadataTags.class);
     }
@@ -65,12 +67,12 @@ public class MetadataTags implements CoreBridge.Task {
     private ObjectMapper mapper;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -85,15 +87,9 @@ public class MetadataTags implements CoreBridge.Task {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase implements CoreBridge.BaseParams, Tasks.QueryParams {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
-        private String config;
-
+    private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
-
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
 
         @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter
@@ -102,15 +98,5 @@ public class MetadataTags implements CoreBridge.Task {
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
-
-        @Override
-        public String config() {
-            return config;
-        }
-
-        @Override
-        public boolean help() {
-            return help;
-        }
     }
 }

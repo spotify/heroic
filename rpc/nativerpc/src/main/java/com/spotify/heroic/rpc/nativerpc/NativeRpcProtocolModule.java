@@ -28,7 +28,7 @@ import io.netty.util.Timer;
 
 import java.net.InetSocketAddress;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,7 +43,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 
-@RequiredArgsConstructor
+@Data
 public class NativeRpcProtocolModule implements RpcProtocolModule {
     private static final String DEFAULT_HOST = "0.0.0.0";
     private static final int DEFAULT_PORT = 1394;

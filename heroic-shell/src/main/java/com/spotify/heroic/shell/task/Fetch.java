@@ -44,14 +44,17 @@ import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.shell.AbstractShellTask;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Usage("Fetch a range of data points")
-public class Fetch implements CoreBridge.Task {
+@ShellTaskUsage("Fetch a range of data points")
+public class Fetch extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, Fetch.class);
     }
@@ -64,12 +67,12 @@ public class Fetch implements CoreBridge.Task {
     private ObjectMapper mapper;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
         final Date now = new Date();
 
@@ -144,10 +147,7 @@ public class Fetch implements CoreBridge.Task {
     }
 
     @ToString
-    private static class Parameters implements CoreBridge.BaseParams {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
-        private String config;
-
+    private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--series", required = true, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 
@@ -162,18 +162,5 @@ public class Fetch implements CoreBridge.Task {
 
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
-
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
-
-        @Override
-        public String config() {
-            return config;
-        }
-
-        @Override
-        public boolean help() {
-            return help;
-        }
     }
 }

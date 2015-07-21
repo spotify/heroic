@@ -22,7 +22,9 @@
 package com.spotify.heroic.shell;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,8 +71,8 @@ public class CoreBridge {
         state.stop().get();
     }
 
-    public Task setup(Class<? extends Task> taskType) throws Exception {
-        final Task task = instance(taskType);
+    public ShellTask setup(Class<? extends ShellTask> taskType) throws Exception {
+        final ShellTask task = instance(taskType);
 
         try (final Borrowed<State> b = state.borrow()) {
             b.get().core.inject(task);
@@ -79,8 +81,8 @@ public class CoreBridge {
         return task;
     }
 
-    public AsyncFuture<Void> run(Task task, String argv[], PrintWriter out) throws Exception {
-        final BaseParams params = task.params();
+    public AsyncFuture<Void> run(ShellTask task, String argv[], PrintWriter out) throws Exception {
+        final ShellTaskParams params = task.params();
 
         try {
             parseArguments(params, argv, out);
@@ -95,42 +97,54 @@ public class CoreBridge {
         return task.run(out, params);
     }
 
-    public static void standalone(String argv[], Class<? extends Task> taskType) throws Exception {
-        final Task task = instance(taskType);
+    public static void standalone(String argv[], Class<? extends ShellTask> taskType) throws Exception {
+        final ShellTask task = instance(taskType);
 
-        final BaseParams params = task.params();
+        final ShellTaskParams params = task.params();
 
-        try (final PrintWriter out = new PrintWriter(System.out)) {
-            try {
-                parseArguments(params, argv, out);
-            } catch (CmdLineException e) {
-                log.error("Commandline error", e);
-                return;
-            }
-
-            if (params.help())
-                return;
-
-            final HeroicCore core = setupBuilder(false, params.config()).build();
-
-            try {
-                core.start();
-            } catch (Exception e1) {
-                log.error("Failed to start core", e1);
-                core.shutdown();
-                return;
-            }
-
-            core.inject(task);
-
-            try {
-                task.run(out, params).get();
-            } catch (Exception e) {
-                log.error("Failed to run task", e);
-            }
-
-            core.shutdown();
+        try {
+            parseArguments(params, argv, new PrintWriter(System.out));
+        } catch (CmdLineException e) {
+            log.error("Commandline error", e);
+            return;
         }
+
+        if (params.help())
+            return;
+
+        if (params.output() == null || "-".equals(params.output())) {
+            runStandaloneTask(task, new PrintWriter(System.out), params);
+            return;
+        }
+
+        final OutputStream output = Files.newOutputStream(Paths.get(params.output()));
+
+        try (final PrintWriter out = new PrintWriter(output)) {
+            runStandaloneTask(task, out, params);
+        }
+    }
+
+    public static void runStandaloneTask(ShellTask task, PrintWriter out, ShellTaskParams params) {
+        final HeroicCore core = setupBuilder(false, params.config()).build();
+
+        try {
+            core.start();
+        } catch (Exception e1) {
+            log.error("Failed to start core", e1);
+            core.shutdown();
+            return;
+        }
+
+        core.inject(task);
+
+        try {
+            task.run(out, params).get();
+        } catch (Exception e) {
+            log.error("Failed to run task", e);
+        }
+
+        out.flush();
+        core.shutdown();
     }
 
     private static Path parseConfigPath(String config) {
@@ -165,7 +179,7 @@ public class CoreBridge {
         return StringUtils.join(alternatives, ", ");
     }
 
-    private static void parseArguments(BaseParams params, String[] args, PrintWriter out) throws CmdLineException,
+    private static void parseArguments(ShellTaskParams params, String[] args, Writer out) throws CmdLineException,
             IOException {
         final CmdLineParser parser = new CmdLineParser(params);
 
@@ -175,20 +189,8 @@ public class CoreBridge {
             parser.printUsage(out, null);
     }
 
-    public static interface Task {
-        public BaseParams params();
-
-        public AsyncFuture<Void> run(PrintWriter out, BaseParams params) throws Exception;
-    }
-
-    public static interface BaseParams {
-        public String config();
-
-        public boolean help();
-    }
-
-    private static Task instance(Class<? extends Task> taskType) throws Exception {
-        final Constructor<? extends Task> constructor;
+    private static ShellTask instance(Class<? extends ShellTask> taskType) throws Exception {
+        final Constructor<? extends ShellTask> constructor;
 
         try {
             constructor = taskType.getConstructor();

@@ -39,16 +39,18 @@ import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.CountSeries;
 import com.spotify.heroic.metadata.model.MetadataEntry;
 import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Usage("Migrate metadata with the given query to suggestion backend")
-public class MetadataMigrateSuggestions implements CoreBridge.Task {
+@ShellTaskUsage("Migrate metadata with the given query to suggestion backend")
+public class MetadataMigrateSuggestions extends AbstractShellTask {
     public static final int DOT_LIMIT = 10000;
     public static final int LINE_LIMIT = 20;
 
@@ -69,12 +71,12 @@ public class MetadataMigrateSuggestions implements CoreBridge.Task {
     private FilterFactory filters;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -124,10 +126,7 @@ public class MetadataMigrateSuggestions implements CoreBridge.Task {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase implements CoreBridge.BaseParams, Tasks.QueryParams {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
-        private String config;
-
+    private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to migrate from", metaVar = "<metadata-group>", required = true)
         private String group;
 
@@ -137,9 +136,6 @@ public class MetadataMigrateSuggestions implements CoreBridge.Task {
         @Option(name = "--ok", usage = "Verify the migration")
         private boolean ok = false;
 
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
-
         @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
@@ -147,15 +143,5 @@ public class MetadataMigrateSuggestions implements CoreBridge.Task {
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
-
-        @Override
-        public String config() {
-            return config;
-        }
-
-        @Override
-        public boolean help() {
-            return help;
-        }
     }
 }

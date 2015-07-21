@@ -49,16 +49,19 @@ import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.shell.AbstractShellTask;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
 
-@Usage("Perform performance testing")
-public class WritePerformance implements CoreBridge.Task {
+@ShellTaskUsage("Perform performance testing")
+public class WritePerformance extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, WritePerformance.class);
     }
@@ -74,12 +77,12 @@ public class WritePerformance implements CoreBridge.Task {
     private AsyncFramework async;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final Date now = new Date();
@@ -277,10 +280,7 @@ public class WritePerformance implements CoreBridge.Task {
     }
 
     @ToString
-    public static class Parameters implements CoreBridge.BaseParams {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
-        private String config;
-
+    public static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch (default: 1000000)", metaVar = "<int>")
         private int limit = 1000000;
 
@@ -301,19 +301,6 @@ public class WritePerformance implements CoreBridge.Task {
 
         @Option(name = "-B", aliases = { "--batch" }, usage = "Write using batch API")
         private boolean batch = false;
-
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
-
-        @Override
-        public String config() {
-            return config;
-        }
-
-        @Override
-        public boolean help() {
-            return help;
-        }
     }
 
     @Data

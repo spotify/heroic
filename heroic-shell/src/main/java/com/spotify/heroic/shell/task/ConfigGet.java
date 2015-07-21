@@ -21,42 +21,38 @@
 
 package com.spotify.heroic.shell.task;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
 
 import lombok.ToString;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
-import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.utils.GroupMember;
-import com.spotify.heroic.utils.Grouped;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
-@ShellTaskUsage("List available backend groups")
-public class ListBackends extends AbstractShellTask {
+@ShellTaskUsage("Load metadata from a file")
+public class ConfigGet extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, ListBackends.class);
+        CoreBridge.standalone(argv, ConfigGet.class);
     }
 
     @Inject
-    private MetricManager metrics;
-
-    @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private SuggestManager suggest;
+    private HeroicConfig config;
 
     @Inject
     @Named("application/json")
@@ -71,30 +67,23 @@ public class ListBackends extends AbstractShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(PrintWriter out, ShellTaskParams base) throws Exception {
-        printBackends(out, "metric", metrics.getBackends());
-        printBackends(out, "metadata", metadata.getBackends());
-        printBackends(out, "suggest", suggest.getBackends());
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+        final Parameters params = (Parameters) base;
+        final ObjectMapper m = mapper.copy();
+        m.enable(SerializationFeature.INDENT_OUTPUT);
+        out.println(m.writeValueAsString(config));
 
-        return async.resolved(null);
+        return async.resolved();
     }
 
-    private void printBackends(PrintWriter out, String title, List<? extends GroupMember<? extends Grouped>> group) {
-        if (group.isEmpty()) {
-            out.println(String.format("%s: (empty)", title));
-            return;
-        }
+    private InputStreamReader open(Path file) throws IOException {
+        final InputStream input = Files.newInputStream(file);
 
-        out.println(String.format("%s:", title));
+        // unpack gzip.
+        if (!file.getFileName().toString().endsWith(".gz"))
+            return new InputStreamReader(input);
 
-        for (final GroupMember<? extends Grouped> grouped : group) {
-            if (grouped.isDefaultMember()) {
-                out.println(String.format("  %s (default) %s", grouped.getGroups(), grouped.getMember()));
-                continue;
-            }
-
-            out.println(String.format("  %s %s", grouped.getGroups(), grouped.getMember()));
-        }
+        return new InputStreamReader(new GZIPInputStream(input));
     }
 
     @ToString

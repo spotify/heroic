@@ -27,7 +27,7 @@ import java.util.List;
 
 import javax.inject.Named;
 
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -38,7 +38,7 @@ import com.google.inject.Provides;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 
-@RequiredArgsConstructor
+@Data
 public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
     private static final int DEFAULT_THREAD_POOL_SIZE = 100;
 

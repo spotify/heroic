@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell.task;
+package com.spotify.heroic.shell;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -28,6 +28,6 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Usage {
+public @interface ShellTaskUsage {
     String value() default "";
 }

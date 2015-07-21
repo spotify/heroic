@@ -39,14 +39,16 @@ import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.CountSeries;
 import com.spotify.heroic.metadata.model.MetadataEntry;
 import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.BaseParams;
+import com.spotify.heroic.shell.ShellTaskParams;
+import com.spotify.heroic.shell.ShellTaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Usage("Fetch series matching the given query")
-public class MetadataEntries implements CoreBridge.Task {
+@ShellTaskUsage("Fetch series matching the given query")
+public class MetadataEntries extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, MetadataEntries.class);
     }
@@ -61,12 +63,12 @@ public class MetadataEntries implements CoreBridge.Task {
     private FilterFactory filters;
 
     @Override
-    public BaseParams params() {
+    public ShellTaskParams params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, BaseParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -93,7 +95,7 @@ public class MetadataEntries implements CoreBridge.Task {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase implements CoreBridge.BaseParams, Tasks.QueryParams {
+    private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
         private String config;
 

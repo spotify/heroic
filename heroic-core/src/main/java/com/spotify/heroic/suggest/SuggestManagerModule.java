@@ -29,6 +29,8 @@ import java.util.Set;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import lombok.Data;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -44,6 +46,7 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.utils.BackendGroups;
 
+@Data
 public class SuggestManagerModule extends PrivateModule {
     private static final List<SuggestModule> DEFAULT_BACKENDS = new ArrayList<>();
 

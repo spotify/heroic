@@ -29,6 +29,8 @@ import java.util.UUID;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import lombok.Data;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -52,6 +54,7 @@ import com.spotify.heroic.cluster.model.NodeRegistryEntry;
  *
  * @author udoprog
  */
+@Data
 public class ClusterManagerModule extends PrivateModule {
     private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key.get(ClusterDiscovery.class);
     public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.copyOf(Sets.newHashSet(

@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.RequiredArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -58,7 +58,7 @@ import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.async.ResolvableFuture;
 
 @Slf4j
-@RequiredArgsConstructor
+@Data
 public class KafkaConsumerModule implements ConsumerModule {
     public static final int DEFAULT_THREADS_PER_TOPIC = 2;
 

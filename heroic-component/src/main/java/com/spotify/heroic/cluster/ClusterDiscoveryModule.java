@@ -25,6 +25,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.Data;
+
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -37,6 +39,7 @@ import eu.toolchain.async.AsyncFuture;
 public interface ClusterDiscoveryModule {
     public Module module(final Key<ClusterDiscovery> key);
 
+    @Data
     public static class Null implements ClusterDiscovery {
         @Inject
         private AsyncFramework async;
