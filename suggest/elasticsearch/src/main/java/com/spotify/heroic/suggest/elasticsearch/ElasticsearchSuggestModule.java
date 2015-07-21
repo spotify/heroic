@@ -45,6 +45,8 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
+import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
+import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
@@ -264,9 +266,14 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @Provides
             @Singleton
             public RateLimitedCache<Pair<String, Series>, Boolean> writeCache() throws IOException {
+                final Cache<Pair<String, Series>, Boolean> cache = CacheBuilder.newBuilder().concurrencyLevel(4)
+                        .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
+
+                if (writesPerSecond == 0d)
+                    return new DisabledRateLimitedCache<Pair<String, Series>, Boolean>(cache);
+
                 RateLimiter rateLimiter = RateLimiter.create(writesPerSecond);
-                Cache<Pair<String, Series>, Boolean> cache = CacheBuilder.newBuilder().concurrencyLevel(4).expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
-                return new RateLimitedCache<>(cache, rateLimiter);
+                return new DefaultRateLimitedCache<>(cache, rateLimiter);
             }
 
             @Override
