@@ -121,6 +121,9 @@ public class CoreBridge {
         try (final PrintWriter out = new PrintWriter(output)) {
             runTask(task, out, params);
         }
+
+        log.info("Exiting...");
+        System.exit(0);
     }
 
     public static void runTask(ShellTask task, PrintWriter out, ShellTaskParams params) {

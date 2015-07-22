@@ -482,6 +482,55 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
     }
 
     @Override
+    public void writeDirect(Series series, DateRange range) throws Exception {
+        try (final Borrowed<Connection> b = connection.borrow()) {
+            final Connection c = b.get();
+
+            final String[] indices = c.writeIndices(range);
+
+            final String seriesId = Integer.toHexString(series.hashCode());
+
+            final XContentBuilder xSeries = XContentFactory.jsonBuilder();
+            final BytesReference rawSeries;
+
+            xSeries.startObject();
+            ElasticsearchUtils.buildMetadataDoc(xSeries, series);
+            xSeries.endObject();
+
+            // for nested entry in suggestion.
+            final XContentBuilder xSeriesRaw = XContentFactory.jsonBuilder();
+            xSeriesRaw.startObject();
+              xSeriesRaw.field("id", seriesId);
+              ElasticsearchUtils.buildMetadataDoc(xSeriesRaw, series);
+            xSeriesRaw.endObject();
+
+            rawSeries = xSeriesRaw.bytes();
+            // @formatter:on
+
+            final BulkProcessor bulk = c.bulk();
+
+            final List<Long> times = new ArrayList<>(indices.length);
+
+            for (final String index : indices) {
+                bulk.add(new IndexRequest(index, ElasticsearchUtils.TYPE_SERIES, seriesId).source(xSeries)
+                        .opType(OpType.CREATE));
+
+                for (final Map.Entry<String, String> e : series.getTags().entrySet()) {
+                    final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
+                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
+
+                    suggest.startObject();
+                    ElasticsearchUtils.buildTagDoc(suggest, rawSeries, e);
+                    suggest.endObject();
+
+                    bulk.add(new IndexRequest(index, ElasticsearchUtils.TYPE_TAG, suggestId).source(suggest)
+                            .opType(OpType.CREATE));
+                }
+            }
+        }
+    }
+
+    @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
         try (final Borrowed<Connection> b = connection.borrow()) {
             if (!b.isValid())

@@ -56,4 +56,6 @@ public interface SuggestBackend extends Grouped, Initializing {
     public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
 
     public AsyncFuture<WriteResult> write(Series series, DateRange range);
+
+    public void writeDirect(Series series, DateRange range) throws Exception;
 }

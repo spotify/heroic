@@ -140,6 +140,32 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
+    public void writeDirect(final Series series, final DateRange range) throws Exception {
+        final List<Throwable> errors = new ArrayList<>();
+
+        run(new InternalOperation() {
+            @Override
+            public void run(int disabled, SuggestBackend backend) {
+                try {
+                    backend.writeDirect(series, range);
+                } catch (Exception e) {
+                    errors.add(e);
+                }
+            }
+        });
+
+        if (!errors.isEmpty()) {
+            final Exception e = new Exception("exception caught when writing to backend");
+
+            for (final Throwable t : errors) {
+                e.addSuppressed(t);
+            }
+
+            throw e;
+        }
+    }
+
+    @Override
     public boolean isReady() {
         boolean ready = true;
 
