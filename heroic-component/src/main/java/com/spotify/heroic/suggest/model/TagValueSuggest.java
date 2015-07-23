@@ -23,9 +23,8 @@ package com.spotify.heroic.suggest.model;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import lombok.Data;
 
@@ -46,9 +45,6 @@ import eu.toolchain.async.Transform;
 public class TagValueSuggest {
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<RequestError>();
     public static final List<String> EMPTY_VALUES = new ArrayList<String>();
-    public static final boolean DEFAULT_LIMITED = false;
-
-    public static final TagValueSuggest EMPTY = new TagValueSuggest(EMPTY_ERRORS, EMPTY_VALUES, DEFAULT_LIMITED);
 
     private final List<RequestError> errors;
     private final List<String> values;
@@ -58,37 +54,32 @@ public class TagValueSuggest {
     public TagValueSuggest(@JsonProperty("errors") List<RequestError> errors,
             @JsonProperty("values") List<String> values, @JsonProperty("limited") Boolean limited) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.values = values;
-        this.limited = limited;
+        this.values = Optional.fromNullable(values).or(EMPTY_VALUES);
+        this.limited = Optional.fromNullable(limited).or(false);
     }
 
     public TagValueSuggest(List<String> values, boolean limited) {
         this(EMPTY_ERRORS, values, limited);
     }
 
-    public TagValueSuggest merge(TagValueSuggest other, int limit) {
-        final List<RequestError> errors = new ArrayList<>(this.errors);
-        errors.addAll(other.errors);
-
-        final SortedSet<String> values = new TreeSet<>(this.values);
-        values.addAll(other.values);
-
-        final List<String> list = new ArrayList<>(values);
-
-        final boolean limited = this.limited || other.limited || list.size() > limit;
-        return new TagValueSuggest(errors, list.subList(0, Math.min(list.size(), limit)), limited);
-    }
-
     public static Collector<TagValueSuggest, TagValueSuggest> reduce(final int limit) {
         return new Collector<TagValueSuggest, TagValueSuggest>() {
             @Override
-            public TagValueSuggest collect(Collection<TagValueSuggest> results) throws Exception {
-                TagValueSuggest result = EMPTY;
+            public TagValueSuggest collect(Collection<TagValueSuggest> groups) throws Exception {
+                final List<RequestError> errors = new ArrayList<>();
+                final List<String> values = new ArrayList<>();
 
-                for (final TagValueSuggest r : results)
-                    result = r.merge(result, limit);
+                boolean limited = false;
 
-                return result;
+                for (final TagValueSuggest g : groups) {
+                    errors.addAll(g.errors);
+                    values.addAll(g.values);
+                    limited = limited || g.limited;
+                }
+
+                Collections.sort(values);
+                limited = limited || values.size() >= limit;
+                return new TagValueSuggest(errors, values.subList(0, Math.min(values.size(), limit)), limited);
             }
         };
     }
@@ -100,7 +91,7 @@ public class TagValueSuggest {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
                 return new TagValueSuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(),
-                        c.toString(), m.getTags(), e)), EMPTY_VALUES, DEFAULT_LIMITED);
+                        c.toString(), m.getTags(), e)), EMPTY_VALUES, false);
             }
         };
     }

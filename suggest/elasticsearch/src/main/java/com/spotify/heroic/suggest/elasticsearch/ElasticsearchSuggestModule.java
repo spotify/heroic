@@ -22,6 +22,7 @@
 package com.spotify.heroic.suggest.elasticsearch;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -29,15 +30,18 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 
+import lombok.Data;
+
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -47,7 +51,6 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
-import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.model.Series;
@@ -60,11 +63,13 @@ import com.spotify.heroic.utils.GroupedUtils;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
 
+@Data
 public final class ElasticsearchSuggestModule implements SuggestModule {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
+    public static final String DEFAULT_BACKEND_TYPE = "default";
 
     private final String id;
     private final Set<String> groups;
@@ -73,6 +78,10 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
     private final String templateName;
+    private final String backendType;
+
+    @JsonIgnore
+    private final BackendTypeBuilder backendTypeBuilder;
 
     @JsonCreator
     public ElasticsearchSuggestModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
@@ -80,7 +89,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @JsonProperty("connection") ManagedConnectionFactory connection,
             @JsonProperty("writesPerSecond") Double writesPerSecond,
             @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
-            @JsonProperty("templateName") String templateName) {
+            @JsonProperty("templateName") String templateName, @JsonProperty("backendType") String backendType) {
         this.id = id;
         this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
@@ -88,162 +97,25 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = Optional.fromNullable(templateName).or(DEFAULT_TEMPLATE_NAME);
+        this.backendType = Optional.fromNullable(backendType).or(DEFAULT_BACKEND_TYPE);
+        this.backendTypeBuilder = Optional.fromNullable(backendTypeBuilders.get(backendType)).or(defaultSetup);
     }
 
-    private Map<String, XContentBuilder> mappings() throws IOException {
-        final Map<String, XContentBuilder> mappings = new HashMap<>();
-        mappings.put("tag", buildTagMapping());
-        mappings.put("series", buildSeriesMapping());
-        return mappings;
-    }
+    private static Map<String, Object> loadJsonResource(String path) throws IOException {
+        final String fullPath = ElasticsearchSuggestModule.class.getPackage().getName() + "/" + path;
 
-    private XContentBuilder buildSeriesMapping() throws IOException {
-        final XContentBuilder b = XContentFactory.jsonBuilder();
+        try (final InputStream input = ElasticsearchSuggestModule.class.getClassLoader().getResourceAsStream(fullPath)) {
+            if (input == null)
+                return ImmutableMap.of();
 
-        // @formatter:off
-        b.startObject();
-          b.startObject(ElasticsearchUtils.TYPE_SERIES);
-            b.startObject("properties");
-              b.startObject(ElasticsearchUtils.KEY);
-                b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-
-              b.startObject(ElasticsearchUtils.TAGS);
-                b.field("type", "nested");
-                b.startObject("properties");
-                  b.startObject(ElasticsearchUtils.TAGS_KEY);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.TAGS_VALUE);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-              /* end tags */
-            b.endObject();
-          b.endObject();
-        b.endObject();
-        // @formatter:on
-
-        return b;
-    }
-
-    private XContentBuilder buildTagMapping() throws IOException {
-        final XContentBuilder b = XContentFactory.jsonBuilder();
-
-        // @formatter:off
-        b.startObject();
-          b.startObject(ElasticsearchUtils.TYPE_TAG);
-            b.startObject("properties");
-
-              b.startObject(ElasticsearchUtils.TAG_KEY);
-                b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-
-              b.startObject(ElasticsearchUtils.TAG_VALUE);
-                b.field("type", "string");
-                b.startObject("fields");
-                  b.startObject("raw");
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-
-              b.startObject(ElasticsearchUtils.TAG_KV);
-                b.field("type", "string");
-                b.field("index", "not_analyzed");
-                b.field("doc_values", true);
-              b.endObject();
-
-              // series is solely used for filtering, nothing should be stored or analyzed.
-              b.startObject(ElasticsearchUtils.TAG_SERIES);
-                b.field("type", "nested");
-                b.field("include_in_parent", true);
-                b.startObject("properties");
-                  // used for cardinality aggregation.
-                  b.startObject(ElasticsearchUtils.ID);
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.KEY);
-                    b.field("type", "string");
-                    b.field("index", "not_analyzed");
-                    b.field("doc_values", true);
-                    b.field("store", false);
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.TAGS);
-                    b.field("type", "nested");
-                    b.startObject("properties");
-                      b.startObject(ElasticsearchUtils.TAGS_KEY);
-                        b.field("type", "string");
-                        b.startObject("fields");
-                          b.startObject("raw");
-                            b.field("type", "string");
-                            b.field("index", "not_analyzed");
-                            b.field("doc_values", true);
-                          b.endObject();
-                        b.endObject();
-                      b.endObject();
-
-                      b.startObject(ElasticsearchUtils.TAGS_VALUE);
-                        b.field("type", "string");
-                        b.startObject("fields");
-                          b.startObject("raw");
-                            b.field("type", "string");
-                            b.field("index", "not_analyzed");
-                            b.field("doc_values", true);
-                          b.endObject();
-                        b.endObject();
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-                  /* end tags */
-                b.endObject();
-              b.endObject();
-            b.endObject();
-          b.endObject();
-        b.endObject();
-        // @formatter:on
-
-        return b;
+            return JsonXContent.jsonXContent.createParser(input).map();
+        }
     }
 
     @Override
     public Module module(final Key<SuggestBackend> key, final String id) {
+        final BackendType backendType = backendTypeBuilder.setup(this);
+
         return new PrivateModule() {
             @Provides
             @Singleton
@@ -260,7 +132,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @Provides
             @Singleton
             public Managed<Connection> connection(ManagedConnectionFactory connection) throws IOException {
-                return connection.construct(templateName, mappings());
+                return connection.construct(templateName, backendType.mappings(), backendType.settings());
             }
 
             @Provides
@@ -279,7 +151,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
-                bind(key).toInstance(new ElasticsearchSuggestBackend(groups));
+                bind(key).toInstance(backendType.instance());
                 expose(key);
             }
         };
@@ -308,6 +180,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         private Double writesPerSecond;
         private Long writeCacheDurationMinutes;
         private String templateName;
+        private String backendType;
 
         public Builder id(String id) {
             this.id = id;
@@ -349,9 +222,57 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             return this;
         }
 
+        public Builder backendType(String backendType) {
+            this.backendType = backendType;
+            return this;
+        }
+
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, group, groups, pools, connection, writesPerSecond,
-                    writeCacheDurationMinutes, templateName);
+                    writeCacheDurationMinutes, templateName, backendType);
         }
+    }
+
+    private static BackendTypeBuilder defaultSetup = new BackendTypeBuilder() {
+        @Override
+        public BackendType setup(final ElasticsearchSuggestModule module) {
+            return new BackendType() {
+                @Override
+                public Map<String, Map<String, Object>> mappings() throws IOException {
+                    final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                    mappings.put("tag", loadJsonResource("default/tag.json"));
+                    mappings.put("series", loadJsonResource("default/series.json"));
+                    return mappings;
+                }
+
+                @Override
+                public Map<String, Object> settings() throws IOException {
+                    return loadJsonResource("default/settings.json");
+                }
+
+                @Override
+                public SuggestBackend instance() {
+                    return new ElasticsearchSuggestBackend(module.groups);
+                }
+            };
+        }
+    };
+
+    private static final Map<String, BackendTypeBuilder> backendTypeBuilders = new HashMap<>();
+
+    static {
+        backendTypeBuilders.put("default", defaultSetup);
+    }
+
+    static interface BackendType {
+        Map<String, Map<String, Object>> mappings() throws IOException;
+
+        Map<String, Object> settings() throws IOException;
+
+        SuggestBackend instance();
+    }
+
+    static interface BackendTypeBuilder {
+        BackendType setup(ElasticsearchSuggestModule module);
     }
 }

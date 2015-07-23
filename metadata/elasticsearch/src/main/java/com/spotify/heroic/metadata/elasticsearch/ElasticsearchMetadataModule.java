@@ -22,6 +22,7 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -33,14 +34,14 @@ import javax.inject.Singleton;
 import lombok.Data;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -51,7 +52,6 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
-import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -96,57 +96,21 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
 
     }
 
-    private static Map<String, XContentBuilder> mappings() throws IOException {
-        final Map<String, XContentBuilder> mappings = new HashMap<>();
-        mappings.put("metadata", buildMetadataMapping());
+    private Map<String, Map<String, Object>> mappings() throws IOException {
+        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+        mappings.put("metadata", loadJsonResource("default/metadata.json"));
         return mappings;
     }
 
-    private static XContentBuilder buildMetadataMapping() throws IOException {
-        final XContentBuilder b = XContentFactory.jsonBuilder();
+    private Map<String, Object> loadJsonResource(String string) throws IOException {
+        final String fullPath = getClass().getPackage().getName() + "/" + string;
 
-        // @formatter:off
-        b.startObject();
-          b.startObject(ElasticsearchUtils.TYPE_METADATA);
-            b.startObject("properties");
-              b.startObject(ElasticsearchUtils.SERIES_KEY);
-                b.field("type", "string");
-                b.field("index", "not_analyzed");
-                b.field("doc_values", true);
-              b.endObject();
+        try (final InputStream input = getClass().getClassLoader().getResourceAsStream(fullPath)) {
+            if (input == null)
+                return ImmutableMap.of();
 
-              b.startObject(ElasticsearchUtils.SERIES_TAGS);
-                b.field("type", "nested");
-                b.startObject("properties");
-                  b.startObject(ElasticsearchUtils.TAGS_KEY);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-
-                  b.startObject(ElasticsearchUtils.TAGS_VALUE);
-                    b.field("type", "string");
-                    b.startObject("fields");
-                      b.startObject("raw");
-                        b.field("type", "string");
-                        b.field("index", "not_analyzed");
-                        b.field("doc_values", true);
-                      b.endObject();
-                    b.endObject();
-                  b.endObject();
-                b.endObject();
-              b.endObject();
-            b.endObject();
-          b.endObject();
-        b.endObject();
-        // @formatter:on
-
-        return b;
+            return JsonXContent.jsonXContent.createParser(input).map();
+        }
     }
 
     @Override

@@ -35,7 +35,6 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.model.NodeMetadata;
@@ -51,23 +50,14 @@ public class KeySuggest {
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
     public static final List<Suggestion> EMPTY_SUGGESTIONS = new ArrayList<>();
 
-    public static final KeySuggest EMPTY = new KeySuggest(EMPTY_ERRORS, EMPTY_SUGGESTIONS);
-
-    private static Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
-        @Override
-        public int compare(Suggestion a, Suggestion b) {
-            return Float.compare(a.score, b.score);
-        }
-    };
-
     private final List<RequestError> errors;
     private final List<Suggestion> suggestions;
 
     @JsonCreator
     public KeySuggest(@JsonProperty("errors") List<RequestError> errors,
             @JsonProperty("suggestions") List<Suggestion> suggestions) {
-        this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.suggestions = suggestions;
+        this.errors = checkNotNull(errors, "errors");
+        this.suggestions = checkNotNull(suggestions, "suggestions");
     }
 
     public KeySuggest(List<Suggestion> suggestions) {
@@ -97,10 +87,22 @@ public class KeySuggest {
                     }
                 }
 
-                final List<Suggestion> result = new ArrayList<>(suggestions.values());
-                Collections.sort(result, COMPARATOR);
+                final List<Suggestion> list = new ArrayList<>(suggestions.values());
+                Collections.sort(list, Suggestion.COMPARATOR);
 
-                return new KeySuggest(errors, result.subList(0, Math.min(limit, result.size())));
+                return new KeySuggest(errors, list.subList(0, Math.min(list.size(), limit)));
+            }
+        };
+    }
+
+    public static Transform<Throwable, ? extends KeySuggest> nodeError(final NodeRegistryEntry node) {
+        return new Transform<Throwable, KeySuggest>() {
+            @Override
+            public KeySuggest transform(Throwable e) throws Exception {
+                final NodeMetadata m = node.getMetadata();
+                final ClusterNode c = node.getClusterNode();
+                return new KeySuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
+                        m.getTags(), e)), EMPTY_SUGGESTIONS);
             }
         };
     }
@@ -115,16 +117,29 @@ public class KeySuggest {
             this.score = checkNotNull(score, "score must not be null");
             this.key = checkNotNull(key, "value must not be null");
         }
-    }
 
-    public static Transform<Throwable, ? extends KeySuggest> nodeError(final NodeRegistryEntry node) {
-        return new Transform<Throwable, KeySuggest>() {
+        private static Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
             @Override
-            public KeySuggest transform(Throwable e) throws Exception {
-                final NodeMetadata m = node.getMetadata();
-                final ClusterNode c = node.getClusterNode();
-                return new KeySuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_SUGGESTIONS);
+            public int compare(Suggestion a, Suggestion b) {
+                final int score = Float.compare(b.score, a.score);
+
+                if (score != 0)
+                    return score;
+
+                return compareKey(a, b);
+            }
+
+            private int compareKey(Suggestion a, Suggestion b) {
+                if (a.key == null && b.key == null)
+                    return 0;
+
+                if (a.key == null)
+                    return 1;
+
+                if (b.key == null)
+                    return -1;
+
+                return a.key.compareTo(b.key);
             }
         };
     }

@@ -47,7 +47,7 @@ import org.elasticsearch.common.collect.ImmutableOpenMap;
 import org.elasticsearch.common.compress.CompressedString;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -73,7 +73,7 @@ public class ManagedConnectionFactory {
     public static final int DEFAULT_FLUSH_INTERVAL = 1000;
     public static final int DEFAULT_BULK_ACTIONS = 1000;
     public static final List<String> DEFAULT_SEEDS = ImmutableList.of("localhost");
-    public static final Map<String, XContentBuilder> EMPTY_MAPPINGS = ImmutableMap.of();
+    public static final Map<String, Object> DEFAULT_SETTINGS = ImmutableMap.of();
 
     @Inject
     private LocalMetadataBackendReporter reporter;
@@ -137,11 +137,16 @@ public class ManagedConnectionFactory {
             }
         };
     }
+    
+    public Managed<Connection> construct(final String defaultTemplateName,
+            final Map<String, Map<String, Object>> suggestedMappings) {
+        return construct(defaultTemplateName, suggestedMappings, DEFAULT_SETTINGS);
+    }
 
     public Managed<Connection> construct(final String defaultTemplateName,
-            final Map<String, XContentBuilder> suggestedMappings) {
+            final Map<String, Map<String, Object>> suggestedMappings, final Map<String, Object> settings) {
         final String templateName = Optional.fromNullable(this.templateName).or(defaultTemplateName);
-        final Map<String, XContentBuilder> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
+        final Map<String, Map<String, Object>> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
 
         return async.managed(new ManagedSetup<Connection>() {
             @Override
@@ -151,7 +156,7 @@ public class ManagedConnectionFactory {
                     public Connection call() throws Exception {
                         final Client client = clientSetup.setup();
 
-                        configureMapping(client, templateName, mappings);
+                        configureMapping(client, templateName, mappings, settings);
 
                         final BulkProcessor bulk = configureBulkProcessor(client);
 
@@ -179,20 +184,23 @@ public class ManagedConnectionFactory {
         });
     }
 
-    private void configureMapping(Client client, String templateName, Map<String, XContentBuilder> mappings)
+    private void configureMapping(Client client, String templateName, Map<String, Map<String, Object>> mappings,
+            Map<String, Object> settings)
             throws Exception {
         final IndicesAdminClient indices = client.admin().indices();
 
-        if (isTemplateUpToDate(indices, templateName, mappings))
+        if (isTemplateUpToDate(indices, templateName, mappings, settings))
             return;
 
-        createTemplate(indices, templateName, mappings);
+        createTemplate(indices, templateName, mappings, settings);
     }
 
     private boolean isTemplateUpToDate(IndicesAdminClient indices, String templateName,
-            Map<String, XContentBuilder> mappings) throws Exception {
+            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
         final GetIndexTemplatesResponse response = indices.getTemplates(
                 indices.prepareGetTemplates(templateName).request()).get(30, TimeUnit.SECONDS);
+
+        System.out.println("settings: " + response.getFromContext("settings"));
 
         for (final IndexTemplateMetaData t : response.getIndexTemplates())
             if (t.getName().equals(templateName))
@@ -202,7 +210,7 @@ public class ManagedConnectionFactory {
     }
 
     private boolean compareTemplate(final IndexTemplateMetaData t, String templateName,
-            Map<String, XContentBuilder> mappings) throws IOException {
+            Map<String, Map<String, Object>> mappings) throws IOException {
         if (t.getTemplate() == null)
             return false;
 
@@ -214,15 +222,15 @@ public class ManagedConnectionFactory {
         if (externalMappings == null || externalMappings.isEmpty())
             return false;
 
-        for (final Map.Entry<String, XContentBuilder> mapping : mappings.entrySet()) {
+        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
             final CompressedString external = externalMappings.get(mapping.getKey());
 
             if (external == null)
                 return false;
 
-            // This is a fairly dirty way, but ES seems to preserve the original document in verbatim, so it works for
-            // now.
-            if (!mapping.getValue().string().equals(external.string()))
+            final Map<String, Object> e = JsonXContent.jsonXContent.createParser(external.string()).map();
+
+            if (!mapping.equals(e))
                 return false;
         }
 
@@ -230,12 +238,13 @@ public class ManagedConnectionFactory {
     }
 
     private void createTemplate(final IndicesAdminClient indices, String templateName,
-            Map<String, XContentBuilder> mappings) throws Exception {
+            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
         final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
 
+        put.setSettings(settings);
         put.setTemplate(index.template());
 
-        for (final Map.Entry<String, XContentBuilder> mapping : mappings.entrySet()) {
+        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
             put.addMapping(mapping.getKey(), mapping.getValue());
         }
 

@@ -38,6 +38,8 @@ import lombok.ToString;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
@@ -68,7 +70,6 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.RateLimitExceededException;
@@ -96,6 +97,8 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.Transform;
 
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
@@ -108,9 +111,6 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
 
     @Inject
     private Managed<Connection> connection;
-
-    @Inject
-    private ReadWriteThreadPools pools;
 
     @Inject
     private LocalMetadataBackendReporter reporter;
@@ -193,11 +193,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     terms.subAggregation(cardinality);
                 }
 
-                return async.call(new Callable<TagValuesSuggest>() {
+                return bind(request.execute(), new Transform<SearchResponse, TagValuesSuggest>() {
                     @Override
-                    public TagValuesSuggest call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
+                    public TagValuesSuggest transform(SearchResponse response) throws Exception {
                         final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
 
                         final Terms terms = (Terms) response.getAggregations().get("keys");
@@ -227,7 +225,7 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                         return new TagValuesSuggest(new ArrayList<>(suggestions), suggestionBuckets.size() > filter
                                 .getLimit());
                     }
-                }, pools.read());
+                });
             }
         });
     }
@@ -261,11 +259,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     request.addAggregation(terms);
                 }
 
-                return async.call(new Callable<TagValueSuggest>() {
+                return bind(request.execute(), new Transform<SearchResponse, TagValueSuggest>() {
                     @Override
-                    public TagValueSuggest call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
+                    public TagValueSuggest transform(SearchResponse response) throws Exception {
                         final List<String> suggestions = new ArrayList<>();
 
                         final Terms terms = (Terms) response.getAggregations().get("values");
@@ -279,8 +275,7 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
 
                         return new TagValueSuggest(new ArrayList<>(suggestions), limited);
                     }
-
-                }, pools.read());
+                });
             }
         });
     }
@@ -313,11 +308,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     terms.subAggregation(cardinality);
                 }
 
-                return async.call(new Callable<TagKeyCount>() {
+                return bind(request.execute(), new Transform<SearchResponse, TagKeyCount>() {
                     @Override
-                    public TagKeyCount call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
+                    public TagKeyCount transform(SearchResponse response) throws Exception {
                         final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
 
                         final Terms terms = (Terms) response.getAggregations().get("keys");
@@ -327,10 +320,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                             suggestions.add(new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
                         }
 
-                        return new TagKeyCount(new ArrayList<>(suggestions));
+                        return new TagKeyCount(new ArrayList<>(suggestions), false);
                     }
-
-                }, pools.read());
+                });
             }
         });
     }
@@ -387,11 +379,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     request.addAggregation(kvs);
                 }
 
-                return async.call(new Callable<TagSuggest>() {
+                return bind(request.execute(), new Transform<SearchResponse, TagSuggest>() {
                     @Override
-                    public TagSuggest call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
+                    public TagSuggest transform(SearchResponse response) throws Exception {
                         final Set<Suggestion> suggestions = new LinkedHashSet<>();
 
                         final StringTerms kvs = (StringTerms) response.getAggregations().get("kvs");
@@ -409,8 +399,7 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
 
                         return new TagSuggest(new ArrayList<>(suggestions));
                     }
-
-                }, pools.read());
+                });
             }
         });
     }
@@ -459,11 +448,9 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
                     request.addAggregation(keys);
                 }
 
-                return async.call(new Callable<KeySuggest>() {
+                return bind(request.execute(), new Transform<SearchResponse, KeySuggest>() {
                     @Override
-                    public KeySuggest call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
+                    public KeySuggest transform(SearchResponse response) throws Exception {
                         final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                         final StringTerms keys = (StringTerms) response.getAggregations().get("keys");
@@ -476,7 +463,7 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
 
                         return new KeySuggest(new ArrayList<>(suggestions));
                     }
-                }, pools.read());
+                });
             }
         });
     }
@@ -619,6 +606,33 @@ public class ElasticsearchSuggestBackend implements SuggestBackend, LifeCycle, G
 
             return async.resolved(WriteResult.of(times));
         }
+    }
+
+    private <S, T> AsyncFuture<T> bind(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+        final ResolvableFuture<T> future = async.future();
+
+        actionFuture.addListener(new ActionListener<S>() {
+            @Override
+            public void onResponse(S response) {
+                final T result;
+
+                try {
+                    result = transform.transform(response);
+                } catch (Exception e) {
+                    future.fail(e);
+                    return;
+                }
+
+                future.resolve(result);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                future.fail(e);
+            }
+        });
+
+        return future;
     }
 
     private QueryBuilder match(String field, String value, MatchOptions options) throws IOException {

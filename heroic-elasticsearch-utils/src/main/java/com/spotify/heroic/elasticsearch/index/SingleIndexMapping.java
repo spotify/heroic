@@ -52,7 +52,7 @@ public class SingleIndexMapping implements IndexMapping {
 
     @Override
     public String template() {
-        return "*";
+        return index;
     }
 
     @Override
