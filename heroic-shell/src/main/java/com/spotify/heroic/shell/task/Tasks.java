@@ -81,6 +81,7 @@ public final class Tasks {
         final List<String> seeds = Arrays.asList(StringUtils.split(params.getSeeds(), ','));
 
         final String clusterName = params.getClusterName();
+        final String backendType = params.getBackendType();
 
         builder.profile(new HeroicProfile() {
             @Override
@@ -111,6 +112,7 @@ public final class Tasks {
                                     ElasticsearchSuggestModule.builder()
                                     .connection(setupConnection(clientSetup, "suggest"))
                                     .writesPerSecond(0d)
+                                    .backendType(backendType)
                                     .build()
                                 )
                             )
@@ -149,5 +151,7 @@ public final class Tasks {
         public String getSeeds();
 
         public String getClusterName();
+
+        public String getBackendType();
     }
 }
