@@ -48,7 +48,7 @@ import com.spotify.heroic.suggest.model.TagSuggest;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Fetch series matching the given query")
+@ShellTaskUsage("Get tag suggestions")
 public class SuggestTag extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
         CoreBridge.standalone(argv, SuggestTag.class);

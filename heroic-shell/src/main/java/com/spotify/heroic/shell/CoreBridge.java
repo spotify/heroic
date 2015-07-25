@@ -32,6 +32,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -66,8 +67,8 @@ public class CoreBridge {
         state.start().get();
     }
 
-    public void stop() throws Exception {
-        state.stop().get();
+    public void stop(long value, TimeUnit unit) throws Exception {
+        state.stop().get(value, unit);
     }
 
     public ShellTask setup(Class<? extends ShellTask> taskType) throws Exception {

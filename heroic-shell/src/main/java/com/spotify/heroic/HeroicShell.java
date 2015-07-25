@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -97,22 +98,22 @@ public class HeroicShell {
         private boolean help;
     }
 
-    private static final Map<String, Class<? extends ShellTask>> tasks = new HashMap<>();
+    private static final Map<String, Class<? extends ShellTask>> available = new HashMap<>();
 
     static {
-        tasks.put("get", ConfigGet.class);
-        tasks.put("keys", Keys.class);
-        tasks.put("backends", ListBackends.class);
-        tasks.put("fetch", Fetch.class);
-        tasks.put("write-performance", WritePerformance.class);
-        tasks.put("metadata-delete", MetadataDelete.class);
-        tasks.put("metadata-fetch", MetadataFetch.class);
-        tasks.put("metadata-tags", MetadataTags.class);
-        tasks.put("metadata-count", MetadataCount.class);
-        tasks.put("metadata-entries", MetadataEntries.class);
-        tasks.put("metadata-migrate", MetadataMigrate.class);
-        tasks.put("metadata-migrate-suggestions", MetadataMigrateSuggestions.class);
-        tasks.put("suggest-tag", SuggestTag.class);
+        available.put("get", ConfigGet.class);
+        available.put("keys", Keys.class);
+        available.put("backends", ListBackends.class);
+        available.put("fetch", Fetch.class);
+        available.put("write-performance", WritePerformance.class);
+        available.put("metadata-delete", MetadataDelete.class);
+        available.put("metadata-fetch", MetadataFetch.class);
+        available.put("metadata-tags", MetadataTags.class);
+        available.put("metadata-count", MetadataCount.class);
+        available.put("metadata-entries", MetadataEntries.class);
+        available.put("metadata-migrate", MetadataMigrate.class);
+        available.put("metadata-migrate-suggestions", MetadataMigrateSuggestions.class);
+        available.put("suggest-tag", SuggestTag.class);
     }
 
     public static void main(String[] args) throws IOException {
@@ -164,9 +165,45 @@ public class HeroicShell {
             return;
         }
 
-        // log.info("Disabling logging");
-        // disableLogging();
+        final HeroicShell shell = new HeroicShell(runner, tasks);
 
+        try {
+            shell.run();
+        } catch (Exception e) {
+            log.error("Exception caught while running shell", e);
+        }
+
+        try {
+            runner.stop(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Failed to stop runner in a timely fashion", e);
+        }
+
+        System.exit(0);
+    }
+
+    private static Map<String, ShellTask> buildTasks(CoreBridge runner) throws Exception {
+        final Map<String, ShellTask> tasks = new HashMap<>();
+
+        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.available.entrySet()) {
+            tasks.put(e.getKey(), runner.setup(e.getValue()));
+        }
+
+        return tasks;
+    }
+
+    private final CoreBridge runner;
+    private final Map<String, ShellTask> tasks;
+
+    // mutable state, a.k.a. settings
+    int currentTimeout = 10;
+
+    public HeroicShell(CoreBridge runner, Map<String, ShellTask> tasks) {
+        this.runner = runner;
+        this.tasks = tasks;
+    }
+
+    private void run() throws IOException {
         try (final FileInputStream input = new FileInputStream(FileDescriptor.in)) {
             final ConsoleReader reader = new ConsoleReader("heroicsh", input, System.out, null);
 
@@ -181,25 +218,20 @@ public class HeroicShell {
                 history = null;
             }
 
-            final ArrayList<String> commands = new ArrayList<>(tasks.keySet());
+            final ArrayList<String> commands = new ArrayList<>(available.keySet());
 
             commands.add("exit");
             commands.add("clear");
             commands.add("help");
+            commands.add("timeout");
 
             reader.addCompleter(new StringsCompleter(commands));
             reader.setHandleUserInterrupt(true);
 
             try {
-                doReaderLoop(tasks, reader, runner);
+                doReaderLoop(reader);
             } catch (Exception e) {
                 log.error("Error in reader loop", e);
-            }
-
-            try {
-                runner.stop();
-            } catch (Exception e) {
-                log.error("Failed to stop runner", e);
             }
 
             if (history != null)
@@ -207,8 +239,187 @@ public class HeroicShell {
 
             reader.shutdown();
         }
+    }
 
-        System.exit(0);
+    private void doReaderLoop(final ConsoleReader reader)
+            throws Exception {
+        final PrintWriter out = new PrintWriter(reader.getOutput());
+
+        while (true) {
+            reader.setPrompt(String.format("heroic(%s)> ", runner.status()));
+
+            final String line;
+
+            try {
+                line = reader.readLine();
+            } catch (UserInterruptException e) {
+                out.println("Interrupted");
+                break;
+            }
+
+            if (line == null)
+                break;
+
+            final String[] parts = QuoteParser.parse(line);
+
+            if ("exit".equals(parts[0]))
+                break;
+
+            if ("clear".equals(parts[0])) {
+                reader.clearScreen();
+                continue;
+            }
+
+            if ("help".equals(parts[0])) {
+                printHelp(tasks, out);
+                continue;
+            }
+
+            if ("timeout".equals(parts[0])) {
+                internalTimeoutTask(parts, out);
+                continue;
+            }
+
+            final long start = System.nanoTime();
+            runTask(reader, parts, out);
+            final long diff = System.nanoTime() - start;
+
+            out.println(String.format("time: %s", formatTime(diff)));
+        }
+
+        out.println();
+        out.println("Exiting...");
+    }
+
+    private void internalTimeoutTask(String[] parts, PrintWriter out) {
+        if (parts.length < 2) {
+            if (currentTimeout == 0) {
+                out.println("timeout disabled");
+            } else {
+                out.println(String.format("timeout = %d", currentTimeout));
+            }
+
+            return;
+        }
+
+        final int timeout;
+
+        try {
+            timeout = Integer.parseInt(parts[1]);
+        } catch (Exception e) {
+            out.println(String.format("not a valid integer value: %s", parts[1]));
+            return;
+        }
+
+        if (timeout <= 0) {
+            out.println("Timeout disabled");
+            currentTimeout = 0;
+        } else {
+            out.println(String.format("Timeout updated to %d seconds", timeout));
+            currentTimeout = timeout;
+        }
+    }
+
+    private String formatTime(long diff) {
+        if (diff < 1000) {
+            return String.format("%d ns", diff);
+        }
+
+        if (diff < 1000000) {
+            final double v = ((double) diff) / 1000;
+            return String.format("%.3f us", v);
+        }
+
+        if (diff < 1000000000) {
+            final double v = ((double) diff) / 1000000;
+            return String.format("%.3f ms", v);
+        }
+
+        final double v = ((double) diff) / 1000000000;
+        return String.format("%.3f s", v);
+    }
+
+    private void printHelp(final Map<String, ShellTask> tasks, final PrintWriter out) {
+        out.println("Known Commands:");
+        out.println("help - Display this help");
+        out.println("exit - Exit the shell");
+        out.println("clear - Clear the shell");
+        out.println("timeout - Manipulate and get timeout settings");
+
+        for (final Map.Entry<String, ShellTask> e : tasks.entrySet()) {
+            final ShellTaskUsage usage = e.getValue().getClass().getAnnotation(ShellTaskUsage.class);
+
+            final String help;
+
+            if (usage == null) {
+                help = "";
+            } else {
+                help = usage.value();
+            }
+
+            out.println(String.format("%s - %s", e.getKey(), help));
+        }
+    }
+
+    private void runTask(final ConsoleReader reader, String[] parts, final PrintWriter out) throws Exception,
+            IOException {
+        // TODO: improve this with proper quote parsing and such.
+        final String taskName = parts[0];
+        final String[] commandArgs = args(parts);
+
+        final ShellTask task = tasks.get(taskName);
+
+        if (task == null) {
+            out.println("No such task '" + taskName + "'");
+            return;
+        }
+
+        final AsyncFuture<Void> t;
+
+        try {
+            t = runner.run(task, commandArgs, out);
+        } catch (Exception e) {
+            out.println("Command failed");
+            e.printStackTrace(out);
+            return;
+        }
+
+        if (t == null)
+            return;
+
+        try {
+            waitForTermination(t);
+        } catch (TimeoutException e) {
+            out.println(String.format("Command timed out (current timeout = %ds)", currentTimeout));
+            t.cancel(true);
+        } catch (Exception e) {
+            out.println("Command failed");
+            e.printStackTrace(out);
+            return;
+        }
+
+        out.flush();
+        return;
+    }
+
+    private Void waitForTermination(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException,
+            TimeoutException {
+        if (currentTimeout > 0)
+            return t.get(currentTimeout, TimeUnit.SECONDS);
+
+        return t.get();
+    }
+
+    private String[] args(String[] parts) {
+        if (parts.length <= 1)
+            return new String[0];
+
+        final String[] args = new String[parts.length - 1];
+
+        for (int i = 1; i < parts.length; i++)
+            args[i - 1] = parts[i];
+
+        return args;
     }
 
     private static Managed<CoreBridge.State> setupState(final AsyncFramework async, final HeroicCore.Builder builder) {
@@ -311,128 +522,5 @@ public class HeroicShell {
                 });
             }
         });
-    }
-
-    private static Map<String, ShellTask> buildTasks(CoreBridge runner) throws Exception {
-        final Map<String, ShellTask> tasks = new HashMap<>();
-
-        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.tasks.entrySet()) {
-            tasks.put(e.getKey(), runner.setup(e.getValue()));
-        }
-
-        return tasks;
-    }
-
-    private static void doReaderLoop(final Map<String, ShellTask> tasks, final ConsoleReader reader, final CoreBridge runner)
-            throws Exception {
-        final PrintWriter out = new PrintWriter(reader.getOutput());
-
-        while (true) {
-            reader.setPrompt(String.format("heroic(%s)> ", runner.status()));
-
-            final String line;
-
-            try {
-                line = reader.readLine();
-            } catch (UserInterruptException e) {
-                out.println("Interrupted");
-                break;
-            }
-
-            if (!parseLine(tasks, reader, runner, line, out))
-                break;
-        }
-    }
-
-    private static boolean parseLine(final Map<String, ShellTask> tasks, final ConsoleReader reader,
-            final CoreBridge runner, String line, final PrintWriter out) throws Exception, IOException {
-        if (line == null)
-            return false;
-
-        final String[] parts = QuoteParser.parse(line);
-
-        if (parts.length == 0)
-            return true;
-
-        if ("exit".equals(parts[0]))
-            return false;
-
-        if ("clear".equals(parts[0])) {
-            reader.clearScreen();
-            return true;
-        }
-
-        if ("help".equals(parts[0])) {
-            out.println("Known Commands:");
-            out.println("help - Display this help");
-            out.println("exit - Exit the shell");
-            out.println("clear - Clear the shell");
-
-            for (final Map.Entry<String, ShellTask> e : tasks.entrySet()) {
-                final ShellTaskUsage usage = e.getValue().getClass().getAnnotation(ShellTaskUsage.class);
-
-                final String help;
-
-                if (usage == null) {
-                    help = "";
-                } else {
-                    help = usage.value();
-                }
-
-                out.println(String.format("%s - %s", e.getKey(), help));
-            }
-
-            return true;
-        }
-
-        // TODO: improve this with proper quote parsing and such.
-        final String taskName = parts[0];
-        final String[] commandArgs = args(parts);
-
-        final ShellTask task = tasks.get(taskName);
-
-        if (task == null) {
-            out.println("No such task '" + taskName + "'");
-            return true;
-        }
-
-        final AsyncFuture<Void> t;
-
-        try {
-            t = runner.run(task, commandArgs, out);
-        } catch (Exception e) {
-            out.println("Command failed");
-            e.printStackTrace(out);
-            return true;
-        }
-
-        if (t == null)
-            return true;
-
-        try {
-            t.get(10, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            out.println("Command timed out");
-            t.cancel(true);
-        } catch (Exception e) {
-            out.println("Command failed");
-            e.printStackTrace(out);
-            return true;
-        }
-
-        out.flush();
-        return true;
-    }
-
-    private static String[] args(String[] parts) {
-        if (parts.length <= 1)
-            return new String[0];
-
-        final String[] args = new String[parts.length - 1];
-
-        for (int i = 1; i < parts.length; i++)
-            args[i - 1] = parts[i];
-
-        return args;
     }
 }
