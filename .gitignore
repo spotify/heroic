@@ -9,3 +9,7 @@ target
 .project
 .settings
 bin
+/*.json
+/*.png
+/*.log
+/*.gz
