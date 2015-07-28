@@ -71,6 +71,7 @@ import com.spotify.heroic.shell.task.MetadataCount;
 import com.spotify.heroic.shell.task.MetadataDelete;
 import com.spotify.heroic.shell.task.MetadataEntries;
 import com.spotify.heroic.shell.task.MetadataFetch;
+import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
@@ -118,6 +119,7 @@ public class HeroicShell {
         available.put("metadata-entries", MetadataEntries.class);
         available.put("metadata-migrate", MetadataMigrate.class);
         available.put("metadata-migrate-suggestions", MetadataMigrateSuggestions.class);
+        available.put("metadata-load", MetadataLoad.class);
         available.put("suggest-tag", SuggestTag.class);
         available.put("suggest-key", SuggestKey.class);
         available.put("suggest-tag-value", SuggestTagValue.class);
