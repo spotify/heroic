@@ -1,0 +1,32 @@
+{
+  "analysis": {
+    "analyzer": {
+      "bag_analyzer": {
+        "type": "custom",
+        "tokenizer": "keyword",
+        "filter": ["heroic_tag_word", "lowercase", "heroic_bag_edge_ngram", "unique"]
+      },
+      "prefix_analyzer": {
+        "type": "custom",
+        "tokenizer": "keyword",
+        "filter": ["lowercase", "heroic_prefix_edge_ngram"]
+      }
+    },
+    "filter": {
+      "heroic_tag_word": {
+        "type": "word_delimiter",
+        "split_on_numerics": false
+      },
+      "heroic_bag_edge_ngram": {
+        "type": "edgeNGram",
+        "max_gram": "10",
+        "min_gram": "2"
+      },
+      "heroic_prefix_edge_ngram": {
+        "type": "edgeNGram",
+        "max_gram": "20",
+        "min_gram": "2"
+      }
+    }
+  }
+}

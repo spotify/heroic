@@ -262,6 +262,31 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
     static {
         backendTypeBuilders.put("default", defaultSetup);
+
+        backendTypeBuilders.put("kv", new BackendTypeBuilder() {
+            @Override
+            public BackendType setup(final ElasticsearchSuggestModule module) {
+                return new BackendType() {
+                    @Override
+                    public Map<String, Map<String, Object>> mappings() throws IOException {
+                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                        mappings.put("tag", loadJsonResource("kv/tag.json"));
+                        mappings.put("series", loadJsonResource("kv/series.json"));
+                        return mappings;
+                    }
+
+                    @Override
+                    public Map<String, Object> settings() throws IOException {
+                        return loadJsonResource("kv/settings.json");
+                    }
+
+                    @Override
+                    public SuggestBackend instance() {
+                        return new ElasticsearchSuggestKVBackend(module.groups);
+                    }
+                };
+            }
+        });
     }
 
     static interface BackendType {
