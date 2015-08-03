@@ -21,11 +21,18 @@
 
 package com.spotify.heroic.shell.task;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
+import org.joda.time.Chronology;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeParser;
+import org.joda.time.format.DateTimeParserBucket;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfig;
@@ -137,6 +144,83 @@ public final class Tasks {
                 return "load metadata form a file";
             }
         });
+    }
+
+    private static final List<DateTimeParser> today = new ArrayList<>();
+    private static final List<DateTimeParser> full = new ArrayList<>();
+
+    static {
+        today.add(DateTimeFormat.forPattern("HH:mm").getParser());
+        today.add(DateTimeFormat.forPattern("HH:mm:ss").getParser());
+        today.add(DateTimeFormat.forPattern("HH:mm:ss.SSS").getParser());
+        full.add(DateTimeFormat.forPattern("yyyy-MM-dd/HH:mm").getParser());
+        full.add(DateTimeFormat.forPattern("yyyy-MM-dd/HH:mm:ss").getParser());
+        full.add(DateTimeFormat.forPattern("yyyy-MM-dd/HH:mm:ss.SSS").getParser());
+    }
+
+    public static long parseInstant(String input, long now) {
+        if (input.charAt(0) == '+') {
+            return now + Long.parseLong(input.substring(1));
+        }
+
+        if (input.charAt(0) == '-') {
+            return now - Long.parseLong(input.substring(1));
+        }
+
+        // try to parse just milliseconds
+        try {
+            return Long.valueOf(input);
+        } catch (IllegalArgumentException e) {
+            // pass-through
+        }
+
+        final Chronology chrono = ISOChronology.getInstance();
+
+        if (input.indexOf('/') >= 0) {
+            return parseFullInstant(input, chrono);
+        }
+
+        return parseTodayInstant(input, chrono, now);
+    }
+
+    private static long parseTodayInstant(String input, final Chronology chrono, long now) {
+        final DateTime n = new DateTime(now, chrono);
+
+        for (final DateTimeParser p : today) {
+            final DateTimeParserBucket bucket = new DateTimeParserBucket(0, chrono, null, null);
+
+            bucket.saveField(chrono.year(), n.year().get());
+            bucket.saveField(chrono.monthOfYear(), n.monthOfYear().get());
+            bucket.saveField(chrono.dayOfYear(), n.dayOfYear().get());
+
+            try {
+                p.parseInto(bucket, input, 0);
+            } catch (IllegalArgumentException e) {
+                // pass-through
+                continue;
+            }
+
+            return bucket.computeMillis();
+        }
+
+        throw new IllegalArgumentException(input + " is not a valid instant");
+    }
+
+    private static long parseFullInstant(String input, final Chronology chrono) {
+        for (final DateTimeParser p : full) {
+            final DateTimeParserBucket bucket = new DateTimeParserBucket(0, chrono, null, null);
+
+            try {
+                p.parseInto(bucket, input, 0);
+            } catch (IllegalArgumentException e) {
+                // pass-through
+                continue;
+            }
+
+            return bucket.computeMillis();
+        }
+
+        throw new IllegalArgumentException(input + " is not a valid instant");
     }
 
     public static interface QueryParams {

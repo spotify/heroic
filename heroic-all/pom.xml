@@ -37,6 +37,10 @@
       <groupId>com.spotify.heroic.metric</groupId>
       <artifactId>heroic-metric-generated</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.metric</groupId>
+      <artifactId>heroic-metric-bigtable</artifactId>
+    </dependency>
 
     <!-- metadata backends -->
     <dependency>

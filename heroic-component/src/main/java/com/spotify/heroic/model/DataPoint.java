@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.model;
 
+import java.util.Comparator;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -43,5 +45,16 @@ public class DataPoint implements TimeData {
     @Override
     public boolean valid() {
         return !Double.isNaN(value);
+    }
+
+    static final Comparator<DataPoint> comparator = new Comparator<DataPoint>() {
+        @Override
+        public int compare(DataPoint a, DataPoint b) {
+            return Long.compare(a.timestamp, b.timestamp);
+        }
+    };
+
+    public static Comparator<DataPoint> comparator() {
+        return comparator;
     }
 }

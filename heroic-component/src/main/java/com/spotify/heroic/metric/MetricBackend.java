@@ -39,6 +39,15 @@ import eu.toolchain.async.AsyncFuture;
 
 public interface MetricBackend extends Initializing, Grouped {
     /**
+     * Configure the metric backend.
+     *
+     * This will assert that all required tables exists and are configured correctly for the given backend.
+     *
+     * @return A future that will be resolved when the configuration is successfully completed.
+     */
+    public AsyncFuture<Void> configure();
+
+    /**
      * Execute a single write.
      *
      * @param write

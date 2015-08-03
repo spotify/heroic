@@ -108,6 +108,11 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
     }
 
     @Override
+    public AsyncFuture<Void> configure() {
+        return async.resolved();
+    }
+
+    @Override
     public AsyncFuture<WriteResult> write(WriteMetric write) {
         return write(ImmutableList.of(write));
     }

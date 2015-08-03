@@ -49,6 +49,16 @@ public class LocalMetadataManager implements MetadataManager {
     private LocalMetadataManagerReporter reporter;
 
     @Override
+    public List<MetadataBackend> allMembers() {
+        return backends.allMembers();
+    }
+
+    @Override
+    public List<MetadataBackend> use(String group) throws BackendGroupException {
+        return backends.use(group).getMembers();
+    }
+
+    @Override
     public List<GroupMember<MetadataBackend>> getBackends() {
         return backends.all();
     }

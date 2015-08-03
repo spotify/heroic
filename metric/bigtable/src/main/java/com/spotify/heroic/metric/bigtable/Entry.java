@@ -19,16 +19,19 @@
  * under the License.
  */
 
-package com.spotify.heroic.utils;
+package com.spotify.heroic.metric.bigtable;
 
-import java.util.Set;
+import javax.inject.Inject;
 
-import lombok.Data;
+import com.spotify.heroic.HeroicConfigurationContext;
+import com.spotify.heroic.HeroicModule;
 
-@Data
-public class GroupMember<T> {
-    private final String group;
-    private final T member;
-    private final Set<String> groups;
-    private final boolean defaultMember;
+public class Entry implements HeroicModule {
+    @Inject
+    private HeroicConfigurationContext config;
+
+    @Override
+    public void setup() {
+        config.registerType("bigtable", BigtableMetricModule.class);
+    }
 }

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.model;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.util.Map;
 
 import lombok.Getter;
@@ -30,11 +28,13 @@ import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 @ToString(of = { "key", "tags" })
 public class Series {
-    public static final Series EMPTY = new Series(null, ImmutableMap.<String, String> of());
+    public static final Map<String, String> EMPTY_TAGS = ImmutableMap.<String, String> of();
+    public static final Series EMPTY = new Series(null, EMPTY_TAGS);
 
     @Getter
     private final String key;
@@ -46,7 +46,7 @@ public class Series {
     @JsonCreator
     public Series(@JsonProperty("key") String key, @JsonProperty("tags") Map<String, String> tags) {
         this.key = key;
-        this.tags = checkNotNull(tags, "tags must not be null");
+        this.tags = Optional.fromNullable(tags).or(EMPTY_TAGS);
         this.hashCode = generateHashCode();
     }
 

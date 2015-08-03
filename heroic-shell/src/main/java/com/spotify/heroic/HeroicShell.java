@@ -64,6 +64,7 @@ import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.task.ConfigGet;
+import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.Fetch;
 import com.spotify.heroic.shell.task.Keys;
 import com.spotify.heroic.shell.task.ListBackends;
@@ -82,6 +83,7 @@ import com.spotify.heroic.shell.task.SuggestTagKeyCount;
 import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.WritePerformance;
+import com.spotify.heroic.shell.task.WritePoints;
 import com.spotify.heroic.utils.GroupMember;
 
 import eu.toolchain.async.AsyncFramework;
@@ -107,10 +109,12 @@ public class HeroicShell {
     private static final Map<String, Class<? extends ShellTask>> available = new HashMap<>();
 
     static {
+        available.put("configure", Configure.class);
         available.put("get", ConfigGet.class);
         available.put("keys", Keys.class);
         available.put("backends", ListBackends.class);
         available.put("fetch", Fetch.class);
+        available.put("write-points", WritePoints.class);
         available.put("write-performance", WritePerformance.class);
         available.put("metadata-delete", MetadataDelete.class);
         available.put("metadata-fetch", MetadataFetch.class);

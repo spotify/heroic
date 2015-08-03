@@ -24,6 +24,7 @@ package com.spotify.heroic.utils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,8 +42,13 @@ import com.spotify.heroic.exceptions.BackendGroupException;
  */
 @Data
 public class BackendGroups<T extends Initializing & Grouped> {
+    private final List<T> allMembers;
     private final Map<String, List<T>> groups;
     private final List<T> defaults;
+
+    public List<T> allMembers() {
+        return allMembers;
+    }
 
     /**
      * Use default groups and guarantee that at least one is available.
@@ -74,7 +80,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
         for (final Map.Entry<String, List<T>> entry : groups.entrySet()) {
             for (final T e : entry.getValue()) {
-                result.add(new GroupMember<>(e, e.getGroups(), defaults.contains(e)));
+                result.add(new GroupMember<>(entry.getKey(), e, e.getGroups(), defaults.contains(e)));
             }
         }
 
@@ -148,9 +154,9 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return groups;
     }
 
-    private static <T extends Grouped> List<T> buildDefaults(final Map<String, List<T>> backends,
+    private static <T extends Grouped> Set<T> buildDefaults(final Map<String, List<T>> backends,
             Collection<String> defaultBackends) {
-        final List<T> defaults = new ArrayList<>();
+        final Set<T> defaults = new HashSet<>();
 
         // add all as defaults.
         if (defaultBackends == null) {
@@ -174,8 +180,8 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
     public static <T extends Grouped & Initializing> BackendGroups<T> build(Collection<T> configured,
             Collection<String> defaultBackends) {
-        final Map<String, List<T>> backends = buildBackends(configured);
-        final List<T> defaults = buildDefaults(backends, defaultBackends);
-        return new BackendGroups<T>(backends, defaults);
+        final Map<String, List<T>> mappings = buildBackends(configured);
+        final Set<T> defaults = buildDefaults(mappings, defaultBackends);
+        return new BackendGroups<T>(ImmutableList.copyOf(configured), mappings, ImmutableList.copyOf(defaults));
     }
 }

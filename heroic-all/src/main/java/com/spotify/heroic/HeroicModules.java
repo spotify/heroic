@@ -10,6 +10,7 @@ public class HeroicModules {
         com.spotify.heroic.metric.astyanax.Entry.class,
         com.spotify.heroic.metric.datastax.Entry.class,
         com.spotify.heroic.metric.generated.Entry.class,
+        com.spotify.heroic.metric.bigtable.Entry.class,
 
         com.spotify.heroic.metadata.elasticsearch.Entry.class,
         com.spotify.heroic.suggest.elasticsearch.Entry.class,

@@ -137,6 +137,16 @@ public class LocalMetricManager implements MetricManager {
     private MetricBackendGroupReporter reporter;
 
     @Override
+    public List<MetricBackend> allMembers() {
+        return backends.allMembers();
+    }
+
+    @Override
+    public List<MetricBackend> use(String group) throws BackendGroupException {
+        return backends.use(group).getMembers();
+    }
+
+    @Override
     public List<GroupMember<MetricBackend>> getBackends() {
         return backends.all();
     }
@@ -300,6 +310,20 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public Iterable<BackendEntry> listEntries() {
             throw new NotImplementedException("not supported");
+        }
+
+        @Override
+        public AsyncFuture<Void> configure() {
+            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
+
+            run(new InternalOperation() {
+                @Override
+                public void run(int disabled, MetricBackend backend) throws Exception {
+                    callbacks.add(backend.configure());
+                }
+            });
+
+            return async.collectAndDiscard(callbacks);
         }
 
         private <T extends TimeData> StreamCollector<FetchData<T>, ResultGroups> collectResultGroups(

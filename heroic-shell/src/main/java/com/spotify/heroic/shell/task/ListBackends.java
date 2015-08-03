@@ -26,6 +26,8 @@ import java.util.List;
 
 import lombok.ToString;
 
+import org.kohsuke.args4j.Option;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -37,7 +39,6 @@ import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.utils.GroupMember;
 import com.spotify.heroic.utils.Grouped;
 
 import eu.toolchain.async.AsyncFramework;
@@ -72,14 +73,16 @@ public class ListBackends extends AbstractShellTask {
 
     @Override
     public AsyncFuture<Void> run(PrintWriter out, ShellTaskParams base) throws Exception {
-        printBackends(out, "metric", metrics.getBackends());
-        printBackends(out, "metadata", metadata.getBackends());
-        printBackends(out, "suggest", suggest.getBackends());
+        final Parameters params = (Parameters) base;
+
+        printBackends(out, "metric", metrics.use(params.group));
+        printBackends(out, "metadata", metadata.use(params.group));
+        printBackends(out, "suggest", suggest.use(params.group));
 
         return async.resolved(null);
     }
 
-    private void printBackends(PrintWriter out, String title, List<? extends GroupMember<? extends Grouped>> group) {
+    private void printBackends(PrintWriter out, String title, List<? extends Grouped> group) {
         if (group.isEmpty()) {
             out.println(String.format("%s: (empty)", title));
             return;
@@ -87,17 +90,14 @@ public class ListBackends extends AbstractShellTask {
 
         out.println(String.format("%s:", title));
 
-        for (final GroupMember<? extends Grouped> grouped : group) {
-            if (grouped.isDefaultMember()) {
-                out.println(String.format("  %s (default) %s", grouped.getGroups(), grouped.getMember()));
-                continue;
-            }
-
-            out.println(String.format("  %s %s", grouped.getGroups(), grouped.getMember()));
+        for (final Grouped grouped : group) {
+            out.println(String.format("  %s %s", grouped.getGroups(), grouped));
         }
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        private String group;
     }
 }

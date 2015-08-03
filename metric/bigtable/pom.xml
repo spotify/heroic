@@ -1,0 +1,100 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.spotify.heroic</groupId>
+    <artifactId>heroic-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <groupId>com.spotify.heroic.metric</groupId>
+  <artifactId>heroic-metric-bigtable</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Heroic: BitTable Backend</name>
+
+  <description>
+    Metric Backend for Heroic to store and fetch time series data from
+    Google BigTable.
+  </description>
+
+  <properties>
+    <bigtable.version>0.2.1-SNAPSHOT</bigtable.version>
+    <alpn-boot.version>8.1.2.v20141202</alpn-boot.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.cloud.bigtable</groupId>
+      <artifactId>bigtable-grpc-interface</artifactId>
+      <version>${bigtable.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.spotify.heroic</groupId>
+      <artifactId>heroic-component</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>eu.toolchain.serializer</groupId>
+      <artifactId>tiny-serializer-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <version>1.1.33.Fork4</version>
+      <classifier>linux-x86_64</classifier>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-jni</artifactId>
+      <version>8.0.24</version>
+    </dependency>
+
+    <!-- XXX: this _must_ be cleaned up at some point
+         Bigtable uses HTTP2, and requires TLS, which requires ALPN.
+         See: https://github.com/grpc/grpc-java/blob/master/SECURITY.md
+
+         Any jvm must be started with:
+           -Xbootclasspath/p:/path/to/alpn-boot.jar
+
+         WARNING: the alpn implementation MIGHT not be compatible with your JRE.
+                  See progress in project: https://github.com/jetty-project/jetty-alpn
+    -->
+    <dependency>
+      <groupId>org.mortbay.jetty.alpn</groupId>
+      <artifactId>alpn-boot</artifactId>
+      <!--
+      Tested with:
+        jdk8u45
+      -->
+      <version>${alpn-boot.version}</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+  </dependencies>
+
+  <!-- XXX: remove when we no longer need SNAPSHOT builds -->
+  <repositories>
+    <repository>
+      <id>sonatype-snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+  </repositories>
+</project>

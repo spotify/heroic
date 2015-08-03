@@ -33,8 +33,8 @@ import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
@@ -79,6 +79,11 @@ public class GeneratedBackend implements MetricBackend, LifeCycle {
     @Override
     public Set<String> getGroups() {
         return groups;
+    }
+
+    @Override
+    public AsyncFuture<Void> configure() {
+        return async.resolved();
     }
 
     @Override

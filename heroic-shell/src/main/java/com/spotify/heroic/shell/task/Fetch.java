@@ -74,11 +74,13 @@ public class Fetch extends AbstractShellTask {
     @Override
     public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
-        final Date now = new Date();
+        final long now = System.currentTimeMillis();
 
         final Series series = mapper.readValue(params.series, Series.class);
-        final DateRange range = new DateRange(params.start == null ? defaultStart(now) : params.start,
-                params.end == null ? defaultEnd(now) : params.end);
+        final long start = params.start == null ? now : Tasks.parseInstant(params.start, now);
+        final long end = params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
+
+        final DateRange range = new DateRange(start, end);
         final int limit = Math.max(1, params.limit);
 
         final DateFormat flip = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -138,12 +140,8 @@ public class Fetch extends AbstractShellTask {
         return false;
     }
 
-    private long defaultStart(Date now) {
-        return now.getTime() - TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
-    }
-
-    private long defaultEnd(Date now) {
-        return now.getTime();
+    private long defaultEnd(long start) {
+        return start + TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
     }
 
     @ToString
@@ -151,11 +149,11 @@ public class Fetch extends AbstractShellTask {
         @Option(name = "--series", required = true, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 
-        @Option(name = "--start", usage = "Start date in milliseconds after unix epoch", metaVar = "<long>")
-        private Long start;
+        @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
+        private String start;
 
-        @Option(name = "--end", usage = "End date in milliseconds after unix epoch", metaVar = "<long>")
-        private Long end;
+        @Option(name = "--end", usage = "End date", metaVar = "<datetime>")
+        private String end;
 
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch", metaVar = "<int>")
         private int limit = 1000;

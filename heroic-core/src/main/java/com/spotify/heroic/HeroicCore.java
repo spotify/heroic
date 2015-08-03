@@ -108,6 +108,8 @@ import com.spotify.heroic.model.Event;
 import com.spotify.heroic.model.EventSerializer;
 import com.spotify.heroic.model.SamplingSerializer;
 import com.spotify.heroic.model.SamplingSerializerImpl;
+import com.spotify.heroic.model.SeriesSerializer;
+import com.spotify.heroic.model.SeriesSerializerImpl;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -329,52 +331,52 @@ public class HeroicCore {
             @Provides
             @Singleton
             @Named("common")
-            private SerializerFramework serializer() {
+            SerializerFramework serializer() {
                 return TinySerializer.builder().build();
             }
 
             @Provides
             @Singleton
-            @Inject
-            private FilterSerializer filterSerializer(@Named("common") SerializerFramework s) {
+            FilterSerializer filterSerializer(@Named("common") SerializerFramework s) {
                 return new FilterSerializerImpl(s, s.integer(), s.string());
             }
 
             @Provides
             @Singleton
-            @Inject
-            private CoreAggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
+            CoreAggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
                 return new CoreAggregationRegistry(s.string());
             }
 
             @Provides
             @Singleton
-            @Inject
-            private AggregationSerializer aggregationSerializer(CoreAggregationRegistry registry) {
+            AggregationSerializer aggregationSerializer(CoreAggregationRegistry registry) {
                 return registry;
             }
 
             @Provides
             @Singleton
-            @Inject
-            private AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
+            AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
                 return registry;
             }
 
             @Provides
             @Singleton
-            @Inject
-            private SamplingSerializer samplingSerializer(@Named("common") SerializerFramework s) {
+            SamplingSerializer samplingSerializer(@Named("common") SerializerFramework s) {
                 return new SamplingSerializerImpl(s.longNumber());
             }
 
             @Provides
             @Singleton
-            @Inject
-            private CacheKeySerializer cacheKeySerializer(@Named("common") SerializerFramework s,
+            CacheKeySerializer cacheKeySerializer(@Named("common") SerializerFramework s,
                     FilterSerializer filter, AggregationSerializer aggregation) {
                 return new CacheKeySerializerImpl(s.integer(), filter, s.map(s.nullable(s.string()),
                         s.nullable(s.string())), aggregation, s.longNumber());
+            }
+
+            @Provides
+            @Singleton
+            SeriesSerializer series(@Named("common") SerializerFramework s) {
+                return new SeriesSerializerImpl(s.string(), s.map(s.nullable(s.string()), s.nullable(s.string())));
             }
 
             @Override

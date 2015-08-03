@@ -89,6 +89,11 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
     }
 
     @Override
+    public AsyncFuture<Void> configure() {
+        return async.resolved();
+    }
+
+    @Override
     public AsyncFuture<WriteResult> write(final WriteMetric w) {
         final Borrowed<Connection> k = connection.borrow();
 

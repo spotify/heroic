@@ -49,6 +49,16 @@ public class LocalSuggestManager implements SuggestManager {
     private LocalMetadataManagerReporter reporter;
 
     @Override
+    public List<SuggestBackend> allMembers() {
+        return backends.allMembers();
+    }
+
+    @Override
+    public List<SuggestBackend> use(String group) throws BackendGroupException {
+        return backends.use(group).getMembers();
+    }
+
+    @Override
     public List<GroupMember<SuggestBackend>> getBackends() {
         return backends.all();
     }
