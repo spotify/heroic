@@ -76,6 +76,7 @@ import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.SuggestTag;
 import com.spotify.heroic.shell.task.SuggestTagValue;
+import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.WritePerformance;
 import com.spotify.heroic.utils.GroupMember;
 
@@ -116,6 +117,7 @@ public class HeroicShell {
         available.put("metadata-migrate-suggestions", MetadataMigrateSuggestions.class);
         available.put("suggest-tag", SuggestTag.class);
         available.put("suggest-tag-value", SuggestTagValue.class);
+        available.put("suggest-tag-values", SuggestTagValues.class);
     }
 
     public static void main(String[] args) throws IOException {
