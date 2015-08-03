@@ -75,6 +75,7 @@ import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.SuggestTag;
+import com.spotify.heroic.shell.task.SuggestTagKeyCount;
 import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.WritePerformance;
@@ -118,6 +119,7 @@ public class HeroicShell {
         available.put("suggest-tag", SuggestTag.class);
         available.put("suggest-tag-value", SuggestTagValue.class);
         available.put("suggest-tag-values", SuggestTagValues.class);
+        available.put("suggest-tag-key-count", SuggestTagKeyCount.class);
     }
 
     public static void main(String[] args) throws IOException {
