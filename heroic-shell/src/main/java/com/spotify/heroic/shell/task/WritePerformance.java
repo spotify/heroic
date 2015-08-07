@@ -40,6 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.exceptions.BackendGroupException;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
@@ -94,7 +95,7 @@ public class WritePerformance extends AbstractShellTask {
         final DateRange range = new DateRange(start, end);
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.from);
-        final MetricBackend writeGroup = metrics.useGroup(params.to);
+        final List<MetricBackend> targets = resolveTargets(params.targets);
 
         final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
 
@@ -111,9 +112,6 @@ public class WritePerformance extends AbstractShellTask {
         return async.collect(reads).transform(new Transform<Collection<WriteMetric>, Void>() {
             @Override
             public Void transform(Collection<WriteMetric> input) throws Exception {
-                out.println(String.format("Read %d series(s), performing writes...", series.size()));
-                out.flush();
-
                 final long start = System.currentTimeMillis();
 
                 int totalWrites = 0;
@@ -122,7 +120,11 @@ public class WritePerformance extends AbstractShellTask {
                     totalWrites += (w.getData().size() * params.writes);
                 }
 
-                final List<AsyncFuture<Times>> writes = buildWrites(writeGroup, input, params, start);
+                final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);
+
+                out.println(String.format("Read data, waiting for %d write batches...", writes.size()));
+                out.flush();
+
                 final AsyncFuture<CollectedTimes> results = collectWrites(out, writes);
 
                 final CollectedTimes times = results.get();
@@ -142,6 +144,19 @@ public class WritePerformance extends AbstractShellTask {
                 return null;
             }
         });
+    }
+
+    private List<MetricBackend> resolveTargets(List<String> targets) throws BackendGroupException {
+        if (targets.isEmpty())
+            throw new IllegalArgumentException("'targets' is empty, add some with --target");
+
+        final List<MetricBackend> backends = new ArrayList<>();
+
+        for (final String target : targets) {
+            backends.add(metrics.useGroup(target));
+        }
+
+        return backends;
     }
 
     private void printHistogram(String title, final PrintWriter out, final List<Long> times, TimeUnit unit) {
@@ -169,13 +184,17 @@ public class WritePerformance extends AbstractShellTask {
         out.println(String.format("  99th: %d ms", TimeUnit.MILLISECONDS.convert(q99, unit)));
     }
 
-    private List<AsyncFuture<Times>> buildWrites(MetricBackend writeGroup, Collection<WriteMetric> input,
+    private List<AsyncFuture<Times>> buildWrites(List<MetricBackend> targets, Collection<WriteMetric> input,
             final Parameters params, final long start) {
         final List<AsyncFuture<Times>> writes = new ArrayList<>();
 
+        int request = 0;
+
         if (params.batch) {
             for (int i = 0; i < params.writes; i++) {
-                writes.add(writeGroup.write(input).transform(new Transform<WriteResult, Times>() {
+                final MetricBackend target = targets.get(request++ % targets.size());
+
+                writes.add(target.write(input).transform(new Transform<WriteResult, Times>() {
                     @Override
                     public Times transform(WriteResult result) throws Exception {
                         final long runtime = System.currentTimeMillis() - start;
@@ -189,7 +208,9 @@ public class WritePerformance extends AbstractShellTask {
 
         for (int i = 0; i < params.writes; i++) {
             for (final WriteMetric w : input) {
-                writes.add(writeGroup.write(w).transform(new Transform<WriteResult, Times>() {
+                final MetricBackend target = targets.get(request++ % targets.size());
+
+                writes.add(target.write(w).transform(new Transform<WriteResult, Times>() {
                     @Override
                     public Times transform(WriteResult result) throws Exception {
                         final long runtime = System.currentTimeMillis() - start;
@@ -203,7 +224,7 @@ public class WritePerformance extends AbstractShellTask {
     }
 
     private AsyncFuture<CollectedTimes> collectWrites(final PrintWriter out, Collection<AsyncFuture<Times>> writes) {
-        final int div = writes.size() / 40;
+        final int div = Math.max(writes.size() / 40, 1);
         final boolean mod = writes.size() % div == 0;
 
         final AtomicInteger errors = new AtomicInteger();
@@ -284,20 +305,20 @@ public class WritePerformance extends AbstractShellTask {
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch (default: 1000000)", metaVar = "<int>")
         private int limit = 1000000;
 
-        @Option(name = "--series", required = true, usage = "Number of series to fetch", metaVar = "<number>")
-        private int series;
+        @Option(name = "--series", required = true, usage = "Number of different series to write", metaVar = "<number>")
+        private int series = 10;
 
         @Option(name = "--from", required = true, usage = "Group to read data from", metaVar = "<group>")
         private String from;
 
-        @Option(name = "--to", required = true, usage = "Group to write data to", metaVar = "<long>")
-        private String to;
+        @Option(name = "--target", usage = "Group to write data to", metaVar = "<backend>")
+        private List<String> targets = new ArrayList<>();
 
         @Option(name = "--history", usage = "Seconds of data to copy (default: 3600)", metaVar = "<number>")
         private long history = 3600;
 
         @Option(name = "--writes", usage = "How many writes to perform (default: 1000)", metaVar = "<number>")
-        private int writes = 1000;
+        private int writes = 10;
 
         @Option(name = "-B", aliases = { "--batch" }, usage = "Write using batch API")
         private boolean batch = false;

@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -42,8 +45,10 @@ import com.spotify.heroic.model.TimeData;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.io.OutputStreamSerialWriter;
@@ -204,8 +209,93 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
     }
 
     @Override
-    public AsyncFuture<WriteResult> write(Collection<WriteMetric> writes) {
-        return async.resolved(WriteResult.EMPTY);
+    public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
+        return connection.doto(new ManagedAction<BigtableConnection, WriteResult>() {
+            @Override
+            public AsyncFuture<WriteResult> action(final BigtableConnection c) throws Exception {
+                final AtomicInteger count = new AtomicInteger(writes.size());
+                final ResolvableFuture<WriteResult> future = async.future();
+
+                for (WriteMetric w : writes) {
+                    final Series series = w.getSeries();
+                    final List<AsyncFuture<WriteResult>> results = new ArrayList<>();
+
+                    final BigtableClient client = c.client();
+
+                    for (final DataPoint d : w.getData()) {
+                        final long timestamp = d.getTimestamp();
+                        final long base = base(timestamp);
+                        final long offset = offset(timestamp);
+
+                        final RowKey rowKey = new RowKey(series, base);
+
+                        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
+                        final ByteString offsetBytes = serializeOffset(offset);
+                        final ByteString valueBytes = serializeValue(d.getValue());
+
+                        final long start = System.nanoTime();
+
+                        final BigtableMutations mutations = client.mutations().setCell(POINTS, offsetBytes, valueBytes)
+                                .build();
+
+                        final AsyncFuture<WriteResult> write = client.mutateRow(METRICS, rowKeyBytes, mutations)
+                                .transform(new Transform<Void, WriteResult>() {
+                                    @Override
+                                    public WriteResult transform(Void result) throws Exception {
+                                        return WriteResult.of(System.nanoTime() - start);
+                                    }
+                                });
+
+                        results.add(write);
+                    }
+
+                    async.collect(results, WriteResult.merger()).on(new FutureDone<WriteResult>() {
+                        final ConcurrentLinkedQueue<WriteResult> times = new ConcurrentLinkedQueue<>();
+                        final AtomicReference<Throwable> failed = new AtomicReference<>();
+
+                        @Override
+                        public void failed(Throwable cause) throws Exception {
+                            check();
+                            failed.compareAndSet(null, cause);
+                        }
+
+                        @Override
+                        public void resolved(WriteResult result) throws Exception {
+                            times.add(result);
+                            check();
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            check();
+                        }
+
+                        private void check() {
+                            if (count.decrementAndGet() == 0)
+                                finish();
+                        }
+
+                        private void finish() {
+                            final Throwable t = failed.get();
+
+                            if (t != null) {
+                                future.fail(t);
+                                return;
+                            }
+
+                            final List<Long> times = new ArrayList<>();
+
+                            for (final WriteResult r : this.times)
+                                times.addAll(r.getTimes());
+
+                            future.resolve(new WriteResult(times));
+                        }
+                    });
+                }
+
+                return future;
+            }
+        });
     }
 
     @Override

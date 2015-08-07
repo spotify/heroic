@@ -278,6 +278,9 @@ public class HeroicShell {
 
             final String[] parts = QuoteParser.parse(line);
 
+            if (parts.length == 0)
+                continue;
+
             if ("exit".equals(parts[0]))
                 break;
 
