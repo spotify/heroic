@@ -60,12 +60,12 @@ public class WriteResult {
         return new WriteResult(EMPTY_ERRORS, ImmutableList.copyOf(times));
     }
 
-    public static WriteResult of(long executionTime) {
-        return new WriteResult(EMPTY_ERRORS, ImmutableList.of(executionTime));
+    public static WriteResult of(long duration) {
+        return of(ImmutableList.of(duration));
     }
 
     public static WriteResult of() {
-        return new WriteResult(EMPTY_ERRORS, EMPTY_TIMES);
+        return of(EMPTY_TIMES);
     }
 
     public WriteResult merge(WriteResult other) {

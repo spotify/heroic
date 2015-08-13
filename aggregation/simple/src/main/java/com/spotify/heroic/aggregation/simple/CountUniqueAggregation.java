@@ -28,16 +28,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.TimeData;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class CountUniqueAggregation extends BucketAggregation<TimeData, DataPoint, CountUniqueBucket> {
+public class CountUniqueAggregation extends BucketAggregation<TimeData, CountUniqueBucket> {
     public static final String NAME = "count-unique";
 
     public CountUniqueAggregation(Sampling sampling) {
-        super(sampling, TimeData.class, DataPoint.class);
+        super(sampling, TimeData.class, MetricType.POINTS);
     }
 
     @JsonCreator

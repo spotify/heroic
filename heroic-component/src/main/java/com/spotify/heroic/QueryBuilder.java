@@ -44,10 +44,8 @@ import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.QuerySource;
 import com.spotify.heroic.grammar.SelectDSL;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.model.MetricType;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -65,7 +63,7 @@ public class QueryBuilder {
     private Aggregation aggregation = EmptyAggregation.INSTANCE;
     private boolean disableCache;
     private String queryString;
-    private Class<? extends TimeData> source = DataPoint.class;
+    private MetricType source = MetricType.POINTS;
 
     /**
      * Specify a set of tags that has to match.
@@ -146,7 +144,7 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder source(Class<? extends TimeData> source) {
+    public QueryBuilder source(MetricType source) {
         this.source = source;
         return this;
     }
@@ -211,7 +209,7 @@ public class QueryBuilder {
         final Filter filter = q.getWhere();
         final GroupByDSL groupBy = q.getGroupBy();
 
-        final Class<? extends TimeData> source = convertQuerySource(from);
+        final MetricType source = convertQuerySource(from);
         final Aggregation aggregation = convertQueryAggregation(select);
         final DateRange range = roundedRange(aggregation, from.getRange());
         final List<String> group = groupBy == null ? null : groupBy.getGroupBy();
@@ -219,15 +217,15 @@ public class QueryBuilder {
         return new Query(null, filter, group, range, aggregation, true, source);
     }
 
-    private Class<? extends TimeData> convertQuerySource(final FromDSL s) {
+    private MetricType convertQuerySource(final FromDSL s) {
         if (s.getSource() == null)
             throw new IllegalArgumentException("source must be defined");
 
         if (s.getSource() == QuerySource.EVENTS)
-            return Event.class;
+            return MetricType.EVENTS;
 
         if (s.getSource() == QuerySource.SERIES)
-            return DataPoint.class;
+            return MetricType.POINTS;
 
         throw new IllegalArgumentException("invalid source: " + s.getSource());
     }

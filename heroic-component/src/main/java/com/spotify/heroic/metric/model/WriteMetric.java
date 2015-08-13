@@ -21,27 +21,39 @@
 
 package com.spotify.heroic.metric.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.model.DataPoint;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 
 @Data
 public class WriteMetric {
-    private final Series series;
-    private final List<DataPoint> data;
+    final Series series;
+    final List<TimeDataGroup> groups;
 
     @JsonCreator
-    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("data") List<DataPoint> data) {
+    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("groups") List<TimeDataGroup> groups) {
         this.series = series;
-        this.data = data;
+        this.groups = groups;
     }
 
     public boolean isEmpty() {
-        return data.isEmpty();
+        return groups.isEmpty();
+    }
+
+    public Iterable<TimeData> all() {
+        final List<Iterable<TimeData>> iterables = new ArrayList<>(groups.size());
+
+        for (final TimeDataGroup g : groups) {
+            iterables.add(g.getData());
+        }
+
+        return Iterables.concat(iterables);
     }
 }

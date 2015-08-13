@@ -36,9 +36,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.ChainAggregation;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.model.MetricType;
 
 @Data
 public class QueryMetrics {
@@ -46,7 +44,7 @@ public class QueryMetrics {
     private static final List<AggregationQuery<?>> EMPTY_AGGREGATIONS = new ArrayList<>();
     private static final Map<String, String> DEFAULT_TAGS = new HashMap<String, String>();
     private static final boolean DEFAULT_NO_CACHE = false;
-    private static final Class<? extends TimeData> DEFAULT_SOURCE = DataPoint.class;
+    private static final MetricType DEFAULT_SOURCE = MetricType.POINTS;
 
     private final String query;
     private final String key;
@@ -56,7 +54,7 @@ public class QueryMetrics {
     private final QueryDateRange range;
     private final boolean noCache;
     private final List<AggregationQuery<?>> aggregators;
-    private final Class<? extends TimeData> source;
+    private final MetricType source;
 
     @JsonCreator
     public QueryMetrics(@JsonProperty("query") String query, @JsonProperty("key") String key,
@@ -76,17 +74,17 @@ public class QueryMetrics {
         this.source = convertSource(sourceName);
     }
 
-    private static Class<? extends TimeData> convertSource(String sourceName) {
+    private static MetricType convertSource(String sourceName) {
         if (sourceName == null) {
             return DEFAULT_SOURCE;
         }
 
         if ("series".equals(sourceName)) {
-            return DataPoint.class;
+            return MetricType.POINTS;
         }
 
         if ("events".equals(sourceName)) {
-            return Event.class;
+            return MetricType.EVENTS;
         }
 
         throw new IllegalArgumentException("invalid source: " + sourceName);

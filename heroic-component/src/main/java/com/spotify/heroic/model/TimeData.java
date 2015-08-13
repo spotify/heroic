@@ -21,10 +21,23 @@
 
 package com.spotify.heroic.model;
 
+import java.util.Comparator;
+
 public interface TimeData extends Comparable<TimeData> {
     public long getTimestamp();
 
     public int hash();
 
     boolean valid();
+
+    public static final Comparator<TimeData> comparator = new Comparator<TimeData>() {
+        @Override
+        public int compare(TimeData a, TimeData b) {
+            return Long.compare(a.getTimestamp(), b.getTimestamp());
+        }
+    };
+
+    public static Comparator<TimeData> comparator() {
+        return comparator;
+    }
 }

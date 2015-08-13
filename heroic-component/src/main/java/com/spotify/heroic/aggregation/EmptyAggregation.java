@@ -12,8 +12,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
 import com.spotify.heroic.model.TimeData;
@@ -60,28 +63,28 @@ public class EmptyAggregation implements Aggregation {
 
         @Override
         public AggregationResult result() {
-            final Map<Class<? extends TimeData>, ArrayList<TimeData>> entries = new HashMap<>();
+            final Map<MetricType, List<Iterable<? extends TimeData>>> entries = new HashMap<>();
 
             for (final AggregationData in : input) {
-                ArrayList<TimeData> data = entries.get(in.getOutput());
+                List<Iterable<? extends TimeData>> iterables = entries.get(in.getType());
 
-                if (data == null) {
-                    data = new ArrayList<>();
-                    entries.put(in.getOutput(), data);
+                if (iterables == null) {
+                    iterables = new ArrayList<>();
+                    entries.put(in.getType(), iterables);
                 }
 
-                data.addAll(in.getValues());
+                iterables.add(in.getValues());
             }
 
-            final List<AggregationData> groups = new ArrayList<>();
+            final ImmutableList.Builder<AggregationData> groups = ImmutableList.builder();
 
-            for (final Map.Entry<Class<? extends TimeData>, ArrayList<TimeData>> e : entries.entrySet()) {
-                final Class<? extends TimeData> output = e.getKey();
-                final List<TimeData> data = e.getValue();
-                groups.add(new AggregationData(EMPTY_GROUP, series, data, output));
+            for (final Map.Entry<MetricType, List<Iterable<? extends TimeData>>> e : entries.entrySet()) {
+                final List<? extends TimeData> data = ImmutableList.copyOf(Iterables.mergeSorted(e.getValue(),
+                        TimeData.comparator()));
+                groups.add(new AggregationData(EMPTY_GROUP, series, data, e.getKey()));
             }
 
-            return new AggregationResult(groups, Statistics.Aggregator.EMPTY);
+            return new AggregationResult(groups.build(), Statistics.Aggregator.EMPTY);
         }
     }
 }

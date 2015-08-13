@@ -36,10 +36,12 @@ import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 
@@ -165,7 +167,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
     @Override
     public AsyncFuture<WriteResult> write(final WriteMetric w) {
-        if (w.getData().isEmpty())
+        if (w.isEmpty())
             return async.resolved(WriteResult.EMPTY);
 
         return connection.doto(new ManagedAction<BigtableConnection, WriteResult>() {
@@ -176,31 +178,12 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                 final BigtableClient client = c.client();
 
-                for (final DataPoint d : w.getData()) {
-                    final long timestamp = d.getTimestamp();
-                    final long base = base(timestamp);
-                    final long offset = offset(timestamp);
-
-                    final RowKey rowKey = new RowKey(series, base);
-
-                    final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
-                    final ByteString offsetBytes = serializeOffset(offset);
-                    final ByteString valueBytes = serializeValue(d.getValue());
-
-                    final long start = System.nanoTime();
-
-                    final BigtableMutations mutations = client.mutations().setCell(POINTS, offsetBytes, valueBytes)
-                            .build();
-
-                    final AsyncFuture<WriteResult> write = client.mutateRow(METRICS, rowKeyBytes, mutations).transform(
-                            new Transform<Void, WriteResult>() {
-                        @Override
-                        public WriteResult transform(Void result) throws Exception {
-                            return WriteResult.of(System.nanoTime() - start);
+                for (final TimeDataGroup g : w.getGroups()) {
+                    if (g.getType() == MetricType.POINTS) {
+                        for (final DataPoint d : (List<? extends DataPoint>) g.getData()) {
+                            results.add(writePoint(series, client, d));
                         }
-                    });
-
-                    results.add(write);
+                    }
                 }
 
                 return async.collect(results, WriteResult.merger());
@@ -222,31 +205,12 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                     final BigtableClient client = c.client();
 
-                    for (final DataPoint d : w.getData()) {
-                        final long timestamp = d.getTimestamp();
-                        final long base = base(timestamp);
-                        final long offset = offset(timestamp);
-
-                        final RowKey rowKey = new RowKey(series, base);
-
-                        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
-                        final ByteString offsetBytes = serializeOffset(offset);
-                        final ByteString valueBytes = serializeValue(d.getValue());
-
-                        final long start = System.nanoTime();
-
-                        final BigtableMutations mutations = client.mutations().setCell(POINTS, offsetBytes, valueBytes)
-                                .build();
-
-                        final AsyncFuture<WriteResult> write = client.mutateRow(METRICS, rowKeyBytes, mutations)
-                                .transform(new Transform<Void, WriteResult>() {
-                                    @Override
-                                    public WriteResult transform(Void result) throws Exception {
-                                        return WriteResult.of(System.nanoTime() - start);
-                                    }
-                                });
-
-                        results.add(write);
+                    for (final TimeDataGroup g : w.getGroups()) {
+                        if (g.getType() == MetricType.POINTS) {
+                            for (final DataPoint d : (List<? extends DataPoint>) g.getData()) {
+                                results.add(writePoint(series, client, d));
+                            }
+                        }
                     }
 
                     async.collect(results, WriteResult.merger()).on(new FutureDone<WriteResult>() {
@@ -299,7 +263,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
     }
 
     @Override
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> type, final Series series, DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType type, final Series series, DateRange range,
             FetchQuotaWatcher watcher) {
         final List<PreparedQuery> prepared;
         try {
@@ -311,20 +275,44 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
         if (!watcher.mayReadData())
             throw new IllegalArgumentException("query violated data limit");
 
-        return connection.doto(new ManagedAction<BigtableConnection, FetchData<T>>() {
-            @SuppressWarnings("unchecked")
+        return connection.doto(new ManagedAction<BigtableConnection, FetchData>() {
             @Override
-            public AsyncFuture<FetchData<T>> action(final BigtableConnection c) throws Exception {
-                final AsyncFuture<? extends FetchData<? extends TimeData>> f = fetchPoints(series, prepared, c);
-                return (AsyncFuture<FetchData<T>>) f;
+            public AsyncFuture<FetchData> action(final BigtableConnection c) throws Exception {
+                return fetchPoints(series, prepared, c);
             }
         });
-
     }
 
-    private AsyncFuture<? extends FetchData<? extends TimeData>> fetchPoints(final Series series,
+    private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final DataPoint d)
+            throws IOException {
+        final long timestamp = d.getTimestamp();
+        final long base = base(timestamp);
+        final long offset = offset(timestamp);
+
+        final RowKey rowKey = new RowKey(series, base);
+
+        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
+        final ByteString offsetBytes = serializeOffset(offset);
+        final ByteString valueBytes = serializeValue(d.getValue());
+
+        final long start = System.nanoTime();
+
+        final BigtableMutations mutations = client.mutations().setCell(POINTS, offsetBytes, valueBytes).build();
+
+        final AsyncFuture<WriteResult> write = client.mutateRow(METRICS, rowKeyBytes, mutations).transform(
+                new Transform<Void, WriteResult>() {
+                    @Override
+                    public WriteResult transform(Void result) throws Exception {
+                        return WriteResult.of(System.nanoTime() - start);
+                    }
+                });
+
+        return write;
+    }
+
+    private AsyncFuture<FetchData> fetchPoints(final Series series,
             final List<PreparedQuery> prepared, final BigtableConnection c) {
-        final List<AsyncFuture<FetchData<DataPoint>>> queries = new ArrayList<>();
+        final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
         final BigtableClient client = c.client();
 
@@ -343,9 +331,9 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
             final long start = System.nanoTime();
 
-            queries.add(readRows.transform(new Transform<List<BigtableLatestRow>, FetchData<DataPoint>>() {
+            queries.add(readRows.transform(new Transform<List<BigtableLatestRow>, FetchData>() {
                 @Override
-                public FetchData<DataPoint> transform(List<BigtableLatestRow> result) throws Exception {
+                public FetchData transform(List<BigtableLatestRow> result) throws Exception {
                     final List<Iterable<DataPoint>> points = new ArrayList<>();
 
                     for (final BigtableLatestRow row : result) {
@@ -358,9 +346,11 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
                         }
                     }
 
-                    final List<DataPoint> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
+                    final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
+                    final List<TimeData> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
                             DataPoint.comparator()));
-                    return new FetchData<DataPoint>(series, data, ImmutableList.of(System.nanoTime() - start));
+                    final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+                    return new FetchData(series, times, groups);
                 }
             }));
         }

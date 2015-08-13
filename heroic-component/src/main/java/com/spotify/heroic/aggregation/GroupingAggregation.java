@@ -139,7 +139,7 @@ public abstract class GroupingAggregation implements Aggregation {
                 throw new IllegalStateException(String.format("no session for %s", key));
 
             // update using this groups key.
-            session.update(new AggregationData(key, group.getSeries(), group.getValues(), group.getOutput()));
+            session.update(new AggregationData(key, group.getSeries(), group.getValues(), group.getType()));
         }
 
         @Override

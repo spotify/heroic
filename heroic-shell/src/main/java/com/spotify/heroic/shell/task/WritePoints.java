@@ -31,14 +31,18 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreBridge;
@@ -79,20 +83,22 @@ public class WritePoints extends AbstractShellTask {
         final MetricBackendGroup g = metrics.useGroup(params.group);
 
         final long now = System.currentTimeMillis();
-        final List<DataPoint> points = parsePoints(params.points, now);
+        final List<TimeData> points = parsePoints(params.points, now);
 
         int i = 0;
 
         out.println("series: " + series.toString());
         out.println("points:");
 
-        for (final DataPoint p : points) {
+        for (final TimeData p : points) {
             out.println(String.format("%d: %s", i++, p));
         }
 
         out.flush();
 
-        return g.write(new WriteMetric(series, points)).transform(new Transform<WriteResult, Void>() {
+        final List<TimeDataGroup> data = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, points));
+
+        return g.write(new WriteMetric(series, data)).transform(new Transform<WriteResult, Void>() {
             @Override
             public Void transform(WriteResult result) throws Exception {
                 int i = 0;
@@ -106,8 +112,8 @@ public class WritePoints extends AbstractShellTask {
         });
     }
 
-    private List<DataPoint> parsePoints(List<String> points, long now) {
-        final List<DataPoint> output = new ArrayList<>();
+    private List<TimeData> parsePoints(List<String> points, long now) {
+        final List<TimeData> output = new ArrayList<>();
 
         for (final String p : points) {
             final String parts[] = p.split("=");

@@ -33,14 +33,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.exceptions.ConsumerSchemaException;
 import com.spotify.heroic.exceptions.ConsumerSchemaValidationException;
 import com.spotify.heroic.exceptions.FatalSchemaException;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 
 @ToString
 public class Spotify100 implements ConsumerSchema {
@@ -99,8 +103,10 @@ public class Spotify100 implements ConsumerSchema {
 
         final Series series = new Series(metric.getKey(), tags);
         final DataPoint datapoint = new DataPoint(metric.getTime(), metric.getValue());
-        final List<DataPoint> data = new ArrayList<DataPoint>();
-        data.add(datapoint);
+        final List<TimeData> points = new ArrayList<>();
+        points.add(datapoint);
+
+        final List<TimeDataGroup> data = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, points));
 
         try {
             consumer.write(new WriteMetric(series, data)).get();

@@ -30,8 +30,8 @@ import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.utils.Grouped;
 import com.spotify.heroic.utils.Initializing;
 
@@ -84,7 +84,7 @@ public interface MetricBackend extends Initializing, Grouped {
      *
      * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
      */
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> type, Series series, DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range,
             FetchQuotaWatcher watcher);
 
     /**

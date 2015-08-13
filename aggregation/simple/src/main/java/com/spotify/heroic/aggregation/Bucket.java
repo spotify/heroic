@@ -23,7 +23,9 @@ package com.spotify.heroic.aggregation;
 
 import java.util.Map;
 
-public interface Bucket<T> {
+import com.spotify.heroic.model.TimeData;
+
+public interface Bucket<T extends TimeData> {
     /**
      * Provide a sample to a bucket.
      *

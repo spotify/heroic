@@ -59,9 +59,9 @@ import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.rpc.httprpc.model.RpcGroupedQuery;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.model.KeySuggest;
@@ -258,7 +258,7 @@ public class HttpRpcResource {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter,
+            public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
                     List<String> groupBy, DateRange range, Aggregation aggregation, boolean disableCache) {
                 return post(new RpcQuery(source, filter, groupBy, range, aggregation, disableCache),
                         ResultGroups.class, METRICS_QUERY);
@@ -335,7 +335,7 @@ public class HttpRpcResource {
 
     @Data
     public static class RpcQuery {
-        private final Class<? extends TimeData> source;
+        private final MetricType source;
         private final Filter filter;
         private final List<String> groupBy;
         private final DateRange range;
@@ -343,7 +343,7 @@ public class HttpRpcResource {
         private final boolean noCache;
 
         @JsonCreator
-        public RpcQuery(@JsonProperty("source") Class<? extends TimeData> source,
+        public RpcQuery(@JsonProperty("source") MetricType source,
                 @JsonProperty("filter") Filter filter, @JsonProperty("groupBy") List<String> groupBy,
                 @JsonProperty("range") DateRange range, @JsonProperty("aggregation") Aggregation aggregation,
                 @JsonProperty("noCache") Boolean noCache) {

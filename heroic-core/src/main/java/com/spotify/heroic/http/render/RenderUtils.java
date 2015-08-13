@@ -37,6 +37,7 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 import com.spotify.heroic.metric.model.ShardedResultGroup;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 
 public final class RenderUtils {
     private static final List<Color> COLORS = new ArrayList<>();
@@ -58,12 +59,14 @@ public final class RenderUtils {
                 continue;
             }
 
-            if (group.getType() != DataPoint.class)
+            if (group.getType() != MetricType.POINTS)
                 continue;
 
             final XYSeries series = new XYSeries(group.getGroup().toString());
 
-            for (final DataPoint d : group.values(DataPoint.class))
+            final List<DataPoint> data = (List<DataPoint>) group.getValues();
+
+            for (final DataPoint d : data)
                 series.add(d.getTimestamp(), d.getValue());
 
             renderer.setSeriesPaint(i, Color.BLUE);

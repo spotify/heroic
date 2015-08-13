@@ -56,6 +56,7 @@ import com.spotify.heroic.metadata.model.FindSeries;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.ResultGroup;
 import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.TagValues;
@@ -63,10 +64,10 @@ import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
 import com.spotify.heroic.utils.BackendGroups;
 import com.spotify.heroic.utils.GroupMember;
@@ -177,7 +178,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public <T extends TimeData> AsyncFuture<ResultGroups> query(Class<T> source, final Filter filter,
+        public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter,
                 final List<String> groupBy, final DateRange range, Aggregation aggregation, final boolean noCache) {
             // XXX: move compatibility hack to a higher level.
             final Aggregation nested = (groupBy != null) ? new GroupAggregation(groupBy, aggregation) : aggregation;
@@ -207,7 +208,7 @@ public class LocalMetricManager implements MetricManager {
 
                 final AggregationSession session = traversal.getSession();
 
-                final List<Callable<AsyncFuture<FetchData<T>>>> fetches = new ArrayList<>();
+                final List<Callable<AsyncFuture<FetchData>>> fetches = new ArrayList<>();
 
                 final DateRange modified = range.shiftStart(-aggregation.extent());
 
@@ -238,19 +239,19 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(final Class<T> source, final Series series,
+        public AsyncFuture<FetchData> fetch(final MetricType source, final Series series,
                 final DateRange range, final FetchQuotaWatcher watcher) {
-            final List<AsyncFuture<FetchData<T>>> callbacks = new ArrayList<>();
+            final List<AsyncFuture<FetchData>> callbacks = new ArrayList<>();
 
             run((int disabled, MetricBackend backend) -> {
                 callbacks.add(backend.fetch(source, series, range, watcher));
             });
 
-            return async.collect(callbacks, FetchData.<T> merger(series));
+            return async.collect(callbacks, FetchData.merger(series));
         }
 
         @Override
-        public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(final Class<T> source, final Series series,
+        public AsyncFuture<FetchData> fetch(final MetricType source, final Series series,
                 final DateRange range) {
             return fetch(source, series, range, NO_QUOTA_WATCHER);
         }
@@ -326,13 +327,15 @@ public class LocalMetricManager implements MetricManager {
             return async.collectAndDiscard(callbacks);
         }
 
-        private <T extends TimeData> StreamCollector<FetchData<T>, ResultGroups> collectResultGroups(
-                final FetchQuotaWatcher watcher, final AggregationSession session, Class<T> output) {
-            return new StreamCollector<FetchData<T>, ResultGroups>() {
+        private StreamCollector<FetchData, ResultGroups> collectResultGroups(final FetchQuotaWatcher watcher,
+                final AggregationSession session, MetricType output) {
+            return new StreamCollector<FetchData, ResultGroups>() {
                 @Override
-                public void resolved(FetchData<T> result) throws Exception {
-                    session.update(new AggregationData(result.getSeries().getTags(), ImmutableSet.of(result
-                            .getSeries()), result.getData(), output));
+                public void resolved(FetchData result) throws Exception {
+                    for (final TimeDataGroup g : result.getGroups()) {
+                        session.update(new AggregationData(result.getSeries().getTags(), ImmutableSet.of(result
+                                .getSeries()), g.getData(), g.getType()));
+                    }
                 }
 
                 @Override
@@ -363,7 +366,7 @@ public class LocalMetricManager implements MetricManager {
                     for (final AggregationData group : result.getResult()) {
                         final List<TagValues> g = group(group.getSeries());
 
-                        if (DataPoint.class.isAssignableFrom(group.getOutput())) {
+                        if (MetricType.POINTS == group.getType()) {
                             groups.add(new ResultGroup.DataPointResultGroup(g, (List<DataPoint>) group
                                     .getValues()));
                         }

@@ -33,6 +33,7 @@ import lombok.Data;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
@@ -53,7 +54,7 @@ import com.spotify.heroic.model.TimeData;
  * @author udoprog
  */
 @Data
-public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeData, T extends Bucket<IN>> implements
+public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN>> implements
         Aggregation {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000l;
@@ -65,7 +66,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
         private final LongAdder sampleSize = new LongAdder();
 
         private final Set<Series> series;
-        private final List<T> buckets;
+        private final List<B> buckets;
         private final long offset;
         private final long size;
         private final long extent;
@@ -74,7 +75,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
         @Override
         public void update(AggregationData update) {
             // ignore incompatible updates
-            if (!out.isAssignableFrom(update.getOutput()))
+            if (in.isAssignableFrom(update.getType().type()))
                 return;
 
             final List<IN> input = (List<IN>) update.getValues();
@@ -92,7 +93,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
                     if (i < 0 || i >= buckets.size())
                         continue;
 
-                    final Bucket<IN> bucket = buckets.get(i);
+                    final B bucket = buckets.get(i);
 
                     final long c = bucket.timestamp() - first;
 
@@ -109,10 +110,10 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
 
         @Override
         public AggregationResult result() {
-            final List<OUT> result = new ArrayList<OUT>(buckets.size());
+            final List<TimeData> result = new ArrayList<>(buckets.size());
 
-            for (final T bucket : buckets) {
-                final OUT d = build(bucket);
+            for (final B bucket : buckets) {
+                final TimeData d = build(bucket);
 
                 if (!d.valid())
                     continue;
@@ -128,7 +129,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
 
     private final Sampling sampling;
     private final Class<IN> in;
-    private final Class<OUT> out;
+    private final MetricType out;
 
     @Override
     public long estimate(DateRange original) {
@@ -152,7 +153,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
         final long size = sampling.getSize();
         final DateRange rounded = range.rounded(size);
 
-        final List<T> buckets = buildBuckets(rounded, size);
+        final List<B> buckets = buildBuckets(rounded, size);
         return new AggregationTraversal(out, new Session(series, buckets, range.start(), size, sampling.getExtent()));
     }
 
@@ -161,14 +162,14 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
         return sampling.getExtent();
     }
 
-    private List<T> buildBuckets(final DateRange range, long size) {
+    private List<B> buildBuckets(final DateRange range, long size) {
         final long start = range.start();
         final long count = range.diff() / size;
 
         if (count < 1 || count > MAX_BUCKET_COUNT)
             throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
 
-        final List<T> buckets = new ArrayList<T>((int) count);
+        final List<B> buckets = new ArrayList<>((int) count);
 
         for (int i = 0; i < count; i++) {
             buckets.add(buildBucket(start + size * i + size));
@@ -177,7 +178,7 @@ public abstract class BucketAggregation<IN extends TimeData, OUT extends TimeDat
         return buckets;
     }
 
-    abstract protected T buildBucket(long timestamp);
+    abstract protected B buildBucket(long timestamp);
 
-    abstract protected OUT build(T bucket);
+    abstract protected TimeData build(B bucket);
 }

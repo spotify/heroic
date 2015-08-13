@@ -38,11 +38,11 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Event;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 
@@ -96,29 +96,28 @@ public class GeneratedBackend implements MetricBackend, LifeCycle {
         return async.resolved(WriteResult.EMPTY);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> source, Series series, DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType source, Series series, DateRange range,
             FetchQuotaWatcher watcher) {
         final long start = System.nanoTime();
 
-        if (source == DataPoint.class) {
-            final List<DataPoint> data = generator.generate(series, range, watcher);
+        if (source == MetricType.POINTS) {
+            final List<TimeData> data = generator.generate(series, range, watcher);
             final long diff = System.nanoTime() - start;
-            final AsyncFuture<? extends FetchData<? extends TimeData>> f = async.resolved(new FetchData<DataPoint>(
-                    series, data, ImmutableList.of(diff)));
-            return (AsyncFuture<FetchData<T>>) f;
+            final ImmutableList<Long> times = ImmutableList.of(diff);
+            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+            return async.resolved(new FetchData(series, times, groups));
         }
 
-        if (source == Event.class) {
-            final List<Event> data = generator.generateEvents(series, range, watcher);
+        if (source == MetricType.EVENTS) {
+            final List<TimeData> data = generator.generateEvents(series, range, watcher);
             final long diff = System.nanoTime() - start;
-            final AsyncFuture<? extends FetchData<? extends TimeData>> f = async.resolved(new FetchData<Event>(series,
-                    data, ImmutableList.of(diff)));
-            return (AsyncFuture<FetchData<T>>) f;
+            final ImmutableList<Long> times = ImmutableList.of(diff);
+            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+            return async.resolved(new FetchData(series, times, groups));
         }
 
-        throw new IllegalArgumentException("unsupported source: " + source.getName());
+        throw new IllegalArgumentException("unsupported source: " + source);
     }
 
     @Override

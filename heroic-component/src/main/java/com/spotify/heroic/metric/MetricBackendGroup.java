@@ -29,8 +29,8 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.model.FetchData;
 import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -51,7 +51,7 @@ public interface MetricBackendGroup extends MetricBackend {
      * @return The result in the form of MetricGroups.
      * @throws BackendGroupException
      */
-    public <T extends TimeData> AsyncFuture<ResultGroups> query(Class<T> source, final Filter filter,
+    public AsyncFuture<ResultGroups> query(MetricType type, final Filter filter,
             final List<String> groupBy, final DateRange range, Aggregation aggregation, final boolean noCache);
 
     /**
@@ -60,5 +60,5 @@ public interface MetricBackendGroup extends MetricBackend {
      *
      * @see #MetricBackend#fetch(Class, Series, DateRange, QuotaWatcher)
      */
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> type, Series series, DateRange range);
+    public AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range);
 }

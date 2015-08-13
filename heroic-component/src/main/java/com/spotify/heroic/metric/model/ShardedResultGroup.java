@@ -27,19 +27,13 @@ import java.util.Map;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import com.spotify.heroic.model.MetricType;
+
 @Data
 @EqualsAndHashCode(exclude = { "values" })
 public final class ShardedResultGroup {
     private final Map<String, String> shard;
     private final List<TagValues> group;
     private final List<?> values;
-    private final Class<?> type;
-
-    @SuppressWarnings("unchecked")
-    public <T> List<T> values(Class<T> expected) {
-        if (!expected.isAssignableFrom(type))
-            throw new IllegalArgumentException(String.format("does not contain values of type %s", expected));
-
-        return (List<T>) values;
-    }
+    private final MetricType type;
 }

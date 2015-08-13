@@ -29,11 +29,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME", "q", "error" })
-public class QuantileAggregation extends BucketAggregation<DataPoint, DataPoint, QuantileBucket> {
+public class QuantileAggregation extends BucketAggregation<DataPoint, QuantileBucket> {
     public static final String NAME = "quantile";
 
     @Getter
@@ -43,7 +44,7 @@ public class QuantileAggregation extends BucketAggregation<DataPoint, DataPoint,
     private final double error;
 
     public QuantileAggregation(Sampling sampling, double q, double error) {
-        super(sampling, DataPoint.class, DataPoint.class);
+        super(sampling, DataPoint.class, MetricType.POINTS);
         this.q = q;
         this.error = error;
     }

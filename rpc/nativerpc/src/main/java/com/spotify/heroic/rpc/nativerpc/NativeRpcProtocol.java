@@ -69,9 +69,9 @@ import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.model.KeySuggest;
 import com.spotify.heroic.suggest.model.MatchOptions;
@@ -437,7 +437,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter,
+            public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
                     List<String> groupBy, DateRange range, Aggregation aggregation, boolean disableCache) {
                 return request(METRICS_QUERY, new RpcQuery(source, filter, groupBy, range, aggregation, disableCache),
                         ResultGroups.class);
@@ -526,7 +526,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
 
     @Data
     public static class RpcQuery {
-        private final Class<? extends TimeData> source;
+        private final MetricType source;
         private final Filter filter;
         private final List<String> groupBy;
         private final DateRange range;
@@ -534,7 +534,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
         private final boolean noCache;
 
         @JsonCreator
-        public RpcQuery(@JsonProperty("source") final Class<? extends TimeData> source,
+        public RpcQuery(@JsonProperty("source") final MetricType source,
                 @JsonProperty("filter") final Filter filter, @JsonProperty("groupBy") final List<String> groupBy,
                 @JsonProperty("range") final DateRange range,
                 @JsonProperty("aggregation") final Aggregation aggregation,

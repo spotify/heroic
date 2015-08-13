@@ -15,6 +15,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.Statistics;
@@ -52,8 +53,8 @@ public class BucketAggregationTest {
         }
     }
 
-    public BucketAggregation<DataPoint, DataPoint, TestBucket> setup(Sampling sampling) {
-        return new BucketAggregation<DataPoint, DataPoint, TestBucket>(sampling, DataPoint.class, DataPoint.class) {
+    public BucketAggregation<DataPoint, TestBucket> setup(Sampling sampling) {
+        return new BucketAggregation<DataPoint, TestBucket>(sampling, DataPoint.class, MetricType.POINTS) {
             @Override
             protected TestBucket buildBucket(long timestamp) {
                 return new TestBucket(timestamp);
@@ -72,7 +73,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testSameSampling() {
-        final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(1000, 1000));
+        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(1000, 1000));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(1000, 50.0).add(2001, 50.0).result()));
 
@@ -85,7 +86,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testShorterExtent() {
-        final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(1000, 500));
+        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(1000, 500));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(2499, 50.0).add(2500, 50.0).result()));
 
@@ -98,7 +99,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testUnevenSampling() {
-        final BucketAggregation<DataPoint, DataPoint, TestBucket> a = setup(new Sampling(999, 499));
+        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(999, 499));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(999, 50.0).add(999, 50.0).add(2598, 50.0).result()));
 
@@ -110,6 +111,6 @@ public class BucketAggregationTest {
     }
 
     private AggregationData group(List<DataPoint> values) {
-        return new AggregationData(group, series, values, DataPoint.class);
+        return new AggregationData(group, series, values, MetricType.POINTS);
     }
 }

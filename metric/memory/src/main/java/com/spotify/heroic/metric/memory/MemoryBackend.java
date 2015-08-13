@@ -43,10 +43,11 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 
@@ -73,12 +74,17 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
 
     @Override
     public AsyncFuture<Void> start() throws Exception {
-        return async.resolved(null);
+        return async.resolved();
     }
 
     @Override
     public AsyncFuture<Void> stop() throws Exception {
-        return async.resolved(null);
+        return async.resolved();
+    }
+
+    @Override
+    public AsyncFuture<Void> configure() {
+        return async.resolved();
     }
 
     @Override
@@ -89,15 +95,9 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
     @Override
     public AsyncFuture<WriteResult> write(WriteMetric write) {
         final long start = System.nanoTime();
-        final MemoryKey key = new MemoryKey(DataPoint.class, write.getSeries());
-        final NavigableMap<Long, TimeData> tree = getOrCreate(key);
-
-        synchronized (tree) {
-            for (final TimeData d : write.getData())
-                tree.put(d.getTimestamp(), d);
-        }
-
-        return async.resolved(WriteResult.of(System.nanoTime() - start));
+        final List<Long> times = new ArrayList<>();
+        writeOne(times, write, start);
+        return async.resolved(WriteResult.of(times));
     }
 
     @Override
@@ -106,39 +106,20 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
 
         for (final WriteMetric write : writes) {
             final long start = System.nanoTime();
-
-            final MemoryKey key = new MemoryKey(DataPoint.class, write.getSeries());
-            final NavigableMap<Long, TimeData> tree = getOrCreate(key);
-
-            synchronized (tree) {
-                for (final TimeData d : write.getData())
-                    tree.put(d.getTimestamp(), d);
-            }
-
-            times.add(System.nanoTime() - start);
+            writeOne(times, write, start);
         }
 
         return async.resolved(WriteResult.of(times));
     }
 
     @Override
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> source, Series series, DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType source, Series series, DateRange range,
             FetchQuotaWatcher watcher) {
         final long start = System.nanoTime();
-
         final MemoryKey key = new MemoryKey(source, series);
-
-        final NavigableMap<Long, ? extends TimeData> tree = storage.get(key);
-
-        if (tree == null)
-            return async.resolved(new FetchData<T>(series, ImmutableList.<T> of(), ImmutableList.<Long> of()));
-
-        synchronized (tree) {
-            final List<? extends TimeData> data = new ArrayList<>(tree.tailMap(range.getStart())
-                    .headMap(range.getEnd()).values());
-            return async.resolved(new FetchData<T>(series, (List<T>) data, ImmutableList.<Long> of(System.nanoTime()
-                    - start)));
-        }
+        final List<TimeDataGroup> groups = doFetch(key, range);
+        final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
+        return async.resolved(new FetchData(series, times, groups));
     }
 
     @Override
@@ -158,8 +139,35 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
 
     @Data
     public static final class MemoryKey {
-        private final Class<? extends TimeData> source;
+        private final MetricType source;
         private final Series series;
+    }
+
+    private void writeOne(final List<Long> times, final WriteMetric write, final long start) {
+        for (final TimeDataGroup g : write.getGroups()) {
+            final MemoryKey key = new MemoryKey(g.getType(), write.getSeries());
+            final NavigableMap<Long, TimeData> tree = getOrCreate(key);
+
+            synchronized (tree) {
+                for (final TimeData d : g.getData())
+                    tree.put(d.getTimestamp(), d);
+            }
+        }
+
+        times.add(System.nanoTime() - start);
+    }
+
+    private List<TimeDataGroup> doFetch(final MemoryKey key, DateRange range) {
+        final NavigableMap<Long, TimeData> tree = storage.get(key);
+
+        if (tree == null) {
+            return ImmutableList.of(new TimeDataGroup(key.getSource(), ImmutableList.of()));
+        }
+
+        synchronized (tree) {
+            final Iterable<TimeData> data = tree.subMap(range.getStart(), range.getEnd()).values();
+            return ImmutableList.of(new TimeDataGroup(key.getSource(), ImmutableList.copyOf(data)));
+        }
     }
 
     /**

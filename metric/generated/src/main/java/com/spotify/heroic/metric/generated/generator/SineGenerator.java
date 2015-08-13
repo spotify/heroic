@@ -35,6 +35,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Event;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 
 public class SineGenerator implements Generator {
     private static final Map<String, Object> PAYLOAD = ImmutableMap.<String, Object> of();
@@ -58,11 +59,11 @@ public class SineGenerator implements Generator {
     private long step;
 
     @Override
-    public List<DataPoint> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
+    public List<TimeData> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
         // calculate a consistent drift depending on which series is being fetched.
         double drift = Math.abs((double) series.hashCode() / (double) Integer.MAX_VALUE);
 
-        final List<DataPoint> data = new ArrayList<>();
+        final List<TimeData> data = new ArrayList<>();
 
         final DateRange rounded = range.rounded(1000);
 
@@ -79,8 +80,8 @@ public class SineGenerator implements Generator {
     }
 
     @Override
-    public List<Event> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
-        final List<Event> data = new ArrayList<>();
+    public List<TimeData> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
+        final List<TimeData> data = new ArrayList<>();
 
         final DateRange rounded = range.rounded(1000);
 

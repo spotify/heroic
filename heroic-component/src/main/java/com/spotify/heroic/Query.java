@@ -28,7 +28,7 @@ import lombok.Data;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.model.MetricType;
 
 @Data
 public class Query {
@@ -38,5 +38,5 @@ public class Query {
     private final DateRange range;
     private final Aggregation aggregation;
     private final boolean disableCache;
-    private final Class<? extends TimeData> source;
+    private final MetricType source;
 }

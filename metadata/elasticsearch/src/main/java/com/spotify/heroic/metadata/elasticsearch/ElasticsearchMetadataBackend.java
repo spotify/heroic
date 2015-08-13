@@ -193,7 +193,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                     }
                 }
 
-                return async.resolved(WriteResult.of(0));
+                return async.resolved(WriteResult.of());
             }
         });
     }

@@ -32,6 +32,7 @@ import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 
 @Data
 public class MetricsRowKey {
@@ -46,8 +47,8 @@ public class MetricsRowKey {
     private final Series series;
     private final long base;
 
-    public List<DataPoint> buildDataPoints(ColumnList<Integer> result) {
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+    public List<TimeData> buildDataPoints(ColumnList<Integer> result) {
+        final List<TimeData> datapoints = new ArrayList<>();
 
         for (final Column<Integer> column : result) {
             datapoints.add(new DataPoint(MetricsRowKeySerializer.calculateAbsoluteTimestamp(base, column.getName()),

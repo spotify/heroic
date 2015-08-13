@@ -32,17 +32,15 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(ResultGroup.DataPointResultGroup.class)})
 public interface ResultGroup {
-
-    public <T> List<T> valuesFor(final Class<T> expected);
     public List<TagValues> getTags();
     public List<?> getValues();
-
     @JsonIgnore
-    public Class<?> getType();
+    public MetricType getType();
 
     /**
      * TODO change the type string from a class name
@@ -54,17 +52,7 @@ public interface ResultGroup {
     static class DataPointResultGroup implements ResultGroup {
         private final List<TagValues> tags;
         private final List<DataPoint> values;
-        private final Class<DataPoint> type = DataPoint.class;
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public <T> List<T> valuesFor(final Class<T> expected) {
-            if (!expected.isAssignableFrom(type))
-                throw new RuntimeException(String.format("incompatible payload type between %s (expected) and %s (actual)",
-                        expected.getCanonicalName(), type.getCanonicalName()));
-
-            return (List<T>) values;
-        }
+        private final MetricType type = MetricType.POINTS;
 
         @JsonCreator
         public DataPointResultGroup(@JsonProperty("tags") final List<TagValues> tags, @JsonProperty("values") final List<DataPoint> values) {

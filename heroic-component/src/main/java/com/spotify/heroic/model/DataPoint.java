@@ -47,14 +47,14 @@ public class DataPoint implements TimeData {
         return !Double.isNaN(value);
     }
 
-    static final Comparator<DataPoint> comparator = new Comparator<DataPoint>() {
+    static final Comparator<TimeData> comparator = new Comparator<TimeData>() {
         @Override
-        public int compare(DataPoint a, DataPoint b) {
-            return Long.compare(a.timestamp, b.timestamp);
+        public int compare(TimeData a, TimeData b) {
+            return Long.compare(a.getTimestamp(), b.getTimestamp());
         }
     };
 
-    public static Comparator<DataPoint> comparator() {
+    public static Comparator<TimeData> comparator() {
         return comparator;
     }
 }

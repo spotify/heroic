@@ -48,9 +48,9 @@ import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.model.KeySuggest;
@@ -110,7 +110,7 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter, List<String> groupBy,
+        public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, List<String> groupBy,
                 DateRange range, Aggregation aggregation, boolean disableCache) {
             return metrics().query(source, filter, groupBy, range, aggregation, disableCache);
         }

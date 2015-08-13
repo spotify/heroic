@@ -47,10 +47,12 @@ import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -130,24 +132,29 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
     }
 
     private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
-        final List<Long> times = new ArrayList<Long>(w.getData().size());
+        final List<Long> times = new ArrayList<Long>();
 
-        for (final DataPoint d : w.getData()) {
-            final long base = MetricsRowKey.calculateBaseTimestamp(d.getTimestamp());
+        for (final TimeDataGroup g : w.getGroups()) {
+            if (g.getType() == MetricType.POINTS) {
+                for (final TimeData t : g.getData()) {
+                    final DataPoint d = (DataPoint) t;
+                    final long base = MetricsRowKey.calculateBaseTimestamp(d.getTimestamp());
 
-            ByteBuffer keyBlob = cache.get(base);
+                    ByteBuffer keyBlob = cache.get(base);
 
-            if (keyBlob == null) {
-                final MetricsRowKey key = new MetricsRowKey(w.getSeries(), base);
-                keyBlob = keySerializer.serialize(key);
+                    if (keyBlob == null) {
+                        final MetricsRowKey key = new MetricsRowKey(w.getSeries(), base);
+                        keyBlob = keySerializer.serialize(key);
+                    }
+
+                    final int offset = MetricsRowKey.calculateColumnKey(d.getTimestamp());
+
+                    final long start = System.nanoTime();
+                    c.session.execute(c.write.bind(keyBlob.asReadOnlyBuffer(), offset, d.getValue()));
+                    final long diff = System.nanoTime() - start;
+                    times.add(diff);
+                }
             }
-
-            final int offset = MetricsRowKey.calculateColumnKey(d.getTimestamp());
-
-            final long start = System.nanoTime();
-            c.session.execute(c.write.bind(keyBlob.asReadOnlyBuffer(), offset, d.getValue()));
-            final long diff = System.nanoTime() - start;
-            times.add(diff);
         }
 
         return times;
@@ -155,17 +162,16 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> source, Series series, final DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             final FetchQuotaWatcher watcher) {
-        if (source == DataPoint.class) {
-            final AsyncFuture<? extends FetchData<? extends TimeData>> f = fetchDataPoints(series, range, watcher);
-            return (AsyncFuture<FetchData<T>>) f;
+        if (source == MetricType.POINTS) {
+            return fetchDataPoints(series, range, watcher);
         }
 
-        throw new IllegalArgumentException("unsupported source: " + source.getName());
+        throw new IllegalArgumentException("unsupported source: " + source);
     }
 
-    private AsyncFuture<FetchData<DataPoint>> fetchDataPoints(final Series series, DateRange range,
+    private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
             final FetchQuotaWatcher watcher) {
         final List<PreparedQuery> prepared = ranges(series, range);
 
@@ -176,23 +182,23 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
 
         final Borrowed<Connection> k = connection.borrow();
 
-        final LazyTransform<List<PreparedQuery>, FetchData<DataPoint>> transform = new LazyTransform<List<PreparedQuery>, FetchData<DataPoint>>() {
+        final LazyTransform<List<PreparedQuery>, FetchData> transform = new LazyTransform<List<PreparedQuery>, FetchData>() {
             @Override
-            public AsyncFuture<FetchData<DataPoint>> transform(List<PreparedQuery> result) throws Exception {
-                final List<AsyncFuture<FetchData<DataPoint>>> queries = new ArrayList<>();
+            public AsyncFuture<FetchData> transform(List<PreparedQuery> result) throws Exception {
+                final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
                 final Connection c = k.get();
 
                 for (final PreparedQuery q : prepared) {
                     final BoundStatement fetch = c.fetch.bind(q.keyBlob, q.startKey, q.endKey, limit);
 
-                    queries.add(async.call(new Callable<FetchData<DataPoint>>() {
+                    queries.add(async.call(new Callable<FetchData>() {
                         @Override
-                        public FetchData<DataPoint> call() throws Exception {
+                        public FetchData call() throws Exception {
                             if (!watcher.mayReadData())
                                 throw new IllegalArgumentException("query violated data limit");
 
-                            final List<DataPoint> result = new ArrayList<>();
+                            final List<TimeData> data = new ArrayList<>();
 
                             final long start = System.nanoTime();
                             final ResultSet rows = c.session.execute(fetch);
@@ -201,22 +207,25 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
                             for (final Row row : rows) {
                                 final long timestamp = MetricsRowKey.calculateAbsoluteTimestamp(q.base, row.getInt(0));
                                 final double value = row.getDouble(1);
-                                result.add(new DataPoint(timestamp, value));
+                                data.add(new DataPoint(timestamp, value));
                             }
 
-                            if (!watcher.readData(result.size()))
+                            if (!watcher.readData(data.size()))
                                 throw new IllegalArgumentException("query violated data limit");
 
-                            return new FetchData<DataPoint>(series, result, ImmutableList.of(diff));
+                            final ImmutableList<Long> times = ImmutableList.of(diff);
+                            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS,
+                                    data));
+                            return new FetchData(series, times, groups);
                         }
-                    }, pools.read()).onAny(reporter.reportFetch()));
+                    }, pools.read()).on(reporter.reportFetch()));
                 }
 
                 return async.collect(queries, FetchData.<DataPoint> merger(series));
             }
         };
 
-        return async.resolved(prepared).transform(transform).on(k.releasing());
+        return async.resolved(prepared).lazyTransform(transform).on(k.releasing());
     }
 
     @Override

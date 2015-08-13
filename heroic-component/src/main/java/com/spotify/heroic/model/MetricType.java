@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.model;
 
+import java.util.Comparator;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
@@ -32,17 +33,22 @@ import com.google.common.collect.ImmutableMap;
  * depending on which source is being operated on.
  */
 public enum MetricType {
-    POINTS(DataPoint.class, "points", "series"), EVENTS(Event.class, "events", "events"), SPREAD(Spread.class,
-            "spread", "spread");
+    // @formatter:off
+    POINTS(DataPoint.class, "points", "series", DataPoint.comparator()),
+    EVENTS(Event.class, "events", "events", Event.comparator()),
+    SPREAD(Spread.class, "spread", "spread", Spread.comparator());
+    // @formatter:on
 
     private final Class<? extends TimeData> type;
     private final String identifier;
     private final String group;
+    private final Comparator<TimeData> comparator;
 
-    private MetricType(Class<? extends TimeData> type, String identifier, String group) {
+    private MetricType(Class<? extends TimeData> type, String identifier, String group, Comparator<TimeData> comparator) {
         this.type = type;
         this.identifier = identifier;
         this.group = group;
+        this.comparator = comparator;
     }
 
     public Class<? extends TimeData> type() {
@@ -70,5 +76,9 @@ public enum MetricType {
 
     public boolean isAssignableFrom(MetricType other) {
         return type.isAssignableFrom(other.type);
+    }
+
+    public Comparator<TimeData> comparator() {
+        return comparator;
     }
 }

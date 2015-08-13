@@ -28,16 +28,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 import com.spotify.heroic.model.Spread;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class SpreadAggregation extends BucketAggregation<DataPoint, Spread, SpreadBucket> {
+public class SpreadAggregation extends BucketAggregation<DataPoint, SpreadBucket> {
     public static final String NAME = "spread";
 
     public SpreadAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, Spread.class);
+        super(sampling, DataPoint.class, MetricType.SPREAD);
     }
 
     @JsonCreator

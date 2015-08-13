@@ -59,10 +59,12 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.model.BackendEntry;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -132,25 +134,30 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                 final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
                 for (final WriteMetric write : writes) {
-                    for (final DataPoint d : write.getData()) {
-                        final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
-                        final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
+                    for (final TimeDataGroup g : write.getGroups()) {
+                        if (g.getType() != MetricType.POINTS)
+                            continue;
 
-                        ColumnListMutation<Integer> m = batches.get(rowKey);
+                        for (final TimeData t : g.getData()) {
+                            final DataPoint d = (DataPoint) t;
+                            final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
+                            final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
 
-                        if (m == null) {
-                            m = mutation.withRow(METRICS_CF, rowKey);
-                            batches.put(rowKey, m);
+                            ColumnListMutation<Integer> m = batches.get(rowKey);
+
+                            if (m == null) {
+                                m = mutation.withRow(METRICS_CF, rowKey);
+                                batches.put(rowKey, m);
+                            }
+
+                            m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()), d.getValue());
                         }
-
-                        m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()), d.getValue());
                     }
                 }
 
                 final long start = System.nanoTime();
                 mutation.execute();
-                final long diff = System.nanoTime() - start;
-                return WriteResult.of(diff);
+                return WriteResult.of(ImmutableList.of(System.nanoTime() - start));
             }
         };
 
@@ -195,46 +202,48 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends TimeData> AsyncFuture<FetchData<T>> fetch(Class<T> source, Series series, final DateRange range,
+    public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             FetchQuotaWatcher watcher) {
-        if (source == DataPoint.class) {
-            final AsyncFuture<? extends FetchData<? extends TimeData>> f = fetchDataPoints(series, range, watcher);
-            return (AsyncFuture<FetchData<T>>) f;
+        if (source == MetricType.POINTS) {
+            return fetchDataPoints(series, range, watcher);
         }
 
-        throw new NotImplementedException("unsupported source: " + source.getName());
+        throw new NotImplementedException("unsupported source: " + source);
     }
 
-    private AsyncFuture<FetchData<DataPoint>> fetchDataPoints(final Series series, DateRange range,
+    private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
             final FetchQuotaWatcher watcher) {
         final List<PreparedQuery> queries = prepareQueries(series, range);
 
         final Borrowed<Context> k = context.borrow();
 
-        return async.resolved(queries).transform(new LazyTransform<List<PreparedQuery>, FetchData<DataPoint>>() {
+        return async.resolved(queries).lazyTransform(new LazyTransform<List<PreparedQuery>, FetchData>() {
             @Override
-            public AsyncFuture<FetchData<DataPoint>> transform(List<PreparedQuery> result) throws Exception {
-                final List<AsyncFuture<FetchData<DataPoint>>> queries = new ArrayList<>();
+            public AsyncFuture<FetchData> transform(List<PreparedQuery> result) throws Exception {
+                final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
                 for (final PreparedQuery q : result) {
                     final Context ctx = k.get();
 
-                    queries.add(async.call(new Callable<FetchData<DataPoint>>() {
+                    queries.add(async.call(new Callable<FetchData>() {
                         @Override
-                        public FetchData<DataPoint> call() throws Exception {
+                        public FetchData call() throws Exception {
                             final long start = System.nanoTime();
 
                             final RowQuery<MetricsRowKey, Integer> query = ctx.client.prepareQuery(METRICS_CF)
                                     .getRow(q.rowKey).autoPaginate(true).withColumnRange(q.columnRange);
 
-                            final List<DataPoint> data = q.rowKey.buildDataPoints(query.execute().getResult());
+                            final List<TimeData> data = q.rowKey.buildDataPoints(query.execute().getResult());
 
                             if (!watcher.readData(data.size()))
                                 throw new IllegalArgumentException("data limit quota violated");
 
-                            return new FetchData<DataPoint>(series, data, ImmutableList.of(System.nanoTime() - start));
+                            final List<Long> times = ImmutableList.of(System.nanoTime() - start);
+                            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS,
+                                    data));
+                            return new FetchData(series, times, groups);
                         }
-                    }, pools.read()).onAny(reporter.reportFetch()));
+                    }, pools.read()).on(reporter.reportFetch()));
                 }
 
                 return async.collect(queries, FetchData.<DataPoint> merger(series));
@@ -303,9 +312,9 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                         final MetricsRowKey rowKey = entry.getKey();
                         final Series series = rowKey.getSeries();
 
-                        final List<DataPoint> dataPoints = rowKey.buildDataPoints(entry.getColumns());
+                        final List<TimeData> dataPoints = rowKey.buildDataPoints(entry.getColumns());
 
-                        return new BackendEntry(series, dataPoints);
+                        return new BackendEntry(series, MetricType.POINTS, dataPoints);
                     }
 
                     @Override

@@ -24,11 +24,8 @@ package com.spotify.heroic.shell.task;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import lombok.ToString;
@@ -41,9 +38,11 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreBridge;
@@ -88,34 +87,34 @@ public class Fetch extends AbstractShellTask {
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.group);
 
-        return readGroup.fetch(DataPoint.class, series, range).transform(new Transform<FetchData<DataPoint>, Void>() {
+        return readGroup.fetch(MetricType.POINTS, series, range).transform(new Transform<FetchData, Void>() {
             @Override
-            public Void transform(FetchData<DataPoint> result) throws Exception {
-                final List<DataPoint> sorted = new ArrayList<>(result.getData());
-                Collections.sort(sorted);
+            public Void transform(FetchData result) throws Exception {
+                outer:
+                for (final TimeDataGroup g : result.getGroups()) {
+                    int i = 0;
 
-                int i = 0;
+                    Calendar current = null;
+                    Calendar last = null;
 
-                Calendar current = null;
-                Calendar last = null;
+                    for (final TimeData d : g.getData()) {
+                        current = Calendar.getInstance();
+                        current.setTime(new Date(d.getTimestamp()));
 
-                for (final DataPoint d : sorted) {
-                    current = Calendar.getInstance();
-                    current.setTime(new Date(d.getTimestamp()));
+                        if (flipped(last, current)) {
+                            out.println(flip.format(current.getTime()));
+                        }
 
-                    if (flipped(last, current)) {
-                        out.println(flip.format(current.getTime()));
+                        out.println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
+
+                        if (i++ >= limit)
+                            break outer;
+
+                        last = current;
                     }
 
-                    out.println(String.format("  %s: %f", point.format(new Date(d.getTimestamp())), d.getValue()));
-
-                    if (i++ >= limit)
-                        break;
-
-                    last = current;
                 }
 
-                out.println(String.format("showing %d/%d result(s)", Math.min(limit, sorted.size()), sorted.size()));
                 return null;
             }
         });

@@ -21,38 +21,57 @@
 
 package com.spotify.heroic.metric.model;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import lombok.Data;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 
 import eu.toolchain.async.Collector;
 
 @Data
-public class FetchData<T extends TimeData> {
+public class FetchData {
     private final Series series;
-    private final List<T> data;
     private final List<Long> times;
+    private final List<TimeDataGroup> groups;
 
-    public static <T extends TimeData> Collector<FetchData<T>, FetchData<T>> merger(final Series series) {
-        return new Collector<FetchData<T>, FetchData<T>>() {
+    public static <T extends TimeData> Collector<FetchData, FetchData> merger(final Series series) {
+        return new Collector<FetchData, FetchData>() {
             @Override
-            public FetchData<T> collect(Collection<FetchData<T>> results) throws Exception {
-                final List<T> data = new ArrayList<>();
-                final List<Long> times = new ArrayList<Long>();
+            public FetchData collect(Collection<FetchData> results) throws Exception {
+                final ImmutableList.Builder<Long> times = ImmutableList.builder();
+                final Map<MetricType, ImmutableList.Builder<TimeData>> fetchGroups = new HashMap<>();
 
-                for (final FetchData<T> fetch : results) {
-                    data.addAll(fetch.getData());
-                    times.addAll(fetch.getTimes());
+                for (final FetchData fetch : results) {
+                    times.addAll(fetch.times);
+
+                    for (final TimeDataGroup g : fetch.groups) {
+                        ImmutableList.Builder<TimeData> data = fetchGroups.get(g.getType());
+
+                        if (data == null) {
+                            data = new ImmutableList.Builder<>();
+                            fetchGroups.put(g.getType(), data);
+                        }
+
+                        data.addAll(g.data);
+                    }
                 }
 
-                Collections.sort(data);
-                return new FetchData<T>(series, data, times);
+                final List<TimeDataGroup> groups = fetchGroups
+                        .entrySet()
+                        .stream()
+                        .map((e) -> new TimeDataGroup(e.getKey(), Ordering.from(e.getKey().comparator())
+                                .immutableSortedCopy(e.getValue().build()))).collect(Collectors.toList());
+
+                return new FetchData(series, times.build(), groups);
             }
         };
     }

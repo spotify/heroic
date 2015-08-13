@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.model;
 
+import java.util.Comparator;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -52,5 +54,16 @@ public class Spread implements TimeData {
     @Override
     public boolean valid() {
         return true;
+    }
+
+    private static final Comparator<TimeData> comparator = new Comparator<TimeData>() {
+        @Override
+        public int compare(TimeData a, TimeData b) {
+            return Long.compare(a.getTimestamp(), b.getTimestamp());
+        }
+    };
+
+    public static Comparator<TimeData> comparator() {
+        return comparator;
     }
 }

@@ -36,8 +36,8 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -200,18 +200,18 @@ public class IngestionManagerImpl implements IngestionManager {
     }
 
     private DateRange rangeFrom(WriteMetric write) {
-        if (write.isEmpty())
+        final Iterator<TimeData> iterator = write.all().iterator();
+
+        if (!iterator.hasNext())
             throw new IllegalArgumentException("write batch must not be empty");
 
-        final Iterator<DataPoint> iterator = write.getData().iterator();
-
-        final DataPoint first = iterator.next();
+        final TimeData first = iterator.next();
 
         long start = first.getTimestamp();
         long end = first.getTimestamp();
 
         while (iterator.hasNext()) {
-            final DataPoint d = iterator.next();
+            final TimeData d = iterator.next();
             start = Math.min(d.getTimestamp(), start);
             end = Math.max(d.getTimestamp(), end);
         }

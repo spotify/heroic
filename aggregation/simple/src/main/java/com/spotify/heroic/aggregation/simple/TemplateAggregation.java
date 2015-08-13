@@ -28,15 +28,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Sampling;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class TemplateAggregation extends BucketAggregation<DataPoint, DataPoint, SumBucket> {
+public class TemplateAggregation extends BucketAggregation<DataPoint, SumBucket> {
     public static final String NAME = "tpl";
 
     public TemplateAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, DataPoint.class);
+        super(sampling, DataPoint.class, MetricType.POINTS);
     }
 
     @JsonCreator

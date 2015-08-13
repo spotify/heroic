@@ -45,10 +45,11 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.FetchData;
+import com.spotify.heroic.metric.model.TimeDataGroup;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -100,13 +101,12 @@ public class WritePerformance extends AbstractShellTask {
         final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
 
         for (final Series s : series) {
-            reads.add(readGroup.fetch(DataPoint.class, s, range).transform(
-                    new Transform<FetchData<DataPoint>, WriteMetric>() {
-                        @Override
-                        public WriteMetric transform(FetchData<DataPoint> result) throws Exception {
-                            return new WriteMetric(s, result.getData());
-                        }
-                    }));
+            reads.add(readGroup.fetch(MetricType.POINTS, s, range).transform(new Transform<FetchData, WriteMetric>() {
+                @Override
+                public WriteMetric transform(FetchData result) throws Exception {
+                    return new WriteMetric(s, result.getGroups());
+                }
+            }));
         }
 
         return async.collect(reads).transform(new Transform<Collection<WriteMetric>, Void>() {
@@ -117,7 +117,9 @@ public class WritePerformance extends AbstractShellTask {
                 int totalWrites = 0;
 
                 for (final WriteMetric w : input) {
-                    totalWrites += (w.getData().size() * params.writes);
+                    for (TimeDataGroup g : w.getGroups()) {
+                        totalWrites += (g.getData().size() * params.writes);
+                    }
                 }
 
                 final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);

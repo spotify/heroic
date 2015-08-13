@@ -36,6 +36,7 @@ import com.spotify.heroic.model.DataPoint;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Event;
 import com.spotify.heroic.model.Series;
+import com.spotify.heroic.model.TimeData;
 
 /**
  * A generator that generates pseudo random numbers depending on which serie and time range is required.
@@ -65,14 +66,14 @@ public class RandomGenerator implements Generator {
     private long step;
 
     @Override
-    public List<DataPoint> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
+    public List<TimeData> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
         final double diff = max - min;
 
         int seriesHash = series.hashCode();
 
         final double localMin = min + diff * seriesRand(seriesHash);
 
-        final List<DataPoint> data = new ArrayList<>();
+        final List<TimeData> data = new ArrayList<>();
 
         final long start = calculateStart(range.getStart());
 
@@ -88,8 +89,8 @@ public class RandomGenerator implements Generator {
     }
 
     @Override
-    public List<Event> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
-        final List<Event> data = new ArrayList<>();
+    public List<TimeData> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
+        final List<TimeData> data = new ArrayList<>();
 
         final DateRange rounded = range.rounded(1000);
 

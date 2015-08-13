@@ -19,9 +19,9 @@ import com.spotify.heroic.metric.model.ResultGroups;
 import com.spotify.heroic.metric.model.WriteMetric;
 import com.spotify.heroic.metric.model.WriteResult;
 import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.suggest.model.KeySuggest;
 import com.spotify.heroic.suggest.model.MatchOptions;
 import com.spotify.heroic.suggest.model.TagKeyCount;
@@ -48,7 +48,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(Class<? extends TimeData> source, Filter filter, List<String> groupBy,
+    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, List<String> groupBy,
             DateRange range, Aggregation aggregation, boolean disableCache) {
         final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
 
