@@ -200,8 +200,6 @@ public class ManagedConnectionFactory {
         final GetIndexTemplatesResponse response = indices.getTemplates(
                 indices.prepareGetTemplates(templateName).request()).get(30, TimeUnit.SECONDS);
 
-        System.out.println("settings: " + response.getFromContext("settings"));
-
         for (final IndexTemplateMetaData t : response.getIndexTemplates())
             if (t.getName().equals(templateName))
                 return compareTemplate(t, templateName, mappings);
