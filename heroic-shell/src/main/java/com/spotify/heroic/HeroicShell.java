@@ -82,6 +82,7 @@ import com.spotify.heroic.shell.task.SuggestTag;
 import com.spotify.heroic.shell.task.SuggestTagKeyCount;
 import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
+import com.spotify.heroic.shell.task.WriteEvents;
 import com.spotify.heroic.shell.task.WritePerformance;
 import com.spotify.heroic.shell.task.WritePoints;
 import com.spotify.heroic.utils.GroupMember;
@@ -115,6 +116,7 @@ public class HeroicShell {
         available.put("backends", ListBackends.class);
         available.put("fetch", Fetch.class);
         available.put("write-points", WritePoints.class);
+        available.put("write-events", WriteEvents.class);
         available.put("write-performance", WritePerformance.class);
         available.put("metadata-delete", MetadataDelete.class);
         available.put("metadata-fetch", MetadataFetch.class);
