@@ -1,8 +1,11 @@
 package com.spotify.heroic;
 
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.profile.GeneratedProfile;
 
 public class HeroicModules {
     // @formatter:off
@@ -27,5 +30,9 @@ public class HeroicModules {
         com.spotify.heroic.rpc.httprpc.Entry.class,
         com.spotify.heroic.rpc.nativerpc.Entry.class
     );
+
+    public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String, HeroicProfile>builder()
+            .put("generated", new GeneratedProfile())
+    .build();
     // @formatter:on
 }

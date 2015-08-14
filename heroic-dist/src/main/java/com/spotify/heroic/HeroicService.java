@@ -26,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +39,6 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import com.spotify.heroic.HeroicCore.Builder;
-import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.reflection.ResourceException;
 import com.spotify.heroic.reflection.ResourceFileLoader;
 import com.spotify.heroic.reflection.ResourceInstance;
@@ -59,12 +57,6 @@ public class HeroicService {
      * Default configuration path.
      */
     public static final Path DEFAULT_CONFIG = Paths.get("heroic.yml");
-
-    private static final Map<String, HeroicProfile> PROFILES = new HashMap<>();
-
-    static {
-        PROFILES.put("generated", new GeneratedProfile());
-    }
 
     public static void main(final String[] args) throws Exception {
         main(args, null);
@@ -173,7 +165,7 @@ public class HeroicService {
     }
 
     private static HeroicProfile setupProfile(final String profile) {
-        final HeroicProfile p = PROFILES.get(profile);
+        final HeroicProfile p = HeroicModules.PROFILES.get(profile);
 
         if (p == null)
             throw new IllegalArgumentException("No such profile: " + profile);
@@ -209,7 +201,7 @@ public class HeroicService {
 
             System.out.println("Available Profiles (activate with: -p <profile>):");
 
-            for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
+            for (final Map.Entry<String, HeroicProfile> entry : HeroicModules.PROFILES.entrySet()) {
                 System.out.println("  " + entry.getKey() + " - " + entry.getValue().description());
             }
 
