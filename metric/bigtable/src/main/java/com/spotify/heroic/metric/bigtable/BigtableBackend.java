@@ -171,6 +171,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
             return async.resolved(WriteResult.EMPTY);
 
         return connection.doto(new ManagedAction<BigtableConnection, WriteResult>() {
+            @SuppressWarnings("unchecked")
             @Override
             public AsyncFuture<WriteResult> action(final BigtableConnection c) throws Exception {
                 final Series series = w.getSeries();
@@ -180,7 +181,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                 for (final TimeDataGroup g : w.getGroups()) {
                     if (g.getType() == MetricType.POINTS) {
-                        for (final DataPoint d : (List<? extends DataPoint>) g.getData()) {
+                        for (final DataPoint d : g.getDataAs(DataPoint.class)) {
                             results.add(writePoint(series, client, d));
                         }
                     }
