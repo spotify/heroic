@@ -86,8 +86,9 @@ public class Fetch extends AbstractShellTask {
         final DateFormat point = new SimpleDateFormat("HH:mm:ss.SSS");
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.group);
+        final MetricType source = MetricType.fromIdentifier(params.source);
 
-        return readGroup.fetch(MetricType.POINTS, series, range).transform(new Transform<FetchData, Void>() {
+        return readGroup.fetch(source, series, range).transform(new Transform<FetchData, Void>() {
             @Override
             public Void transform(FetchData result) throws Exception {
                 outer:
@@ -147,6 +148,9 @@ public class Fetch extends AbstractShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--series", required = true, usage = "Series to fetch", metaVar = "<json>")
         private String series;
+
+        @Option(name = "-s", aliases = { "--source" }, usage = "Source to fetch", metaVar = "<events|points>")
+        private String source = MetricType.POINTS.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
         private String start;
