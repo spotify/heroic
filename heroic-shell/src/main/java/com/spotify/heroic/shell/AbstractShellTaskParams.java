@@ -10,8 +10,11 @@ public abstract class AbstractShellTaskParams implements ShellTaskParams {
     @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
     public boolean help;
 
-    @Option(name = "-o", aliases = { "--output" }, usage = "Redirect output to the given file")
+    @Option(name = "-o", aliases = { "--output" }, usage = "Redirect output to the given file", metaVar = "<file|->")
     public String output;
+
+    @Option(name = "-P", aliases = { "--profile" }, usage = "Activate the given heroic profile", metaVar = "<profile>")
+    public String profile;
 
     @Override
     public String config() {
@@ -26,5 +29,10 @@ public abstract class AbstractShellTaskParams implements ShellTaskParams {
     @Override
     public String output() {
         return output;
+    }
+
+    @Override
+    public String profile() {
+        return profile;
     }
 }

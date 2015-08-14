@@ -42,11 +42,11 @@ import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicCore;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.task.Tasks.ElasticSearchParams;
@@ -61,7 +61,7 @@ public class MetadataLoad extends AbstractShellTask {
     protected static final long OUTPUT_STEP = 1000;
 
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, MetadataLoad.class);
+        HeroicShell.standalone(argv, MetadataLoad.class);
     }
 
     @Inject

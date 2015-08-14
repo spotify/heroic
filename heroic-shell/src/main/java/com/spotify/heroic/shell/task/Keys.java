@@ -34,12 +34,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.BackendKey;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -49,7 +49,7 @@ import eu.toolchain.async.Transform;
 @ShellTaskUsage("List available metric keys for all backends")
 public class Keys extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, Keys.class);
+        HeroicShell.standalone(argv, Keys.class);
     }
 
     @Inject

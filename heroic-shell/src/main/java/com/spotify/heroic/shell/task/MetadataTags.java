@@ -34,13 +34,13 @@ import org.kohsuke.args4j.Option;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -50,7 +50,7 @@ import eu.toolchain.async.Transform;
 @ShellTaskUsage("Get tags")
 public class MetadataTags extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, MetadataTags.class);
+        HeroicShell.standalone(argv, MetadataTags.class);
     }
 
     @Inject

@@ -40,6 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.exceptions.BackendGroupException;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
@@ -53,7 +54,6 @@ import com.spotify.heroic.model.MetricType;
 import com.spotify.heroic.model.Series;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -65,7 +65,7 @@ import eu.toolchain.async.Transform;
 @ShellTaskUsage("Perform performance testing")
 public class WritePerformance extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, WritePerformance.class);
+        HeroicShell.standalone(argv, WritePerformance.class);
     }
 
     @Inject

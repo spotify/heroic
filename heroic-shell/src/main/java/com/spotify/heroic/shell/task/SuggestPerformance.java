@@ -36,13 +36,13 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicCore;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.model.DateRange;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -57,7 +57,7 @@ import eu.toolchain.async.AsyncFuture;
 @ShellTaskUsage("Execute a set of suggest performance tests")
 public class SuggestPerformance extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, SuggestPerformance.class);
+        HeroicShell.standalone(argv, SuggestPerformance.class);
     }
 
     @Inject

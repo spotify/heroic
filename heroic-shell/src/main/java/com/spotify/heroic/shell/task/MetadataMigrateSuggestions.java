@@ -32,6 +32,7 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -40,7 +41,6 @@ import com.spotify.heroic.metadata.model.CountSeries;
 import com.spotify.heroic.metadata.model.MetadataEntry;
 import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
@@ -55,7 +55,7 @@ public class MetadataMigrateSuggestions extends AbstractShellTask {
     public static final int LINE_LIMIT = 20;
 
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, MetadataMigrateSuggestions.class);
+        HeroicShell.standalone(argv, MetadataMigrateSuggestions.class);
     }
 
     @Inject

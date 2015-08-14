@@ -37,6 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.model.TimeDataGroup;
@@ -48,7 +49,6 @@ import com.spotify.heroic.model.Series;
 import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -62,7 +62,7 @@ public class WriteEvents extends AbstractShellTask {
     };
 
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, WriteEvents.class);
+        HeroicShell.standalone(argv, WriteEvents.class);
     }
 
     @Inject

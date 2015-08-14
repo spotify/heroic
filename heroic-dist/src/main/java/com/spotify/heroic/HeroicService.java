@@ -27,7 +27,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import lombok.Data;
 import lombok.ToString;
@@ -192,19 +191,13 @@ public class HeroicService {
         try {
             parser.parseArgument(args);
         } catch (final CmdLineException e) {
-            log.error("Argument error", e);
+            log.error("Error parsing arguments", e);
             return null;
         }
 
         if (params.help) {
             parser.printUsage(System.out);
-
-            System.out.println("Available Profiles (activate with: -p <profile>):");
-
-            for (final Map.Entry<String, HeroicProfile> entry : HeroicModules.PROFILES.entrySet()) {
-                System.out.println("  " + entry.getKey() + " - " + entry.getValue().description());
-            }
-
+            HeroicModules.printProfileUsage(System.out, "-p");
             return null;
         }
 

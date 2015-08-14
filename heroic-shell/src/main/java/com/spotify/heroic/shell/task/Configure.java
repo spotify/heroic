@@ -28,10 +28,10 @@ import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -40,7 +40,7 @@ import eu.toolchain.async.AsyncFuture;
 @ShellTaskUsage("Configure the given group of metric backends")
 public class Configure extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, Configure.class);
+        HeroicShell.standalone(argv, Configure.class);
     }
 
     @Inject

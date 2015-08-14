@@ -7,4 +7,6 @@ public interface ShellTaskParams {
     public boolean help();
 
     public String output();
+
+    public String profile();
 }

@@ -1,5 +1,7 @@
 package com.spotify.heroic;
 
+import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -37,4 +39,22 @@ public class HeroicModules {
         .put("memory", new MemoryProfile())
     .build();
     // @formatter:on
+
+    public static void printProfileUsage(final PrintWriter out, final String option) {
+        out.println(String.format("Available Profiles (activate with: %s <profile>):", option));
+
+        for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
+            out.println("  " + entry.getKey() + " - " + entry.getValue().description());
+        }
+    }
+
+    public static void printProfileUsage(final PrintStream out, final String option) {
+        final PrintWriter o = new PrintWriter(out);
+
+        try {
+            printProfileUsage(o, option);
+        } finally {
+            o.flush();
+        }
+    }
 }

@@ -36,9 +36,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.CoreBridge;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 
@@ -48,7 +48,7 @@ import eu.toolchain.async.AsyncFuture;
 @ShellTaskUsage("Load metadata from a file")
 public class ConfigGet extends AbstractShellTask {
     public static void main(String argv[]) throws Exception {
-        CoreBridge.standalone(argv, ConfigGet.class);
+        HeroicShell.standalone(argv, ConfigGet.class);
     }
 
     @Inject

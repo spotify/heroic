@@ -25,17 +25,19 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -43,6 +45,7 @@ import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
 import jline.console.completer.StringsCompleter;
 import jline.console.history.FileHistory;
+import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,16 +55,10 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.shell.CoreBridge;
-import com.spotify.heroic.shell.CoreBridge.State;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
@@ -85,27 +82,14 @@ import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.WriteEvents;
 import com.spotify.heroic.shell.task.WritePerformance;
 import com.spotify.heroic.shell.task.WritePoints;
-import com.spotify.heroic.utils.GroupMember;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Managed;
-import eu.toolchain.async.ManagedSetup;
-import eu.toolchain.async.TinyAsync;
 
 @Slf4j
 public class HeroicShell {
-    @ToString
-    public static class Parameters {
-        @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration", metaVar = "<config>")
-        private String config;
-
-        @Option(name = "--server", usage = "Start shell as server (enables listen port)")
-        private boolean server = false;
-
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
-        private boolean help;
-    }
+    public static final Path[] DEFAULT_CONFIGS = new Path[] { Paths.get("heroic.yml"),
+            Paths.get("/etc/heroic/heroic.yml") };
 
     private static final Map<String, Class<? extends ShellTask>> available = new HashMap<>();
 
@@ -135,9 +119,6 @@ public class HeroicShell {
     }
 
     public static void main(String[] args) throws IOException {
-        final ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-
-        final AsyncFramework async = TinyAsync.builder().executor(executor).build();
         final Parameters params = new Parameters();
 
         final CmdLineParser parser = new CmdLineParser(params);
@@ -150,22 +131,20 @@ public class HeroicShell {
             return;
         }
 
-        if (params.help) {
-            parser.printUsage(System.out);
+        if (params.help()) {
+            parser.printUsage(System.err);
+            HeroicModules.printProfileUsage(new PrintWriter(System.err), "-p");
             System.exit(0);
             return;
         }
 
-        final HeroicCore.Builder builder = CoreBridge.setupBuilder(params.server, params.config);
-
-        final Managed<CoreBridge.State> state = setupState(async, builder);
-
-        final CoreBridge runner = new CoreBridge(state);
+        final HeroicCore.Builder builder = setupBuilder(params.server, params.config(), params.profile());
+        final HeroicCore core = builder.build();
 
         log.info("Starting Heroic...");
 
         try {
-            runner.start();
+            core.start();
         } catch (Exception e) {
             log.error("Failed to start core", e);
             System.exit(1);
@@ -177,13 +156,13 @@ public class HeroicShell {
         final Map<String, ShellTask> tasks;
 
         try {
-            tasks = buildTasks(runner);
+            tasks = buildTasks(core);
         } catch (Exception e) {
             log.error("Failed to build tasks", e);
             return;
         }
 
-        final HeroicShell shell = new HeroicShell(runner, tasks);
+        final HeroicShell shell = core.inject(new HeroicShell(tasks));
 
         try {
             shell.run();
@@ -192,7 +171,7 @@ public class HeroicShell {
         }
 
         try {
-            runner.stop(10, TimeUnit.SECONDS);
+            core.shutdown();
         } catch (Exception e) {
             log.error("Failed to stop runner in a timely fashion", e);
         }
@@ -200,28 +179,85 @@ public class HeroicShell {
         System.exit(0);
     }
 
-    private static Map<String, ShellTask> buildTasks(CoreBridge runner) throws Exception {
-        final Map<String, ShellTask> tasks = new HashMap<>();
+    /**
+     * Entrypoint for running standalone tasks.
+     *
+     * @param argv
+     * @param taskType
+     * @throws Exception
+     */
+    public static void standalone(String argv[], Class<? extends ShellTask> taskType) throws Exception {
+        final ShellTask task = instance(taskType);
 
-        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.available.entrySet()) {
-            tasks.put(e.getKey(), runner.setup(e.getValue()));
+        final ShellTaskParams params = task.params();
+
+        final PrintWriter out = new PrintWriter(System.out);
+
+        final CmdLineParser parser = new CmdLineParser(params);
+
+        try {
+            parser.parseArgument(argv);
+        } catch (CmdLineException e) {
+            log.error("Error parsing arguments", e);
+            System.exit(1);
+            return;
         }
 
-        return tasks;
+        if (params.help()) {
+            parser.printUsage(System.err);
+            HeroicModules.printProfileUsage(System.err, "-p");
+            System.exit(0);
+            return;
+        }
+
+        final HeroicCore.Builder builder = setupBuilder(false, params.config(), params.profile());
+
+        task.standaloneConfig(builder, params);
+
+        final HeroicCore core = builder.build();
+
+        try {
+            core.start();
+        } catch (Exception e) {
+            log.error("Failed to start core", e);
+            return;
+        }
+
+        try {
+            core.inject(task);
+        } catch (final Exception e) {
+            log.error("Failed to inject task", e);
+            return;
+        }
+
+        final PrintWriter o = standaloneOutput(params, System.out);
+
+        try {
+            task.run(o, params).get();
+        } catch (Exception e) {
+            log.error("Failed to run task", e);
+        } finally {
+            o.flush();
+        }
+
+        log.info("Exiting...");
+        core.shutdown();
+        System.exit(0);
     }
 
-    private final CoreBridge runner;
-    private final Map<String, ShellTask> tasks;
+    final Map<String, ShellTask> tasks;
+
+    @Inject
+    AsyncFramework async;
 
     // mutable state, a.k.a. settings
     int currentTimeout = 10;
 
-    public HeroicShell(CoreBridge runner, Map<String, ShellTask> tasks) {
-        this.runner = runner;
+    public HeroicShell(final Map<String, ShellTask> tasks) {
         this.tasks = tasks;
     }
 
-    private void run() throws IOException {
+    void run() throws IOException {
         try (final FileInputStream input = new FileInputStream(FileDescriptor.in)) {
             final ConsoleReader reader = new ConsoleReader("heroicsh", input, System.out, null);
 
@@ -259,12 +295,12 @@ public class HeroicShell {
         }
     }
 
-    private void doReaderLoop(final ConsoleReader reader)
+    void doReaderLoop(final ConsoleReader reader)
             throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());
 
         while (true) {
-            reader.setPrompt(String.format("heroic(%s)> ", runner.status()));
+            reader.setPrompt(String.format("heroic> "));
 
             final String line;
 
@@ -312,7 +348,7 @@ public class HeroicShell {
         out.println("Exiting...");
     }
 
-    private void internalTimeoutTask(String[] parts, PrintWriter out) {
+    void internalTimeoutTask(String[] parts, PrintWriter out) {
         if (parts.length < 2) {
             if (currentTimeout == 0) {
                 out.println("timeout disabled");
@@ -341,7 +377,7 @@ public class HeroicShell {
         }
     }
 
-    private String formatTime(long diff) {
+    String formatTime(long diff) {
         if (diff < 1000) {
             return String.format("%d ns", diff);
         }
@@ -360,7 +396,7 @@ public class HeroicShell {
         return String.format("%.3f s", v);
     }
 
-    private void printHelp(final Map<String, ShellTask> tasks, final PrintWriter out) {
+    void printHelp(final Map<String, ShellTask> tasks, final PrintWriter out) {
         out.println("Known Commands:");
         out.println("help - Display this help");
         out.println("exit - Exit the shell");
@@ -382,11 +418,11 @@ public class HeroicShell {
         }
     }
 
-    private void runTask(final ConsoleReader reader, String[] parts, final PrintWriter out) throws Exception,
+    void runTask(final ConsoleReader reader, String[] parts, final PrintWriter out) throws Exception,
             IOException {
         // TODO: improve this with proper quote parsing and such.
         final String taskName = parts[0];
-        final String[] commandArgs = args(parts);
+        final String[] commandArgs = extractArgs(parts);
 
         final ShellTask task = tasks.get(taskName);
 
@@ -398,7 +434,7 @@ public class HeroicShell {
         final AsyncFuture<Void> t;
 
         try {
-            t = runner.run(task, commandArgs, out);
+            t = runTask(task, commandArgs, out);
         } catch (Exception e) {
             out.println("Command failed");
             e.printStackTrace(out);
@@ -409,7 +445,7 @@ public class HeroicShell {
             return;
 
         try {
-            waitForTermination(t);
+            awaitFinished(t);
         } catch (TimeoutException e) {
             out.println(String.format("Command timed out (current timeout = %ds)", currentTimeout));
             t.cancel(true);
@@ -423,15 +459,17 @@ public class HeroicShell {
         return;
     }
 
-    private Void waitForTermination(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException,
+    Void awaitFinished(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException,
             TimeoutException {
-        if (currentTimeout > 0)
+        if (currentTimeout > 0) {
             return t.get(currentTimeout, TimeUnit.SECONDS);
+        }
 
+        log.warn(String.format("Waiting forever for task (timeout = %d)", currentTimeout));
         return t.get();
     }
 
-    private String[] args(String[] parts) {
+    String[] extractArgs(String[] parts) {
         if (parts.length <= 1)
             return new String[0];
 
@@ -443,105 +481,121 @@ public class HeroicShell {
         return args;
     }
 
-    private static Managed<CoreBridge.State> setupState(final AsyncFramework async, final HeroicCore.Builder builder) {
-        return async.managed(new ManagedSetup<CoreBridge.State>() {
-            @Override
-            public AsyncFuture<State> construct() {
-                return async.call(new Callable<CoreBridge.State>() {
-                    @Override
-                    public State call() throws Exception {
-                        final HeroicCore core = builder.build();
-                        core.start();
+    AsyncFuture<Void> runTask(ShellTask task, String argv[], PrintWriter out) throws Exception {
+        final ShellTaskParams params = task.params();
+        final CmdLineParser parser = new CmdLineParser(params);
 
-                        final Callable<String> status = core.inject(new Callable<String>() {
-                            @Inject
-                            private Set<Consumer> consumers;
+        try {
+            parser.parseArgument(argv);
+        } catch (CmdLineException e) {
+            log.error("Commandline error", e);
+            return async.failed(e);
+        }
 
-                            @Inject
-                            private MetricManager metric;
+        if (params.help()) {
+            parser.printUsage(out, null);
+            return async.resolved();
+        }
 
-                            @Inject
-                            private MetadataManager metadata;
+        return task.run(out, params);
+    }
 
-                            @Inject
-                            private ClusterManager cluster;
+    static PrintWriter standaloneOutput(final ShellTaskParams params, final PrintStream original) throws IOException {
+        if (params.output() != null && !"-".equals(params.output())) {
+            return new PrintWriter(Files.newOutputStream(Paths.get(params.output())));
+        }
 
-                            @Override
-                            public String call() throws Exception {
-                                final List<String> statuses = new ArrayList<>();
+        return new PrintWriter(original);
+    }
 
-                                if (!clusterStatus())
-                                    statuses.add("bad cluster");
+    static Map<String, ShellTask> buildTasks(HeroicCore core) throws Exception {
+        final Map<String, ShellTask> tasks = new HashMap<>();
 
-                                if (!consumerStatus())
-                                    statuses.add("bad consumer");
+        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.available.entrySet()) {
+            tasks.put(e.getKey(), core.inject(instance(e.getValue())));
+        }
 
-                                if (!metadataStatus())
-                                    statuses.add("bad metadata");
+        return tasks;
+    }
 
-                                if (!metricStatus())
-                                    statuses.add("bad metric");
+    static Path parseConfigPath(String config) {
+        final Path path = doParseConfigPath(config);
 
-                                if (statuses.isEmpty())
-                                    return "ok";
+        if (!Files.isRegularFile(path))
+            throw new IllegalStateException("No such file: " + path.toAbsolutePath());
 
-                                return StringUtils.join(statuses, ", ");
-                            }
+        return path;
+    }
 
-                            private boolean clusterStatus() {
-                                final ClusterManager.Statistics s = cluster.getStatistics();
-
-                                if (s == null)
-                                    return false;
-
-                                return s.getOfflineNodes() == 0 || s.getOnlineNodes() > 0;
-                            }
-
-                            private boolean consumerStatus() {
-                                for (final Consumer c : consumers) {
-                                    if (!c.isReady()) {
-                                        return false;
-                                    }
-                                }
-
-                                return true;
-                            }
-
-                            private boolean metadataStatus() {
-                                for (final GroupMember<MetadataBackend> backend : metadata.getBackends()) {
-                                    if (!backend.getMember().isReady())
-                                        return false;
-                                }
-
-                                return true;
-                            }
-
-                            private boolean metricStatus() {
-                                for (final GroupMember<MetricBackend> backend : metric.getBackends()) {
-                                    if (!backend.getMember().isReady())
-                                        return false;
-                                }
-
-                                return true;
-                            }
-                        });
-
-                        return new State(core, status);
-                    }
-                });
+    static Path doParseConfigPath(String config) {
+        if (config == null) {
+            for (final Path p : DEFAULT_CONFIGS) {
+                if (Files.isRegularFile(p))
+                    return p;
             }
 
-            @Override
-            public AsyncFuture<Void> destruct(final State state) {
-                return async.call(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        state.getCore().shutdown();
-                        return null;
-                    }
+            throw new IllegalStateException("No default configuration available, checked "
+                    + formatDefaults(DEFAULT_CONFIGS));
+        }
 
-                });
-            }
-        });
+        return Paths.get(config);
+    }
+
+    static String formatDefaults(Path[] defaultConfigs) {
+        final List<Path> alternatives = new ArrayList<>(defaultConfigs.length);
+
+        for (final Path path : defaultConfigs)
+            alternatives.add(path.toAbsolutePath());
+
+        return StringUtils.join(alternatives, ", ");
+    }
+
+    static ShellTask instance(Class<? extends ShellTask> taskType) throws Exception {
+        final Constructor<? extends ShellTask> constructor;
+
+        try {
+            constructor = taskType.getConstructor();
+        } catch (ReflectiveOperationException e) {
+            throw new Exception("Task '" + taskType.getCanonicalName()
+                    + "' does not have an accessible, empty constructor", e);
+        }
+
+        try {
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new Exception("Failed to invoke constructor of '" + taskType.getCanonicalName(), e);
+        }
+    }
+
+    static HeroicCore.Builder setupBuilder(boolean server, String config, String profile) {
+        HeroicCore.Builder builder = HeroicCore.builder().server(server).modules(HeroicModules.ALL_MODULES)
+                .oneshot(true);
+
+        if (config != null) {
+            builder.configPath(parseConfigPath(config));
+        }
+
+        if (profile != null) {
+            final HeroicProfile p = HeroicModules.PROFILES.get(profile);
+
+            if (p == null)
+                throw new IllegalArgumentException(String.format("not a valid profile: %s", profile));
+
+            builder.profile(p);
+        }
+
+        return builder;
+    }
+
+    @ToString
+    public static class Parameters extends AbstractShellTaskParams {
+        @Option(name = "--server", usage = "Start shell as server (enables listen port)")
+        private boolean server = false;
+    }
+
+    @Data
+    public static final class State {
+        private final HeroicCore core;
+        private final Callable<String> status;
     }
 }
