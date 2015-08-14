@@ -48,7 +48,7 @@ public class WriteMetric {
     }
 
     public Iterable<TimeData> all() {
-        final List<Iterable<TimeData>> iterables = new ArrayList<>(groups.size());
+        final List<Iterable<? extends TimeData>> iterables = new ArrayList<>(groups.size());
 
         for (final TimeDataGroup g : groups) {
             iterables.add(g.getData());

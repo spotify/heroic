@@ -21,12 +21,17 @@
 
 package com.spotify.heroic.model;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.Comparator;
 import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 @Data
@@ -39,6 +44,12 @@ public class Event implements TimeData {
 
     public Event(long timestamp) {
         this(timestamp, EMPTY_PAYLOAD);
+    }
+
+    @JsonCreator
+    public Event(@JsonProperty("timestamp") Long timestamp, @JsonProperty("payload") Map<String, Object> payload) {
+        this.timestamp = checkNotNull(timestamp, "timestamp");
+        this.payload = Optional.fromNullable(payload).or(EMPTY_PAYLOAD);
     }
 
     @Override
