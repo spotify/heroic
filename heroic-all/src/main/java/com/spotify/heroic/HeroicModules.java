@@ -6,6 +6,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.GeneratedProfile;
+import com.spotify.heroic.profile.MemoryProfile;
 
 public class HeroicModules {
     // @formatter:off
@@ -32,7 +33,8 @@ public class HeroicModules {
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String, HeroicProfile>builder()
-            .put("generated", new GeneratedProfile())
+        .put("generated", new GeneratedProfile())
+        .put("memory", new MemoryProfile())
     .build();
     // @formatter:on
 }
