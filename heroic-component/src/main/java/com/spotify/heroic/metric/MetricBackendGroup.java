@@ -24,13 +24,10 @@ package com.spotify.heroic.metric;
 import java.util.List;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.exceptions.BackendGroupException;
+import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.ResultGroups;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
 
 import eu.toolchain.async.AsyncFuture;
 

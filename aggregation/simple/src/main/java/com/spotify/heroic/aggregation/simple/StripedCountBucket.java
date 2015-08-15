@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.LongAdder;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
 
 /**
  * Bucket that counts the number of seen samples.
@@ -37,7 +38,7 @@ import com.spotify.heroic.model.TimeData;
  * @author udoprog
  */
 @Data
-public class StripedCountBucket implements Bucket<TimeData> {
+public class StripedCountBucket implements Bucket<Metric> {
     private final long timestamp;
     private final LongAdder count = new LongAdder();
 
@@ -46,7 +47,7 @@ public class StripedCountBucket implements Bucket<TimeData> {
     }
 
     @Override
-    public void update(Map<String, String> tags, TimeData d) {
+    public void update(Map<String, String> tags, MetricType type, Metric d) {
         count.increment();
     }
 

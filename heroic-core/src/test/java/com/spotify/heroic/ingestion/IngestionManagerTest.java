@@ -14,13 +14,13 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.spotify.heroic.exceptions.BackendGroupException;
+import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;

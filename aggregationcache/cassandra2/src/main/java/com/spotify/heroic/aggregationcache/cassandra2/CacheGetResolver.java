@@ -37,11 +37,11 @@ import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.model.CacheKey;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.aggregationcache.CacheBackendGetResult;
+import com.spotify.heroic.aggregationcache.CacheBackendKey;
+import com.spotify.heroic.aggregationcache.CacheKey;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.metric.Point;
 
 @RequiredArgsConstructor
 public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
@@ -58,14 +58,14 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
         return new CacheBackendGetResult(key, doGetRow());
     }
 
-    private List<DataPoint> doGetRow() throws ConnectionException {
+    private List<Point> doGetRow() throws ConnectionException {
         final Keyspace keyspace = ctx.getClient();
         final Aggregation aggregation = key.getAggregation();
         final long columnSize = aggregation.extent();
 
         final List<Long> bases = calculateBases(columnSize);
 
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+        final List<Point> datapoints = new ArrayList<Point>();
 
         for (final long base : bases) {
             final CacheKey cacheKey = new CacheKey(CacheKey.VERSION, key.getFilter(), key.getGroup(), aggregation, base);
@@ -87,7 +87,7 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
                 if (timestamp < range.getStart() || timestamp > range.getEnd())
                     continue;
 
-                datapoints.add(new DataPoint(timestamp, value));
+                datapoints.add(new Point(timestamp, value));
             }
         }
 

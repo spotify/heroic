@@ -40,11 +40,11 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
-import com.spotify.heroic.utils.BackendGroups;
 
 @Data
 public class MetricManagerModule extends PrivateModule {

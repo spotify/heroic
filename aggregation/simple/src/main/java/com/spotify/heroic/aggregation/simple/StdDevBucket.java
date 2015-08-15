@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * Bucket that calculates the standard deviation of all buckets seen.
@@ -37,14 +38,14 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class StdDevBucket implements DoubleBucket<DataPoint> {
+public class StdDevBucket implements DoubleBucket<Point> {
     private static final Cell ZERO = new Cell(0.0, 0.0, 0);
 
     private final long timestamp;
     private AtomicReference<Cell> cell = new AtomicReference<>(ZERO);
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         final double value = d.getValue();
 
         while (true) {

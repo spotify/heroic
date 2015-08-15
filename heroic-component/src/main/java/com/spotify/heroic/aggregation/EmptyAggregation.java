@@ -15,11 +15,11 @@ import lombok.RequiredArgsConstructor;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.Statistics;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
 
 @RequiredArgsConstructor
 @EqualsAndHashCode(of = { "NAME" })
@@ -63,10 +63,10 @@ public class EmptyAggregation implements Aggregation {
 
         @Override
         public AggregationResult result() {
-            final Map<MetricType, List<Iterable<? extends TimeData>>> entries = new HashMap<>();
+            final Map<MetricType, List<Iterable<? extends Metric>>> entries = new HashMap<>();
 
             for (final AggregationData in : input) {
-                List<Iterable<? extends TimeData>> iterables = entries.get(in.getType());
+                List<Iterable<? extends Metric>> iterables = entries.get(in.getType());
 
                 if (iterables == null) {
                     iterables = new ArrayList<>();
@@ -78,9 +78,9 @@ public class EmptyAggregation implements Aggregation {
 
             final ImmutableList.Builder<AggregationData> groups = ImmutableList.builder();
 
-            for (final Map.Entry<MetricType, List<Iterable<? extends TimeData>>> e : entries.entrySet()) {
-                final List<? extends TimeData> data = ImmutableList.copyOf(Iterables.mergeSorted(e.getValue(),
-                        TimeData.comparator()));
+            for (final Map.Entry<MetricType, List<Iterable<? extends Metric>>> e : entries.entrySet()) {
+                final List<? extends Metric> data = ImmutableList.copyOf(Iterables.mergeSorted(e.getValue(),
+                        Metric.comparator()));
                 groups.add(new AggregationData(EMPTY_GROUP, series, data, e.getKey()));
             }
 

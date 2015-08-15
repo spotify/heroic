@@ -45,11 +45,6 @@
       <artifactId>heroic-all</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-utils</artifactId>
-    </dependency>
-
     <!-- shell -->
     <dependency>
       <groupId>args4j</groupId>

@@ -45,32 +45,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.httpclient.HttpClientSession;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metadata.model.CountSeries;
-import com.spotify.heroic.metadata.model.DeleteSeries;
-import com.spotify.heroic.metadata.model.FindKeys;
-import com.spotify.heroic.metadata.model.FindSeries;
-import com.spotify.heroic.metadata.model.FindTags;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.ResultGroups;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.RangeFilter;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.rpc.httprpc.model.RpcGroupedQuery;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.ResultGroups;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.suggest.model.KeySuggest;
-import com.spotify.heroic.suggest.model.MatchOptions;
-import com.spotify.heroic.suggest.model.TagKeyCount;
-import com.spotify.heroic.suggest.model.TagSuggest;
-import com.spotify.heroic.suggest.model.TagValueSuggest;
-import com.spotify.heroic.suggest.model.TagValuesSuggest;
-import com.spotify.heroic.utils.HttpAsyncUtils;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -94,7 +93,7 @@ public class HttpRpcResource {
     private static final String METADATA_WRITE = "metadata:writeSeries";
 
     @Inject
-    private HttpAsyncUtils httpAsync;
+    private JavaxRestFramework httpAsync;
 
     @Inject
     private MetricManager metrics;
@@ -120,7 +119,7 @@ public class HttpRpcResource {
     @Path(METRICS_QUERY)
     public void query(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcQuery> grouped) throws Exception {
         final RpcQuery query = grouped.getQuery();
-        httpAsync.handleAsyncResume(
+        httpAsync.bind(
                 response,
                 metrics.useGroup(grouped.getGroup()).query(query.getSource(), query.getFilter(), query.getGroupBy(),
                         query.getRange(), query.getAggregation(), query.isNoCache()));
@@ -131,35 +130,35 @@ public class HttpRpcResource {
     public void writeMetric(@Suspended final AsyncResponse response, RpcGroupedQuery<WriteMetric> grouped)
             throws Exception {
         final WriteMetric query = grouped.getQuery();
-        httpAsync.handleAsyncResume(response, metrics.useGroup(grouped.getGroup()).write(query));
+        httpAsync.bind(response, metrics.useGroup(grouped.getGroup()).write(query));
     }
 
     @POST
     @Path(METADATA_FIND_TAGS)
     public void findTags(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, metadata.useGroup(grouped.getGroup()).findTags(grouped.getQuery()));
+        httpAsync.bind(response, metadata.useGroup(grouped.getGroup()).findTags(grouped.getQuery()));
     }
 
     @POST
     @Path(METADATA_FIND_KEYS)
     public void metadataFindKeys(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, metadata.useGroup(grouped.getGroup()).findKeys(grouped.getQuery()));
+        httpAsync.bind(response, metadata.useGroup(grouped.getGroup()).findKeys(grouped.getQuery()));
     }
 
     @POST
     @Path(METADATA_FIND_SERIES)
     public void metadataFindSeries(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, metadata.useGroup(grouped.getGroup()).findSeries(grouped.getQuery()));
+        httpAsync.bind(response, metadata.useGroup(grouped.getGroup()).findSeries(grouped.getQuery()));
     }
 
     @POST
     @Path(METADATA_COUNT_SERIES)
     public void metadataCountSeries(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, metadata.useGroup(grouped.getGroup()).countSeries(grouped.getQuery()));
+        httpAsync.bind(response, metadata.useGroup(grouped.getGroup()).countSeries(grouped.getQuery()));
     }
 
     @POST
@@ -167,7 +166,7 @@ public class HttpRpcResource {
     public void writeSeries(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcWriteSeries> grouped)
             throws Exception {
         final RpcWriteSeries query = grouped.getQuery();
-        httpAsync.handleAsyncResume(response,
+        httpAsync.bind(response,
                 metadata.useGroup(grouped.getGroup()).write(query.getSeries(), query.getRange()));
     }
 
@@ -175,14 +174,14 @@ public class HttpRpcResource {
     @Path(METADATA_DELETE_SERIES)
     public void metadataDeleteSeries(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, metadata.useGroup(grouped.getGroup()).deleteSeries(grouped.getQuery()));
+        httpAsync.bind(response, metadata.useGroup(grouped.getGroup()).deleteSeries(grouped.getQuery()));
     }
 
     @POST
     @Path(SUGGEST_TAG_KEY_COUNT)
     public void suggestTagKeyCount(@Suspended final AsyncResponse response, RpcGroupedQuery<RangeFilter> grouped)
             throws Exception {
-        httpAsync.handleAsyncResume(response, suggest.useGroup(grouped.getGroup()).tagKeyCount(grouped.getQuery()));
+        httpAsync.bind(response, suggest.useGroup(grouped.getGroup()).tagKeyCount(grouped.getQuery()));
     }
 
     @POST
@@ -190,7 +189,7 @@ public class HttpRpcResource {
     public void suggestTag(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcTagSuggest> grouped)
             throws Exception {
         final RpcTagSuggest query = grouped.getQuery();
-        httpAsync.handleAsyncResume(
+        httpAsync.bind(
                 response,
                 suggest.useGroup(grouped.getGroup()).tagSuggest(query.getFilter(), query.getMatch(), query.getKey(),
                         query.getValue()));
@@ -201,7 +200,7 @@ public class HttpRpcResource {
     public void suggestKey(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcKeySuggest> grouped)
             throws Exception {
         final RpcKeySuggest query = grouped.getQuery();
-        httpAsync.handleAsyncResume(response,
+        httpAsync.bind(response,
                 suggest.useGroup(grouped.getGroup()).keySuggest(query.getFilter(), query.getMatch(), query.getKey()));
     }
 
@@ -210,7 +209,7 @@ public class HttpRpcResource {
     public void tagValuesSuggest(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcSuggestTagValues> grouped)
             throws Exception {
         final RpcSuggestTagValues query = grouped.getQuery();
-        httpAsync.handleAsyncResume(
+        httpAsync.bind(
                 response,
                 suggest.useGroup(grouped.getGroup()).tagValuesSuggest(query.getFilter(), query.getExclude(),
                         query.getGroupLimit()));
@@ -221,7 +220,7 @@ public class HttpRpcResource {
     public void tagValueSuggest(@Suspended final AsyncResponse response, RpcGroupedQuery<RpcSuggestTagValue> grouped)
             throws Exception {
         final RpcSuggestTagValue query = grouped.getQuery();
-        httpAsync.handleAsyncResume(response,
+        httpAsync.bind(response,
                 suggest.useGroup(grouped.getGroup()).tagValueSuggest(query.getFilter(), query.getKey()));
     }
 
@@ -419,6 +418,18 @@ public class HttpRpcResource {
         public RpcWriteSeries(@JsonProperty("range") DateRange range, @JsonProperty("series") Series series) {
             this.range = checkNotNull(range);
             this.series = checkNotNull(series);
+        }
+    }
+
+    @Data
+    public static class RpcGroupedQuery<T> {
+        private final String group;
+        private final T query;
+
+        @JsonCreator
+        public RpcGroupedQuery(@JsonProperty("group") String group, @JsonProperty("query") T query) {
+            this.group = checkNotNull(group, "group");
+            this.query = checkNotNull(query, "query");
         }
     }
 }

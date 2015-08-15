@@ -28,11 +28,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-utils</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>eu.toolchain.async</groupId>
       <artifactId>tiny-async-core</artifactId>
     </dependency>

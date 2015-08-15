@@ -28,13 +28,14 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME", "q", "error" })
-public class QuantileAggregation extends BucketAggregation<DataPoint, QuantileBucket> {
+public class QuantileAggregation extends BucketAggregation<Point, QuantileBucket> {
     public static final String NAME = "quantile";
 
     @Getter
@@ -44,7 +45,7 @@ public class QuantileAggregation extends BucketAggregation<DataPoint, QuantileBu
     private final double error;
 
     public QuantileAggregation(Sampling sampling, double q, double error) {
-        super(sampling, DataPoint.class, MetricType.POINTS);
+        super(sampling, Point.class, MetricType.POINT);
         this.q = q;
         this.error = error;
     }
@@ -70,7 +71,13 @@ public class QuantileAggregation extends BucketAggregation<DataPoint, QuantileBu
     }
 
     @Override
-    protected DataPoint build(QuantileBucket bucket) {
-        return new DataPoint(bucket.timestamp(), bucket.value());
+    protected Metric build(QuantileBucket bucket) {
+        final double value = bucket.value();
+
+        if (Double.isNaN(value)) {
+            return Metric.invalid();
+        }
+
+        return new Point(bucket.timestamp(), value);
     }
 }

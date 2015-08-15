@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.utils.Grouped;
+import com.spotify.heroic.common.Grouped;
 
 public interface GroupedSuggestBackend extends Grouped, SuggestBackend {
 

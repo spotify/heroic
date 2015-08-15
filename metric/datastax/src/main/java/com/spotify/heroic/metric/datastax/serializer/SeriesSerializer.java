@@ -26,7 +26,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.Series;
 
 public class SeriesSerializer implements CustomSerializer<Series> {
     private final CustomSerializer<String> key = new StringSerializer();

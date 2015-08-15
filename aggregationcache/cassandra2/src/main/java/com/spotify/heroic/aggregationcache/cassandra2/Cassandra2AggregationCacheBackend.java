@@ -34,14 +34,14 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackend;
+import com.spotify.heroic.aggregationcache.CacheBackendGetResult;
+import com.spotify.heroic.aggregationcache.CacheBackendKey;
+import com.spotify.heroic.aggregationcache.CacheBackendPutResult;
+import com.spotify.heroic.aggregationcache.CacheKey;
 import com.spotify.heroic.aggregationcache.CacheOperationException;
-import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
-import com.spotify.heroic.model.CacheKey;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
@@ -84,7 +84,7 @@ public class Cassandra2AggregationCacheBackend implements AggregationCacheBacken
     }
 
     @Override
-    public AsyncFuture<CacheBackendPutResult> put(final CacheBackendKey key, final List<DataPoint> datapoints)
+    public AsyncFuture<CacheBackendPutResult> put(final CacheBackendKey key, final List<Point> datapoints)
             throws CacheOperationException {
         return context.doto(new ManagedAction<Context, CacheBackendPutResult>() {
             @Override

@@ -51,8 +51,8 @@ import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.TermFilterBuilder;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.model.Series;
 
 public final class ElasticsearchUtils {
     public static final String TYPE_METADATA = "metadata";

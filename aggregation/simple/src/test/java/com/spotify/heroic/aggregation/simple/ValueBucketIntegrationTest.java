@@ -23,7 +23,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @RequiredArgsConstructor
 public abstract class ValueBucketIntegrationTest {
@@ -54,19 +55,19 @@ public abstract class ValueBucketIntegrationTest {
         service.shutdownNow();
     }
 
-    public abstract Collection<? extends DoubleBucket<DataPoint>> buckets();
+    public abstract Collection<? extends DoubleBucket<Point>> buckets();
 
     @Test(timeout = 10000)
     public void testExpectedValue() throws InterruptedException, ExecutionException {
         final Random rnd = new Random();
 
-        for (final DoubleBucket<DataPoint> bucket : buckets()) {
+        for (final DoubleBucket<Point> bucket : buckets()) {
             final List<Future<Void>> futures = new ArrayList<>();
 
             double expected = initial;
 
             for (int iteration = 0; iteration < iterations; iteration++) {
-                final List<DataPoint> updates = new ArrayList<>();
+                final List<Point> updates = new ArrayList<>();
 
                 double base = iteration * range;
 
@@ -74,8 +75,8 @@ public abstract class ValueBucketIntegrationTest {
                     final double v1 = base + (rnd.nextDouble() * range);
                     final double v2 = -base + (rnd.nextDouble() * range);
 
-                    updates.add(new DataPoint(0l, v1));
-                    updates.add(new DataPoint(0l, v2));
+                    updates.add(new Point(0l, v1));
+                    updates.add(new Point(0l, v2));
 
                     expected = fn.applyAsDouble(expected, v1);
                     expected = fn.applyAsDouble(expected, v2);
@@ -87,8 +88,8 @@ public abstract class ValueBucketIntegrationTest {
                     futures.add(service.submit(new Callable<Void>() {
                         @Override
                         public Void call() throws Exception {
-                            for (final DataPoint d : updates)
-                                bucket.update(tags, d);
+                            for (final Point d : updates)
+                                bucket.update(tags, MetricType.POINT, d);
 
                             return null;
                         }

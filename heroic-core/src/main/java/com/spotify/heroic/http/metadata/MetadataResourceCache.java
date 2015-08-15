@@ -32,9 +32,9 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.metadata.model.FindKeys;
-import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.model.RangeFilter;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindTags;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;

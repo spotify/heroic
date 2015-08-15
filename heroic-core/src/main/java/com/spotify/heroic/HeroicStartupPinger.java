@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicInternalLifeCycle.Context;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.common.LifeCycle;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

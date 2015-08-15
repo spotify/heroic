@@ -28,9 +28,7 @@ import java.util.Map;
 
 import lombok.Data;
 
-import com.spotify.heroic.cluster.model.NodeCapability;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.common.LifeCycle;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;

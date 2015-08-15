@@ -4,7 +4,7 @@ import java.io.IOException;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.Series;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;

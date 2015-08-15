@@ -28,7 +28,8 @@ import java.util.function.DoubleBinaryOperator;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * A bucket implementation that retains the largest (max) value seen.
@@ -38,7 +39,7 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class StripedMaxBucket implements DoubleBucket<DataPoint> {
+public class StripedMaxBucket implements DoubleBucket<Point> {
     private static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
     private final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
@@ -49,7 +50,7 @@ public class StripedMaxBucket implements DoubleBucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         max.accumulate(d.getValue());
     }
 
@@ -57,8 +58,9 @@ public class StripedMaxBucket implements DoubleBucket<DataPoint> {
     public double value() {
         final double result = max.doubleValue();
 
-        if (Double.isInfinite(result))
+        if (Double.isInfinite(result)) {
             return Double.NaN;
+        }
 
         return result;
     }

@@ -28,7 +28,8 @@ import java.util.concurrent.atomic.DoubleAdder;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
@@ -38,7 +39,7 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class StripedSumBucket implements DoubleBucket<DataPoint> {
+public class StripedSumBucket implements DoubleBucket<Point> {
     private final long timestamp;
     /* the sum of all seen values */
     private final DoubleAdder sum = new DoubleAdder();
@@ -50,7 +51,7 @@ public class StripedSumBucket implements DoubleBucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         sum.add(d.getValue());
         valid.compareAndSet(false, true);
     }

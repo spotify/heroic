@@ -27,17 +27,16 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Point;
 
 @Data
 public class WriteMetrics {
     private final Series series;
-    private final List<DataPoint> data;
+    private final List<Point> data;
 
     @JsonCreator
-    public static WriteMetrics create(@JsonProperty("series") Series series, @JsonProperty("data") List<DataPoint> data) {
+    public static WriteMetrics create(@JsonProperty("series") Series series, @JsonProperty("data") List<Point> data) {
         return new WriteMetrics(series, data);
     }
 }

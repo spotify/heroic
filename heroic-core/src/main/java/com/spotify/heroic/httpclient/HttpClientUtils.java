@@ -27,7 +27,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import com.spotify.heroic.exceptions.RpcRemoteException;
 import com.spotify.heroic.http.ErrorMessage;
 
 public class HttpClientUtils {

@@ -27,7 +27,8 @@ import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * A bucket implementation that retains the smallest (min) value seen.
@@ -35,7 +36,7 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class MinBucket implements DoubleBucket<DataPoint> {
+public class MinBucket implements DoubleBucket<Point> {
     private final long timestamp;
     private final AtomicDouble value = new AtomicDouble(Double.POSITIVE_INFINITY);
 
@@ -44,7 +45,7 @@ public class MinBucket implements DoubleBucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         while (true) {
             double current = value.get();
 

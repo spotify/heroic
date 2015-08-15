@@ -25,7 +25,7 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.Series;
 
 @Data
 public class MetricsRowKey {

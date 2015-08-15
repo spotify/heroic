@@ -12,11 +12,12 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 public class StdDevBucketTest {
-    public Collection<? extends DoubleBucket<DataPoint>> buckets() {
-        return ImmutableList.<DoubleBucket<DataPoint>> of(new StdDevBucket(0l), new StripedStdDevBucket(0l));
+    public Collection<? extends DoubleBucket<Point>> buckets() {
+        return ImmutableList.<DoubleBucket<Point>> of(new StdDevBucket(0l), new StripedStdDevBucket(0l));
     }
 
     @Test
@@ -25,9 +26,9 @@ public class StdDevBucketTest {
 
         final Map<String, String> tags = ImmutableMap.of();
 
-        for (final DoubleBucket<DataPoint> bucket : buckets()) {
+        for (final DoubleBucket<Point> bucket : buckets()) {
             for (int i = 0; i < 1000; i++) {
-                bucket.update(tags, new DataPoint(0l, rnd.nextDouble()));
+                bucket.update(tags, MetricType.POINT, new Point(0l, rnd.nextDouble()));
             }
 
             final double value = bucket.value();
@@ -39,13 +40,13 @@ public class StdDevBucketTest {
     public void testNaNOnZero() {
         final Map<String, String> tags = ImmutableMap.of();
 
-        for (final DoubleBucket<DataPoint> bucket : buckets()) {
+        for (final DoubleBucket<Point> bucket : buckets()) {
             assertTrue(Double.isNaN(bucket.value()));
         }
 
-        for (final DoubleBucket<DataPoint> bucket : buckets()) {
-            bucket.update(tags, new DataPoint(0l, 0.0d));
-            bucket.update(tags, new DataPoint(0l, 0.0d));
+        for (final DoubleBucket<Point> bucket : buckets()) {
+            bucket.update(tags, MetricType.POINT, new Point(0l, 0.0d));
+            bucket.update(tags, MetricType.POINT, new Point(0l, 0.0d));
             assertFalse(bucket.getClass().getSimpleName(), Double.isNaN(bucket.value()));
         }
     }

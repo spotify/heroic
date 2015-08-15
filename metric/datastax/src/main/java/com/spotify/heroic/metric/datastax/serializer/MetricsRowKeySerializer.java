@@ -23,8 +23,8 @@ package com.spotify.heroic.metric.datastax.serializer;
 
 import java.nio.ByteBuffer;
 
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
-import com.spotify.heroic.model.Series;
 
 public class MetricsRowKeySerializer implements CustomSerializer<MetricsRowKey> {
     private final CustomSerializer<Series> series = new SeriesSerializer();

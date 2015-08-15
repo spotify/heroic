@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.FutureReporter.Context;
 

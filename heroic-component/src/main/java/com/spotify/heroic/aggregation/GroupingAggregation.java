@@ -35,9 +35,9 @@ import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.Statistics;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 
 @Data
 @EqualsAndHashCode(of = { "of", "each" })

@@ -7,10 +7,11 @@ import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @Data
-public class AverageBucket implements DoubleBucket<DataPoint> {
+public class AverageBucket implements DoubleBucket<Point> {
     private final long timestamp;
     private final AtomicDouble value = new AtomicDouble();
     private final AtomicLong count = new AtomicLong();
@@ -20,7 +21,7 @@ public class AverageBucket implements DoubleBucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         value.addAndGet(d.getValue());
         count.incrementAndGet();
     }

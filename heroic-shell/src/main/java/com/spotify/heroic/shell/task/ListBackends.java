@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTask;
@@ -39,7 +40,6 @@ import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.utils.Grouped;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

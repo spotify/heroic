@@ -37,6 +37,7 @@ import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AbsoluteContext;
@@ -68,7 +69,6 @@ import com.spotify.heroic.grammar.HeroicQueryParser.RelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.SelectContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ValueExprContext;
-import com.spotify.heroic.model.DateRange;
 
 @SuppressWarnings("unchecked")
 @RequiredArgsConstructor

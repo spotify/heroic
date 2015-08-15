@@ -42,23 +42,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.metadata.model.CountSeries;
-import com.spotify.heroic.metadata.model.DeleteSeries;
-import com.spotify.heroic.metadata.model.FindKeys;
-import com.spotify.heroic.metadata.model.FindSeries;
-import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.RangeFilter;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.suggest.model.KeySuggest;
-import com.spotify.heroic.suggest.model.TagKeyCount;
-import com.spotify.heroic.suggest.model.TagSuggest;
-import com.spotify.heroic.suggest.model.TagValueSuggest;
-import com.spotify.heroic.suggest.model.TagValuesSuggest;
-import com.spotify.heroic.utils.HttpAsyncUtils;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.DeleteSeries;
+import com.spotify.heroic.metadata.FindKeys;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -71,7 +71,7 @@ public class MetadataResource {
     private FilterFactory filters;
 
     @Inject
-    private HttpAsyncUtils httpAsync;
+    private JavaxRestFramework httpAsync;
 
     @Inject
     private ClusterManager cluster;
@@ -95,7 +95,7 @@ public class MetadataResource {
 
         final AsyncFuture<FindTags> callback = cache.findTags(null, RangeFilter.filterFor(filter, query.getRange()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -110,10 +110,10 @@ public class MetadataResource {
 
         final AsyncFuture<FindKeys> callback = cache.findKeys(null, RangeFilter.filterFor(filter, query.getRange()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
-    private static final HttpAsyncUtils.Resume<WriteResult, MetadataAddSeriesResponse> WRITE = new HttpAsyncUtils.Resume<WriteResult, MetadataAddSeriesResponse>() {
+    private static final JavaxRestFramework.Resume<WriteResult, MetadataAddSeriesResponse> WRITE = new JavaxRestFramework.Resume<WriteResult, MetadataAddSeriesResponse>() {
         @Override
         public MetadataAddSeriesResponse resume(WriteResult value) throws Exception {
             return new MetadataAddSeriesResponse(value.getTimes());
@@ -125,7 +125,7 @@ public class MetadataResource {
     public void addSeries(@Suspended final AsyncResponse response, Series series) {
         final DateRange range = DateRange.now();
         final AsyncFuture<WriteResult> callback = cluster.useDefaultGroup().writeSeries(range, series);
-        httpAsync.handleAsyncResume(response, callback, WRITE);
+        httpAsync.bind(response, callback, WRITE);
     }
 
     @POST
@@ -146,7 +146,7 @@ public class MetadataResource {
         final AsyncFuture<FindSeries> callback = cluster.useDefaultGroup().findSeries(
                 RangeFilter.filterFor(filter, query.getRange(), query.getLimit()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @DELETE
@@ -165,7 +165,7 @@ public class MetadataResource {
         final AsyncFuture<DeleteSeries> callback = cluster.useDefaultGroup().deleteSeries(
                 RangeFilter.filterFor(filter, query.getRange()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -177,7 +177,7 @@ public class MetadataResource {
         final AsyncFuture<CountSeries> callback = cluster.useDefaultGroup().countSeries(
                 RangeFilter.filterFor(request.getFilter(), request.getRange()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -189,7 +189,7 @@ public class MetadataResource {
         final AsyncFuture<TagKeyCount> callback = cluster.useDefaultGroup().tagKeyCount(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()));
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -202,7 +202,7 @@ public class MetadataResource {
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getMatch(),
                 request.getKey());
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     /* @POST
@@ -226,7 +226,7 @@ public class MetadataResource {
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getMatch(),
                 request.getKey(), request.getValue());
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -238,7 +238,7 @@ public class MetadataResource {
         final AsyncFuture<TagValueSuggest> callback = cluster.useDefaultGroup().tagValueSuggest(
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()), request.getKey());
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 
     @POST
@@ -251,6 +251,6 @@ public class MetadataResource {
                 RangeFilter.filterFor(request.getFilter(), request.getRange(), request.getLimit()),
                 request.getExclude(), request.getGroupLimit());
 
-        httpAsync.handleAsyncResume(response, callback);
+        httpAsync.bind(response, callback);
     }
 }

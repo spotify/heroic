@@ -37,19 +37,19 @@ import lombok.Data;
 import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -61,7 +61,7 @@ import eu.toolchain.async.AsyncFuture;
 public class MemoryBackend implements MetricBackend, LifeCycle {
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    private final ConcurrentMap<MemoryKey, NavigableMap<Long, TimeData>> storage = new ConcurrentHashMap<>();
+    private final ConcurrentMap<MemoryKey, NavigableMap<Long, Metric>> storage = new ConcurrentHashMap<>();
 
     private final Object $create = new Object();
 
@@ -117,7 +117,7 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
             FetchQuotaWatcher watcher) {
         final long start = System.nanoTime();
         final MemoryKey key = new MemoryKey(source, series);
-        final List<TimeDataGroup> groups = doFetch(key, range);
+        final List<MetricTypeGroup> groups = doFetch(key, range);
         final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
         return async.resolved(new FetchData(series, times, groups));
     }
@@ -144,12 +144,12 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
     }
 
     private void writeOne(final List<Long> times, final WriteMetric write, final long start) {
-        for (final TimeDataGroup g : write.getGroups()) {
+        for (final MetricTypeGroup g : write.getGroups()) {
             final MemoryKey key = new MemoryKey(g.getType(), write.getSeries());
-            final NavigableMap<Long, TimeData> tree = getOrCreate(key);
+            final NavigableMap<Long, Metric> tree = getOrCreate(key);
 
             synchronized (tree) {
-                for (final TimeData d : g.getData())
+                for (final Metric d : g.getData())
                     tree.put(d.getTimestamp(), d);
             }
         }
@@ -157,16 +157,16 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
         times.add(System.nanoTime() - start);
     }
 
-    private List<TimeDataGroup> doFetch(final MemoryKey key, DateRange range) {
-        final NavigableMap<Long, TimeData> tree = storage.get(key);
+    private List<MetricTypeGroup> doFetch(final MemoryKey key, DateRange range) {
+        final NavigableMap<Long, Metric> tree = storage.get(key);
 
         if (tree == null) {
-            return ImmutableList.of(new TimeDataGroup(key.getSource(), ImmutableList.of()));
+            return ImmutableList.of(new MetricTypeGroup(key.getSource(), ImmutableList.of()));
         }
 
         synchronized (tree) {
-            final Iterable<TimeData> data = tree.subMap(range.getStart(), range.getEnd()).values();
-            return ImmutableList.of(new TimeDataGroup(key.getSource(), ImmutableList.copyOf(data)));
+            final Iterable<Metric> data = tree.subMap(range.getStart(), range.getEnd()).values();
+            return ImmutableList.of(new MetricTypeGroup(key.getSource(), ImmutableList.copyOf(data)));
         }
     }
 
@@ -176,19 +176,19 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
      * @param key The key to create the map under.
      * @return An existing, or a newly created navigable map for the given key.
      */
-    private NavigableMap<Long, TimeData> getOrCreate(final MemoryKey key) {
-        final NavigableMap<Long, TimeData> tree = storage.get(key);
+    private NavigableMap<Long, Metric> getOrCreate(final MemoryKey key) {
+        final NavigableMap<Long, Metric> tree = storage.get(key);
 
         if (tree != null)
             return tree;
 
         synchronized ($create) {
-            final NavigableMap<Long, TimeData> checked = storage.get(key);
+            final NavigableMap<Long, Metric> checked = storage.get(key);
 
             if (checked != null)
                 return checked;
 
-            final NavigableMap<Long, TimeData> created = new TreeMap<>();
+            final NavigableMap<Long, Metric> created = new TreeMap<>();
             storage.put(key, created);
             return created;
         }

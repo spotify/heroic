@@ -30,11 +30,8 @@ import lombok.ToString;
 
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.metric.Point;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -46,7 +43,7 @@ import eu.toolchain.async.AsyncFuture;
  */
 @ToString
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
-    private final Map<CacheBackendKey, Map<Long, DataPoint>> cache = new HashMap<CacheBackendKey, Map<Long, DataPoint>>();
+    private final Map<CacheBackendKey, Map<Long, Point>> cache = new HashMap<CacheBackendKey, Map<Long, Point>>();
 
     @Inject
     private AsyncFramework async;
@@ -54,10 +51,10 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     @Override
     public synchronized AsyncFuture<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
             throws CacheOperationException {
-        Map<Long, DataPoint> entry = cache.get(key);
+        Map<Long, Point> entry = cache.get(key);
 
         if (entry == null) {
-            entry = new HashMap<Long, DataPoint>();
+            entry = new HashMap<Long, Point>();
             cache.put(key, entry);
         }
 
@@ -68,7 +65,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         if (extent == 0)
             throw new CacheOperationException("provided aggregation is not cacheable");
 
-        final List<DataPoint> datapoints = new ArrayList<DataPoint>();
+        final List<Point> datapoints = new ArrayList<Point>();
 
         if (extent == 0) {
             return async.resolved(new CacheBackendGetResult(key, datapoints));
@@ -78,7 +75,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final long end = range.getEnd() - range.getEnd() % extent;
 
         for (long i = start; i < end; i += extent) {
-            final DataPoint d = entry.get(i);
+            final Point d = entry.get(i);
 
             if (d == null)
                 continue;
@@ -90,12 +87,12 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     }
 
     @Override
-    public synchronized AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints)
+    public synchronized AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<Point> datapoints)
             throws CacheOperationException {
-        Map<Long, DataPoint> entry = cache.get(key);
+        Map<Long, Point> entry = cache.get(key);
 
         if (entry == null) {
-            entry = new HashMap<Long, DataPoint>();
+            entry = new HashMap<Long, Point>();
             cache.put(key, entry);
         }
 
@@ -105,7 +102,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         if (extent == 0)
             return async.resolved(new CacheBackendPutResult());
 
-        for (final DataPoint d : datapoints) {
+        for (final Point d : datapoints) {
             final long timestamp = d.getTimestamp();
             final double value = d.getValue();
 

@@ -26,8 +26,8 @@ import java.net.URI;
 import javax.inject.Inject;
 
 import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
-import com.spotify.heroic.cluster.model.NodeMetadata;
 import com.spotify.heroic.httpclient.HttpClientManager;
 import com.spotify.heroic.httpclient.HttpClientSession;
 

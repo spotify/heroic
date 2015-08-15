@@ -40,12 +40,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.utils.GroupedUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
@@ -68,7 +68,7 @@ public final class DatastaxMetricModule implements MetricModule {
             @JsonProperty("keyspace") String keyspace, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.id = id;
-        this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
+        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.keyspace = Optional.fromNullable(keyspace).or(DEFAULT_KEYSPACE);
         this.seeds = convert(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());

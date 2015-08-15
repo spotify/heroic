@@ -24,16 +24,10 @@ package com.spotify.heroic.metric;
 import java.util.Collection;
 import java.util.List;
 
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.utils.Grouped;
-import com.spotify.heroic.utils.Initializing;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.Initializing;
+import com.spotify.heroic.common.Series;
 
 import eu.toolchain.async.AsyncFuture;
 

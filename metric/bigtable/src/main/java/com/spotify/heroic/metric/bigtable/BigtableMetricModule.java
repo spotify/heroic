@@ -37,13 +37,13 @@ import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.SeriesSerializer;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
-import com.spotify.heroic.model.SeriesSerializer;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.utils.GroupedUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -71,7 +71,7 @@ public final class BigtableMetricModule implements MetricModule {
             @JsonProperty("zone") String zone, @JsonProperty("cluster") String cluster,
             @JsonProperty("credentials") CredentialsBuilder credentials) {
         this.id = id;
-        this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
+        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.project = checkNotNull(project, "project");
         this.zone = checkNotNull(zone, "zone");
         this.cluster = Optional.fromNullable(cluster).or(DEFAULT_CLUSTER);

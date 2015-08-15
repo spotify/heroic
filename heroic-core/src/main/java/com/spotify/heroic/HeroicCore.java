@@ -78,8 +78,19 @@ import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
+import com.spotify.heroic.aggregationcache.CacheKeySerializer;
+import com.spotify.heroic.aggregationcache.CacheKeySerializerImpl;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
+import com.spotify.heroic.common.CollectingTypeListener;
+import com.spotify.heroic.common.CoreJavaxRestFramework;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.IsSubclassOf;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.SamplingSerializer;
+import com.spotify.heroic.common.SamplingSerializerImpl;
+import com.spotify.heroic.common.SeriesSerializer;
+import com.spotify.heroic.common.SeriesSerializerImpl;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -95,32 +106,21 @@ import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.filter.FilterSerializerImpl;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.injection.CollectingTypeListener;
-import com.spotify.heroic.injection.IsSubclassOf;
-import com.spotify.heroic.injection.LifeCycle;
 import com.spotify.heroic.metadata.MetadataModule;
+import com.spotify.heroic.metric.DataPointSerializer;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.EventSerializer;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.model.CacheKeySerializer;
-import com.spotify.heroic.model.CacheKeySerializerImpl;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DataPointSerializer;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.EventSerializer;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.MetricTypeSerializer;
-import com.spotify.heroic.model.SamplingSerializer;
-import com.spotify.heroic.model.SamplingSerializerImpl;
-import com.spotify.heroic.model.SeriesSerializer;
-import com.spotify.heroic.model.SeriesSerializerImpl;
-import com.spotify.heroic.model.Spread;
-import com.spotify.heroic.model.SpreadSerializer;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeSerializer;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.SpreadSerializer;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 import com.spotify.heroic.suggest.SuggestModule;
-import com.spotify.heroic.utils.CoreHttpAsyncUtils;
-import com.spotify.heroic.utils.HttpAsyncUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -434,7 +434,7 @@ public class HeroicCore {
                 bind(HeroicContext.class).toInstance(new CoreHeroicContext());
                 bind(ExecutorService.class).toInstance(executorService);
 
-                bind(HttpAsyncUtils.class).toInstance(new CoreHttpAsyncUtils());
+                bind(JavaxRestFramework.class).toInstance(new CoreJavaxRestFramework());
             }
         };
 
@@ -489,8 +489,8 @@ public class HeroicCore {
                 serializerImpl.configure(module);
                 aggregationRegistry.configure(module);
 
-                module.addSerializer(DataPoint.class, new DataPointSerializer.Serializer());
-                module.addDeserializer(DataPoint.class, new DataPointSerializer.Deserializer());
+                module.addSerializer(Point.class, new DataPointSerializer.Serializer());
+                module.addDeserializer(Point.class, new DataPointSerializer.Deserializer());
 
                 module.addSerializer(Event.class, new EventSerializer.Serializer());
                 module.addDeserializer(Event.class, new EventSerializer.Deserializer());

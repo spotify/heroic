@@ -23,13 +23,13 @@ package com.spotify.heroic.metric.generated;
 
 import java.util.List;
 
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.Metric;
 
 public interface Generator {
-    List<TimeData> generate(Series series, DateRange range, FetchQuotaWatcher watcher);
+    List<Metric> generate(Series series, DateRange range, FetchQuotaWatcher watcher);
 
-    List<TimeData> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher);
+    List<Metric> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher);
 }

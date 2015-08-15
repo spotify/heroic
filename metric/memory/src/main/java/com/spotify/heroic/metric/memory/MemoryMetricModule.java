@@ -34,11 +34,11 @@ import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.utils.GroupedUtils;
 
 @Data
 public final class MemoryMetricModule implements MetricModule {
@@ -51,7 +51,7 @@ public final class MemoryMetricModule implements MetricModule {
     public MemoryMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups) {
         this.id = id;
-        this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
+        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
     }
 
     @Override

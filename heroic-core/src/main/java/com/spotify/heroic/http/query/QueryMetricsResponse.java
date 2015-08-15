@@ -32,14 +32,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.spotify.heroic.metric.model.RequestError;
-import com.spotify.heroic.metric.model.ShardLatency;
-import com.spotify.heroic.metric.model.ShardedResultGroup;
-import com.spotify.heroic.metric.model.TagValues;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.Statistics;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.RequestError;
+import com.spotify.heroic.metric.ShardLatency;
+import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.metric.TagValues;
 
 @RequiredArgsConstructor
 public class QueryMetricsResponse {
@@ -57,9 +57,9 @@ public class QueryMetricsResponse {
             g.writeStartArray();
 
             for (final ShardedResultGroup group : result) {
-                if (group.getType().equals(DataPoint.class)) {
+                if (group.getType().equals(Point.class)) {
                     final List<TagValues> tags = group.getGroup();
-                    final List<DataPoint> datapoints = (List<DataPoint>) group.getValues();
+                    final List<Point> datapoints = (List<Point>) group.getValues();
                     writeDataPoints(g, group, tags, datapoints);
                     continue;
                 }
@@ -76,7 +76,7 @@ public class QueryMetricsResponse {
         }
 
         private void writeDataPoints(JsonGenerator g, final ShardedResultGroup group, final List<TagValues> tags,
-                final List<DataPoint> datapoints) throws IOException {
+                final List<Point> datapoints) throws IOException {
             g.writeStartObject();
             g.writeFieldName("type");
             g.writeString(SERIES);

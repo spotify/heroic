@@ -29,9 +29,9 @@ import javax.inject.Named;
 
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.common.SamplingSerializer;
 import com.spotify.heroic.grammar.Value;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.SamplingSerializer;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;

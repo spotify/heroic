@@ -23,7 +23,7 @@ package com.spotify.heroic.aggregation;
 
 import java.util.List;
 
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
 
 public interface Aggregation {
     /**

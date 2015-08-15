@@ -21,19 +21,13 @@
 
 package com.spotify.heroic.metadata;
 
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.Initializing;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.model.CountSeries;
-import com.spotify.heroic.metadata.model.DeleteSeries;
-import com.spotify.heroic.metadata.model.FindKeys;
-import com.spotify.heroic.metadata.model.FindSeries;
-import com.spotify.heroic.metadata.model.FindTags;
-import com.spotify.heroic.metadata.model.MetadataEntry;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.RangeFilter;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.utils.Grouped;
-import com.spotify.heroic.utils.Initializing;
+import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 

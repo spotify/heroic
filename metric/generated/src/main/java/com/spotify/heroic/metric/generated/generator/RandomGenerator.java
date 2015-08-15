@@ -30,13 +30,13 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 
 /**
  * A generator that generates pseudo random numbers depending on which serie and time range is required.
@@ -66,14 +66,14 @@ public class RandomGenerator implements Generator {
     private long step;
 
     @Override
-    public List<TimeData> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
+    public List<Metric> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
         final double diff = max - min;
 
         int seriesHash = series.hashCode();
 
         final double localMin = min + diff * seriesRand(seriesHash);
 
-        final List<TimeData> data = new ArrayList<>();
+        final List<Metric> data = new ArrayList<>();
 
         final long start = calculateStart(range.getStart());
 
@@ -82,15 +82,15 @@ public class RandomGenerator implements Generator {
 
         for (long i = start; i < range.getEnd(); i += step) {
             final Double value = localMin + (positionRand(seriesHash, i) - 0.5) * this.range;
-            data.add(new DataPoint(i, value));
+            data.add(new Point(i, value));
         }
 
         return data;
     }
 
     @Override
-    public List<TimeData> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
-        final List<TimeData> data = new ArrayList<>();
+    public List<Metric> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
+        final List<Metric> data = new ArrayList<>();
 
         final DateRange rounded = range.rounded(1000);
 

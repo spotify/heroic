@@ -12,11 +12,11 @@ import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metric.model.QueryResult;
-import com.spotify.heroic.metric.model.QueryResultPart;
+import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.QueryResultPart;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

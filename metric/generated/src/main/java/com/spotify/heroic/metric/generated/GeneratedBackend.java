@@ -32,19 +32,19 @@ import javax.inject.Named;
 import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -101,19 +101,19 @@ public class GeneratedBackend implements MetricBackend, LifeCycle {
             FetchQuotaWatcher watcher) {
         final long start = System.nanoTime();
 
-        if (source == MetricType.POINTS) {
-            final List<TimeData> data = generator.generate(series, range, watcher);
+        if (source == MetricType.POINT) {
+            final List<Metric> data = generator.generate(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
             return async.resolved(new FetchData(series, times, groups));
         }
 
-        if (source == MetricType.EVENTS) {
-            final List<TimeData> data = generator.generateEvents(series, range, watcher);
+        if (source == MetricType.EVENT) {
+            final List<Metric> data = generator.generateEvents(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
             return async.resolved(new FetchData(series, times, groups));
         }
 

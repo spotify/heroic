@@ -5,7 +5,7 @@ import java.util.function.DoubleBinaryOperator;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.Point;
 
 public class MinBucketIntegrationTest extends ValueBucketIntegrationTest {
     public MinBucketIntegrationTest() {
@@ -18,7 +18,7 @@ public class MinBucketIntegrationTest extends ValueBucketIntegrationTest {
     }
 
     @Override
-    public Collection<DoubleBucket<DataPoint>> buckets() {
-        return ImmutableList.<DoubleBucket<DataPoint>> of(new MinBucket(0l), new StripedMinBucket(0l));
+    public Collection<DoubleBucket<Point>> buckets() {
+        return ImmutableList.<DoubleBucket<Point>> of(new MinBucket(0l), new StripedMinBucket(0l));
     }
 }

@@ -48,9 +48,9 @@ import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackend;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
+import com.spotify.heroic.aggregationcache.CacheKey;
+import com.spotify.heroic.aggregationcache.CacheKeySerializer;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
-import com.spotify.heroic.model.CacheKey;
-import com.spotify.heroic.model.CacheKeySerializer;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 

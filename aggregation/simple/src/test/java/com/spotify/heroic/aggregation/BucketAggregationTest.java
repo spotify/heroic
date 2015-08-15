@@ -13,23 +13,23 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.Statistics;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 public class BucketAggregationTest {
     public final class IterableBuilder {
-        final ArrayList<DataPoint> datapoints = new ArrayList<DataPoint>();
+        final ArrayList<Point> datapoints = new ArrayList<Point>();
 
         public IterableBuilder add(long timestamp, double value) {
-            datapoints.add(new DataPoint(timestamp, value));
+            datapoints.add(new Point(timestamp, value));
             return this;
         }
 
-        public List<DataPoint> result() {
+        public List<Point> result() {
             return datapoints;
         }
     }
@@ -39,11 +39,11 @@ public class BucketAggregationTest {
     }
 
     @Data
-    public static class TestBucket implements Bucket<DataPoint> {
+    public static class TestBucket implements Bucket<Point> {
         private final long timestamp;
         private double sum;
 
-        public void update(Map<String, String> tags, DataPoint d) {
+        public void update(Map<String, String> tags, MetricType type, Point d) {
             sum += d.getValue();
         }
 
@@ -53,16 +53,16 @@ public class BucketAggregationTest {
         }
     }
 
-    public BucketAggregation<DataPoint, TestBucket> setup(Sampling sampling) {
-        return new BucketAggregation<DataPoint, TestBucket>(sampling, DataPoint.class, MetricType.POINTS) {
+    public BucketAggregation<Point, TestBucket> setup(Sampling sampling) {
+        return new BucketAggregation<Point, TestBucket>(sampling, Point.class, MetricType.POINT) {
             @Override
             protected TestBucket buildBucket(long timestamp) {
                 return new TestBucket(timestamp);
             }
 
             @Override
-            protected DataPoint build(TestBucket bucket) {
-                return new DataPoint(bucket.timestamp, bucket.sum);
+            protected Point build(TestBucket bucket) {
+                return new Point(bucket.timestamp, bucket.sum);
             }
         };
     }
@@ -73,7 +73,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testSameSampling() {
-        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(1000, 1000));
+        final BucketAggregation<Point, TestBucket> a = setup(new Sampling(1000, 1000));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(1000, 50.0).add(2001, 50.0).result()));
 
@@ -86,7 +86,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testShorterExtent() {
-        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(1000, 500));
+        final BucketAggregation<Point, TestBucket> a = setup(new Sampling(1000, 500));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(1000, 50.0).add(2499, 50.0).add(2500, 50.0).result()));
 
@@ -99,7 +99,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testUnevenSampling() {
-        final BucketAggregation<DataPoint, TestBucket> a = setup(new Sampling(999, 499));
+        final BucketAggregation<Point, TestBucket> a = setup(new Sampling(999, 499));
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.update(group(build().add(999, 50.0).add(999, 50.0).add(2598, 50.0).result()));
 
@@ -110,7 +110,7 @@ public class BucketAggregationTest {
                 result.getResult());
     }
 
-    private AggregationData group(List<DataPoint> values) {
-        return new AggregationData(group, series, values, MetricType.POINTS);
+    private AggregationData group(List<Point> values) {
+        return new AggregationData(group, series, values, MetricType.POINT);
     }
 }

@@ -34,8 +34,8 @@ import org.elasticsearch.index.query.FilterBuilder;
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.metadata.model.FindTagKeys;
-import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metadata.FindTagKeys;
+import com.spotify.heroic.metadata.FindTags;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

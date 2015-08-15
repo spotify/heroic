@@ -43,12 +43,12 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-import com.spotify.heroic.utils.GroupedUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -75,7 +75,7 @@ public final class AstyanaxMetricModule implements MetricModule {
             @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost, @JsonProperty("group") String group,
             @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.id = id;
-        this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
+        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.keyspace = Optional.fromNullable(keyspace).or(DEFAULT_KEYSPACE);
         this.seeds = Optional.fromNullable(seeds).or(DEFAULT_SEEDS);
         this.maxConnectionsPerHost = Optional.fromNullable(maxConnectionsPerHost).or(DEFAULT_MAX_CONNECTIONS_PER_HOST);

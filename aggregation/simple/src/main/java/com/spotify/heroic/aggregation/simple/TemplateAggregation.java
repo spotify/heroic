@@ -27,17 +27,17 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class TemplateAggregation extends BucketAggregation<DataPoint, SumBucket> {
+public class TemplateAggregation extends BucketAggregation<Point, SumBucket> {
     public static final String NAME = "tpl";
 
     public TemplateAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, MetricType.POINTS);
+        super(sampling, Point.class, MetricType.POINT);
     }
 
     @JsonCreator
@@ -51,7 +51,7 @@ public class TemplateAggregation extends BucketAggregation<DataPoint, SumBucket>
     }
 
     @Override
-    protected DataPoint build(SumBucket bucket) {
-        return new DataPoint(bucket.timestamp(), 0.0);
+    protected Point build(SumBucket bucket) {
+        return new Point(bucket.timestamp(), 0.0);
     }
 }

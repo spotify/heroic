@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.suggest;
 
-import com.spotify.heroic.utils.GroupManager;
+import com.spotify.heroic.common.GroupManager;
 
 /**
  * Interface for handling tag suggestions.

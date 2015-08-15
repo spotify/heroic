@@ -31,10 +31,10 @@ import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.model.CacheKey;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.aggregationcache.CacheBackendKey;
+import com.spotify.heroic.aggregationcache.CacheBackendPutResult;
+import com.spotify.heroic.aggregationcache.CacheKey;
+import com.spotify.heroic.metric.Point;
 
 @RequiredArgsConstructor
 final class CachePutResolver implements Callable<CacheBackendPutResult> {
@@ -44,7 +44,7 @@ final class CachePutResolver implements Callable<CacheBackendPutResult> {
     private final Context ctx;
     private final ColumnFamily<Integer, String> columnFamily;
     private final CacheBackendKey key;
-    private final List<DataPoint> datapoints;
+    private final List<Point> datapoints;
 
     @Override
     public CacheBackendPutResult call() throws Exception {
@@ -53,7 +53,7 @@ final class CachePutResolver implements Callable<CacheBackendPutResult> {
         final long size = aggregation.extent();
         final long columnWidth = size * Cassandra2AggregationCacheBackend.WIDTH;
 
-        for (final DataPoint d : datapoints) {
+        for (final Point d : datapoints) {
             final double value = d.getValue();
 
             if (Double.isNaN(value))
@@ -69,7 +69,7 @@ final class CachePutResolver implements Callable<CacheBackendPutResult> {
         return new CacheBackendPutResult();
     }
 
-    private void doPut(Keyspace keyspace, CacheKey key, Integer dataOffset, DataPoint d) throws ConnectionException {
+    private void doPut(Keyspace keyspace, CacheKey key, Integer dataOffset, Point d) throws ConnectionException {
         keyspace.prepareQuery(columnFamily).withCql(CQL_STMT).asPreparedStatement()
                 .withByteBufferValue(key, cacheKeySerializer).withIntegerValue(dataOffset)
                 .withDoubleValue(d.getValue()).execute();

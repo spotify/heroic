@@ -23,11 +23,6 @@
 
     <dependency>
       <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-utils</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
       <artifactId>heroic-elasticsearch-utils</artifactId>
     </dependency>
 

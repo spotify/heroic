@@ -28,7 +28,8 @@ import java.util.function.DoubleBinaryOperator;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * A min-bucket implementation intended to reduce cross-thread contention.
@@ -38,7 +39,7 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @Data
-public class StripedMinBucket implements DoubleBucket<DataPoint> {
+public class StripedMinBucket implements DoubleBucket<Point> {
     private static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
 
     private final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
@@ -49,7 +50,7 @@ public class StripedMinBucket implements DoubleBucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         min.accumulate(d.getValue());
     }
 
@@ -57,8 +58,9 @@ public class StripedMinBucket implements DoubleBucket<DataPoint> {
     public double value() {
         final double result = min.doubleValue();
 
-        if (Double.isInfinite(result))
+        if (Double.isInfinite(result)) {
             return Double.NaN;
+        }
 
         return result;
     }

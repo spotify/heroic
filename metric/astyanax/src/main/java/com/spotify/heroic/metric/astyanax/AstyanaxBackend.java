@@ -52,21 +52,21 @@ import com.netflix.astyanax.serializers.DoubleSerializer;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
@@ -134,12 +134,12 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                 final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
                 for (final WriteMetric write : writes) {
-                    for (final TimeDataGroup g : write.getGroups()) {
-                        if (g.getType() != MetricType.POINTS)
+                    for (final MetricTypeGroup g : write.getGroups()) {
+                        if (g.getType() != MetricType.POINT)
                             continue;
 
-                        for (final TimeData t : g.getData()) {
-                            final DataPoint d = (DataPoint) t;
+                        for (final Metric t : g.getData()) {
+                            final Point d = (Point) t;
                             final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
                             final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
 
@@ -176,7 +176,7 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
      * @throws MetricBackendException If backend is not ready
      */
     @SuppressWarnings("unused")
-    private AsyncFuture<Integer> writeCQL(final MetricsRowKey rowKey, final List<DataPoint> datapoints) {
+    private AsyncFuture<Integer> writeCQL(final MetricsRowKey rowKey, final List<Point> datapoints) {
         final Borrowed<Context> k = context.borrow();
 
         return async.call(new Callable<Integer>() {
@@ -184,7 +184,7 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
             public Integer call() throws Exception {
                 final Context ctx = k.get();
 
-                for (final DataPoint d : datapoints) {
+                for (final Point d : datapoints) {
                     ctx.client
                             .prepareQuery(CQL3_CF)
                             .withCql(INSERT_METRICS_CQL)
@@ -204,7 +204,7 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
     @Override
     public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             FetchQuotaWatcher watcher) {
-        if (source == MetricType.POINTS) {
+        if (source == MetricType.POINT) {
             return fetchDataPoints(series, range, watcher);
         }
 
@@ -233,20 +233,20 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                             final RowQuery<MetricsRowKey, Integer> query = ctx.client.prepareQuery(METRICS_CF)
                                     .getRow(q.rowKey).autoPaginate(true).withColumnRange(q.columnRange);
 
-                            final List<TimeData> data = q.rowKey.buildDataPoints(query.execute().getResult());
+                            final List<Metric> data = q.rowKey.buildDataPoints(query.execute().getResult());
 
                             if (!watcher.readData(data.size()))
                                 throw new IllegalArgumentException("data limit quota violated");
 
                             final List<Long> times = ImmutableList.of(System.nanoTime() - start);
-                            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS,
+                            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT,
                                     data));
                             return new FetchData(series, times, groups);
                         }
                     }, pools.read()).on(reporter.reportFetch()));
                 }
 
-                return async.collect(queries, FetchData.<DataPoint> merger(series));
+                return async.collect(queries, FetchData.<Point> merger(series));
             }
         }).on(k.releasing());
     }
@@ -312,9 +312,9 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                         final MetricsRowKey rowKey = entry.getKey();
                         final Series series = rowKey.getSeries();
 
-                        final List<TimeData> dataPoints = rowKey.buildDataPoints(entry.getColumns());
+                        final List<Metric> dataPoints = rowKey.buildDataPoints(entry.getColumns());
 
-                        return new BackendEntry(series, MetricType.POINTS, dataPoints);
+                        return new BackendEntry(series, MetricType.POINT, dataPoints);
                     }
 
                     @Override

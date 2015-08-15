@@ -23,9 +23,10 @@ package com.spotify.heroic.aggregation;
 
 import java.util.Map;
 
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
 
-public interface Bucket<T extends TimeData> {
+public interface Bucket<T extends Metric> {
     /**
      * Provide a sample to a bucket.
      *
@@ -34,7 +35,7 @@ public interface Bucket<T extends TimeData> {
      * @param tags Tags for the sample.
      * @param sample Sample for the update.
      */
-    public void update(Map<String, String> tags, T sample);
+    public void update(Map<String, String> tags, MetricType type, T sample);
 
     /**
      * Get the timestamp for the bucket.

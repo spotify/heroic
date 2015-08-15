@@ -37,11 +37,11 @@ import javax.ws.rs.core.Response;
 
 import com.google.inject.Inject;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.model.NodeMetadata;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
-import com.spotify.heroic.httpclient.model.DataResponse;
-import com.spotify.heroic.utils.HttpAsyncUtils;
-import com.spotify.heroic.utils.HttpAsyncUtils.Resume;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.JavaxRestFramework.Resume;
+import com.spotify.heroic.http.DataResponse;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -50,7 +50,7 @@ import eu.toolchain.async.AsyncFuture;
 @Produces(MediaType.APPLICATION_JSON)
 public class ClusterResource {
     @Inject
-    private HttpAsyncUtils httpAsync;
+    private JavaxRestFramework httpAsync;
 
     @Inject
     private ClusterManager cluster;
@@ -93,6 +93,6 @@ public class ClusterResource {
     @Path("/nodes")
     public void addNode(@Suspended AsyncResponse response, URI uri) {
         AsyncFuture<Void> callback = cluster.addStaticNode(uri);
-        httpAsync.handleAsyncResume(response, callback, ADD_NODE);
+        httpAsync.bind(response, callback, ADD_NODE);
     }
 }

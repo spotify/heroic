@@ -48,30 +48,19 @@ import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
 import com.spotify.heroic.aggregation.GroupAggregation;
-import com.spotify.heroic.exceptions.BackendGroupException;
+import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.SelectedGroup;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metadata.model.FindSeries;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.ResultGroup;
-import com.spotify.heroic.metric.model.ResultGroups;
-import com.spotify.heroic.metric.model.TagValues;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.RangeFilter;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.Statistics;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
-import com.spotify.heroic.utils.BackendGroups;
-import com.spotify.heroic.utils.GroupMember;
-import com.spotify.heroic.utils.SelectedGroup;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -332,7 +321,7 @@ public class LocalMetricManager implements MetricManager {
             return new StreamCollector<FetchData, ResultGroups>() {
                 @Override
                 public void resolved(FetchData result) throws Exception {
-                    for (final TimeDataGroup g : result.getGroups()) {
+                    for (final MetricTypeGroup g : result.getGroups()) {
                         session.update(new AggregationData(result.getSeries().getTags(), ImmutableSet.of(result
                                 .getSeries()), g.getData(), g.getType()));
                     }
@@ -366,8 +355,8 @@ public class LocalMetricManager implements MetricManager {
                     for (final AggregationData group : result.getResult()) {
                         final List<TagValues> g = group(group.getSeries());
 
-                        if (MetricType.POINTS == group.getType()) {
-                            groups.add(new ResultGroup.DataPointResultGroup(g, (List<DataPoint>) group
+                        if (MetricType.POINT == group.getType()) {
+                            groups.add(new ResultGroup.DataPointResultGroup(g, (List<Point>) group
                                     .getValues()));
                         }
                     }

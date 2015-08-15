@@ -36,7 +36,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.ChainAggregation;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.model.MetricType;
+import com.spotify.heroic.metric.MetricType;
 
 @Data
 public class QueryMetrics {
@@ -44,7 +44,7 @@ public class QueryMetrics {
     private static final List<AggregationQuery<?>> EMPTY_AGGREGATIONS = new ArrayList<>();
     private static final Map<String, String> DEFAULT_TAGS = new HashMap<String, String>();
     private static final boolean DEFAULT_NO_CACHE = false;
-    private static final MetricType DEFAULT_SOURCE = MetricType.POINTS;
+    private static final MetricType DEFAULT_SOURCE = MetricType.POINT;
 
     private final String query;
     private final String key;
@@ -80,11 +80,11 @@ public class QueryMetrics {
         }
 
         if ("series".equals(sourceName)) {
-            return MetricType.POINTS;
+            return MetricType.POINT;
         }
 
         if ("events".equals(sourceName)) {
-            return MetricType.EVENTS;
+            return MetricType.EVENT;
         }
 
         throw new IllegalArgumentException("invalid source: " + sourceName);

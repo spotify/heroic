@@ -30,8 +30,6 @@ import javax.ws.rs.core.Response;
 
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.exceptions.RpcNodeException;
-
 @RequiredArgsConstructor
 final class HttpPostRequestResolver<R, T> implements Callable<T> {
     private final R request;

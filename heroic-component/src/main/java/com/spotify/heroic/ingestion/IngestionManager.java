@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.ingestion;
 
-import com.spotify.heroic.exceptions.BackendGroupException;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
+import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 

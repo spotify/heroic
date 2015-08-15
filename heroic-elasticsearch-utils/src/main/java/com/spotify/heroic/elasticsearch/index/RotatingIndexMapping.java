@@ -36,7 +36,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {

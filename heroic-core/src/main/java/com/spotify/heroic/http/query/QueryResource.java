@@ -48,8 +48,8 @@ import com.google.inject.Inject;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.metric.model.QueryResult;
-import com.spotify.heroic.utils.HttpAsyncUtils;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.metric.QueryResult;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -58,7 +58,7 @@ import eu.toolchain.async.FutureDone;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
-    private static final class MetricsResumer implements HttpAsyncUtils.Resume<QueryResult, QueryMetricsResponse> {
+    private static final class MetricsResumer implements JavaxRestFramework.Resume<QueryResult, QueryMetricsResponse> {
         @Override
         public QueryMetricsResponse resume(QueryResult r) throws Exception {
             return new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getStatistics(), r.getErrors(),
@@ -69,7 +69,7 @@ public class QueryResource {
     private static final MetricsResumer METRICS = new MetricsResumer();
 
     @Inject
-    private HttpAsyncUtils httpAsync;
+    private JavaxRestFramework httpAsync;
 
     @Inject
     private QueryManager query;
@@ -128,7 +128,7 @@ public class QueryResource {
         });
 
         response.setTimeout(300, TimeUnit.SECONDS);
-        httpAsync.handleAsyncResume(response, callback, METRICS);
+        httpAsync.bind(response, callback, METRICS);
     }
 
     @POST
@@ -142,7 +142,7 @@ public class QueryResource {
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        httpAsync.handleAsyncResume(response, callback, METRICS);
+        httpAsync.bind(response, callback, METRICS);
     }
 
     private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {

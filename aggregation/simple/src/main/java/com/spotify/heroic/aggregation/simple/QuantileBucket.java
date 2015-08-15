@@ -46,7 +46,8 @@ import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm for streaming calculation of targeted
@@ -61,7 +62,7 @@ import com.spotify.heroic.model.DataPoint;
  * Greenwald and Khanna, "Space-efficient online computation of quantile summaries" in SIGMOD 2001
  */
 @RequiredArgsConstructor
-public class QuantileBucket implements Bucket<DataPoint> {
+public class QuantileBucket implements Bucket<Point> {
     private final long timestamp;
     private final double quantile;
     private final double error;
@@ -89,7 +90,7 @@ public class QuantileBucket implements Bucket<DataPoint> {
      *            data point to add.
      */
     @Override
-    public synchronized void update(Map<String, String> tags, DataPoint d) {
+    public synchronized void update(Map<String, String> tags, MetricType type, Point d) {
         batch[index] = d.getValue();
         index++;
         count++;
@@ -111,8 +112,9 @@ public class QuantileBucket implements Bucket<DataPoint> {
 
         final Double value = query(quantile);
 
-        if (value == null)
+        if (value == null) {
             return Double.NaN;
+        }
 
         return value;
     }

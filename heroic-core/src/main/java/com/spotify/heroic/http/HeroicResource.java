@@ -33,14 +33,13 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.httpclient.model.DataResponse;
+import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.utils.GroupMember;
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)

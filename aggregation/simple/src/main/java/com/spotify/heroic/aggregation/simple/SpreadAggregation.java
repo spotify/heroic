@@ -27,18 +27,18 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.Spread;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class SpreadAggregation extends BucketAggregation<DataPoint, SpreadBucket> {
+public class SpreadAggregation extends BucketAggregation<Point, SpreadBucket> {
     public static final String NAME = "spread";
 
     public SpreadAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, MetricType.SPREAD);
+        super(sampling, Point.class, MetricType.SPREAD);
     }
 
     @JsonCreator
@@ -52,7 +52,7 @@ public class SpreadAggregation extends BucketAggregation<DataPoint, SpreadBucket
     }
 
     @Override
-    protected Spread build(SpreadBucket bucket) {
+    protected Metric build(SpreadBucket bucket) {
         return bucket.newSpread();
     }
 }

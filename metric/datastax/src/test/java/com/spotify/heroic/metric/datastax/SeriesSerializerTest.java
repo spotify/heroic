@@ -7,8 +7,8 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.datastax.serializer.SeriesSerializer;
-import com.spotify.heroic.model.Series;
 
 public class SeriesSerializerTest {
     private static final SeriesSerializer serializer = new SeriesSerializer();

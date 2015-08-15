@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import lombok.Data;
 
-import com.spotify.heroic.cluster.model.NodeCapability;
+import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
 public class ClusterNodeStatus {

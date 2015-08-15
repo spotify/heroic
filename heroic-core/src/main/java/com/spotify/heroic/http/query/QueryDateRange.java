@@ -30,8 +30,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.utils.TimeUtils;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.TimeUtils;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),

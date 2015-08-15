@@ -33,9 +33,9 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.utils.HttpAsyncUtils;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -43,7 +43,7 @@ import eu.toolchain.async.AsyncFuture;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetricsResource {
-    private final HttpAsyncUtils.Resume<List<BackendKey>, List<BackendKey>> KEYS = new HttpAsyncUtils.Resume<List<BackendKey>, List<BackendKey>>() {
+    private final JavaxRestFramework.Resume<List<BackendKey>, List<BackendKey>> KEYS = new JavaxRestFramework.Resume<List<BackendKey>, List<BackendKey>>() {
         @Override
         public List<BackendKey> resume(List<BackendKey> result) throws Exception {
             return result;
@@ -51,7 +51,7 @@ public class MetricsResource {
     };
 
     @Inject
-    private HttpAsyncUtils httpAsync;
+    private JavaxRestFramework httpAsync;
 
     @Inject
     private MetricManager metrics;
@@ -62,6 +62,6 @@ public class MetricsResource {
             @QueryParam("limit") Integer limit) throws Exception {
         final AsyncFuture<List<BackendKey>> keys = metrics.useGroup(group).keys(null, null,
                 limit == null ? 1000 : limit);
-        httpAsync.handleAsyncResume(response, keys, KEYS);
+        httpAsync.bind(response, keys, KEYS);
     }
 }

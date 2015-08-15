@@ -32,8 +32,8 @@ import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.Statistics;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Statistics;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.

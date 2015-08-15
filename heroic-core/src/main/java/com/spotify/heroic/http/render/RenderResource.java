@@ -43,7 +43,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.http.query.QueryMetrics;
-import com.spotify.heroic.metric.model.QueryResult;
+import com.spotify.heroic.metric.QueryResult;
 
 @Path("render")
 public class RenderResource {

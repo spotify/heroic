@@ -42,7 +42,7 @@ import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
-import com.spotify.heroic.metadata.model.FindTags;
+import com.spotify.heroic.metadata.FindTags;
 
 @RequiredArgsConstructor
 public class FindTagsResolver implements Callable<FindTags> {

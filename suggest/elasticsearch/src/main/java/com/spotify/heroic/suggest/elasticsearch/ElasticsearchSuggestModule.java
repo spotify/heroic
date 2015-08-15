@@ -47,18 +47,18 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.model.Series;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestModule;
-import com.spotify.heroic.utils.GroupedUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
@@ -91,7 +91,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
             @JsonProperty("templateName") String templateName, @JsonProperty("backendType") String backendType) {
         this.id = id;
-        this.groups = GroupedUtils.groups(group, groups, DEFAULT_GROUP);
+        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);

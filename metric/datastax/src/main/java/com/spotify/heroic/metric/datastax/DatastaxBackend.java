@@ -39,22 +39,22 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
@@ -134,10 +134,10 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
     private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
         final List<Long> times = new ArrayList<Long>();
 
-        for (final TimeDataGroup g : w.getGroups()) {
-            if (g.getType() == MetricType.POINTS) {
-                for (final TimeData t : g.getData()) {
-                    final DataPoint d = (DataPoint) t;
+        for (final MetricTypeGroup g : w.getGroups()) {
+            if (g.getType() == MetricType.POINT) {
+                for (final Metric t : g.getData()) {
+                    final Point d = (Point) t;
                     final long base = MetricsRowKey.calculateBaseTimestamp(d.getTimestamp());
 
                     ByteBuffer keyBlob = cache.get(base);
@@ -164,7 +164,7 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
     @Override
     public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             final FetchQuotaWatcher watcher) {
-        if (source == MetricType.POINTS) {
+        if (source == MetricType.POINT) {
             return fetchDataPoints(series, range, watcher);
         }
 
@@ -198,7 +198,7 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
                             if (!watcher.mayReadData())
                                 throw new IllegalArgumentException("query violated data limit");
 
-                            final List<TimeData> data = new ArrayList<>();
+                            final List<Metric> data = new ArrayList<>();
 
                             final long start = System.nanoTime();
                             final ResultSet rows = c.session.execute(fetch);
@@ -207,21 +207,21 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
                             for (final Row row : rows) {
                                 final long timestamp = MetricsRowKey.calculateAbsoluteTimestamp(q.base, row.getInt(0));
                                 final double value = row.getDouble(1);
-                                data.add(new DataPoint(timestamp, value));
+                                data.add(new Point(timestamp, value));
                             }
 
                             if (!watcher.readData(data.size()))
                                 throw new IllegalArgumentException("query violated data limit");
 
                             final ImmutableList<Long> times = ImmutableList.of(diff);
-                            final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS,
+                            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT,
                                     data));
                             return new FetchData(series, times, groups);
                         }
                     }, pools.read()).on(reporter.reportFetch()));
                 }
 
-                return async.collect(queries, FetchData.<DataPoint> merger(series));
+                return async.collect(queries, FetchData.<Point> merger(series));
             }
         };
 

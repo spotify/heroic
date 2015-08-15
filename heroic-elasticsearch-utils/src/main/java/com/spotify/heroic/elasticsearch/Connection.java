@@ -35,9 +35,9 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.Client;
 
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
-import com.spotify.heroic.model.DateRange;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

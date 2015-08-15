@@ -28,8 +28,8 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.utils.TimeUtils;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.common.TimeUtils;
 
 @Data
 public class AggregationSamplingQuery {

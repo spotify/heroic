@@ -4,7 +4,7 @@ import java.util.List;
 
 import lombok.Data;
 
-import com.spotify.heroic.model.Statistics;
+import com.spotify.heroic.common.Statistics;
 
 @Data
 public class AggregationResult {

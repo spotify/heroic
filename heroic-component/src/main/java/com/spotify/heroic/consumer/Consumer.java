@@ -23,9 +23,9 @@ package com.spotify.heroic.consumer;
 
 import lombok.Data;
 
-import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 

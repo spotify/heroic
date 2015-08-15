@@ -30,12 +30,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.Point;
 
 @Data
-public class MetricsRowKey {
+class MetricsRowKey {
     /**
      * This constant represents the maximum row width of the metrics column family. It equals the amount of numbers that
      * can be represented by Integer. Since the column name is the timestamp offset, having an integer as column offset
@@ -47,11 +47,11 @@ public class MetricsRowKey {
     private final Series series;
     private final long base;
 
-    public List<TimeData> buildDataPoints(ColumnList<Integer> result) {
-        final List<TimeData> datapoints = new ArrayList<>();
+    public List<Metric> buildDataPoints(ColumnList<Integer> result) {
+        final List<Metric> datapoints = new ArrayList<>();
 
         for (final Column<Integer> column : result) {
-            datapoints.add(new DataPoint(MetricsRowKeySerializer.calculateAbsoluteTimestamp(base, column.getName()),
+            datapoints.add(new Point(MetricsRowKeySerializer.calculateAbsoluteTimestamp(base, column.getName()),
                     column.getDoubleValue()));
         }
 

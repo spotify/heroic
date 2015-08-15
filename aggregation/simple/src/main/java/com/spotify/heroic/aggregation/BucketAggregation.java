@@ -32,12 +32,12 @@ import lombok.Data;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.Statistics;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
 
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
@@ -54,7 +54,7 @@ import com.spotify.heroic.model.TimeData;
  * @author udoprog
  */
 @Data
-public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN>> implements
+public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>> implements
         Aggregation {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000l;
@@ -75,7 +75,9 @@ public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN
         @Override
         public void update(AggregationData update) {
             // ignore incompatible updates
-            if (in.isAssignableFrom(update.getType().type()))
+            final MetricType type = update.getType();
+
+            if (in.isAssignableFrom(type.type()))
                 return;
 
             final List<IN> input = (List<IN>) update.getValues();
@@ -101,7 +103,7 @@ public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN
                     if (!(c >= 0 && c <= extent))
                         continue;
 
-                    bucket.update(update.getGroup(), d);
+                    bucket.update(update.getGroup(), type, d);
                 }
             }
 
@@ -110,10 +112,10 @@ public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN
 
         @Override
         public AggregationResult result() {
-            final List<TimeData> result = new ArrayList<>(buckets.size());
+            final List<Metric> result = new ArrayList<>(buckets.size());
 
             for (final B bucket : buckets) {
-                final TimeData d = build(bucket);
+                final Metric d = build(bucket);
 
                 if (!d.valid())
                     continue;
@@ -180,5 +182,5 @@ public abstract class BucketAggregation<IN extends TimeData, B extends Bucket<IN
 
     abstract protected B buildBucket(long timestamp);
 
-    abstract protected TimeData build(B bucket);
+    abstract protected Metric build(B bucket);
 }

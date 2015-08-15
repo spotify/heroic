@@ -28,7 +28,8 @@ import java.util.concurrent.atomic.LongAdder;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.model.DataPoint;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 /**
  * A lock-free implementation for calculating the standard deviation over many values.
@@ -38,7 +39,7 @@ import com.spotify.heroic.model.DataPoint;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class StripedStdDevBucket implements DoubleBucket<DataPoint> {
+public class StripedStdDevBucket implements DoubleBucket<Point> {
     private final DoubleAdder sum = new DoubleAdder();
     private final DoubleAdder sum2 = new DoubleAdder();
     private final LongAdder count = new LongAdder();
@@ -46,7 +47,7 @@ public class StripedStdDevBucket implements DoubleBucket<DataPoint> {
     private final long timestamp;
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         final double value = d.getValue();
 
         sum.add(value);
@@ -62,8 +63,9 @@ public class StripedStdDevBucket implements DoubleBucket<DataPoint> {
     public double value() {
         final long count = this.count.sum();
 
-        if (count == 0)
+        if (count == 0) {
             return Double.NaN;
+        }
 
         final double sum = this.sum.sum(), sum2 = this.sum2.sum();
         final double mean = sum / count;

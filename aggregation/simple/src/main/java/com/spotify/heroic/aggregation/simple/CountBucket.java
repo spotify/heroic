@@ -27,7 +27,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
 
 /**
  * Bucket that counts the number of seen events.
@@ -35,7 +36,7 @@ import com.spotify.heroic.model.TimeData;
  * @author udoprog
  */
 @Data
-public class CountBucket implements Bucket<TimeData> {
+public class CountBucket implements Bucket<Metric> {
     private final long timestamp;
     private final AtomicLong count = new AtomicLong();
 
@@ -44,7 +45,7 @@ public class CountBucket implements Bucket<TimeData> {
     }
 
     @Override
-    public void update(Map<String, String> tags, TimeData d) {
+    public void update(Map<String, String> tags, MetricType type, Metric d) {
         count.incrementAndGet();
     }
 

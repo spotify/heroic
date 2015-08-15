@@ -31,14 +31,9 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.aggregationcache.model.CachePutResult;
-import com.spotify.heroic.aggregationcache.model.CacheQueryResult;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 
 import eu.toolchain.async.AsyncFuture;
@@ -65,7 +60,7 @@ public class AggregationCacheImpl implements AggregationCache {
 
             final List<DateRange> misses = new ArrayList<DateRange>();
 
-            final List<DataPoint> cached = result.getDatapoints();
+            final List<Point> cached = result.getDatapoints();
 
             if (width == 0 || cached.isEmpty()) {
                 misses.add(range);
@@ -77,7 +72,7 @@ public class AggregationCacheImpl implements AggregationCache {
 
             long current = range.getStart();
 
-            for (final DataPoint d : cached) {
+            for (final Point d : cached) {
                 if (current + width != d.getTimestamp() && current < d.getTimestamp())
                     misses.add(range.modify(current, d.getTimestamp()));
 
@@ -118,7 +113,7 @@ public class AggregationCacheImpl implements AggregationCache {
 
     @Override
     public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, Aggregation aggregation,
-            List<DataPoint> datapoints) throws CacheOperationException {
+            List<Point> datapoints) throws CacheOperationException {
         final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
 
         if (!isConfigured())

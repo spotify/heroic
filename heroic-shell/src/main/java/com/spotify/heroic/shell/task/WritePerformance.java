@@ -41,17 +41,17 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
-import com.spotify.heroic.exceptions.BackendGroupException;
+import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
@@ -101,7 +101,7 @@ public class WritePerformance extends AbstractShellTask {
         final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
 
         for (final Series s : series) {
-            reads.add(readGroup.fetch(MetricType.POINTS, s, range).transform(new Transform<FetchData, WriteMetric>() {
+            reads.add(readGroup.fetch(MetricType.POINT, s, range).transform(new Transform<FetchData, WriteMetric>() {
                 @Override
                 public WriteMetric transform(FetchData result) throws Exception {
                     return new WriteMetric(s, result.getGroups());
@@ -117,7 +117,7 @@ public class WritePerformance extends AbstractShellTask {
                 int totalWrites = 0;
 
                 for (final WriteMetric w : input) {
-                    for (TimeDataGroup g : w.getGroups()) {
+                    for (MetricTypeGroup g : w.getGroups()) {
                         totalWrites += (g.getData().size() * params.writes);
                     }
                 }

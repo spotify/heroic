@@ -44,11 +44,11 @@ import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.spotify.heroic.common.ReflectionUtils;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.statistics.ConsumerReporter;
-import com.spotify.heroic.utils.ReflectionUtils;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

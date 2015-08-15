@@ -23,7 +23,7 @@ package com.spotify.heroic.grammar;
 
 import lombok.Data;
 
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
 
 @Data
 public class FromDSL {

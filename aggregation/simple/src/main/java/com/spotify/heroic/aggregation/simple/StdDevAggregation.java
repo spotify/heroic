@@ -27,17 +27,18 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class StdDevAggregation extends BucketAggregation<DataPoint, StripedStdDevBucket> {
+public class StdDevAggregation extends BucketAggregation<Point, StripedStdDevBucket> {
     public static final String NAME = "stddev";
 
     public StdDevAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, MetricType.POINTS);
+        super(sampling, Point.class, MetricType.POINT);
     }
 
     @JsonCreator
@@ -51,7 +52,13 @@ public class StdDevAggregation extends BucketAggregation<DataPoint, StripedStdDe
     }
 
     @Override
-    protected DataPoint build(StripedStdDevBucket bucket) {
-        return new DataPoint(bucket.timestamp(), bucket.value());
+    protected Metric build(StripedStdDevBucket bucket) {
+        final double value = bucket.value();
+
+        if (Double.isNaN(value)) {
+            return Metric.invalid();
+        }
+
+        return new Point(bucket.timestamp(), value);
     }
 }

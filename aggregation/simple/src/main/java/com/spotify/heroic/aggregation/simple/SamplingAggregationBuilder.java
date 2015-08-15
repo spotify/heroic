@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.spotify.heroic.aggregation.AggregationBuilder;
+import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.grammar.DiffValue;
 import com.spotify.heroic.grammar.Value;
-import com.spotify.heroic.model.Sampling;
 
 public abstract class SamplingAggregationBuilder<T> implements AggregationBuilder<T> {
     private static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);

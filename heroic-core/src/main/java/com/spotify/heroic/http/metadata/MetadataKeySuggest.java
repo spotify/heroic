@@ -28,11 +28,11 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.impl.TrueFilterImpl;
 import com.spotify.heroic.http.query.QueryDateRange;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.suggest.model.MatchOptions;
+import com.spotify.heroic.suggest.MatchOptions;
 
 @Data
 public class MetadataKeySuggest {

@@ -32,7 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
-import com.spotify.heroic.exceptions.ConsumerSchemaValidationException;
+import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 import eu.toolchain.async.ResolvableFuture;

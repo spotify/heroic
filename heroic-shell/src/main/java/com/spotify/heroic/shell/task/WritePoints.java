@@ -35,15 +35,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
@@ -83,20 +83,20 @@ public class WritePoints extends AbstractShellTask {
         final MetricBackendGroup g = metrics.useGroup(params.group);
 
         final long now = System.currentTimeMillis();
-        final List<TimeData> points = parsePoints(params.points, now);
+        final List<Metric> points = parsePoints(params.points, now);
 
         int i = 0;
 
         out.println("series: " + series.toString());
         out.println("points:");
 
-        for (final TimeData p : points) {
+        for (final Metric p : points) {
             out.println(String.format("%d: %s", i++, p));
         }
 
         out.flush();
 
-        final List<TimeDataGroup> data = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, points));
+        final List<MetricTypeGroup> data = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, points));
 
         return g.write(new WriteMetric(series, data)).transform(new Transform<WriteResult, Void>() {
             @Override
@@ -112,8 +112,8 @@ public class WritePoints extends AbstractShellTask {
         });
     }
 
-    private List<TimeData> parsePoints(List<String> points, long now) {
-        final List<TimeData> output = new ArrayList<>();
+    private List<Metric> parsePoints(List<String> points, long now) {
+        final List<Metric> output = new ArrayList<>();
 
         for (final String p : points) {
             final String parts[] = p.split("=");
@@ -129,7 +129,7 @@ public class WritePoints extends AbstractShellTask {
                 value = Double.valueOf(parts[1]);
             }
 
-            output.add(new DataPoint(timestamp, value));
+            output.add(new Point(timestamp, value));
         }
 
         return output;

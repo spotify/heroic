@@ -29,9 +29,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import lombok.RequiredArgsConstructor;
-
-import com.spotify.heroic.model.CacheKey;
-
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
@@ -46,6 +43,8 @@ import eu.toolchain.serializer.SerializerFramework;
  */
 @RequiredArgsConstructor
 public class FilterSerializerImpl implements FilterSerializer {
+    public static final int VERSION = 1;
+
     private final SerializerFramework s;
     private final Serializer<Integer> intNumber;
     private final Serializer<String> string;
@@ -151,7 +150,7 @@ public class FilterSerializerImpl implements FilterSerializer {
 
         final Serializer<Filter> serializer = getSerializer(typeId);
 
-        intNumber.serialize(buffer, CacheKey.VERSION);
+        intNumber.serialize(buffer, VERSION);
         string.serialize(buffer, typeId);
 
         final SerialWriter.Scope scope = buffer.scope();
@@ -164,7 +163,7 @@ public class FilterSerializerImpl implements FilterSerializer {
         final int version = intNumber.deserialize(buffer);
         final String typeId = string.deserialize(buffer);
 
-        if (version != CacheKey.VERSION) {
+        if (version != VERSION) {
             buffer.skip();
             return null;
         }

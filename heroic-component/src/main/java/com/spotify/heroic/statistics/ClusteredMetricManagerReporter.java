@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.cluster.model.NodeMetadata;
+import com.spotify.heroic.cluster.NodeMetadata;
 
 public interface ClusteredMetricManagerReporter {
     FutureReporter.Context reportQuery();

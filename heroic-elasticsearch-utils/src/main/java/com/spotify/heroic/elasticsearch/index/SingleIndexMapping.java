@@ -31,7 +31,7 @@ import org.elasticsearch.client.Client;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
 
 @ToString
 public class SingleIndexMapping implements IndexMapping {

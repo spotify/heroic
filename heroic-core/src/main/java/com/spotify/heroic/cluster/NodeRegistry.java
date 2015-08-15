@@ -34,8 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.spotify.heroic.cluster.model.NodeCapability;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

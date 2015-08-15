@@ -21,7 +21,8 @@
 
 package com.spotify.heroic.rpc.httprpc;
 
-import java.util.HashSet;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -31,17 +32,15 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.cluster.model.NodeCapability;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class HttpRpcMetadata {
     public static final int DEFAULT_VERSION = 0;
-
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = new HashSet<>();
-    static {
-        DEFAULT_CAPABILITIES.add(NodeCapability.QUERY);
-    }
+    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.of(NodeCapability.QUERY);
 
     private final int version;
     private final UUID id;
@@ -49,18 +48,12 @@ public class HttpRpcMetadata {
     private final Set<NodeCapability> capabilities;
 
     @JsonCreator
-    public static HttpRpcMetadata create(@JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
+    public HttpRpcMetadata(@JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
             @JsonProperty(value = "tags", required = false) Map<String, String> tags,
             @JsonProperty(value = "capabilities", required = false) Set<NodeCapability> capabilities) {
-        if (version == null)
-            version = DEFAULT_VERSION;
-
-        if (capabilities == null)
-            capabilities = DEFAULT_CAPABILITIES;
-
-        if (id == null)
-            throw new IllegalArgumentException("'id' must be specified");
-
-        return new HttpRpcMetadata(version, id, tags, capabilities);
+        this.version = Optional.fromNullable(version).or(DEFAULT_VERSION);
+        this.id = checkNotNull(id);
+        this.tags = tags;
+        this.capabilities = Optional.fromNullable(capabilities).or(DEFAULT_CAPABILITIES);
     }
 }

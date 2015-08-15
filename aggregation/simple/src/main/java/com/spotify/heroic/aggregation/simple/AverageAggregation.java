@@ -27,17 +27,18 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class AverageAggregation extends BucketAggregation<DataPoint, StripedAverageBucket> {
+public class AverageAggregation extends BucketAggregation<Point, StripedAverageBucket> {
     public static final String NAME = "average";
 
     public AverageAggregation(Sampling sampling) {
-        super(sampling, DataPoint.class, MetricType.POINTS);
+        super(sampling, Point.class, MetricType.POINT);
     }
 
     @JsonCreator
@@ -51,12 +52,13 @@ public class AverageAggregation extends BucketAggregation<DataPoint, StripedAver
     }
 
     @Override
-    protected DataPoint build(StripedAverageBucket bucket) {
+    protected Metric build(StripedAverageBucket bucket) {
         final long count = bucket.count();
 
-        if (count == 0)
-            return new DataPoint(bucket.timestamp(), Double.NaN);
+        if (count == 0) {
+            return Metric.invalid();
+        }
 
-        return new DataPoint(bucket.timestamp(), bucket.value() / count);
+        return new Point(bucket.timestamp(), bucket.value() / count);
     }
 }

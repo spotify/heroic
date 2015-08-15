@@ -16,7 +16,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.GroupingAggregation;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GroupingAggregationTest {

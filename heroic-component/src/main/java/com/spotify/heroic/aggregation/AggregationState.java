@@ -6,7 +6,7 @@ import java.util.Set;
 import lombok.Data;
 
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.Series;
 
 @Data
 public class AggregationState {

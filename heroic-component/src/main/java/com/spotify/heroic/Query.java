@@ -26,9 +26,9 @@ import java.util.List;
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
+import com.spotify.heroic.metric.MetricType;
 
 @Data
 public class Query {

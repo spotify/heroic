@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric;
 
-import com.spotify.heroic.utils.GroupManager;
+import com.spotify.heroic.common.GroupManager;
 
 public interface MetricManager extends GroupManager<MetricBackend, MetricBackendGroup> {
 }

@@ -35,15 +35,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.model.RangeFilter;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.suggest.model.KeySuggest;
-import com.spotify.heroic.suggest.model.MatchOptions;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;

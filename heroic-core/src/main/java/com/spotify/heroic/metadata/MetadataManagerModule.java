@@ -41,10 +41,10 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-import com.spotify.heroic.utils.BackendGroups;
 
 @Data
 public class MetadataManagerModule extends PrivateModule {

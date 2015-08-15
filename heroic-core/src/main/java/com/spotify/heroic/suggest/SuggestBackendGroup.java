@@ -28,18 +28,12 @@ import java.util.Set;
 import lombok.Data;
 import lombok.ToString;
 
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.RangeFilter;
-import com.spotify.heroic.model.Series;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.SelectedGroup;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-import com.spotify.heroic.suggest.model.KeySuggest;
-import com.spotify.heroic.suggest.model.MatchOptions;
-import com.spotify.heroic.suggest.model.TagKeyCount;
-import com.spotify.heroic.suggest.model.TagSuggest;
-import com.spotify.heroic.suggest.model.TagValueSuggest;
-import com.spotify.heroic.suggest.model.TagValuesSuggest;
-import com.spotify.heroic.utils.SelectedGroup;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

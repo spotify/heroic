@@ -22,9 +22,20 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.protobuf.ByteString;
-import com.spotify.heroic.injection.LifeCycle;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.bigtable.api.BigtableCell;
 import com.spotify.heroic.metric.bigtable.api.BigtableClient;
 import com.spotify.heroic.metric.bigtable.api.BigtableColumnFamily;
@@ -33,17 +44,6 @@ import com.spotify.heroic.metric.bigtable.api.BigtableLatestRow;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutations;
 import com.spotify.heroic.metric.bigtable.api.BigtableTable;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
-import com.spotify.heroic.metric.model.BackendEntry;
-import com.spotify.heroic.metric.model.BackendKey;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -179,9 +179,9 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                 final BigtableClient client = c.client();
 
-                for (final TimeDataGroup g : w.getGroups()) {
-                    if (g.getType() == MetricType.POINTS) {
-                        for (final DataPoint d : g.getDataAs(DataPoint.class)) {
+                for (final MetricTypeGroup g : w.getGroups()) {
+                    if (g.getType() == MetricType.POINT) {
+                        for (final Point d : g.getDataAs(Point.class)) {
                             results.add(writePoint(series, client, d));
                         }
                     }
@@ -206,9 +206,9 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                     final BigtableClient client = c.client();
 
-                    for (final TimeDataGroup g : w.getGroups()) {
-                        if (g.getType() == MetricType.POINTS) {
-                            for (final DataPoint d : (List<? extends DataPoint>) g.getData()) {
+                    for (final MetricTypeGroup g : w.getGroups()) {
+                        if (g.getType() == MetricType.POINT) {
+                            for (final Point d : (List<? extends Point>) g.getData()) {
                                 results.add(writePoint(series, client, d));
                             }
                         }
@@ -284,7 +284,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
         });
     }
 
-    private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final DataPoint d)
+    private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final Point d)
             throws IOException {
         final long timestamp = d.getTimestamp();
         final long base = base(timestamp);
@@ -321,12 +321,12 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
             final AsyncFuture<List<BigtableLatestRow>> readRows = client.readRows(METRICS, p.keyBlob,
                     client.columnFilter(POINTS, p.startKey, p.endKey));
 
-            final Function<BigtableCell, DataPoint> transform = new Function<BigtableCell, DataPoint>() {
+            final Function<BigtableCell, Point> transform = new Function<BigtableCell, Point>() {
                 @Override
-                public DataPoint apply(BigtableCell cell) {
+                public Point apply(BigtableCell cell) {
                     final long timestamp = p.base + deserializeOffset(cell.getQualifier());
                     final double value = deserializeValue(cell.getValue());
-                    return new DataPoint(timestamp, value);
+                    return new Point(timestamp, value);
                 }
             };
 
@@ -335,7 +335,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
             queries.add(readRows.transform(new Transform<List<BigtableLatestRow>, FetchData>() {
                 @Override
                 public FetchData transform(List<BigtableLatestRow> result) throws Exception {
-                    final List<Iterable<DataPoint>> points = new ArrayList<>();
+                    final List<Iterable<Point>> points = new ArrayList<>();
 
                     for (final BigtableLatestRow row : result) {
                         for (final BigtableLatestColumnFamily family : row.getFamilies()) {
@@ -348,15 +348,15 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
                     }
 
                     final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
-                    final List<TimeData> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
-                            DataPoint.comparator()));
-                    final List<TimeDataGroup> groups = ImmutableList.of(new TimeDataGroup(MetricType.POINTS, data));
+                    final List<Metric> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
+                            Point.comparator()));
+                    final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
                     return new FetchData(series, times, groups);
                 }
             }));
         }
 
-        return async.collect(queries, FetchData.<DataPoint> merger(series));
+        return async.collect(queries, FetchData.<Point> merger(series));
     }
 
     @Override

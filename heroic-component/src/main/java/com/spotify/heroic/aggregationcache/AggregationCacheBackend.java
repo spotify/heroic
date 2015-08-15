@@ -23,12 +23,9 @@ package com.spotify.heroic.aggregationcache;
 
 import java.util.List;
 
-import com.spotify.heroic.aggregationcache.model.CacheBackendGetResult;
-import com.spotify.heroic.aggregationcache.model.CacheBackendKey;
-import com.spotify.heroic.aggregationcache.model.CacheBackendPutResult;
-import com.spotify.heroic.injection.LifeCycle;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.DateRange;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.metric.Point;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -58,6 +55,6 @@ public interface AggregationCacheBackend extends LifeCycle {
      * @return A callback that will be executed as soon as any underlying request has been satisfied.
      * @throws CacheOperationException An early throw exception, if the backend is unable to prepare the request.
      */
-    public AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<DataPoint> datapoints)
+    public AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<Point> datapoints)
             throws CacheOperationException;
 }

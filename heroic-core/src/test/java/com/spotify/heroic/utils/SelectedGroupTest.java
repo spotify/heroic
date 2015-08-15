@@ -9,6 +9,8 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.SelectedGroup;
 
 public class SelectedGroupTest {
     private final Set<String> groupA = ImmutableSet.of("foo", "bar");

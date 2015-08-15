@@ -28,8 +28,10 @@ import lombok.Data;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.Spread;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
@@ -40,7 +42,7 @@ import com.spotify.heroic.model.Spread;
  * @author udoprog
  */
 @Data
-public class SpreadBucket implements Bucket<DataPoint> {
+public class SpreadBucket implements Bucket<Point> {
     private final long timestamp;
 
     private final AtomicLong count = new AtomicLong(0);
@@ -54,7 +56,7 @@ public class SpreadBucket implements Bucket<DataPoint> {
     }
 
     @Override
-    public void update(Map<String, String> tags, DataPoint d) {
+    public void update(Map<String, String> tags, MetricType type, Point d) {
         final double value = d.getValue();
 
         if (Double.isNaN(value))
@@ -95,7 +97,7 @@ public class SpreadBucket implements Bucket<DataPoint> {
         return count.get();
     }
 
-    public Spread newSpread() {
+    public Metric newSpread() {
         return new Spread(timestamp, count.get(), sum.get(), min.get(), max.get());
     }
 }

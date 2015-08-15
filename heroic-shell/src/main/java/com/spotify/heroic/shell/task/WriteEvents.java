@@ -38,15 +38,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.metric.model.WriteMetric;
-import com.spotify.heroic.metric.model.WriteResult;
-import com.spotify.heroic.model.Event;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
@@ -89,20 +89,20 @@ public class WriteEvents extends AbstractShellTask {
         final MetricBackendGroup g = metrics.useGroup(params.group);
 
         final long now = System.currentTimeMillis();
-        final List<TimeData> events = parseEvents(params.points, now);
+        final List<Metric> events = parseEvents(params.points, now);
 
         int i = 0;
 
         out.println("series: " + series.toString());
         out.println("events:");
 
-        for (final TimeData p : events) {
+        for (final Metric p : events) {
             out.println(String.format("%d: %s", i++, p));
         }
 
         out.flush();
 
-        final List<TimeDataGroup> data = ImmutableList.of(new TimeDataGroup(MetricType.EVENTS, events));
+        final List<MetricTypeGroup> data = ImmutableList.of(new MetricTypeGroup(MetricType.EVENT, events));
 
         return g.write(new WriteMetric(series, data)).transform(new Transform<WriteResult, Void>() {
             @Override
@@ -118,8 +118,8 @@ public class WriteEvents extends AbstractShellTask {
         });
     }
 
-    private List<TimeData> parseEvents(List<String> points, long now) throws IOException {
-        final List<TimeData> output = new ArrayList<>();
+    private List<Metric> parseEvents(List<String> points, long now) throws IOException {
+        final List<Metric> output = new ArrayList<>();
 
         for (final String p : points) {
             final String parts[] = p.split("=");

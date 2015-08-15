@@ -27,18 +27,18 @@ import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.model.DataPoint;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Sampling;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class CountUniqueAggregation extends BucketAggregation<TimeData, CountUniqueBucket> {
+public class CountUniqueAggregation extends BucketAggregation<Metric, CountUniqueBucket> {
     public static final String NAME = "count-unique";
 
     public CountUniqueAggregation(Sampling sampling) {
-        super(sampling, TimeData.class, MetricType.POINTS);
+        super(sampling, Metric.class, MetricType.POINT);
     }
 
     @JsonCreator
@@ -52,12 +52,7 @@ public class CountUniqueAggregation extends BucketAggregation<TimeData, CountUni
     }
 
     @Override
-    protected DataPoint build(CountUniqueBucket bucket) {
-        final long count = bucket.count();
-
-        if (count == 0)
-            return new DataPoint(bucket.timestamp(), Double.NaN);
-
-        return new DataPoint(bucket.timestamp(), count);
+    protected Point build(CountUniqueBucket bucket) {
+        return new Point(bucket.timestamp(), bucket.count());
     }
 }

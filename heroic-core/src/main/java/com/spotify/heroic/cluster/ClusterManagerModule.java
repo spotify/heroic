@@ -46,9 +46,6 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
-import com.spotify.heroic.cluster.model.NodeCapability;
-import com.spotify.heroic.cluster.model.NodeMetadata;
-import com.spotify.heroic.cluster.model.NodeRegistryEntry;
 
 /**
  *

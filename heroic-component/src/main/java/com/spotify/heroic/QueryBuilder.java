@@ -35,6 +35,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.EmptyAggregation;
 import com.spotify.heroic.aggregation.GroupAggregation;
+import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.AggregationValue;
@@ -44,8 +45,7 @@ import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.QuerySource;
 import com.spotify.heroic.grammar.SelectDSL;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
+import com.spotify.heroic.metric.MetricType;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -63,7 +63,7 @@ public class QueryBuilder {
     private Aggregation aggregation = EmptyAggregation.INSTANCE;
     private boolean disableCache;
     private String queryString;
-    private MetricType source = MetricType.POINTS;
+    private MetricType source = MetricType.POINT;
 
     /**
      * Specify a set of tags that has to match.
@@ -222,10 +222,10 @@ public class QueryBuilder {
             throw new IllegalArgumentException("source must be defined");
 
         if (s.getSource() == QuerySource.EVENTS)
-            return MetricType.EVENTS;
+            return MetricType.EVENT;
 
         if (s.getSource() == QuerySource.SERIES)
-            return MetricType.POINTS;
+            return MetricType.POINT;
 
         throw new IllegalArgumentException("invalid source: " + s.getSource());
     }

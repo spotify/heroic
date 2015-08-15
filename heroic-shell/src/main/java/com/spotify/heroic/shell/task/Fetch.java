@@ -36,14 +36,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.FetchData;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.model.FetchData;
-import com.spotify.heroic.metric.model.TimeDataGroup;
-import com.spotify.heroic.model.DateRange;
-import com.spotify.heroic.model.MetricType;
-import com.spotify.heroic.model.Series;
-import com.spotify.heroic.model.TimeData;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypeGroup;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
@@ -92,13 +92,13 @@ public class Fetch extends AbstractShellTask {
             @Override
             public Void transform(FetchData result) throws Exception {
                 outer:
-                for (final TimeDataGroup g : result.getGroups()) {
+                for (final MetricTypeGroup g : result.getGroups()) {
                     int i = 0;
 
                     Calendar current = null;
                     Calendar last = null;
 
-                    for (final TimeData d : g.getData()) {
+                    for (final Metric d : g.getData()) {
                         current = Calendar.getInstance();
                         current.setTime(new Date(d.getTimestamp()));
 
@@ -150,7 +150,7 @@ public class Fetch extends AbstractShellTask {
         private String series;
 
         @Option(name = "-s", aliases = { "--source" }, usage = "Source to fetch", metaVar = "<events|points>")
-        private String source = MetricType.POINTS.identifier();
+        private String source = MetricType.POINT.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
         private String start;
