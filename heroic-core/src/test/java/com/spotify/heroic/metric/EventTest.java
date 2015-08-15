@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.EventSerializer;
+import com.spotify.heroic.metric.EventSerialization;
 
 public class EventTest {
     private static final Event ref = new Event(1021L, ImmutableMap.<String, Object> of("int", 1234, "float", 0.1d,
@@ -21,8 +21,8 @@ public class EventTest {
 
         final SimpleModule m = new SimpleModule();
 
-        m.addSerializer(Event.class, new EventSerializer.Serializer());
-        m.addDeserializer(Event.class, new EventSerializer.Deserializer());
+        m.addSerializer(Event.class, new EventSerialization.Serializer());
+        m.addDeserializer(Event.class, new EventSerialization.Deserializer());
 
         mapper.registerModule(m);
 

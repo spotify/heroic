@@ -30,22 +30,23 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.spotify.heroic.metric.MetricType;
 
-public class MetricTypeSerializer {
+public class MetricTypeSerialization {
     public static class Deserializer extends JsonDeserializer<MetricType> {
         @Override
         public MetricType deserialize(JsonParser p, DeserializationContext c) throws IOException,
                 JsonProcessingException {
-            final String identifier = p.getValueAsString();
+            final String identifier = p.nextTextValue();
 
-            if (identifier == null)
+            if (identifier == null) {
                 throw c.mappingException("No identifier specified");
+            }
 
             final MetricType source = MetricType.fromIdentifier(identifier);
 
-            if (source == null)
+            if (source == null) {
                 throw c.mappingException("Not a valid metric source: " + identifier);
+            }
 
             return source;
         }

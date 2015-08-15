@@ -42,7 +42,7 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 
@@ -105,7 +105,7 @@ public class GeneratedBackend implements MetricBackend, LifeCycle {
             final List<Metric> data = generator.generate(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
+            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
             return async.resolved(new FetchData(series, times, groups));
         }
 
@@ -113,7 +113,7 @@ public class GeneratedBackend implements MetricBackend, LifeCycle {
             final List<Metric> data = generator.generateEvents(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
+            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
             return async.resolved(new FetchData(series, times, groups));
         }
 

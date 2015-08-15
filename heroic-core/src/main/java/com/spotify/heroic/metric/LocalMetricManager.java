@@ -321,7 +321,7 @@ public class LocalMetricManager implements MetricManager {
             return new StreamCollector<FetchData, ResultGroups>() {
                 @Override
                 public void resolved(FetchData result) throws Exception {
-                    for (final MetricTypeGroup g : result.getGroups()) {
+                    for (final MetricTypedGroup g : result.getGroups()) {
                         session.update(new AggregationData(result.getSeries().getTags(), ImmutableSet.of(result
                                 .getSeries()), g.getData(), g.getType()));
                     }

@@ -10,7 +10,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.metric.DataPointSerializer;
+import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ResultGroup;
 import com.spotify.heroic.metric.TagValues;
@@ -23,8 +23,8 @@ public class ResultGroupTest {
     public void before() {
         mapper = new ObjectMapper();
         final SimpleModule module = new SimpleModule();
-        module.addSerializer(Point.class, new DataPointSerializer.Serializer());
-        module.addDeserializer(Point.class, new DataPointSerializer.Deserializer());
+        module.addSerializer(Point.class, new PointSerialization.Serializer());
+        module.addDeserializer(Point.class, new PointSerialization.Deserializer());
         mapper.registerModule(module);
     }
 

@@ -144,18 +144,14 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
     private final NativeRpcContainer container = new NativeRpcContainer();
 
     {
-        container.register("metadata", new NativeRpcContainer.Endpoint<RpcEmptyBody, NodeMetadata>(
-                new TypeReference<RpcEmptyBody>() {
-                }) {
+        container.register("metadata", new NativeRpcContainer.Endpoint<RpcEmptyBody, NodeMetadata>() {
             @Override
             public AsyncFuture<NodeMetadata> handle(final RpcEmptyBody request) throws Exception {
                 return async.resolved(localMetadata);
             }
         });
 
-        container.register(METRICS_QUERY, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcQuery>, ResultGroups>(
-                new TypeReference<RpcGroupedQuery<RpcQuery>>() {
-                }) {
+        container.register(METRICS_QUERY, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcQuery>, ResultGroups>() {
             @Override
             public AsyncFuture<ResultGroups> handle(final RpcGroupedQuery<RpcQuery> grouped) throws Exception {
                 final RpcQuery query = grouped.getQuery();
@@ -165,9 +161,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
             }
         });
 
-        container.register(METRICS_WRITE, new NativeRpcContainer.Endpoint<RpcGroupedQuery<WriteMetric>, WriteResult>(
-                new TypeReference<RpcGroupedQuery<WriteMetric>>() {
-                }) {
+        container.register(METRICS_WRITE, new NativeRpcContainer.Endpoint<RpcGroupedQuery<WriteMetric>, WriteResult>() {
             @Override
             public AsyncFuture<WriteResult> handle(final RpcGroupedQuery<WriteMetric> grouped) throws Exception {
                 final WriteMetric query = grouped.getQuery();
@@ -175,28 +169,24 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
             }
         });
 
-        container.register(METADATA_FIND_TAGS, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindTags>(
-                new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                }) {
-            @Override
-            public AsyncFuture<FindTags> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
-                return metadata.useGroup(grouped.getGroup()).findTags(grouped.getQuery());
-            }
-        });
+        container.register(METADATA_FIND_TAGS,
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindTags>() {
+                    @Override
+                    public AsyncFuture<FindTags> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
+                        return metadata.useGroup(grouped.getGroup()).findTags(grouped.getQuery());
+                    }
+                });
 
-        container.register(METADATA_FIND_KEYS, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindKeys>(
-                new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                }) {
-            @Override
-            public AsyncFuture<FindKeys> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
-                return metadata.useGroup(grouped.getGroup()).findKeys(grouped.getQuery());
-            }
-        });
+        container.register(METADATA_FIND_KEYS,
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindKeys>() {
+                    @Override
+                    public AsyncFuture<FindKeys> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
+                        return metadata.useGroup(grouped.getGroup()).findKeys(grouped.getQuery());
+                    }
+                });
 
         container.register(METADATA_FIND_SERIES,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindSeries>(
-                        new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, FindSeries>() {
                     @Override
                     public AsyncFuture<FindSeries> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
                         return metadata.useGroup(grouped.getGroup()).findSeries(grouped.getQuery());
@@ -204,9 +194,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
                 });
 
         container.register(METADATA_COUNT_SERIES,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, CountSeries>(
-                        new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, CountSeries>() {
                     @Override
                     public AsyncFuture<CountSeries> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
                         return metadata.useGroup(grouped.getGroup()).countSeries(grouped.getQuery());
@@ -214,9 +202,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
                 });
 
         container.register(METADATA_WRITE,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcWriteSeries>, WriteResult>(
-                        new TypeReference<RpcGroupedQuery<RpcWriteSeries>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcWriteSeries>, WriteResult>() {
                     @Override
                     public AsyncFuture<WriteResult> handle(final RpcGroupedQuery<RpcWriteSeries> grouped)
                             throws Exception {
@@ -226,9 +212,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
                 });
 
         container.register(METADATA_DELETE_SERIES,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, DeleteSeries>(
-                        new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, DeleteSeries>() {
                     @Override
                     public AsyncFuture<DeleteSeries> handle(final RpcGroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -237,18 +221,14 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
                 });
 
         container.register(SUGGEST_TAG_KEY_COUNT,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, TagKeyCount>(
-                        new TypeReference<RpcGroupedQuery<RangeFilter>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RangeFilter>, TagKeyCount>() {
                     @Override
                     public AsyncFuture<TagKeyCount> handle(final RpcGroupedQuery<RangeFilter> grouped) throws Exception {
                         return suggest.useGroup(grouped.getGroup()).tagKeyCount(grouped.getQuery());
                     }
                 });
 
-        container.register(SUGGEST_TAG, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcTagSuggest>, TagSuggest>(
-                new TypeReference<RpcGroupedQuery<RpcTagSuggest>>() {
-                }) {
+        container.register(SUGGEST_TAG, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcTagSuggest>, TagSuggest>() {
             @Override
             public AsyncFuture<TagSuggest> handle(final RpcGroupedQuery<RpcTagSuggest> grouped) throws Exception {
                 final RpcTagSuggest query = grouped.getQuery();
@@ -257,9 +237,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
             }
         });
 
-        container.register(SUGGEST_KEY, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcKeySuggest>, KeySuggest>(
-                new TypeReference<RpcGroupedQuery<RpcKeySuggest>>() {
-                }) {
+        container.register(SUGGEST_KEY, new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcKeySuggest>, KeySuggest>() {
             @Override
             public AsyncFuture<KeySuggest> handle(final RpcGroupedQuery<RpcKeySuggest> grouped) throws Exception {
                 final RpcKeySuggest query = grouped.getQuery();
@@ -269,9 +247,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
         });
 
         container.register(SUGGEST_TAG_VALUES,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcSuggestTagValues>, TagValuesSuggest>(
-                        new TypeReference<RpcGroupedQuery<RpcSuggestTagValues>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcSuggestTagValues>, TagValuesSuggest>() {
                     @Override
                     public AsyncFuture<TagValuesSuggest> handle(final RpcGroupedQuery<RpcSuggestTagValues> grouped)
                             throws Exception {
@@ -282,9 +258,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
                 });
 
         container.register(SUGGEST_TAG_VALUE,
-                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcSuggestTagValue>, TagValueSuggest>(
-                        new TypeReference<RpcGroupedQuery<RpcSuggestTagValue>>() {
-                        }) {
+                new NativeRpcContainer.Endpoint<RpcGroupedQuery<RpcSuggestTagValue>, TagValueSuggest>() {
                     @Override
                     public AsyncFuture<TagValueSuggest> handle(final RpcGroupedQuery<RpcSuggestTagValue> grouped)
                             throws Exception {

@@ -33,23 +33,23 @@ import com.google.common.collect.ImmutableList;
 @Data
 @EqualsAndHashCode
 public class MetricGroup implements Metric {
-    static final List<MetricTypeGroup> EMPTY_GROUPS = ImmutableList.of();
+    static final List<MetricTypedGroup> EMPTY_GROUPS = ImmutableList.of();
 
     private final long timestamp;
-    private final List<MetricTypeGroup> groups;
+    private final List<MetricTypedGroup> groups;
     private final int hash;
 
-    public MetricGroup(long timestamp, List<MetricTypeGroup> groups) {
+    public MetricGroup(long timestamp, List<MetricTypedGroup> groups) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
         this.hash = doHash(this.groups);
     }
 
-    int doHash(List<MetricTypeGroup> groups) {
+    int doHash(List<MetricTypedGroup> groups) {
         final int prime = 31;
         int result = 1;
 
-        for (final MetricTypeGroup g : groups) {
+        for (final MetricTypedGroup g : groups) {
             for (final Metric d : g.getData()) {
                 result = prime * result + d.hash();
             }

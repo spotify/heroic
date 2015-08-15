@@ -51,7 +51,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
@@ -134,7 +134,7 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
     private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
         final List<Long> times = new ArrayList<Long>();
 
-        for (final MetricTypeGroup g : w.getGroups()) {
+        for (final MetricTypedGroup g : w.getGroups()) {
             if (g.getType() == MetricType.POINT) {
                 for (final Metric t : g.getData()) {
                     final Point d = (Point) t;
@@ -214,7 +214,7 @@ public class DatastaxBackend implements MetricBackend, LifeCycle {
                                 throw new IllegalArgumentException("query violated data limit");
 
                             final ImmutableList<Long> times = ImmutableList.of(diff);
-                            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT,
+                            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT,
                                     data));
                             return new FetchData(series, times, groups);
                         }

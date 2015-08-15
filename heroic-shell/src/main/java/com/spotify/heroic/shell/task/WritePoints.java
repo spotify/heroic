@@ -41,7 +41,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTask;
@@ -96,7 +96,7 @@ public class WritePoints extends AbstractShellTask {
 
         out.flush();
 
-        final List<MetricTypeGroup> data = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, points));
+        final List<MetricTypedGroup> data = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, points));
 
         return g.write(new WriteMetric(series, data)).transform(new Transform<WriteResult, Void>() {
             @Override

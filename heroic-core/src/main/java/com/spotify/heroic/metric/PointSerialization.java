@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.spotify.heroic.metric.Point;
 
-public class DataPointSerializer {
+public class PointSerialization {
     public static class Deserializer extends JsonDeserializer<Point> {
         @Override
         public Point deserialize(JsonParser p, DeserializationContext c) throws IOException,

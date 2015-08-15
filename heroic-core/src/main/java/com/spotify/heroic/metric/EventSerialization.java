@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.metric.Event;
 
-public class EventSerializer {
+public class EventSerialization {
     public static class Deserializer extends JsonDeserializer<Event> {
         @Override
         public Event deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {

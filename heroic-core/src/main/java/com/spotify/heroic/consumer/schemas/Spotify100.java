@@ -43,7 +43,7 @@ import com.spotify.heroic.consumer.FatalSchemaException;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 
 @ToString
@@ -111,7 +111,7 @@ public class Spotify100 implements ConsumerSchema {
         final List<Metric> points = new ArrayList<>();
         points.add(datapoint);
 
-        final List<MetricTypeGroup> data = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, points));
+        final List<MetricTypedGroup> data = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, points));
 
         try {
             consumer.write(new WriteMetric(series, data)).get();

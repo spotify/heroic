@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.spotify.heroic.metric.Spread;
 
-public class SpreadSerializer {
+public class SpreadSerialization {
     private static final String COUNT = "count";
     private static final String MIN = "min";
     private static final String MAX = "max";

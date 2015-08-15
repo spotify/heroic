@@ -64,7 +64,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -134,7 +134,7 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                 final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
                 for (final WriteMetric write : writes) {
-                    for (final MetricTypeGroup g : write.getGroups()) {
+                    for (final MetricTypedGroup g : write.getGroups()) {
                         if (g.getType() != MetricType.POINT)
                             continue;
 
@@ -239,7 +239,7 @@ public class AstyanaxBackend implements MetricBackend, LifeCycle {
                                 throw new IllegalArgumentException("data limit quota violated");
 
                             final List<Long> times = ImmutableList.of(System.nanoTime() - start);
-                            final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT,
+                            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT,
                                     data));
                             return new FetchData(series, times, groups);
                         }

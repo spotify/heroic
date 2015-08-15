@@ -43,7 +43,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
@@ -92,7 +92,7 @@ public class Fetch extends AbstractShellTask {
             @Override
             public Void transform(FetchData result) throws Exception {
                 outer:
-                for (final MetricTypeGroup g : result.getGroups()) {
+                for (final MetricTypedGroup g : result.getGroups()) {
                     int i = 0;
 
                     Calendar current = null;

@@ -84,8 +84,8 @@ import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CollectingTypeListener;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
-import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.IsSubclassOf;
+import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.SamplingSerializer;
 import com.spotify.heroic.common.SamplingSerializerImpl;
@@ -107,15 +107,19 @@ import com.spotify.heroic.filter.FilterSerializerImpl;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.metric.DataPointSerializer;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.EventSerializer;
+import com.spotify.heroic.metric.EventSerialization;
+import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.MetricGroupSerialization;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypeSerializer;
+import com.spotify.heroic.metric.MetricTypeSerialization;
+import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricTypedGroupSerialization;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
-import com.spotify.heroic.metric.SpreadSerializer;
+import com.spotify.heroic.metric.SpreadSerialization;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.HeroicReporter;
@@ -489,17 +493,23 @@ public class HeroicCore {
                 serializerImpl.configure(module);
                 aggregationRegistry.configure(module);
 
-                module.addSerializer(Point.class, new DataPointSerializer.Serializer());
-                module.addDeserializer(Point.class, new DataPointSerializer.Deserializer());
+                module.addSerializer(Point.class, new PointSerialization.Serializer());
+                module.addDeserializer(Point.class, new PointSerialization.Deserializer());
 
-                module.addSerializer(Event.class, new EventSerializer.Serializer());
-                module.addDeserializer(Event.class, new EventSerializer.Deserializer());
+                module.addSerializer(Event.class, new EventSerialization.Serializer());
+                module.addDeserializer(Event.class, new EventSerialization.Deserializer());
 
-                module.addSerializer(Spread.class, new SpreadSerializer.Serializer());
-                module.addDeserializer(Spread.class, new SpreadSerializer.Deserializer());
+                module.addSerializer(Spread.class, new SpreadSerialization.Serializer());
+                module.addDeserializer(Spread.class, new SpreadSerialization.Deserializer());
 
-                module.addSerializer(MetricType.class, new MetricTypeSerializer.Serializer());
-                module.addDeserializer(MetricType.class, new MetricTypeSerializer.Deserializer());
+                module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
+                module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
+
+                module.addSerializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Serializer());
+                module.addDeserializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Deserializer());
+
+                module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
+                module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());
 
                 final ObjectMapper mapper = new ObjectMapper();
 

@@ -14,7 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 
 @RequiredArgsConstructor
 public class UniqueGroupBucket implements Bucket<Metric> {
@@ -22,7 +22,7 @@ public class UniqueGroupBucket implements Bucket<Metric> {
 
     final long timestamp;
 
-    public List<MetricTypeGroup> groups() {
+    public List<MetricTypedGroup> groups() {
         final ImmutableList.Builder<Metric> pointsBuilder = ImmutableList.builder();
         final ImmutableList.Builder<Metric> eventsBuilder = ImmutableList.builder();
 
@@ -42,14 +42,14 @@ public class UniqueGroupBucket implements Bucket<Metric> {
         final List<Metric> points = pointsBuilder.build();
         final List<Metric> events = eventsBuilder.build();
 
-        final ImmutableList.Builder<MetricTypeGroup> result = ImmutableList.builder();
+        final ImmutableList.Builder<MetricTypedGroup> result = ImmutableList.builder();
 
         if (!points.isEmpty()) {
-            result.add(new MetricTypeGroup(MetricType.POINT, points));
+            result.add(new MetricTypedGroup(MetricType.POINT, points));
         }
 
         if (!events.isEmpty()) {
-            result.add(new MetricTypeGroup(MetricType.EVENT, events));
+            result.add(new MetricTypedGroup(MetricType.EVENT, events));
         }
 
         return result.build();

@@ -5,7 +5,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
-public class MetricTypeGroup {
+public class MetricTypedGroup {
     final MetricType type;
     final List<? extends Metric> data;
 

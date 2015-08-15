@@ -33,7 +33,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.MetricTypeGroup;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.bigtable.api.BigtableCell;
@@ -179,7 +179,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                 final BigtableClient client = c.client();
 
-                for (final MetricTypeGroup g : w.getGroups()) {
+                for (final MetricTypedGroup g : w.getGroups()) {
                     if (g.getType() == MetricType.POINT) {
                         for (final Point d : g.getDataAs(Point.class)) {
                             results.add(writePoint(series, client, d));
@@ -206,7 +206,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
 
                     final BigtableClient client = c.client();
 
-                    for (final MetricTypeGroup g : w.getGroups()) {
+                    for (final MetricTypedGroup g : w.getGroups()) {
                         if (g.getType() == MetricType.POINT) {
                             for (final Point d : (List<? extends Point>) g.getData()) {
                                 results.add(writePoint(series, client, d));
@@ -350,7 +350,7 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
                     final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
                     final List<Metric> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
                             Point.comparator()));
-                    final List<MetricTypeGroup> groups = ImmutableList.of(new MetricTypeGroup(MetricType.POINT, data));
+                    final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
                     return new FetchData(series, times, groups);
                 }
             }));

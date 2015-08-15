@@ -34,7 +34,7 @@ public class NativeRpcContainer {
     private final Map<String, EndpointSpec<Object, Object>> endpoints = new HashMap<>();
 
     @SuppressWarnings("unchecked")
-    public void register(final String endpoint, final EndpointSpec<?, ?> handle) {
+    public void register(final String endpoint, final Endpoint<?, ?> handle) {
         if (endpoints.containsKey(endpoint))
             throw new IllegalStateException("Endpoint already registered: " + endpoint);
 
@@ -52,11 +52,9 @@ public class NativeRpcContainer {
     }
 
     @RequiredArgsConstructor
-    public static abstract class Endpoint<Q, R> implements EndpointSpec<Q, R> {
-        private final TypeReference<Q> type;
-
+    public static abstract class Endpoint<Q, R> extends TypeReference<Q> implements EndpointSpec<Q, R> {
         public TypeReference<Q> requestType() {
-            return type;
+            return this;
         }
     }
 }
