@@ -137,7 +137,7 @@ public class ManagedConnectionFactory {
             }
         };
     }
-    
+
     public Managed<Connection> construct(final String defaultTemplateName,
             final Map<String, Map<String, Object>> suggestedMappings) {
         return construct(defaultTemplateName, suggestedMappings, DEFAULT_SETTINGS);

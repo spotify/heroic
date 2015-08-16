@@ -80,9 +80,9 @@ public class QueryResource {
     @POST
     @Path("/metrics/stream")
     public List<StreamId> metricsStream(@QueryParam("backend") String backendGroup, QueryMetrics query) {
-        final Query request = setupBuilder(backendGroup, query).build();
+        final Query request = setupBuilder(query).build();
 
-        final Collection<? extends QueryManager.Group> groups = this.query.useDefaultGroupPerNode();
+        final Collection<? extends QueryManager.Group> groups = this.query.useGroupPerNode(backendGroup);
         final List<StreamId> ids = new ArrayList<>();
 
         for (QueryManager.Group group : groups) {
@@ -135,7 +135,7 @@ public class QueryResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
             QueryMetrics query) {
-        final Query q = setupBuilder(backendGroup, query).build();
+        final Query q = setupBuilder(query).build();
 
         final QueryManager.Group group = this.query.useGroup(backendGroup);
         final AsyncFuture<QueryResult> callback = group.query(q);
@@ -145,9 +145,9 @@ public class QueryResource {
         httpAsync.bind(response, callback, METRICS);
     }
 
-    private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
+    private QueryBuilder setupBuilder(QueryMetrics query) {
         return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
-                .backendGroup(backendGroup).queryString(query.getQuery()).filter(query.getFilter())
+                .queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
                 .aggregation(query.makeAggregation()).source(query.getSource());
     }

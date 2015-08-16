@@ -28,6 +28,12 @@
         "index": "not_analyzed",
         "doc_values": true,
         "include_in_all": false
+      },
+      "series_id": {
+        "type": "long",
+        "index": "not_analyzed",
+        "doc_values": true,
+        "include_in_all": false
       }
     }
   }

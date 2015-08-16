@@ -23,18 +23,29 @@ package com.spotify.heroic.metric;
 
 import java.util.Comparator;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-@AllArgsConstructor
+@EqualsAndHashCode(exclude = { "valueHash" })
 public class Spread implements Metric {
     private final long timestamp;
-
     private final long count;
     private final double sum;
+    private final double sum2;
     private final double min;
     private final double max;
+    private final int valueHash;
+
+    public Spread(long timestamp, long count, double sum, double sum2, double min, double max) {
+        this.timestamp = timestamp;
+        this.count = count;
+        this.sum = sum;
+        this.sum2 = sum2;
+        this.min = min;
+        this.max = max;
+        this.valueHash = calculateValueHash(count, sum, sum2, min, max);
+    }
 
     @Override
     public long getTimestamp() {
@@ -42,8 +53,8 @@ public class Spread implements Metric {
     }
 
     @Override
-    public int hash() {
-        return 0;
+    public int valueHash() {
+        return valueHash;
     }
 
     @Override
@@ -51,14 +62,30 @@ public class Spread implements Metric {
         return true;
     }
 
-    private static final Comparator<Metric> comparator = new Comparator<Metric>() {
+    static int calculateValueHash(long count, double sum, double sum2, double min, double max) {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + (int) (count ^ (count >>> 32));
+        long temp;
+        temp = Double.doubleToLongBits(max);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(min);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(sum);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(sum2);
+        result = prime * result + (int) (temp ^ (temp >>> 32));
+        return result;
+    }
+
+    public static Comparator<Metric> comparator() {
+        return comparator;
+    }
+
+    static final Comparator<Metric> comparator = new Comparator<Metric>() {
         @Override
         public int compare(Metric a, Metric b) {
             return Long.compare(a.getTimestamp(), b.getTimestamp());
         }
     };
-
-    public static Comparator<Metric> comparator() {
-        return comparator;
-    }
 }

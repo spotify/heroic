@@ -57,7 +57,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagValuesSuggest.reduce(filter.getLimit(), groupLimit)).onAny(
+        return async.collect(callbacks, TagValuesSuggest.reduce(filter.getLimit(), groupLimit)).on(
                 reporter.reportTagValuesSuggest());
     }
 
@@ -72,7 +72,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagValueSuggest.reduce(filter.getLimit())).onAny(
+        return async.collect(callbacks, TagValueSuggest.reduce(filter.getLimit())).on(
                 reporter.reportTagValueSuggest());
     }
 
@@ -87,7 +87,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagKeyCount.reduce(filter.getLimit())).onAny(reporter.reportTagKeySuggest());
+        return async.collect(callbacks, TagKeyCount.reduce(filter.getLimit())).on(reporter.reportTagKeySuggest());
     }
 
     @Override
@@ -102,7 +102,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagSuggest.reduce(filter.getLimit())).onAny(reporter.reportTagSuggest());
+        return async.collect(callbacks, TagSuggest.reduce(filter.getLimit())).on(reporter.reportTagSuggest());
     }
 
     @Override
@@ -116,7 +116,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, KeySuggest.reduce(filter.getLimit())).onAny(reporter.reportKeySuggest());
+        return async.collect(callbacks, KeySuggest.reduce(filter.getLimit())).on(reporter.reportKeySuggest());
     }
 
     @Override
@@ -131,32 +131,6 @@ public class SuggestBackendGroup implements SuggestBackend {
         });
 
         return async.collect(callbacks, WriteResult.merger());
-    }
-
-    @Override
-    public void writeDirect(final Series series, final DateRange range) throws Exception {
-        final List<Throwable> errors = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                try {
-                    backend.writeDirect(series, range);
-                } catch (Exception e) {
-                    errors.add(e);
-                }
-            }
-        });
-
-        if (!errors.isEmpty()) {
-            final Exception e = new Exception("exception caught when writing to backend");
-
-            for (final Throwable t : errors) {
-                e.addSuppressed(t);
-            }
-
-            throw e;
-        }
     }
 
     @Override

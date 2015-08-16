@@ -8,7 +8,7 @@ queries
     ;
 
 query
-    : Select select From from (Where filter)? (GroupBy groupBy)?
+    : select From from (Where filter)? (GroupBy groupBy)?
     ;
 
 eqExpr
@@ -105,19 +105,19 @@ keyValue
     : Identifier Eq valueExpr
     ;
 
+string
+    : QuotedString
+    | SimpleString
+    | Identifier
+    ;
+
 aggregationArgs
     : listValues (Colon keyValue)*
     | keyValue (Colon keyValue)*
     ;
 
 aggregation
-    : Identifier LParen aggregationArgs? RParen
-    ;
-
-string
-    : QuotedString
-    | SimpleString
-    | Identifier
+    : string LParen aggregationArgs? RParen
     ;
 
 placeholder
@@ -171,17 +171,10 @@ sourceRange
     | absolute
     ;
 
-from : (SERIES | EVENTS) sourceRange? ;
-
-// lexer below
-
-SERIES : 'series' ;
-EVENTS : 'events' ;
+from : Identifier sourceRange? ;
 
 // keywords (must come before SimpleString!)
-All : 'all' ;
-
-Select : 'select' ;
+All : '*' ;
 
 Where : 'where' ;
 

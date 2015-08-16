@@ -42,13 +42,13 @@ public class MetricTypeSerialization {
                 throw c.mappingException("No identifier specified");
             }
 
-            final MetricType source = MetricType.fromIdentifier(identifier);
+            final MetricType type = MetricType.fromIdentifier(identifier);
 
-            if (source == null) {
+            if (type == null) {
                 throw c.mappingException("Not a valid metric source: " + identifier);
             }
 
-            return source;
+            return type;
         }
     }
 

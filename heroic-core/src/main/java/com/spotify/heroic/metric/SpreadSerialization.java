@@ -31,44 +31,49 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.spotify.heroic.metric.Spread;
 
 public class SpreadSerialization {
     private static final String COUNT = "count";
     private static final String MIN = "min";
     private static final String MAX = "max";
     private static final String SUM = "sum";
+    private static final String SUM2 = "sum2";
 
     public static class Deserializer extends JsonDeserializer<Spread> {
         @Override
         public Spread deserialize(JsonParser p, DeserializationContext c) throws IOException,
                 JsonProcessingException {
 
-            if (p.getCurrentToken() != JsonToken.START_ARRAY)
-                throw c.mappingException("Expected start of array");
-
-            final Long timestamp;
-
-            {
-                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
-                    throw c.mappingException("Expected number (timestamp)");
-
-                timestamp = p.readValueAs(Long.class);
+            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
+                throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
-            if (p.nextToken() != JsonToken.START_OBJECT)
+            final long timestamp;
+
+            {
+                if (!p.nextToken().isNumeric()) {
+                    throw c.mappingException(String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
+                }
+
+                timestamp = p.getLongValue();
+            }
+
+            if (p.nextToken() != JsonToken.START_OBJECT) {
                 throw c.mappingException("Expected start of object");
+            }
 
             long count = 0;
             double sum = Double.NaN;
+            double sumx2 = Double.NaN;
             double min = Double.NaN;
             double max = Double.NaN;
 
             while (p.nextToken() == JsonToken.FIELD_NAME) {
                 final String name = p.getCurrentName();
 
-                if (name == null)
+                if (name == null) {
                     throw c.mappingException("Expected field name");
+                }
 
                 if (COUNT.equals(name)) {
                     count = nextLong(p, c);
@@ -89,39 +94,38 @@ public class SpreadSerialization {
                     sum = nextDouble(p, c);
                     continue;
                 }
+
+                if (SUM2.equals(name)) {
+                    sumx2 = nextDouble(p, c);
+                    continue;
+                }
             }
 
-            if (p.getCurrentToken() != JsonToken.END_OBJECT)
-                throw c.mappingException("Expected end of object");
+            if (p.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw c.mappingException(String.format("Expected end of object, not %s", p.getCurrentToken()));
+            }
 
-            if (p.getCurrentToken() != JsonToken.END_ARRAY)
-                throw c.mappingException("Expected end of array");
+            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
+                throw c.mappingException(String.format("Expected end of array, not %s", p.getCurrentToken()));
+            }
 
-            return new Spread(timestamp, count, sum, min, max);
+            return new Spread(timestamp, count, sum, sumx2, min, max);
         }
 
         private long nextLong(JsonParser p, DeserializationContext c) throws IOException {
-            switch (p.nextToken()) {
-            case VALUE_NUMBER_FLOAT:
-                return p.readValueAs(Double.class).longValue();
-            case VALUE_NUMBER_INT:
-                return p.readValueAs(Long.class);
-            default:
-                throw c.mappingException("Expected long");
+            if (!p.nextToken().isNumeric()) {
+                throw c.mappingException(String.format("Expected numeric, not %s", p.getCurrentToken()));
             }
+
+            return p.getLongValue();
         }
 
         private Double nextDouble(JsonParser p, DeserializationContext c) throws IOException {
-            switch (p.nextToken()) {
-            case VALUE_NUMBER_FLOAT:
-                return p.readValueAs(Double.class);
-            case VALUE_NUMBER_INT:
-                return p.readValueAs(Long.class).doubleValue();
-            case VALUE_NULL:
-                return Double.NaN;
-            default:
-                throw c.mappingException("Expected double");
+            if (!p.nextToken().isNumeric()) {
+                throw c.mappingException(String.format("Expected numeric, not %s", p.getCurrentToken()));
             }
+
+            return p.getDoubleValue();
         }
     }
 
@@ -139,6 +143,9 @@ public class SpreadSerialization {
             g.writeFieldName(SUM);
             writeDouble(g, d.getSum());
 
+            g.writeFieldName(SUM2);
+            writeDouble(g, d.getSum2());
+
             g.writeFieldName(MIN);
             writeDouble(g, d.getMin());
 
@@ -150,10 +157,10 @@ public class SpreadSerialization {
         }
 
         private void writeDouble(JsonGenerator g, double value) throws IOException {
-            if (Double.isNaN(value)) {
-                g.writeNull();
-            } else {
+            if (Double.isFinite(value)) {
                 g.writeNumber(value);
+            } else {
+                g.writeNull();
             }
         }
     }

@@ -23,8 +23,10 @@ package com.spotify.heroic.grammar;
 
 import lombok.Data;
 
+import com.google.common.base.Optional;
+
 @Data
 public class SelectDSL {
     private final Context context;
-    private final AggregationValue aggregation;
+    private final Optional<AggregationValue> aggregation;
 }

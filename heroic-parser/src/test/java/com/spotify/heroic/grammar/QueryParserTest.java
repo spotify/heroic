@@ -1,12 +1,14 @@
 package com.spotify.heroic.grammar;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
@@ -37,8 +39,9 @@ public class QueryParserTest {
         final AggregationValue chain = new AggregationValue("chain", ImmutableList.<Value> of(group, sum),
                 ImmutableMap.<String, Value> of());
 
-        Assert.assertEquals(null, parser.parse(CoreQueryParser.SELECT, "all").getAggregation());
-        Assert.assertEquals(chain, parser.parse(CoreQueryParser.SELECT, "chain(group([host], average(30H)), sum(30H))")
+        assertEquals(Optional.absent(), parser.parse(CoreQueryParser.SELECT, "*").getAggregation());
+        assertEquals(Optional.of(chain),
+                parser.parse(CoreQueryParser.SELECT, "chain(group([host], average(30H)), sum(30H))")
                 .getAggregation());
     }
 
@@ -49,27 +52,34 @@ public class QueryParserTest {
 
     @Test
     public void testValueExpr() {
-        Assert.assertEquals("foobar", parser.parse(CoreQueryParser.VALUE_EXPR, "foo + bar").cast(String.class));
-        Assert.assertEquals(new DiffValue(TimeUnit.HOURS, 7),
+        assertEquals("foobar", parser.parse(CoreQueryParser.VALUE_EXPR, "foo + bar").cast(String.class));
+        assertEquals(new DiffValue(TimeUnit.HOURS, 7),
                 parser.parse(CoreQueryParser.VALUE_EXPR, "3H + 4H").cast(DiffValue.class));
-        Assert.assertEquals(new DiffValue(TimeUnit.MINUTES, 59), parser.parse(CoreQueryParser.VALUE_EXPR, "1H - 1m")
+        assertEquals(new DiffValue(TimeUnit.MINUTES, 59),
+                parser.parse(CoreQueryParser.VALUE_EXPR, "1H - 1m")
                 .cast(DiffValue.class));
-        Assert.assertEquals(new DiffValue(TimeUnit.MINUTES, 59), parser.parse(CoreQueryParser.VALUE_EXPR, "119m - 1H")
+        assertEquals(new DiffValue(TimeUnit.MINUTES, 59),
+                parser.parse(CoreQueryParser.VALUE_EXPR, "119m - 1H")
                 .cast(DiffValue.class));
-        Assert.assertEquals(new ListValue(ImmutableList.<Value> of(new IntValue(1l), new IntValue(2l))),
+        assertEquals(new ListValue(ImmutableList.<Value> of(new IntValue(1l), new IntValue(2l))),
                 parser.parse(CoreQueryParser.VALUE_EXPR, "[1] + [2]").cast(ListValue.class));
     }
 
     @Test
     public void testFrom() {
-        Assert.assertEquals(FromDSL.SERIES, parser.parse(CoreQueryParser.FROM, "series"));
-        Assert.assertEquals(FromDSL.EVENTS, parser.parse(CoreQueryParser.FROM, "events"));
+        checkFrom("series", Optional.absent(), parser.parse(CoreQueryParser.FROM, "series"));
+        checkFrom("events", Optional.absent(), parser.parse(CoreQueryParser.FROM, "events"));
         // absolute
-        Assert.assertEquals(new FromDSL(QuerySource.SERIES, new DateRange(0, 1234 + 4321)),
+        checkFrom("series", Optional.of(new DateRange(0, 1234 + 4321)),
                 parser.parse(CoreQueryParser.FROM, "series(0, 1234 + 4321)"));
         // relative
-        Assert.assertEquals(new FromDSL(QuerySource.SERIES, new DateRange(0, 1000)),
+        checkFrom("series", Optional.of(new DateRange(0, 1000)),
                 parser.parse(CoreQueryParser.FROM, "series(1000ms)", 1000));
+    }
+
+    void checkFrom(String source, Optional<DateRange> range, FromDSL result) {
+        assertEquals(source, result.getSource());
+        assertEquals(range, result.getRange());
     }
 
     @Test(expected = ParseException.class)
@@ -79,7 +89,7 @@ public class QueryParserTest {
 
     @Test(expected = ParseException.class)
     public void testInvalidSyntax() {
-        parser.parse(CoreQueryParser.QUERY, "select \"some string\" from series");
+        parser.parse(CoreQueryParser.QUERY, "select 12 from series");
     }
 
     @Test
@@ -92,7 +102,7 @@ public class QueryParserTest {
         Mockito.when(filters.and(matchTag, matchTag)).thenReturn(and);
         Mockito.when(and.optimize()).thenReturn(optimized);
 
-        Assert.assertEquals(optimized, parser.parse(CoreQueryParser.FILTER, "a=b and c=d"));
+        assertEquals(optimized, parser.parse(CoreQueryParser.FILTER, "a=b and c=d"));
 
         Mockito.verify(filters, Mockito.times(2)).matchTag(Mockito.any(String.class), Mockito.any(String.class));
         Mockito.verify(filters).and(matchTag, matchTag);

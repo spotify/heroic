@@ -17,7 +17,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 
 @RequiredArgsConstructor
-public class UniqueGroupBucket implements Bucket<Metric> {
+public class GroupUniqueBucket implements Bucket<Metric> {
     final Set<Member> groups = Collections.newSetFromMap(new ConcurrentHashMap<Member, Boolean>());
 
     final long timestamp;
@@ -57,7 +57,7 @@ public class UniqueGroupBucket implements Bucket<Metric> {
 
     @Override
     public void update(Map<String, String> tags, MetricType type, Metric sample) {
-        groups.add(new Member(sample.hash(), type, sample));
+        groups.add(new Member(sample.valueHash(), type, sample));
     }
 
     @Override

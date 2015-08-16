@@ -31,7 +31,7 @@ public interface Metric {
      *
      * @return The hash of the sample value.
      */
-    public int hash();
+    public int valueHash();
 
     boolean valid();
 
@@ -57,8 +57,8 @@ public interface Metric {
         }
 
         @Override
-        public int hash() {
-            return 0;
+        public int valueHash() {
+            return 1;
         }
 
         @Override

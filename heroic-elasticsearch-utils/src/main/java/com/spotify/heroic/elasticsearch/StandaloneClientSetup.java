@@ -82,6 +82,9 @@ public class StandaloneClientSetup implements ClientSetup {
 
             final Settings settings = ImmutableSettings.builder().put("path.logs", root.resolve("logs"))
                     .put("path.data", root.resolve("data")).put("node.name", InetAddress.getLocalHost().getHostName())
+                    .put("script.inline", "on")
+                    // .put("script.disable_dynamic", false)
+                    // .put("script.groovy.sandbox.enabled", true)
                     .put("discovery.zen.ping.multicast.enabled", false).build();
 
             final Node node = NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();

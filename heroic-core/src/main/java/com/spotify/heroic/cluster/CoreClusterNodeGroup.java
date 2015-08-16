@@ -48,13 +48,13 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, List<String> groupBy,
+    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
             DateRange range, Aggregation aggregation, boolean disableCache) {
         final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.query(source, filter, groupBy, range, aggregation, disableCache).catchFailed(
-                    ResultGroups.nodeError(g)));
+            futures.add(g.query(source, filter, range, aggregation, disableCache)
+                    .catchFailed(ResultGroups.nodeError(g)));
         }
 
         return async.collect(futures, ResultGroups.merger());

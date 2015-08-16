@@ -4,17 +4,20 @@
       "key": {
         "index": "not_analyzed",
         "type": "string",
-        "doc_values": true
+        "doc_values": true,
+        "include_in_all": false
       },
       "tags": {
         "type": "string",
         "index": "not_analyzed",
-        "doc_values": true
+        "doc_values": true,
+        "include_in_all": false
       },
       "tag_keys": {
         "type": "string",
         "index": "not_analyzed",
-        "doc_values": true
+        "doc_values": true,
+        "include_in_all": false
       }
     }
   }

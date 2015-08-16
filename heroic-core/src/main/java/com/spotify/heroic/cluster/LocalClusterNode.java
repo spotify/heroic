@@ -109,9 +109,9 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, List<String> groupBy,
+        public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
                 DateRange range, Aggregation aggregation, boolean disableCache) {
-            return metrics().query(source, filter, groupBy, range, aggregation, disableCache);
+            return metrics().query(source, filter, range, aggregation, disableCache);
         }
 
         @Override

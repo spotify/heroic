@@ -33,27 +33,30 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.metric.Event;
 
 public class EventSerialization {
     public static class Deserializer extends JsonDeserializer<Event> {
         @Override
         public Event deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
 
-            if (p.getCurrentToken() != JsonToken.START_ARRAY)
-                throw c.mappingException("Expected start of array");
+            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
+                throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
+            }
 
             final Long timestamp;
 
             {
-                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
-                    throw c.mappingException("Expected number (timestamp)");
+                if (!p.nextToken().isNumeric()) {
+                    throw c.mappingException(String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
+                }
 
-                timestamp = p.readValueAs(Long.class);
+                timestamp = p.getLongValue();
             }
 
-            if (p.nextToken() != JsonToken.START_OBJECT)
-                throw c.mappingException("Expected start of payload");
+            if (p.nextToken() != JsonToken.START_OBJECT) {
+                throw c.mappingException(String.format("Expected start of payload (object), not %s",
+                        p.getCurrentToken()));
+            }
 
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
@@ -75,12 +78,13 @@ public class EventSerialization {
                     builder.put(key, p.getValueAsBoolean());
                     break;
                 default:
-                    throw c.mappingException("unexpected token");
+                    throw c.mappingException(String.format("Unexpected token %s", p.getCurrentToken()));
                 }
             }
 
-            if (p.getCurrentToken() != JsonToken.END_OBJECT)
-                throw c.mappingException("expected field name");
+            if (p.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw c.mappingException(String.format("Expected end of object, not %s", p.getCurrentToken()));
+            }
 
             return new Event(timestamp, builder.build());
         }

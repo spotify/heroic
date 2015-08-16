@@ -85,7 +85,7 @@ public class CoreQueryManager implements QueryManager {
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
                 final NodeMetadata m = c.metadata();
-                futures.add(group.query(q.getSource(), q.getFilter(), q.getGroupBy(), q.getRange(), q.getAggregation(),
+                futures.add(group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(),
                         q.isDisableCache()).transform(QueryResultPart.toSharded(q.getRange(), m.getTags())));
             }
 

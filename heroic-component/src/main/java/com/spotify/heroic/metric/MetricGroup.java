@@ -31,31 +31,18 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
 @Data
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = { "valueHash" })
 public class MetricGroup implements Metric {
     static final List<MetricTypedGroup> EMPTY_GROUPS = ImmutableList.of();
 
     private final long timestamp;
     private final List<MetricTypedGroup> groups;
-    private final int hash;
+    private final int valueHash;
 
     public MetricGroup(long timestamp, List<MetricTypedGroup> groups) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
-        this.hash = doHash(this.groups);
-    }
-
-    int doHash(List<MetricTypedGroup> groups) {
-        final int prime = 31;
-        int result = 1;
-
-        for (final MetricTypedGroup g : groups) {
-            for (final Metric d : g.getData()) {
-                result = prime * result + d.hash();
-            }
-        }
-
-        return result;
+        this.valueHash = calculateValueHash(this.groups);
     }
 
     @Override
@@ -64,8 +51,8 @@ public class MetricGroup implements Metric {
     }
 
     @Override
-    public int hash() {
-        return hash;
+    public int valueHash() {
+        return valueHash;
     }
 
     @Override
@@ -83,4 +70,17 @@ public class MetricGroup implements Metric {
             return Long.compare(a.getTimestamp(), b.getTimestamp());
         }
     };
+
+    static int calculateValueHash(List<MetricTypedGroup> groups) {
+        final int prime = 31;
+        int result = 1;
+
+        for (final MetricTypedGroup g : groups) {
+            for (final Metric d : g.getData()) {
+                result = prime * result + d.valueHash();
+            }
+        }
+
+        return result;
+    }
 }

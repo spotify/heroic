@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import java.util.List;
+
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -31,28 +33,35 @@ import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypedGroup;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class UniqueGroupAggregation extends BucketAggregation<Metric, UniqueGroupBucket> {
-    public static final String NAME = "average";
+public class GroupUniqueAggregation extends BucketAggregation<Metric, GroupUniqueBucket> {
+    public static final String NAME = "group-unique";
 
-    public UniqueGroupAggregation(final Sampling sampling) {
+    public GroupUniqueAggregation(final Sampling sampling) {
         super(sampling, Metric.class, MetricType.GROUP);
     }
 
     @JsonCreator
-    public static UniqueGroupAggregation create(@JsonProperty("sampling") final Sampling sampling) {
-        return new UniqueGroupAggregation(sampling);
+    public static GroupUniqueAggregation create(@JsonProperty("sampling") final Sampling sampling) {
+        return new GroupUniqueAggregation(sampling);
     }
 
     @Override
-    protected UniqueGroupBucket buildBucket(long timestamp) {
-        return new UniqueGroupBucket(timestamp);
+    protected GroupUniqueBucket buildBucket(long timestamp) {
+        return new GroupUniqueBucket(timestamp);
     }
 
     @Override
-    protected MetricGroup build(final UniqueGroupBucket bucket) {
-        return new MetricGroup(bucket.timestamp(), bucket.groups());
+    protected Metric build(final GroupUniqueBucket bucket) {
+        final List<MetricTypedGroup> groups = bucket.groups();
+
+        if (groups.isEmpty()) {
+            return Metric.invalid();
+        }
+
+        return new MetricGroup(bucket.timestamp(), groups);
     }
 }

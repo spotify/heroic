@@ -49,7 +49,8 @@ import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
-import com.spotify.heroic.shell.task.Tasks.ElasticSearchParams;
+import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.Tasks.ElasticSearchParams;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 
@@ -125,7 +126,7 @@ public class MetadataLoad extends AbstractShellTask {
                 total++;
 
                 try {
-                    target.writeDirect(series, now);
+                    target.write(series, now).get();
                 } catch (Exception e) {
                     failed++;
                 }

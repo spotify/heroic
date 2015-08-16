@@ -24,11 +24,13 @@ public class DefaultRateLimitedCache<K, V> implements RateLimitedCache<K, V> {
     public V get(K key, final Callable<V> callable) throws ExecutionException, RateLimitExceededException {
         final V shortcut = cache.getIfPresent(key);
 
-        if (shortcut != null)
+        if (shortcut != null) {
             return shortcut;
+        }
 
-        if (!rateLimiter.tryAcquire())
+        if (!rateLimiter.tryAcquire()) {
             throw new RateLimitExceededException();
+        }
 
         return cache.get(key, callable);
     }

@@ -49,18 +49,18 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestModule;
 
-import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 
 @Data
@@ -73,7 +73,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
     private final String id;
     private final Set<String> groups;
-    private final ReadWriteThreadPools.Config pools;
     private final ManagedConnectionFactory connection;
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
@@ -85,14 +84,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
     @JsonCreator
     public ElasticsearchSuggestModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools,
+            @JsonProperty("groups") Set<String> groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
             @JsonProperty("writesPerSecond") Double writesPerSecond,
             @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
             @JsonProperty("templateName") String templateName, @JsonProperty("backendType") String backendType) {
         this.id = id;
         this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
-        this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
@@ -125,24 +123,19 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(AsyncFramework async, LocalMetadataBackendReporter reporter) {
-                return pools.construct(async, reporter.newThreadPool());
-            }
-
-            @Provides
-            @Singleton
             public Managed<Connection> connection(ManagedConnectionFactory connection) throws IOException {
                 return connection.construct(templateName, backendType.mappings(), backendType.settings());
             }
 
             @Provides
             @Singleton
-            public RateLimitedCache<Pair<String, Series>, Boolean> writeCache() throws IOException {
-                final Cache<Pair<String, Series>, Boolean> cache = CacheBuilder.newBuilder().concurrencyLevel(4)
+            public RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache() throws IOException {
+                final Cache<Pair<String, Series>, AsyncFuture<WriteResult>> cache = CacheBuilder.newBuilder()
+                        .concurrencyLevel(4)
                         .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
 
                 if (writesPerSecond == 0d)
-                    return new DisabledRateLimitedCache<Pair<String, Series>, Boolean>(cache);
+                    return new DisabledRateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>>(cache);
 
                 RateLimiter rateLimiter = RateLimiter.create(writesPerSecond);
                 return new DefaultRateLimitedCache<>(cache, rateLimiter);
@@ -176,7 +169,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         private String group;
         private Set<String> groups;
         private ManagedConnectionFactory connection;
-        private ReadWriteThreadPools.Config pools;
         private Double writesPerSecond;
         private Long writeCacheDurationMinutes;
         private String templateName;
@@ -194,11 +186,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
         public Builder group(Set<String> groups) {
             this.groups = groups;
-            return this;
-        }
-
-        public Builder pools(ReadWriteThreadPools.Config pools) {
-            this.pools = pools;
             return this;
         }
 
@@ -228,7 +215,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         }
 
         public ElasticsearchSuggestModule build() {
-            return new ElasticsearchSuggestModule(id, group, groups, pools, connection, writesPerSecond,
+            return new ElasticsearchSuggestModule(id, group, groups, connection, writesPerSecond,
                     writeCacheDurationMinutes, templateName, backendType);
         }
     }
@@ -240,19 +227,19 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
                 @Override
                 public Map<String, Map<String, Object>> mappings() throws IOException {
                     final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                    mappings.put("tag", loadJsonResource("default/tag.json"));
-                    mappings.put("series", loadJsonResource("default/series.json"));
+                    mappings.put("tag", loadJsonResource("kv/tag.json"));
+                    mappings.put("series", loadJsonResource("kv/series.json"));
                     return mappings;
                 }
 
                 @Override
                 public Map<String, Object> settings() throws IOException {
-                    return loadJsonResource("default/settings.json");
+                    return loadJsonResource("kv/settings.json");
                 }
 
                 @Override
                 public SuggestBackend instance() {
-                    return new ElasticsearchSuggestBackend(module.groups);
+                    return new ElasticsearchSuggestKVBackend(module.groups);
                 }
             };
         }
@@ -262,31 +249,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
     static {
         backendTypeBuilders.put("default", defaultSetup);
-
-        backendTypeBuilders.put("kv", new BackendTypeBuilder() {
-            @Override
-            public BackendType setup(final ElasticsearchSuggestModule module) {
-                return new BackendType() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() throws IOException {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("tag", loadJsonResource("kv/tag.json"));
-                        mappings.put("series", loadJsonResource("kv/series.json"));
-                        return mappings;
-                    }
-
-                    @Override
-                    public Map<String, Object> settings() throws IOException {
-                        return loadJsonResource("kv/settings.json");
-                    }
-
-                    @Override
-                    public SuggestBackend instance() {
-                        return new ElasticsearchSuggestKVBackend(module.groups);
-                    }
-                };
-            }
-        });
     }
 
     static interface BackendType {

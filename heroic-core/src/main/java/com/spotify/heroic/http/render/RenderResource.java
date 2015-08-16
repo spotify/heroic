@@ -87,9 +87,9 @@ public class RenderResource {
         }
 
         final QueryMetrics queryMetrics = mapper.readValue(query, QueryMetrics.class);
-        final Query q = setupBuilder(backendGroup, queryMetrics).build();
+        final Query q = setupBuilder(queryMetrics).build();
 
-        final QueryResult result = this.query.useDefaultGroup().query(q).get();
+        final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
 
         final JFreeChart chart = RenderUtils.createChart(result.getGroups(), title, highlight, threshold, height);
 
@@ -102,9 +102,9 @@ public class RenderResource {
     }
 
     @SuppressWarnings("deprecation")
-    private QueryBuilder setupBuilder(String backendGroup, QueryMetrics query) {
+    private QueryBuilder setupBuilder(QueryMetrics query) {
         return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
-                .backendGroup(backendGroup).queryString(query.getQuery()).filter(query.getFilter())
+                .queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
                 .aggregation(query.makeAggregation()).source(query.getSource());
     }

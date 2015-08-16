@@ -23,13 +23,12 @@ package com.spotify.heroic.grammar;
 
 import lombok.Data;
 
+import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
 
 @Data
 public class FromDSL {
-    public static final FromDSL SERIES = new FromDSL(QuerySource.SERIES, null);
-    public static final FromDSL EVENTS = new FromDSL(QuerySource.EVENTS, null);
-
-    private final QuerySource source;
-    private final DateRange range;
+    private final Context context;
+    private final String source;
+    private final Optional<DateRange> range;
 }

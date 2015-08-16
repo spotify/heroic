@@ -22,11 +22,13 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAccumulator;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.DoubleBinaryOperator;
 
 import lombok.Data;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
@@ -43,13 +45,16 @@ import com.spotify.heroic.metric.Spread;
  */
 @Data
 public class SpreadBucket implements Bucket<Point> {
-    private final long timestamp;
+    static final DoubleBinaryOperator minFn = (left, right) -> Math.max(left, right);
+    static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
-    private final AtomicLong count = new AtomicLong(0);
-    private final AtomicDouble sum = new AtomicDouble(0);
+    final long timestamp;
 
-    private final AtomicDouble min = new AtomicDouble(Double.NaN);
-    private final AtomicDouble max = new AtomicDouble(Double.NaN);
+    final LongAdder count = new LongAdder();
+    final DoubleAdder sum = new DoubleAdder();
+    final DoubleAdder sum2 = new DoubleAdder();
+    final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
+    final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
 
     public long timestamp() {
         return timestamp;
@@ -59,45 +64,18 @@ public class SpreadBucket implements Bucket<Point> {
     public void update(Map<String, String> tags, MetricType type, Point d) {
         final double value = d.getValue();
 
-        if (Double.isNaN(value))
+        if (!Double.isFinite(value)) {
             return;
-
-        count.incrementAndGet();
-        sum.addAndGet(value);
-
-        updateMin(value);
-        updateMax(value);
-    }
-
-    private void updateMin(final double value) {
-        while (true) {
-            final double current = min.get();
-
-            if (!Double.isNaN(current) && value >= current)
-                return;
-
-            if (min.compareAndSet(current, value))
-                return;
         }
-    }
 
-    private void updateMax(final double value) {
-        while (true) {
-            final double current = max.get();
-
-            if (!Double.isNaN(current) && value <= current)
-                return;
-
-            if (max.compareAndSet(current, value))
-                return;
-        }
-    }
-
-    public long count() {
-        return count.get();
+        count.increment();
+        sum.add(value);
+        sum2.add(value * value);
+        max.accumulate(value);
+        min.accumulate(value);
     }
 
     public Metric newSpread() {
-        return new Spread(timestamp, count.get(), sum.get(), min.get(), max.get());
+        return new Spread(timestamp, count.sum(), sum.sum(), sum2.sum(), min.get(), max.get());
     }
 }

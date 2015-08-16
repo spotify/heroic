@@ -100,7 +100,7 @@ public class QueryResultPart {
                 final List<ShardedResultGroup> groups = new ArrayList<>();
 
                 for (final ResultGroup group : result.getGroups()) {
-                    groups.add(new ShardedResultGroup(shard, group.getTags(), group.getValues(), group.getType()));
+                    groups.add(new ShardedResultGroup(shard, group.getTags(), group.getGroup()));
                 }
 
                 final long end = System.currentTimeMillis();

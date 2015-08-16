@@ -48,6 +48,7 @@ import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
@@ -75,7 +76,14 @@ public class Fetch extends AbstractShellTask {
         final Parameters params = (Parameters) base;
         final long now = System.currentTimeMillis();
 
-        final Series series = mapper.readValue(params.series, Series.class);
+        final Series series;
+
+        if (params.series == null) {
+            series = Series.empty();
+        } else {
+            series = mapper.readValue(params.series, Series.class);
+        }
+
         final long start = params.start == null ? now : Tasks.parseInstant(params.start, now);
         final long end = params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
 
@@ -146,10 +154,10 @@ public class Fetch extends AbstractShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--series", required = true, usage = "Series to fetch", metaVar = "<json>")
+        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 
-        @Option(name = "-s", aliases = { "--source" }, usage = "Source to fetch", metaVar = "<events|points>")
+        @Option(name = "--source", aliases = { "--source" }, usage = "Source to fetch", metaVar = "<events|points>")
         private String source = MetricType.POINT.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")

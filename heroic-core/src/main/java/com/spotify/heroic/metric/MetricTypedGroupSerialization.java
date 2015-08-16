@@ -53,18 +53,7 @@ public class MetricTypedGroupSerialization {
                 }
 
                 if (TYPE.equals(name)) {
-                    final String identifier = p.nextTextValue();
-
-                    if (identifier == null) {
-                        throw c.mappingException("Invalid type");
-                    }
-
-                    type = MetricType.fromIdentifier(identifier);
-
-                    if (type == null) {
-                        throw c.mappingException("Invalid metric type: " + identifier);
-                    }
-
+                    type = p.readValueAs(MetricType.class);
                     continue;
                 }
 

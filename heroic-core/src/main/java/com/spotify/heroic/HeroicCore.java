@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -36,8 +37,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -91,6 +96,7 @@ import com.spotify.heroic.common.SamplingSerializer;
 import com.spotify.heroic.common.SamplingSerializerImpl;
 import com.spotify.heroic.common.SeriesSerializer;
 import com.spotify.heroic.common.SeriesSerializerImpl;
+import com.spotify.heroic.common.TagsSerializer;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -142,19 +148,31 @@ import eu.toolchain.serializer.TinySerializer;
  */
 @Slf4j
 public class HeroicCore {
-    private static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
-    private static final List<HeroicConfigurator> DEFAULT_CONFIGURATORS = ImmutableList.of();
-    private static final boolean DEFAULT_SERVER = true;
-    private static final String DEFAULT_HOST = "0.0.0.0";
-    private static final int DEFAULT_PORT = 8080;
-    private static final boolean DEFAULT_ONESHOT = false;
+    static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
+    static final List<HeroicConfigurator> DEFAULT_CONFIGURATORS = ImmutableList.of();
+    static final boolean DEFAULT_SERVER = true;
+    static final String DEFAULT_HOST = "0.0.0.0";
+    static final int DEFAULT_PORT = 8080;
+    static final boolean DEFAULT_ONESHOT = false;
 
     /**
      * Which resource file to load modules from.
      */
-    private static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
-    private static final String APPLICATION_JSON = "application/json";
-    private static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
+    static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
+    static final String APPLICATION_JSON = "application/json";
+    static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
+
+    static final UncaughtExceptionHandler uncaughtExceptionHandler = new UncaughtExceptionHandler() {
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            try {
+                System.err.println(String.format("Uncaught exception caught in thread %s, exiting...", t));
+                e.printStackTrace(System.err);
+            } finally {
+                System.exit(1);
+            }
+        }
+    };
 
     /**
      * Built-in modules that should always be loaded.
@@ -329,8 +347,7 @@ public class HeroicCore {
 
         final Scheduler scheduler = new DefaultScheduler();
 
-        final ExecutorService executorService = Executors.newFixedThreadPool(1000, new ThreadFactoryBuilder()
-                .setNameFormat("heroic-core-%d").build());
+        final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
 
         final HeroicInternalLifeCycle lifecycle = new HeroicInernalLifeCycleImpl();
 
@@ -384,7 +401,7 @@ public class HeroicCore {
             @Provides
             @Singleton
             SeriesSerializer series(@Named("common") SerializerFramework s) {
-                return new SeriesSerializerImpl(s.string(), s.map(s.nullable(s.string()), s.nullable(s.string())));
+                return new SeriesSerializerImpl(s.string(), TagsSerializer.construct(s));
             }
 
             @Override
@@ -436,13 +453,50 @@ public class HeroicCore {
                 bind(HeroicConfigurationContext.class).to(CoreHeroicConfigurationContext.class).in(Scopes.SINGLETON);
 
                 bind(HeroicContext.class).toInstance(new CoreHeroicContext());
-                bind(ExecutorService.class).toInstance(executorService);
+                bind(ExecutorService.class).toInstance(executor);
 
                 bind(JavaxRestFramework.class).toInstance(new CoreJavaxRestFramework());
             }
         };
 
         return Guice.createInjector(core, serializers);
+    }
+
+    /**
+     * Setup a fixed thread pool executor that correctly handles unhandled exceptions.
+     *
+     * @param nThreads Number of threads to configure.
+     * @return
+     */
+    private ExecutorService buildCoreExecutor(final int nThreads) {
+        return new ThreadPoolExecutor(nThreads, nThreads,
+                 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(),
+                new ThreadFactoryBuilder().setNameFormat("heroic-core-%d")
+                        .setUncaughtExceptionHandler(uncaughtExceptionHandler).build()) {
+            @Override
+            protected void afterExecute(Runnable r, Throwable t) {
+                super.afterExecute(r, t);
+
+                if (t == null && (r instanceof Future<?>)) {
+                    try {
+                        ((Future<?>) r).get();
+                    } catch (CancellationException e) {
+                        t = e;
+                    } catch (ExecutionException e) {
+                        t = e.getCause();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                if (t != null) {
+                    log.error("Unhandled exception caught in core executor", t);
+                    log.error("Exiting (code=2)");
+                    System.exit(2);
+                }
+            }
+        };
     }
 
     /**
@@ -493,30 +547,13 @@ public class HeroicCore {
                 serializerImpl.configure(module);
                 aggregationRegistry.configure(module);
 
-                module.addSerializer(Point.class, new PointSerialization.Serializer());
-                module.addDeserializer(Point.class, new PointSerialization.Deserializer());
-
-                module.addSerializer(Event.class, new EventSerialization.Serializer());
-                module.addDeserializer(Event.class, new EventSerialization.Deserializer());
-
-                module.addSerializer(Spread.class, new SpreadSerialization.Serializer());
-                module.addDeserializer(Spread.class, new SpreadSerialization.Deserializer());
-
-                module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
-                module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
-
-                module.addSerializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Serializer());
-                module.addDeserializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Deserializer());
-
-                module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
-                module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());
-
                 final ObjectMapper mapper = new ObjectMapper();
 
                 mapper.addMixIn(Aggregation.class, TypeNameMixin.class);
                 mapper.addMixIn(AggregationQuery.class, TypeNameMixin.class);
 
                 mapper.registerModule(module);
+                mapper.registerModule(serializerModule());
                 mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
                 return mapper;
             }
@@ -621,7 +658,46 @@ public class HeroicCore {
             futures.add(startable.start());
         }
 
-        async.collect(futures).get();
+        final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();
+
+        /* fire Stoppable handlers */
+        for (final LifeCycle startable : lifecycles) {
+            try {
+                final AsyncFuture<Void> future = startable.start().on(new FutureDone<Void>() {
+                    @Override
+                    public void failed(Throwable cause) throws Exception {
+                        log.info("Failed to start: {}", startable, cause);
+                    }
+
+                    @Override
+                    public void resolved(Void result) throws Exception {
+                        log.info("Started: {}", startable);
+                    }
+
+                    @Override
+                    public void cancelled() throws Exception {
+                        log.info("Start cancelled: {}", startable);
+                    }
+                });
+
+                futures.add(future);
+                pairs.add(Pair.of(future, startable));
+            } catch (Exception e) {
+                log.error("Failed to start {}", startable, e);
+            }
+        }
+
+        try {
+            async.collect(futures).get(30, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            log.error("Some futures did not start in a timely fashion!");
+
+            for (final Pair<AsyncFuture<Void>, LifeCycle> pair : pairs) {
+                if (!pair.getLeft().isDone()) {
+                    log.error("Did not start: {}", pair.getRight());
+                }
+            }
+        }
 
         log.info("Started all life cycles");
     }
@@ -669,8 +745,9 @@ public class HeroicCore {
             log.error("Some futures did not stop in a timely fashion!");
 
             for (final Pair<AsyncFuture<Void>, LifeCycle> pair : pairs) {
-                if (!pair.getLeft().isDone())
+                if (!pair.getLeft().isDone()) {
                     log.error("Did not stop: {}", pair.getRight());
+                }
             }
         }
 
@@ -731,6 +808,34 @@ public class HeroicCore {
                     e.getOriginalMessage());
             throw new Exception(message, e);
         }
+    }
+
+    public static SimpleModule serializerModule() {
+        final SimpleModule module = new SimpleModule("serializers");
+
+        module.addSerializer(Point.class, new PointSerialization.Serializer());
+        module.addDeserializer(Point.class, new PointSerialization.Deserializer());
+
+        module.addSerializer(Event.class, new EventSerialization.Serializer());
+        module.addDeserializer(Event.class, new EventSerialization.Deserializer());
+
+        module.addSerializer(Spread.class, new SpreadSerialization.Serializer());
+        module.addDeserializer(Spread.class, new SpreadSerialization.Deserializer());
+
+        module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
+        module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
+
+        module.addSerializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Serializer());
+        module.addDeserializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Deserializer());
+
+        module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
+        module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());
+
+        return module;
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder {
@@ -847,9 +952,5 @@ public class HeroicCore {
 
             return result;
         }
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 }

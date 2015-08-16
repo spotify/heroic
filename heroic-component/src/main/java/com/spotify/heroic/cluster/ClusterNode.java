@@ -56,7 +56,7 @@ public interface ClusterNode {
     public interface Group {
         public ClusterNode node();
 
-        public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, List<String> groupBy,
+        public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
                 DateRange range, Aggregation aggregation, boolean disableCache);
 
         public AsyncFuture<FindTags> findTags(RangeFilter filter);

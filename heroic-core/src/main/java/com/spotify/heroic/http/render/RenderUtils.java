@@ -36,6 +36,7 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
 
@@ -54,20 +55,24 @@ public final class RenderUtils {
 
         int i = 0;
 
-        for (final ShardedResultGroup group : groups) {
-            if (highlight != null && !highlight.equals(group.getGroup())) {
+        for (final ShardedResultGroup resultGroup : groups) {
+            if (highlight != null && !highlight.equals(resultGroup.getGroup())) {
                 continue;
             }
 
-            if (group.getType() != MetricType.POINT)
+            final MetricTypedGroup group = resultGroup.getGroup();
+
+            if (group.getType() != MetricType.POINT) {
                 continue;
+            }
 
-            final XYSeries series = new XYSeries(group.getGroup().toString());
+            final XYSeries series = new XYSeries(resultGroup.getGroup().toString());
 
-            final List<Point> data = (List<Point>) group.getValues();
+            final List<Point> data = group.getDataAs(Point.class);
 
-            for (final Point d : data)
+            for (final Point d : data) {
                 series.add(d.getTimestamp(), d.getValue());
+            }
 
             renderer.setSeriesPaint(i, Color.BLUE);
             renderer.setSeriesShapesVisible(i, false);

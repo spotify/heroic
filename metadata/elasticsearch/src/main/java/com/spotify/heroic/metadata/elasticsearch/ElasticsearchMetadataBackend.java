@@ -21,11 +21,23 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import static org.elasticsearch.index.query.FilterBuilders.andFilter;
+import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
+import static org.elasticsearch.index.query.FilterBuilders.notFilter;
+import static org.elasticsearch.index.query.FilterBuilders.orFilter;
+import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
+import static org.elasticsearch.index.query.FilterBuilders.termFilter;
+
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -33,12 +45,12 @@ import javax.inject.Named;
 import lombok.ToString;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -51,31 +63,24 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.nested.Nested;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.ElasticsearchUtils;
 import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterModifier;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
-import com.spotify.heroic.metadata.FindTagKeys;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
-import com.spotify.heroic.metadata.elasticsearch.async.FindTagsTransformer;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 
@@ -84,12 +89,24 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.Transform;
 
 @ToString(of = { "connection" })
 public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle {
-    private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
-    private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    private static final int MAX_SIZE = 1000;
+    static final String KEY = "key";
+    static final String TAGS = "tags";
+    static final String TAG_KEYS = "tag_keys";
+    static final Character TAG_DELIMITER = '\0';
+
+    static final String TYPE_METADATA = "metadata";
+
+    static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
+    static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
+    static final int MAX_SIZE = 1000;
+
+    static final int ENTREIES_SCAN_SIZE = 1000;
+    static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
 
     public static final String TEMPLATE_NAME = "heroic";
 
@@ -98,13 +115,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
     private Set<String> groups;
 
     @Inject
-    private ReadWriteThreadPools pools;
-
-    @Inject
     private LocalMetadataBackendReporter reporter;
-
-    @Inject
-    private FilterModifier modifier;
 
     @Inject
     private AsyncFramework async;
@@ -113,7 +124,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
     private Managed<Connection> connection;
 
     @Inject
-    private RateLimitedCache<Pair<String, Series>, Boolean> writeCache;
+    private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
     @Override
     public Set<String> getGroups() {
@@ -130,23 +141,12 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         return connection.stop();
     }
 
-    private final ElasticsearchUtils.FilterContext CTX = ElasticsearchUtils.context();
-
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
         return doto(new ManagedAction<Connection, FindTags>() {
             @Override
             public AsyncFuture<FindTags> action(final Connection c) throws Exception {
-                final Callable<SearchRequestBuilder> setup = new Callable<SearchRequestBuilder>() {
-                    @Override
-                    public SearchRequestBuilder call() throws Exception {
-                        return c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
-                    }
-                };
-
-                return findTagKeys(filter).transform(
-                        new FindTagsTransformer(async, pools.read(), modifier, filter.getFilter(), setup, CTX)).onAny(
-                        reporter.reportFindTags());
+                return async.resolved(FindTags.EMPTY).on(reporter.reportFindTags());
             }
         });
     }
@@ -156,9 +156,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         return doto(new ManagedAction<Connection, WriteResult>() {
             @Override
             public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final BulkProcessor bulk = c.bulk();
-
-                final String id = Integer.toHexString(series.hashCode());
+                final String id = Long.toHexString(series.hash());
 
                 final String[] indices;
 
@@ -168,32 +166,39 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                     return async.failed(e);
                 }
 
+                final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+
                 for (final String index : indices) {
                     final Pair<String, Series> key = Pair.of(index, series);
 
-                    final Callable<Boolean> loader = new Callable<Boolean>() {
+                    final Callable<AsyncFuture<WriteResult>> loader = new Callable<AsyncFuture<WriteResult>>() {
                         @Override
-                        public Boolean call() throws Exception {
+                        public AsyncFuture<WriteResult> call() throws Exception {
                             final XContentBuilder source = XContentFactory.jsonBuilder();
 
                             source.startObject();
-                            ElasticsearchUtils.buildMetadataDoc(source, series);
+                            buildContext(source, series);
                             source.endObject();
 
-                            bulk.add(new IndexRequest(index, ElasticsearchUtils.TYPE_METADATA, id).source(source)
-                                    .opType(OpType.CREATE));
-                            return true;
+                            final IndexRequestBuilder request = c.index(index, TYPE_METADATA).setId(id)
+                                    .setSource(source).setOpType(OpType.CREATE);
+
+                            final long start = System.nanoTime();
+                            return bind(request.execute(), (response) -> WriteResult.of(System.nanoTime() - start));
                         }
                     };
 
                     try {
-                        writeCache.get(key, loader);
+                        writes.add(writeCache.get(key, loader));
+                    } catch (ExecutionException e) {
+                        return async.failed(e);
                     } catch (RateLimitExceededException e) {
                         reporter.reportWriteDroppedByRateLimit();
+                        continue;
                     }
                 }
 
-                return async.resolved(WriteResult.of());
+                return async.collect(writes, WriteResult.merger());
             }
         });
     }
@@ -207,7 +212,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                     return async.resolved(CountSeries.EMPTY);
                 }
 
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+                final FilterBuilder f = filter(filter.getFilter());
 
                 if (f == null) {
                     return async.resolved(CountSeries.EMPTY);
@@ -216,7 +221,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 final CountRequestBuilder request;
 
                 try {
-                    request = c.count(filter.getRange(), ElasticsearchUtils.TYPE_METADATA).setTerminateAfter(
+                    request = c.count(filter.getRange(), TYPE_METADATA).setTerminateAfter(
                             filter.getLimit());
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
@@ -224,13 +229,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return async.call(new Callable<CountSeries>() {
-                    @Override
-                    public CountSeries call() throws Exception {
-                        final CountResponse response = request.get(TIMEOUT);
-                        return new CountSeries(response.getCount(), false);
-                    }
-                }, pools.read()).onAny(reporter.reportCountSeries());
+                return bind(request.execute(), (response) -> new CountSeries(response.getCount(), false));
             }
         });
     }
@@ -243,7 +242,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 if (filter.getLimit() <= 0)
                     return async.resolved(FindSeries.EMPTY);
 
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+                final FilterBuilder f = filter(filter.getFilter());
 
                 if (f == null)
                     return async.resolved(FindSeries.EMPTY);
@@ -251,7 +250,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
+                    request = c.search(filter.getRange(), TYPE_METADATA)
                             .setSize(Math.min(MAX_SIZE, filter.getLimit())).setScroll(TIMEOUT)
                             .setSearchType(SearchType.SCAN);
                 } catch (NoIndexSelectedException e) {
@@ -260,14 +259,16 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                final Set<Series> series = new HashSet<Series>();
-
-                return async.call(new Callable<FindSeries>() {
+                return bind(request.execute(), new Transform<SearchResponse, FindSeries>() {
                     @Override
-                    public FindSeries call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
+                    public FindSeries transform(SearchResponse response) throws Exception {
+                        final Set<Series> series = new HashSet<Series>();
 
                         String currentId = response.getScrollId();
+
+                        if (currentId == null) {
+                            return new FindSeries(series, 0, 0);
+                        }
 
                         int size = 0;
 
@@ -283,16 +284,16 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                                 break;
                             }
 
-                            for (final SearchHit hit : hits)
-                                series.add(ElasticsearchUtils.toSeries(hit.getSource()));
+                            for (final SearchHit hit : hits) {
+                                series.add(buildSeries(hit.getSource()));
+                            }
 
                             size += hits.length;
                         } while (size < filter.getLimit());
 
                         return new FindSeries(series, series.size(), size - series.size());
                     }
-
-                }, pools.read()).onAny(reporter.reportFindTimeSeries());
+                });
             }
         });
     }
@@ -302,7 +303,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         return doto(new ManagedAction<Connection, DeleteSeries>() {
             @Override
             public AsyncFuture<DeleteSeries> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+                final FilterBuilder f = filter(filter.getFilter());
 
                 if (f == null)
                     return async.resolved(DeleteSeries.EMPTY);
@@ -310,72 +311,14 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 final DeleteByQueryRequestBuilder request;
 
                 try {
-                    request = c.deleteByQuery(filter.getRange(), ElasticsearchUtils.TYPE_METADATA);
+                    request = c.deleteByQuery(filter.getRange(), TYPE_METADATA);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return async.call(new Callable<DeleteSeries>() {
-                    @Override
-                    public DeleteSeries call() throws Exception {
-                        request.execute().get();
-                        return new DeleteSeries(0, 0);
-                    }
-                }, pools.write());
-            }
-        });
-    }
-
-    private AsyncFuture<FindTagKeys> findTagKeys(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, FindTagKeys>() {
-            @Override
-            public AsyncFuture<FindTagKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
-
-                if (f == null)
-                    return async.resolved(FindTagKeys.EMPTY);
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
-
-                {
-                    final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(CTX.tagsKey()).size(0);
-                    final AggregationBuilder<?> nested = AggregationBuilders.nested("nested").path(CTX.tags())
-                            .subAggregation(terms);
-                    request.addAggregation(nested);
-                }
-
-                return async.call(new Callable<FindTagKeys>() {
-                    @Override
-                    public FindTagKeys call() throws Exception {
-                        final SearchResponse response = request.get(TIMEOUT);
-
-                        final Terms terms;
-
-                        {
-                            final Aggregations aggregations = response.getAggregations();
-                            final Nested attributes = (Nested) aggregations.get("nested");
-                            terms = (Terms) attributes.getAggregations().get("terms");
-                        }
-
-                        final Set<String> keys = new HashSet<String>();
-
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            keys.add(bucket.getKey());
-                        }
-
-                        return new FindTagKeys(keys, keys.size());
-                    }
-                }, pools.read()).on(reporter.reportFindTagKeys());
+                return bind(request.execute(), (response) -> new DeleteSeries(0, 0));
             }
         });
     }
@@ -385,7 +328,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         return doto(new ManagedAction<Connection, FindKeys>() {
             @Override
             public AsyncFuture<FindKeys> action(final Connection c) throws Exception {
-                final FilterBuilder f = CTX.filter(filter.getFilter());
+                final FilterBuilder f = filter(filter.getFilter());
 
                 if (f == null)
                     return async.resolved(FindKeys.EMPTY);
@@ -393,7 +336,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA).setSearchType("count");
+                    request = c.search(filter.getRange(), TYPE_METADATA).setSearchType("count");
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
@@ -401,16 +344,14 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
                 {
-                    final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(CTX.seriesKey())
+                    final AggregationBuilder<?> terms = AggregationBuilders.terms("terms").field(KEY)
                             .size(0);
                     request.addAggregation(terms);
                 }
 
-                return async.call(new Callable<FindKeys>() {
+                return bind(request.execute(), new Transform<SearchResponse, FindKeys>() {
                     @Override
-                    public FindKeys call() throws Exception {
-                        final SearchResponse response = request.get();
-
+                    public FindKeys transform(SearchResponse response) throws Exception {
                         final Terms terms = (Terms) response.getAggregations().get("terms");
 
                         final Set<String> keys = new HashSet<String>();
@@ -426,18 +367,41 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
 
                         return new FindKeys(keys, size, duplicates);
                     }
-
-                }, pools.read()).on(reporter.reportFindKeys());
+                }).on(reporter.reportFindKeys());
             }
         });
     }
 
-    private static final int ENTREIES_SCAN_SIZE = 1000;
-    private static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
+    private <S, T> AsyncFuture<T> bind(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+        final ResolvableFuture<T> future = async.future();
+
+        actionFuture.addListener(new ActionListener<S>() {
+            @Override
+            public void onResponse(S response) {
+                final T result;
+
+                try {
+                    result = transform.transform(response);
+                } catch (Exception e) {
+                    future.fail(e);
+                    return;
+                }
+
+                future.resolve(result);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                future.fail(e);
+            }
+        });
+
+        return future;
+    }
 
     @Override
     public Iterable<MetadataEntry> entries(Filter filter, DateRange range) {
-        final FilterBuilder f = CTX.filter(filter);
+        final FilterBuilder f = filter(filter);
 
         QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
 
@@ -449,7 +413,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         final SearchRequestBuilder request;
 
         try {
-            request = c.get().search(range, ElasticsearchUtils.TYPE_METADATA).setSize(ENTREIES_SCAN_SIZE)
+            request = c.get().search(range, TYPE_METADATA).setSize(ENTREIES_SCAN_SIZE)
                     .setScroll(ENTRIES_TIMEOUT).setSearchType(SearchType.SCAN).setQuery(query);
         } catch (NoIndexSelectedException e) {
             throw new IllegalArgumentException("no valid index selected", e);
@@ -489,7 +453,7 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
                         final LinkedList<Series> results = new LinkedList<>();
 
                         for (final SearchHit hit : hits) {
-                            results.add(ElasticsearchUtils.toSeries(hit.getSource()));
+                            results.add(buildSeries(hit.getSource()));
                         }
 
                         return results;
@@ -524,5 +488,106 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
 
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
         return connection.doto(action);
+    }
+
+    private Series buildSeries(Map<String, Object> source) {
+        final String key = (String) source.get(KEY);
+        final Iterator<Map.Entry<String, String>> tags = ((List<String>) source.get(TAGS)).stream().map(this::buildTag)
+                .iterator();
+        return Series.of(key, tags);
+    }
+
+    Map.Entry<String, String> buildTag(String kv) {
+        final int index = kv.indexOf(TAG_DELIMITER);
+
+        if (index == -1) {
+            throw new IllegalArgumentException("invalid tag source: " + kv);
+        }
+
+        final String tk = kv.substring(0, index);
+        final String tv = kv.substring(index + 1);
+        return Pair.of(tk, tv);
+    }
+
+    static void buildContext(final XContentBuilder b, Series series) throws IOException {
+        b.field(KEY, series.getKey());
+
+        b.startArray(TAGS);
+
+        for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
+            b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
+        }
+
+        b.endArray();
+
+        b.startArray(TAG_KEYS);
+
+        for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
+            b.value(entry.getKey());
+        }
+
+        b.endArray();
+    }
+
+    static FilterBuilder filter(final Filter filter) {
+        if (filter instanceof Filter.True) {
+            return matchAllFilter();
+        }
+
+        if (filter instanceof Filter.False) {
+            return notFilter(matchAllFilter());
+        }
+
+        if (filter instanceof Filter.And) {
+            final Filter.And and = (Filter.And) filter;
+            final List<FilterBuilder> filters = new ArrayList<>(and.terms().size());
+
+            for (final Filter stmt : and.terms())
+                filters.add(filter(stmt));
+
+            return andFilter(filters.toArray(new FilterBuilder[0]));
+        }
+
+        if (filter instanceof Filter.Or) {
+            final Filter.Or or = (Filter.Or) filter;
+            final List<FilterBuilder> filters = new ArrayList<>(or.terms().size());
+
+            for (final Filter stmt : or.terms()) {
+                filters.add(filter(stmt));
+            }
+
+            return orFilter(filters.toArray(new FilterBuilder[0]));
+        }
+
+        if (filter instanceof Filter.Not) {
+            final Filter.Not not = (Filter.Not) filter;
+            return notFilter(filter(not.first()));
+        }
+
+        if (filter instanceof Filter.MatchTag) {
+            final Filter.MatchTag matchTag = (Filter.MatchTag) filter;
+            return termFilter(TAGS, matchTag.first() + '\0' + matchTag.second());
+        }
+
+        if (filter instanceof Filter.StartsWith) {
+            final Filter.StartsWith startsWith = (Filter.StartsWith) filter;
+            return prefixFilter(TAGS, startsWith.first() + '\0' + startsWith.second());
+        }
+
+        if (filter instanceof Filter.Regex) {
+            throw new IllegalArgumentException("regex not supported");
+        }
+
+        if (filter instanceof Filter.HasTag) {
+            final Filter.HasTag hasTag = (Filter.HasTag) filter;
+            return termFilter(TAG_KEYS, hasTag.first());
+        }
+
+        if (filter instanceof Filter.MatchKey) {
+            final Filter.MatchKey matchKey = (Filter.MatchKey) filter;
+            return termFilter(KEY, matchKey.first());
+        }
+
+        throw new IllegalArgumentException("Invalid filter statement: " + filter);
     }
 }

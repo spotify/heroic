@@ -42,8 +42,8 @@ import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.FatalSchemaException;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 
 @ToString
@@ -106,7 +106,7 @@ public class Spotify100 implements ConsumerSchema {
         final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());
         tags.put(HOST, metric.getHost());
 
-        final Series series = new Series(metric.getKey(), tags);
+        final Series series = Series.of(metric.getKey(), tags);
         final Point datapoint = new Point(metric.getTime(), metric.getValue());
         final List<Metric> points = new ArrayList<>();
         points.add(datapoint);

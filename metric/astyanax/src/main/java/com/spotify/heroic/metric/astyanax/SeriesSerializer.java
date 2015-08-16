@@ -79,6 +79,6 @@ class SeriesSerializer extends AbstractSerializer<Series> {
         final String key = composite.get(0, keySerializer);
         final Map<String, String> tags = composite.get(1, tagsSerializer);
 
-        return new Series(key, tags);
+        return Series.of(key, tags);
     }
 }

@@ -1,23 +1,15 @@
-/*
- * Copyright (c) 2015 Spotify AB.
- *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+/* Copyright (c) 2015 Spotify AB.
+ * 
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
+ * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License. */
 
 package com.spotify.heroic;
 
@@ -27,6 +19,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -45,7 +39,6 @@ import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
 import jline.console.completer.StringsCompleter;
 import jline.console.history.FileHistory;
-import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -60,6 +53,7 @@ import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.Fetch;
@@ -73,15 +67,15 @@ import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
+import com.spotify.heroic.shell.task.Query;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
 import com.spotify.heroic.shell.task.SuggestTag;
 import com.spotify.heroic.shell.task.SuggestTagKeyCount;
 import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
-import com.spotify.heroic.shell.task.WriteEvents;
+import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
-import com.spotify.heroic.shell.task.WritePoints;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -91,34 +85,56 @@ public class HeroicShell {
     public static final Path[] DEFAULT_CONFIGS = new Path[] { Paths.get("heroic.yml"),
             Paths.get("/etc/heroic/heroic.yml") };
 
-    private static final Map<String, Class<? extends ShellTask>> available = new HashMap<>();
+    private static final Map<String, TaskDefinition> available = new HashMap<>();
 
     static {
-        available.put("configure", Configure.class);
-        available.put("get", ConfigGet.class);
-        available.put("keys", Keys.class);
-        available.put("backends", ListBackends.class);
-        available.put("fetch", Fetch.class);
-        available.put("write-points", WritePoints.class);
-        available.put("write-events", WriteEvents.class);
-        available.put("write-performance", WritePerformance.class);
-        available.put("metadata-delete", MetadataDelete.class);
-        available.put("metadata-fetch", MetadataFetch.class);
-        available.put("metadata-tags", MetadataTags.class);
-        available.put("metadata-count", MetadataCount.class);
-        available.put("metadata-entries", MetadataEntries.class);
-        available.put("metadata-migrate", MetadataMigrate.class);
-        available.put("metadata-migrate-suggestions", MetadataMigrateSuggestions.class);
-        available.put("metadata-load", MetadataLoad.class);
-        available.put("suggest-tag", SuggestTag.class);
-        available.put("suggest-key", SuggestKey.class);
-        available.put("suggest-tag-value", SuggestTagValue.class);
-        available.put("suggest-tag-values", SuggestTagValues.class);
-        available.put("suggest-tag-key-count", SuggestTagKeyCount.class);
-        available.put("suggest-performance", SuggestPerformance.class);
+        // built-in
+        available.put("exit", builtin("exit shell", (shell, reader, out, tasks, args) -> shell.exit()));
+        available.put("help",
+                builtin("print help", (shell, reader, out, tasks, args) -> shell.printTasksHelp(out, tasks)));
+        available.put(
+                "timeout",
+                builtin("get/set shell timeout",
+                        (shell, reader, out, tasks, args) -> shell.internalTimeoutTask(out, args)));
+        available
+                .put("clear", builtin("clear shell screen", (shell, reader, out, tasks, args) -> reader.clearScreen()));
+
+        available.put("configure", shellTask(Configure.class));
+        available.put("get", shellTask(ConfigGet.class));
+        available.put("keys", shellTask(Keys.class));
+        available.put("backends", shellTask(ListBackends.class));
+        available.put("fetch", shellTask(Fetch.class));
+        available.put("write", shellTask(Write.class));
+        available.put("write-performance", shellTask(WritePerformance.class));
+        available.put("metadata-delete", shellTask(MetadataDelete.class));
+        available.put("metadata-fetch", shellTask(MetadataFetch.class));
+        available.put("metadata-tags", shellTask(MetadataTags.class));
+        available.put("metadata-count", shellTask(MetadataCount.class));
+        available.put("metadata-entries", shellTask(MetadataEntries.class));
+        available.put("metadata-migrate", shellTask(MetadataMigrate.class));
+        available.put("metadata-migrate-suggestions", shellTask(MetadataMigrateSuggestions.class));
+        available.put("metadata-load", shellTask(MetadataLoad.class));
+        available.put("suggest-tag", shellTask(SuggestTag.class));
+        available.put("suggest-key", shellTask(SuggestKey.class));
+        available.put("suggest-tag-value", shellTask(SuggestTagValue.class));
+        available.put("suggest-tag-values", shellTask(SuggestTagValues.class));
+        available.put("suggest-tag-key-count", shellTask(SuggestTagKeyCount.class));
+        available.put("suggest-performance", shellTask(SuggestPerformance.class));
+        available.put("query", shellTask(Query.class));
     }
 
     public static void main(String[] args) throws IOException {
+        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                try {
+                    log.error("Uncaught exception in thread {}, exiting...", t, e);
+                } finally {
+                    System.exit(1);
+                }
+            }
+        });
+
         final Parameters params = new Parameters();
 
         final CmdLineParser parser = new CmdLineParser(params);
@@ -133,7 +149,7 @@ public class HeroicShell {
 
         if (params.help()) {
             parser.printUsage(System.err);
-            HeroicModules.printProfileUsage(new PrintWriter(System.err), "-p");
+            HeroicModules.printProfileUsage(new PrintWriter(System.err), "-P");
             System.exit(0);
             return;
         }
@@ -153,10 +169,10 @@ public class HeroicShell {
 
         log.info("Wiring tasks...");
 
-        final Map<String, ShellTask> tasks;
+        final SortedMap<String, TaskShellDefinition> tasks;
 
         try {
-            tasks = buildTasks(core);
+            tasks = new TreeMap<>(buildTasks(core));
         } catch (Exception e) {
             log.error("Failed to build tasks", e);
             return;
@@ -187,11 +203,20 @@ public class HeroicShell {
      * @throws Exception
      */
     public static void standalone(String argv[], Class<? extends ShellTask> taskType) throws Exception {
+        Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread t, Throwable e) {
+                try {
+                    log.error("Uncaught exception in thread {}, exiting...", t, e);
+                } finally {
+                    System.exit(1);
+                }
+            }
+        });
+
         final ShellTask task = instance(taskType);
 
         final ShellTaskParams params = task.params();
-
-        final PrintWriter out = new PrintWriter(System.out);
 
         final CmdLineParser parser = new CmdLineParser(params);
 
@@ -205,7 +230,7 @@ public class HeroicShell {
 
         if (params.help()) {
             parser.printUsage(System.err);
-            HeroicModules.printProfileUsage(System.err, "-p");
+            HeroicModules.printProfileUsage(System.err, "-P");
             System.exit(0);
             return;
         }
@@ -245,7 +270,9 @@ public class HeroicShell {
         System.exit(0);
     }
 
-    final Map<String, ShellTask> tasks;
+    final SortedMap<String, TaskShellDefinition> tasks;
+
+    boolean running = true;
 
     @Inject
     AsyncFramework async;
@@ -253,8 +280,12 @@ public class HeroicShell {
     // mutable state, a.k.a. settings
     int currentTimeout = 10;
 
-    public HeroicShell(final Map<String, ShellTask> tasks) {
+    public HeroicShell(final SortedMap<String, TaskShellDefinition> tasks) {
         this.tasks = tasks;
+    }
+
+    void exit() {
+        this.running = false;
     }
 
     void run() throws IOException {
@@ -272,34 +303,41 @@ public class HeroicShell {
                 history = null;
             }
 
-            final ArrayList<String> commands = new ArrayList<>(available.keySet());
-
-            commands.add("exit");
-            commands.add("clear");
-            commands.add("help");
-            commands.add("timeout");
+            final ArrayList<String> commands = new ArrayList<>(tasks.keySet());
 
             reader.addCompleter(new StringsCompleter(commands));
             reader.setHandleUserInterrupt(true);
 
+            final SortedMap<String, Task> tasks = setupTasks(reader);
+
             try {
-                doReaderLoop(reader);
+                doReaderLoop(reader, tasks);
             } catch (Exception e) {
                 log.error("Error in reader loop", e);
             }
 
-            if (history != null)
+            if (history != null) {
                 history.flush();
+            }
 
             reader.shutdown();
         }
     }
 
-    void doReaderLoop(final ConsoleReader reader)
-            throws Exception {
+    SortedMap<String, Task> setupTasks(final ConsoleReader reader) {
+        final SortedMap<String, Task> tasks = new TreeMap<>();
+
+        for (Entry<String, TaskShellDefinition> e : this.tasks.entrySet()) {
+            tasks.put(e.getKey(), e.getValue().setup(this, reader, tasks));
+        }
+
+        return tasks;
+    }
+
+    void doReaderLoop(final ConsoleReader reader, SortedMap<String, Task> tasks) throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());
 
-        while (true) {
+        while (running) {
             reader.setPrompt(String.format("heroic> "));
 
             final String line;
@@ -314,42 +352,32 @@ public class HeroicShell {
             if (line == null)
                 break;
 
-            final String[] parts = QuoteParser.parse(line);
+            final String[] parts;
 
-            if (parts.length == 0)
-                continue;
-
-            if ("exit".equals(parts[0]))
-                break;
-
-            if ("clear".equals(parts[0])) {
-                reader.clearScreen();
+            try {
+                parts = QuoteParser.parse(line);
+            } catch (Exception e) {
+                log.error("Line syntax invalid", e);
                 continue;
             }
 
-            if ("help".equals(parts[0])) {
-                printHelp(tasks, out);
-                continue;
-            }
-
-            if ("timeout".equals(parts[0])) {
-                internalTimeoutTask(parts, out);
+            if (parts.length == 0) {
                 continue;
             }
 
             final long start = System.nanoTime();
-            runTask(reader, parts, out);
+            runTask(reader, parts, out, tasks);
             final long diff = System.nanoTime() - start;
 
-            out.println(String.format("time: %s", formatTime(diff)));
+            out.println(String.format("time: %s", Tasks.formatTimeNanos(diff)));
         }
 
         out.println();
         out.println("Exiting...");
     }
 
-    void internalTimeoutTask(String[] parts, PrintWriter out) {
-        if (parts.length < 2) {
+    void internalTimeoutTask(PrintWriter out, String[] args) {
+        if (args.length < 2) {
             if (currentTimeout == 0) {
                 out.println("timeout disabled");
             } else {
@@ -362,9 +390,9 @@ public class HeroicShell {
         final int timeout;
 
         try {
-            timeout = Integer.parseInt(parts[1]);
+            timeout = Integer.parseInt(args[1]);
         } catch (Exception e) {
-            out.println(String.format("not a valid integer value: %s", parts[1]));
+            out.println(String.format("not a valid integer value: %s", args[1]));
             return;
         }
 
@@ -377,72 +405,32 @@ public class HeroicShell {
         }
     }
 
-    String formatTime(long diff) {
-        if (diff < 1000) {
-            return String.format("%d ns", diff);
-        }
-
-        if (diff < 1000000) {
-            final double v = ((double) diff) / 1000;
-            return String.format("%.3f us", v);
-        }
-
-        if (diff < 1000000000) {
-            final double v = ((double) diff) / 1000000;
-            return String.format("%.3f ms", v);
-        }
-
-        final double v = ((double) diff) / 1000000000;
-        return String.format("%.3f s", v);
-    }
-
-    void printHelp(final Map<String, ShellTask> tasks, final PrintWriter out) {
-        out.println("Known Commands:");
-        out.println("help - Display this help");
-        out.println("exit - Exit the shell");
-        out.println("clear - Clear the shell");
-        out.println("timeout - Manipulate and get timeout settings");
-
-        for (final Map.Entry<String, ShellTask> e : tasks.entrySet()) {
-            final ShellTaskUsage usage = e.getValue().getClass().getAnnotation(ShellTaskUsage.class);
-
-            final String help;
-
-            if (usage == null) {
-                help = "";
-            } else {
-                help = usage.value();
-            }
-
-            out.println(String.format("%s - %s", e.getKey(), help));
-        }
-    }
-
-    void runTask(final ConsoleReader reader, String[] parts, final PrintWriter out) throws Exception,
-            IOException {
+    void runTask(final ConsoleReader reader, String[] parts, final PrintWriter out,
+            final SortedMap<String, Task> tasks) throws Exception, IOException {
         // TODO: improve this with proper quote parsing and such.
         final String taskName = parts[0];
-        final String[] commandArgs = extractArgs(parts);
+        final String[] args = extractArgs(parts);
 
-        final ShellTask task = tasks.get(taskName);
+        final Task task = resolveTask(out, taskName, tasks);
 
         if (task == null) {
-            out.println("No such task '" + taskName + "'");
             return;
         }
 
         final AsyncFuture<Void> t;
 
         try {
-            t = runTask(task, commandArgs, out);
+            t = runTask(out, task, args);
         } catch (Exception e) {
             out.println("Command failed");
             e.printStackTrace(out);
             return;
         }
 
-        if (t == null)
+        if (t == null) {
+            out.flush();
             return;
+        }
 
         try {
             awaitFinished(t);
@@ -459,8 +447,33 @@ public class HeroicShell {
         return;
     }
 
-    Void awaitFinished(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException,
-            TimeoutException {
+    Task resolveTask(final PrintWriter out, final String taskName,
+            final SortedMap<String, Task> tasks) {
+        final SortedMap<String, Task> selected = tasks.subMap(taskName, taskName + Character.MAX_VALUE);
+
+        final Task exact;
+
+        // exact match
+        if ((exact = selected.get(taskName)) != null) {
+            return exact;
+        }
+
+        // no fuzzy matches
+        if (selected.isEmpty()) {
+            out.println("No such task '" + taskName + "'");
+            return null;
+        }
+
+        if (selected.size() > 1) {
+            out.println(String.format("Too many (%d) matching tasks:", selected.size()));
+            printTasksHelp(out, selected);
+
+            return null;
+        }
+        return selected.values().iterator().next();
+    }
+
+    Void awaitFinished(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException, TimeoutException {
         if (currentTimeout > 0) {
             return t.get(currentTimeout, TimeUnit.SECONDS);
         }
@@ -481,23 +494,32 @@ public class HeroicShell {
         return args;
     }
 
-    AsyncFuture<Void> runTask(ShellTask task, String argv[], PrintWriter out) throws Exception {
+    void printTasksHelp(final PrintWriter out, final SortedMap<String, Task> tasks) {
+        for (final Map.Entry<String, Task> e : tasks.entrySet()) {
+            out.println(String.format("%s - %s", e.getKey(), e.getValue().usage()));
+        }
+    }
+
+    AsyncFuture<Void> runTask(PrintWriter out, Task task, String args[]) throws Exception {
         final ShellTaskParams params = task.params();
-        final CmdLineParser parser = new CmdLineParser(params);
 
-        try {
-            parser.parseArgument(argv);
-        } catch (CmdLineException e) {
-            log.error("Commandline error", e);
-            return async.failed(e);
+        if (params != null) {
+            final CmdLineParser parser = new CmdLineParser(params);
+
+            try {
+                parser.parseArgument(args);
+            } catch (CmdLineException e) {
+                log.error("Commandline error", e);
+                return async.failed(e);
+            }
+
+            if (params.help()) {
+                parser.printUsage(out, null);
+                return async.resolved();
+            }
         }
 
-        if (params.help()) {
-            parser.printUsage(out, null);
-            return async.resolved();
-        }
-
-        return task.run(out, params);
+        return task.run(out, args, params);
     }
 
     static PrintWriter standaloneOutput(final ShellTaskParams params, final PrintStream original) throws IOException {
@@ -508,11 +530,11 @@ public class HeroicShell {
         return new PrintWriter(original);
     }
 
-    static Map<String, ShellTask> buildTasks(HeroicCore core) throws Exception {
-        final Map<String, ShellTask> tasks = new HashMap<>();
+    static Map<String, TaskShellDefinition> buildTasks(HeroicCore core) throws Exception {
+        final Map<String, TaskShellDefinition> tasks = new HashMap<>();
 
-        for (final Entry<String, Class<? extends ShellTask>> e : HeroicShell.available.entrySet()) {
-            tasks.put(e.getKey(), core.inject(instance(e.getValue())));
+        for (final Entry<String, TaskDefinition> e : HeroicShell.available.entrySet()) {
+            tasks.put(e.getKey(), e.getValue().setup(core));
         }
 
         return tasks;
@@ -587,15 +609,114 @@ public class HeroicShell {
         return builder;
     }
 
+    static TaskDefinition builtin(final String usage, final Builtin command) {
+        return new TaskDefinition() {
+            @Override
+            public TaskShellDefinition setup(HeroicCore core) throws Exception {
+                return new TaskShellDefinition() {
+                    @Override
+                    public Task setup(final HeroicShell shell, final ConsoleReader reader,
+                            final SortedMap<String, Task> tasks) {
+                        return core.inject(new Task() {
+                            @Inject
+                            AsyncFramework async;
+
+                            @Override
+                            public ShellTaskParams params() {
+                                return null;
+                            }
+
+                            @Override
+                            public String usage() {
+                                return usage;
+                            }
+
+                            @Override
+                            public AsyncFuture<Void> run(PrintWriter out, String[] args, ShellTaskParams params)
+                                    throws Exception {
+                                try {
+                                    command.run(shell, reader, out, tasks, args);
+                                } catch (Exception e) {
+                                    return async.failed(e);
+                                }
+
+                                return async.resolved();
+                            }
+                        });
+                    }
+                };
+            }
+        };
+    }
+
+    static TaskDefinition shellTask(final Class<? extends ShellTask> task) {
+        return new TaskDefinition() {
+            @Override
+            public TaskShellDefinition setup(final HeroicCore core) throws Exception {
+                final ShellTask instance = core.inject(instance(task));
+
+                final String usage;
+
+                final ShellTaskUsage u = task.getAnnotation(ShellTaskUsage.class);
+
+                if (u == null) {
+                    usage = String.format("<no @ShellTaskUsage annotation for %s>", task.getName());
+                } else {
+                    usage = u.value();
+                }
+
+                return new TaskShellDefinition() {
+                    @Override
+                    public Task setup(HeroicShell shell, ConsoleReader reader,
+                            SortedMap<String, Task> tasks) {
+                        return new Task() {
+                            @Override
+                            public ShellTaskParams params() {
+                                return instance.params();
+                            }
+
+                            @Override
+                            public String usage() {
+                                return usage;
+                            }
+
+                            @Override
+                            public AsyncFuture<Void> run(PrintWriter out, String args[], ShellTaskParams params)
+                                    throws Exception {
+                                return instance.run(out, params);
+                            }
+                        };
+                    }
+                };
+            };
+        };
+    }
+
     @ToString
     public static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--server", usage = "Start shell as server (enables listen port)")
         private boolean server = false;
     }
 
-    @Data
-    public static final class State {
-        private final HeroicCore core;
-        private final Callable<String> status;
+    public static interface Builtin {
+        void run(HeroicShell shell, ConsoleReader reader, PrintWriter out,
+                SortedMap<String, Task> tasks, String[] args) throws Exception;
+    }
+
+    public static interface TaskDefinition {
+        TaskShellDefinition setup(HeroicCore core) throws Exception;
+    }
+
+    public static interface TaskShellDefinition {
+        Task setup(HeroicShell shell, ConsoleReader reader,
+                SortedMap<String, Task> tasks);
+    }
+
+    public static interface Task {
+        ShellTaskParams params();
+
+        String usage();
+
+        AsyncFuture<Void> run(PrintWriter out, String[] args, ShellTaskParams params) throws Exception;
     }
 }

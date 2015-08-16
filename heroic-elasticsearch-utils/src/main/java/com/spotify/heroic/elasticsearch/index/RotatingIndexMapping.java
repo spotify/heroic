@@ -142,7 +142,7 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     private IndicesOptions options() {
-        return IndicesOptions.fromOptions(true, false, false, false);
+        return IndicesOptions.fromOptions(true, true, false, false);
     }
 
     public static Supplier<IndexMapping> defaultSupplier() {

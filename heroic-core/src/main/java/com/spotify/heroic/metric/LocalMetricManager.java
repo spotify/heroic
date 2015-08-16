@@ -47,7 +47,6 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
-import com.spotify.heroic.aggregation.GroupAggregation;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
@@ -167,10 +166,9 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter,
-                final List<String> groupBy, final DateRange range, Aggregation aggregation, final boolean noCache) {
+        public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter, final DateRange range,
+                final Aggregation aggregation, final boolean noCache) {
             // XXX: move compatibility hack to a higher level.
-            final Aggregation nested = (groupBy != null) ? new GroupAggregation(groupBy, aggregation) : aggregation;
             final FetchQuotaWatcher watcher = new LimitedFetchQuotaWatcher(dataLimit);
 
             /* groupLoadLimit + 1, so that we return one too many results when more than groupLoadLimit series are
@@ -178,22 +176,25 @@ public class LocalMetricManager implements MetricManager {
             final RangeFilter rangeFilter = RangeFilter.filterFor(filter, range, seriesLimit + 1);
 
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
-                if (result.getSize() >= seriesLimit)
+                if (result.getSize() >= seriesLimit) {
                     throw new IllegalArgumentException("The total number of series fetched " + result.getSize()
                             + " would exceed the allowed limit of " + seriesLimit);
+                }
 
-                final long estimate = nested.estimate(range);
+                final long estimate = aggregation.estimate(range);
 
-                if (estimate > aggregationLimit)
+                if (estimate > aggregationLimit) {
                     throw new IllegalArgumentException(String.format(
                             "aggregation is estimated more points [%d/%d] than what is allowed", estimate,
                             aggregationLimit));
+                }
 
-                final AggregationTraversal traversal = nested.session(states(result.getSeries()), range);
+                final AggregationTraversal traversal = aggregation.session(states(result.getSeries()), range);
 
-                if (traversal.getStates().size() > groupLimit)
+                if (traversal.getStates().size() > groupLimit) {
                     throw new IllegalArgumentException("The current query is too heavy! (More than " + groupLimit
-                            + " timeseries would be sent to your browser).");
+                            + " timeseries would be sent to your client).");
+                }
 
                 final AggregationSession session = traversal.getSession();
 
@@ -354,11 +355,7 @@ public class LocalMetricManager implements MetricManager {
 
                     for (final AggregationData group : result.getResult()) {
                         final List<TagValues> g = group(group.getSeries());
-
-                        if (MetricType.POINT == group.getType()) {
-                            groups.add(new ResultGroup.DataPointResultGroup(g, (List<Point>) group
-                                    .getValues()));
-                        }
+                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues())));
                     }
 
                     final Statistics stat = Statistics.builder().aggregator(result.getStatistics())

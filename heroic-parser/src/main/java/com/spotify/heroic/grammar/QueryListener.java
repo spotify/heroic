@@ -37,10 +37,14 @@ import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AbsoluteContext;
+import com.spotify.heroic.grammar.HeroicQueryParser.AggregationArgsContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.DiffContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.EqExprContext;
@@ -79,7 +83,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     private static final Object QUERIES_MARK = new Object();
     private static final Object GROUPBY_MARK = new Object();
     private static final Object LIST_MARK = new Object();
-    private static final Object AGGREGATION_MARK = new Object();
+    private static final Object AGGREGATION_ARGUMENTS_MARK = new Object();
     private static final Object QUERY_MARK = new Object();
 
     @Getter
@@ -126,8 +130,9 @@ public class QueryListener extends HeroicQueryBaseListener {
         while (true) {
             final Object mark = stack.pop();
 
-            if (mark == QUERY_MARK)
+            if (mark == QUERY_MARK) {
                 break;
+            }
 
             if (mark instanceof SelectDSL) {
                 select = (SelectDSL) mark;
@@ -152,7 +157,15 @@ public class QueryListener extends HeroicQueryBaseListener {
             throw c.error(String.format("expected part of query, but got %s", mark));
         }
 
-        push(new QueryDSL(select, source, where, groupBy));
+        if (select == null) {
+            throw c.error("No select clause available");
+        }
+
+        if (source == null) {
+            throw c.error("No source clause available");
+        }
+
+        push(new QueryDSL(select, source, Optional.fromNullable(where), Optional.fromNullable(groupBy)));
     }
 
     @Override
@@ -226,14 +239,30 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitSelect(SelectContext ctx) {
         final ParseTree child = ctx.getChild(0);
-
         final Context c = new ContextImpl(ctx);
+        final Optional<AggregationValue> aggregation = buildAggregation(c, child);
+        push(new SelectDSL(c, aggregation));
+    }
 
-        if (child.getPayload() instanceof ValueExprContext) {
-            push(new SelectDSL(c, pop(c, AggregationValue.class)));
-        } else {
-            push(new SelectDSL(c, null));
+    Optional<AggregationValue> buildAggregation(final Context c, final ParseTree child) {
+        if (!(child.getPayload() instanceof ValueExprContext)) {
+            return Optional.absent();
         }
+
+        final Value value = pop(c, Value.class);
+
+        if (value instanceof AggregationValue) {
+            return Optional.of((AggregationValue) value);
+        }
+
+        if (value instanceof StringValue) {
+            final StringValue name = (StringValue) value;
+            final List<Value> arguments = new ArrayList<>();
+            final Map<String, Value> keywordArguments = new HashMap<>();
+            return Optional.of(new AggregationValue(name.getString(), arguments, keywordArguments));
+        }
+
+        throw c.error(String.format("expected aggregation, but was %s", name(AggregationValue.class), value.toString()));
     }
 
     @Override
@@ -290,24 +319,23 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
-    public void enterAggregation(AggregationContext ctx) {
-        stack.push(AGGREGATION_MARK);
+    public void enterAggregationArgs(AggregationArgsContext ctx) {
+        stack.push(AGGREGATION_ARGUMENTS_MARK);
     }
 
     @Override
-    public void exitAggregation(AggregationContext ctx) {
+    public void exitAggregationArgs(AggregationArgsContext ctx) {
         final List<Value> arguments = new ArrayList<>();
         final Map<String, Value> keywordArguments = new HashMap<>();
-
-        final String name = ctx.getChild(0).getText();
 
         final Context c = new ContextImpl(ctx);
 
         while (true) {
             final Object argument = stack.pop();
 
-            if (argument == AGGREGATION_MARK)
+            if (argument == AGGREGATION_ARGUMENTS_MARK) {
                 break;
+            }
 
             if (argument instanceof KeywordValue) {
                 final KeywordValue kw = (KeywordValue) argument;
@@ -323,8 +351,23 @@ public class QueryListener extends HeroicQueryBaseListener {
         }
 
         Collections.reverse(arguments);
+        push(new AggregationArguments(arguments, keywordArguments));
+    }
 
-        push(new AggregationValue(name, arguments, keywordArguments));
+    @Override
+    public void exitAggregation(AggregationContext ctx) {
+        final Context c = new ContextImpl(ctx);
+
+        final AggregationArguments arguments;
+
+        if (ctx.getChildCount() == 4) {
+            arguments = pop(c, AggregationArguments.class);
+        } else {
+            arguments = AggregationArguments.empty();
+        }
+
+        final StringValue name = pop(c, StringValue.class);
+        push(new AggregationValue(name.getString(), arguments.getPositional(), arguments.getKeywords()));
     }
 
     @Override
@@ -336,16 +379,18 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitFrom(FromContext ctx) {
         final ParseTree source = ctx.getChild(0);
-        final ParseTree sourceRange = ctx.getChild(1);
-        final DateRange range;
 
-        if (sourceRange != null) {
-            range = pop(new ContextImpl(ctx), DateRange.class);
+        final Context context = new ContextImpl(ctx);
+
+        final Optional<DateRange> range;
+
+        if (ctx.getChildCount() > 1) {
+            range = Optional.of(pop(context, DateRange.class));
         } else {
-            range = null;
+            range = Optional.absent();
         }
 
-        push(new FromDSL(QuerySource.valueOf(source.getText().toUpperCase()), range));
+        push(new FromDSL(context, source.getText(), range));
     }
 
     @Override
@@ -574,8 +619,9 @@ public class QueryListener extends HeroicQueryBaseListener {
         if (popped == null)
             throw ctx.error(String.format("expected %s, but was empty", name(type)));
 
-        if (!type.isAssignableFrom(popped.getClass()))
+        if (!type.isAssignableFrom(popped.getClass())) {
             throw ctx.error(String.format("expected %s, but was %s", name(type), popped.toString()));
+        }
 
         return (T) popped;
     }
@@ -584,6 +630,18 @@ public class QueryListener extends HeroicQueryBaseListener {
     private static final class KeywordValue {
         private final String key;
         private final Value value;
+    }
+
+    @Data
+    static final class AggregationArguments {
+        final List<Value> positional;
+        final Map<String, Value> keywords;
+
+        static final AggregationArguments empty = new AggregationArguments(ImmutableList.of(), ImmutableMap.of());
+
+        public static AggregationArguments empty() {
+            return empty;
+        }
     }
 
     @Data

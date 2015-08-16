@@ -35,6 +35,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
@@ -56,18 +58,17 @@ public class QueryMetricsResponse {
 
             g.writeStartArray();
 
-            for (final ShardedResultGroup group : result) {
-                if (group.getType().equals(Point.class)) {
-                    final List<TagValues> tags = group.getGroup();
-                    final List<Point> datapoints = (List<Point>) group.getValues();
-                    writeDataPoints(g, group, tags, datapoints);
+            for (final ShardedResultGroup resultGroup : result) {
+                final List<TagValues> tags = resultGroup.getTags();
+                final MetricTypedGroup group = resultGroup.getGroup();
+
+                if (group.getType() == MetricType.POINT) {
+                    writeDataPoints(g, resultGroup, tags, group.getDataAs(Point.class));
                     continue;
                 }
 
-                if (group.getType().equals(Event.class)) {
-                    final List<TagValues> tags = group.getGroup();
-                    final List<Event> events = (List<Event>) group.getValues();
-                    writeEvents(g, group, tags, events);
+                if (group.getType() == MetricType.EVENT) {
+                    writeEvents(g, resultGroup, tags, group.getDataAs(Event.class));
                     continue;
                 }
             }

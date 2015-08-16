@@ -31,6 +31,7 @@ import lombok.ToString;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.Client;
@@ -93,6 +94,10 @@ public class Connection {
 
     public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type) throws NoIndexSelectedException {
         return index.deleteByQuery(client, range, type);
+    }
+
+    public IndexRequestBuilder index(String index, String type) {
+        return client.prepareIndex(index, type);
     }
 
     public SearchScrollRequestBuilder prepareSearchScroll(String scrollId) {

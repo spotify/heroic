@@ -19,32 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.aggregation.simple;
 
 import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.Series;
+import com.google.common.base.Optional;
+import com.spotify.heroic.aggregation.AggregationQuery;
 
-/**
- * Opaque type designating a row key for any type of metric backend.
- */
 @Data
-public class RowKey {
-    private static final long DEFAULT_BASE = 0;
-
-    private final Series series;
-    private final long base;
+public class GroupUniqueAggregationQuery implements AggregationQuery<GroupUniqueAggregation> {
+    private final AggregationSamplingQuery sampling;
 
     @JsonCreator
-    public static RowKey create(@JsonProperty("series") Series series, @JsonProperty("base") Long base) {
-        if (series == null)
-            series = Series.EMPTY;
+    public GroupUniqueAggregationQuery(@JsonProperty("sampling") AggregationSamplingQuery sampling) {
+        this.sampling = Optional.fromNullable(sampling).or(AggregationSamplingQuery.DEFAULT_SUPPLIER);
+    }
 
-        if (base == null)
-            base = DEFAULT_BASE;
-
-        return new RowKey(series, base);
+    @Override
+    public GroupUniqueAggregation build() {
+        return new GroupUniqueAggregation(sampling.build());
     }
 }

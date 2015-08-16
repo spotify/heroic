@@ -36,21 +36,19 @@ import com.google.common.collect.ImmutableMap;
  */
 public enum MetricType {
     // @formatter:off
-    POINT(Point.class, "point", "points", Point.comparator()),
-    EVENT(Event.class, "event", "events", Event.comparator()),
-    SPREAD(Spread.class, "spread", "spreads", Spread.comparator()),
-    GROUP(MetricGroup.class, "group", "groups", MetricGroup.comparator());
+    POINT(Point.class, "points", Point.comparator()),
+    EVENT(Event.class, "events", Event.comparator()),
+    SPREAD(Spread.class, "spreads", Spread.comparator()),
+    GROUP(MetricGroup.class, "groups", MetricGroup.comparator());
     // @formatter:on
 
     private final Class<? extends Metric> type;
     private final String identifier;
-    private final String group;
     private final Comparator<Metric> comparator;
 
-    private MetricType(Class<? extends Metric> type, String identifier, String group, Comparator<Metric> comparator) {
+    private MetricType(Class<? extends Metric> type, String identifier, Comparator<Metric> comparator) {
         this.type = type;
         this.identifier = identifier;
-        this.group = group;
         this.comparator = comparator;
     }
 
@@ -60,10 +58,6 @@ public enum MetricType {
 
     public String identifier() {
         return identifier;
-    }
-
-    public String group() {
-        return group;
     }
 
     static final Map<String, MetricType> mapping = ImmutableMap.copyOf(Arrays.stream(MetricType.values()).collect(

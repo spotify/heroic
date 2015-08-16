@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.List;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
@@ -48,8 +46,8 @@ public interface MetricBackendGroup extends MetricBackend {
      * @return The result in the form of MetricGroups.
      * @throws BackendGroupException
      */
-    public AsyncFuture<ResultGroups> query(MetricType type, final Filter filter,
-            final List<String> groupBy, final DateRange range, Aggregation aggregation, final boolean noCache);
+    public AsyncFuture<ResultGroups> query(MetricType type, final Filter filter, final DateRange range,
+            Aggregation aggregation, final boolean noCache);
 
     /**
      * Fetch metrics with a default (no-op) quota watcher. This method allows for the fetching of an indefinite amount

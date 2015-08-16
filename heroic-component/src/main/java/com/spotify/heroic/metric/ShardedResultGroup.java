@@ -28,10 +28,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(exclude = { "values" })
+@EqualsAndHashCode
 public final class ShardedResultGroup {
     private final Map<String, String> shard;
-    private final List<TagValues> group;
-    private final List<?> values;
-    private final MetricType type;
+    private final List<TagValues> tags;
+    private final MetricTypedGroup group;
 }

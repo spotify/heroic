@@ -258,5 +258,24 @@ public class Entry implements HeroicModule {
                         return new CountAggregation(sampling);
                     }
                 });
+
+        ctx.aggregation(GroupUniqueAggregation.NAME, GroupUniqueAggregation.class, GroupUniqueAggregationQuery.class,
+                new Serializer<GroupUniqueAggregation>() {
+                    @Override
+                    public void serialize(SerialWriter buffer, GroupUniqueAggregation value) throws IOException {
+                        resolutionSerializer.serialize(buffer, value.getSampling());
+                    }
+
+                    @Override
+                    public GroupUniqueAggregation deserialize(SerialReader buffer) throws IOException {
+                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
+                        return new GroupUniqueAggregation(sampling);
+                    }
+                }, new SamplingAggregationBuilder<GroupUniqueAggregation>() {
+                    @Override
+                    protected GroupUniqueAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
+                        return new GroupUniqueAggregation(sampling);
+                    }
+                });
     }
 }

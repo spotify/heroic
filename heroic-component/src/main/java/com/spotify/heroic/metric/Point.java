@@ -33,7 +33,7 @@ public class Point implements Metric {
     private final double value;
 
     @Override
-    public int hash() {
+    public int valueHash() {
         return Double.hashCode(value);
     }
 

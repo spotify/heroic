@@ -162,4 +162,10 @@ public class TagSuggest {
             }
         };
     }
+
+    static final TagSuggest empty = new TagSuggest(EMPTY_SUGGESTIONS);
+
+    public static TagSuggest empty() {
+        return empty;
+    }
 }

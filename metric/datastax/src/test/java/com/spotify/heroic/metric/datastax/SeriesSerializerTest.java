@@ -23,25 +23,24 @@ public class SeriesSerializerTest {
 
     @Test
     public void testEmpty() throws Exception {
-        final Series series = new Series(null, new HashMap<String, String>());
+        final Series series = Series.of(null, new HashMap<String, String>());
         Assert.assertEquals(series, roundTrip(series));
     }
 
     @Test
     public void testTagsWithNull() throws Exception {
         final Map<String, String> tags = new HashMap<String, String>();
-        tags.put(null, null);
-        final Series series = new Series(null, tags);
+        tags.put("test", null);
+        final Series series = Series.of(null, tags);
         Assert.assertEquals(series, roundTrip(series));
     }
 
     @Test
     public void testTagsWithMixed() throws Exception {
         final Map<String, String> tags = new HashMap<String, String>();
-        tags.put(null, null);
         tags.put("foo", "bar");
         tags.put("bar", null);
-        final Series series = new Series(null, tags);
+        final Series series = Series.of(null, tags);
         Assert.assertEquals(series, roundTrip(series));
     }
 
@@ -50,7 +49,7 @@ public class SeriesSerializerTest {
         final Map<String, String> tags = new HashMap<String, String>();
         tags.put("a", "b");
         tags.put("b", "c");
-        final Series series = new Series("baz", tags);
+        final Series series = Series.of("baz", tags);
         Assert.assertEquals(series, roundTrip(series));
     }
 }

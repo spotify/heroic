@@ -50,7 +50,7 @@ public class CountUniqueBucket implements Bucket<Metric> {
 
     @Override
     public void update(Map<String, String> tags, MetricType type, Metric d) {
-        if (seen.add(tags.hashCode() ^ d.hash()))
+        if (seen.add(tags.hashCode() ^ d.valueHash()))
             count.incrementAndGet();
     }
 

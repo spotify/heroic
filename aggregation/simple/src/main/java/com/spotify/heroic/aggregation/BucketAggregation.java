@@ -77,14 +77,16 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
             // ignore incompatible updates
             final MetricType type = update.getType();
 
-            if (in.isAssignableFrom(type.type()))
+            if (!in.isAssignableFrom(type.type())) {
                 return;
+            }
 
             final List<IN> input = (List<IN>) update.getValues();
 
             for (final IN d : input) {
-                if (!d.valid())
+                if (!d.valid()) {
                     continue;
+                }
 
                 final long first = d.getTimestamp();
                 final long last = first + extent;
@@ -92,16 +94,18 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
                 for (long start = first; start < last; start += size) {
                     int i = (int) ((start - offset - 1) / size);
 
-                    if (i < 0 || i >= buckets.size())
+                    if (i < 0 || i >= buckets.size()) {
                         continue;
+                    }
 
                     final B bucket = buckets.get(i);
 
                     final long c = bucket.timestamp() - first;
 
                     // check that the current bucket is _within_ the extent.
-                    if (!(c >= 0 && c <= extent))
+                    if (!(c >= 0 && c <= extent)) {
                         continue;
+                    }
 
                     bucket.update(update.getGroup(), type, d);
                 }

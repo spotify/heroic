@@ -21,41 +21,23 @@
 
 package com.spotify.heroic.metric;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.List;
 
 import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(ResultGroup.DataPointResultGroup.class)})
-public interface ResultGroup {
-    public List<TagValues> getTags();
-    public List<?> getValues();
-    @JsonIgnore
-    public MetricType getType();
+@Data
+public class ResultGroup {
+    final List<TagValues> tags;
+    final MetricTypedGroup group;
 
-    /**
-     * TODO change the type string from a class name
-     * @author mehrdad
-     *
-     */
-    @Data
-    @JsonTypeName("com.spotify.heroic.model.DataPoint")
-    static class DataPointResultGroup implements ResultGroup {
-        private final List<TagValues> tags;
-        private final List<Point> values;
-        private final MetricType type = MetricType.POINT;
-
-        @JsonCreator
-        public DataPointResultGroup(@JsonProperty("tags") final List<TagValues> tags, @JsonProperty("values") final List<Point> values) {
-            this.tags = tags;
-            this.values = values;
-        }
+    @JsonCreator
+    public ResultGroup(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("group") MetricTypedGroup group) {
+        this.tags = checkNotNull(tags, "tags");
+        this.group = checkNotNull(group, "group");
     }
 }

@@ -149,8 +149,9 @@ public class MemoryBackend implements MetricBackend, LifeCycle {
             final NavigableMap<Long, Metric> tree = getOrCreate(key);
 
             synchronized (tree) {
-                for (final Metric d : g.getData())
+                for (final Metric d : g.getData()) {
                     tree.put(d.getTimestamp(), d);
+                }
             }
         }
 

@@ -13,7 +13,7 @@ public abstract class AbstractShellTaskParams implements ShellTaskParams {
     @Option(name = "-o", aliases = { "--output" }, usage = "Redirect output to the given file", metaVar = "<file|->")
     public String output;
 
-    @Option(name = "-p", aliases = { "--profile" }, usage = "Activate the given heroic profile", metaVar = "<profile>")
+    @Option(name = "-P", aliases = { "--profile" }, usage = "Activate the given heroic profile", metaVar = "<profile>")
     public String profile;
 
     @Override

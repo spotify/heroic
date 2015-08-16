@@ -25,17 +25,19 @@ import java.util.Comparator;
 import java.util.Map;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 @Data
+@EqualsAndHashCode(exclude = { "valueHash" })
 public class Event implements Metric {
     private static final Map<String, Object> EMPTY_PAYLOAD = ImmutableMap.of();
 
     final long timestamp;
     final Map<String, Object> payload;
-    final int hash;
+    final int valueHash;
 
     public Event(long timestamp) {
         this(timestamp, EMPTY_PAYLOAD);
@@ -44,26 +46,33 @@ public class Event implements Metric {
     public Event(long timestamp, Map<String, Object> payload) {
         this.timestamp = timestamp;
         this.payload = Optional.fromNullable(payload).or(EMPTY_PAYLOAD);
-        this.hash = this.payload.hashCode();
+        this.valueHash = calculateValueHash(this.payload);
     }
 
     @Override
-    public int hash() {
-        return hash;
+    public int valueHash() {
+        return valueHash;
     }
 
     public boolean valid() {
         return true;
     }
 
-    private static final Comparator<Metric> comparator = new Comparator<Metric>() {
+    static int calculateValueHash(Map<String, Object> payload) {
+        final int prime = 31;
+        int result = 1;
+        result = result * prime + payload.hashCode();
+        return result;
+    }
+
+    public static Comparator<Metric> comparator() {
+        return comparator;
+    }
+
+    static final Comparator<Metric> comparator = new Comparator<Metric>() {
         @Override
         public int compare(Metric a, Metric b) {
             return Long.compare(a.getTimestamp(), b.getTimestamp());
         }
     };
-
-    public static Comparator<Metric> comparator() {
-        return comparator;
-    }
 }

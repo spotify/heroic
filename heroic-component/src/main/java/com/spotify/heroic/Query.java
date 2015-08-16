@@ -21,8 +21,6 @@
 
 package com.spotify.heroic;
 
-import java.util.List;
-
 import lombok.Data;
 
 import com.spotify.heroic.aggregation.Aggregation;
@@ -32,9 +30,7 @@ import com.spotify.heroic.metric.MetricType;
 
 @Data
 public class Query {
-    private final String backendGroup;
     private final Filter filter;
-    private final List<String> groupBy;
     private final DateRange range;
     private final Aggregation aggregation;
     private final boolean disableCache;

@@ -21,60 +21,164 @@
 
 package com.spotify.heroic.common;
 
-import java.util.Map;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import lombok.Getter;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+
 import lombok.ToString;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
 
 @ToString(of = { "key", "tags" })
 public class Series {
-    public static final Map<String, String> EMPTY_TAGS = ImmutableMap.<String, String> of();
-    public static final Series EMPTY = new Series(null, EMPTY_TAGS);
+    static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String> of();
+    static final String EMPTY_STRING = "";
 
-    @Getter
-    private final String key;
-    @Getter
-    private final Map<String, String> tags;
+    final String key;
+    final Map<String, String> tags;
+    final long hash;
 
-    private final int hashCode;
-
+    /**
+     * Package-private constructor to avoid invalid inputs.
+     * 
+     * @param key The key of the time series.
+     * @param tags The tags of the time series.
+     */
     @JsonCreator
-    public Series(@JsonProperty("key") String key, @JsonProperty("tags") Map<String, String> tags) {
+    Series(@JsonProperty("key") String key, @JsonProperty("tags") SortedMap<String, String> tags) {
         this.key = key;
-        this.tags = Optional.fromNullable(tags).or(EMPTY_TAGS);
-        this.hashCode = generateHashCode();
+        this.tags = checkNotNull(tags, "tags");
+        this.hash = generateHash();
     }
 
-    public int generateHashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((key == null) ? 0 : key.hashCode());
-        result = prime * result + ((tags == null) ? 0 : tags.hashCode());
+    public String getKey() {
+        return key;
+    }
+
+    public Map<String, String> getTags() {
+        return tags;
+    }
+
+    public long generateHash() {
+        final long prime = 63;
+        long result = 1;
+        result = prime * result + ((key == null) ? 0 : stringHash(key));
+
+        for (final Map.Entry<String, String> e : tags.entrySet()) {
+            result = prime * result + stringHash(e.getKey());
+            result = prime * result + stringHash(e.getValue());
+        }
+
         return result;
+    }
+
+    private long stringHash(String string) {
+        final long prime = 63;
+        long result = 1;
+
+        for (int i = 0; i < string.length(); i++) {
+            result = prime * result + string.charAt(i);
+        }
+
+        return result;
+    }
+
+    public long hash() {
+        return hash;
     }
 
     @Override
     public int hashCode() {
-        return hashCode;
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((key == null) ? 0 : key.hashCode());
+        result = prime * result + tags.hashCode();
+        return result;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
+        }
 
-        if (obj == null)
+        if (obj == null) {
             return false;
+        }
 
-        if (Series.class != obj.getClass())
+        if (Series.class != obj.getClass()) {
             return false;
+        }
 
         final Series o = (Series) obj;
-        return hashCode == o.hashCode;
+
+        if (hash != o.hash) {
+            return false;
+        }
+
+        if (key == null) {
+            if (o.key != null) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if (o.key == null) {
+            return false;
+        }
+
+        if (!key.equals(o.key)) {
+            return false;
+        }
+
+        if (!tags.equals(o.tags)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    static final Series empty = new Series(null, EMPTY_TAGS);
+
+    public static Series empty() {
+        return empty;
+    }
+
+    public static Series of(String key) {
+        return new Series(key, EMPTY_TAGS);
+    }
+
+    public static Series of(String key, Map<String, String> tags) {
+        return of(key, tags.entrySet().iterator());
+    }
+
+    public static Series of(String key, Set<Map.Entry<String, String>> entries) {
+        return of(key, entries.iterator());
+    }
+
+    public static Series of(String key, Iterator<Map.Entry<String, String>> tagPairs) {
+        final ImmutableSortedMap.Builder<String, String> tags = ImmutableSortedMap.naturalOrder();
+
+        while (tagPairs.hasNext()) {
+            final Map.Entry<String, String> pair = tagPairs.next();
+            final String tk = checkNotNull(pair.getKey());
+            final String tv = checkNotNull(pair.getValue());
+            tags.put(tk, tv);
+        }
+
+        return new Series(key, tags.build());
+    }
+
+    public Iterator<Map.Entry<String, String>> getTagsIterator() {
+        return tags.entrySet().stream().map((e) -> (Map.Entry<String, String>) Pair.of(e.getKey(), e.getValue()))
+                .iterator();
     }
 }

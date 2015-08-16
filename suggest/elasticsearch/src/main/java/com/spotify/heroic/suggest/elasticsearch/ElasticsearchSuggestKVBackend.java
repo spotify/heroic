@@ -48,12 +48,9 @@ import java.util.concurrent.ExecutionException;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
-import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -68,12 +65,12 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Order;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
-import org.elasticsearch.search.aggregations.metrics.max.MaxBuilder;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
@@ -96,13 +93,12 @@ import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
@@ -111,10 +107,13 @@ import eu.toolchain.async.Transform;
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
 public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle, Grouped {
+    private static final String TAG_DELIMITER = "\0";
+    private static final String SERIES_TYPE = "series";
     private static final String TAG_TYPE = "tag";
     private static final String KEY = "key";
     private static final String TAG_KEYS = "tag_keys";
     private static final String TAGS = "tags";
+    private static final String SERIES_ID = "series_id";
 
     private static final String TAG_SKEY_RAW = "skey.raw";
     private static final String TAG_SKEY_PREFIX = "skey.prefix";
@@ -144,7 +143,7 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
      * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
      */
     @Inject
-    private RateLimitedCache<Pair<String, Series>, Boolean> writeCache;
+    private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
     private final Set<String> groups;
 
@@ -364,15 +363,13 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
 
                 // aggregation
                 {
-                    final MaxBuilder topHit = AggregationBuilders.max("topHit").script("_score");
                     final TopHitsBuilder hits = AggregationBuilders.topHits("hits").setSize(1)
                             .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
 
-                    final TermsBuilder kvs = AggregationBuilders.terms("kvs").field(TAG_KV)
-                            .size(filter.getLimit()).order(Order.aggregation("topHit", false)).subAggregation(hits)
-                            .subAggregation(topHit);
+                    final TermsBuilder terms = AggregationBuilders.terms("terms").field(TAG_KV).size(filter.getLimit())
+                            .subAggregation(hits);
 
-                    request.addAggregation(kvs);
+                    request.addAggregation(terms);
                 }
 
                 return bind(request.execute(), new Transform<SearchResponse, TagSuggest>() {
@@ -380,9 +377,15 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
                     public TagSuggest transform(SearchResponse response) throws Exception {
                         final Set<Suggestion> suggestions = new LinkedHashSet<>();
 
-                        final StringTerms kvs = (StringTerms) response.getAggregations().get("kvs");
+                        Aggregations aggregations = response.getAggregations();
 
-                        for (final Terms.Bucket bucket : kvs.getBuckets()) {
+                        if (aggregations == null) {
+                            return TagSuggest.empty();
+                        }
+
+                        final StringTerms terms = (StringTerms) aggregations.get("terms");
+
+                        for (final Terms.Bucket bucket : terms.getBuckets()) {
                             final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
                             final SearchHits hits = topHits.getHits();
                             final SearchHit hit = hits.getAt(0);
@@ -426,14 +429,13 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
 
                 // aggregation
                 {
-                    final MaxBuilder topHit = AggregationBuilders.max("top_hit").script("_score");
                     final TopHitsBuilder hits = AggregationBuilders.topHits("hits").setSize(1)
                             .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                    final TermsBuilder keys = AggregationBuilders.terms("keys").field(KEY).size(filter.getLimit())
-                            .order(Order.aggregation("top_hit", false)).subAggregation(hits).subAggregation(topHit);
+                    final TermsBuilder terms = AggregationBuilders.terms("terms").field(KEY).size(filter.getLimit())
+                            .subAggregation(hits);
 
-                    request.addAggregation(keys);
+                    request.addAggregation(terms);
                 }
 
                 return bind(request.execute(), new Transform<SearchResponse, KeySuggest>() {
@@ -441,9 +443,9 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
                     public KeySuggest transform(SearchResponse response) throws Exception {
                         final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
-                        final StringTerms keys = (StringTerms) response.getAggregations().get("keys");
+                        final StringTerms terms = (StringTerms) response.getAggregations().get("terms");
 
-                        for (final Terms.Bucket bucket : keys.getBuckets()) {
+                        for (final Terms.Bucket bucket : terms.getBuckets()) {
                             final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
                             final SearchHits hits = topHits.getHits();
                             suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
@@ -457,116 +459,74 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
     }
 
     @Override
-    public void writeDirect(Series s, DateRange range) throws Exception {
-        try (final Borrowed<Connection> b = connection.borrow()) {
-            final Connection c = b.get();
-
-            final String[] indices = c.writeIndices(range);
-
-            final String seriesId = Integer.toHexString(s.hashCode());
-
-            final BulkProcessor bulk = c.bulk();
-
-            for (final String index : indices) {
-                final XContentBuilder series = XContentFactory.jsonBuilder();
-
-                series.startObject();
-                buildContext(series, s);
-                series.endObject();
-
-                bulk.add(new IndexRequest(index, "series", seriesId).source(series)
-                        .opType(OpType.CREATE));
-
-                for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
-
-                    suggest.startObject();
-                    buildContext(suggest, s);
-                    buildTag(suggest, e);
-                    suggest.endObject();
-
-                    final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
-
-                    bulk.add(new IndexRequest(index, TAG_TYPE, suggestId).source(suggest)
-                            .opType(OpType.CREATE));
-                }
-            }
-        }
-    }
-
-    @Override
     public AsyncFuture<WriteResult> write(final Series s, final DateRange range) {
-        try (final Borrowed<Connection> b = connection.borrow()) {
-            if (!b.isValid())
-                return async.cancelled();
-
-            final Connection c = b.get();
-
-            final String[] indices;
-
-            try {
-                indices = c.writeIndices(range);
-            } catch (NoIndexSelectedException e) {
-                return async.failed(e);
-            }
-
-            final String seriesId = Integer.toHexString(s.hashCode());
-
-            final BulkProcessor bulk = c.bulk();
-
-            final List<Long> times = new ArrayList<>(indices.length);
-
-            for (final String index : indices) {
-                final StopWatch watch = new StopWatch();
-
-                watch.start();
-
-                final Pair<String, Series> key = Pair.of(index, s);
-
-                final Callable<Boolean> loader = new Callable<Boolean>() {
-                    @Override
-                    public Boolean call() throws Exception {
-                        final XContentBuilder series = XContentFactory.jsonBuilder();
-
-                        series.startObject();
-                        buildContext(series, s);
-                        series.endObject();
-
-                        bulk.add(new IndexRequest(index, "series", seriesId).source(series)
-                                .opType(OpType.CREATE));
-
-                        for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                            final XContentBuilder suggest = XContentFactory.jsonBuilder();
-
-                            suggest.startObject();
-                            buildContext(suggest, s);
-                            buildTag(suggest, e);
-                            suggest.endObject();
-
-                            final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
-
-                            bulk.add(new IndexRequest(index, TAG_TYPE, suggestId).source(suggest)
-                                    .opType(OpType.CREATE));
-                        }
-
-                        return true;
-                    }
-                };
+        return doto(new ManagedAction<Connection, WriteResult>() {
+            @Override
+            public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
+                final String[] indices;
 
                 try {
-                    writeCache.get(key, loader);
-                } catch (ExecutionException e) {
+                    indices = c.writeIndices(range);
+                } catch (NoIndexSelectedException e) {
                     return async.failed(e);
-                } catch (RateLimitExceededException e) {
-                    reporter.reportWriteDroppedByRateLimit();
                 }
 
-                watch.stop();
-                times.add(watch.getNanoTime());
-            }
+                final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
 
-            return async.resolved(WriteResult.of(times));
-        }
+                for (final String index : indices) {
+                    final Pair<String, Series> key = Pair.of(index, s);
+
+                    final Callable<AsyncFuture<WriteResult>> loader = new Callable<AsyncFuture<WriteResult>>() {
+                        @Override
+                        public AsyncFuture<WriteResult> call() throws Exception {
+                            final String seriesId = Long.toHexString(s.hash());
+
+                            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+
+                            final XContentBuilder series = XContentFactory.jsonBuilder();
+
+                            series.startObject();
+                            buildContext(series, s);
+                            series.endObject();
+
+                            final long start = System.nanoTime();
+
+                            writes.add(bind(
+                                    c.index(index, SERIES_TYPE).setId(seriesId).setSource(series)
+                                            .setOpType(OpType.CREATE)
+                                    .execute(), (response) -> WriteResult.of(System.nanoTime() - start)));
+
+                            for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
+                                final XContentBuilder suggest = XContentFactory.jsonBuilder();
+
+                                suggest.startObject();
+                                buildContext(suggest, s);
+                                buildTag(suggest, e);
+                                suggest.endObject();
+
+                                final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
+
+                                writes.add(bind(c.index(index, TAG_TYPE).setId(suggestId).setSource(suggest)
+                                                .setOpType(OpType.CREATE)
+                                        .execute(), (response) -> WriteResult.of(System.nanoTime() - start)));
+                            }
+
+                            return async.collect(writes, WriteResult.merger());
+                        }
+                    };
+
+                    try {
+                        writes.add(writeCache.get(key, loader));
+                    } catch (ExecutionException e) {
+                        return async.failed(e);
+                    } catch (RateLimitExceededException e) {
+                        reporter.reportWriteDroppedByRateLimit();
+                    }
+                }
+
+                return async.collect(writes, WriteResult.merger());
+            }
+        });
     }
 
     /**
@@ -603,13 +563,13 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
         return future;
     }
 
-    static void buildContext(final XContentBuilder b, Series series) throws IOException {
+    static void buildContext(final XContentBuilder b, final Series series) throws IOException {
         b.field(KEY, series.getKey());
 
         b.startArray(TAGS);
 
         for (final Map.Entry<String, String> entry : series.getTags().entrySet()) {
-            b.value(entry.getKey() + "\0" + entry.getValue());
+            b.value(entry.getKey() + TAG_DELIMITER + entry.getValue());
         }
 
         b.endArray();
@@ -621,12 +581,14 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
         }
 
         b.endArray();
+
+        b.field(SERIES_ID, series.hash());
     }
 
     static void buildTag(final XContentBuilder b, Entry<String, String> e) throws IOException {
         b.field(TAG_SKEY, e.getKey());
         b.field(TAG_SVAL, e.getValue());
-        b.field(TAG_KV, e.getKey() + "\0" + e.getValue());
+        b.field(TAG_KV, e.getKey() + TAG_DELIMITER + e.getValue());
     }
 
     public static FilterBuilder filter(final Filter filter) {

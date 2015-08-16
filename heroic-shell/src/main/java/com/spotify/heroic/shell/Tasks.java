@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.shell.task;
+package com.spotify.heroic.shell;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +49,6 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
-import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
@@ -174,7 +173,7 @@ public final class Tasks {
             // pass-through
         }
 
-        final Chronology chrono = ISOChronology.getInstance();
+        final Chronology chrono = ISOChronology.getInstanceUTC();
 
         if (input.indexOf('/') >= 0) {
             return parseFullInstant(input, chrono);
@@ -189,9 +188,9 @@ public final class Tasks {
         for (final DateTimeParser p : today) {
             final DateTimeParserBucket bucket = new DateTimeParserBucket(0, chrono, null, null);
 
-            bucket.saveField(chrono.year(), n.year().get());
-            bucket.saveField(chrono.monthOfYear(), n.monthOfYear().get());
-            bucket.saveField(chrono.dayOfYear(), n.dayOfYear().get());
+            bucket.saveField(chrono.year(), n.getYear());
+            bucket.saveField(chrono.monthOfYear(), n.getMonthOfYear());
+            bucket.saveField(chrono.dayOfYear(), n.getDayOfYear());
 
             try {
                 p.parseInto(bucket, input, 0);
@@ -221,6 +220,25 @@ public final class Tasks {
         }
 
         throw new IllegalArgumentException(input + " is not a valid instant");
+    }
+
+    public static String formatTimeNanos(long diff) {
+        if (diff < 1000) {
+            return String.format("%d ns", diff);
+        }
+
+        if (diff < 1000000) {
+            final double v = ((double) diff) / 1000;
+            return String.format("%.3f us", v);
+        }
+
+        if (diff < 1000000000) {
+            final double v = ((double) diff) / 1000000;
+            return String.format("%.3f ms", v);
+        }
+
+        final double v = ((double) diff) / 1000000000;
+        return String.format("%.3f s", v);
     }
 
     public static interface QueryParams {

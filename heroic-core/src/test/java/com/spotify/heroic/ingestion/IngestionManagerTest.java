@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Matchers;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -107,17 +108,15 @@ public class IngestionManagerTest {
     public void testDoWriteAll() throws BackendGroupException {
         final IngestionManagerImpl manager = setupIngestionManager(true, true, true);
 
-        final Collector<WriteResult, WriteResult> collector = (Collector<WriteResult, WriteResult>) any(Collector.class);
-
         doReturn(future).when(manager).doMetricWrite(write, metric);
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
-        doReturn(future).when(async).collect(anyCollection(), collector);
+        doReturn(future).when(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));
 
         assertEquals(future, manager.doWrite(group, write));
 
         verify(manager).doMetricWrite(write, metric);
         verify(manager).doMetadataWrite(write, metadata, suggest);
-        verify(async).collect(anyCollection(), collector);
+        verify(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -125,16 +124,14 @@ public class IngestionManagerTest {
     public void testDoWriteNone() throws BackendGroupException {
         final IngestionManagerImpl manager = setupIngestionManager(false, false, false);
 
-        final Collector<WriteResult, WriteResult> collector = (Collector<WriteResult, WriteResult>) any(Collector.class);
-
         doReturn(future).when(manager).doMetricWrite(write, metric);
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
-        doReturn(future).when(async).collect(anyCollection(), collector);
+        doReturn(future).when(async).collect(anyCollection(), Matchers.<Collector>any(Collector.class));
 
         assertEquals(future, manager.doWrite(group, write));
 
         verify(manager, never()).doMetricWrite(write, metric);
         verify(manager, never()).doMetadataWrite(write, metadata, suggest);
-        verify(async).collect(anyCollection(), collector);
+        verify(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));
     }
 }

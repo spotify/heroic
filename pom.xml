@@ -45,7 +45,7 @@
     <jackson.version>2.5.1</jackson.version>
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.2.2.v20140723</jetty.version>
-    <lucene.version>4.10.3</lucene.version>
+    <lucene.version>4.10.4</lucene.version>
     <astyanax.version>2.0.2</astyanax.version>
     <datastax.version>2.1.4</datastax.version>
     <guice.version>3.0</guice.version>
@@ -56,6 +56,7 @@
     <microrpc.version>1.0.1</microrpc.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
+    <elasticsearch.version>1.7.1</elasticsearch.version>
   </properties>
 
   <dependencyManagement>
@@ -443,7 +444,7 @@
       <dependency>
         <groupId>org.elasticsearch</groupId>
         <artifactId>elasticsearch</artifactId>
-        <version>1.4.4</version>
+        <version>${elasticsearch.version}</version>
       </dependency>
       <!--  used by com.spotify.heroic.metadata.lucene -->
       <dependency>

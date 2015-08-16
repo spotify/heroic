@@ -161,8 +161,11 @@ public class DateRange implements Comparable<DateRange> {
         return new DateRange(start, end);
     }
 
-    public static DateRange now() {
-        final long now = System.currentTimeMillis();
+    public static DateRange now(long now) {
         return new DateRange(now, now);
+    }
+
+    public static DateRange now() {
+        return now(System.currentTimeMillis());
     }
 }

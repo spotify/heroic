@@ -31,6 +31,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.google.common.base.Function;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.EmptyAggregation;
@@ -40,10 +41,8 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.FromDSL;
-import com.spotify.heroic.grammar.GroupByDSL;
 import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.grammar.QuerySource;
 import com.spotify.heroic.grammar.SelectDSL;
 import com.spotify.heroic.metric.MetricType;
 
@@ -54,7 +53,6 @@ public class QueryBuilder {
     private final FilterFactory filters;
     private final QueryParser parser;
 
-    private String backendGroup;
     private String key;
     private Map<String, String> tags;
     private Filter filter;
@@ -112,14 +110,6 @@ public class QueryBuilder {
     }
 
     /**
-     * Specify a backend group to use.
-     */
-    public QueryBuilder backendGroup(String backendGroup) {
-        this.backendGroup = backendGroup;
-        return this;
-    }
-
-    /**
      * Specify a filter to use.
      */
     public QueryBuilder filter(Filter filter) {
@@ -155,20 +145,35 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        if (queryString != null)
-            return parseQuery(queryString);
+        if (queryString != null) {
+            return parseQueryString(queryString);
+        }
 
-        if (range == null)
+        if (range == null) {
             throw new NullPointerException("range must not be null");
+        }
 
-        final DateRange range = roundedRange(this.aggregation, this.range);
-
+        final Aggregation aggregation = legacyAggregation();
+        final DateRange range = roundedRange(aggregation, this.range);
         final Filter filter = legacyFilter();
 
-        if (filter instanceof Filter.True)
+        if (filter instanceof Filter.True) {
             throw new IllegalArgumentException("a valid filter must be defined, not: true");
+        }
 
-        return new Query(backendGroup, filter, groupBy, range, aggregation, disableCache, source);
+        return new Query(filter, range, aggregation, disableCache, source);
+    }
+
+    Aggregation legacyAggregation() {
+        return legacyAggregation(aggregation, groupBy);
+    }
+
+    Aggregation legacyAggregation(Aggregation aggregation, List<String> groupBy) {
+        if (groupBy == null) {
+            return aggregation;
+        }
+
+        return new GroupAggregation(groupBy, aggregation);
     }
 
     /**
@@ -177,7 +182,7 @@ public class QueryBuilder {
      * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be expressed as filter
      * objects.
      */
-    private Filter legacyFilter() {
+    Filter legacyFilter() {
         final List<Filter> statements = new ArrayList<>();
 
         if (tags != null && !tags.isEmpty()) {
@@ -186,62 +191,68 @@ public class QueryBuilder {
             }
         }
 
-        if (key != null)
+        if (key != null) {
             statements.add(filters.matchKey(key));
+        }
 
-        if (filter != null)
+        if (filter != null) {
             statements.add(filter);
+        }
 
-        if (statements.size() == 0)
-            return null;
+        if (statements.isEmpty()) {
+            return filters.t();
+        }
 
-        if (statements.size() == 1)
-            return statements.get(0);
+        if (statements.size() == 1) {
+            return statements.get(0).optimize();
+        }
 
         return filters.and(statements).optimize();
     }
 
-    private Query parseQuery(String query) {
+    Query parseQueryString(String query) {
         final QueryDSL q = parser.parseQuery(query);
-
         final FromDSL from = q.getSource();
         final SelectDSL select = q.getSelect();
-        final Filter filter = q.getWhere();
-        final GroupByDSL groupBy = q.getGroupBy();
+        final Filter filter = q.getWhere().or(filters::t);
 
-        final MetricType source = convertQuerySource(from);
-        final Aggregation aggregation = convertQueryAggregation(select);
-        final DateRange range = roundedRange(aggregation, from.getRange());
-        final List<String> group = groupBy == null ? null : groupBy.getGroupBy();
+        final MetricType source = convertSource(from);
 
-        return new Query(null, filter, group, range, aggregation, true, source);
+        final Aggregation aggregation = legacyAggregation(select.getAggregation().transform(customAggregation(select))
+                .or(EmptyAggregation.INSTANCE), q.getGroupBy().transform((g) -> g.getGroupBy()).orNull());
+
+        final DateRange range = roundedRange(aggregation, from.getRange().or(this::getRange));
+
+        return new Query(filter, range, aggregation, true, source);
     }
 
-    private MetricType convertQuerySource(final FromDSL s) {
-        if (s.getSource() == null)
-            throw new IllegalArgumentException("source must be defined");
-
-        if (s.getSource() == QuerySource.EVENTS)
-            return MetricType.EVENT;
-
-        if (s.getSource() == QuerySource.SERIES)
-            return MetricType.POINT;
-
-        throw new IllegalArgumentException("invalid source: " + s.getSource());
-    }
-
-    private Aggregation convertQueryAggregation(final SelectDSL select) {
-        if (select.getAggregation() == null)
-            return EmptyAggregation.INSTANCE;
-
-        final AggregationValue a = select.getAggregation();
-
-        try {
-            return aggregations.build(a.getName(), a.getArguments(), a.getKeywordArguments());
-        } catch (final Exception e) {
-            log.error("Failed to build aggregation", e);
-            throw select.getContext().error(e);
+    DateRange getRange() {
+        if (range == null) {
+            throw new IllegalStateException("No range configured");
         }
+
+        return range;
+    }
+
+    MetricType convertSource(final FromDSL s) {
+        final MetricType type = MetricType.fromIdentifier(s.getSource());
+
+        if (type == null) {
+            throw s.getContext().error("Invalid source: " + s.getSource());
+        }
+
+        return type;
+    }
+
+    Function<AggregationValue, Aggregation> customAggregation(final SelectDSL select) {
+        return (a) -> {
+            try {
+                return aggregations.build(a.getName(), a.getArguments(), a.getKeywordArguments());
+            } catch (final Exception e) {
+                log.error("Failed to build aggregation", e);
+                throw select.getContext().error(e);
+            }
+        };
     }
 
     /**
@@ -251,7 +262,7 @@ public class QueryBuilder {
      * @param query
      * @return
      */
-    private DateRange roundedRange(Aggregation aggregation, DateRange range) {
+    DateRange roundedRange(Aggregation aggregation, DateRange range) {
         if (aggregation == null)
             return range;
 

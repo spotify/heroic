@@ -31,7 +31,6 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.spotify.heroic.metric.Point;
 
 public class PointSerialization {
     public static class Deserializer extends JsonDeserializer<Point> {
@@ -39,36 +38,33 @@ public class PointSerialization {
         public Point deserialize(JsonParser p, DeserializationContext c) throws IOException,
                 JsonProcessingException {
 
-            if (p.getCurrentToken() != JsonToken.START_ARRAY)
-                throw c.mappingException("Expected start of array");
+            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
+                throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
+            }
 
-            final Long timestamp;
+            final long timestamp;
 
             {
-                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
-                    throw c.mappingException("Expected number (timestamp)");
+                if (!p.nextToken().isNumeric()) {
+                    throw c.mappingException(String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
+                }
 
-                timestamp = p.readValueAs(Long.class);
+                timestamp = p.getLongValue();
             }
 
-            final Double value;
+            final double value;
 
-            switch (p.nextToken()) {
-            case VALUE_NUMBER_FLOAT:
-                value = p.readValueAs(Double.class);
-                break;
-            case VALUE_NUMBER_INT:
-                value = p.readValueAs(Long.class).doubleValue();
-                break;
-            case VALUE_NULL:
-                value = Double.NaN;
-                break;
-            default:
-                throw c.mappingException("Expected float (value)");
+            {
+                if (!p.nextToken().isNumeric()) {
+                    throw c.mappingException(String.format("Expected value (number), not %s", p.getCurrentToken()));
+                }
+
+                value = p.getDoubleValue();
             }
 
-            if (p.nextToken() != JsonToken.END_ARRAY)
-                throw c.mappingException("Expected end of array");
+            if (p.nextToken() != JsonToken.END_ARRAY) {
+                throw c.mappingException(String.format("Expected end of array, not %s", p.getCurrentToken()));
+            }
 
             return new Point(timestamp, value);
         }
@@ -83,10 +79,10 @@ public class PointSerialization {
 
             final double value = d.getValue();
 
-            if (Double.isNaN(value)) {
-                g.writeNull();
-            } else {
+            if (Double.isFinite(value)) {
                 g.writeNumber(value);
+            } else {
+                g.writeNull();
             }
 
             g.writeEndArray();

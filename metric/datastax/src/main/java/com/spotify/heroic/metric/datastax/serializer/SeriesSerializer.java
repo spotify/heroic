@@ -65,6 +65,6 @@ public class SeriesSerializer implements CustomSerializer<Series> {
         final CompositeStream reader = new CompositeStream(buffer);
         final String key = reader.next(this.key);
         final Map<String, String> tags = reader.next(this.tags);
-        return new Series(key, tags);
+        return Series.of(key, tags);
     }
 }

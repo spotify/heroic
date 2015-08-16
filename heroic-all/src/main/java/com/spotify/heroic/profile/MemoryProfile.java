@@ -37,6 +37,9 @@ import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
+import com.spotify.heroic.suggest.SuggestManagerModule;
+import com.spotify.heroic.suggest.SuggestModule;
+import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 public class MemoryProfile implements HeroicProfile {
     @Override
@@ -64,12 +67,31 @@ public class MemoryProfile implements HeroicProfile {
                             .connection(
                                 ManagedConnectionFactory.builder()
                                 .clientSetup(
-                                    StandaloneClientSetup.builder()
-                                    .build()
+                                    StandaloneClientSetup.builder().build()
                                 )
                                 .index(
                                     RotatingIndexMapping.builder()
                                     .pattern("heroic-metadata-v1-%s")
+                                    .build()
+                                )
+                                .build()
+                            )
+                            .build()
+                    ))
+                    .build()
+            )
+            .suggest(
+                SuggestManagerModule.builder()
+                    .backends(ImmutableList.<SuggestModule>of(
+                        ElasticsearchSuggestModule.builder()
+                            .connection(
+                                ManagedConnectionFactory.builder()
+                                .clientSetup(
+                                    StandaloneClientSetup.builder().build()
+                                )
+                                .index(
+                                    RotatingIndexMapping.builder()
+                                    .pattern("heroic-suggest-v1-%s")
                                     .build()
                                 )
                                 .build()

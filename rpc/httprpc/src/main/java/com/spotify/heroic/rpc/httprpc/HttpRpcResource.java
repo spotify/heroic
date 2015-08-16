@@ -121,7 +121,7 @@ public class HttpRpcResource {
         final RpcQuery query = grouped.getQuery();
         httpAsync.bind(
                 response,
-                metrics.useGroup(grouped.getGroup()).query(query.getSource(), query.getFilter(), query.getGroupBy(),
+                metrics.useGroup(grouped.getGroup()).query(query.getSource(), query.getFilter(),
                         query.getRange(), query.getAggregation(), query.isNoCache()));
     }
 
@@ -257,9 +257,9 @@ public class HttpRpcResource {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-                    List<String> groupBy, DateRange range, Aggregation aggregation, boolean disableCache) {
-                return post(new RpcQuery(source, filter, groupBy, range, aggregation, disableCache),
+            public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
+                    Aggregation aggregation, boolean disableCache) {
+                return post(new RpcQuery(source, filter, range, aggregation, disableCache),
                         ResultGroups.class, METRICS_QUERY);
             }
 
@@ -336,22 +336,19 @@ public class HttpRpcResource {
     public static class RpcQuery {
         private final MetricType source;
         private final Filter filter;
-        private final List<String> groupBy;
         private final DateRange range;
         private final Aggregation aggregation;
         private final boolean noCache;
 
         @JsonCreator
-        public RpcQuery(@JsonProperty("source") MetricType source,
-                @JsonProperty("filter") Filter filter, @JsonProperty("groupBy") List<String> groupBy,
+        public RpcQuery(@JsonProperty("source") MetricType source, @JsonProperty("filter") Filter filter,
                 @JsonProperty("range") DateRange range, @JsonProperty("aggregation") Aggregation aggregation,
                 @JsonProperty("noCache") Boolean noCache) {
-            this.source = checkNotNull(source, "source must not be null");
-            this.filter = filter;
-            this.groupBy = groupBy;
-            this.range = checkNotNull(range, "range must not be null");
-            this.aggregation = aggregation;
-            this.noCache = checkNotNull(noCache, "noCache must not be null");
+            this.source = checkNotNull(source, "source");
+            this.filter = checkNotNull(filter, "filter");
+            this.range = checkNotNull(range, "range");
+            this.aggregation = checkNotNull(aggregation, "aggregation");
+            this.noCache = checkNotNull(noCache, "noCache");
         }
     }
 

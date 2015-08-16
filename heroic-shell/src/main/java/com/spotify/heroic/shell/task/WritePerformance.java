@@ -286,7 +286,7 @@ public class WritePerformance extends AbstractShellTask {
         final List<Series> series = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            series.add(new Series("generated",
+            series.add(Series.of("generated",
                     ImmutableMap.of("type", "generated", "generated-id", Integer.toString(i))));
         }
 
