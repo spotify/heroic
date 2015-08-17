@@ -51,18 +51,20 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Perform performance testing")
-public class WritePerformance extends AbstractShellTask {
+@TaskUsage("Perform performance testing")
+@TaskName("write-performance")
+public class WritePerformance implements ShellTask {
     @Inject
     private MetricManager metrics;
 
@@ -74,12 +76,12 @@ public class WritePerformance extends AbstractShellTask {
     private AsyncFramework async;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final Date now = new Date();

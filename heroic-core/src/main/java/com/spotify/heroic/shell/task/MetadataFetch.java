@@ -40,16 +40,18 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Fetch series matching the given query")
-public class MetadataFetch extends AbstractShellTask {
+@TaskUsage("Fetch series matching the given query")
+@TaskName("metadata-fetch")
+public class MetadataFetch implements ShellTask {
     @Inject
     private MetadataManager metadata;
 
@@ -64,12 +66,12 @@ public class MetadataFetch extends AbstractShellTask {
     private ObjectMapper mapper;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);

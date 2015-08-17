@@ -6,7 +6,7 @@ import eu.toolchain.async.AsyncFuture;
 
 
 public interface ShellTask {
-    public ShellTaskParams params();
+    public TaskParameters params();
 
-    public AsyncFuture<Void> run(PrintWriter out, ShellTaskParams params) throws Exception;
+    public AsyncFuture<Void> run(PrintWriter out, TaskParameters params) throws Exception;
 }

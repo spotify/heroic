@@ -147,7 +147,7 @@ import eu.toolchain.serializer.TinySerializer;
  * @author udoprog
  */
 @Slf4j
-public class HeroicCore {
+public class HeroicCore implements HeroicCoreInjector {
     static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
     static final List<HeroicConfigurator> DEFAULT_CONFIGURATORS = ImmutableList.of();
     static final boolean DEFAULT_SERVER = true;
@@ -249,6 +249,8 @@ public class HeroicCore {
             configurator.setup(primary);
         }
 
+        this.primary.set(primary);
+
         try {
             startLifeCycles(primary);
         } catch (Exception e) {
@@ -279,8 +281,6 @@ public class HeroicCore {
             }
         });
 
-        this.primary.set(primary);
-
         lifecycle.start();
         log.info("Heroic was successfully started!");
     }
@@ -290,11 +290,12 @@ public class HeroicCore {
      *
      * @param injectee Object to inject fields on.
      */
+    @Override
     public <T> T inject(T injectee) {
         final Injector primary = this.primary.get();
 
         if (primary == null) {
-            throw new IllegalStateException("heroic has not started");
+            throw new IllegalStateException("primary injector not available");
         }
 
         primary.injectMembers(injectee);
@@ -520,6 +521,12 @@ public class HeroicCore {
         modules.add(new AbstractModule() {
             @Provides
             @Singleton
+            public HeroicCore core() {
+                return HeroicCore.this;
+            }
+
+            @Provides
+            @Singleton
             public Set<LifeCycle> lifecycles() {
                 return lifecycles;
             }
@@ -595,7 +602,7 @@ public class HeroicCore {
         modules.add(config.getIngestion());
 
         // shell server module
-        // modules.add(config.getShellServer());
+        modules.add(config.getShellServer());
 
         modules.add(new AbstractModule() {
             @Override

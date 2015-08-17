@@ -1,7 +1,7 @@
 package com.spotify.heroic.shell;
 
 
-public interface ShellTaskParams {
+public interface TaskParameters {
     public String config();
 
     public boolean help();

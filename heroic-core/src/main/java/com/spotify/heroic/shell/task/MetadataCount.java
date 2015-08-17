@@ -37,16 +37,18 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Count how much metadata matches a given query")
-public class MetadataCount extends AbstractShellTask {
+@TaskUsage("Count how much metadata matches a given query")
+@TaskName("metadata-count")
+public class MetadataCount implements ShellTask {
     @Inject
     private MetadataManager metadata;
 
@@ -57,12 +59,12 @@ public class MetadataCount extends AbstractShellTask {
     private FilterFactory filters;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         // final Filter filter = Tasks.setupFilter(filters, parser, params);

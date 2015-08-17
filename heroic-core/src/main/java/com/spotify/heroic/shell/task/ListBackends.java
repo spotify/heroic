@@ -34,17 +34,19 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
-@ShellTaskUsage("List available backend groups")
-public class ListBackends extends AbstractShellTask {
+@TaskUsage("List available backend groups")
+@TaskName("backends")
+public class ListBackends implements ShellTask {
     @Inject
     private MetricManager metrics;
 
@@ -62,12 +64,12 @@ public class ListBackends extends AbstractShellTask {
     private AsyncFramework async;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         printBackends(out, "metric", metrics.use(params.group));

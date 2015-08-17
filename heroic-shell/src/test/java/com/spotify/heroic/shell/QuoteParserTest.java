@@ -1,11 +1,15 @@
 package com.spotify.heroic.shell;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+
 public class QuoteParserTest {
     private void test(final Case c) throws QuoteParserException {
-        Assert.assertArrayEquals(c.expected, QuoteParser.parse(c.input));
+        Assert.assertEquals(c.expected, QuoteParser.parse(c.input));
     }
 
     @Test
@@ -24,15 +28,15 @@ public class QuoteParserTest {
 
     private static class Case {
         private final String input;
-        private final String[] expected;
+        private final List<String> expected;
 
-        private Case(String input, String[] expected) {
+        private Case(String input, List<String> expected) {
             this.input = input;
             this.expected = expected;
         }
 
         public static Case of(String input, String... expected) {
-            return new Case(input, expected);
+            return new Case(input, ImmutableList.copyOf(expected));
         }
     }
 }

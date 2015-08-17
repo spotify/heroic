@@ -39,16 +39,18 @@ import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardedResultGroup;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Execute a query")
-public class Query extends AbstractShellTask {
+@TaskUsage("Execute a query")
+@TaskName("query")
+public class Query implements ShellTask {
     @Inject
     private QueryManager query;
 
@@ -57,12 +59,12 @@ public class Query extends AbstractShellTask {
     private ObjectMapper mapper;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final String queryString = params.query.stream().collect(Collectors.joining(" "));

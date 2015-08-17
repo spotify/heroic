@@ -1,15 +1,11 @@
 dependency-reduced-pom.xml
 target
 *.log
-.*.un~
 *~
-.*.swp
 *.pyc
-.classpath
-.project
-.settings
 bin
 /*.json
 /*.png
 /*.log
 /*.gz
+.*

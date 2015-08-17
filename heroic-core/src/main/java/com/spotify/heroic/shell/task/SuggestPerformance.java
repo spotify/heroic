@@ -39,11 +39,12 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
-import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskElasticsearchParameters;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -53,8 +54,9 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
 @Slf4j
-@ShellTaskUsage("Execute a set of suggest performance tests")
-public class SuggestPerformance extends AbstractShellTask {
+@TaskUsage("Execute a set of suggest performance tests")
+@TaskName("suggest-performance")
+public class SuggestPerformance implements ShellTask {
     @Inject
     private SuggestManager suggest;
 
@@ -69,12 +71,12 @@ public class SuggestPerformance extends AbstractShellTask {
     private AsyncFramework async;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final SuggestBackend s = suggest.useGroup(params.group);
@@ -225,7 +227,7 @@ public class SuggestPerformance extends AbstractShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams implements Tasks.ElasticSearchParams {
+    private static class Parameters extends AbstractShellTaskParams implements TaskElasticsearchParameters {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
 

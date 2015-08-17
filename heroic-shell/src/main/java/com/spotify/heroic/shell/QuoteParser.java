@@ -27,6 +27,8 @@ import java.util.Map;
 
 import jersey.repackaged.com.google.common.collect.ImmutableMap;
 
+import com.google.common.collect.ImmutableList;
+
 public class QuoteParser {
     private static final char DOUBLE_QUOTE = '"';
     private static final char SINGLE_QUOTE = '\'';
@@ -43,7 +45,7 @@ public class QuoteParser {
             .build();
     // @formatter:on
 
-    public static String[] parse(String input) throws QuoteParserException {
+    public static List<String> parse(String input) throws QuoteParserException {
         boolean openSingle = false;
         boolean openDouble = false;
         boolean escapeNext = false;
@@ -141,7 +143,7 @@ public class QuoteParser {
         if (buffer.length() > 0)
             parts.add(buffer.toString());
 
-        return parts.toArray(new String[0]);
+        return ImmutableList.copyOf(parts);
     }
 
     private static char parseUnicodeChar(char[] unicode, int pos) throws QuoteParserException {

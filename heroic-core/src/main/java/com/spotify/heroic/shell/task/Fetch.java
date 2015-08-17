@@ -43,17 +43,19 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Fetch a range of data points")
-public class Fetch extends AbstractShellTask {
+@TaskUsage("Fetch a range of data points")
+@TaskName("fetch")
+public class Fetch implements ShellTask {
     @Inject
     private MetricManager metrics;
 
@@ -62,12 +64,12 @@ public class Fetch extends AbstractShellTask {
     private ObjectMapper mapper;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
         final long now = System.currentTimeMillis();
 

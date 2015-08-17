@@ -39,9 +39,10 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFramework;
@@ -49,8 +50,9 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Delete metadata matching the given query")
-public class MetadataDelete extends AbstractShellTask {
+@TaskUsage("Delete metadata matching the given query")
+@TaskName("metadata-delete")
+public class MetadataDelete implements ShellTask {
     @Inject
     private AsyncFramework async;
 
@@ -64,12 +66,12 @@ public class MetadataDelete extends AbstractShellTask {
     private FilterFactory filters;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);

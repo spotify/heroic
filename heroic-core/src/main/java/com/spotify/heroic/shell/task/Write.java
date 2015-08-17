@@ -49,10 +49,11 @@ import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -61,8 +62,9 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Write a single, or a set of events")
-public class Write extends AbstractShellTask {
+@TaskUsage("Write a single, or a set of events")
+@TaskName("write")
+public class Write implements ShellTask {
     private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE = new TypeReference<Map<String, Object>>() {
     };
 
@@ -83,12 +85,12 @@ public class Write extends AbstractShellTask {
     private ObjectMapper json;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final Series series;

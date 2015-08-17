@@ -1,5 +1,6 @@
 package com.spotify.heroic.metric.bigtable;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -32,8 +33,8 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.bigtable.api.BigtableCell;
@@ -370,9 +371,10 @@ public class BigtableBackend implements MetricBackend, LifeCycle {
     }
 
     static <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
-        final OutputStreamSerialWriter writer = new OutputStreamSerialWriter();
+        final ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
+        final OutputStreamSerialWriter writer = new OutputStreamSerialWriter(byteArray);
         serializer.serialize(writer, rowKey);
-        return ByteString.copyFrom(writer.toByteArray());
+        return ByteString.copyFrom(byteArray.toByteArray());
     }
 
     static long base(long timestamp) {

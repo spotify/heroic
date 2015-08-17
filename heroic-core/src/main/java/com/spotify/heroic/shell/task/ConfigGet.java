@@ -36,16 +36,18 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskParams;
-import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
-@ShellTaskUsage("Load metadata from a file")
-public class ConfigGet extends AbstractShellTask {
+@TaskUsage("Load metadata from a file")
+@TaskName("get")
+public class ConfigGet implements ShellTask {
     @Inject
     private HeroicConfig config;
 
@@ -57,12 +59,12 @@ public class ConfigGet extends AbstractShellTask {
     private AsyncFramework async;
 
     @Override
-    public ShellTaskParams params() {
+    public TaskParameters params() {
         return new Parameters();
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
         final ObjectMapper m = mapper.copy();
         m.enable(SerializationFeature.INDENT_OUTPUT);

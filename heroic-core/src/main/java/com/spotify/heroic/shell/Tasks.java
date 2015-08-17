@@ -21,7 +21,10 @@
 
 package com.spotify.heroic.shell;
 
+import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -33,14 +36,193 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
 
+import com.spotify.heroic.HeroicCoreInjector;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.shell.task.ConfigGet;
+import com.spotify.heroic.shell.task.Configure;
+import com.spotify.heroic.shell.task.Fetch;
+import com.spotify.heroic.shell.task.Keys;
+import com.spotify.heroic.shell.task.ListBackends;
+import com.spotify.heroic.shell.task.MetadataCount;
+import com.spotify.heroic.shell.task.MetadataDelete;
+import com.spotify.heroic.shell.task.MetadataEntries;
+import com.spotify.heroic.shell.task.MetadataFetch;
+import com.spotify.heroic.shell.task.MetadataLoad;
+import com.spotify.heroic.shell.task.MetadataMigrate;
+import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
+import com.spotify.heroic.shell.task.MetadataTags;
+import com.spotify.heroic.shell.task.Query;
+import com.spotify.heroic.shell.task.SuggestKey;
+import com.spotify.heroic.shell.task.SuggestPerformance;
+import com.spotify.heroic.shell.task.SuggestTag;
+import com.spotify.heroic.shell.task.SuggestTagKeyCount;
+import com.spotify.heroic.shell.task.SuggestTagValue;
+import com.spotify.heroic.shell.task.SuggestTagValues;
+import com.spotify.heroic.shell.task.Write;
+import com.spotify.heroic.shell.task.WritePerformance;
+
+import eu.toolchain.async.AsyncFuture;
 
 public final class Tasks {
-    public static Filter setupFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
+    static final List<CoreTaskDefinition> available = new ArrayList<>();
+
+    static {
+        available.add(shellTask(Configure.class));
+        available.add(shellTask(ConfigGet.class));
+        available.add(shellTask(Keys.class));
+        available.add(shellTask(ListBackends.class));
+        available.add(shellTask(Fetch.class));
+        available.add(shellTask(Write.class));
+        available.add(shellTask(WritePerformance.class));
+        available.add(shellTask(MetadataDelete.class));
+        available.add(shellTask(MetadataFetch.class));
+        available.add(shellTask(MetadataTags.class));
+        available.add(shellTask(MetadataCount.class));
+        available.add(shellTask(MetadataEntries.class));
+        available.add(shellTask(MetadataMigrate.class));
+        available.add(shellTask(MetadataMigrateSuggestions.class));
+        available.add(shellTask(MetadataLoad.class));
+        available.add(shellTask(SuggestTag.class));
+        available.add(shellTask(SuggestKey.class));
+        available.add(shellTask(SuggestTagValue.class));
+        available.add(shellTask(SuggestTagValues.class));
+        available.add(shellTask(SuggestTagKeyCount.class));
+        available.add(shellTask(SuggestPerformance.class));
+        available.add(shellTask(Query.class));
+    }
+
+    public static Collection<CoreTaskDefinition> available() {
+        return available;
+    }
+
+    static CoreTaskDefinition shellTask(final Class<? extends ShellTask> task) {
+        final String usage = taskUsage(task);
+
+        final String name = name(task);
+        final List<String> names = allNames(task);
+        final List<String> aliases = aliases(task);
+
+        return new CoreTaskDefinition() {
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public List<String> names() {
+                return names;
+            }
+
+            @Override
+            public List<String> aliases() {
+                return aliases;
+            }
+
+            @Override
+            public String usage() {
+                return usage;
+            }
+
+            @Override
+            public CoreShellTaskDefinition setup(final HeroicCoreInjector core) throws Exception {
+                final ShellTask instance = core.inject(newInstance(task));
+
+                return new CoreShellTaskDefinition() {
+                    @Override
+                    public TaskDefinition setup(ShellInterface shell, TaskContext ctx) {
+                        return new TaskDefinition() {
+                            @Override
+                            public TaskParameters params() {
+                                return instance.params();
+                            }
+
+                            @Override
+                            public AsyncFuture<Void> run(PrintWriter out, TaskParameters params) throws Exception {
+                                return instance.run(out, params);
+                            }
+                        };
+                    }
+                };
+            };
+        };
+    }
+
+    public static String taskUsage(final Class<? extends ShellTask> task) {
+        final TaskUsage u = task.getAnnotation(TaskUsage.class);
+
+        if (u != null) {
+            return u.value();
+        }
+
+        return String.format("<no @ShellTaskUsage annotation for %s>", task.getCanonicalName());
+    }
+
+    public static String name(final Class<? extends ShellTask> task) {
+        final TaskName n = task.getAnnotation(TaskName.class);
+
+        if (n != null) {
+            return n.value();
+        }
+
+        throw new IllegalStateException(String.format("No name configured with @TaskName on %s",
+                task.getCanonicalName()));
+    }
+
+    public static List<String> allNames(final Class<? extends ShellTask> task) {
+        final TaskName n = task.getAnnotation(TaskName.class);
+        final List<String> names = new ArrayList<>();
+
+        if (n != null) {
+            names.add(n.value());
+
+            for (final String alias : n.aliases()) {
+                names.add(alias);
+            }
+        }
+
+        if (names.isEmpty()) {
+            throw new IllegalStateException(String.format("No name configured with @TaskName on %s",
+                    task.getCanonicalName()));
+        }
+
+        return names;
+    }
+
+    public static List<String> aliases(final Class<? extends ShellTask> task) {
+        final TaskName n = task.getAnnotation(TaskName.class);
+        final List<String> names = new ArrayList<>();
+
+        if (n != null) {
+            for (final String alias : n.aliases()) {
+                names.add(alias);
+            }
+        }
+
+        return names;
+    }
+
+    public static ShellTask newInstance(Class<? extends ShellTask> taskType) throws Exception {
+        final Constructor<? extends ShellTask> constructor;
+
+        try {
+            constructor = taskType.getConstructor();
+        } catch (ReflectiveOperationException e) {
+            throw new Exception("Task '" + taskType.getCanonicalName()
+                    + "' does not have an accessible, empty constructor", e);
+        }
+
+        try {
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new Exception("Failed to invoke constructor of '" + taskType.getCanonicalName(), e);
+        }
+    }
+
+    public static Filter setupFilter(FilterFactory filters, QueryParser parser, TaskQueryParameters params) {
         final List<String> query = params.getQuery();
 
         if (query.isEmpty())
@@ -49,7 +231,7 @@ public final class Tasks {
         return parser.parseFilter(StringUtils.join(query, " "));
     }
 
-    public abstract static class QueryParamsBase extends AbstractShellTaskParams implements QueryParams {
+    public abstract static class QueryParamsBase extends AbstractShellTaskParams implements TaskQueryParameters {
         private final DateRange defaultDateRange;
 
         public QueryParamsBase() {
@@ -64,7 +246,7 @@ public final class Tasks {
         }
     }
 
-    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
+    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, TaskQueryParameters params) {
         final Filter filter = setupFilter(filters, parser, params);
         return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
@@ -163,21 +345,5 @@ public final class Tasks {
 
         final double v = ((double) diff) / 1000000000;
         return String.format("%.3f s", v);
-    }
-
-    public static interface QueryParams {
-        public List<String> getQuery();
-
-        public DateRange getRange();
-
-        public int getLimit();
-    }
-
-    public static interface ElasticSearchParams {
-        public String getSeeds();
-
-        public String getClusterName();
-
-        public String getBackendType();
     }
 }

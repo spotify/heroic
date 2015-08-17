@@ -3,7 +3,7 @@ package com.spotify.heroic.shell;
 import org.kohsuke.args4j.Option;
 
 
-public abstract class AbstractShellTaskParams implements ShellTaskParams {
+public abstract class AbstractShellTaskParams implements TaskParameters {
     @Option(name = "-c", aliases = { "--config" }, usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
     public String config;
 
