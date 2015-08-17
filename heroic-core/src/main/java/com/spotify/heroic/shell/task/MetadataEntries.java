@@ -31,42 +31,32 @@ import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataEntry;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
-import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
 @ShellTaskUsage("Fetch series matching the given query")
-public class SuggestKey extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, SuggestKey.class);
-    }
-
+public class MetadataEntries extends AbstractShellTask {
     @Inject
-    private SuggestManager suggest;
-
-    @Inject
-    private FilterFactory filters;
+    private MetadataManager metadata;
 
     @Inject
     private QueryParser parser;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    private FilterFactory filters;
 
     @Override
     public ShellTaskParams params() {
@@ -79,30 +69,31 @@ public class SuggestKey extends AbstractShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        final MatchOptions fuzzyOptions = MatchOptions.builder().build();
+        final MetadataBackend group = metadata.useGroup(params.group);
 
-        return suggest.useGroup(params.group).keySuggest(filter, fuzzyOptions, params.key)
-                .transform(new Transform<KeySuggest, Void>() {
-                    @Override
-                    public Void transform(KeySuggest result) throws Exception {
-                        int i = 0;
+        return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
+            @Override
+            public Void transform(CountSeries c) throws Exception {
+                Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
 
-                        for (final KeySuggest.Suggestion suggestion : result.getSuggestions()) {
-                            out.println(String.format("%s: %s", i++, suggestion));
-                        }
+                int i = 1;
+                final long count = c.getCount();
 
-                        return null;
-                    }
-                });
+                for (final MetadataEntry e : entries) {
+                    out.println(String.format("%d/%d: %s", i++, count, e));
+                    out.flush();
+                }
+
+                out.println(String.format("%d entrie(s)", (i - 1)));
+                return null;
+            }
+        });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
-
-        @Option(name = "-k", aliases = { "--key" }, usage = "Provide key context for suggestion")
-        private String key = null;
 
         @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter

@@ -34,7 +34,6 @@ import org.kohsuke.args4j.Option;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -43,17 +42,13 @@ import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.SuggestManager;
-import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Get value suggestions for a given key")
-public class SuggestTagValue extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, SuggestTagValue.class);
-    }
-
+@ShellTaskUsage("Get a list of value suggestions for a given key")
+public class SuggestTagValues extends AbstractShellTask {
     @Inject
     private SuggestManager suggest;
 
@@ -78,14 +73,14 @@ public class SuggestTagValue extends AbstractShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return suggest.useGroup(params.group).tagValueSuggest(filter, params.key)
-                .transform(new Transform<TagValueSuggest, Void>() {
+        return suggest.useGroup(params.group).tagValuesSuggest(filter, params.exclude, params.groupLimit)
+                .transform(new Transform<TagValuesSuggest, Void>() {
                     @Override
-                    public Void transform(TagValueSuggest result) throws Exception {
+                    public Void transform(TagValuesSuggest result) throws Exception {
                         int i = 0;
 
-                        for (final String value : result.getValues()) {
-                            out.println(String.format("%s: %s", i++, value));
+                        for (final TagValuesSuggest.Suggestion suggestion : result.getSuggestions()) {
+                            out.println(String.format("%s: %s", i++, suggestion));
                         }
 
                         return null;
@@ -98,8 +93,11 @@ public class SuggestTagValue extends AbstractShellTask {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
 
-        @Option(name = "-k", aliases = { "--key" }, usage = "Provide key context for suggestion")
-        private String key = null;
+        @Option(name = "-e", aliases = { "--exclude" }, usage = "Exclude the given tags")
+        private List<String> exclude = new ArrayList<>();
+
+        @Option(name = "--group-limit", usage = "Maximum cardinality to pull")
+        private int groupLimit = 100;
 
         @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter

@@ -31,42 +31,36 @@ import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.spotify.heroic.HeroicShell;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.CountSeries;
-import com.spotify.heroic.metadata.DeleteSeries;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.suggest.SuggestManager;
+import com.spotify.heroic.suggest.TagKeyCount;
 
-import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Delete metadata matching the given query")
-public class MetadataDelete extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataDelete.class);
-    }
+@ShellTaskUsage("Get approximate cardinality counts for each tag key")
+public class SuggestTagKeyCount extends AbstractShellTask {
+    @Inject
+    private SuggestManager suggest;
 
     @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private MetadataManager metadata;
+    private FilterFactory filters;
 
     @Inject
     private QueryParser parser;
 
     @Inject
-    private FilterFactory filters;
+    @Named("application/json")
+    private ObjectMapper mapper;
 
     @Override
     public ShellTaskParams params() {
@@ -79,26 +73,17 @@ public class MetadataDelete extends AbstractShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        final MetadataBackend group = metadata.useGroup(params.group);
-
-        return group.countSeries(filter).transform(new LazyTransform<CountSeries, Void>() {
+        return suggest.useGroup(params.group).tagKeyCount(filter).transform(new Transform<TagKeyCount, Void>() {
             @Override
-            public AsyncFuture<Void> transform(CountSeries c) throws Exception {
-                out.println(String.format("Deleteing %d entrie(s)", c.getCount()));
+            public Void transform(TagKeyCount result) throws Exception {
+                int i = 0;
 
-                if (!params.ok) {
-                    out.println("Deletion stopped, use --ok to proceed");
-                    return async.resolved(null);
+                for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
+                    out.println(String.format("%s: %s", i++, value));
                 }
 
-                return group.deleteSeries(filter).transform(new Transform<DeleteSeries, Void>() {
-                    @Override
-                    public Void transform(DeleteSeries result) throws Exception {
-                        return null;
-                    }
-                });
+                return null;
             }
-
         });
     }
 
@@ -107,12 +92,12 @@ public class MetadataDelete extends AbstractShellTask {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
 
-        @Option(name = "--ok", usage = "Verify that you actually want to run")
-        private boolean ok = false;
+        @Option(name = "-k", aliases = { "--key" }, usage = "Provide key context for suggestion")
+        private String key = null;
 
-        @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
+        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter
-        private int limit = Integer.MAX_VALUE;
+        private int limit = 10;
 
         @Argument
         @Getter

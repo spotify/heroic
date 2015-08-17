@@ -32,7 +32,6 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -48,10 +47,6 @@ import eu.toolchain.async.Transform;
 
 @ShellTaskUsage("Count how much metadata matches a given query")
 public class MetadataCount extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataCount.class);
-    }
-
     @Inject
     private MetadataManager metadata;
 

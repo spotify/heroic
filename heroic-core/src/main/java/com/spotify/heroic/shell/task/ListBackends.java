@@ -31,7 +31,6 @@ import org.kohsuke.args4j.Option;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
@@ -46,10 +45,6 @@ import eu.toolchain.async.AsyncFuture;
 
 @ShellTaskUsage("List available backend groups")
 public class ListBackends extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, ListBackends.class);
-    }
-
     @Inject
     private MetricManager metrics;
 

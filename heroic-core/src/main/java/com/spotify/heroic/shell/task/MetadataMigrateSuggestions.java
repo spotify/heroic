@@ -31,42 +31,40 @@ import lombok.ToString;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.CountSeries;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Fetch series matching the given query")
-public class MetadataFetch extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataFetch.class);
-    }
+@ShellTaskUsage("Migrate metadata with the given query to suggestion backend")
+public class MetadataMigrateSuggestions extends AbstractShellTask {
+    public static final int DOT_LIMIT = 10000;
+    public static final int LINE_LIMIT = 20;
 
     @Inject
     private MetadataManager metadata;
 
     @Inject
-    private FilterFactory filters;
+    private SuggestManager suggest;
 
     @Inject
     private QueryParser parser;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    private FilterFactory filters;
 
     @Override
     public ShellTaskParams params() {
@@ -79,18 +77,45 @@ public class MetadataFetch extends AbstractShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return metadata.useGroup(params.group).findSeries(filter).transform(new Transform<FindSeries, Void>() {
+        final MetadataBackend group = metadata.useGroup(params.group);
+        final SuggestBackend target = suggest.useGroup(params.target);
+
+        out.println("Migrating:");
+        out.println("  from (metadata): " + group);
+        out.println("    to  (suggest): " + target);
+
+        return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
             @Override
-            public Void transform(FindSeries result) throws Exception {
-                int i = 0;
+            public Void transform(CountSeries c) throws Exception {
+                out.println(String.format("Migrating %d entrie(s)", c.getCount()));
 
-                for (final Series series : result.getSeries()) {
-                    out.println(String.format("%s: %s", i++, series));
-
-                    if (i >= params.limit)
-                        break;
+                if (!params.ok) {
+                    out.println("Migration stopped, use --ok to proceed");
+                    return null;
                 }
 
+                Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+
+                int index = 1;
+
+                final long count = c.getCount();
+
+                for (final MetadataEntry e : entries) {
+                    if (index % DOT_LIMIT == 0) {
+                        out.print(".");
+                        out.flush();
+                    }
+
+                    if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
+                        out.println(String.format(" %d/%d", index, count));
+                        out.flush();
+                    }
+
+                    ++index;
+                    target.write(e.getSeries(), filter.getRange());
+                }
+
+                out.println(String.format(" %d/%d", index, count));
                 return null;
             }
         });
@@ -98,8 +123,14 @@ public class MetadataFetch extends AbstractShellTask {
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to migrate from", metaVar = "<metadata-group>", required = true)
         private String group;
+
+        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to", metaVar = "<metadata-group>", required = true)
+        private String target;
+
+        @Option(name = "--ok", usage = "Verify the migration")
+        private boolean ok = false;
 
         @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
         @Getter

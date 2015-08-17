@@ -22,7 +22,6 @@
 package com.spotify.heroic.shell;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -34,24 +33,11 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicCore;
-import com.spotify.heroic.HeroicProfile;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
-import com.spotify.heroic.elasticsearch.index.SingleIndexMapping;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.MetadataManagerModule;
-import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
-import com.spotify.heroic.suggest.SuggestManagerModule;
-import com.spotify.heroic.suggest.SuggestModule;
-import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 public final class Tasks {
     public static Filter setupFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
@@ -81,68 +67,6 @@ public final class Tasks {
     public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, QueryParams params) {
         final Filter filter = setupFilter(filters, parser, params);
         return new RangeFilter(filter, params.getRange(), params.getLimit());
-    }
-
-    public static void standaloneElasticsearchConfig(HeroicCore.Builder builder, ElasticSearchParams params) {
-        final List<String> seeds = Arrays.asList(StringUtils.split(params.getSeeds(), ','));
-
-        final String clusterName = params.getClusterName();
-        final String backendType = params.getBackendType();
-
-        builder.profile(new HeroicProfile() {
-            @Override
-            public HeroicConfig build() throws Exception {
-                // @formatter:off
-
-                final TransportClientSetup clientSetup = TransportClientSetup.builder()
-                    .clusterName(clusterName)
-                    .seeds(seeds)
-                .build();
-
-                return HeroicConfig.builder()
-                        .metadata(
-                            MetadataManagerModule.builder()
-                            .backends(
-                                ImmutableList.<MetadataModule>of(
-                                    ElasticsearchMetadataModule.builder()
-                                    .connection(setupConnection(clientSetup, "metadata"))
-                                    .writesPerSecond(0d)
-                                    .build()
-                                )
-                            ).build()
-                        )
-                        .suggest(
-                            SuggestManagerModule.builder()
-                            .backends(
-                                ImmutableList.<SuggestModule>of(
-                                    ElasticsearchSuggestModule.builder()
-                                    .connection(setupConnection(clientSetup, "suggest"))
-                                    .writesPerSecond(0d)
-                                    .backendType(backendType)
-                                    .build()
-                                )
-                            )
-                            .build()
-                        )
-
-                .build();
-                // @formatter:on
-            }
-
-            private ManagedConnectionFactory setupConnection(TransportClientSetup clientSetup, final String index) {
-                // @formatter:off
-                return ManagedConnectionFactory.builder()
-                    .clientSetup(clientSetup)
-                    .index(SingleIndexMapping.builder().index(index).build())
-                    .build();
-                // @formatter:on
-            }
-
-            @Override
-            public String description() {
-                return "load metadata form a file";
-            }
-        });
     }
 
     private static final List<DateTimeParser> today = new ArrayList<>();

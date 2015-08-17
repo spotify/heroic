@@ -41,15 +41,12 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicCore;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
-import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.shell.Tasks.ElasticSearchParams;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
@@ -60,10 +57,6 @@ import eu.toolchain.async.AsyncFuture;
 @ShellTaskUsage("Load metadata from a file")
 public class MetadataLoad extends AbstractShellTask {
     protected static final long OUTPUT_STEP = 1000;
-
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataLoad.class);
-    }
 
     @Inject
     private AsyncFramework async;
@@ -78,11 +71,6 @@ public class MetadataLoad extends AbstractShellTask {
     @Override
     public ShellTaskParams params() {
         return new Parameters();
-    }
-
-    @Override
-    public void standaloneConfig(HeroicCore.Builder builder, final ShellTaskParams params) {
-        Tasks.standaloneElasticsearchConfig(builder, (Parameters) params);
     }
 
     @Override

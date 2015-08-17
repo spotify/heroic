@@ -32,7 +32,6 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -44,26 +43,17 @@ import com.spotify.heroic.shell.AbstractShellTask;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Migrate metadata with the given query to suggestion backend")
-public class MetadataMigrateSuggestions extends AbstractShellTask {
+@ShellTaskUsage("Fetch series matching the given query")
+public class MetadataMigrate extends AbstractShellTask {
     public static final int DOT_LIMIT = 10000;
     public static final int LINE_LIMIT = 20;
 
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataMigrateSuggestions.class);
-    }
-
     @Inject
     private MetadataManager metadata;
-
-    @Inject
-    private SuggestManager suggest;
 
     @Inject
     private QueryParser parser;
@@ -83,27 +73,27 @@ public class MetadataMigrateSuggestions extends AbstractShellTask {
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
         final MetadataBackend group = metadata.useGroup(params.group);
-        final SuggestBackend target = suggest.useGroup(params.target);
+        final MetadataBackend target = metadata.useGroup(params.target);
 
         out.println("Migrating:");
-        out.println("  from (metadata): " + group);
-        out.println("    to  (suggest): " + target);
+        out.println("  from: " + group);
+        out.println("    to: " + target);
 
         return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
             @Override
             public Void transform(CountSeries c) throws Exception {
-                out.println(String.format("Migrating %d entrie(s)", c.getCount()));
+                final long count = c.getCount();
+
+                out.println(String.format("Migrating %d entrie(s)", count));
 
                 if (!params.ok) {
                     out.println("Migration stopped, use --ok to proceed");
                     return null;
                 }
 
-                Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+                final Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
 
                 int index = 1;
-
-                final long count = c.getCount();
 
                 for (final MetadataEntry e : entries) {
                     if (index % DOT_LIMIT == 0) {

@@ -36,7 +36,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -66,10 +65,6 @@ import eu.toolchain.async.Transform;
 public class Write extends AbstractShellTask {
     private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE = new TypeReference<Map<String, Object>>() {
     };
-
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, Write.class);
-    }
 
     @Inject
     private MetricManager metrics;

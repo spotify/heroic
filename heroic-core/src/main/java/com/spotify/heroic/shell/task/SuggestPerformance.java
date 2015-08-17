@@ -35,8 +35,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicCore;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
@@ -57,10 +55,6 @@ import eu.toolchain.async.AsyncFuture;
 @Slf4j
 @ShellTaskUsage("Execute a set of suggest performance tests")
 public class SuggestPerformance extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, SuggestPerformance.class);
-    }
-
     @Inject
     private SuggestManager suggest;
 
@@ -73,11 +67,6 @@ public class SuggestPerformance extends AbstractShellTask {
 
     @Inject
     private AsyncFramework async;
-
-    @Override
-    public void standaloneConfig(HeroicCore.Builder builder, final ShellTaskParams params) {
-        Tasks.standaloneElasticsearchConfig(builder, (Parameters) params);
-    }
 
     @Override
     public ShellTaskParams params() {

@@ -40,7 +40,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -64,10 +63,6 @@ import eu.toolchain.async.Transform;
 
 @ShellTaskUsage("Perform performance testing")
 public class WritePerformance extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, WritePerformance.class);
-    }
-
     @Inject
     private MetricManager metrics;
 

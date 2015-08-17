@@ -24,44 +24,33 @@ package com.spotify.heroic.shell.task;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import lombok.Getter;
 import lombok.ToString;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.shell.AbstractShellTask;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
-import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Get tags")
-public class MetadataTags extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, MetadataTags.class);
-    }
-
+@ShellTaskUsage("Execute a query")
+public class Query extends AbstractShellTask {
     @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private FilterFactory filters;
-
-    @Inject
-    private QueryParser parser;
+    private QueryManager query;
 
     @Inject
     @Named("application/json")
@@ -73,31 +62,40 @@ public class MetadataTags extends AbstractShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
+    public AsyncFuture<Void> run(final PrintWriter out, final ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
+        final String queryString = params.query.stream().collect(Collectors.joining(" "));
 
-        return metadata.useGroup(params.group).findTags(filter).transform(new Transform<FindTags, Void>() {
+        final AsyncFuture<QueryResult> result = query.useGroup(params.group).query(
+                query.newQuery().queryString(queryString).build());
+
+        final ObjectMapper indent = mapper.copy();
+        indent.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+        return result.transform(new Transform<QueryResult, Void>() {
             @Override
-            public Void transform(FindTags result) throws Exception {
-                out.println(result.toString());
+            public Void transform(QueryResult result) throws Exception {
+                for (final ShardedResultGroup resultGroup : result.getGroups()) {
+                    final MetricTypedGroup group = resultGroup.getGroup();
+
+                    out.println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
+                            resultGroup.getTags()));
+                    out.println(indent.writeValueAsString(group.getData()));
+                    out.flush();
+                }
+
                 return null;
             }
         });
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
+    private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
-        private String group;
+        private String group = null;
 
-        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
-        @Getter
-        private int limit = 10;
-
-        @Argument
-        @Getter
-        private List<String> query = new ArrayList<String>();
+        @Argument(metaVar = "<query>")
+        private List<String> query = new ArrayList<>();
     }
 }

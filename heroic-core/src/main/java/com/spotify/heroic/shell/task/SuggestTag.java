@@ -34,7 +34,6 @@ import org.kohsuke.args4j.Option;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -51,10 +50,6 @@ import eu.toolchain.async.Transform;
 
 @ShellTaskUsage("Get tag suggestions")
 public class SuggestTag extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, SuggestTag.class);
-    }
-
     @Inject
     private SuggestManager suggest;
 

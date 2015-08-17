@@ -21,45 +21,46 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.zip.GZIPInputStream;
+import java.util.ArrayList;
+import java.util.List;
 
+import lombok.Getter;
 import lombok.ToString;
 
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicShell;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.FindTags;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.AbstractShellTask;
-import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskParams;
 import com.spotify.heroic.shell.ShellTaskUsage;
+import com.spotify.heroic.shell.Tasks;
 
-import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Transform;
 
-@ShellTaskUsage("Load metadata from a file")
-public class ConfigGet extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, ConfigGet.class);
-    }
+@ShellTaskUsage("Get tags")
+public class MetadataTags extends AbstractShellTask {
+    @Inject
+    private MetadataManager metadata;
 
     @Inject
-    private HeroicConfig config;
+    private FilterFactory filters;
+
+    @Inject
+    private QueryParser parser;
 
     @Inject
     @Named("application/json")
     private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
 
     @Override
     public ShellTaskParams params() {
@@ -69,24 +70,29 @@ public class ConfigGet extends AbstractShellTask {
     @Override
     public AsyncFuture<Void> run(final PrintWriter out, ShellTaskParams base) throws Exception {
         final Parameters params = (Parameters) base;
-        final ObjectMapper m = mapper.copy();
-        m.enable(SerializationFeature.INDENT_OUTPUT);
-        out.println(m.writeValueAsString(config));
 
-        return async.resolved();
-    }
+        final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-    private InputStreamReader open(Path file) throws IOException {
-        final InputStream input = Files.newInputStream(file);
-
-        // unpack gzip.
-        if (!file.getFileName().toString().endsWith(".gz"))
-            return new InputStreamReader(input);
-
-        return new InputStreamReader(new GZIPInputStream(input));
+        return metadata.useGroup(params.group).findTags(filter).transform(new Transform<FindTags, Void>() {
+            @Override
+            public Void transform(FindTags result) throws Exception {
+                out.println(result.toString());
+                return null;
+            }
+        });
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams {
+    private static class Parameters extends Tasks.QueryParamsBase {
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        private String group;
+
+        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
+        @Getter
+        private int limit = 10;
+
+        @Argument
+        @Getter
+        private List<String> query = new ArrayList<String>();
     }
 }

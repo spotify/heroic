@@ -35,7 +35,6 @@ import org.kohsuke.args4j.Option;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShell;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
@@ -55,10 +54,6 @@ import eu.toolchain.async.Transform;
 
 @ShellTaskUsage("Fetch a range of data points")
 public class Fetch extends AbstractShellTask {
-    public static void main(String argv[]) throws Exception {
-        HeroicShell.standalone(argv, Fetch.class);
-    }
-
     @Inject
     private MetricManager metrics;
 
