@@ -594,6 +594,9 @@ public class HeroicCore {
         modules.add(config.getCache());
         modules.add(config.getIngestion());
 
+        // shell server module
+        // modules.add(config.getShellServer());
+
         modules.add(new AbstractModule() {
             @Override
             protected void configure() {

@@ -48,7 +48,7 @@
     <lucene.version>4.10.4</lucene.version>
     <astyanax.version>2.0.2</astyanax.version>
     <datastax.version>2.1.4</datastax.version>
-    <guice.version>3.0</guice.version>
+    <guice.version>4.0</guice.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.0.27.Final</netty.version>
     <tiny-async.version>1.6.0</tiny-async.version>
