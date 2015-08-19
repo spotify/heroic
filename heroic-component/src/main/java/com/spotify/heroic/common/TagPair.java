@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.common;
 
+import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 
 @Data

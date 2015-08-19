@@ -9,17 +9,19 @@ import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.shell.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.CoreShellInterface;
 import com.spotify.heroic.shell.ShellInterface;
 import com.spotify.heroic.shell.ShellProtocol;
-import com.spotify.heroic.shell.ShellProtocol.CommandOutput;
-import com.spotify.heroic.shell.ShellProtocol.CommandsRequest;
-import com.spotify.heroic.shell.ShellProtocol.CommandsResponse;
-import com.spotify.heroic.shell.ShellProtocol.EndOfCommand;
-import com.spotify.heroic.shell.ShellProtocol.RunTaskRequest;
 import com.spotify.heroic.shell.ShellServerModule;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.CommandOutput;
+import com.spotify.heroic.shell.protocol.CommandsRequest;
+import com.spotify.heroic.shell.protocol.CommandsResponse;
+import com.spotify.heroic.shell.protocol.EndOfCommand;
+import com.spotify.heroic.shell.protocol.Request;
+import com.spotify.heroic.shell.protocol.Response;
+import com.spotify.heroic.shell.protocol.RunTaskRequest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -47,19 +49,20 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
 
     final ShellProtocol protocol = new ShellProtocol();
 
+    final Serializer<Request> requestSerializer = protocol.buildRequest();
+    final Serializer<Response> responseSerializer = protocol.buildResponse();
+
     @Override
     public CoreShellInterface setup(final ShellInterface shell) throws Exception {
         return new CoreShellInterface() {
             @Override
             public AsyncFuture<Void> command(final List<String> command, final PrintWriter out) throws Exception {
                 return async.call(() -> {
-                    protocol.request.serialize(output, new RunTaskRequest(command));
+                    requestSerializer.serialize(output, new RunTaskRequest(command));
                     out.flush();
 
-                    final Serializer<ShellProtocol.Response> res = protocol.message;
-
                     while (true) {
-                        final ShellProtocol.Response response = res.deserialize(input);
+                        final Response response = responseSerializer.deserialize(input);
 
                         if (response instanceof EndOfCommand) {
                             break;
@@ -90,12 +93,12 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
     }
 
     @SuppressWarnings("unchecked")
-    <R extends ShellProtocol.Request, T extends ShellProtocol.Response> T request(R request,
+    <R extends Request, T extends Response> T request(R request,
             Class<T> expected) throws IOException {
-        protocol.request.serialize(output, request);
+        requestSerializer.serialize(output, request);
         out.flush();
 
-        final ShellProtocol.Response response = protocol.message.deserialize(input);
+        final Response response = responseSerializer.deserialize(input);
 
         if (!(expected.isAssignableFrom(response.getClass()))) {
             throw new IOException(String.format("Got unexpected message (%s), expected (%s)", response.getClass(),

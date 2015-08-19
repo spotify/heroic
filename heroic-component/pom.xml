@@ -27,6 +27,12 @@
     </dependency>
 
     <dependency>
+      <groupId>eu.toolchain.serializer</groupId>
+      <artifactId>tiny-serializer-processor</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>eu.toolchain.async</groupId>
       <artifactId>tiny-async-api</artifactId>
     </dependency>

@@ -28,23 +28,6 @@ public class SeriesSerializerTest {
     }
 
     @Test
-    public void testTagsWithNull() throws Exception {
-        final Map<String, String> tags = new HashMap<String, String>();
-        tags.put("test", null);
-        final Series series = Series.of(null, tags);
-        Assert.assertEquals(series, roundTrip(series));
-    }
-
-    @Test
-    public void testTagsWithMixed() throws Exception {
-        final Map<String, String> tags = new HashMap<String, String>();
-        tags.put("foo", "bar");
-        tags.put("bar", null);
-        final Series series = Series.of(null, tags);
-        Assert.assertEquals(series, roundTrip(series));
-    }
-
-    @Test
     public void testStoreSomeValues() throws Exception {
         final Map<String, String> tags = new HashMap<String, String>();
         tags.put("a", "b");

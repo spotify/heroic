@@ -15,17 +15,21 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.spotify.heroic.shell.ShellProtocol.CommandOutput;
-import com.spotify.heroic.shell.ShellProtocol.CommandsRequest;
-import com.spotify.heroic.shell.ShellProtocol.CommandsResponse;
-import com.spotify.heroic.shell.ShellProtocol.EndOfCommand;
-import com.spotify.heroic.shell.ShellProtocol.Request;
-import com.spotify.heroic.shell.ShellProtocol.RunTaskRequest;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.shell.protocol.CommandOutput;
+import com.spotify.heroic.shell.protocol.CommandsRequest;
+import com.spotify.heroic.shell.protocol.CommandsResponse;
+import com.spotify.heroic.shell.protocol.EndOfCommand;
+import com.spotify.heroic.shell.protocol.Request;
+import com.spotify.heroic.shell.protocol.Response;
+import com.spotify.heroic.shell.protocol.RunTaskRequest;
 
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.FutureFinished;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
+import eu.toolchain.serializer.Serializer;
+import eu.toolchain.serializer.TinySerializer;
 import eu.toolchain.serializer.io.InputStreamSerialReader;
 import eu.toolchain.serializer.io.OutputStreamSerialWriter;
 
@@ -36,7 +40,10 @@ class ShellServerClientThread implements Runnable {
     final ShellServerConnection connection;
     final Collection<CoreTaskDefinition> commands;
 
-    static final ShellProtocol protocol = new ShellProtocol();
+    final ShellProtocol protocol = new ShellProtocol();
+
+    final Serializer<Request> requestSerializer = protocol.buildRequest();
+    final Serializer<Response> responseSerializer = protocol.buildResponse();
 
     @Override
     public void run() {
@@ -66,10 +73,10 @@ class ShellServerClientThread implements Runnable {
                 final PrintWriter out = setupPrintWriter(writer);
 
                 while (true) {
-                    final ShellProtocol.Request request;
+                    final Request request;
 
                     try {
-                        request = protocol.request.deserialize(reader);
+                        request = requestSerializer.deserialize(reader);
                         handleRequest(writer, request, out);
                         output.flush();
                     } catch (EOFException e) {
@@ -93,7 +100,7 @@ class ShellServerClientThread implements Runnable {
             public void flush() throws IOException {
                 final char[] data = array.toCharArray();
 
-                protocol.message.serialize(writer, new CommandOutput(data));
+                responseSerializer.serialize(writer, new CommandOutput(data));
                 writer.flush();
 
                 array = new CharArrayWriter();
@@ -128,7 +135,7 @@ class ShellServerClientThread implements Runnable {
             commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
         }
 
-        protocol.message.serialize(writer, new CommandsResponse(commands));
+        responseSerializer.serialize(writer, new CommandsResponse(commands));
         writer.flush();
     }
 
@@ -156,7 +163,7 @@ class ShellServerClientThread implements Runnable {
         }).on(new FutureFinished() {
             @Override
             public void finished() throws Exception {
-                protocol.message.serialize(writer, EndOfCommand.instance);
+                responseSerializer.serialize(writer, new EndOfCommand());
                 writer.flush();
             }
         });

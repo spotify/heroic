@@ -19,11 +19,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.shell.CommandDefinition;
 import com.spotify.heroic.shell.CoreShellInterface;
 import com.spotify.heroic.shell.QuoteParser;
 import com.spotify.heroic.shell.ShellInterface;
 import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
 
 import eu.toolchain.async.AsyncFuture;
 

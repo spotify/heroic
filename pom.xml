@@ -52,12 +52,13 @@
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.0.27.Final</netty.version>
     <tiny-async.version>1.6.0</tiny-async.version>
-    <tiny-serializer.version>1.1.0</tiny-serializer.version>
+    <tiny-serializer.version>1.3.4</tiny-serializer.version>
     <microrpc.version>1.0.1</microrpc.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
     <elasticsearch.version>1.7.1</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
+    <lombok.version>1.16.6</lombok.version>
   </properties>
 
   <dependencyManagement>
@@ -190,6 +191,11 @@
         <version>${tiny-serializer.version}</version>
       </dependency>
       <dependency>
+        <groupId>eu.toolchain.serializer</groupId>
+        <artifactId>tiny-serializer-processor</artifactId>
+        <version>${tiny-serializer.version}</version>
+      </dependency>
+      <dependency>
         <groupId>eu.toolchain.microrpc</groupId>
         <artifactId>microrpc</artifactId>
         <version>${microrpc.version}</version>
@@ -198,7 +204,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.12.6</version>
+        <version>${lombok.version}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -236,15 +242,15 @@
         <exclusions>
           <exclusion>
             <groupId>org.mortbay.jetty</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>jetty</artifactId>
           </exclusion>
           <exclusion>
             <groupId>log4j</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>log4j</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.slf4j</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -256,11 +262,11 @@
         <exclusions>
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>httpclient</artifactId>
           </exclusion>
           <exclusion>
             <groupId>javax.servlet</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>servlet-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -436,7 +442,7 @@
         <exclusions>
           <exclusion>
             <groupId>log4j</groupId>
-            <artifactId>*</artifactId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -542,24 +548,18 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
+          <configuration>
+            <showWarnings>true</showWarnings>
+          </configuration>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.5.2</version>
-        <configuration>
-          <effort>Max</effort>
-          <threshold>Default</threshold>
-          <xmlOutput>true</xmlOutput>
-        </configuration>
-        <executions>
-          <execution>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.bsc.maven</groupId>
+        <artifactId>maven-processor-plugin</artifactId>
       </plugin>
     </plugins>
 
@@ -611,8 +611,31 @@
             </execution>
           </executions>
         </plugin>
+
+        <plugin>
+          <groupId>org.bsc.maven</groupId>
+          <artifactId>maven-processor-plugin</artifactId>
+          <version>3.1.0-beta1</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>2.5.2</version>
+          <configuration>
+            <effort>Max</effort>
+            <threshold>Default</threshold>
+            <xmlOutput>true</xmlOutput>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
-
   </build>
 </project>

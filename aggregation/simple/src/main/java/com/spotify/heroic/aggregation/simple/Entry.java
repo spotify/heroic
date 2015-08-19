@@ -30,7 +30,6 @@ import javax.inject.Named;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.common.Sampling;
-import com.spotify.heroic.common.SamplingSerializer;
 import com.spotify.heroic.grammar.Value;
 
 import eu.toolchain.serializer.SerialReader;
@@ -40,7 +39,7 @@ import eu.toolchain.serializer.SerializerFramework;
 
 public class Entry implements HeroicModule {
     @Inject
-    private SamplingSerializer resolutionSerializer;
+    private Serializer<Sampling> resolutionSerializer;
 
     @Inject
     private HeroicContext ctx;

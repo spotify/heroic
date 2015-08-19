@@ -33,6 +33,12 @@
     </dependency>
 
     <dependency>
+      <groupId>eu.toolchain.serializer</groupId>
+      <artifactId>tiny-serializer-processor</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>com.google.cloud.bigtable</groupId>
       <artifactId>bigtable-grpc-interface</artifactId>
       <version>${bigtable.version}</version>

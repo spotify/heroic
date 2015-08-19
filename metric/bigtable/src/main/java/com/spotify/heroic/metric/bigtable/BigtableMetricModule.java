@@ -38,7 +38,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.SeriesSerializer;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
@@ -111,8 +111,8 @@ public final class BigtableMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public Serializer<RowKey> rowKeySerializer(SeriesSerializer series, @Named("common") SerializerFramework s) {
-                return new RowKeySerializer(series, s.longNumber());
+            public Serializer<RowKey> rowKeySerializer(Serializer<Series> series, @Named("common") SerializerFramework s) {
+                return new RowKey_Serializer(s);
             }
 
             @Override

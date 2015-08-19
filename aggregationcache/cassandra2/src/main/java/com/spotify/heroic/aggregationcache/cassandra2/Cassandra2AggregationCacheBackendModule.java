@@ -49,7 +49,6 @@ import com.netflix.astyanax.thrift.ThriftFamilyFactory;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackend;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
 import com.spotify.heroic.aggregationcache.CacheKey;
-import com.spotify.heroic.aggregationcache.CacheKeySerializer;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.statistics.AggregationCacheBackendReporter;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
@@ -139,7 +138,7 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
             @Provides
             @Singleton
             @Inject
-            public Serializer<CacheKey> cacheKeySerializer(final CacheKeySerializer source,
+            public Serializer<CacheKey> cacheKeySerializer(final eu.toolchain.serializer.Serializer<CacheKey> source,
                     @Named("common") final SerializerFramework s) {
                 return new AbstractSerializer<CacheKey>() {
                     @Override

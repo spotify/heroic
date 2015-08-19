@@ -30,36 +30,45 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 
+import eu.toolchain.serializer.AutoSerialize;
+
+@AutoSerialize(orderById = true)
 @Data
 public class CacheKey {
     public static final int VERSION = 2;
 
-    private final int version;
+    final int version;
 
     /**
      * Which filter was used to query the specified data.
      */
-    private final Filter filter;
+    @AutoSerialize.Field(provided = true)
+    final Filter filter;
 
     /**
      * Which group this result belongs to.
      */
-    private final Map<String, String> group;
+    final Map<String, String> group;
 
     /**
      * Always includes sampling.
      */
-    private final Aggregation aggregation;
+    @AutoSerialize.Field(provided = true)
+    final Aggregation aggregation;
 
     /**
      * long base.
      */
-    private final long base;
+    final long base;
 
     @JsonCreator
-    public static CacheKey create(@JsonProperty("version") Integer version, @JsonProperty("filter") Filter filter,
+    public CacheKey(@JsonProperty("version") int version, @JsonProperty("filter") Filter filter,
             @JsonProperty("group") Map<String, String> group, @JsonProperty("aggregation") Aggregation aggregation,
-            @JsonProperty("base") Long base) {
-        return new CacheKey(version, filter, group, aggregation, base);
+            @JsonProperty("base") long base) {
+        this.version = version;
+        this.filter = filter;
+        this.group = group;
+        this.aggregation = aggregation;
+        this.base = base;
     }
 }

@@ -83,8 +83,8 @@ import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
-import com.spotify.heroic.aggregationcache.CacheKeySerializer;
-import com.spotify.heroic.aggregationcache.CacheKeySerializerImpl;
+import com.spotify.heroic.aggregationcache.CacheKey;
+import com.spotify.heroic.aggregationcache.CacheKey_Serializer;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CollectingTypeListener;
@@ -92,11 +92,10 @@ import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.IsSubclassOf;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.common.SamplingSerializer;
-import com.spotify.heroic.common.SamplingSerializerImpl;
-import com.spotify.heroic.common.SeriesSerializer;
-import com.spotify.heroic.common.SeriesSerializerImpl;
-import com.spotify.heroic.common.TagsSerializer;
+import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.common.Sampling_Serializer;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -136,6 +135,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.TinyAsync;
+import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
 
@@ -387,22 +387,21 @@ public class HeroicCore implements HeroicCoreInjector {
 
             @Provides
             @Singleton
-            SamplingSerializer samplingSerializer(@Named("common") SerializerFramework s) {
-                return new SamplingSerializerImpl(s.longNumber());
+            Serializer<Sampling> samplingSerializer(@Named("common") SerializerFramework s) {
+                return new Sampling_Serializer(s);
             }
 
             @Provides
             @Singleton
-            CacheKeySerializer cacheKeySerializer(@Named("common") SerializerFramework s,
-                    FilterSerializer filter, AggregationSerializer aggregation) {
-                return new CacheKeySerializerImpl(s.integer(), filter, s.map(s.nullable(s.string()),
-                        s.nullable(s.string())), aggregation, s.longNumber());
+            Serializer<CacheKey> cacheKeySerializer(@Named("common") SerializerFramework s, FilterSerializer filter,
+                    AggregationSerializer aggregation) {
+                return new CacheKey_Serializer(s, filter, aggregation);
             }
 
             @Provides
             @Singleton
-            SeriesSerializer series(@Named("common") SerializerFramework s) {
-                return new SeriesSerializerImpl(s.string(), TagsSerializer.construct(s));
+            Serializer<Series> series(@Named("common") SerializerFramework s) {
+                return new Series_Serializer(s);
             }
 
             @Override
@@ -578,8 +577,9 @@ public class HeroicCore implements HeroicCoreInjector {
                 bind(HeroicConfig.class).toInstance(config);
                 bind(QueryManager.class).to(CoreQueryManager.class).in(Scopes.SINGLETON);
 
-                if (server)
+                if (server) {
                     bind(HeroicServer.class).in(Scopes.SINGLETON);
+                }
 
                 bind(HeroicReporter.class).toInstance(reporter);
 
@@ -663,15 +663,12 @@ public class HeroicCore implements HeroicCoreInjector {
 
         log.info("Starting life cycles");
 
-        for (final LifeCycle startable : lifecycles) {
-            log.info("Starting: {}", startable);
-            futures.add(startable.start());
-        }
-
         final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();
 
         /* fire Stoppable handlers */
         for (final LifeCycle startable : lifecycles) {
+            log.info("Starting: {}", startable);
+
             try {
                 final AsyncFuture<Void> future = startable.start().on(new FutureDone<Void>() {
                     @Override

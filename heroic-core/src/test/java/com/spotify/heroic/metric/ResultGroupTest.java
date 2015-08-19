@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicCore;
 
 public class ResultGroupTest {
@@ -27,7 +28,7 @@ public class ResultGroupTest {
     @Test
     public void testResultGroupSerializer() throws IOException {
         final List<TagValues> tags = ImmutableList.of();
-        final List<Point> values = ImmutableList.of(new Point(System.currentTimeMillis(), 123));
+        final List<Event> values = ImmutableList.of(new Event(1000, ImmutableMap.<String, Object> of()));
         final ResultGroup group = new ResultGroup(tags, new MetricTypedGroup(MetricType.EVENT, values));
 
         final String json = mapper.writeValueAsString(group);

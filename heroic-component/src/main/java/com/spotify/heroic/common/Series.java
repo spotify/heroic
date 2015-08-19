@@ -36,13 +36,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSortedMap;
 
+import eu.toolchain.serializer.AutoSerialize;
+
+@AutoSerialize
 @ToString(of = { "key", "tags" })
 public class Series {
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String> of();
     static final String EMPTY_STRING = "";
 
     final String key;
-    final Map<String, String> tags;
+    final SortedMap<String, String> tags;
+
+    @AutoSerialize.Ignore
     final long hash;
 
     /**
@@ -62,7 +67,7 @@ public class Series {
         return key;
     }
 
-    public Map<String, String> getTags() {
+    public SortedMap<String, String> getTags() {
         return tags;
     }
 

@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

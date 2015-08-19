@@ -7,12 +7,12 @@ import java.util.concurrent.Callable;
 import lombok.RequiredArgsConstructor;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.shell.CommandDefinition;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.CoreShellInterface;
 import com.spotify.heroic.shell.ShellInterface;
 import com.spotify.heroic.shell.ShellServer;
 import com.spotify.heroic.shell.ShellServerConnection;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

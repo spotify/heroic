@@ -26,6 +26,9 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import eu.toolchain.serializer.AutoSerialize;
+
+@AutoSerialize
 @Data
 public class Sampling {
     private final long size;
