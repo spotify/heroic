@@ -26,6 +26,7 @@ import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
@@ -59,7 +60,7 @@ import eu.toolchain.serializer.io.OutputStreamSerialWriter;
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
 @Slf4j
-public class BigtableBackend implements MetricBackend, LifeCycle {
+public class BigtableBackend extends AbstractMetricBackend implements LifeCycle {
     // XXX: replace w/ Integer.BYTES when upgrading to java 8
     private static final int OFFSET_BYTES = 4;
     // XXX: replace w/ Double.BYTES when upgrading to java 8

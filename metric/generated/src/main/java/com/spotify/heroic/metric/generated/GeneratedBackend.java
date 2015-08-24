@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
@@ -53,7 +54,7 @@ import eu.toolchain.async.AsyncFuture;
  * MetricBackend for Heroic cassandra datastore.
  */
 @ToString
-public class GeneratedBackend implements MetricBackend, LifeCycle {
+public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle {
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
     @Inject

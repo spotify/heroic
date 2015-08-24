@@ -43,6 +43,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
+import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
@@ -68,7 +69,7 @@ import eu.toolchain.async.Managed;
  */
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
-public class DatastaxBackend implements MetricBackend, LifeCycle {
+public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle {
     private static final MetricsRowKeySerializer keySerializer = new MetricsRowKeySerializer();
 
     @Inject

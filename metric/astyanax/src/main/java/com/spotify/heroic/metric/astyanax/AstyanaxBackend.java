@@ -32,9 +32,6 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import org.apache.commons.lang3.NotImplementedException;
 
 import com.google.common.collect.ImmutableList;
@@ -56,15 +53,15 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
+import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -74,13 +71,15 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
 @RequiredArgsConstructor
 @ToString(of = {})
-public class AstyanaxBackend implements MetricBackend, LifeCycle {
+public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle {
     private static final MetricsRowKeySerializer KEY_SERIALIZER = MetricsRowKeySerializer.get();
 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(

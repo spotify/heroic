@@ -27,16 +27,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
-
-import lombok.ToString;
-
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSortedMap;
 
 import eu.toolchain.serializer.AutoSerialize;
+import lombok.ToString;
 
 @AutoSerialize
 @ToString(of = { "key", "tags" })
@@ -72,20 +70,20 @@ public class Series {
     }
 
     public long generateHash() {
-        final long prime = 63;
+        final long prime = 61;
         long result = 1;
         result = prime * result + ((key == null) ? 0 : stringHash(key));
 
         for (final Map.Entry<String, String> e : tags.entrySet()) {
             result = prime * result + stringHash(e.getKey());
-            result = prime * result + stringHash(e.getValue());
+            result = prime * result + (e.getValue() == null ? 0 : stringHash(e.getValue()));
         }
 
         return result;
     }
 
     private long stringHash(String string) {
-        final long prime = 63;
+        final long prime = 61;
         long result = 1;
 
         for (int i = 0; i < string.length(); i++) {
@@ -170,20 +168,15 @@ public class Series {
     }
 
     public static Series of(String key, Iterator<Map.Entry<String, String>> tagPairs) {
-        final ImmutableSortedMap.Builder<String, String> tags = ImmutableSortedMap.naturalOrder();
+        final TreeMap<String, String> tags = new TreeMap<>();
 
         while (tagPairs.hasNext()) {
             final Map.Entry<String, String> pair = tagPairs.next();
             final String tk = checkNotNull(pair.getKey());
-            final String tv = checkNotNull(pair.getValue());
+            final String tv = pair.getValue();
             tags.put(tk, tv);
         }
 
-        return new Series(key, tags.build());
-    }
-
-    public Iterator<Map.Entry<String, String>> getTagsIterator() {
-        return tags.entrySet().stream().map((e) -> (Map.Entry<String, String>) Pair.of(e.getKey(), e.getValue()))
-                .iterator();
+        return new Series(key, tags);
     }
 }

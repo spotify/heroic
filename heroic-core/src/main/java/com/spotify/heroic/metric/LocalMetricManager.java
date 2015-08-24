@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,13 +35,10 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.NotImplementedException;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -65,6 +63,10 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
+import eu.toolchain.async.Transform;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = {})
@@ -315,6 +317,25 @@ public class LocalMetricManager implements MetricManager {
             });
 
             return async.collectAndDiscard(callbacks);
+        }
+
+        @Override
+        public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit) {
+            final List<AsyncFuture<Iterator<BackendKey>>> callbacks = new ArrayList<>();
+
+            run(new InternalOperation() {
+                @Override
+                public void run(int disabled, MetricBackend backend) throws Exception {
+                    callbacks.add(backend.allKeys(start, limit));
+                }
+            });
+
+            return async.collect(callbacks).transform(new Transform<Collection<Iterator<BackendKey>>, Iterator<BackendKey>>() {
+                @Override
+                public Iterator<BackendKey> transform(Collection<Iterator<BackendKey>> result) throws Exception {
+                    return Iterators.concat(result.iterator());
+                }
+            });
         }
 
         private StreamCollector<FetchData, ResultGroups> collectResultGroups(final FetchQuotaWatcher watcher,
