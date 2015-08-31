@@ -3,7 +3,7 @@ package com.spotify.heroic.metric;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.NoSuchElementException;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
@@ -27,7 +27,13 @@ public abstract class AbstractMetricBackend implements MetricBackend {
                     @Override
                     public boolean hasNext() {
                         if (!currentIterator.hasNext()) {
+                            nextStart = null;
+
                             currentIterator = getNextIterator();
+
+                            if (currentIterator == null) {
+                                return false;
+                            }
                         }
 
                         final BackendKey next = currentIterator.next();
@@ -57,7 +63,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
                         }
 
                         if (!nextIterator.hasNext()) {
-                            throw new IllegalStateException("Next iterator fetched was empty, this should never happen");
+                            return null;
                         }
 
                         return nextIterator;
@@ -65,6 +71,10 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
                     @Override
                     public BackendKey next() {
+                        if (nextStart == null) {
+                            throw new NoSuchElementException();
+                        }
+
                         return nextStart;
                     }
                 };

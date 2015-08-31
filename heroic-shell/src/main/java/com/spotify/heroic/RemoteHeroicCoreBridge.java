@@ -7,8 +7,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.List;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.CoreShellInterface;
 import com.spotify.heroic.shell.ShellInterface;
@@ -28,8 +26,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.io.InputStreamSerialReader;
-import eu.toolchain.serializer.io.OutputStreamSerialWriter;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RemoteHeroicCoreBridge implements CoreInterface {
@@ -39,18 +36,17 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
     final SerialWriter output;
     final SerialReader input;
 
+    final ShellProtocol protocol = new ShellProtocol();
+    final Serializer<Request> requestSerializer = protocol.buildRequest();
+    final Serializer<Response> responseSerializer = protocol.buildResponse();
+
     public RemoteHeroicCoreBridge(Socket socket, AsyncFramework async) throws IOException {
         this.socket = socket;
         this.async = async;
         this.out = socket.getOutputStream();
-        this.output = new OutputStreamSerialWriter(out);
-        this.input = new InputStreamSerialReader(socket.getInputStream());
+        this.output = protocol.framework().writeStream(out);
+        this.input = protocol.framework().readStream(socket.getInputStream());
     }
-
-    final ShellProtocol protocol = new ShellProtocol();
-
-    final Serializer<Request> requestSerializer = protocol.buildRequest();
-    final Serializer<Response> responseSerializer = protocol.buildResponse();
 
     @Override
     public CoreShellInterface setup(final ShellInterface shell) throws Exception {

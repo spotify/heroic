@@ -34,6 +34,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
@@ -67,6 +68,7 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     private final Object $create = new Object();
 
     @Inject
+    @Getter
     private AsyncFramework async;
 
     @Inject

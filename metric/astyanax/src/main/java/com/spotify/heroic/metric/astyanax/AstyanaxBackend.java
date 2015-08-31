@@ -71,6 +71,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
@@ -86,6 +87,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             "metrics", KEY_SERIALIZER, IntegerSerializer.get());
 
     @Inject
+    @Getter
     private AsyncFramework async;
 
     @Inject

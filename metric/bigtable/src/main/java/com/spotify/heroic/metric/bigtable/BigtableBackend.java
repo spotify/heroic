@@ -14,14 +14,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
@@ -32,7 +29,6 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
@@ -54,8 +50,13 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
+import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.io.OutputStreamSerialWriter;
+import eu.toolchain.serializer.SerializerFramework;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
@@ -71,7 +72,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     public static final long PERIOD = 0x100000000L;
 
     @Inject
+    @Getter
     private AsyncFramework async;
+
+    @Inject
+    @Named("common")
+    private SerializerFramework serializer;
 
     @Inject
     private Serializer<RowKey> rowKeySerializer;
@@ -269,6 +275,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     public AsyncFuture<FetchData> fetch(MetricType type, final Series series, DateRange range,
             FetchQuotaWatcher watcher) {
         final List<PreparedQuery> prepared;
+
         try {
             prepared = ranges(series, range, rowKeySerializer);
         } catch (final IOException e) {
@@ -371,10 +378,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         return async.<List<BackendKey>> resolved(ImmutableList.<BackendKey> of());
     }
 
-    static <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
+    <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
         final ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-        final OutputStreamSerialWriter writer = new OutputStreamSerialWriter(byteArray);
-        serializer.serialize(writer, rowKey);
+
+        try (final SerialWriter writer = this.serializer.writeBytes()) {
+            serializer.serialize(writer, rowKey);
+        }
+
         return ByteString.copyFrom(byteArray.toByteArray());
     }
 
@@ -386,7 +396,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         return timestamp % PERIOD;
     }
 
-    static List<PreparedQuery> ranges(final Series series, final DateRange range,
+    List<PreparedQuery> ranges(final Series series, final DateRange range,
             final Serializer<RowKey> rowKeySerializer) throws IOException {
         final List<PreparedQuery> bases = new ArrayList<>();
 

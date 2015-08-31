@@ -12,9 +12,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.shell.protocol.CommandDefinition;
 import com.spotify.heroic.shell.protocol.CommandOutput;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
@@ -29,9 +26,9 @@ import eu.toolchain.async.FutureFinished;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.TinySerializer;
-import eu.toolchain.serializer.io.InputStreamSerialReader;
-import eu.toolchain.serializer.io.OutputStreamSerialWriter;
+import eu.toolchain.serializer.StreamSerialWriter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -66,10 +63,10 @@ class ShellServerClientThread implements Runnable {
 
     void doRun() throws Exception {
         try (final InputStream input = socket.getInputStream()) {
-            final SerialReader reader = new InputStreamSerialReader(input);
+            final SerialReader reader = protocol.framework().readStream(input);
 
             try (final OutputStream output = socket.getOutputStream()) {
-                final SerialWriter writer = new OutputStreamSerialWriter(output);
+                final StreamSerialWriter writer = protocol.framework().writeStream(output);
                 final PrintWriter out = setupPrintWriter(writer);
 
                 while (true) {
@@ -88,7 +85,7 @@ class ShellServerClientThread implements Runnable {
         }
     }
 
-    PrintWriter setupPrintWriter(final SerialWriter writer) {
+    PrintWriter setupPrintWriter(final StreamSerialWriter writer) {
         return new PrintWriter(new Writer() {
             CharArrayWriter array = new CharArrayWriter();
 
@@ -113,7 +110,7 @@ class ShellServerClientThread implements Runnable {
         });
     }
 
-    void handleRequest(SerialWriter writer, Request request, PrintWriter out) throws Exception {
+    void handleRequest(final StreamSerialWriter writer, Request request, PrintWriter out) throws Exception {
         if (request instanceof CommandsRequest) {
             handleCommandsRequest(writer, (CommandsRequest) request);
             return;
@@ -128,7 +125,7 @@ class ShellServerClientThread implements Runnable {
         socket.close();
     }
 
-    void handleCommandsRequest(SerialWriter writer, CommandsRequest request) throws IOException {
+    void handleCommandsRequest(final StreamSerialWriter writer, final CommandsRequest request) throws IOException {
         final List<CommandDefinition> commands = new ArrayList<>();
 
         for (final CoreTaskDefinition def : this.commands) {
@@ -139,7 +136,7 @@ class ShellServerClientThread implements Runnable {
         writer.flush();
     }
 
-    void handleRunTask(SerialWriter writer, RunTaskRequest request, final PrintWriter out) throws Exception {
+    void handleRunTask(final StreamSerialWriter writer, final RunTaskRequest request, final PrintWriter out) throws Exception {
         log.info("Run task: {}", request);
 
         connection.runTask(request.getCommand(), out).on(new FutureDone<Void>() {

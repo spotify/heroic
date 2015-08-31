@@ -15,6 +15,10 @@ public class ShellProtocol {
     final Serializer<Request> request = new Request_Serializer(f);
     final Serializer<Response> response = new Response_Serializer(f);
 
+    public SerializerFramework framework() {
+        return f;
+    }
+
     public Serializer<Request> buildRequest() {
         return request;
     }

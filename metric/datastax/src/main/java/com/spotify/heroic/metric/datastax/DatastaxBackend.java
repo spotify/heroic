@@ -32,13 +32,13 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
@@ -49,10 +49,9 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
@@ -63,6 +62,11 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.StreamCollector;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -73,6 +77,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     private static final MetricsRowKeySerializer keySerializer = new MetricsRowKeySerializer();
 
     @Inject
+    @Getter
     private AsyncFramework async;
 
     @Inject
@@ -282,14 +287,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     private BoundStatement keysStatement(int limit, final Connection c, final ByteBuffer first, final ByteBuffer last) {
-        if (first == null && last == null)
-            return c.keysUnbound.bind(limit);
+        if (first == null && last == null) {
+            return c.keysUnbound.bind(Long.MIN_VALUE, limit);
+        }
 
-        if (first != null && last == null)
+        if (first != null && last == null) {
             return c.keysLeftbound.bind(first, limit);
+        }
 
-        if (first == null && last != null)
+        if (first == null && last != null) {
             return c.keysRightbound.bind(last, limit);
+        }
 
         return c.keysBound.bind(first, last, limit);
     }

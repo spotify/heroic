@@ -29,6 +29,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import lombok.Getter;
 import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
@@ -58,6 +59,7 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
     @Inject
+    @Getter
     private AsyncFramework async;
 
     @Inject
