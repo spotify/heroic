@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
 import static org.elasticsearch.index.query.FilterBuilders.andFilter;
 import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
 import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
@@ -35,6 +36,7 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,9 +46,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionListener;
@@ -81,6 +80,8 @@ import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
@@ -91,6 +92,7 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagSuggest.Suggestion;
@@ -103,10 +105,12 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 @ToString(of = { "connection" })
-public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle, Grouped {
+public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
     private static final String TAG_DELIMITER = "\0";
     private static final String SERIES_TYPE = "series";
     private static final String TAG_TYPE = "tag";
@@ -119,7 +123,6 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
     private static final String TAG_SKEY_PREFIX = "skey.prefix";
     private static final String TAG_SKEY = "skey";
     private static final String TAG_SVAL_RAW = "sval.raw";
-    private static final String TAG_SVAL_HASH = "sval.hash";
     private static final String TAG_SVAL_PREFIX = "sval.prefix";
     private static final String TAG_SVAL = "sval";
     private static final String TAG_KV = "kv";
@@ -149,6 +152,16 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
 
     private final String[] KEY_SUGGEST_SOURCES = new String[] { KEY };
     private static final String[] TAG_SUGGEST_SOURCES = new String[] { TAG_SKEY, TAG_SVAL };
+
+    @Override
+    public AsyncFuture<Void> configure() {
+        return doto(new ManagedAction<Connection, Void>() {
+            @Override
+            public AsyncFuture<Void> action(Connection reference) throws Exception {
+                return reference.configure();
+            }
+        });
+    }
 
     @Override
     public AsyncFuture<Void> start() throws Exception {
@@ -648,5 +661,32 @@ public class ElasticsearchSuggestKVBackend implements SuggestBackend, LifeCycle,
         }
 
         throw new IllegalArgumentException("Invalid filter statement: " + filter);
+    }
+
+    public static BackendTypeFactory<ElasticsearchSuggestModule, SuggestBackend> factory() {
+        return new BackendTypeFactory<ElasticsearchSuggestModule, SuggestBackend>() {
+            @Override
+            public BackendType<SuggestBackend> setup(final ElasticsearchSuggestModule module) {
+                return new BackendType<SuggestBackend>() {
+                    @Override
+                    public Map<String, Map<String, Object>> mappings() throws IOException {
+                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                        mappings.put("tag", loadJsonResource("kv/tag.json"));
+                        mappings.put("series", loadJsonResource("kv/series.json"));
+                        return mappings;
+                    }
+
+                    @Override
+                    public Map<String, Object> settings() throws IOException {
+                        return loadJsonResource("kv/settings.json");
+                    }
+
+                    @Override
+                    public SuggestBackend instance() {
+                        return new SuggestBackendKV(module.groups());
+                    }
+                };
+            }
+        };
     }
 }

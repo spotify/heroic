@@ -32,6 +32,8 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface MetadataBackend extends Grouped, Initializing {
+    public AsyncFuture<Void> configure();
+
     /**
      * Buffer a write for the specified series.
      *

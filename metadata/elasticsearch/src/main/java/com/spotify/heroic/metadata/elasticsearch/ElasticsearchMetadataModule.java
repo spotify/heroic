@@ -22,7 +22,6 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -31,17 +30,14 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -50,6 +46,8 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
@@ -63,6 +61,7 @@ import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import lombok.Data;
 
 @Data
 public final class ElasticsearchMetadataModule implements MetadataModule {
@@ -79,41 +78,38 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
 
+    private static BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend> defaultSetup = MetadataBackendKV.factory();
+
+    private static final Map<String, BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend>> backendTypes = new HashMap<>();
+
+    static {
+        backendTypes.put("kv", defaultSetup);
+        backendTypes.put("v1", MetadataBackendV1.factory());
+    }
+
+    @JsonIgnore
+    private final BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend> backendTypeBuilder;
+
     @JsonCreator
     public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups,
-            @JsonProperty("connection") ManagedConnectionFactory connection,
+            @JsonProperty("groups") Set<String> groups, @JsonProperty("connection") ManagedConnectionFactory connection,
             @JsonProperty("writesPerSecond") Double writesPerSecond,
             @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
-            @JsonProperty("templateName") String templateName) {
+            @JsonProperty("templateName") String templateName, @JsonProperty("backendType") String backendType) {
         this.id = id;
         this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.connection = Optional.fromNullable(connection).or(ManagedConnectionFactory.provideDefault());
         this.writesPerSecond = Optional.fromNullable(writesPerSecond).or(DEFAULT_WRITES_PER_SECOND);
-        this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes)
+                .or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = Optional.fromNullable(templateName).or(DEFAULT_TEMPLATE_NAME);
-
-    }
-
-    private Map<String, Map<String, Object>> mappings() throws IOException {
-        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-        mappings.put("metadata", loadJsonResource("default/metadata.json"));
-        return mappings;
-    }
-
-    private Map<String, Object> loadJsonResource(String string) throws IOException {
-        final String fullPath = getClass().getPackage().getName() + "/" + string;
-
-        try (final InputStream input = getClass().getClassLoader().getResourceAsStream(fullPath)) {
-            if (input == null)
-                return ImmutableMap.of();
-
-            return JsonXContent.jsonXContent.createParser(input).map();
-        }
+        this.backendTypeBuilder = Optional.fromNullable(backendTypes.get(backendType)).or(defaultSetup);
     }
 
     @Override
     public Module module(final Key<MetadataBackend> key, final String id) {
+        final BackendType<MetadataBackend> backendType = backendTypeBuilder.setup(this);
+
         return new PrivateModule() {
             @Provides
             @Singleton
@@ -131,7 +127,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Provides
             @Inject
             public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
-                return builder.construct(templateName, mappings());
+                return builder.construct(templateName, backendType.mappings());
             }
 
             @Provides
@@ -150,7 +146,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
-                bind(key).to(ElasticsearchMetadataBackend.class);
+                bind(key).toInstance(backendType.instance());
                 expose(key);
             }
         };
@@ -178,6 +174,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         private Double writesPerSecond;
         private Long writeCacheDurationMinutes;
         private String templateName;
+        private String backendType;
 
         public Builder id(String id) {
             this.id = id;
@@ -214,9 +211,14 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             return this;
         }
 
+        public Builder backendType(String backendType) {
+            this.backendType = backendType;
+            return this;
+        }
+
         public ElasticsearchMetadataModule build() {
             return new ElasticsearchMetadataModule(id, group, groups, connection, writesPerSecond,
-                    writeCacheDurationMinutes, templateName);
+                    writeCacheDurationMinutes, templateName, backendType);
         }
     }
 }

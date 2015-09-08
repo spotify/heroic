@@ -33,6 +33,8 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface SuggestBackend extends Grouped, Initializing {
+    public AsyncFuture<Void> configure();
+
     /**
      * Return a set of suggestions for the most relevant tag values (given the number of tags available).
      */

@@ -388,9 +388,6 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private void run(InternalOperation op) {
-            if (backends.isEmpty())
-                throw new IllegalStateException("cannot run operation; no backends available for given group");
-
             for (final MetricBackend b : backends) {
                 try {
                     op.run(backends.getDisabled(), b);

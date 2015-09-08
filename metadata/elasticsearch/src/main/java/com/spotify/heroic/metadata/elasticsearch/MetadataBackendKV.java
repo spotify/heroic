@@ -30,6 +30,7 @@ import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -41,8 +42,6 @@ import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import lombok.ToString;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionListener;
@@ -65,10 +64,13 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
@@ -91,9 +93,10 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
+import lombok.ToString;
 
 @ToString(of = { "connection" })
-public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle {
+public class MetadataBackendKV implements MetadataBackend, LifeCycle {
     static final String KEY = "key";
     static final String TAGS = "tags";
     static final String TAG_KEYS = "tag_keys";
@@ -125,6 +128,16 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
 
     @Inject
     private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+
+    @Override
+    public AsyncFuture<Void> configure() {
+        return doto(new ManagedAction<Connection, Void>() {
+            @Override
+            public AsyncFuture<Void> action(Connection reference) throws Exception {
+                return reference.configure();
+            }
+        });
+    }
 
     @Override
     public Set<String> getGroups() {
@@ -589,5 +602,31 @@ public class ElasticsearchMetadataBackend implements MetadataBackend, LifeCycle 
         }
 
         throw new IllegalArgumentException("Invalid filter statement: " + filter);
+    }
+
+    public static BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend> factory() {
+        return new BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend>() {
+            @Override
+            public BackendType<MetadataBackend> setup(final ElasticsearchMetadataModule module) {
+                return new BackendType<MetadataBackend>() {
+                    @Override
+                    public Map<String, Map<String, Object>> mappings() throws IOException {
+                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                        mappings.put("metadata", ElasticsearchMetadataUtils.loadJsonResource("kv/metadata.json"));
+                        return mappings;
+                    }
+
+                    @Override
+                    public Map<String, Object> settings() throws IOException {
+                        return ImmutableMap.of();
+                    }
+
+                    @Override
+                    public MetadataBackend instance() {
+                        return new MetadataBackendKV();
+                    }
+                };
+            }
+        };
     }
 }

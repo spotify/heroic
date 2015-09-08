@@ -46,6 +46,20 @@ public class SuggestBackendGroup implements SuggestBackend {
     private final LocalMetadataManagerReporter reporter;
 
     @Override
+    public AsyncFuture<Void> configure() {
+        final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
+
+        run(new InternalOperation() {
+            @Override
+            public void run(int disabled, SuggestBackend backend) {
+                callbacks.add(backend.configure());
+            }
+        });
+
+        return async.collectAndDiscard(callbacks);
+    }
+
+    @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter, final List<String> exclude,
             final int groupLimit) {
         final List<AsyncFuture<TagValuesSuggest>> callbacks = new ArrayList<>();

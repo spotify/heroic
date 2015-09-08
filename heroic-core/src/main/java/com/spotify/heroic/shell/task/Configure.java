@@ -22,26 +22,36 @@
 package com.spotify.heroic.shell.task;
 
 import java.io.PrintWriter;
-
-import lombok.ToString;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.kohsuke.args4j.Option;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.suggest.SuggestManager;
 
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.ToString;
 
 @TaskUsage("Configure the given group of metric backends")
 @TaskName("configure")
 public class Configure implements ShellTask {
     @Inject
+    private AsyncFramework async;
+    @Inject
     private MetricManager metrics;
+    @Inject
+    private MetadataManager metadata;
+    @Inject
+    private SuggestManager suggest;
 
     @Override
     public TaskParameters params() {
@@ -51,7 +61,14 @@ public class Configure implements ShellTask {
     @Override
     public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
-        return metrics.useGroup(params.group).configure();
+
+        final List<AsyncFuture<Void>> futures = new ArrayList<>();
+
+        futures.add(metrics.useGroup(params.group).configure());
+        futures.add(metadata.useGroup(params.group).configure());
+        futures.add(suggest.useGroup(params.group).configure());
+
+        return async.collectAndDiscard(futures);
     }
 
     @ToString

@@ -22,7 +22,6 @@
 package com.spotify.heroic.suggest.elasticsearch;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,10 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -41,7 +37,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -49,6 +44,8 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
@@ -62,6 +59,7 @@ import com.spotify.heroic.suggest.SuggestModule;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import lombok.Data;
 
 @Data
 public final class ElasticsearchSuggestModule implements SuggestModule {
@@ -79,8 +77,17 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private final String templateName;
     private final String backendType;
 
+    private static BackendTypeFactory<ElasticsearchSuggestModule, SuggestBackend> defaultSetup = SuggestBackendKV.factory();
+
+    private static final Map<String, BackendTypeFactory<ElasticsearchSuggestModule, SuggestBackend>> backendTypes = new HashMap<>();
+
+    static {
+        backendTypes.put("kv", defaultSetup);
+        backendTypes.put("v1", SuggestBackendV1.factory());
+    }
+
     @JsonIgnore
-    private final BackendTypeBuilder backendTypeBuilder;
+    private final BackendTypeFactory<ElasticsearchSuggestModule, SuggestBackend> backendTypeBuilder;
 
     @JsonCreator
     public ElasticsearchSuggestModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
@@ -96,23 +103,12 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         this.writeCacheDurationMinutes = Optional.fromNullable(writeCacheDurationMinutes).or(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = Optional.fromNullable(templateName).or(DEFAULT_TEMPLATE_NAME);
         this.backendType = Optional.fromNullable(backendType).or(DEFAULT_BACKEND_TYPE);
-        this.backendTypeBuilder = Optional.fromNullable(backendTypeBuilders.get(backendType)).or(defaultSetup);
-    }
-
-    private static Map<String, Object> loadJsonResource(String path) throws IOException {
-        final String fullPath = ElasticsearchSuggestModule.class.getPackage().getName() + "/" + path;
-
-        try (final InputStream input = ElasticsearchSuggestModule.class.getClassLoader().getResourceAsStream(fullPath)) {
-            if (input == null)
-                return ImmutableMap.of();
-
-            return JsonXContent.jsonXContent.createParser(input).map();
-        }
+        this.backendTypeBuilder = Optional.fromNullable(backendTypes.get(backendType)).or(defaultSetup);
     }
 
     @Override
     public Module module(final Key<SuggestBackend> key, final String id) {
-        final BackendType backendType = backendTypeBuilder.setup(this);
+        final BackendType<SuggestBackend> backendType = backendTypeBuilder.setup(this);
 
         return new PrivateModule() {
             @Provides
@@ -220,46 +216,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         }
     }
 
-    private static BackendTypeBuilder defaultSetup = new BackendTypeBuilder() {
-        @Override
-        public BackendType setup(final ElasticsearchSuggestModule module) {
-            return new BackendType() {
-                @Override
-                public Map<String, Map<String, Object>> mappings() throws IOException {
-                    final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                    mappings.put("tag", loadJsonResource("kv/tag.json"));
-                    mappings.put("series", loadJsonResource("kv/series.json"));
-                    return mappings;
-                }
-
-                @Override
-                public Map<String, Object> settings() throws IOException {
-                    return loadJsonResource("kv/settings.json");
-                }
-
-                @Override
-                public SuggestBackend instance() {
-                    return new ElasticsearchSuggestKVBackend(module.groups);
-                }
-            };
-        }
-    };
-
-    private static final Map<String, BackendTypeBuilder> backendTypeBuilders = new HashMap<>();
-
-    static {
-        backendTypeBuilders.put("default", defaultSetup);
-    }
-
-    static interface BackendType {
-        Map<String, Map<String, Object>> mappings() throws IOException;
-
-        Map<String, Object> settings() throws IOException;
-
-        SuggestBackend instance();
-    }
-
-    static interface BackendTypeBuilder {
-        BackendType setup(ElasticsearchSuggestModule module);
+    public Set<String> groups() {
+        return groups;
     }
 }

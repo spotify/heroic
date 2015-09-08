@@ -48,6 +48,20 @@ public class MetadataBackendGroup implements MetadataBackend {
     private final LocalMetadataManagerReporter reporter;
 
     @Override
+    public AsyncFuture<Void> configure() {
+        final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
+
+        run(new InternalOperation() {
+            @Override
+            public void run(int disabled, MetadataBackend backend) throws Exception {
+                callbacks.add(backend.configure());
+            }
+        });
+
+        return async.collectAndDiscard(callbacks);
+    }
+
+    @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
         final List<AsyncFuture<FindTags>> callbacks = new ArrayList<>();
 

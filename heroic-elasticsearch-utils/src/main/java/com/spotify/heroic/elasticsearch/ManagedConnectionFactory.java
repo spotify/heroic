@@ -156,11 +156,9 @@ public class ManagedConnectionFactory {
                     public Connection call() throws Exception {
                         final Client client = clientSetup.setup();
 
-                        configureMapping(client, templateName, mappings, settings);
-
                         final BulkProcessor bulk = configureBulkProcessor(client);
 
-                        return new Connection(async, index, client, bulk);
+                        return new Connection(async, index, client, bulk, templateName, mappings, settings);
                     }
                 });
             }
@@ -182,74 +180,6 @@ public class ManagedConnectionFactory {
                 return async.collectAndDiscard(futures);
             }
         });
-    }
-
-    private void configureMapping(Client client, String templateName, Map<String, Map<String, Object>> mappings,
-            Map<String, Object> settings)
-            throws Exception {
-        final IndicesAdminClient indices = client.admin().indices();
-
-        if (isTemplateUpToDate(indices, templateName, mappings, settings))
-            return;
-
-        createTemplate(indices, templateName, mappings, settings);
-    }
-
-    private boolean isTemplateUpToDate(IndicesAdminClient indices, String templateName,
-            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
-        final GetIndexTemplatesResponse response = indices.getTemplates(
-                indices.prepareGetTemplates(templateName).request()).get(30, TimeUnit.SECONDS);
-
-        for (final IndexTemplateMetaData t : response.getIndexTemplates())
-            if (t.getName().equals(templateName))
-                return compareTemplate(t, templateName, mappings);
-
-        return false;
-    }
-
-    private boolean compareTemplate(final IndexTemplateMetaData t, String templateName,
-            Map<String, Map<String, Object>> mappings) throws IOException {
-        if (t.getTemplate() == null)
-            return false;
-
-        if (!t.getTemplate().equals(index.template()))
-            return false;
-
-        final ImmutableOpenMap<String, CompressedString> externalMappings = t.getMappings();
-
-        if (externalMappings == null || externalMappings.isEmpty())
-            return false;
-
-        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
-            final CompressedString external = externalMappings.get(mapping.getKey());
-
-            if (external == null)
-                return false;
-
-            final Map<String, Object> e = JsonXContent.jsonXContent.createParser(external.string()).map();
-
-            if (!mapping.equals(e))
-                return false;
-        }
-
-        return true;
-    }
-
-    private void createTemplate(final IndicesAdminClient indices, String templateName,
-            Map<String, Map<String, Object>> mappings, Map<String, Object> settings) throws Exception {
-        final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
-
-        put.setSettings(settings);
-        put.setTemplate(index.template());
-
-        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
-            put.addMapping(mapping.getKey(), mapping.getValue());
-        }
-
-        final PutIndexTemplateResponse response = put.get();
-
-        if (!response.isAcknowledged())
-            throw new Exception("Failed to setup mapping: " + response.toString());
     }
 
     private BulkProcessor configureBulkProcessor(final Client client) {
