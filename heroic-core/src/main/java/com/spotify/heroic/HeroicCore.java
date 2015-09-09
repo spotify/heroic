@@ -47,19 +47,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -67,77 +59,24 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Guice;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicInternalLifeCycle.Context;
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.AggregationSerializer;
-import com.spotify.heroic.aggregation.CoreAggregationRegistry;
-import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
-import com.spotify.heroic.aggregationcache.CacheKey;
-import com.spotify.heroic.aggregationcache.CacheKey_Serializer;
-import com.spotify.heroic.cluster.ClusterDiscoveryModule;
-import com.spotify.heroic.cluster.RpcProtocolModule;
-import com.spotify.heroic.common.CollectingTypeListener;
-import com.spotify.heroic.common.CoreJavaxRestFramework;
-import com.spotify.heroic.common.IsSubclassOf;
-import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.common.Sampling;
-import com.spotify.heroic.common.Sampling_Serializer;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.common.Series_Serializer;
-import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
-import com.spotify.heroic.filter.CoreFilterFactory;
-import com.spotify.heroic.filter.CoreFilterModifier;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.filter.FilterJsonDeserializer;
-import com.spotify.heroic.filter.FilterJsonDeserializerImpl;
-import com.spotify.heroic.filter.FilterJsonSerializer;
-import com.spotify.heroic.filter.FilterJsonSerializerImpl;
-import com.spotify.heroic.filter.FilterModifier;
-import com.spotify.heroic.filter.FilterSerializer;
-import com.spotify.heroic.filter.FilterSerializerImpl;
-import com.spotify.heroic.grammar.CoreQueryParser;
-import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.EventSerialization;
-import com.spotify.heroic.metric.MetricGroup;
-import com.spotify.heroic.metric.MetricGroupSerialization;
-import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypeSerialization;
-import com.spotify.heroic.metric.MetricTypedGroup;
-import com.spotify.heroic.metric.MetricTypedGroupSerialization;
-import com.spotify.heroic.metric.Point;
-import com.spotify.heroic.metric.PointSerialization;
-import com.spotify.heroic.metric.Spread;
-import com.spotify.heroic.metric.SpreadSerialization;
-import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
-import com.spotify.heroic.suggest.SuggestModule;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.TinyAsync;
-import eu.toolchain.serializer.Serializer;
-import eu.toolchain.serializer.SerializerFramework;
-import eu.toolchain.serializer.TinySerializer;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Configure and bootstrap a Heroic application.
@@ -346,120 +285,10 @@ public class HeroicCore implements HeroicCoreInjector {
     private Injector earlyInjector() {
         log.info("Building Early Injector");
 
-        final Scheduler scheduler = new DefaultScheduler();
-
         final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
+        final HeroicInternalLifeCycle lifeCycle = new HeroicInernalLifeCycleImpl();
 
-        final HeroicInternalLifeCycle lifecycle = new HeroicInernalLifeCycleImpl();
-
-        // build default serialization to be used everywhere.
-        final Module serializers = new AbstractModule() {
-            @Provides
-            @Singleton
-            @Named("common")
-            SerializerFramework serializer() {
-                return TinySerializer.builder().build();
-            }
-
-            @Provides
-            @Singleton
-            FilterSerializer filterSerializer(@Named("common") SerializerFramework s) {
-                return new FilterSerializerImpl(s, s.integer(), s.string());
-            }
-
-            @Provides
-            @Singleton
-            CoreAggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
-                return new CoreAggregationRegistry(s.string());
-            }
-
-            @Provides
-            @Singleton
-            AggregationSerializer aggregationSerializer(CoreAggregationRegistry registry) {
-                return registry;
-            }
-
-            @Provides
-            @Singleton
-            AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
-                return registry;
-            }
-
-            @Provides
-            @Singleton
-            Serializer<Sampling> samplingSerializer(@Named("common") SerializerFramework s) {
-                return new Sampling_Serializer(s);
-            }
-
-            @Provides
-            @Singleton
-            Serializer<CacheKey> cacheKeySerializer(@Named("common") SerializerFramework s, FilterSerializer filter,
-                    AggregationSerializer aggregation) {
-                return new CacheKey_Serializer(s, filter, aggregation);
-            }
-
-            @Provides
-            @Singleton
-            Serializer<Series> series(@Named("common") SerializerFramework s) {
-                return new Series_Serializer(s);
-            }
-
-            @Override
-            protected void configure() {
-                bind(FilterJsonSerializer.class).toInstance(new FilterJsonSerializerImpl());
-                bind(FilterJsonDeserializer.class).toInstance(new FilterJsonDeserializerImpl());
-            }
-        };
-
-        final Module core = new AbstractModule() {
-            @Provides
-            @Singleton
-            public AsyncFramework async(ExecutorService executor) {
-                return TinyAsync.builder().executor(executor).build();
-            }
-
-            @Provides
-            @Singleton
-            @Named("oneshot")
-            private boolean oneshot() {
-                return oneshot;
-            }
-
-            @Provides
-            @Singleton
-            @Named(APPLICATION_HEROIC_CONFIG)
-            private ObjectMapper configMapper() {
-                final ObjectMapper m = new ObjectMapper(new YAMLFactory());
-
-                m.addMixIn(AggregationCacheBackendModule.class, TypeNameMixin.class);
-                m.addMixIn(ClusterDiscoveryModule.class, TypeNameMixin.class);
-                m.addMixIn(RpcProtocolModule.class, TypeNameMixin.class);
-                m.addMixIn(ConsumerModule.class, TypeNameMixin.class);
-                m.addMixIn(MetadataModule.class, TypeNameMixin.class);
-                m.addMixIn(SuggestModule.class, TypeNameMixin.class);
-                m.addMixIn(MetricModule.class, TypeNameMixin.class);
-
-                return m;
-            }
-
-            @Override
-            protected void configure() {
-                bind(Scheduler.class).toInstance(scheduler);
-                bind(HeroicInternalLifeCycle.class).toInstance(lifecycle);
-                bind(FilterFactory.class).to(CoreFilterFactory.class).in(Scopes.SINGLETON);
-                bind(FilterModifier.class).to(CoreFilterModifier.class).in(Scopes.SINGLETON);
-                bind(QueryParser.class).to(CoreQueryParser.class).in(Scopes.SINGLETON);
-
-                bind(HeroicConfigurationContext.class).to(CoreHeroicConfigurationContext.class).in(Scopes.SINGLETON);
-
-                bind(HeroicContext.class).toInstance(new CoreHeroicContext());
-                bind(ExecutorService.class).toInstance(executor);
-
-                bind(JavaxRestFramework.class).toInstance(new CoreJavaxRestFramework());
-            }
-        };
-
-        return Guice.createInjector(core, serializers);
+        return Guice.createInjector(new HeroicEarlyModule(executor, lifeCycle, oneshot));
     }
 
     /**
@@ -512,86 +341,20 @@ public class HeroicCore implements HeroicCoreInjector {
 
         final List<Module> modules = new ArrayList<Module>();
 
-        final Set<LifeCycle> lifecycles = new HashSet<>();
+        final Set<LifeCycle> lifeCycles = new HashSet<>();
 
         final InetSocketAddress bindAddress = setupBindAddress(config);
 
+        final HeroicStartupPinger pinger;
+
+        if (startupPing != null && startupId != null) {
+            pinger = new HeroicStartupPinger(startupPing, startupId);
+        } else {
+            pinger = null;
+        }
+
         // register root components.
-        modules.add(new AbstractModule() {
-            @Provides
-            @Singleton
-            public HeroicCore core() {
-                return HeroicCore.this;
-            }
-
-            @Provides
-            @Singleton
-            public Set<LifeCycle> lifecycles() {
-                return lifecycles;
-            }
-
-            @Provides
-            @Singleton
-            @Named("bindAddress")
-            public InetSocketAddress bindAddress() {
-                return bindAddress;
-            }
-
-            @Provides
-            @Singleton
-            @Named(APPLICATION_JSON_INTERNAL)
-            @Inject
-            public ObjectMapper internalMapper(FilterJsonSerializer serializer, FilterJsonDeserializer deserializer,
-                    AggregationSerializer aggregationSerializer) {
-                final SimpleModule module = new SimpleModule("custom");
-
-                final FilterJsonSerializerImpl serializerImpl = (FilterJsonSerializerImpl) serializer;
-                final FilterJsonDeserializerImpl deserializerImpl = (FilterJsonDeserializerImpl) deserializer;
-                final CoreAggregationRegistry aggregationRegistry = (CoreAggregationRegistry) aggregationSerializer;
-
-                deserializerImpl.configure(module);
-                serializerImpl.configure(module);
-                aggregationRegistry.configure(module);
-
-                final ObjectMapper mapper = new ObjectMapper();
-
-                mapper.addMixIn(Aggregation.class, TypeNameMixin.class);
-                mapper.addMixIn(AggregationQuery.class, TypeNameMixin.class);
-
-                mapper.registerModule(module);
-                mapper.registerModule(serializerModule());
-                mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-                return mapper;
-            }
-
-            @Provides
-            @Singleton
-            @Named(APPLICATION_JSON)
-            @Inject
-            public ObjectMapper jsonMapper(@Named(APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
-                return mapper;
-            }
-
-            @Override
-            protected void configure() {
-                bind(HeroicConfig.class).toInstance(config);
-                bind(QueryManager.class).to(CoreQueryManager.class).in(Scopes.SINGLETON);
-
-                if (server) {
-                    bind(HeroicServer.class).in(Scopes.SINGLETON);
-                }
-
-                bind(HeroicReporter.class).toInstance(reporter);
-
-                if (startupPing != null && startupId != null) {
-                    bind(URI.class).annotatedWith(Names.named("startupPing")).toInstance(startupPing);
-                    bind(String.class).annotatedWith(Names.named("startupId")).toInstance(startupId);
-                    bind(HeroicStartupPinger.class).in(Scopes.SINGLETON);
-                }
-
-                bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifecycles));
-            }
-        });
+        modules.add(new HeroicPrimaryModule(this, lifeCycles, config, bindAddress, server, reporter, pinger));
 
         modules.add(config.getClient());
         modules.add(config.getMetric());
@@ -815,30 +578,6 @@ public class HeroicCore implements HeroicCoreInjector {
                     e.getOriginalMessage());
             throw new Exception(message, e);
         }
-    }
-
-    public static SimpleModule serializerModule() {
-        final SimpleModule module = new SimpleModule("serializers");
-
-        module.addSerializer(Point.class, new PointSerialization.Serializer());
-        module.addDeserializer(Point.class, new PointSerialization.Deserializer());
-
-        module.addSerializer(Event.class, new EventSerialization.Serializer());
-        module.addDeserializer(Event.class, new EventSerialization.Deserializer());
-
-        module.addSerializer(Spread.class, new SpreadSerialization.Serializer());
-        module.addDeserializer(Spread.class, new SpreadSerialization.Deserializer());
-
-        module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
-        module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
-
-        module.addSerializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Serializer());
-        module.addDeserializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Deserializer());
-
-        module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
-        module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());
-
-        return module;
     }
 
     public static Builder builder() {

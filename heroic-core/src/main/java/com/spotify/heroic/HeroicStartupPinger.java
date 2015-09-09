@@ -55,14 +55,6 @@ import eu.toolchain.async.AsyncFuture;
 @ToString(of = { "ping", "id" })
 public class HeroicStartupPinger implements LifeCycle {
     @Inject
-    @Named("startupPing")
-    private URI ping;
-
-    @Inject
-    @Named("startupId")
-    private String id;
-
-    @Inject
     private HeroicServer server;
 
     @Inject
@@ -75,11 +67,8 @@ public class HeroicStartupPinger implements LifeCycle {
     @Inject
     private AsyncFramework async;
 
-    @Data
-    public static final class PingMessage {
-        private final int port;
-        private final String id;
-    }
+    private final URI ping;
+    private final String id;
 
     @Override
     public AsyncFuture<Void> start() throws Exception {
@@ -127,5 +116,11 @@ public class HeroicStartupPinger implements LifeCycle {
         try (final DatagramSocket socket = new DatagramSocket()) {
             socket.send(packet);
         }
+    }
+
+    @Data
+    public static final class PingMessage {
+        private final int port;
+        private final String id;
     }
 }

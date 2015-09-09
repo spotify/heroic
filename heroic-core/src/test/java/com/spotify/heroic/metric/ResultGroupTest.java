@@ -10,7 +10,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.HeroicCore;
+import com.spotify.heroic.HeroicPrimaryModule;
 
 public class ResultGroupTest {
     private ObjectMapper mapper;
@@ -18,7 +18,7 @@ public class ResultGroupTest {
     @Before
     public void before() {
         mapper = new ObjectMapper();
-        mapper.registerModule(HeroicCore.serializerModule());
+        mapper.registerModule(HeroicPrimaryModule.serializerModule());
     }
 
     /**
