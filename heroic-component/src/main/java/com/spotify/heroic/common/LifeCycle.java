@@ -24,7 +24,7 @@ package com.spotify.heroic.common;
 import eu.toolchain.async.AsyncFuture;
 
 public interface LifeCycle extends Initializing {
-    public AsyncFuture<Void> start() throws Exception;
+    public AsyncFuture<Void> start();
 
-    public AsyncFuture<Void> stop() throws Exception;
+    public AsyncFuture<Void> stop();
 }

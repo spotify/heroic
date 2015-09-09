@@ -365,12 +365,12 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return context.start();
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
         futures.add(context.stop());
         futures.add(pools.stop());

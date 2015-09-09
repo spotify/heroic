@@ -70,12 +70,12 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     private Set<String> groups;
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return async.resolved(null);
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.resolved(null);
     }
 

@@ -88,7 +88,7 @@ public class HeroicServer implements LifeCycle {
     private final Object $lock = new Object();
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return async.call(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
@@ -151,7 +151,7 @@ public class HeroicServer implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.call(new Callable<Void>() {
             @Override
             public Void call() throws Exception {

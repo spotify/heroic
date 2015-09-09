@@ -88,12 +88,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     private final Set<String> groups;
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return connection.start();
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return connection.stop();
     }
 

@@ -268,7 +268,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         final ServerBootstrap s = new ServerBootstrap();
         s.channel(NioServerSocketChannel.class);
         s.group(bossGroup, workerGroup);
@@ -351,7 +351,7 @@ public class NativeRpcProtocol implements RpcProtocol, LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
         callbacks.add(async.call(teardownServer()));
         callbacks.addAll(teardownThreadpools());

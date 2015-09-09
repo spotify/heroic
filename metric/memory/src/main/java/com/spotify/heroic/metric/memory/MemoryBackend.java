@@ -76,12 +76,12 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     private Set<String> groups;
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return async.resolved();
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.resolved();
     }
 

@@ -24,7 +24,7 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 
 @RequiredArgsConstructor
-@ToString
+@ToString(of = { "state" })
 @Slf4j
 public class ShellServer implements LifeCycle {
     @Inject
@@ -43,7 +43,7 @@ public class ShellServer implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return state.start().lazyTransform((s) -> {
             return state.doto((state) -> {
                 final Thread thread = new Thread(() -> {
@@ -64,7 +64,7 @@ public class ShellServer implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return state.stop();
     }
 

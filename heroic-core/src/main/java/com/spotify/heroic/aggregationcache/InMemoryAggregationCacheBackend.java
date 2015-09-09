@@ -119,12 +119,12 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     }
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return async.resolved(null);
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.resolved(null);
     }
 

@@ -348,7 +348,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         final AsyncFuture<Void> startup;
 
         if (!oneshot) {
@@ -369,24 +369,18 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
             startup = this.context.startedFuture();
         }
 
-        startup.transform(new LazyTransform<Void, Void>() {
-            @Override
-            public AsyncFuture<Void> transform(Void result) throws Exception {
-                return refresh().error(new Transform<Throwable, Void>() {
-                    @Override
-                    public Void transform(Throwable e) throws Exception {
-                        log.error("initial metadata refresh failed", e);
-                        return null;
-                    }
-                });
-            }
-        });
+        startup.lazyTransform((Void result) -> 
+            refresh().catchFailed((Throwable e) -> {
+                log.error("initial metadata refresh failed", e);
+                return null;
+            })
+        );
 
         return async.resolved(null);
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.resolved(null);
     }
 

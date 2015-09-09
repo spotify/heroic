@@ -46,6 +46,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -418,110 +419,60 @@ public class HeroicCore implements HeroicCoreInjector {
     }
 
     private void startLifeCycles(Injector primary) throws Exception {
-        final AsyncFramework async = primary.getInstance(AsyncFramework.class);
-        final Set<LifeCycle> lifecycles = primary.getInstance(Key.get(new TypeLiteral<Set<LifeCycle>>() {
-        }));
-
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
-
         log.info("Starting life cycles");
-
-        final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();
-
-        /* fire Stoppable handlers */
-        for (final LifeCycle startable : lifecycles) {
-            log.info("Starting: {}", startable);
-
-            try {
-                final AsyncFuture<Void> future = startable.start().on(new FutureDone<Void>() {
-                    @Override
-                    public void failed(Throwable cause) throws Exception {
-                        log.info("Failed to start: {}", startable, cause);
-                    }
-
-                    @Override
-                    public void resolved(Void result) throws Exception {
-                        log.info("Started: {}", startable);
-                    }
-
-                    @Override
-                    public void cancelled() throws Exception {
-                        log.info("Start cancelled: {}", startable);
-                    }
-                });
-
-                futures.add(future);
-                pairs.add(Pair.of(future, startable));
-            } catch (Exception e) {
-                log.error("Failed to start {}", startable, e);
-            }
-        }
-
-        try {
-            async.collect(futures).get(30, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            log.error("Some futures did not start in a timely fashion!");
-
-            for (final Pair<AsyncFuture<Void>, LifeCycle> pair : pairs) {
-                if (!pair.getLeft().isDone()) {
-                    log.error("Did not start: {}", pair.getRight());
-                }
-            }
-        }
-
+        awaitLifeCycles("start", primary, 30, LifeCycle::start);
         log.info("Started all life cycles");
     }
 
     private void stopLifeCycles(final Injector primary) throws Exception {
+        log.info("Stopping life cycles");
+        awaitLifeCycles("stop", primary, 10, LifeCycle::stop);
+        log.info("Stopped all life cycles");
+    }
+
+    private void awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds, final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
-        final Set<LifeCycle> lifecycles = primary.getInstance(Key.get(new TypeLiteral<Set<LifeCycle>>() {
+        final Set<LifeCycle> lifeCycles = primary.getInstance(Key.get(new TypeLiteral<Set<LifeCycle>>() {
         }));
 
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
-        log.info("Stopping life cycles");
-
         final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();
 
-        /* fire Stoppable handlers */
-        for (final LifeCycle stoppable : lifecycles) {
-            try {
-                final AsyncFuture<Void> future = stoppable.stop().on(new FutureDone<Void>() {
-                    @Override
-                    public void failed(Throwable cause) throws Exception {
-                        log.info("Failed to stop: {}", stoppable, cause);
-                    }
+        for (final LifeCycle l : lifeCycles) {
+            log.info("{}: running {}", op, l);
 
-                    @Override
-                    public void resolved(Void result) throws Exception {
-                        log.info("Stopped: {}", stoppable);
-                    }
+            final AsyncFuture<Void> future = fn.apply(l).on(new FutureDone<Void>() {
+                @Override
+                public void failed(Throwable cause) throws Exception {
+                    log.info("{}: failed: {}", op, l, cause);
+                }
 
-                    @Override
-                    public void cancelled() throws Exception {
-                        log.info("Stop cancelled: {}", stoppable);
-                    }
-                });
+                @Override
+                public void resolved(Void result) throws Exception {
+                    log.info("{}: done: {}", op, l);
+                }
 
-                futures.add(future);
-                pairs.add(Pair.of(future, stoppable));
-            } catch (Exception e) {
-                log.error("Failed to stop {}", stoppable, e);
-            }
+                @Override
+                public void cancelled() throws Exception {
+                    log.info("{}: cancelled: {}", op, l);
+                }
+            });
+
+            futures.add(future);
+            pairs.add(Pair.of(future, l));
         }
 
         try {
-            async.collect(futures).get(10, TimeUnit.SECONDS);
+            async.collect(futures).get(awaitSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            log.error("Some futures did not stop in a timely fashion!");
+            log.error("Operation timed out");
 
             for (final Pair<AsyncFuture<Void>, LifeCycle> pair : pairs) {
                 if (!pair.getLeft().isDone()) {
-                    log.error("Did not stop: {}", pair.getRight());
+                    log.error("{}: did not finish in time: {}", op, pair.getRight());
                 }
             }
         }
-
-        log.info("Stopped all life cycles");
     }
 
     private HeroicConfig config(Injector earlyInjector) throws Exception {

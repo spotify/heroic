@@ -96,13 +96,13 @@ public class Cassandra2AggregationCacheBackend implements AggregationCacheBacken
 
     @Override
     @Synchronized
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         return context.start();
     }
 
     @Override
     @Synchronized
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return context.stop();
     }
 

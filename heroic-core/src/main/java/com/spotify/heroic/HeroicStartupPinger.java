@@ -71,7 +71,7 @@ public class HeroicStartupPinger implements LifeCycle {
     private final String id;
 
     @Override
-    public AsyncFuture<Void> start() throws Exception {
+    public AsyncFuture<Void> start() {
         lifecycle.register("Startup Ping", new HeroicInternalLifeCycle.StartupHook() {
             @Override
             public void onStartup(Context context) throws Exception {
@@ -85,7 +85,7 @@ public class HeroicStartupPinger implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<Void> stop() throws Exception {
+    public AsyncFuture<Void> stop() {
         return async.resolved(null);
     }
 
