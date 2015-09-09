@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
-import org.elasticsearch.action.admin.indices.template.get.GetIndexTemplatesResponse;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateResponse;
 import org.elasticsearch.action.bulk.BulkProcessor;
@@ -39,10 +38,7 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
-import org.elasticsearch.cluster.metadata.IndexTemplateMetaData;
-import org.elasticsearch.common.collect.ImmutableOpenMap;
-import org.elasticsearch.common.compress.CompressedString;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
+import org.elasticsearch.common.unit.TimeValue;
 
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
@@ -50,6 +46,8 @@ import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureCancelled;
+import eu.toolchain.async.ResolvableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -93,13 +91,48 @@ public class Connection {
     }
 
     public AsyncFuture<Void> configure() {
-        return async.call(new Callable<Void>() {
+        final IndicesAdminClient indices = client.admin().indices();
+
+        log.info("[{}] updating template for {}", templateName, index.template());
+
+        final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
+
+        put.setSettings(settings);
+        put.setTemplate(index.template());
+
+        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
+            put.addMapping(mapping.getKey(), mapping.getValue());
+        }
+
+        final ResolvableFuture<Void> future = async.future();
+
+        final ListenableActionFuture<PutIndexTemplateResponse> target = put.execute();
+
+        target.addListener(new ActionListener<PutIndexTemplateResponse>() {
             @Override
-            public Void call() throws Exception {
-                configureMapping(client);
-                return null;
+            public void onResponse(final PutIndexTemplateResponse response) {
+                if (!response.isAcknowledged()) {
+                    future.fail(new Exception("request not acknowledged"));
+                    return;
+                }
+
+                future.resolve(null);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                future.fail(e);
             }
         });
+
+        future.on(new FutureCancelled() {
+            @Override
+            public void cancelled() throws Exception {
+                target.cancel(false);
+            }
+        });
+
+        return future;
     }
 
     public String[] readIndices(DateRange range) throws NoIndexSelectedException {
@@ -136,93 +169,5 @@ public class Connection {
 
     public BulkProcessor bulk() {
         return bulk;
-    }
-
-    private void configureMapping(Client client)
-            throws Exception {
-        final IndicesAdminClient indices = client.admin().indices();
-
-        if (isTemplateUpToDate(indices)) {
-            log.info("[{}] template up-to-date", templateName);
-            return;
-        }
-
-        log.info("[{}] updating template", templateName);
-        updateTemplate(indices);
-    }
-
-    private boolean isTemplateUpToDate(IndicesAdminClient indices) throws Exception {
-        final GetIndexTemplatesResponse response = indices
-                .getTemplates(indices.prepareGetTemplates(templateName).request()).get(30, TimeUnit.SECONDS);
-
-        for (final IndexTemplateMetaData t : response.getIndexTemplates()) {
-            if (t.getName().equals(templateName)) {
-                return compareTemplate(t);
-            }
-        }
-
-        return false;
-    }
-
-    private boolean compareTemplate(final IndexTemplateMetaData t) throws IOException {
-        if (t.getTemplate() == null) {
-            log.warn("{}.template (missing)", t.getName());
-            return false;
-        }
-
-        if (!t.getTemplate().equals(index.template())) {
-            log.warn("{}.template\nactual: {}\nwanted:{}", t.getName(), t.getTemplate(), index.template());
-            return false;
-        }
-
-        final ImmutableOpenMap<String, CompressedString> externalMappings = t.getMappings();
-
-        if (externalMappings == null || externalMappings.isEmpty()) {
-            log.warn("{}.mappings (empty)", t.getName());
-            return false;
-        }
-
-        if (mappings.size() != externalMappings.size()) {
-            log.warn("{}.mappings: size differ, {} (actual) != {} (wanted)", t.getName(), externalMappings.size(),
-                    mappings.size());
-        }
-
-        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
-            final CompressedString external = externalMappings.get(mapping.getKey());
-
-            if (external == null) {
-                log.warn("{}.mappings.{} (missing)", t.getName(), mapping.getKey());
-                return false;
-            }
-
-            final Map<String, Object> e = JsonXContent.jsonXContent.createParser(external.string()).map();
-
-            e.get(mapping.getKey());
-
-            if (!e.equals(mapping.getValue())) {
-                log.warn("{}.mappings.{}:\nactual: {}\nwanted: {}", t.getName(), mapping.getKey(), e,
-                        mapping.getValue());
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private void updateTemplate(final IndicesAdminClient indices) throws Exception {
-        final PutIndexTemplateRequestBuilder put = indices.preparePutTemplate(templateName);
-
-        put.setSettings(settings);
-        put.setTemplate(index.template());
-
-        for (final Map.Entry<String, Map<String, Object>> mapping : mappings.entrySet()) {
-            put.addMapping(mapping.getKey(), mapping.getValue());
-        }
-
-        final PutIndexTemplateResponse response = put.get();
-
-        if (!response.isAcknowledged()) {
-            throw new Exception("Failed to setup mapping: " + response.toString());
-        }
     }
 }
