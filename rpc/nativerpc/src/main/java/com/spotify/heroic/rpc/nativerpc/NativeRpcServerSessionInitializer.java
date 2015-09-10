@@ -118,16 +118,12 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 return;
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Request {}: {}", request.getEndpoint(), new String(request.getBody(), UTF8));
+            if (log.isTraceEnabled()) {
+                log.trace("request[{}] {}", request.getEndpoint(), new String(request.getBody(), UTF8));
             }
 
             // start sending heartbeat since we are now processing a request.
             setupHeartbeat(ch);
-
-            if (log.isInfoEnabled()) {
-                log.info("body: {}", new String(request.getBody()));
-            }
 
             final Object body = mapper.readValue(request.getBody(), handle.requestType());
 
@@ -135,12 +131,9 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
 
             // serialize in a separate thread on the async thread pool.
             // this also neatly catches errors for us in the next step.
-            handleFuture.transform(serialize()).on(new FutureFinished() {
+            handleFuture.transform(serialize(request)).on(new FutureFinished() {
                 @Override
                 public void finished() throws Exception {
-                    if (log.isDebugEnabled())
-                        log.debug("Response {}", request.getEndpoint());
-
                     // stop sending heartbeats when the future has been resolved.
                     // this will cause the other end to time out if a response is available, but its unable to pass the
                     // network.
@@ -175,16 +168,20 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
 
             final Timeout old = heartbeatTimeout.getAndSet(timeout);
 
-            if (old != null)
+            if (old != null) {
                 old.cancel();
+            }
         }
 
-        private Transform<Object, NativeRpcResponse> serialize() {
+        private Transform<Object, NativeRpcResponse> serialize(final NativeRpcRequest request) {
             return new Transform<Object, NativeRpcResponse>() {
                 @Override
                 public NativeRpcResponse transform(Object result) throws Exception {
                     final byte[] response = mapper.writeValueAsBytes(result);
-                    log.info("response: {}", new String(response));
+                    if (log.isTraceEnabled()) {
+                        log.trace("response[{}]: {}", request.getEndpoint(), new String(response, UTF8));
+                    }
+
                     return new NativeRpcResponse(response);
                 }
             };
