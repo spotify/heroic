@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,11 +35,8 @@ import javax.inject.Inject;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
@@ -62,8 +60,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
-import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.StreamCollector;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -270,7 +266,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
             @Override
             public List<BackendKey> call() throws Exception {
                 final Connection c = k.get();
-                final BoundStatement stmt = keysStatement(limit, c, first, last);
+                final BoundStatement stmt = keysStatement(c, first, last);
                 final ResultSet rows = c.session.execute(stmt);
 
                 final List<BackendKey> result = new ArrayList<>();
@@ -286,20 +282,54 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         }).on(k.releasing());
     }
 
-    private BoundStatement keysStatement(int limit, final Connection c, final ByteBuffer first, final ByteBuffer last) {
+    @Override
+    public AsyncFuture<Iterator<BackendKey>> allKeys(BackendKey start, int limit) {
+        final ByteBuffer first = start == null ? null
+                : keySerializer.serialize(new MetricsRowKey(start.getSeries(), start.getBase()));
+
+        final Borrowed<Connection> k = connection.borrow();
+        final Connection c = k.get();
+        final BoundStatement stmt = keysStatement(c, first, null);
+        final ResultSet rows = c.session.execute(stmt);
+
+        final Iterator<Row> it = rows.iterator();
+
+        return async.resolved(new Iterator<BackendKey>() {
+            @Override
+            public boolean hasNext() {
+                boolean hasNext = it.hasNext();
+
+                if (!hasNext) {
+                    k.release();
+                }
+
+                return hasNext;
+            }
+
+            @Override
+            public BackendKey next() {
+                final Row r = it.next();
+                final ByteBuffer bytes = r.getBytes("metric_key");
+                final MetricsRowKey key = keySerializer.deserialize(bytes);
+                return new BackendKey(key.getSeries(), key.getBase());
+            }
+        });
+    }
+
+    private BoundStatement keysStatement(final Connection c, final ByteBuffer first, final ByteBuffer last) {
         if (first == null && last == null) {
-            return c.keysUnbound.bind(Long.MIN_VALUE, limit);
+            return c.keysUnbound.bind();
         }
 
         if (first != null && last == null) {
-            return c.keysLeftbound.bind(first, limit);
+            return c.keysLeftbound.bind(first);
         }
 
         if (first == null && last != null) {
-            return c.keysRightbound.bind(last, limit);
+            return c.keysRightbound.bind(last);
         }
 
-        return c.keysBound.bind(first, last, limit);
+        return c.keysBound.bind(first, last);
     }
 
     private static List<PreparedQuery> ranges(final Series series, final DateRange range) {
