@@ -48,11 +48,27 @@ public class QueryMetricsResponse {
     private static final String SERIES = "series";
     private static final String EVENTS = "events";
 
+    @Getter
+    private final DateRange range;
+
+    @Getter
+    @JsonSerialize(using = ResultSerializer.class)
+    private final List<ShardedResultGroup> result;
+
+    @Getter
+    private final Statistics statistics;
+
+    @Getter
+    private final List<RequestError> errors;
+
+    @Getter
+    private final List<ShardLatency> latencies;
+
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
         @Override
-        public void serialize(Object value, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(Object value, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
 
             final List<ShardedResultGroup> result = (List<ShardedResultGroup>) value;
 
@@ -62,14 +78,16 @@ public class QueryMetricsResponse {
                 final List<TagValues> tags = resultGroup.getTags();
                 final MetricTypedGroup group = resultGroup.getGroup();
 
-                if (group.getType() == MetricType.POINT) {
+                switch (group.getType()) {
+                case POINT:
                     writeDataPoints(g, resultGroup, tags, group.getDataAs(Point.class));
-                    continue;
-                }
-
-                if (group.getType() == MetricType.EVENT) {
+                    break;
+                case EVENT:
                     writeEvents(g, resultGroup, tags, group.getDataAs(Event.class));
-                    continue;
+                    break;
+                default:
+                    /* ignore, for now */
+                    break;
                 }
             }
 
@@ -80,13 +98,11 @@ public class QueryMetricsResponse {
                 final List<Point> datapoints) throws IOException {
             g.writeStartObject();
             g.writeFieldName("type");
-            g.writeString(SERIES);
 
-            g.writeFieldName("hash");
-            g.writeString(Integer.toHexString(group.hashCode()));
-
-            g.writeFieldName("shard");
-            g.writeObject(group.getShard());
+            g.writeStringField("type", SERIES);
+            g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+            g.writeObjectField("shard", group.getShard());
+            g.writeNumberField("cadence", group.getCadence());
 
             g.writeFieldName("tags");
 
@@ -120,8 +136,7 @@ public class QueryMetricsResponse {
 
             g.writeEndObject();
 
-            g.writeFieldName("values");
-            g.writeObject(datapoints);
+            g.writeObjectField("values", datapoints);
 
             g.writeEndObject();
         }
@@ -130,14 +145,10 @@ public class QueryMetricsResponse {
                 final List<Event> events) throws IOException {
             g.writeStartObject();
 
-            g.writeFieldName("type");
-            g.writeString(EVENTS);
-
-            g.writeFieldName("hash");
-            g.writeString(Integer.toHexString(group.hashCode()));
-
-            g.writeFieldName("shard");
-            g.writeObject(group.getShard());
+            g.writeStringField("type", EVENTS);
+            g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+            g.writeObjectField("shard", group.getShard());
+            g.writeNumberField("cadence", group.getCadence());
 
             g.writeFieldName("tags");
 
@@ -150,26 +161,9 @@ public class QueryMetricsResponse {
 
             g.writeEndObject();
 
-            g.writeFieldName("values");
-            g.writeObject(events);
+            g.writeObjectField("values", events);
 
             g.writeEndObject();
         }
     }
-
-    @Getter
-    private final DateRange range;
-
-    @Getter
-    @JsonSerialize(using = ResultSerializer.class)
-    private final List<ShardedResultGroup> result;
-
-    @Getter
-    private final Statistics statistics;
-
-    @Getter
-    private final List<RequestError> errors;
-
-    @Getter
-    private final List<ShardLatency> latencies;
 }
