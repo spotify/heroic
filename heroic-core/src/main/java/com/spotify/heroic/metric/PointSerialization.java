@@ -37,30 +37,21 @@ public class PointSerialization {
         @Override
         public Point deserialize(JsonParser p, DeserializationContext c) throws IOException,
                 JsonProcessingException {
-
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
-            final long timestamp;
-
-            {
-                if (!p.nextToken().isNumeric()) {
-                    throw c.mappingException(String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
-                }
-
-                timestamp = p.getLongValue();
+            if (!p.nextToken().isNumeric()) {
+                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_INT, "Expected timestamp (number)");
             }
 
-            final double value;
+            final long timestamp = p.getLongValue();
 
-            {
-                if (!p.nextToken().isNumeric()) {
-                    throw c.mappingException(String.format("Expected value (number), not %s", p.getCurrentToken()));
-                }
-
-                value = p.getDoubleValue();
+            if (!p.nextToken().isNumeric()) {
+                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_FLOAT, "Expected value (number)");
             }
+
+            final double value = p.getDoubleValue();
 
             if (p.nextToken() != JsonToken.END_ARRAY) {
                 throw c.mappingException(String.format("Expected end of array, not %s", p.getCurrentToken()));
