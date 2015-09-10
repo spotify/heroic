@@ -40,8 +40,12 @@ public class MetricTypedGroupSerialization {
 
     public static class Deserializer extends JsonDeserializer<MetricTypedGroup> {
         @Override
-        public MetricTypedGroup deserialize(JsonParser p, DeserializationContext c) throws IOException,
-                JsonProcessingException {
+        public MetricTypedGroup deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
+            if (p.getCurrentToken() != JsonToken.START_OBJECT) {
+                throw c.wrongTokenException(p, JsonToken.START_OBJECT, null);
+            }
+
             MetricType type = null;
             List<Metric> data = null;
 
@@ -53,6 +57,10 @@ public class MetricTypedGroupSerialization {
                 }
 
                 if (TYPE.equals(name)) {
+                    if (p.nextToken() != JsonToken.VALUE_STRING) {
+                        throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
+                    }
+
                     type = p.readValueAs(MetricType.class);
                     continue;
                 }
@@ -77,8 +85,8 @@ public class MetricTypedGroupSerialization {
                 }
             }
 
-            if (p.nextToken() != JsonToken.END_OBJECT) {
-                throw c.mappingException("Expected end of object");
+            if (p.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw c.wrongTokenException(p, JsonToken.END_OBJECT, null);
             }
 
             if (type == null) {

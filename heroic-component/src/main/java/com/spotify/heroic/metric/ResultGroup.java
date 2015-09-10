@@ -25,10 +25,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.List;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import lombok.Data;
 
 @Data
 public class ResultGroup {

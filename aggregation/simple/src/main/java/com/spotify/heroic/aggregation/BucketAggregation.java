@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
 
-import lombok.Data;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
@@ -38,6 +36,10 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
+
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
 
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
@@ -60,6 +62,14 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
     public static final long MAX_BUCKET_COUNT = 100000l;
 
     private final static Map<String, String> EMPTY = ImmutableMap.of();
+
+    private final Sampling sampling;
+
+    @Getter(AccessLevel.NONE)
+    private final Class<IN> in;
+
+    @Getter(AccessLevel.NONE)
+    private final MetricType out;
 
     @Data
     private final class Session implements AggregationSession {
@@ -132,10 +142,6 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
             return new AggregationResult(updates, statistics);
         }
     }
-
-    private final Sampling sampling;
-    private final Class<IN> in;
-    private final MetricType out;
 
     @Override
     public long estimate(DateRange original) {

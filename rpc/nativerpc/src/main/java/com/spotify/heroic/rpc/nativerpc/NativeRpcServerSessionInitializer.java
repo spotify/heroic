@@ -118,11 +118,16 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 return;
             }
 
-            if (log.isDebugEnabled())
+            if (log.isDebugEnabled()) {
                 log.debug("Request {}: {}", request.getEndpoint(), new String(request.getBody(), UTF8));
+            }
 
             // start sending heartbeat since we are now processing a request.
             setupHeartbeat(ch);
+
+            if (log.isInfoEnabled()) {
+                log.info("body: {}", new String(request.getBody()));
+            }
 
             final Object body = mapper.readValue(request.getBody(), handle.requestType());
 
@@ -178,7 +183,9 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             return new Transform<Object, NativeRpcResponse>() {
                 @Override
                 public NativeRpcResponse transform(Object result) throws Exception {
-                    return new NativeRpcResponse(mapper.writeValueAsBytes(result));
+                    final byte[] response = mapper.writeValueAsBytes(result);
+                    log.info("response: {}", new String(response));
+                    return new NativeRpcResponse(response);
                 }
             };
         }

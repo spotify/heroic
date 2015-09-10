@@ -17,7 +17,7 @@ public class MetricTypedGroup {
      */
     @SuppressWarnings("unchecked")
     public <T> List<T> getDataAs(Class<T> expected) {
-        if (expected.isAssignableFrom(type.type())) {
+        if (!expected.isAssignableFrom(type.type())) {
             throw new IllegalArgumentException(
                     String.format("Cannot assign type (%s) to expected (%s)", type, expected));
         }
