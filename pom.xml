@@ -29,6 +29,7 @@
     <module>aggregationcache/cassandra2</module>
     <module>rpc/httprpc</module>
     <module>rpc/nativerpc</module>
+    <module>heroic-coalesce</module>
     <module>heroic-dist</module>
   </modules>
 
@@ -84,6 +85,7 @@
         <artifactId>heroic-elasticsearch-utils</artifactId>
         <version>${project.version}</version>
       </dependency>
+
       <dependency>
         <groupId>com.spotify.heroic</groupId>
         <artifactId>heroic-core</artifactId>
@@ -94,6 +96,12 @@
         <artifactId>heroic-shell</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic</groupId>
+        <artifactId>heroic-coalesce</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
         <artifactId>heroic-metric-datastax</artifactId>

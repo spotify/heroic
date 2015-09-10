@@ -24,14 +24,21 @@ package com.spotify.heroic.rpc.httprpc;
 import com.google.inject.Inject;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.HeroicOptions;
 
 public class Entry implements HeroicModule {
     @Inject
     private HeroicConfigurationContext config;
 
+    @Inject
+    private HeroicOptions options;
+
     @Override
     public void setup() {
         config.registerType("http", HttpRpcProtocolModule.class);
-        config.resource(HttpRpcResource.class);
+
+        if (!options.isDisableLocal()) {
+            config.resource(HttpRpcResource.class);
+        }
     }
 }

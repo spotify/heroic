@@ -63,10 +63,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicInternalLifeCycle.Context;
+import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -87,9 +89,8 @@ import lombok.extern.slf4j.Slf4j;
  * @author udoprog
  */
 @Slf4j
-public class HeroicCore implements HeroicCoreInjector {
+public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
-    static final List<HeroicConfigurator> DEFAULT_CONFIGURATORS = ImmutableList.of();
     static final boolean DEFAULT_SERVER = true;
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
@@ -130,7 +131,7 @@ public class HeroicCore implements HeroicCoreInjector {
     private final String host;
     private final Integer port;
     private final List<Class<?>> modules;
-    private final List<HeroicConfigurator> configurators;
+    private final List<HeroicBootstrap> bootstrappers;
     private final boolean server;
     private final Path configPath;
     private final HeroicProfile profile;
@@ -138,21 +139,33 @@ public class HeroicCore implements HeroicCoreInjector {
     private final URI startupPing;
     private final String startupId;
     private final boolean oneshot;
+    private final boolean disableLocal;
 
-    public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicConfigurator> configurators,
+    public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> bootstrappers,
             Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter, URI startupPing,
-            String startupId, Boolean oneshot) {
+            String startupId, boolean oneshot, boolean disableLocal) {
         this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
         this.port = port;
         this.modules = Optional.fromNullable(modules).or(DEFAULT_MODULES);
-        this.configurators = Optional.fromNullable(configurators).or(DEFAULT_CONFIGURATORS);
+        this.bootstrappers = ImmutableList.copyOf(Optional.fromNullable(bootstrappers).or(ImmutableList.of()));
         this.server = Optional.fromNullable(server).or(DEFAULT_SERVER);
         this.configPath = configPath;
         this.profile = profile;
         this.reporter = Optional.fromNullable(reporter).or(NoopHeroicReporter.get());
         this.startupPing = startupPing;
         this.startupId = startupId;
-        this.oneshot = Optional.fromNullable(oneshot).or(DEFAULT_ONESHOT);
+        this.oneshot = oneshot;
+        this.disableLocal = disableLocal;
+    }
+
+    @Override
+    public boolean isDisableLocal() {
+        return disableLocal;
+    }
+
+    @Override
+    public boolean isOneshot() {
+        return oneshot;
     }
 
     private final Object $lock = new Object();
@@ -184,9 +197,13 @@ public class HeroicCore implements HeroicCoreInjector {
         final HeroicConfig config = config(early);
         final Injector primary = primaryInjector(config, early);
 
-        /* execute configurators (before starting all life cycles) */
-        for (final HeroicConfigurator configurator : configurators()) {
-            configurator.setup(primary);
+        for (final HeroicBootstrap bootstrap : bootstrappers) {
+            try {
+                primary.injectMembers(bootstrap);
+                bootstrap.run();
+            } catch (Exception e) {
+                throw new Exception("Failed to run bootstrapper " + bootstrap, e);
+            }
         }
 
         this.primary.set(primary);
@@ -242,6 +259,17 @@ public class HeroicCore implements HeroicCoreInjector {
         return injectee;
     }
 
+    @Override
+    public <T> T injectInstance(Class<T> cls) {
+        final Injector primary = this.primary.get();
+
+        if (primary == null) {
+            throw new IllegalStateException("primary injector not available");
+        }
+
+        return primary.getInstance(cls);
+    }
+
     public void join() throws InterruptedException {
         synchronized ($lock) {
             while (primary.get() != null) {
@@ -289,7 +317,7 @@ public class HeroicCore implements HeroicCoreInjector {
         final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
         final HeroicInternalLifeCycle lifeCycle = new HeroicInernalLifeCycleImpl();
 
-        return Guice.createInjector(new HeroicEarlyModule(executor, lifeCycle, oneshot));
+        return Guice.createInjector(new HeroicEarlyModule(executor, lifeCycle, this));
     }
 
     /**
@@ -358,15 +386,25 @@ public class HeroicCore implements HeroicCoreInjector {
         modules.add(new HeroicPrimaryModule(this, lifeCycles, config, bindAddress, server, reporter, pinger));
 
         modules.add(config.getClient());
-        modules.add(config.getMetric());
-        modules.add(config.getMetadata());
-        modules.add(config.getSuggest());
-        modules.add(config.getCluster());
-        modules.add(config.getCache());
-        modules.add(config.getIngestion());
 
-        // shell server module
-        modules.add(config.getShellServer());
+        if (!disableLocal) {
+            modules.add(new AbstractModule() {
+                @Override
+                protected void configure() {
+                    bind(LocalClusterNode.class).in(Scopes.SINGLETON);
+                }
+            });
+            modules.add(config.getMetric());
+            modules.add(config.getMetadata());
+            modules.add(config.getSuggest());
+            modules.add(config.getIngestion());
+
+            // shell server module
+            modules.add(config.getShellServer());
+        }
+
+        modules.add(config.getCluster().make(this));
+        modules.add(config.getCache());
 
         modules.add(new AbstractModule() {
             @Override
@@ -412,25 +450,28 @@ public class HeroicCore implements HeroicCoreInjector {
         return modules;
     }
 
-    private List<HeroicConfigurator> configurators() {
-        final List<HeroicConfigurator> configurators = new ArrayList<>();
-        configurators.addAll(this.configurators);
-        return configurators;
-    }
-
     private void startLifeCycles(Injector primary) throws Exception {
         log.info("Starting life cycles");
-        awaitLifeCycles("start", primary, 30, LifeCycle::start);
+
+        if (!awaitLifeCycles("start", primary, 120, LifeCycle::start)) {
+            throw new Exception("Failed to start all life cycles");
+        }
+
         log.info("Started all life cycles");
     }
 
     private void stopLifeCycles(final Injector primary) throws Exception {
         log.info("Stopping life cycles");
-        awaitLifeCycles("stop", primary, 10, LifeCycle::stop);
+
+        if (!awaitLifeCycles("stop", primary, 10, LifeCycle::stop)) {
+            log.warn("Failed to stop all life cycles");
+            return;
+        }
+
         log.info("Stopped all life cycles");
     }
 
-    private void awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds, final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
+    private boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds, final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
         final Set<LifeCycle> lifeCycles = primary.getInstance(Key.get(new TypeLiteral<Set<LifeCycle>>() {
         }));
@@ -472,7 +513,11 @@ public class HeroicCore implements HeroicCoreInjector {
                     log.error("{}: did not finish in time: {}", op, pair.getRight());
                 }
             }
+
+            return false;
         }
+
+        return true;
     }
 
     private HeroicConfig config(Injector earlyInjector) throws Exception {
@@ -539,7 +584,6 @@ public class HeroicCore implements HeroicCoreInjector {
         private String host;
         private Integer port;
         private List<Class<?>> modules = new ArrayList<>();
-        private List<HeroicConfigurator> configurators = new ArrayList<>();
         private boolean server = false;
         private Path configPath;
         private HeroicProfile profile;
@@ -547,6 +591,8 @@ public class HeroicCore implements HeroicCoreInjector {
         private URI startupPing;
         private String startupId;
         private boolean oneshot = false;
+        private boolean disableLocal = false;
+        private List<HeroicBootstrap> bootstrappers = new ArrayList<>();
 
         public Builder module(Class<?> module) {
             this.modules.add(checkNotNull(module, "module must not be null"));
@@ -563,6 +609,14 @@ public class HeroicCore implements HeroicCoreInjector {
          */
         public Builder server(boolean server) {
             this.server = server;
+            return this;
+        }
+
+        /**
+         * Disable local backends.
+         */
+        public Builder disableLocal(boolean disableLocal) {
+            this.disableLocal = disableLocal;
             return this;
         }
 
@@ -598,11 +652,6 @@ public class HeroicCore implements HeroicCoreInjector {
             return this;
         }
 
-        public Builder configurator(HeroicConfigurator configurator) {
-            this.configurators.add(checkNotNull(configurator, "configurator must not be null"));
-            return this;
-        }
-
         public Builder startupPing(String startupPing) {
             this.startupPing = URI.create(checkNotNull(startupPing, "startupPing must not be null"));
             return this;
@@ -626,9 +675,14 @@ public class HeroicCore implements HeroicCoreInjector {
             return this;
         }
 
+        public Builder bootstrap(HeroicBootstrap bootstrap) {
+            this.bootstrappers.add(bootstrap);
+            return this;
+        }
+
         public HeroicCore build() {
-            return new HeroicCore(host, port, modules, configurators, server, configPath, profile, reporter,
-                    startupPing, startupId, oneshot);
+            return new HeroicCore(host, port, modules, bootstrappers, server, configPath, profile, reporter,
+                    startupPing, startupId, oneshot, disableLocal);
         }
 
         public Builder modules(List<String> modules) {

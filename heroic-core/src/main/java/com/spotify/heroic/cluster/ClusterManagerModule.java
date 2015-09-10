@@ -29,8 +29,6 @@ import java.util.UUID;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -39,20 +37,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Exposed;
-import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
+import com.spotify.heroic.HeroicOptions;
+
+import lombok.Data;
 
 /**
  *
  * @author udoprog
  */
 @Data
-public class ClusterManagerModule extends PrivateModule {
+public class ClusterManagerModule {
     private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key.get(ClusterDiscovery.class);
     public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.copyOf(Sets.newHashSet(
             NodeCapability.QUERY, NodeCapability.WRITE));
@@ -101,61 +102,51 @@ public class ClusterManagerModule extends PrivateModule {
         };
     }
 
-    @Provides
-    @Singleton
-    @Exposed
-    public NodeMetadata localMetadata() {
-        return new NodeMetadata(0, id, tags, capabilities);
-    }
+    public Module make(final HeroicOptions options) {
+        return new PrivateModule() {
+            @Provides
+            @Singleton
+            @Exposed
+            public NodeMetadata localMetadata() {
+                return new NodeMetadata(0, id, tags, capabilities);
+            }
 
-    @Provides
-    @Singleton
-    @Named("useLocal")
-    public Boolean useLocal() {
-        return useLocal;
-    }
+            @Provides
+            @Singleton
+            @Named("useLocal")
+            public Boolean useLocal() {
+                return useLocal;
+            }
 
-    @Provides
-    @Singleton
-    @Named("localId")
-    public UUID localId() {
-        return id;
-    }
+            @Provides
+            @Singleton
+            @Named("topology")
+            public Set<Map<String, String>> topology() {
+                return topology;
+            }
 
-    @Provides
-    @Singleton
-    @Named("topology")
-    public Set<Map<String, String>> topology() {
-        return topology;
-    }
+            @Override
+            protected void configure() {
+                install(discovery.module(DISCOVERY_KEY));
+                installProtocols(protocols);
 
-    @Provides
-    @Singleton
-    @Named("local")
-    @Inject
-    public NodeRegistryEntry localEntry(LocalClusterNode localClusterNode, NodeMetadata localMetadata) {
-        return new NodeRegistryEntry(localClusterNode, localMetadata);
-    }
+                bind(ClusterManager.class).to(ClusterManagerImpl.class).in(Scopes.SINGLETON);
 
-    @Override
-    protected void configure() {
-        bind(LocalClusterNode.class).in(Scopes.SINGLETON);
-        install(discovery.module(DISCOVERY_KEY));
-        installProtocols(protocols);
+                expose(ClusterManager.class);
+                expose(NodeMetadata.class);
+            }
 
-        bind(ClusterManager.class).to(ClusterManagerImpl.class).in(Scopes.SINGLETON);
-        expose(ClusterManager.class);
-    }
+            private void installProtocols(final List<RpcProtocolModule> protocols) {
+                final MapBinder<String, RpcProtocol> protocolBindings = MapBinder.newMapBinder(binder(), String.class,
+                        RpcProtocol.class);
 
-    private void installProtocols(final List<RpcProtocolModule> protocols) {
-        final MapBinder<String, RpcProtocol> protocolBindings = MapBinder.newMapBinder(binder(), String.class,
-                RpcProtocol.class);
-
-        for (final RpcProtocolModule m : protocols) {
-            final Key<RpcProtocol> key = Key.get(RpcProtocol.class, Names.named(m.scheme()));
-            install(m.module(key));
-            protocolBindings.addBinding(m.scheme()).to(key);
-        }
+                for (final RpcProtocolModule m : protocols) {
+                    final Key<RpcProtocol> key = Key.get(RpcProtocol.class, Names.named(m.scheme()));
+                    install(m.module(key, options));
+                    protocolBindings.addBinding(m.scheme()).to(key);
+                }
+            }
+        };
     }
 
     public static Builder builder() {

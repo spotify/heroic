@@ -23,9 +23,10 @@ package com.spotify.heroic.cluster;
 
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.spotify.heroic.HeroicOptions;
 
 public interface RpcProtocolModule {
-    public Module module(final Key<RpcProtocol> key);
+    public Module module(final Key<RpcProtocol> key, final HeroicOptions options);
 
     public String scheme();
 }

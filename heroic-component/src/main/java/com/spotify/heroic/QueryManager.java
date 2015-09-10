@@ -18,6 +18,8 @@ public interface QueryManager {
 
     public QueryBuilder newQuery();
 
+    public AsyncFuture<Void> initialized();
+
     public interface Group extends Iterable<ClusterNode.Group> {
         public AsyncFuture<QueryResult> query(Query query);
 

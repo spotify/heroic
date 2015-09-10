@@ -9,57 +9,35 @@
     <relativePath>..</relativePath>
   </parent>
 
-  <artifactId>heroic-dist</artifactId>
+  <artifactId>heroic-coalesce</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Self-Contained Distrubtion Project</name>
+  <name>Heroic: Coalesce Framework</name>
 
   <description>
-    This manifest is intended to build a completely self-contained Heroic
-    distribution as a shaded jar.
   </description>
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <scope>provided</scope>
     </dependency>
 
-    <!-- dist-specific -->
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-1.2-api</artifactId>
-    </dependency>
-
-    <!-- core -->
+    <!-- all -->
     <dependency>
       <groupId>com.spotify.heroic</groupId>
       <artifactId>heroic-all</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-shell</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-coalesce</artifactId>
-    </dependency>
-
-    <!-- argument parsing -->
-    <dependency>
-      <groupId>args4j</groupId>
-      <artifactId>args4j</artifactId>
     </dependency>
 
     <!-- testing -->
@@ -75,13 +53,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
 </project>

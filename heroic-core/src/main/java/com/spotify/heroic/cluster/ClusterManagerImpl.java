@@ -31,18 +31,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicContext;
+import com.spotify.heroic.HeroicOptions;
 import com.spotify.heroic.async.MaybeError;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.scheduler.Scheduler;
@@ -52,8 +48,12 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
+import eu.toolchain.async.FutureFinished;
 import eu.toolchain.async.LazyTransform;
+import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Handles management of cluster state.
@@ -66,45 +66,46 @@ import eu.toolchain.async.Transform;
  * @author udoprog
  */
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
 @ToString(of = { "useLocal" })
 public class ClusterManagerImpl implements ClusterManager, LifeCycle {
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final ClusterDiscovery discovery;
+    private final NodeMetadata localMetadata;
+    private final Map<String, RpcProtocol> protocols;
+    private final Scheduler scheduler;
+    private final Boolean useLocal;
+    private final Set<Map<String, String>> topology;
+    private final HeroicReporter reporter;
+    private final HeroicOptions options;
+    private final Optional<LocalClusterNode> local;
+    private final HeroicContext context;
+
+    private final ResolvableFuture<Void> initialized;
 
     @Inject
-    private ClusterDiscovery discovery;
+    public ClusterManagerImpl(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
+            Map<String, RpcProtocol> protocols, Scheduler scheduler, @Named("useLocal") Boolean useLocal,
+            @Named("topology") Set<Map<String, String>> topology, HeroicReporter reporter, HeroicOptions options,
+            LocalClusterNodeHolder local, HeroicContext context) {
+        this.async = async;
+        this.discovery = discovery;
+        this.localMetadata = localMetadata;
+        this.protocols = protocols;
+        this.scheduler = scheduler;
+        this.useLocal = useLocal;
+        this.topology = topology;
+        this.reporter = reporter;
+        this.options = options;
+        this.local = Optional.fromNullable(local.value);
+        this.context = context;
 
-    @Inject
-    private NodeMetadata localMetadata;
+        this.initialized = async.future();
+    }
 
-    @Inject
-    private Map<String, RpcProtocol> protocols;
-
-    @Inject
-    private Scheduler scheduler;
-
-    @Inject
-    @Named("useLocal")
-    private Boolean useLocal;
-
-    @Inject
-    @Named("local")
-    private NodeRegistryEntry localEntry;
-
-    @Inject
-    @Named("topology")
-    private Set<Map<String, String>> topology;
-
-    @Inject
-    private HeroicReporter reporter;
-
-    @Inject
-    @Named("oneshot")
-    private boolean oneshot;
-
-    @Inject
-    private HeroicContext context;
+    static class LocalClusterNodeHolder {
+        @Inject(optional = true)
+        LocalClusterNode value = null;
+    }
 
     private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<Set<URI>>(new HashSet<URI>());
 
@@ -214,8 +215,9 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
             log.info("No discovery mechanism configured, using local node");
             final List<MaybeError<NodeRegistryEntry>> results = new ArrayList<>();
 
-            if (useLocal) {
-                results.add(MaybeError.just(localEntry));
+            if (useLocal && local.isPresent()) {
+                final LocalClusterNode l = local.get();
+                results.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
             }
 
             transform = async.resolved(results);
@@ -351,7 +353,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     public AsyncFuture<Void> start() {
         final AsyncFuture<Void> startup;
 
-        if (!oneshot) {
+        if (!options.isOneshot()) {
             startup = this.context.startedFuture().transform(new Transform<Void, Void>() {
                 @Override
                 public Void transform(Void result) throws Exception {
@@ -374,7 +376,12 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
                 log.error("initial metadata refresh failed", e);
                 return null;
             })
-        );
+        ).on(new FutureFinished() {
+            @Override
+            public void finished() throws Exception {
+                initialized.resolve(null);
+            }
+        });
 
         return async.resolved(null);
     }
@@ -395,16 +402,23 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         return registry.getOnlineNodes() > 0;
     }
 
+    @Override
+    public AsyncFuture<Void> initialized() {
+        return initialized;
+    }
+
     private final LazyTransform<ClusterNode, NodeRegistryEntry> localTransform = new LazyTransform<ClusterNode, NodeRegistryEntry>() {
         @Override
         public AsyncFuture<NodeRegistryEntry> transform(final ClusterNode node) throws Exception {
-            if (useLocal && localMetadata.getId().equals(node.metadata().getId())) {
+            if (useLocal && local.isPresent() && localMetadata.getId().equals(node.metadata().getId())) {
                 log.info("Using local instead of {}", node);
+
+                final LocalClusterNode l = local.get();
 
                 return node.close().transform(new Transform<Void, NodeRegistryEntry>() {
                     @Override
                     public NodeRegistryEntry transform(Void result) throws Exception {
-                        return localEntry;
+                        return new NodeRegistryEntry(l, l.metadata());
                     }
                 });
             }

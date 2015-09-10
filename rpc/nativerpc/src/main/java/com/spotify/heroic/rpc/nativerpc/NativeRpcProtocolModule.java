@@ -21,14 +21,7 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timer;
-
 import java.net.InetSocketAddress;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -40,8 +33,15 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicOptions;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.RpcProtocolModule;
+
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timer;
+import lombok.Data;
 
 @Data
 public class NativeRpcProtocolModule implements RpcProtocolModule {
@@ -75,7 +75,7 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     }
 
     @Override
-    public Module module(final Key<RpcProtocol> key) {
+    public Module module(final Key<RpcProtocol> key, final HeroicOptions options) {
         return new PrivateModule() {
             @Provides
             @Singleton
@@ -102,8 +102,12 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
                 final long heartbeatReadInterval = heartbeatInterval * 2;
 
                 bind(key).toInstance(
-                        new NativeRpcProtocol(address, DEFAULT_PORT, maxFrameSize, sendTimeout, heartbeatInterval,
-                                heartbeatReadInterval));
+                        new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout, heartbeatReadInterval));
+
+                if (!options.isDisableLocal()) {
+                    bind(NativeRpcProtocolServer.class)
+                            .toInstance(new NativeRpcProtocolServer(address, heartbeatReadInterval, maxFrameSize));
+                }
 
                 expose(key);
             }

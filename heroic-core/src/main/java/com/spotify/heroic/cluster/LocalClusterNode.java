@@ -24,13 +24,8 @@ package com.spotify.heroic.cluster;
 import java.util.List;
 import java.util.UUID;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
@@ -61,28 +56,27 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-@NoArgsConstructor
 @ToString(exclude = { "metrics" })
 public class LocalClusterNode implements ClusterNode {
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final NodeMetadata localMetadata;
+    private final MetricManager metrics;
+    private final MetadataManager metadata;
+    private final SuggestManager suggest;
 
     @Inject
-    private NodeMetadata localMetadata;
-
-    @Inject
-    private MetricManager metrics;
-
-    @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private SuggestManager suggest;
-
-    @Inject
-    @Named("localId")
-    private UUID id;
+    public LocalClusterNode(AsyncFramework async, NodeMetadata localMetadata, MetricManager metrics,
+            MetadataManager metadata, SuggestManager suggest) {
+        this.async = async;
+        this.localMetadata = localMetadata;
+        this.metrics = metrics;
+        this.metadata = metadata;
+        this.suggest = suggest;
+    }
 
     @Override
     public NodeMetadata metadata() {

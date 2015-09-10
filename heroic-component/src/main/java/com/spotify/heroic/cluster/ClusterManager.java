@@ -85,4 +85,9 @@ public interface ClusterManager extends LifeCycle {
     public ClusterNodeGroup useDefaultGroup();
 
     public ClusterNodeGroup useGroup(String group);
+
+    /**
+     * Future that will be resolved, after the cluster manager has been fully initialized.
+     */
+    public AsyncFuture<Void> initialized();
 }

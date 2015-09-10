@@ -74,6 +74,11 @@ public class CoreQueryManager implements QueryManager {
         return new QueryBuilder(aggregations, filters, parser);
     }
 
+    @Override
+    public AsyncFuture<Void> initialized() {
+        return cluster.initialized();
+    }
+
     @RequiredArgsConstructor
     public class Group implements QueryManager.Group {
         private final Iterable<ClusterNode.Group> groups;

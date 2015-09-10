@@ -55,7 +55,13 @@ import lombok.RequiredArgsConstructor;
 public class HeroicEarlyModule extends AbstractModule {
     private final ExecutorService executor;
     private final HeroicInternalLifeCycle lifeCycle;
-    private final boolean oneshot;
+    private final HeroicOptions options;
+
+    @Provides
+    @Singleton
+    HeroicOptions options() {
+        return options;
+    }
 
     @Provides
     @Singleton
@@ -111,13 +117,6 @@ public class HeroicEarlyModule extends AbstractModule {
     @Singleton
     public AsyncFramework async(ExecutorService executor) {
         return TinyAsync.builder().executor(executor).build();
-    }
-
-    @Provides
-    @Singleton
-    @Named("oneshot")
-    private boolean oneshot() {
-        return oneshot;
     }
 
     @Provides
