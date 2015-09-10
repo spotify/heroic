@@ -13,6 +13,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicPrimaryModule;
 import com.spotify.heroic.common.Statistics;
 
@@ -26,8 +27,15 @@ public class BasicSerializationTest {
     }
 
     @Test
+    public void testEvent() throws Exception {
+        final Event expected = new Event(1024L, ImmutableMap.<String, Object> of("int", 1234, "float", 0.25d,
+                "string", "foo"));
+        assertSerialization("Event.json", expected, Event.class);
+    }
+
+    @Test
     public void testPoint() throws Exception {
-        final Point expected = new Point(0, 3.14);
+        final Point expected = new Point(1024L, 3.14);
         assertSerialization("Point.json", expected, Point.class);
     }
 
@@ -40,7 +48,7 @@ public class BasicSerializationTest {
     @Test
     public void testResultGroup() throws Exception {
         final List<TagValues> tags = new ArrayList<>();
-        final ResultGroup expected = new ResultGroup(tags, new MetricTypedGroup(MetricType.POINT, new ArrayList<>()));
+        final ResultGroup expected = new ResultGroup(tags, new MetricTypedGroup(MetricType.POINT, new ArrayList<>()), 0l);
         assertSerialization("ResultGroup.json", expected, ResultGroup.class);
     }
 

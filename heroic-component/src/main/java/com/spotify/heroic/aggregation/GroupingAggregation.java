@@ -126,6 +126,11 @@ public abstract class GroupingAggregation implements Aggregation {
         return each.extent();
     }
 
+    @Override
+    public long cadence() {
+        return each.cadence();
+    }
+
     @RequiredArgsConstructor
     private final class GroupSession implements AggregationSession {
         private final Map<Map<String, String>, AggregationSession> sessions;

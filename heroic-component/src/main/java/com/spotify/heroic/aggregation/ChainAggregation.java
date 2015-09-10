@@ -61,31 +61,27 @@ public class ChainAggregation implements Aggregation {
     }
 
     /**
-     * For chain aggregations, the extent is the biggest among all children.
+     * The last aggregation in the chain determines the estimated number of samples.
+     */
+    @Override
+    public long estimate(DateRange range) {
+        return chain.get(chain.size() - 1).estimate(range);
+    }
+
+    /**
+     * The first aggregation in the chain determines the extent.
      */
     @Override
     public long extent() {
-        long extent = 0;
-
-        for (final Aggregation a : chain) {
-            extent = Math.max(a.extent(), extent);
-        }
-
-        return extent;
+        return chain.iterator().next().extent();
     }
 
+    /**
+     * The last aggregation in the chain determines the cadence.
+     */
     @Override
-    public long estimate(DateRange range) {
-        long best = -1;
-
-        for (final Aggregation a : chain) {
-            final long estimate = a.estimate(range);
-
-            if (estimate != -1)
-                best = estimate;
-        }
-
-        return best;
+    public long cadence() {
+        return chain.get(chain.size() - 1).cadence();
     }
 
     @Override

@@ -45,6 +45,15 @@ public interface Aggregation {
     public long extent();
 
     /**
+     * Get the cadence of the current aggregation.
+     *
+     * The cadence indicates the interval in milliseconds that samples can be expected.
+     *
+     * @return The cadence of the resulting aggregation, or {@code 0} if this is unknown.
+     */
+    public long cadence();
+
+    /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
     public AggregationTraversal session(List<AggregationState> states, DateRange range);

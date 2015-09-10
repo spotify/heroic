@@ -35,9 +35,17 @@ public class ResultGroup {
     final List<TagValues> tags;
     final MetricTypedGroup group;
 
+    /**
+     * The interval in milliseconds for which a sample can be expected.
+     * A cadence of 0 indicates that this value is unknown.
+     */
+    final long cadence;
+
     @JsonCreator
-    public ResultGroup(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("group") MetricTypedGroup group) {
+    public ResultGroup(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("group") MetricTypedGroup group,
+            @JsonProperty("cadence") Long cadence) {
         this.tags = checkNotNull(tags, "tags");
         this.group = checkNotNull(group, "group");
+        this.cadence = checkNotNull(cadence, "cadence");
     }
 }

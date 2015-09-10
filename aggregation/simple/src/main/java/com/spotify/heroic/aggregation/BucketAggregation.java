@@ -147,8 +147,9 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
     public long estimate(DateRange original) {
         final long size = sampling.getSize();
 
-        if (size == 0)
-            return -1;
+        if (size == 0) {
+            return 0;
+        }
 
         return original.rounded(size).diff() / size;
     }
@@ -172,6 +173,11 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
     @Override
     public long extent() {
         return sampling.getExtent();
+    }
+
+    @Override
+    public long cadence() {
+        return sampling.getSize();
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {

@@ -190,6 +190,7 @@ public class LocalMetricManager implements MetricManager {
                             "aggregation is estimated more points [%d/%d] than what is allowed", estimate,
                             aggregationLimit));
                 }
+                aggregation.extent();
 
                 final AggregationTraversal traversal = aggregation.session(states(result.getSeries()), range);
 
@@ -222,7 +223,7 @@ public class LocalMetricManager implements MetricManager {
                     });
                 }
 
-                return async.eventuallyCollect(fetches, collectResultGroups(watcher, session, source),
+                return async.eventuallyCollect(fetches, collectResultGroups(watcher, aggregation, session, source),
                         fetchParallelism);
             };
 
@@ -339,7 +340,7 @@ public class LocalMetricManager implements MetricManager {
         }
 
         private StreamCollector<FetchData, ResultGroups> collectResultGroups(final FetchQuotaWatcher watcher,
-                final AggregationSession session, MetricType output) {
+                final Aggregation aggregation, final AggregationSession session, MetricType output) {
             return new StreamCollector<FetchData, ResultGroups>() {
                 @Override
                 public void resolved(FetchData result) throws Exception {
@@ -376,7 +377,7 @@ public class LocalMetricManager implements MetricManager {
 
                     for (final AggregationData group : result.getResult()) {
                         final List<TagValues> g = group(group.getSeries());
-                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues())));
+                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues()), aggregation.cadence()));
                     }
 
                     final Statistics stat = Statistics.builder().aggregator(result.getStatistics())

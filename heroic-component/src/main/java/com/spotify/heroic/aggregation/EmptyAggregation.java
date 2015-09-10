@@ -48,6 +48,11 @@ public class EmptyAggregation implements Aggregation {
         return 0;
     }
 
+    @Override
+    public long cadence() {
+        return 0;
+    }
+
     /**
      * A trivial session that collects all values provided to it.
      */
