@@ -22,23 +22,16 @@
 package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 
-import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
 
-@Slf4j
 @Data
 public class QueryResultPart {
     private static final List<ShardedResultGroup> EMPTY_GROUPS = new ArrayList<>();
@@ -67,74 +60,22 @@ public class QueryResultPart {
      */
     private final List<ShardLatency> latencies;
 
-    private static final Collector<QueryResultPart, QueryResultPart> collector = new Collector<QueryResultPart, QueryResultPart>() {
-        @Override
-        public QueryResultPart collect(Collection<QueryResultPart> results) throws Exception {
-            Statistics statistics = Statistics.EMPTY;
-
-            final List<ShardedResultGroup> groups = new ArrayList<>();
-            final List<RequestError> errors = new ArrayList<>();
-            final List<ShardLatency> latencies = new ArrayList<>();
-
-            for (final QueryResultPart result : results) {
-                statistics = statistics.merge(result.getStatistics());
-                groups.addAll(result.getGroups());
-                errors.addAll(result.getErrors());
-                latencies.addAll(result.getLatencies());
-            }
-
-            return new QueryResultPart(groups, statistics, errors, latencies);
-        }
-    };
-
-    public static Collector<QueryResultPart, QueryResultPart> reduce() {
-        return collector;
-    }
-
-    public static Transform<ResultGroups, QueryResultPart> toSharded(final DateRange range, final Map<String, String> shard) {
-        final long start = System.currentTimeMillis();
-
-        return new Transform<ResultGroups, QueryResultPart>() {
-            @Override
-            public QueryResultPart transform(ResultGroups result) throws Exception {
-                final List<ShardedResultGroup> groups = new ArrayList<>();
-
-                for (final ResultGroup group : result.getGroups()) {
-                    groups.add(new ShardedResultGroup(shard, group.getTags(), group.getGroup(), group.getCadence()));
-                }
-
-                final long end = System.currentTimeMillis();
-                final long latency = end - start;
-                final ImmutableList<ShardLatency> latencies = ImmutableList.of(new ShardLatency(shard, latency));
-
-                return new QueryResultPart(groups, result.getStatistics(), result.getErrors(), latencies);
-            }
-        };
-    }
-
-    public static QueryResultPart nodeError(final UUID id, final String node, final Map<String, String> tags,
-            Throwable e) {
-        final List<RequestError> errors = Lists.newArrayList();
-        errors.add(NodeError.fromThrowable(id, node, tags, e));
-        return new QueryResultPart(EMPTY_GROUPS, Statistics.EMPTY, errors, EMPTY_LATENCIES);
-    }
-
-    public static Transform<Throwable, QueryResultPart> nodeError(final UUID id, final String node,
+    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range,
             final Map<String, String> shard) {
         final long start = System.currentTimeMillis();
 
-        return new Transform<Throwable, QueryResultPart>() {
-            @Override
-            public QueryResultPart transform(Throwable e) throws Exception {
-                log.error("Encountered error in transform", e);
-                final long end = System.currentTimeMillis();
-                final long latency = end - start;
-                final ImmutableList<ShardLatency> latencies = ImmutableList.of(new ShardLatency(shard, latency));
+        return (ResultGroups result) -> {
+            final List<ShardedResultGroup> groups = new ArrayList<>();
 
-                final List<RequestError> errors = Lists.newArrayList();
-                errors.add(NodeError.fromThrowable(id, node, shard, e));
-                return new QueryResultPart(EMPTY_GROUPS, Statistics.EMPTY, errors, latencies);
+            for (final ResultGroup group : result.getGroups()) {
+                groups.add(new ShardedResultGroup(shard, group.getTags(), group.getGroup(), group.getCadence()));
             }
+
+            final long end = System.currentTimeMillis();
+            final long latency = end - start;
+            final ImmutableList<ShardLatency> latencies = ImmutableList.of(new ShardLatency(shard, latency));
+
+            return new QueryResultPart(groups, result.getStatistics(), result.getErrors(), latencies);
         };
     }
 }

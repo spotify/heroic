@@ -5,8 +5,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
-
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.AggregationFactory;
@@ -17,9 +15,11 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
+import com.spotify.heroic.metric.ResultGroups;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
 
 public class CoreQueryManager implements QueryManager {
     @Inject
@@ -85,8 +85,10 @@ public class CoreQueryManager implements QueryManager {
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
                 final NodeMetadata m = c.metadata();
-                futures.add(group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(),
-                        q.isDisableCache()).transform(QueryResultPart.toSharded(q.getRange(), m.getTags())));
+                futures.add(
+                        group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.isDisableCache())
+                                .catchFailed(ResultGroups.nodeError(group))
+                                .transform(QueryResultPart.fromResultGroup(q.getRange(), m.getTags())));
             }
 
             return async.collect(futures, QueryResult.collectParts(q.getRange()));

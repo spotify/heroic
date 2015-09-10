@@ -68,24 +68,21 @@ public class QueryResult {
      * @return A complete QueryResult.
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(final DateRange range) {
-        return new Collector<QueryResultPart, QueryResult>() {
-            @Override
-            public QueryResult collect(Collection<QueryResultPart> parts) throws Exception {
-                Statistics statistics = Statistics.EMPTY;
+        return (Collection<QueryResultPart> parts) -> {
+            Statistics statistics = Statistics.EMPTY;
 
-                final List<ShardedResultGroup> groups = new ArrayList<>();
-                final List<RequestError> errors = new ArrayList<>();
-                final List<ShardLatency> latencies = new ArrayList<>();
+            final List<ShardedResultGroup> groups = new ArrayList<>();
+            final List<RequestError> errors = new ArrayList<>();
+            final List<ShardLatency> latencies = new ArrayList<>();
 
-                for (final QueryResultPart part : parts) {
-                    statistics = statistics.merge(part.getStatistics());
-                    groups.addAll(part.getGroups());
-                    errors.addAll(part.getErrors());
-                    latencies.addAll(part.getLatencies());
-                }
-
-                return new QueryResult(range, groups, statistics, errors, latencies);
+            for (final QueryResultPart part : parts) {
+                statistics = statistics.merge(part.getStatistics());
+                groups.addAll(part.getGroups());
+                errors.addAll(part.getErrors());
+                latencies.addAll(part.getLatencies());
             }
+
+            return new QueryResult(range, groups, statistics, errors, latencies);
         };
     }
 }
