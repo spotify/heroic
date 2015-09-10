@@ -45,17 +45,20 @@ public class CollapseAggregation extends GroupingAggregation {
     protected Map<String, String> key(final Map<String, String> tags) {
         final List<String> of = getOf();
 
-        if (of == null)
+        if (of == null) {
             return NO_GROUP;
+        }
 
         // group by 'everything'
-        if (of.isEmpty())
+        if (of.isEmpty()) {
             return tags;
+        }
 
         final Map<String, String> key = new HashMap<>(tags);
 
-        for (final String o : of)
+        for (final String o : of) {
             key.remove(o);
+        }
 
         return key;
     }

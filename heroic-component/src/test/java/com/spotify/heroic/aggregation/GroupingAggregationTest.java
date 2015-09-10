@@ -1,11 +1,17 @@
 package com.spotify.heroic.aggregation;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -13,10 +19,11 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.GroupingAggregation;
+import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GroupingAggregationTest {
@@ -56,5 +63,60 @@ public class GroupingAggregationTest {
         doReturn(key2).when(a).key(key2);
 
         a.map(ImmutableList.of(state1, state2));
+    }
+
+    @Test
+    public void testChainedSessions() {
+        final GroupingAggregation g1 = new GroupAggregation(ImmutableList.of("site", "host"), EmptyAggregation.INSTANCE);
+        final GroupingAggregation g2 = new GroupAggregation(ImmutableList.of("site"), EmptyAggregation.INSTANCE);
+
+        final ChainAggregation chain = new ChainAggregation(ImmutableList.of(g1, g2));
+
+        final List<AggregationState> states = new ArrayList<>();
+
+        final Series s1 = Series.of("foo", ImmutableMap.of("site", "sto", "host", "a"));
+        final Series s2 = Series.of("foo", ImmutableMap.of("site", "sto", "host", "b"));
+        final Series s3 = Series.of("foo", ImmutableMap.of("site", "lon", "host", "b"));
+        final Series s4 = Series.of("foo", ImmutableMap.of("host", "c"));
+
+        states.add(AggregationState.forSeries(s1));
+        states.add(AggregationState.forSeries(s2));
+        states.add(AggregationState.forSeries(s3));
+        states.add(AggregationState.forSeries(s4));
+
+        final AggregationSession session = chain.session(states, new DateRange(0, 10000)).getSession();
+
+        session.update(AggregationData.forSeries(s4, ImmutableList.of(new Point(4, 4.0)), MetricType.POINT));
+        session.update(AggregationData.forSeries(s3, ImmutableList.of(new Point(3, 3.0)), MetricType.POINT));
+        session.update(AggregationData.forSeries(s2, ImmutableList.of(new Point(2, 2.0)), MetricType.POINT));
+        session.update(AggregationData.forSeries(s1, ImmutableList.of(new Point(1, 1.0)), MetricType.POINT));
+
+        final List<AggregationData> result = session.result().getResult();
+
+        assertEquals(3, result.size());
+
+        final Set<Map<String, String>> expected = result.stream().map(AggregationData::getGroup).collect(Collectors.toSet());
+
+        for (final AggregationData data : result) {
+            if (data.getGroup().equals(ImmutableMap.of("site", "lon"))) {
+                assertEquals(ImmutableList.of(new Point(3, 3.0)), data.getValues());
+                expected.remove(ImmutableMap.of("site", "lon"));
+                continue;
+            }
+
+            if (data.getGroup().equals(ImmutableMap.of("site", "sto"))) {
+                assertEquals(ImmutableList.of(new Point(1, 1.0), new Point(2, 2.0)), data.getValues());
+                expected.remove(ImmutableMap.of("site", "sto"));
+                continue;
+            }
+
+            if (data.getGroup().equals(ImmutableMap.of())) {
+                assertEquals(ImmutableList.of(new Point(4, 4.0)), data.getValues());
+                expected.remove(ImmutableMap.of());
+                continue;
+            }
+
+            Assert.fail("unexpected group: " + data.getGroup());
+        }
     }
 }

@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,6 +58,7 @@ public class EmptyAggregation implements Aggregation {
      * A trivial session that collects all values provided to it.
      */
     @Data
+    @ToString(exclude = { "input" })
     private static final class CollectorSession implements AggregationSession {
         private final ConcurrentLinkedQueue<AggregationData> input = new ConcurrentLinkedQueue<AggregationData>();
         private final Set<Series> series;

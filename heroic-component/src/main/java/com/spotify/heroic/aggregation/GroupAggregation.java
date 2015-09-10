@@ -45,17 +45,26 @@ public class GroupAggregation extends GroupingAggregation {
     protected Map<String, String> key(final Map<String, String> tags) {
         final List<String> of = getOf();
 
-        if (of == null)
+        if (of == null) {
             return tags;
+        }
 
         // group by 'everything'
-        if (of.isEmpty())
+        if (of.isEmpty()) {
             return ALL_GROUP;
+        }
 
         final Map<String, String> key = new HashMap<>();
 
-        for (final String o : of)
-            key.put(o, tags.get(o));
+        for (final String o : of) {
+            String value = tags.get(o);
+
+            if (value == null) {
+                continue;
+            }
+
+            key.put(o, value);
+        }
 
         return key;
     }

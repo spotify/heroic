@@ -25,15 +25,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.
@@ -121,8 +122,9 @@ public class ChainAggregation implements Aggregation {
             Statistics.Aggregator statistics = firstResult.getStatistics();
 
             for (final AggregationSession session : rest) {
-                for (AggregationData u : current)
+                for (final AggregationData u : current) {
                     session.update(u);
+                }
 
                 final AggregationResult next = session.result();
                 current = next.getResult();
@@ -130,6 +132,15 @@ public class ChainAggregation implements Aggregation {
             }
 
             return new AggregationResult(current, statistics);
+        }
+
+        @Override
+        public String toString() {
+            if (rest.iterator().hasNext()) {
+                return "[" + first + ", " + Joiner.on(", ").join(rest) + "]";
+            }
+
+            return "[" + first + "]";
         }
     }
 

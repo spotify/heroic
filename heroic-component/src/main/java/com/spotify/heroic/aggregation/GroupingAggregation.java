@@ -24,21 +24,25 @@ package com.spotify.heroic.aggregation;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricType;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
@@ -108,8 +112,9 @@ public abstract class GroupingAggregation implements Aggregation {
                     ImmutableList.of(new AggregationState(e.getKey(), e.getValue())),
                     range);
 
-            for (final AggregationState state : traversal.getStates())
+            for (final AggregationState state : traversal.getStates()) {
                 series.addAll(state.getSeries());
+            }
 
             sessions.put(e.getKey(), traversal.getSession());
             states.add(new AggregationState(e.getKey(), series));
@@ -133,6 +138,7 @@ public abstract class GroupingAggregation implements Aggregation {
         return each.cadence();
     }
 
+    @ToString
     @RequiredArgsConstructor
     private final class GroupSession implements AggregationSession {
         private final Map<Map<String, String>, AggregationSession> sessions;
@@ -143,8 +149,8 @@ public abstract class GroupingAggregation implements Aggregation {
             AggregationSession session = sessions.get(key);
 
             if (session == null) {
-                log.warn("no session for key ({}) derived from {}", key, group.getGroup());
-                return;
+                throw new IllegalStateException(String.format("no session for key (%s) derived from %s, has (%s)", key,
+                        group.getGroup(), sessions.keySet()));
             }
 
             // update using this groups key.
@@ -153,17 +159,52 @@ public abstract class GroupingAggregation implements Aggregation {
 
         @Override
         public AggregationResult result() {
-            final List<AggregationData> groups = new ArrayList<>();
+            final Map<ResultKey, ResultValues> groups = new HashMap<>();
 
             Statistics.Aggregator statistics = Statistics.Aggregator.EMPTY;
 
             for (final Map.Entry<Map<String, String>, AggregationSession> e : sessions.entrySet()) {
                 final AggregationResult r = e.getValue().result();
                 statistics = statistics.merge(r.getStatistics());
-                groups.addAll(r.getResult());
+
+                for (final AggregationData data : r.getResult()) {
+                    final ResultKey key = new ResultKey(e.getKey(), data.getType());
+
+                    ResultValues result = groups.get(key);
+
+                    if (result == null) {
+                        result = new ResultValues();
+                        groups.put(key, result);
+                    }
+
+                    result.series.addAll(data.getSeries());
+                    result.values.addAll(data.getValues());
+                }
             }
 
-            return new AggregationResult(groups, statistics);
+            final List<AggregationData> data = new ArrayList<>();
+
+            for (final Map.Entry<ResultKey, ResultValues> e : groups.entrySet()) {
+                final ResultKey k = e.getKey();
+                final ResultValues v = e.getValue();
+
+                Collections.sort(v.values, k.type.comparator());
+
+                data.add(new AggregationData(k.group, v.series, v.values, k.type));
+            }
+
+            return new AggregationResult(data, statistics);
         }
+    }
+
+    @Data
+    private static class ResultKey {
+        final Map<String, String> group;
+        final MetricType type;
+    }
+
+    private static class ResultValues {
+        final Set<Series> series = new HashSet<>();
+        final List<Metric> values = new ArrayList<>();
     }
 }
