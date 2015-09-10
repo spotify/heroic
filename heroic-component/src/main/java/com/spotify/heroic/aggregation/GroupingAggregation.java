@@ -33,12 +33,14 @@ import java.util.Set;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 
+@Slf4j
 @Data
 @EqualsAndHashCode(of = { "of", "each" })
 public abstract class GroupingAggregation implements Aggregation {
@@ -140,8 +142,10 @@ public abstract class GroupingAggregation implements Aggregation {
             final Map<String, String> key = key(group.getGroup());
             AggregationSession session = sessions.get(key);
 
-            if (session == null)
-                throw new IllegalStateException(String.format("no session for %s", key));
+            if (session == null) {
+                log.warn("no session for key ({}) derived from {}", key, group.getGroup());
+                return;
+            }
 
             // update using this groups key.
             session.update(new AggregationData(key, group.getSeries(), group.getValues(), group.getType()));
