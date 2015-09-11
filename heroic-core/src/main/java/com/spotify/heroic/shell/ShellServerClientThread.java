@@ -44,8 +44,6 @@ class ShellServerClientThread implements Runnable {
 
     @Override
     public void run() {
-        log.info("Connected");
-
         try {
             doRun();
         } catch (Exception e) {
@@ -57,8 +55,6 @@ class ShellServerClientThread implements Runnable {
         } catch (IOException e) {
             log.error("Failed to close client socket", e);
         }
-
-        log.info("Shutting down");
     }
 
     void doRun() throws Exception {

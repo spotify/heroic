@@ -1,7 +1,7 @@
 package com.spotify.heroic;
 
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -24,28 +24,18 @@ import com.spotify.heroic.shell.protocol.RunTaskRequest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
+import eu.toolchain.serializer.StreamSerialWriter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RemoteHeroicCoreBridge implements CoreInterface {
-    final Socket socket;
+    final InetSocketAddress address;
     final AsyncFramework async;
-    final OutputStream out;
-    final SerialWriter output;
-    final SerialReader input;
 
-    final ShellProtocol protocol = new ShellProtocol();
-    final Serializer<Request> requestSerializer = protocol.buildRequest();
-    final Serializer<Response> responseSerializer = protocol.buildResponse();
-
-    public RemoteHeroicCoreBridge(Socket socket, AsyncFramework async) throws IOException {
-        this.socket = socket;
+    public RemoteHeroicCoreBridge(InetSocketAddress address, AsyncFramework async) throws IOException {
+        this.address = address;
         this.async = async;
-        this.out = socket.getOutputStream();
-        this.output = protocol.framework().writeStream(out);
-        this.input = protocol.framework().readStream(socket.getInputStream());
     }
 
     @Override
@@ -54,22 +44,23 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
             @Override
             public AsyncFuture<Void> command(final List<String> command, final PrintWriter out) throws Exception {
                 return async.call(() -> {
-                    requestSerializer.serialize(output, new RunTaskRequest(command));
-                    out.flush();
+                    try (final Connection c = connect()) {
+                        c.send(new RunTaskRequest(command));
 
-                    while (true) {
-                        final Response response = responseSerializer.deserialize(input);
+                        while (true) {
+                            final Response response = c.receive();;
 
-                        if (response instanceof EndOfCommand) {
-                            break;
+                            if (response instanceof EndOfCommand) {
+                                break;
+                            }
+
+                            if (response instanceof CommandOutput) {
+                                handleCommandOutput((CommandOutput) response, out);
+                                continue;
+                            }
+
+                            log.error("Unhandled response: {}", response);
                         }
-
-                        if (response instanceof CommandOutput) {
-                            handleCommandOutput((CommandOutput) response, out);
-                            continue;
-                        }
-
-                        log.error("Unhandled response: {}", response);
                     }
 
                     return null;
@@ -85,28 +76,13 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
 
     @Override
     public List<CommandDefinition> getCommands() throws Exception {
-        return request(new CommandsRequest(), CommandsResponse.class).getCommands();
-    }
-
-    @SuppressWarnings("unchecked")
-    <R extends Request, T extends Response> T request(R request,
-            Class<T> expected) throws IOException {
-        requestSerializer.serialize(output, request);
-        out.flush();
-
-        final Response response = responseSerializer.deserialize(input);
-
-        if (!(expected.isAssignableFrom(response.getClass()))) {
-            throw new IOException(String.format("Got unexpected message (%s), expected (%s)", response.getClass(),
-                    expected));
+        try (final Connection c = connect()) {
+            return c.request(new CommandsRequest(), CommandsResponse.class).getCommands();
         }
-
-        return (T) response;
     }
 
     @Override
     public void shutdown() throws Exception {
-        socket.close();
     }
 
     public static RemoteHeroicCoreBridge fromConnectString(String connect, AsyncFramework async) throws IOException {
@@ -128,8 +104,57 @@ public class RemoteHeroicCoreBridge implements CoreInterface {
 
     private static RemoteHeroicCoreBridge fromInetSocketAddress(InetSocketAddress address, AsyncFramework async)
             throws IOException {
+        return new RemoteHeroicCoreBridge(address, async);
+    }
+
+    private Connection connect() throws IOException {
         final Socket socket = new Socket();
         socket.connect(address);
-        return new RemoteHeroicCoreBridge(socket, async);
+        return new Connection(socket);
+    }
+
+    private static class Connection implements Closeable {
+        static final ShellProtocol protocol = new ShellProtocol();
+
+        static final Serializer<Request> requestSerializer = protocol.buildRequest();
+        static final Serializer<Response> responseSerializer = protocol.buildResponse();
+
+        private final Socket socket;
+        private final StreamSerialWriter output;
+        private final SerialReader input;
+
+        public Connection(Socket socket) throws IOException {
+            this.socket = socket;
+            output = protocol.framework().writeStream(socket.getOutputStream());
+            input = protocol.framework().readStream(socket.getInputStream());
+        }
+
+        public Response receive() throws IOException {
+            return responseSerializer.deserialize(input);
+        }
+
+        public void send(Request request) throws IOException {
+            requestSerializer.serialize(output, request);
+            output.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            socket.close();
+        }
+
+        @SuppressWarnings("unchecked")
+        <R extends Request, T extends Response> T request(R request, Class<T> expected) throws IOException {
+            send(request);
+
+            final Response response = receive();
+
+            if (!(expected.isAssignableFrom(response.getClass()))) {
+                throw new IOException(
+                        String.format("Got unexpected message (%s), expected (%s)", response.getClass(), expected));
+            }
+
+            return (T) response;
+        }
     }
 }
