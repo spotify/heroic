@@ -71,17 +71,26 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
             protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
                 if (msg instanceof NativeRpcError) {
                     final NativeRpcError error = (NativeRpcError) msg;
+
+                    if (log.isTraceEnabled()) {
+                        log.trace("[{}] remote error: {}", ctx.channel(), error.getMessage());
+                    }
+
                     future.fail(new NativeRpcRemoteException(address, error.getMessage()));
                     ctx.channel().close();
                     return;
                 }
 
                 if (msg instanceof NativeRpcResponse) {
-                    log.info("received response, cancelling heartbeat");
+                    if (log.isTraceEnabled()) {
+                        log.trace("[{}] response: cancelling heartbeat", ctx.channel());
+                    }
+
                     final Timeout old = heartbeatTimeout.getAndSet(null);
 
-                    if (old != null)
+                    if (old != null) {
                         old.cancel();
+                    }
 
                     final NativeRpcResponse response = (NativeRpcResponse) msg;
                     final R responseBody = mapper.readValue(response.getBody(), expected);
@@ -90,6 +99,10 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
                 }
 
                 if (msg instanceof NativeRpcHeartBeat) {
+                    if (log.isTraceEnabled()) {
+                        log.trace("[{}] heartbeat: delaying timeout by {}ms", ctx.channel(), heartbeatInterval);
+                    }
+
                     final Timeout timeout = timer.newTimeout(heartbeatTimeout(ctx.channel(), future),
                             heartbeatInterval, TimeUnit.MILLISECONDS);
                     final Timeout old = heartbeatTimeout.getAndSet(timeout);
