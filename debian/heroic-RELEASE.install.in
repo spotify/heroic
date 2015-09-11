@@ -1,3 +1,4 @@
 build/heroic-RELEASE usr/bin
+build/heroicsh-RELEASE usr/bin
 build/heroic-status-RELEASE usr/bin
 build/heroic-full.jar usr/share/heroic-RELEASE
