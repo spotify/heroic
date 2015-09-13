@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import lombok.ToString;
-
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -38,6 +36,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTask;
@@ -47,6 +46,7 @@ import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.ToString;
 
 @TaskUsage("Execute a query")
 @TaskName("query")
@@ -78,6 +78,10 @@ public class Query implements ShellTask {
         return result.transform(new Transform<QueryResult, Void>() {
             @Override
             public Void transform(QueryResult result) throws Exception {
+                for (final RequestError e : result.getErrors()) {
+                    out.println(String.format("ERR: %s", e.toString()));
+                }
+
                 for (final ShardedResultGroup resultGroup : result.getGroups()) {
                     final MetricTypedGroup group = resultGroup.getGroup();
 

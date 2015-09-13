@@ -44,7 +44,7 @@ import lombok.Data;
  */
 @Data
 public class SpreadBucket extends AbstractBucket {
-    static final DoubleBinaryOperator minFn = (left, right) -> Math.max(left, right);
+    static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
     static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
     final long timestamp;

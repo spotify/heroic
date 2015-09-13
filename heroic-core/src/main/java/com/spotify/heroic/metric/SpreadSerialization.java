@@ -105,7 +105,7 @@ public class SpreadSerialization {
                 throw c.mappingException(String.format("Expected end of object, not %s", p.getCurrentToken()));
             }
 
-            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
+            if (p.nextToken() != JsonToken.END_ARRAY) {
                 throw c.mappingException(String.format("Expected end of array, not %s", p.getCurrentToken()));
             }
 
@@ -121,8 +121,14 @@ public class SpreadSerialization {
         }
 
         private Double nextDouble(JsonParser p, DeserializationContext c) throws IOException {
-            if (!p.nextToken().isNumeric()) {
-                throw c.mappingException(String.format("Expected numeric, not %s", p.getCurrentToken()));
+            final JsonToken token = p.nextToken();
+
+            if (token == JsonToken.VALUE_NULL) {
+                return Double.NaN;
+            }
+
+            if (!token.isNumeric()) {
+                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_FLOAT, null);
             }
 
             return p.getDoubleValue();
