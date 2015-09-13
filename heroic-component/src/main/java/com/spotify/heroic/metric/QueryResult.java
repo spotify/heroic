@@ -24,13 +24,14 @@ package com.spotify.heroic.metric;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import lombok.Data;
-
+import com.google.common.base.Stopwatch;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.Collector;
+import lombok.Data;
 
 @Data
 public class QueryResult {
@@ -57,9 +58,9 @@ public class QueryResult {
     private final List<RequestError> errors;
 
     /**
-     * Shard latencies associated with the query.
+     * Improve shard latencies.
      */
-    private final List<ShardLatency> latencies;
+    private final List<ShardTrace> traces;
 
     /**
      * Collect result parts into a complete result.
@@ -73,16 +74,16 @@ public class QueryResult {
 
             final List<ShardedResultGroup> groups = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
-            final List<ShardLatency> latencies = new ArrayList<>();
+            final List<ShardTrace> traces = new ArrayList<>();
 
             for (final QueryResultPart part : parts) {
                 statistics = statistics.merge(part.getStatistics());
                 groups.addAll(part.getGroups());
                 errors.addAll(part.getErrors());
-                latencies.addAll(part.getLatencies());
+                traces.add(part.getTrace());
             }
 
-            return new QueryResult(range, groups, statistics, errors, latencies);
+            return new QueryResult(range, groups, statistics, errors, traces);
         };
     }
 }

@@ -89,11 +89,10 @@ public class CoreQueryManager implements QueryManager {
 
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
-                final NodeMetadata m = c.metadata();
                 futures.add(
                         group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.isDisableCache())
                                 .catchFailed(ResultGroups.nodeError(group))
-                                .transform(QueryResultPart.fromResultGroup(q.getRange(), m.getTags())));
+                                .transform(QueryResultPart.fromResultGroup(q.getRange(), c)));
             }
 
             return async.collect(futures, QueryResult.collectParts(q.getRange()));

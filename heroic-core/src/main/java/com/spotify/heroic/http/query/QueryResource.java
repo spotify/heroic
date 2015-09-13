@@ -40,8 +40,7 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
-import lombok.Data;
-
+import com.google.common.base.Stopwatch;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
@@ -50,24 +49,16 @@ import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
+import com.spotify.heroic.metric.ShardTrace;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
+import lombok.Data;
 
 @Path("/query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
-    private static final class MetricsResumer implements JavaxRestFramework.Resume<QueryResult, QueryMetricsResponse> {
-        @Override
-        public QueryMetricsResponse resume(QueryResult r) throws Exception {
-            return new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getStatistics(), r.getErrors(),
-                    r.getLatencies());
-        }
-    };
-
-    private static final MetricsResumer METRICS = new MetricsResumer();
-
     @Inject
     private JavaxRestFramework httpAsync;
 
@@ -127,8 +118,7 @@ public class QueryResource {
             }
         });
 
-        response.setTimeout(300, TimeUnit.SECONDS);
-        httpAsync.bind(response, callback, METRICS);
+        bindMetricsResponse(response, callback);
     }
 
     @POST
@@ -140,9 +130,17 @@ public class QueryResource {
         final QueryManager.Group group = this.query.useGroup(backendGroup);
         final AsyncFuture<QueryResult> callback = group.query(q);
 
+        bindMetricsResponse(response, callback);
+    }
+
+    private void bindMetricsResponse(final AsyncResponse response, final AsyncFuture<QueryResult> callback) {
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        httpAsync.bind(response, callback, METRICS);
+        final Stopwatch watch = Stopwatch.createStarted();
+
+        httpAsync.bind(response, callback,
+                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getStatistics(), r.getErrors(),
+                        ShardTrace.of("api", watch.elapsed(TimeUnit.MILLISECONDS), r.getTraces())));
     }
 
     private QueryBuilder setupBuilder(QueryMetrics query) {

@@ -24,9 +24,11 @@ package com.spotify.heroic.metric;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.List;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.cluster.ClusterNode;
 
 import lombok.Data;
 
@@ -47,5 +49,9 @@ public class ResultGroup {
         this.tags = checkNotNull(tags, "tags");
         this.group = checkNotNull(group, "group");
         this.cadence = checkNotNull(cadence, "cadence");
+    }
+
+    public static Function<? super ResultGroup, ? extends ShardedResultGroup> fromResultGroup(final ClusterNode c) {
+        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getTags(), g.getGroup(), g.getCadence());
     }
 }

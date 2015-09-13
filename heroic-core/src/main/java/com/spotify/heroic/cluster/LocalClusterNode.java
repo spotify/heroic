@@ -60,7 +60,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@ToString(exclude = { "metrics" })
+@ToString(exclude = { "async", "metrics", "metadata", "suggest" })
 public class LocalClusterNode implements ClusterNode {
     private final AsyncFramework async;
     private final NodeMetadata localMetadata;

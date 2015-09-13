@@ -23,9 +23,13 @@ package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 
@@ -36,7 +40,6 @@ import lombok.Data;
 public class QueryResultPart {
     private static final List<ShardedResultGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
-    public static final List<ShardLatency> EMPTY_LATENCIES = ImmutableList.of();
 
     /**
      * Groups of results.
@@ -56,26 +59,16 @@ public class QueryResultPart {
     private final List<RequestError> errors;
 
     /**
-     * Shard latencies associated with the query.
+     * Trace (replaces latency, eventually).
      */
-    private final List<ShardLatency> latencies;
+    private final ShardTrace trace;
 
-    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range,
-            final Map<String, String> shard) {
-        final long start = System.currentTimeMillis();
+    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range, final ClusterNode c) {
+        final Stopwatch watch = Stopwatch.createStarted();
 
-        return (ResultGroups result) -> {
-            final List<ShardedResultGroup> groups = new ArrayList<>();
-
-            for (final ResultGroup group : result.getGroups()) {
-                groups.add(new ShardedResultGroup(shard, group.getTags(), group.getGroup(), group.getCadence()));
-            }
-
-            final long end = System.currentTimeMillis();
-            final long latency = end - start;
-            final ImmutableList<ShardLatency> latencies = ImmutableList.of(new ShardLatency(shard, latency));
-
-            return new QueryResultPart(groups, result.getStatistics(), result.getErrors(), latencies);
-        };
+        return (ResultGroups result) -> new QueryResultPart(
+                ImmutableList.copyOf(result.getGroups().stream().map(ResultGroup.fromResultGroup(c)).iterator()),
+                result.getStatistics(), result.getErrors(),
+                ShardTrace.of(c.toString(), watch.elapsed(TimeUnit.MILLISECONDS)));
     }
 }

@@ -24,24 +24,25 @@ package com.spotify.heroic.http.query;
 import java.io.IOException;
 import java.util.List;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
+import com.spotify.heroic.metric.ShardTrace;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class QueryMetricsResponse {
@@ -61,8 +62,15 @@ public class QueryMetricsResponse {
     @Getter
     private final List<RequestError> errors;
 
+    /**
+     * Shard latencies associated with the query.
+     * @deprecated Use {@link #trace} instead.
+     */
     @Getter
-    private final List<ShardLatency> latencies;
+    private final List<ShardLatency> latencies = ImmutableList.of();
+
+    @Getter
+    private final ShardTrace trace;
 
     public static class ResultSerializer extends JsonSerializer<Object> {
         @SuppressWarnings("unchecked")
