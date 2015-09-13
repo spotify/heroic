@@ -21,23 +21,24 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class TemplateAggregation extends BucketAggregation<Point, SumBucket> {
+public class TemplateAggregation extends BucketAggregation<SumBucket> {
     public static final String NAME = "tpl";
 
     public TemplateAggregation(Sampling sampling) {
-        super(sampling, Point.class, MetricType.POINT);
+        super(sampling, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
     }
 
     @JsonCreator

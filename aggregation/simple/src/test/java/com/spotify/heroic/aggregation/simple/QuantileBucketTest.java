@@ -20,7 +20,6 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 public class QuantileBucketTest {
@@ -30,7 +29,7 @@ public class QuantileBucketTest {
     @Test
     public void testCount() throws IOException {
         final QuantileBucket b = new QuantileBucket(0, 0.5, ERROR);
-        b.update(TAGS, MetricType.POINT, new Point(0, 1337.0));
+        b.updatePoint(TAGS, new Point(0, 1337.0));
         Assert.assertEquals(1337.0, b.value(), 0.0);
     }
 
@@ -38,8 +37,9 @@ public class QuantileBucketTest {
     public void testQuantiles() throws IOException {
         final QuantileBucket b = new QuantileBucket(0, 0.5, ERROR);
 
-        for (int i = 1; i <= 10000; i++)
-            b.update(TAGS, MetricType.POINT, new Point(0, i));
+        for (int i = 1; i <= 10000; i++) {
+            b.updatePoint(TAGS, new Point(0, i));
+        }
 
         Assert.assertEquals(5000.0, b.value(), 10000 * ERROR);
     }
@@ -48,8 +48,9 @@ public class QuantileBucketTest {
     public void testQuantiles2() throws IOException {
         final QuantileBucket b = new QuantileBucket(0, 0.1, ERROR);
 
-        for (int i = 1; i <= 10000; i++)
-            b.update(TAGS, MetricType.POINT, new Point(0, i));
+        for (int i = 1; i <= 10000; i++) {
+            b.updatePoint(TAGS, new Point(0, i));
+        }
 
         Assert.assertEquals(1000.0, b.value(), 10000 * ERROR);
     }

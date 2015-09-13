@@ -25,11 +25,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.DoubleBinaryOperator;
 
-import lombok.Data;
-
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+
+import lombok.Data;
 
 /**
  * A min-bucket implementation intended to reduce cross-thread contention.
@@ -39,7 +40,7 @@ import com.spotify.heroic.metric.Point;
  * @author udoprog
  */
 @Data
-public class StripedMinBucket implements DoubleBucket<Point> {
+public class StripedMinBucket extends AbstractBucket implements DoubleBucket {
     private static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
 
     private final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
@@ -50,7 +51,12 @@ public class StripedMinBucket implements DoubleBucket<Point> {
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
+    public void updateSpread(Map<String, String> tags, Spread d) {
+        min.accumulate(d.getMin());
+    }
+
+    @Override
+    public void updatePoint(Map<String, String> tags, Point d) {
         min.accumulate(d.getValue());
     }
 
@@ -58,7 +64,7 @@ public class StripedMinBucket implements DoubleBucket<Point> {
     public double value() {
         final double result = min.doubleValue();
 
-        if (Double.isInfinite(result)) {
+        if (!Double.isFinite(result)) {
             return Double.NaN;
         }
 

@@ -5,7 +5,6 @@ import java.util.function.DoubleBinaryOperator;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.Point;
 
 public class MaxBucketIntegrationTest extends ValueBucketIntegrationTest {
     public MaxBucketIntegrationTest() {
@@ -18,7 +17,7 @@ public class MaxBucketIntegrationTest extends ValueBucketIntegrationTest {
     }
 
     @Override
-    public Collection<DoubleBucket<Point>> buckets() {
-        return ImmutableList.<DoubleBucket<Point>> of(new MaxBucket(0l), new StripedMaxBucket(0l));
+    public Collection<DoubleBucket> buckets() {
+        return ImmutableList.<DoubleBucket> of(new MaxBucket(0l), new StripedMaxBucket(0l));
     }
 }

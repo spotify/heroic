@@ -6,70 +6,71 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
-
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class GroupUniqueBucket implements Bucket<Metric> {
-    final Set<Member> groups = Collections.newSetFromMap(new ConcurrentHashMap<Member, Boolean>());
+public class GroupUniqueBucket extends AbstractBucket implements Bucket {
+    final Set<Point> points = Collections.newSetFromMap(new ConcurrentHashMap<Point, Boolean>());
+    final Set<Event> events = Collections.newSetFromMap(new ConcurrentHashMap<Event, Boolean>());
+    final Set<Spread> spreads = Collections.newSetFromMap(new ConcurrentHashMap<Spread, Boolean>());
+    final Set<MetricGroup> groups = Collections.newSetFromMap(new ConcurrentHashMap<MetricGroup, Boolean>());
 
     final long timestamp;
 
     public List<MetricTypedGroup> groups() {
-        final ImmutableList.Builder<Metric> pointsBuilder = ImmutableList.builder();
-        final ImmutableList.Builder<Metric> eventsBuilder = ImmutableList.builder();
-
-        for (final Member m : groups) {
-            switch (m.type) {
-            case POINT:
-                pointsBuilder.add(m.sample);
-                break;
-            case EVENT:
-                eventsBuilder.add(m.sample);
-                break;
-            default:
-                break;
-            }
-        }
-
-        final List<Metric> points = pointsBuilder.build();
-        final List<Metric> events = eventsBuilder.build();
-
         final ImmutableList.Builder<MetricTypedGroup> result = ImmutableList.builder();
 
         if (!points.isEmpty()) {
-            result.add(new MetricTypedGroup(MetricType.POINT, points));
+            result.add(new MetricTypedGroup(MetricType.POINT, ImmutableList.copyOf(points)));
         }
 
         if (!events.isEmpty()) {
-            result.add(new MetricTypedGroup(MetricType.EVENT, events));
+            result.add(new MetricTypedGroup(MetricType.EVENT, ImmutableList.copyOf(events)));
+        }
+
+        if (!spreads.isEmpty()) {
+            result.add(new MetricTypedGroup(MetricType.SPREAD, ImmutableList.copyOf(spreads)));
+        }
+
+        if (!groups.isEmpty()) {
+            result.add(new MetricTypedGroup(MetricType.SPREAD, ImmutableList.copyOf(groups)));
         }
 
         return result.build();
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Metric sample) {
-        groups.add(new Member(sample.valueHash(), type, sample));
+    public void updatePoint(Map<String, String> tags, Point sample) {
+        points.add(sample);
+    }
+
+    @Override
+    public void updateEvent(Map<String, String> tags, Event sample) {
+        events.add(sample);
+    }
+
+    @Override
+    public void updateSpread(Map<String, String> tags, Spread sample) {
+        spreads.add(sample);
+    }
+
+    @Override
+    public void updateGroup(Map<String, String> tags, MetricGroup sample) {
+        groups.add(sample);
     }
 
     @Override
     public long timestamp() {
         return timestamp;
-    }
-
-    @Data
-    @EqualsAndHashCode(of = { "hash", "type" })
-    static class Member {
-        final int hash;
-        final MetricType type;
-        final Metric sample;
     }
 }

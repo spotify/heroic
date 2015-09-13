@@ -21,24 +21,23 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.common.Sampling;
-import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class CountAggregation extends BucketAggregation<Metric, CountBucket> {
+public class CountAggregation extends BucketAggregation<StripedCountBucket> {
     public static final String NAME = "count";
 
     public CountAggregation(Sampling sampling) {
-        super(sampling, Metric.class, MetricType.POINT);
+        super(sampling, ALL_TYPES, MetricType.POINT);
     }
 
     @JsonCreator
@@ -47,12 +46,12 @@ public class CountAggregation extends BucketAggregation<Metric, CountBucket> {
     }
 
     @Override
-    protected CountBucket buildBucket(long timestamp) {
-        return new CountBucket(timestamp);
+    protected StripedCountBucket buildBucket(long timestamp) {
+        return new StripedCountBucket(timestamp);
     }
 
     @Override
-    protected Point build(CountBucket bucket) {
+    protected Point build(StripedCountBucket bucket) {
         return new Point(bucket.timestamp(), bucket.count());
     }
 }

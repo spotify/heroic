@@ -6,7 +6,6 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 public class MaxBucketTest {
@@ -21,8 +20,8 @@ public class MaxBucketTest {
     @Test
     public void testMinValues() {
         final StripedMaxBucket b = new StripedMaxBucket(0);
-        b.update(TAGS, MetricType.POINT, new Point(0, 20.0));
-        b.update(TAGS, MetricType.POINT, new Point(0, 10.0));
+        b.updatePoint(TAGS, new Point(0, 20.0));
+        b.updatePoint(TAGS, new Point(0, 10.0));
         Assert.assertEquals(20.0, b.value(), 0.0);
     }
 }

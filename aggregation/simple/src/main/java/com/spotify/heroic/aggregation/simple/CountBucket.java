@@ -24,19 +24,18 @@ package com.spotify.heroic.aggregation.simple;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.spotify.heroic.aggregation.AbstractAnyBucket;
+import com.spotify.heroic.metric.Metric;
+
 import lombok.Data;
 
-import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricType;
-
 /**
- * Bucket that counts the number of seen events.
+ * Bucket that counts the number of seen samples.
  * 
  * @author udoprog
  */
 @Data
-public class CountBucket implements Bucket<Metric> {
+public class CountBucket extends AbstractAnyBucket {
     private final long timestamp;
     private final AtomicLong count = new AtomicLong();
 
@@ -45,7 +44,7 @@ public class CountBucket implements Bucket<Metric> {
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Metric d) {
+    public void update(Map<String, String> tags, Metric d) {
         count.incrementAndGet();
     }
 

@@ -27,13 +27,12 @@ import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.DoubleBinaryOperator;
 
-import lombok.Data;
-
-import com.spotify.heroic.aggregation.Bucket;
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+
+import lombok.Data;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
@@ -44,7 +43,7 @@ import com.spotify.heroic.metric.Spread;
  * @author udoprog
  */
 @Data
-public class SpreadBucket implements Bucket<Point> {
+public class SpreadBucket extends AbstractBucket {
     static final DoubleBinaryOperator minFn = (left, right) -> Math.max(left, right);
     static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
@@ -61,7 +60,16 @@ public class SpreadBucket implements Bucket<Point> {
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
+    public void updateSpread(Map<String, String> tags, Spread d) {
+        count.add(d.getCount());
+        sum.add(d.getSum());
+        sum2.add(d.getSum2());
+        max.accumulate(d.getMax());
+        min.accumulate(d.getMin());
+    }
+
+    @Override
+    public void updatePoint(Map<String, String> tags, Point d) {
         final double value = d.getValue();
 
         if (!Double.isFinite(value)) {

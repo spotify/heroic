@@ -23,19 +23,19 @@ package com.spotify.heroic.aggregation;
 
 import java.util.Map;
 
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
-public interface Bucket<T extends Metric> {
-    /**
-     * Provide a sample to a bucket.
-     *
-     * This method must be fully thread-safe.
-     *
-     * @param tags Tags for the sample.
-     * @param sample Sample for the update.
-     */
-    public void update(Map<String, String> tags, MetricType type, T sample);
+public interface Bucket {
+    public void updatePoint(Map<String, String> tags, Point sample);
+
+    public void updateEvent(Map<String, String> tags, Event sample);
+
+    public void updateSpread(Map<String, String> tags, Spread sample);
+
+    public void updateGroup(Map<String, String> tags, MetricGroup sample);
 
     /**
      * Get the timestamp for the bucket.

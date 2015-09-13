@@ -22,7 +22,9 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,12 +32,17 @@ import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -56,17 +63,20 @@ import lombok.Getter;
  * @author udoprog
  */
 @Data
-public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>> implements
+public abstract class BucketAggregation<B extends Bucket> implements
         Aggregation {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000l;
 
     private final static Map<String, String> EMPTY = ImmutableMap.of();
 
+    public static final Set<MetricType> ALL_TYPES = ImmutableSet.of(MetricType.POINT, MetricType.EVENT,
+            MetricType.SPREAD, MetricType.GROUP);
+
     private final Sampling sampling;
 
     @Getter(AccessLevel.NONE)
-    private final Class<IN> in;
+    private final Set<MetricType> input;
 
     @Getter(AccessLevel.NONE)
     private final MetricType out;
@@ -76,52 +86,89 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
         private final LongAdder sampleSize = new LongAdder();
 
         private final Set<Series> series;
+
         private final List<B> buckets;
+
         private final long offset;
         private final long size;
         private final long extent;
 
-        @SuppressWarnings("unchecked")
         @Override
-        public void update(AggregationData update) {
-            // ignore incompatible updates
-            final MetricType type = update.getType();
+        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+            feed(MetricType.POINT, values, (bucket, m) -> bucket.updatePoint(group, m));
+        }
 
-            if (!in.isAssignableFrom(type.type())) {
+        @Override
+        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+            feed(MetricType.EVENT, values, (bucket, m) -> bucket.updateEvent(group, m));
+        }
+
+        @Override
+        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+            feed(MetricType.SPREAD, values, (bucket, m) -> bucket.updateSpread(group, m));
+        }
+
+        @Override
+        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+            feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(group, m));
+        }
+
+        private <T extends Metric> void feed(final MetricType type, List<T> values,
+                final BucketConsumer<B, T> consumer) {
+            if (!input.contains(type)) {
                 return;
             }
 
-            final List<IN> input = (List<IN>) update.getValues();
+            int sampleSize = 0;
 
-            for (final IN d : input) {
-                if (!d.valid()) {
+            for (final T m : values) {
+                if (!m.valid()) {
                     continue;
                 }
 
-                final long first = d.getTimestamp();
-                final long last = first + extent;
+                final Iterator<B> buckets = matching(m);
 
-                for (long start = first; start < last; start += size) {
-                    int i = (int) ((start - offset - 1) / size);
-
-                    if (i < 0 || i >= buckets.size()) {
-                        continue;
-                    }
-
-                    final B bucket = buckets.get(i);
-
-                    final long c = bucket.timestamp() - first;
-
-                    // check that the current bucket is _within_ the extent.
-                    if (!(c >= 0 && c <= extent)) {
-                        continue;
-                    }
-
-                    bucket.update(update.getGroup(), type, d);
+                while (buckets.hasNext()) {
+                    consumer.apply(buckets.next(), m);
                 }
+
+                sampleSize += 1;
             }
 
-            sampleSize.add(input.size());
+            this.sampleSize.add(sampleSize);
+        }
+
+        private Iterator<B> matching(final Metric m) {
+            // XXX: range should be `<expr> - 1` to match old behavior, change back?
+
+            final long ts = m.getTimestamp() - offset;
+            final long te = ts + extent;
+
+            if (te < 0) {
+                return Collections.emptyIterator();
+            }
+
+            // iterator that iterates from the largest to the smallest matching bucket for _this_ metric.
+            return new Iterator<B>() {
+                long current = te;
+
+                @Override
+                public boolean hasNext() {
+                    while ((current / size) >= buckets.size()) {
+                        current -= size;
+                    }
+
+                    final long m = current % size;
+                    return (current >= 0 && current > ts) && (m >= 0 && m < extent);
+                }
+
+                @Override
+                public B next() {
+                    final int index = (int)(current / size);
+                    current -= size;
+                    return buckets.get(index);
+                }
+            };
         }
 
         @Override
@@ -164,9 +211,8 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
         final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
 
         final long size = sampling.getSize();
-        final DateRange rounded = range.rounded(size);
 
-        final List<B> buckets = buildBuckets(rounded, size);
+        final List<B> buckets = buildBuckets(range, size);
         return new AggregationTraversal(out, new Session(series, buckets, range.start(), size, sampling.getExtent()));
     }
 
@@ -182,15 +228,16 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
 
     private List<B> buildBuckets(final DateRange range, long size) {
         final long start = range.start();
-        final long count = range.diff() / size;
+        final long count = (range.diff() + size) / size;
 
-        if (count < 1 || count > MAX_BUCKET_COUNT)
+        if (count < 1 || count > MAX_BUCKET_COUNT) {
             throw new IllegalArgumentException(String.format("range %s, size %d", range, size));
+        }
 
         final List<B> buckets = new ArrayList<>((int) count);
 
         for (int i = 0; i < count; i++) {
-            buckets.add(buildBucket(start + size * i + size));
+            buckets.add(buildBucket(start + size * i));
         }
 
         return buckets;
@@ -199,4 +246,8 @@ public abstract class BucketAggregation<IN extends Metric, B extends Bucket<IN>>
     abstract protected B buildBucket(long timestamp);
 
     abstract protected Metric build(B bucket);
+
+    private static interface BucketConsumer<B extends Bucket, M extends Metric> {
+        void apply(B bucket, M metric);
+    }
 }

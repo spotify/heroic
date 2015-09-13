@@ -25,11 +25,12 @@ import java.util.Map;
 import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAdder;
 
-import lombok.RequiredArgsConstructor;
-
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * A lock-free implementation for calculating the standard deviation over many values.
@@ -39,7 +40,7 @@ import com.spotify.heroic.metric.Point;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class StripedStdDevBucket implements DoubleBucket<Point> {
+public class StripedStdDevBucket extends AbstractBucket implements DoubleBucket {
     private final DoubleAdder sum = new DoubleAdder();
     private final DoubleAdder sum2 = new DoubleAdder();
     private final LongAdder count = new LongAdder();
@@ -47,11 +48,18 @@ public class StripedStdDevBucket implements DoubleBucket<Point> {
     private final long timestamp;
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
-        final double value = d.getValue();
+    public void updateSpread(Map<String, String> tags, Spread d) {
+        sum.add(d.getSum());
+        sum2.add(d.getSum2());
+        count.add(d.getCount());
+    }
 
-        sum.add(value);
-        sum2.add(value * value);
+    @Override
+    public void updatePoint(Map<String, String> tags, Point d) {
+        final double v = d.getValue();
+
+        sum.add(v);
+        sum2.add(v * v);
         count.increment();
     }
 

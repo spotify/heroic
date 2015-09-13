@@ -35,8 +35,12 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -144,17 +148,35 @@ public abstract class GroupingAggregation implements Aggregation {
         private final Map<Map<String, String>, AggregationSession> sessions;
 
         @Override
-        public void update(AggregationData group) {
-            final Map<String, String> key = key(group.getGroup());
-            AggregationSession session = sessions.get(key);
+        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+            session(group).updatePoints(group, series, values);
+        }
+
+        @Override
+        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+            session(group).updateEvents(group, series, values);
+        }
+
+        @Override
+        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+            session(group).updateSpreads(group, series, values);
+        }
+
+        @Override
+        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+            session(group).updateGroup(group, series, values);
+        }
+
+        private AggregationSession session(final Map<String, String> group) {
+            final Map<String, String> key = key(group);
+            final AggregationSession session = sessions.get(key);
 
             if (session == null) {
                 throw new IllegalStateException(String.format("no session for key (%s) derived from %s, has (%s)", key,
-                        group.getGroup(), sessions.keySet()));
+                        group, sessions.keySet()));
             }
 
-            // update using this groups key.
-            session.update(new AggregationData(key, group.getSeries(), group.getValues(), group.getType()));
+            return session;
         }
 
         @Override

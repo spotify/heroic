@@ -25,11 +25,13 @@ import java.util.Map;
 import java.util.concurrent.atomic.DoubleAdder;
 import java.util.concurrent.atomic.LongAdder;
 
-import lombok.Data;
-
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+
+import lombok.Data;
 
 /**
  * Bucket that calculates the average of all samples seen.
@@ -37,7 +39,7 @@ import com.spotify.heroic.metric.Point;
  * @author udoprog
  */
 @Data
-public class StripedAverageBucket implements DoubleBucket<Point> {
+public class StripedAverageBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
     private final DoubleAdder value = new DoubleAdder();
     private final LongAdder count = new LongAdder();
@@ -47,9 +49,15 @@ public class StripedAverageBucket implements DoubleBucket<Point> {
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
+    public void updatePoint(Map<String, String> tags, Point d) {
         value.add(d.getValue());
         count.increment();
+    }
+
+    @Override
+    public void updateSpread(Map<String, String> tags, Spread sample) {
+        value.add(sample.getSum());
+        count.add(sample.getCount());
     }
 
     public long count() {
@@ -60,8 +68,9 @@ public class StripedAverageBucket implements DoubleBucket<Point> {
     public double value() {
         final long count = this.count.sum();
 
-        if (count == 0)
+        if (count == 0) {
             return Double.NaN;
+        }
 
         return value.sum() / count;
     }

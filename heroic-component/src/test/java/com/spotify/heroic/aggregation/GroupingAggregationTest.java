@@ -20,6 +20,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricType;
@@ -86,10 +87,10 @@ public class GroupingAggregationTest {
 
         final AggregationSession session = chain.session(states, new DateRange(0, 10000)).getSession();
 
-        session.update(AggregationData.forSeries(s4, ImmutableList.of(new Point(4, 4.0)), MetricType.POINT));
-        session.update(AggregationData.forSeries(s3, ImmutableList.of(new Point(3, 3.0)), MetricType.POINT));
-        session.update(AggregationData.forSeries(s2, ImmutableList.of(new Point(2, 2.0)), MetricType.POINT));
-        session.update(AggregationData.forSeries(s1, ImmutableList.of(new Point(1, 1.0)), MetricType.POINT));
+        session.updatePoints(s4.getTags(), ImmutableSet.of(s4), ImmutableList.of(new Point(4, 4.0)));
+        session.updatePoints(s3.getTags(), ImmutableSet.of(s3), ImmutableList.of(new Point(3, 3.0)));
+        session.updatePoints(s2.getTags(), ImmutableSet.of(s2), ImmutableList.of(new Point(2, 2.0)));
+        session.updatePoints(s1.getTags(), ImmutableSet.of(s1), ImmutableList.of(new Point(1, 1.0)));
 
         final List<AggregationData> result = session.result().getResult();
 

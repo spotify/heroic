@@ -15,16 +15,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.DoubleBinaryOperator;
 
-import lombok.RequiredArgsConstructor;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class ValueBucketIntegrationTest {
@@ -55,13 +54,13 @@ public abstract class ValueBucketIntegrationTest {
         service.shutdownNow();
     }
 
-    public abstract Collection<? extends DoubleBucket<Point>> buckets();
+    public abstract Collection<? extends DoubleBucket> buckets();
 
     @Test(timeout = 10000)
     public void testExpectedValue() throws InterruptedException, ExecutionException {
         final Random rnd = new Random();
 
-        for (final DoubleBucket<Point> bucket : buckets()) {
+        for (final DoubleBucket bucket : buckets()) {
             final List<Future<Void>> futures = new ArrayList<>();
 
             double expected = initial;
@@ -88,8 +87,9 @@ public abstract class ValueBucketIntegrationTest {
                     futures.add(service.submit(new Callable<Void>() {
                         @Override
                         public Void call() throws Exception {
-                            for (final Point d : updates)
-                                bucket.update(tags, MetricType.POINT, d);
+                            for (final Point d : updates) {
+                                bucket.updatePoint(tags, d);
+                            }
 
                             return null;
                         }

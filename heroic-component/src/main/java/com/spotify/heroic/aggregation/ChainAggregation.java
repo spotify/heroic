@@ -24,13 +24,20 @@ package com.spotify.heroic.aggregation;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricGroup;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -111,8 +118,23 @@ public class ChainAggregation implements Aggregation {
         private final Iterable<AggregationSession> rest;
 
         @Override
-        public void update(AggregationData update) {
-            first.update(update);
+        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+            first.updatePoints(group, series, values);
+        }
+
+        @Override
+        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+            first.updateEvents(group, series, values);
+        }
+
+        @Override
+        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+            first.updateSpreads(group, series, values);
+        }
+
+        @Override
+        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+            first.updateGroup(group, series, values);
         }
 
         @Override
@@ -123,7 +145,7 @@ public class ChainAggregation implements Aggregation {
 
             for (final AggregationSession session : rest) {
                 for (final AggregationData u : current) {
-                    session.update(u);
+                    u.getType().updateAggregation(session, u.getGroup(), u.getSeries(), u.getValues());
                 }
 
                 final AggregationResult next = session.result();

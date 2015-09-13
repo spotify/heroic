@@ -23,11 +23,9 @@ package com.spotify.heroic.aggregation.simple;
 
 import java.util.List;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
@@ -35,13 +33,16 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class GroupUniqueAggregation extends BucketAggregation<Metric, GroupUniqueBucket> {
+public class GroupUniqueAggregation extends BucketAggregation<GroupUniqueBucket> {
     public static final String NAME = "group-unique";
 
     public GroupUniqueAggregation(final Sampling sampling) {
-        super(sampling, Metric.class, MetricType.GROUP);
+        super(sampling, BucketAggregation.ALL_TYPES, MetricType.GROUP);
     }
 
     @JsonCreator

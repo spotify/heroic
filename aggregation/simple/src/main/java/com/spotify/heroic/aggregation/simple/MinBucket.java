@@ -23,12 +23,13 @@ package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
 
-import lombok.Data;
-
 import com.google.common.util.concurrent.AtomicDouble;
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
+
+import lombok.Data;
 
 /**
  * A bucket implementation that retains the smallest (min) value seen.
@@ -36,7 +37,7 @@ import com.spotify.heroic.metric.Point;
  * @author udoprog
  */
 @Data
-public class MinBucket implements DoubleBucket<Point> {
+public class MinBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
     private final AtomicDouble value = new AtomicDouble(Double.POSITIVE_INFINITY);
 
@@ -45,7 +46,7 @@ public class MinBucket implements DoubleBucket<Point> {
     }
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
+    public void updatePoint(Map<String, String> tags, Point d) {
         while (true) {
             double current = value.get();
 
@@ -60,11 +61,27 @@ public class MinBucket implements DoubleBucket<Point> {
     }
 
     @Override
+    public void updateSpread(Map<String, String> tags, Spread d) {
+        while (true) {
+            double current = value.get();
+
+            if (current < d.getMin()) {
+                break;
+            }
+
+            if (value.compareAndSet(current, d.getMin())) {
+                break;
+            }
+        }
+    }
+
+    @Override
     public double value() {
         final double result = value.get();
 
-        if (Double.isInfinite(result))
+        if (!Double.isFinite(result)) {
             return Double.NaN;
+        }
 
         return result;
     }

@@ -21,24 +21,23 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.common.Sampling;
-import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class CountUniqueAggregation extends BucketAggregation<Metric, CountUniqueBucket> {
+public class CountUniqueAggregation extends BucketAggregation<CountUniqueBucket> {
     public static final String NAME = "count-unique";
 
     public CountUniqueAggregation(Sampling sampling) {
-        super(sampling, Metric.class, MetricType.POINT);
+        super(sampling, ALL_TYPES, MetricType.POINT);
     }
 
     @JsonCreator

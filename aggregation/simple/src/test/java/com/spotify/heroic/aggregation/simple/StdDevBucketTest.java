@@ -12,12 +12,11 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 public class StdDevBucketTest {
-    public Collection<? extends DoubleBucket<Point>> buckets() {
-        return ImmutableList.<DoubleBucket<Point>> of(new StdDevBucket(0l), new StripedStdDevBucket(0l));
+    public Collection<? extends DoubleBucket> buckets() {
+        return ImmutableList.<DoubleBucket> of(new StdDevBucket(0l), new StripedStdDevBucket(0l));
     }
 
     @Test
@@ -26,9 +25,9 @@ public class StdDevBucketTest {
 
         final Map<String, String> tags = ImmutableMap.of();
 
-        for (final DoubleBucket<Point> bucket : buckets()) {
+        for (final DoubleBucket bucket : buckets()) {
             for (int i = 0; i < 1000; i++) {
-                bucket.update(tags, MetricType.POINT, new Point(0l, rnd.nextDouble()));
+                bucket.updatePoint(tags, new Point(0l, rnd.nextDouble()));
             }
 
             final double value = bucket.value();
@@ -40,13 +39,13 @@ public class StdDevBucketTest {
     public void testNaNOnZero() {
         final Map<String, String> tags = ImmutableMap.of();
 
-        for (final DoubleBucket<Point> bucket : buckets()) {
+        for (final DoubleBucket bucket : buckets()) {
             assertTrue(Double.isNaN(bucket.value()));
         }
 
-        for (final DoubleBucket<Point> bucket : buckets()) {
-            bucket.update(tags, MetricType.POINT, new Point(0l, 0.0d));
-            bucket.update(tags, MetricType.POINT, new Point(0l, 0.0d));
+        for (final DoubleBucket bucket : buckets()) {
+            bucket.updatePoint(tags, new Point(0l, 0.0d));
+            bucket.updatePoint(tags, new Point(0l, 0.0d));
             assertFalse(bucket.getClass().getSimpleName(), Double.isNaN(bucket.value()));
         }
     }

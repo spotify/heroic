@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import lombok.RequiredArgsConstructor;
 
+import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -38,14 +39,14 @@ import com.spotify.heroic.metric.Point;
  * @author udoprog
  */
 @RequiredArgsConstructor
-public class StdDevBucket implements DoubleBucket<Point> {
+public class StdDevBucket extends AbstractBucket implements DoubleBucket {
     private static final Cell ZERO = new Cell(0.0, 0.0, 0);
 
     private final long timestamp;
     private AtomicReference<Cell> cell = new AtomicReference<>(ZERO);
 
     @Override
-    public void update(Map<String, String> tags, MetricType type, Point d) {
+    public void updatePoint(Map<String, String> tags, Point d) {
         final double value = d.getValue();
 
         while (true) {
@@ -58,8 +59,9 @@ public class StdDevBucket implements DoubleBucket<Point> {
 
             final Cell n = new Cell(mean, s, count);
 
-            if (cell.compareAndSet(c, n))
+            if (cell.compareAndSet(c, n)) {
                 break;
+            }
         }
     }
 
@@ -72,8 +74,9 @@ public class StdDevBucket implements DoubleBucket<Point> {
     public double value() {
         final Cell c = cell.get();
 
-        if (c.count <= 1)
+        if (c.count <= 1) {
             return Double.NaN;
+        }
 
         return Math.sqrt(c.s / (c.count - 1));
     }
