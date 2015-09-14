@@ -39,6 +39,7 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
 import com.spotify.heroic.metric.ShardTrace;
 import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.TagValues;
 
 import lombok.Getter;
@@ -48,6 +49,7 @@ import lombok.RequiredArgsConstructor;
 public class QueryMetricsResponse {
     private static final String SERIES = "series";
     private static final String EVENTS = "events";
+    private static final String SPREADS = "spreads";
 
     @Getter
     private final DateRange range;
@@ -93,8 +95,8 @@ public class QueryMetricsResponse {
                 case EVENT:
                     writeEvents(g, resultGroup, tags, group.getDataAs(Event.class));
                     break;
-                default:
-                    /* ignore, for now */
+                case SPREAD:
+                    writeSpreads(g, resultGroup, tags, group.getDataAs(Spread.class));
                     break;
                 }
             }
@@ -109,7 +111,47 @@ public class QueryMetricsResponse {
             g.writeStringField("hash", Integer.toHexString(group.hashCode()));
             g.writeObjectField("shard", group.getShard());
             g.writeNumberField("cadence", group.getCadence());
+            g.writeObjectField("values", datapoints);
 
+            writeTags(g, tags);
+            writeTagCounts(g, tags);
+
+            g.writeEndObject();
+        }
+
+        private void writeEvents(JsonGenerator g, final ShardedResultGroup group, final List<TagValues> tags,
+                final List<Event> events) throws IOException {
+            g.writeStartObject();
+
+            g.writeStringField("type", EVENTS);
+            g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+            g.writeObjectField("shard", group.getShard());
+            g.writeNumberField("cadence", group.getCadence());
+            g.writeObjectField("values", events);
+
+            writeTags(g, tags);
+            writeTagCounts(g, tags);
+
+            g.writeEndObject();
+        }
+
+        private void writeSpreads(JsonGenerator g, final ShardedResultGroup group, final List<TagValues> tags,
+                final List<Spread> spreads) throws IOException {
+            g.writeStartObject();
+
+            g.writeStringField("type", SPREADS);
+            g.writeStringField("hash", Integer.toHexString(group.hashCode()));
+            g.writeObjectField("shard", group.getShard());
+            g.writeNumberField("cadence", group.getCadence());
+            g.writeObjectField("values", spreads);
+
+            writeTags(g, tags);
+            writeTagCounts(g, tags);
+
+            g.writeEndObject();
+        }
+
+        private void writeTags(JsonGenerator g, final List<TagValues> tags) throws IOException {
             g.writeFieldName("tags");
 
             g.writeStartObject();
@@ -124,7 +166,9 @@ public class QueryMetricsResponse {
             }
 
             g.writeEndObject();
+        }
 
+        private void writeTagCounts(JsonGenerator g, final List<TagValues> tags) throws IOException {
             g.writeFieldName("tagCounts");
 
             g.writeStartObject();
@@ -137,34 +181,6 @@ public class QueryMetricsResponse {
 
                 g.writeNumberField(pair.getKey(), values.size());
             }
-
-            g.writeEndObject();
-
-            g.writeObjectField("values", datapoints);
-
-            g.writeEndObject();
-        }
-
-        private void writeEvents(JsonGenerator g, final ShardedResultGroup group, final List<TagValues> tags,
-                final List<Event> events) throws IOException {
-            g.writeStartObject();
-
-            g.writeStringField("type", EVENTS);
-            g.writeStringField("hash", Integer.toHexString(group.hashCode()));
-            g.writeObjectField("shard", group.getShard());
-            g.writeNumberField("cadence", group.getCadence());
-
-            g.writeFieldName("tags");
-
-            g.writeStartObject();
-
-            for (final TagValues pair : tags) {
-                g.writeObjectField(pair.getKey(), pair.getValues());
-            }
-
-            g.writeEndObject();
-
-            g.writeObjectField("values", events);
 
             g.writeEndObject();
         }
