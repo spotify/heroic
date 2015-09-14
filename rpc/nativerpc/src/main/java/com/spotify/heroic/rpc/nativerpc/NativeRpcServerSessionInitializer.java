@@ -21,6 +21,20 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
+
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.FutureFinished;
+import eu.toolchain.async.Transform;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -34,24 +48,8 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.TimerTask;
-
-import java.nio.charset.Charset;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
-import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
-import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
-import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
-
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.FutureFinished;
-import eu.toolchain.async.Transform;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -61,7 +59,6 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
     private final Timer timer;
     private final ObjectMapper mapper;
     private final NativeRpcContainer container;
-    private final long heartbeatSendInterval;
     private final int maxFrameSize;
 
     @Override
@@ -84,8 +81,9 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
     private void stopCurrentTimeout(final AtomicReference<Timeout> heartbeatTimeout) {
         final Timeout old = heartbeatTimeout.getAndSet(null);
 
-        if (old != null)
+        if (old != null) {
             old.cancel();
+        }
     }
 
     @RequiredArgsConstructor
@@ -119,11 +117,16 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             }
 
             if (log.isTraceEnabled()) {
-                log.trace("request[{}] {}", request.getEndpoint(), new String(request.getBody(), UTF8));
+                log.trace("request[{}:{}ms] {}", request.getEndpoint(), request.getHeartbeatInterval(),
+                        new String(request.getBody(), UTF8));
             }
 
-            // start sending heartbeat since we are now processing a request.
-            setupHeartbeat(ch);
+            final long heartbeatInterval = calculcateHeartbeatInterval(msg);
+
+            if (heartbeatInterval > 0) {
+                // start sending heartbeat since we are now processing a request.
+                setupHeartbeat(ch, heartbeatInterval);
+            }
 
             final Object body = mapper.readValue(request.getBody(), handle.requestType());
 
@@ -142,8 +145,16 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             }).on(sendResponseHandle(ch));
         }
 
-        private void setupHeartbeat(final Channel ch) {
-            scheduleHeartbeat(ch);
+        private long calculcateHeartbeatInterval(NativeRpcRequest msg) {
+            if (msg.getHeartbeatInterval() <= 0) {
+                return 0;
+            }
+
+            return msg.getHeartbeatInterval() / 2;
+        }
+
+        private void setupHeartbeat(final Channel ch, final long heartbeatInterval) {
+            scheduleHeartbeat(ch, heartbeatInterval);
 
             ch.closeFuture().addListener(new ChannelFutureListener() {
                 @Override
@@ -153,18 +164,18 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             });
         }
 
-        private void scheduleHeartbeat(final Channel ch) {
+        private void scheduleHeartbeat(final Channel ch, final long heartbeatInterval) {
             final Timeout timeout = timer.newTimeout(new TimerTask() {
                 @Override
                 public void run(final Timeout timeout) throws Exception {
                     sendHeartbeat(ch).addListener(new ChannelFutureListener() {
                         @Override
                         public void operationComplete(final ChannelFuture future) throws Exception {
-                            scheduleHeartbeat(ch);
+                            scheduleHeartbeat(ch, heartbeatInterval);
                         }
                     });
                 }
-            }, heartbeatSendInterval, TimeUnit.MILLISECONDS);
+            }, heartbeatInterval, TimeUnit.MILLISECONDS);
 
             final Timeout old = heartbeatTimeout.getAndSet(timeout);
 
@@ -191,11 +202,13 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             return new FutureDone<NativeRpcResponse>() {
                 @Override
                 public void cancelled() throws Exception {
+                    log.error("{}: request cancelled", ch);
                     ch.writeAndFlush(new NativeRpcError("request cancelled")).addListener(closeListener());
                 }
 
                 @Override
                 public void failed(final Throwable e) throws Exception {
+                    log.error("{}: request failed", ch, e);
                     ch.writeAndFlush(new NativeRpcError(e.getMessage())).addListener(closeListener());
                 }
 

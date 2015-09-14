@@ -76,6 +76,7 @@ public class NativeRpcEncoder extends MessageToByteEncoder<Object> {
         out.write(NativeRpc.REQUEST);
         out.write(in.getEndpoint());
         out.write(in.getBody());
+        out.write(in.getHeartbeatInterval());
     }
 
     private void encodeResponse(final NativeRpcResponse in, final Packer out) throws IOException {

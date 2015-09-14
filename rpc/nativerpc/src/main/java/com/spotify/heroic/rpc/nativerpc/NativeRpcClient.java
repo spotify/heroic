@@ -69,7 +69,7 @@ public class NativeRpcClient {
             return async.failed(e);
         }
 
-        final NativeRpcRequest request = new NativeRpcRequest(endpoint, requestBody);
+        final NativeRpcRequest request = new NativeRpcRequest(endpoint, requestBody, heartbeatInterval);
         final ResolvableFuture<R> future = async.future();
         final AtomicReference<Timeout> heartbeatTimeout = new AtomicReference<>();
 

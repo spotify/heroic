@@ -44,10 +44,11 @@ public class NativeRpcDecoder extends ByteToMessageDecoder {
     protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) throws Exception {
         final int length = in.readableBytes();
 
-        if (length == 0)
+        if (length == 0) {
             return;
+        }
 
-        try (ByteBufInputStream stream = new ByteBufInputStream(in)) {
+        try (final ByteBufInputStream stream = new ByteBufInputStream(in)) {
             final Unpacker unpacker = messagePack.createUnpacker(stream);
 
             final byte type = unpacker.readByte();
@@ -74,7 +75,8 @@ public class NativeRpcDecoder extends ByteToMessageDecoder {
     private NativeRpcRequest decodeRequest(final Unpacker unpacker) throws IOException {
         final String endpoint = unpacker.readString();
         final byte[] body = unpacker.readByteArray();
-        return new NativeRpcRequest(endpoint, body);
+        final long heartbeatInterval = unpacker.readLong();
+        return new NativeRpcRequest(endpoint, body, heartbeatInterval);
     }
 
     private NativeRpcResponse decodeResponse(final Unpacker unpacker) throws IOException {

@@ -221,7 +221,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
         final ServerBootstrap s = new ServerBootstrap();
         s.channel(NioServerSocketChannel.class);
         s.group(bossGroup, workerGroup);
-        s.childHandler(new NativeRpcServerSessionInitializer(timer, mapper, container, heartbeatInterval, maxFrameSize));
+        s.childHandler(new NativeRpcServerSessionInitializer(timer, mapper, container, maxFrameSize));
 
         final ResolvableFuture<Void> bindFuture = async.future();
 

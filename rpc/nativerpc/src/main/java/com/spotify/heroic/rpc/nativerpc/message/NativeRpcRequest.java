@@ -27,4 +27,5 @@ import lombok.Data;
 public class NativeRpcRequest {
     private final String endpoint;
     private final byte[] body;
+    private final long heartbeatInterval;
 }
