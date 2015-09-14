@@ -44,6 +44,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -112,6 +114,8 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
+import eu.toolchain.async.FutureCancelled;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
@@ -122,7 +126,7 @@ import lombok.ToString;
 
 @ToString(of = { "connection" })
 public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
-    private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
+    // private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     private static final int MAX_SIZE = 1000;
 
@@ -228,7 +232,7 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
                             final Stopwatch watch = Stopwatch.createStarted();
 
-                            return bind(request.execute(), new Transform<IndexResponse, WriteResult>() {
+                            return transform(request.execute(), new Transform<IndexResponse, WriteResult>() {
                                 @Override
                                 public WriteResult transform(IndexResponse result) throws Exception {
                                     return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
@@ -275,10 +279,9 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute(), new Transform<CountResponse, CountSeries>() {
+                return transform(request.execute(), new Transform<CountResponse, CountSeries>() {
                     @Override
-                    public CountSeries transform(CountResponse result) throws Exception {
-                        final CountResponse response = request.get(TIMEOUT);
+                    public CountSeries transform(final CountResponse response) throws Exception {
                         return new CountSeries(response.getCount(), false);
                     }
                 });
@@ -291,19 +294,21 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
         return doto(new ManagedAction<Connection, FindSeries>() {
             @Override
             public AsyncFuture<FindSeries> action(final Connection c) throws Exception {
-                if (filter.getLimit() <= 0)
+                if (filter.getLimit() <= 0) {
                     return async.resolved(FindSeries.EMPTY);
+                }
 
                 final FilterBuilder f = CTX.filter(filter.getFilter());
 
-                if (f == null)
+                if (f == null) {
                     return async.resolved(FindSeries.EMPTY);
+                }
 
                 final SearchRequestBuilder request;
 
                 try {
                     request = c.search(filter.getRange(), ElasticsearchUtils.TYPE_METADATA)
-                            .setSize(Math.min(MAX_SIZE, filter.getLimit())).setScroll(TIMEOUT)
+                            .setSize(Math.min(MAX_SIZE, filter.getLimit())).setScroll(SCROLL_TIME)
                             .setSearchType(SearchType.SCAN);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
@@ -311,36 +316,51 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                final Set<Series> series = new HashSet<Series>();
+                return bind(request.execute()).lazyTransform((initial) -> {
+                    return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
+                        final ResolvableFuture<FindSeries> future = async.future();
+                        final Set<Series> series = new HashSet<>();
+                        final AtomicInteger count = new AtomicInteger();
 
-                return bind(request.execute(), new Transform<SearchResponse, FindSeries>() {
-                    @Override
-                    public FindSeries transform(SearchResponse response) throws Exception {
-                        String currentId = response.getScrollId();
+                        final Consumer<SearchResponse> consumer = new Consumer<SearchResponse>() {
+                            @Override
+                            public void accept(final SearchResponse response) {
+                                final SearchHit[] hits = response.getHits().hits();
 
-                        int size = 0;
+                                if (hits.length == 0 || count.get() >= filter.getLimit()) {
+                                    future.resolve(new FindSeries(series, series.size(), 0));
+                                    return;
+                                }
 
-                        do {
-                            final SearchResponse resp = c.prepareSearchScroll(currentId).setScroll(SCROLL_TIME)
-                                    .get(TIMEOUT);
+                                for (final SearchHit hit : hits) {
+                                    series.add(ElasticsearchUtils.toSeries(hit.getSource()));
+                                }
 
-                            currentId = resp.getScrollId();
+                                count.addAndGet(hits.length);
 
-                            final SearchHit[] hits = resp.getHits().hits();
+                                bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
+                                    @Override
+                                    public void failed(Throwable cause) throws Exception {
+                                        future.fail(cause);
+                                    }
 
-                            if (hits.length == 0) {
-                                break;
+                                    @Override
+                                    public void resolved(SearchResponse result) throws Exception {
+                                        accept(result);
+                                    }
+
+                                    @Override
+                                    public void cancelled() throws Exception {
+                                        future.cancel();
+                                    }
+                                });
                             }
+                        };
 
-                            for (final SearchHit hit : hits) {
-                                series.add(ElasticsearchUtils.toSeries(hit.getSource()));
-                            }
+                        consumer.accept(response);
 
-                            size += hits.length;
-                        } while (size < filter.getLimit());
-
-                        return new FindSeries(series, series.size(), size - series.size());
-                    }
+                        return future;
+                    });
                 }).on(reporter.reportFindTimeSeries());
             }
         });
@@ -366,10 +386,9 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute(), new Transform<DeleteByQueryResponse, DeleteSeries>() {
+                return transform(request.execute(), new Transform<DeleteByQueryResponse, DeleteSeries>() {
                     @Override
                     public DeleteSeries transform(DeleteByQueryResponse response) throws Exception {
-                        request.execute().get();
                         return new DeleteSeries(0, 0);
                     }
                 });
@@ -403,7 +422,7 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
                     request.addAggregation(nested);
                 }
 
-                return bind(request.execute(), new Transform<SearchResponse, FindTagKeys>() {
+                return transform(request.execute(), new Transform<SearchResponse, FindTagKeys>() {
                     @Override
                     public FindTagKeys transform(SearchResponse response) throws Exception {
                         final Terms terms;
@@ -453,7 +472,7 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
                     request.addAggregation(terms);
                 }
 
-                return bind(request.execute(), new Transform<SearchResponse, FindKeys>() {
+                return transform(request.execute(), new Transform<SearchResponse, FindKeys>() {
                     @Override
                     public FindKeys transform(SearchResponse response) throws Exception {
                         final Terms terms = (Terms) response.getAggregations().get("terms");
@@ -570,21 +589,12 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
         return connection.doto(action);
     }
 
-    private <S, T> AsyncFuture<T> bind(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+    private <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
         final ResolvableFuture<T> future = async.future();
 
-        actionFuture.addListener(new ActionListener<S>() {
+        actionFuture.addListener(new ActionListener<T>() {
             @Override
-            public void onResponse(S response) {
-                final T result;
-
-                try {
-                    result = transform.transform(response);
-                } catch (Exception e) {
-                    future.fail(e);
-                    return;
-                }
-
+            public void onResponse(T result) {
                 future.resolve(result);
             }
 
@@ -594,7 +604,18 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
             }
         });
 
+        future.on(new FutureCancelled() {
+            @Override
+            public void cancelled() throws Exception {
+                actionFuture.cancel(false);
+            }
+        });
+
         return future;
+    }
+
+    private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+        return bind(actionFuture).transform(transform);
     }
 
     private static final class ElasticsearchUtils {
@@ -789,7 +810,7 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
             request.addAggregation(nestedAggregation);
         }
 
-        return bind(request.execute(), new Transform<SearchResponse, FindTags>() {
+        return transform(request.execute(), new Transform<SearchResponse, FindTags>() {
             @Override
             public FindTags transform(final SearchResponse response) throws Exception {
                 final Terms terms;

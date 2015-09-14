@@ -39,6 +39,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -89,6 +91,8 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
+import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
@@ -104,7 +108,6 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
 
     static final String TYPE_METADATA = "metadata";
 
-    static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
     static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     static final int MAX_SIZE = 1000;
 
@@ -197,7 +200,7 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                                     .setSource(source).setOpType(OpType.CREATE);
 
                             final long start = System.nanoTime();
-                            return bind(request.execute(), (response) -> WriteResult.of(System.nanoTime() - start));
+                            return transform(request.execute(), (response) -> WriteResult.of(System.nanoTime() - start));
                         }
                     };
 
@@ -242,7 +245,7 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute(), (response) -> new CountSeries(response.getCount(), false));
+                return transform(request.execute(), (response) -> new CountSeries(response.getCount(), false));
             }
         });
     }
@@ -263,50 +266,60 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), TYPE_METADATA)
-                            .setSize(Math.min(MAX_SIZE, filter.getLimit())).setScroll(TIMEOUT)
-                            .setSearchType(SearchType.SCAN);
+                    request = c.search(filter.getRange(), TYPE_METADATA).setSize(Math.min(MAX_SIZE, filter.getLimit()))
+                            .setScroll(SCROLL_TIME).setSearchType(SearchType.SCAN);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute(), new Transform<SearchResponse, FindSeries>() {
-                    @Override
-                    public FindSeries transform(SearchResponse response) throws Exception {
-                        final Set<Series> series = new HashSet<Series>();
+                return bind(request.execute()).lazyTransform((initial) -> {
+                    return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
+                        final ResolvableFuture<FindSeries> future = async.future();
+                        final Set<Series> series = new HashSet<>();
+                        final AtomicInteger count = new AtomicInteger();
 
-                        String currentId = response.getScrollId();
+                        final Consumer<SearchResponse> consumer = new Consumer<SearchResponse>() {
+                            @Override
+                            public void accept(final SearchResponse response) {
+                                final SearchHit[] hits = response.getHits().hits();
 
-                        if (currentId == null) {
-                            return new FindSeries(series, 0, 0);
-                        }
+                                if (hits.length == 0 || count.get() >= filter.getLimit()) {
+                                    future.resolve(new FindSeries(series, series.size(), 0));
+                                    return;
+                                }
 
-                        int size = 0;
+                                for (final SearchHit hit : hits) {
+                                    series.add(buildSeries(hit.getSource()));
+                                }
 
-                        do {
-                            final SearchResponse resp = c.prepareSearchScroll(currentId).setScroll(SCROLL_TIME)
-                                    .get(TIMEOUT);
+                                count.addAndGet(hits.length);
 
-                            currentId = resp.getScrollId();
+                                bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
+                                    @Override
+                                    public void failed(Throwable cause) throws Exception {
+                                        future.fail(cause);
+                                    }
 
-                            final SearchHit[] hits = resp.getHits().hits();
+                                    @Override
+                                    public void resolved(SearchResponse result) throws Exception {
+                                        accept(result);
+                                    }
 
-                            if (hits.length == 0) {
-                                break;
+                                    @Override
+                                    public void cancelled() throws Exception {
+                                        future.cancel();
+                                    }
+                                });
                             }
+                        };
 
-                            for (final SearchHit hit : hits) {
-                                series.add(buildSeries(hit.getSource()));
-                            }
+                        consumer.accept(response);
 
-                            size += hits.length;
-                        } while (size < filter.getLimit());
-
-                        return new FindSeries(series, series.size(), size - series.size());
-                    }
-                });
+                        return future;
+                    });
+                }).on(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -331,7 +344,7 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute(), (response) -> new DeleteSeries(0, 0));
+                return transform(request.execute(), (response) -> new DeleteSeries(0, 0));
             }
         });
     }
@@ -362,7 +375,7 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                     request.addAggregation(terms);
                 }
 
-                return bind(request.execute(), new Transform<SearchResponse, FindKeys>() {
+                return transform(request.execute(), new Transform<SearchResponse, FindKeys>() {
                     @Override
                     public FindKeys transform(SearchResponse response) throws Exception {
                         final Terms terms = (Terms) response.getAggregations().get("terms");
@@ -385,21 +398,12 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
         });
     }
 
-    private <S, T> AsyncFuture<T> bind(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+    private <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
         final ResolvableFuture<T> future = async.future();
 
-        actionFuture.addListener(new ActionListener<S>() {
+        actionFuture.addListener(new ActionListener<T>() {
             @Override
-            public void onResponse(S response) {
-                final T result;
-
-                try {
-                    result = transform.transform(response);
-                } catch (Exception e) {
-                    future.fail(e);
-                    return;
-                }
-
+            public void onResponse(T result) {
                 future.resolve(result);
             }
 
@@ -410,6 +414,10 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
         });
 
         return future;
+    }
+
+    private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
+        return bind(actionFuture).transform(transform);
     }
 
     @Override
