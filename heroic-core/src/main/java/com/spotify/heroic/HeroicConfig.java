@@ -23,9 +23,6 @@ package com.spotify.heroic;
 
 import java.util.List;
 
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -39,6 +36,9 @@ import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
+
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Data
@@ -60,7 +60,7 @@ public class HeroicConfig {
     private final HttpClientManagerModule client;
     private final IngestionModule ingestion;
     private final List<ConsumerModule> consumers;
-    private final ShellServerModule shellServer;
+    private final Optional<ShellServerModule> shellServer;
 
     @JsonCreator
     public HeroicConfig(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
@@ -85,7 +85,7 @@ public class HeroicConfig {
         this.cache = Optional.fromNullable(cache).or(AggregationCacheModule.defaultSupplier());
         this.ingestion = Optional.fromNullable(ingestion).or(IngestionModule.defaultSupplier());
         this.consumers = Optional.fromNullable(consumers).or(DEFAULT_CONSUMERS);
-        this.shellServer = Optional.fromNullable(shellServer).or(ShellServerModule::defaultSupplier);
+        this.shellServer = Optional.fromNullable(shellServer);
     }
 
     public static Builder builder() {

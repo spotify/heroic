@@ -84,10 +84,6 @@ public class ShellServerModule extends PrivateModule {
         expose(ShellServer.class);
     }
 
-    public static ShellServerModule defaultSupplier() {
-        return new ShellServerModule(null, null);
-    }
-
     public static Builder builder() {
         return new Builder();
     }

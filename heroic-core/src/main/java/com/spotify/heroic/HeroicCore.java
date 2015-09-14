@@ -399,8 +399,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
             modules.add(config.getSuggest());
             modules.add(config.getIngestion());
 
-            // shell server module
-            modules.add(config.getShellServer());
+            config.getShellServer().transform(modules::add);
         }
 
         modules.add(config.getCluster().make(this));
