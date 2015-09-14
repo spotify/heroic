@@ -105,8 +105,6 @@ public class QueryMetricsResponse {
         private void writeDataPoints(JsonGenerator g, final ShardedResultGroup group, final List<TagValues> tags,
                 final List<Point> datapoints) throws IOException {
             g.writeStartObject();
-            g.writeFieldName("type");
-
             g.writeStringField("type", SERIES);
             g.writeStringField("hash", Integer.toHexString(group.hashCode()));
             g.writeObjectField("shard", group.getShard());
@@ -122,8 +120,7 @@ public class QueryMetricsResponse {
                 if (values.size() != 1)
                     continue;
 
-                g.writeFieldName(pair.getKey());
-                g.writeString(values.iterator().next());
+                g.writeStringField(pair.getKey(), values.iterator().next());
             }
 
             g.writeEndObject();
@@ -138,8 +135,7 @@ public class QueryMetricsResponse {
                 if (values.size() <= 1)
                     continue;
 
-                g.writeFieldName(pair.getKey());
-                g.writeNumber(values.size());
+                g.writeNumberField(pair.getKey(), values.size());
             }
 
             g.writeEndObject();
@@ -163,8 +159,7 @@ public class QueryMetricsResponse {
             g.writeStartObject();
 
             for (final TagValues pair : tags) {
-                g.writeFieldName(pair.getKey());
-                g.writeObject(pair.getValues());
+                g.writeObjectField(pair.getKey(), pair.getValues());
             }
 
             g.writeEndObject();
