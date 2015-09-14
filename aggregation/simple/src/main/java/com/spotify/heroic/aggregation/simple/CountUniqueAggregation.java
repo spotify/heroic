@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -36,13 +35,9 @@ import lombok.ToString;
 public class CountUniqueAggregation extends BucketAggregation<CountUniqueBucket> {
     public static final String NAME = "count-unique";
 
-    public CountUniqueAggregation(Sampling sampling) {
-        super(sampling, ALL_TYPES, MetricType.POINT);
-    }
-
     @JsonCreator
-    public static CountUniqueAggregation create(@JsonProperty("sampling") Sampling sampling) {
-        return new CountUniqueAggregation(sampling);
+    public CountUniqueAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+        super(size, extent, ALL_TYPES, MetricType.POINT);
     }
 
     @Override

@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.DiffValue;
 import com.spotify.heroic.grammar.ListValue;
@@ -16,8 +16,6 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class AbstractAggregationBuilder<T> implements AggregationBuilder<T> {
-    private static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);
-
     protected final AggregationFactory factory;
 
     protected List<Aggregation> flatten(final AggregationContext context, final Value value) {
@@ -39,41 +37,17 @@ public abstract class AbstractAggregationBuilder<T> implements AggregationBuilde
         return ImmutableList.of(factory.build(context, a.getName(), a.getArguments(), a.getKeywordArguments()));
     }
 
-    protected Sampling parseSampling(AggregationContext context, Deque<Value> args, Map<String, Value> keywords) {
-        final long size;
-        final long extent;
-
-        boolean preferDefault = true;
-
+    protected Optional<Long> parseDiffMillis(Deque<Value> args, Map<String, Value> keywords,
+            String key) {
         if (!args.isEmpty()) {
-            size = args.removeFirst().cast(DiffValue.class).toMilliseconds();
-        } else {
-            if (keywords.containsKey("sampling")) {
-                size = keywords.get("sampling").cast(DiffValue.class).toMilliseconds();
-                preferDefault = false;
-            } else {
-                size = DEFAULT_SIZE;
-            }
+            return Optional.of(args.removeFirst().cast(DiffValue.class).toMilliseconds());
         }
 
-        if (!args.isEmpty()) {
-            extent = args.removeFirst().cast(DiffValue.class).toMilliseconds();
-        } else {
-            if (keywords.containsKey("extent")) {
-                extent = keywords.get("extent").cast(DiffValue.class).toMilliseconds();
-                preferDefault = false;
-            } else {
-                extent = size;
-            }
+        if (keywords.containsKey(key)) {
+            return Optional.of(keywords.get(key).cast(DiffValue.class).toMilliseconds());
         }
 
-        final Sampling candidate = new Sampling(size, extent);
-
-        if (!preferDefault) {
-            return candidate;
-        }
-
-        return context.getSampling().or(candidate);
+        return Optional.absent();
     }
 
     protected Aggregation parseAggregation(Map<String, Value> keywords, final Deque<Value> a,

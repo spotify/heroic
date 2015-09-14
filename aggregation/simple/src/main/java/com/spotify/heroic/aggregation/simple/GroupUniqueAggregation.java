@@ -25,9 +25,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
@@ -41,13 +39,9 @@ import lombok.ToString;
 public class GroupUniqueAggregation extends BucketAggregation<GroupUniqueBucket> {
     public static final String NAME = "group-unique";
 
-    public GroupUniqueAggregation(final Sampling sampling) {
-        super(sampling, BucketAggregation.ALL_TYPES, MetricType.GROUP);
-    }
-
     @JsonCreator
-    public static GroupUniqueAggregation create(@JsonProperty("sampling") final Sampling sampling) {
-        return new GroupUniqueAggregation(sampling);
+    public GroupUniqueAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+        super(size, extent, BucketAggregation.ALL_TYPES, MetricType.GROUP);
     }
 
     @Override

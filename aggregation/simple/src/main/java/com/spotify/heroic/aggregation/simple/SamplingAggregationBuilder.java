@@ -28,7 +28,6 @@ import java.util.Map;
 import com.spotify.heroic.aggregation.AbstractAggregationBuilder;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.grammar.Value;
 
 public abstract class SamplingAggregationBuilder<T> extends AbstractAggregationBuilder<T> {
@@ -38,9 +37,11 @@ public abstract class SamplingAggregationBuilder<T> extends AbstractAggregationB
 
     @Override
     public T build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
-        final Sampling sampling = parseSampling(context, new LinkedList<>(args), keywords);
-        return buildWith(sampling, keywords);
+        final LinkedList<Value> a = new LinkedList<>(args);
+        final long size = parseDiffMillis(a, keywords, "size").or(context.size()).or(context::defaultSize);
+        final long extent = parseDiffMillis(a, keywords, "extent").or(context.extent()).or(context::defaultExtent);
+        return buildWith(args, keywords, size, extent);
     }
 
-    protected abstract T buildWith(Sampling sampling, Map<String, Value> keywords);
+    protected abstract T buildWith(List<Value> args, Map<String, Value> keywords, final long size, final long extent);
 }

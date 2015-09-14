@@ -21,26 +21,29 @@
 
 package com.spotify.heroic.aggregation;
 
+import java.util.concurrent.TimeUnit;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.common.Sampling;
 
 import lombok.Data;
 
 @Data
 public class OptionsAggregationQuery implements AggregationQuery {
-    private final Optional<Sampling> sampling;
+    public static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);
+
+    private final SamplingQuery sampling;
     private final AggregationQuery aggregation;
 
     @JsonCreator
-    public OptionsAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling, @JsonProperty("aggregation") AggregationQuery aggregation) {
-        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
+    public OptionsAggregationQuery(@JsonProperty("sampling") SamplingQuery sampling, @JsonProperty("aggregation") AggregationQuery aggregation) {
+        this.sampling = Optional.fromNullable(sampling).or(SamplingQuery::empty);
         this.aggregation = aggregation;
     }
 
     @Override
     public Aggregation build(final AggregationContext context) {
-        return aggregation.build(new OptionsContext(context, sampling));
+        return aggregation.build(new OptionsContext(context, sampling.getSize(), sampling.getExtent()));
     }
 }

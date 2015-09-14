@@ -25,23 +25,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.SimpleSamplingQuery;
-import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.aggregation.SamplingQuery;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class MaxAggregationQuery implements AggregationQuery {
-    private final Optional<Sampling> sampling;
-
+@EqualsAndHashCode(callSuper = true)
+public class MaxAggregationQuery extends SamplingAggregationQuery {
     @JsonCreator
-    public MaxAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling) {
-        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
+    public MaxAggregationQuery(@JsonProperty("sampling") SamplingQuery sampling) {
+        super(Optional.fromNullable(sampling).or(SamplingQuery::empty));
     }
 
     @Override
-    public MaxAggregation build(AggregationContext context) {
-        return new MaxAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER));
+    public MaxAggregation build(AggregationContext contex, final long size, final long extent) {
+        return new MaxAggregation(size, extent);
     }
 }

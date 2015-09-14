@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -37,13 +36,9 @@ import lombok.ToString;
 public class TemplateAggregation extends BucketAggregation<SumBucket> {
     public static final String NAME = "tpl";
 
-    public TemplateAggregation(Sampling sampling) {
-        super(sampling, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
-    }
-
     @JsonCreator
-    public static TemplateAggregation create(@JsonProperty("sampling") Sampling sampling) {
-        return new TemplateAggregation(sampling);
+    public TemplateAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+        super(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
     }
 
     @Override

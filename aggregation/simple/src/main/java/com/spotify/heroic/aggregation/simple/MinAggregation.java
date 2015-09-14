@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -38,13 +37,9 @@ import lombok.ToString;
 public class MinAggregation extends BucketAggregation<StripedMinBucket> {
     public static final String NAME = "min";
 
-    public MinAggregation(Sampling sampling) {
-        super(sampling, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
-    }
-
     @JsonCreator
-    public static MinAggregation create(@JsonProperty("sampling") Sampling sampling) {
-        return new MinAggregation(sampling);
+    public MinAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+        super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 
     @Override

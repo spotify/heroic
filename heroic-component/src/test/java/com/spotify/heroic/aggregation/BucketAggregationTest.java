@@ -12,9 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -53,8 +51,8 @@ public class BucketAggregationTest {
         }
     }
 
-    public BucketAggregation<TestBucket> setup(Sampling sampling) {
-        return new BucketAggregation<TestBucket>(sampling, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
+    public BucketAggregation<TestBucket> setup(long sampling, long extent) {
+        return new BucketAggregation<TestBucket>(sampling, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
             @Override
             protected TestBucket buildBucket(long timestamp) {
                 return new TestBucket(timestamp);
@@ -93,7 +91,7 @@ public class BucketAggregationTest {
     }
 
     private void checkBucketAggregation(List<Point> input, List<Point> expected, final long extent) {
-        final BucketAggregation<TestBucket> a = setup(new Sampling(1000, extent));
+        final BucketAggregation<TestBucket> a = setup(1000, extent);
         final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
         session.updatePoints(group, series, input);
 
@@ -104,7 +102,7 @@ public class BucketAggregationTest {
 
     @Test
     public void testUnevenSampling() {
-        final BucketAggregation<TestBucket> a = setup(new Sampling(999, 499));
+        final BucketAggregation<TestBucket> a = setup(999, 499);
         final AggregationSession session = a.session(states, new DateRange(1000, 2998)).getSession();
         session.updatePoints(group, series, build().add(501, 1.0).add(502, 1.0).add(1000, 1.0).add(1001, 1.0).result());
 

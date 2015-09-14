@@ -22,15 +22,18 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.grammar.Value;
 
 import eu.toolchain.serializer.SerialReader;
@@ -39,9 +42,6 @@ import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 
 public class Entry implements HeroicModule {
-    @Inject
-    private Serializer<Sampling> resolutionSerializer;
-
     @Inject
     private HeroicContext ctx;
 
@@ -54,161 +54,62 @@ public class Entry implements HeroicModule {
 
     @Override
     public void setup() {
-        final Serializer<Double> doubleS = s.doubleNumber();
-
         /* example aggregation, if used only returns zeroes. */
         ctx.aggregation(TemplateAggregation.NAME, TemplateAggregation.class, TemplateAggregationQuery.class,
-                new Serializer<TemplateAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, TemplateAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public TemplateAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new TemplateAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<TemplateAggregation>(factory) {
-                    @Override
-                    protected TemplateAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new TemplateAggregation(sampling);
-                    }
-                });
+                samplingSerializer(TemplateAggregation::new), samplingBuilder(TemplateAggregation::new));
 
         ctx.aggregation(SpreadAggregation.NAME, SpreadAggregation.class, SpreadAggregationQuery.class,
-                new Serializer<SpreadAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, SpreadAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public SpreadAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new SpreadAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<SpreadAggregation>(factory) {
-                    @Override
-                    protected SpreadAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new SpreadAggregation(sampling);
-                    }
-                });
+                samplingSerializer(SpreadAggregation::new), samplingBuilder(SpreadAggregation::new));
 
         ctx.aggregation(SumAggregation.NAME, SumAggregation.class, SumAggregationQuery.class,
-                new Serializer<SumAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, SumAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public SumAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new SumAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<SumAggregation>(factory) {
-                    @Override
-                    protected SumAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new SumAggregation(sampling);
-                    }
-                });
+                samplingSerializer(SumAggregation::new), samplingBuilder(SumAggregation::new));
 
         ctx.aggregation(AverageAggregation.NAME, AverageAggregation.class, AverageAggregationQuery.class,
-                new Serializer<AverageAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, AverageAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public AverageAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new AverageAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<AverageAggregation>(factory) {
-                    @Override
-                    protected AverageAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new AverageAggregation(sampling);
-                    }
-                });
+                samplingSerializer(AverageAggregation::new), samplingBuilder(AverageAggregation::new));
 
         ctx.aggregation(MinAggregation.NAME, MinAggregation.class, MinAggregationQuery.class,
-                new Serializer<MinAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, MinAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public MinAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new MinAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<MinAggregation>(factory) {
-                    @Override
-                    protected MinAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new MinAggregation(sampling);
-                    }
-                });
+                samplingSerializer(MinAggregation::new), samplingBuilder(MinAggregation::new));
 
         ctx.aggregation(MaxAggregation.NAME, MaxAggregation.class, MaxAggregationQuery.class,
-                new Serializer<MaxAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, MaxAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public MaxAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new MaxAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<MaxAggregation>(factory) {
-                    @Override
-                    protected MaxAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new MaxAggregation(sampling);
-                    }
-                });
+                samplingSerializer(MaxAggregation::new), samplingBuilder(MaxAggregation::new));
 
         ctx.aggregation(StdDevAggregation.NAME, StdDevAggregation.class, StdDevAggregationQuery.class,
-                new Serializer<StdDevAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, StdDevAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
+                samplingSerializer(StdDevAggregation::new), samplingBuilder(StdDevAggregation::new));
 
-                    @Override
-                    public StdDevAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new StdDevAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<StdDevAggregation>(factory) {
-                    @Override
-                    protected StdDevAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new StdDevAggregation(sampling);
-                    }
-                });
+        ctx.aggregation(CountUniqueAggregation.NAME, CountUniqueAggregation.class, CountUniqueAggregationQuery.class,
+                samplingSerializer(CountUniqueAggregation::new), samplingBuilder(CountUniqueAggregation::new));
+
+        ctx.aggregation(CountAggregation.NAME, CountAggregation.class, CountAggregationQuery.class,
+                samplingSerializer(CountAggregation::new), samplingBuilder(CountAggregation::new));
+
+        ctx.aggregation(GroupUniqueAggregation.NAME, GroupUniqueAggregation.class, GroupUniqueAggregationQuery.class,
+                samplingSerializer(GroupUniqueAggregation::new), samplingBuilder(GroupUniqueAggregation::new));
 
         ctx.aggregation(QuantileAggregation.NAME, QuantileAggregation.class, QuantileAggregationQuery.class,
                 new Serializer<QuantileAggregation>() {
+                    final Serializer<Double> fixedDouble = s.fixedDouble();
+                    final Serializer<Long> fixedLong = s.fixedLong();
+
                     @Override
                     public void serialize(SerialWriter buffer, QuantileAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                        doubleS.serialize(buffer, value.getQ());
-                        doubleS.serialize(buffer, value.getError());
+                        fixedLong.serialize(buffer, value.getSize());
+                        fixedLong.serialize(buffer, value.getExtent());
+                        fixedDouble.serialize(buffer, value.getQ());
+                        fixedDouble.serialize(buffer, value.getError());
                     }
 
                     @Override
                     public QuantileAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        final double q = doubleS.deserialize(buffer);
-                        final double error = doubleS.deserialize(buffer);
-                        return new QuantileAggregation(sampling, q, error);
+                        final long size = fixedLong.deserialize(buffer);
+                        final long extent = fixedLong.deserialize(buffer);
+                        final double q = fixedDouble.deserialize(buffer);
+                        final double error = fixedDouble.deserialize(buffer);
+                        return new QuantileAggregation(size, extent, q, error);
                     }
                 }, new SamplingAggregationBuilder<QuantileAggregation>(factory) {
                     @Override
-                    protected QuantileAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
+                    protected QuantileAggregation buildWith(List<Value> args, Map<String, Value> keywords,
+                            final long size, final long extent) {
                         double q = QuantileAggregationQuery.DEFAULT_QUANTILE;
                         double error = QuantileAggregationQuery.DEFAULT_ERROR;
 
@@ -220,65 +121,36 @@ public class Entry implements HeroicModule {
                             error = ((double) keywords.get("error").cast(Long.class)) / 100;
                         }
 
-                        return new QuantileAggregation(sampling, q, error);
+                        return new QuantileAggregation(size, extent, q, error);
                     }
                 });
+    }
 
-        ctx.aggregation(CountUniqueAggregation.NAME, CountUniqueAggregation.class, CountUniqueAggregationQuery.class,
-                new Serializer<CountUniqueAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, CountUniqueAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
+    private <T extends BucketAggregation<?>> Serializer<T> samplingSerializer(BiFunction<Long, Long, T> builder) {
+        final Serializer<Long> fixedLong = s.fixedLong();
 
-                    @Override
-                    public CountUniqueAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new CountUniqueAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<CountUniqueAggregation>(factory) {
-                    @Override
-                    protected CountUniqueAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new CountUniqueAggregation(sampling);
-                    }
-                });
+        return new Serializer<T>() {
+            @Override
+            public void serialize(SerialWriter buffer, T value) throws IOException {
+                fixedLong.serialize(buffer, value.getSize());
+                fixedLong.serialize(buffer, value.getExtent());
+            }
 
-        ctx.aggregation(CountAggregation.NAME, CountAggregation.class, CountAggregationQuery.class,
-                new Serializer<CountAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, CountAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
+            @Override
+            public T deserialize(SerialReader buffer) throws IOException {
+                final long size = fixedLong.deserialize(buffer);
+                final long extent = fixedLong.deserialize(buffer);
+                return builder.apply(size, extent);
+            }
+        };
+    }
 
-                    @Override
-                    public CountAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new CountAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<CountAggregation>(factory) {
-                    @Override
-                    protected CountAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new CountAggregation(sampling);
-                    }
-                });
-
-        ctx.aggregation(GroupUniqueAggregation.NAME, GroupUniqueAggregation.class, GroupUniqueAggregationQuery.class,
-                new Serializer<GroupUniqueAggregation>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, GroupUniqueAggregation value) throws IOException {
-                        resolutionSerializer.serialize(buffer, value.getSampling());
-                    }
-
-                    @Override
-                    public GroupUniqueAggregation deserialize(SerialReader buffer) throws IOException {
-                        final Sampling sampling = resolutionSerializer.deserialize(buffer);
-                        return new GroupUniqueAggregation(sampling);
-                    }
-                }, new SamplingAggregationBuilder<GroupUniqueAggregation>(factory) {
-                    @Override
-                    protected GroupUniqueAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
-                        return new GroupUniqueAggregation(sampling);
-                    }
-                });
+    private <T extends Aggregation> SamplingAggregationBuilder<T> samplingBuilder(BiFunction<Long, Long, T> builder) {
+        return new SamplingAggregationBuilder<T>(factory) {
+            @Override
+            protected T buildWith(List<Value> args, Map<String, Value> keywords, final long size, final long extent) {
+                return builder.apply(size, extent);
+            }
+        };
     }
 }

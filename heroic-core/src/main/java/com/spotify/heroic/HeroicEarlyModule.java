@@ -20,8 +20,6 @@ import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.common.Sampling;
-import com.spotify.heroic.common.Sampling_Serializer;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.common.TypeNameMixin;
@@ -92,12 +90,6 @@ public class HeroicEarlyModule extends AbstractModule {
     @Singleton
     AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
         return registry;
-    }
-
-    @Provides
-    @Singleton
-    Serializer<Sampling> samplingSerializer(@Named("common") SerializerFramework s) {
-        return new Sampling_Serializer(s);
     }
 
     @Provides

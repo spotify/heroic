@@ -25,32 +25,30 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.SimpleSamplingQuery;
-import com.spotify.heroic.common.Sampling;
+import com.spotify.heroic.aggregation.SamplingQuery;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class QuantileAggregationQuery implements AggregationQuery {
+@EqualsAndHashCode(callSuper = true)
+public class QuantileAggregationQuery extends SamplingAggregationQuery {
     public static final double DEFAULT_QUANTILE = 0.5;
     public static final double DEFAULT_ERROR = 0.01;
 
-    private final Optional<Sampling> sampling;
     private final double q;
     private final double error;
 
     @JsonCreator
-    public QuantileAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling, @JsonProperty("q") Double q,
+    public QuantileAggregationQuery(@JsonProperty("sampling") SamplingQuery sampling, @JsonProperty("q") Double q,
             @JsonProperty("error") Double error) {
-        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
+        super(Optional.fromNullable(sampling).or(SamplingQuery::empty));
         this.q = Optional.fromNullable(q).or(DEFAULT_QUANTILE);
         this.error = Optional.fromNullable(error).or(DEFAULT_ERROR);
     }
 
     @Override
-    public QuantileAggregation build(AggregationContext context) {
-        return new QuantileAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER), q,
-                error);
+    public QuantileAggregation build(AggregationContext context, final long size, final long extent) {
+        return new QuantileAggregation(size, extent, q, error);
     }
 }

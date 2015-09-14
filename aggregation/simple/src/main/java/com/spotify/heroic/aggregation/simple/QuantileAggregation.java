@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -45,25 +44,12 @@ public class QuantileAggregation extends BucketAggregation<QuantileBucket> {
     @Getter
     private final double error;
 
-    public QuantileAggregation(Sampling sampling, double q, double error) {
-        super(sampling, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
+    @JsonCreator
+    public QuantileAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent,
+            @JsonProperty("q") final double q, @JsonProperty("error") double error) {
+        super(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
         this.q = q;
         this.error = error;
-    }
-
-    @JsonCreator
-    public static QuantileAggregation create(@JsonProperty("sampling") Sampling sampling, @JsonProperty("q") Double q,
-            @JsonProperty("error") Double error) {
-        if (q == null)
-            throw new RuntimeException("'q' is required");
-
-        if (error == null)
-            throw new RuntimeException("'error' is required");
-
-        if (!(0 < error && error <= 1.0))
-            throw new RuntimeException("'error' must be a value between 0 and 1 (inclusive).");
-
-        return new QuantileAggregation(sampling, q, error);
     }
 
     @Override

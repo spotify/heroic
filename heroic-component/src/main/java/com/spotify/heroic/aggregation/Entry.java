@@ -35,7 +35,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.Value;
 
@@ -162,9 +161,9 @@ public class Entry implements HeroicModule {
                     @Override
                     public Aggregation build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
                         final Deque<Value> a = new LinkedList<>(args);
-                        final Sampling sampling = parseSampling(context, a, keywords);
-                        final OptionsContext c = new OptionsContext(context, Optional.of(sampling));
-
+                        final Optional<Long> size = parseDiffMillis(a, keywords, "size");
+                        final Optional<Long> extent = parseDiffMillis(a, keywords, "extent");
+                        final OptionsContext c = new OptionsContext(context, size, extent);
                         return extracted(keywords, a, c);
                     }
 

@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
@@ -54,9 +53,7 @@ import lombok.Getter;
  * A bucket aggregation is used to down-sample a lot of data into distinct buckets over time, making them useful for
  * presentation purposes. Buckets have to be thread safe.
  *
- * @param <IN> The expected input data type.
- * @param <OUT> The expected output data type.
- * @param <T> The bucket type.
+ * @param <B> The bucket type.
  *
  * @see Bucket
  *
@@ -73,7 +70,8 @@ public abstract class BucketAggregation<B extends Bucket> implements
     public static final Set<MetricType> ALL_TYPES = ImmutableSet.of(MetricType.POINT, MetricType.EVENT,
             MetricType.SPREAD, MetricType.GROUP);
 
-    private final Sampling sampling;
+    private final long size;
+    private final long extent;
 
     @Getter(AccessLevel.NONE)
     private final Set<MetricType> input;
@@ -90,8 +88,6 @@ public abstract class BucketAggregation<B extends Bucket> implements
         private final List<B> buckets;
 
         private final long offset;
-        private final long size;
-        private final long extent;
 
         @Override
         public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
@@ -192,8 +188,6 @@ public abstract class BucketAggregation<B extends Bucket> implements
 
     @Override
     public long estimate(DateRange original) {
-        final long size = sampling.getSize();
-
         if (size == 0) {
             return 0;
         }
@@ -210,20 +204,18 @@ public abstract class BucketAggregation<B extends Bucket> implements
 
         final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
 
-        final long size = sampling.getSize();
-
         final List<B> buckets = buildBuckets(range, size);
-        return new AggregationTraversal(out, new Session(series, buckets, range.start(), size, sampling.getExtent()));
+        return new AggregationTraversal(out, new Session(series, buckets, range.start()));
     }
 
     @Override
     public long extent() {
-        return sampling.getExtent();
+        return extent;
     }
 
     @Override
     public long cadence() {
-        return sampling.getSize();
+        return size;
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.BucketAggregation;
-import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -38,13 +37,9 @@ import lombok.ToString;
 public class MaxAggregation extends BucketAggregation<StripedMaxBucket> {
     public static final String NAME = "max";
 
-    public MaxAggregation(Sampling sampling) {
-        super(sampling, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
-    }
-
     @JsonCreator
-    public static MaxAggregation create(@JsonProperty("sampling") Sampling sampling) {
-        return new MaxAggregation(sampling);
+    public MaxAggregation(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+        super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 
     @Override

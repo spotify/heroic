@@ -25,37 +25,30 @@ import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Supplier;
-import com.spotify.heroic.common.Sampling;
+import com.google.common.base.Optional;
 import com.spotify.heroic.common.TimeUtils;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-public class SimpleSamplingQuery {
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+public class SamplingQuery {
     private static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
-    private static final long DEFAULT_VALUE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES);
 
-    public static final Supplier<Sampling> DEFAULT_SUPPLIER = new Supplier<Sampling>() {
-        @Override
-        public Sampling get() {
-            return new Sampling(DEFAULT_VALUE, DEFAULT_VALUE);
-        }
-    };
-
-    private final long size;
-    private final long extent;
+    private final Optional<Long> size;
+    private final Optional<Long> extent;
 
     @JsonCreator
-    public static SimpleSamplingQuery create(@JsonProperty("unit") String unitName,
-            @JsonProperty("value") Long inputSize, @JsonProperty("extent") Long inputExtent) {
+    public SamplingQuery(@JsonProperty("unit") String unitName, @JsonProperty("value") Long size,
+            @JsonProperty("extent") Long extent) {
         final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
-        final long size = TimeUtils.parseSize(inputSize, unit, DEFAULT_VALUE);
-        final long extent = TimeUtils.parseExtent(inputExtent, unit, size);
-        return new SimpleSamplingQuery(size, extent);
+        this.size = Optional.fromNullable(size).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit));
+        this.extent = Optional.fromNullable(extent).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit));
     }
 
-    public Sampling build() {
-        return new Sampling(size, extent);
+    public static SamplingQuery empty() {
+        return new SamplingQuery(Optional.absent(), Optional.absent());
     }
 }
