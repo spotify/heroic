@@ -45,7 +45,7 @@ public class SamplingQuery {
             @JsonProperty("extent") Long extent) {
         final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
         this.size = Optional.fromNullable(size).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit));
-        this.extent = Optional.fromNullable(extent).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit));
+        this.extent = Optional.fromNullable(extent).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit)).or(this.size);
     }
 
     public static SamplingQuery empty() {
