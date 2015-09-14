@@ -29,6 +29,7 @@ import javax.inject.Named;
 
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.grammar.Value;
 
@@ -48,6 +49,9 @@ public class Entry implements HeroicModule {
     @Named("common")
     private SerializerFramework s;
 
+    @Inject
+    private AggregationFactory factory;
+
     @Override
     public void setup() {
         final Serializer<Double> doubleS = s.doubleNumber();
@@ -65,7 +69,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new TemplateAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<TemplateAggregation>() {
+                }, new SamplingAggregationBuilder<TemplateAggregation>(factory) {
                     @Override
                     protected TemplateAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new TemplateAggregation(sampling);
@@ -84,7 +88,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new SpreadAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<SpreadAggregation>() {
+                }, new SamplingAggregationBuilder<SpreadAggregation>(factory) {
                     @Override
                     protected SpreadAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new SpreadAggregation(sampling);
@@ -103,7 +107,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new SumAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<SumAggregation>() {
+                }, new SamplingAggregationBuilder<SumAggregation>(factory) {
                     @Override
                     protected SumAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new SumAggregation(sampling);
@@ -122,7 +126,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new AverageAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<AverageAggregation>() {
+                }, new SamplingAggregationBuilder<AverageAggregation>(factory) {
                     @Override
                     protected AverageAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new AverageAggregation(sampling);
@@ -141,7 +145,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new MinAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<MinAggregation>() {
+                }, new SamplingAggregationBuilder<MinAggregation>(factory) {
                     @Override
                     protected MinAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new MinAggregation(sampling);
@@ -160,7 +164,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new MaxAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<MaxAggregation>() {
+                }, new SamplingAggregationBuilder<MaxAggregation>(factory) {
                     @Override
                     protected MaxAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new MaxAggregation(sampling);
@@ -179,7 +183,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new StdDevAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<StdDevAggregation>() {
+                }, new SamplingAggregationBuilder<StdDevAggregation>(factory) {
                     @Override
                     protected StdDevAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new StdDevAggregation(sampling);
@@ -202,7 +206,7 @@ public class Entry implements HeroicModule {
                         final double error = doubleS.deserialize(buffer);
                         return new QuantileAggregation(sampling, q, error);
                     }
-                }, new SamplingAggregationBuilder<QuantileAggregation>() {
+                }, new SamplingAggregationBuilder<QuantileAggregation>(factory) {
                     @Override
                     protected QuantileAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         double q = QuantileAggregationQuery.DEFAULT_QUANTILE;
@@ -232,7 +236,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new CountUniqueAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<CountUniqueAggregation>() {
+                }, new SamplingAggregationBuilder<CountUniqueAggregation>(factory) {
                     @Override
                     protected CountUniqueAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new CountUniqueAggregation(sampling);
@@ -251,7 +255,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new CountAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<CountAggregation>() {
+                }, new SamplingAggregationBuilder<CountAggregation>(factory) {
                     @Override
                     protected CountAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new CountAggregation(sampling);
@@ -270,7 +274,7 @@ public class Entry implements HeroicModule {
                         final Sampling sampling = resolutionSerializer.deserialize(buffer);
                         return new GroupUniqueAggregation(sampling);
                     }
-                }, new SamplingAggregationBuilder<GroupUniqueAggregation>() {
+                }, new SamplingAggregationBuilder<GroupUniqueAggregation>(factory) {
                     @Override
                     protected GroupUniqueAggregation buildWith(Sampling sampling, Map<String, Value> keywords) {
                         return new GroupUniqueAggregation(sampling);

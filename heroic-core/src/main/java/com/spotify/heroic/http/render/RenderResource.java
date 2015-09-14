@@ -104,8 +104,7 @@ public class RenderResource {
     @SuppressWarnings("deprecation")
     private QueryBuilder setupBuilder(QueryMetrics query) {
         return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
-                .queryString(query.getQuery()).filter(query.getFilter())
-                .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
-                .aggregation(query.makeAggregation()).source(query.getSource());
+                .queryString(query.getQuery()).filter(query.getFilter()).range(query.getRange().buildDateRange())
+                .disableCache(query.isNoCache()).aggregationQuery(query.getAggregators()).source(query.getSource());
     }
 }

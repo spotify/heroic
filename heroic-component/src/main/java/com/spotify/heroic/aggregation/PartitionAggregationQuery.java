@@ -19,29 +19,31 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
+
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.SimpleSamplingQuery;
-import com.spotify.heroic.common.Sampling;
+import com.google.common.collect.ImmutableList;
 
 import lombok.Data;
 
 @Data
-public class SumAggregationQuery implements AggregationQuery {
-    private final Optional<Sampling> sampling;
+public class PartitionAggregationQuery implements AggregationQuery {
+    private static final List<AggregationQuery> DEFAULT_CHILDREN = ImmutableList.of();
+
+    private final List<AggregationQuery> children;
 
     @JsonCreator
-    public SumAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling) {
-        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
+    public PartitionAggregationQuery(@JsonProperty("children") List<AggregationQuery> children) {
+        this.children = Optional.fromNullable(children).or(DEFAULT_CHILDREN);
     }
 
     @Override
-    public SumAggregation build(AggregationContext context) {
-        return new SumAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER));
+    public PartitionAggregation build(final AggregationContext context) {
+        final List<Aggregation> children = ImmutableList.copyOf(this.children.stream().map((c) -> c.build(context)).iterator());
+        return new PartitionAggregation(children);
     }
 }

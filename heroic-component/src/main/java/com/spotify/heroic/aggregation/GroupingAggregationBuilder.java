@@ -25,31 +25,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
-
-import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
-@RequiredArgsConstructor
-public abstract class GroupingAggregationBuilder<T> implements AggregationBuilder<T> {
-    private final AggregationFactory factory;
+public abstract class GroupingAggregationBuilder<T> extends AbstractAggregationBuilder<T> {
+    public GroupingAggregationBuilder(AggregationFactory factory) {
+        super(factory);
+    }
 
     @Override
-    public T build(List<Value> args, Map<String, Value> keywords) {
+    public T build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
         final List<String> over;
         final Aggregation each;
 
         if (args.size() > 0) {
             over = convertOver(args.get(0));
         } else {
-            over = convertOver(keywords.get("over"));
+            over = convertOver(keywords.get("of"));
         }
 
         if (args.size() > 1) {
-            each = convertEach(args.subList(1, args.size()));
+            each = convertEach(context, args.subList(1, args.size()));
         } else {
-            each = Aggregations.chain(flatten(keywords.get("each")));
+            each = Aggregations.chain(flatten(context, keywords.get("each")));
         }
 
         return build(over, each);
@@ -58,8 +56,9 @@ public abstract class GroupingAggregationBuilder<T> implements AggregationBuilde
     protected abstract T build(List<String> over, Aggregation each);
 
     private List<String> convertOver(Value value) {
-        if (value == null)
+        if (value == null) {
             return null;
+        }
 
         final ListValue list = value.cast(ListValue.class);
 
@@ -72,31 +71,13 @@ public abstract class GroupingAggregationBuilder<T> implements AggregationBuilde
         return over;
     }
 
-    private Aggregation convertEach(List<Value> values) {
+    private Aggregation convertEach(AggregationContext context, List<Value> values) {
         final List<Aggregation> aggregations = new ArrayList<>();
 
         for (final Value v : values) {
-            aggregations.addAll(flatten(v));
+            aggregations.addAll(flatten(context, v));
         }
 
         return new ChainAggregation(aggregations);
-    }
-
-    private List<Aggregation> flatten(Value v) {
-        final List<Aggregation> aggregations = new ArrayList<>();
-
-        if (v == null)
-            return aggregations;
-
-        if (v instanceof ListValue) {
-            for (final Value item : ((ListValue) v).getList()) {
-                aggregations.addAll(flatten(item));
-            }
-        } else {
-            final AggregationValue a = v.cast(AggregationValue.class);
-            aggregations.add(factory.build(a.getName(), a.getArguments(), a.getKeywordArguments()));
-        }
-
-        return aggregations;
     }
 }

@@ -21,6 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-public interface AggregationQuery<T extends Aggregation> {
-    public T build();
+public interface AggregationQuery {
+    public Aggregation build(AggregationContext context);
 }

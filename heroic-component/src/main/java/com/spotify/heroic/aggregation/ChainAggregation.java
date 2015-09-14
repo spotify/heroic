@@ -166,7 +166,7 @@ public class ChainAggregation implements Aggregation {
         }
     }
 
-    public static Aggregation convertQueries(List<AggregationQuery<?>> aggregators) {
+    public static Aggregation convertQueries(final AggregationContext context, List<AggregationQuery> aggregators) {
         if (aggregators == null)
             throw new NullPointerException("aggregators");
 
@@ -174,16 +174,17 @@ public class ChainAggregation implements Aggregation {
             return EmptyAggregation.INSTANCE;
 
         if (aggregators.size() == 1)
-            return aggregators.iterator().next().build();
+            return aggregators.iterator().next().build(context);
 
-        return new ChainAggregation(convertQueriesAsList(aggregators));
+        return new ChainAggregation(convertQueriesAsList(context, aggregators));
     }
 
-    public static List<Aggregation> convertQueriesAsList(List<AggregationQuery<?>> aggregators) {
+    public static List<Aggregation> convertQueriesAsList(final AggregationContext context, List<AggregationQuery> aggregators) {
         final List<Aggregation> result = new ArrayList<>(aggregators.size());
 
-        for (final AggregationQuery<?> aggregation : aggregators)
-            result.add(aggregation.build());
+        for (final AggregationQuery aggregation : aggregators) {
+            result.add(aggregation.build(context));
+        }
 
         return result;
     }

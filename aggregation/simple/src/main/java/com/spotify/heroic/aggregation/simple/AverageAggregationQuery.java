@@ -21,24 +21,27 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.SimpleSamplingQuery;
+import com.spotify.heroic.common.Sampling;
+
+import lombok.Data;
 
 @Data
-public class AverageAggregationQuery implements AggregationQuery<AverageAggregation> {
-    private final AggregationSamplingQuery sampling;
+public class AverageAggregationQuery implements AggregationQuery {
+    private final Optional<Sampling> sampling;
 
     @JsonCreator
-    public AverageAggregationQuery(@JsonProperty("sampling") AggregationSamplingQuery sampling) {
-        this.sampling = Optional.fromNullable(sampling).or(AggregationSamplingQuery.DEFAULT_SUPPLIER);
+    public AverageAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling) {
+        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
     }
 
     @Override
-    public AverageAggregation build() {
-        return new AverageAggregation(sampling.build());
+    public AverageAggregation build(final AggregationContext context) {
+        return new AverageAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER));
     }
 }

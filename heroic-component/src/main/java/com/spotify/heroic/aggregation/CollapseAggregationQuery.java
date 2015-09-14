@@ -23,29 +23,29 @@ package com.spotify.heroic.aggregation;
 
 import java.util.List;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
+import lombok.Data;
+
 @Data
-public class CollapseAggregationQuery implements AggregationQuery<CollapseAggregation> {
-    private static final List<AggregationQuery<?>> DEFAULT_EACH = ImmutableList.of();
+public class CollapseAggregationQuery implements AggregationQuery {
+    private static final List<AggregationQuery> DEFAULT_EACH = ImmutableList.of();
 
     private final List<String> of;
-    private final Aggregation each;
+    private final List<AggregationQuery> each;
 
     @JsonCreator
     public CollapseAggregationQuery(@JsonProperty("of") List<String> of,
-            @JsonProperty("each") List<AggregationQuery<?>> each) {
+            @JsonProperty("each") List<AggregationQuery> each) {
         this.of = of;
-        this.each = ChainAggregation.convertQueries(Optional.fromNullable(each).or(DEFAULT_EACH));
+        this.each = Optional.fromNullable(each).or(DEFAULT_EACH);
     }
 
     @Override
-    public CollapseAggregation build() {
-        return new CollapseAggregation(of, each);
+    public CollapseAggregation build(final AggregationContext context) {
+        return new CollapseAggregation(of, ChainAggregation.convertQueries(context, each));
     }
 }

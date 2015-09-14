@@ -28,13 +28,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import com.google.common.base.Function;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.EmptyAggregation;
+import com.spotify.heroic.aggregation.EmptyAggregationQuery;
 import com.spotify.heroic.aggregation.GroupAggregation;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
@@ -45,6 +46,9 @@ import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.grammar.SelectDSL;
 import com.spotify.heroic.metric.MetricType;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -58,10 +62,11 @@ public class QueryBuilder {
     private Filter filter;
     private List<String> groupBy;
     private DateRange range;
-    private Aggregation aggregation = EmptyAggregation.INSTANCE;
+    private AggregationQuery aggregation = EmptyAggregationQuery.INSTANCE;
     private boolean disableCache;
     private String queryString;
     private MetricType source = MetricType.POINT;
+    private AggregationContext context = new DefaultAggregationContext();
 
     /**
      * Specify a set of tags that has to match.
@@ -129,7 +134,7 @@ public class QueryBuilder {
     /**
      * Specify an aggregation to use.
      */
-    public QueryBuilder aggregation(Aggregation aggregation) {
+    public QueryBuilder aggregationQuery(AggregationQuery aggregation) {
         this.aggregation = aggregation;
         return this;
     }
@@ -141,6 +146,11 @@ public class QueryBuilder {
 
     public QueryBuilder disableCache(boolean disableCache) {
         this.disableCache = disableCache;
+        return this;
+    }
+
+    public QueryBuilder aggregationContext(AggregationContext context) {
+        this.context = checkNotNull(context, "context");
         return this;
     }
 
@@ -165,7 +175,7 @@ public class QueryBuilder {
     }
 
     Aggregation legacyAggregation() {
-        return legacyAggregation(aggregation, groupBy);
+        return legacyAggregation(aggregation.build(context), groupBy);
     }
 
     Aggregation legacyAggregation(Aggregation aggregation, List<String> groupBy) {
@@ -247,7 +257,7 @@ public class QueryBuilder {
     Function<AggregationValue, Aggregation> customAggregation(final SelectDSL select) {
         return (a) -> {
             try {
-                return aggregations.build(a.getName(), a.getArguments(), a.getKeywordArguments());
+                return aggregations.build(context, a.getName(), a.getArguments(), a.getKeywordArguments());
             } catch (final Exception e) {
                 log.error("Failed to build aggregation", e);
                 throw select.getContext().error(e);

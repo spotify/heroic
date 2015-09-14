@@ -21,18 +21,20 @@
 
 package com.spotify.heroic.aggregation;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import lombok.Data;
+
 @Data
-public class EmptyAggregationQuery implements AggregationQuery<EmptyAggregation> {
+public class EmptyAggregationQuery implements AggregationQuery {
+    public static final AggregationQuery INSTANCE = new EmptyAggregationQuery();
+
     @JsonCreator
     public EmptyAggregationQuery() {
     }
 
     @Override
-    public EmptyAggregation build() {
+    public EmptyAggregation build(AggregationContext context) {
         return EmptyAggregation.INSTANCE;
     }
 }

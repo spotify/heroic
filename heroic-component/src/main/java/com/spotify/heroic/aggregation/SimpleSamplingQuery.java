@@ -19,11 +19,9 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
 
 import java.util.concurrent.TimeUnit;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,15 +29,17 @@ import com.google.common.base.Supplier;
 import com.spotify.heroic.common.Sampling;
 import com.spotify.heroic.common.TimeUtils;
 
+import lombok.Data;
+
 @Data
-public class AggregationSamplingQuery {
+public class SimpleSamplingQuery {
     private static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
     private static final long DEFAULT_VALUE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES);
 
-    public static final Supplier<AggregationSamplingQuery> DEFAULT_SUPPLIER = new Supplier<AggregationSamplingQuery>() {
+    public static final Supplier<Sampling> DEFAULT_SUPPLIER = new Supplier<Sampling>() {
         @Override
-        public AggregationSamplingQuery get() {
-            return new AggregationSamplingQuery(DEFAULT_VALUE, DEFAULT_VALUE);
+        public Sampling get() {
+            return new Sampling(DEFAULT_VALUE, DEFAULT_VALUE);
         }
     };
 
@@ -47,12 +47,12 @@ public class AggregationSamplingQuery {
     private final long extent;
 
     @JsonCreator
-    public static AggregationSamplingQuery create(@JsonProperty("unit") String unitName,
+    public static SimpleSamplingQuery create(@JsonProperty("unit") String unitName,
             @JsonProperty("value") Long inputSize, @JsonProperty("extent") Long inputExtent) {
         final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
         final long size = TimeUtils.parseSize(inputSize, unit, DEFAULT_VALUE);
         final long extent = TimeUtils.parseExtent(inputExtent, unit, size);
-        return new AggregationSamplingQuery(size, extent);
+        return new SimpleSamplingQuery(size, extent);
     }
 
     public Sampling build() {

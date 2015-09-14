@@ -25,13 +25,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.EqualsAndHashCode;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 @EqualsAndHashCode(of = { "NAME" }, callSuper = true)
+@Data
 public class GroupAggregation extends GroupingAggregation {
     public static final Map<String, String> ALL_GROUP = ImmutableMap.of();
     public static final String NAME = "group";

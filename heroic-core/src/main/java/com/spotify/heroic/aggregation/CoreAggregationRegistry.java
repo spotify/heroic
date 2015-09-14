@@ -26,9 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.spotify.heroic.grammar.Value;
@@ -36,6 +33,8 @@ import com.spotify.heroic.grammar.Value;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Serializes aggregation configurations.
@@ -49,13 +48,13 @@ import eu.toolchain.serializer.Serializer;
 public class CoreAggregationRegistry implements AggregationSerializer, AggregationFactory {
     private final Serializer<String> string;
 
-    private final Map<Class<? extends AggregationQuery<?>>, String> queryTypes = new HashMap<>();
+    private final Map<Class<? extends AggregationQuery>, String> queryTypes = new HashMap<>();
     private final Map<Class<? extends Aggregation>, String> types = new HashMap<>();
     private final Map<String, Serializer<? extends Aggregation>> serializers = new HashMap<>();
     private final Map<String, AggregationBuilder<? extends Aggregation>> builders = new HashMap<>();
 
     @Override
-    public <T extends AggregationQuery<?>> void registerQuery(String id, Class<T> queryType) {
+    public <T extends AggregationQuery> void registerQuery(String id, Class<T> queryType) {
         if (queryTypes.put(queryType, id) != null) {
             throw new IllegalArgumentException("An aggregaiton query with the id '" + id + "' is already registered.");
         }
@@ -106,14 +105,15 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
     }
 
     @Override
-    public Aggregation build(String name, List<Value> args, Map<String, Value> keywords) {
+    public Aggregation build(AggregationContext context, String name, List<Value> args, Map<String, Value> keywords) {
         final AggregationBuilder<? extends Aggregation> builder = builders.get(name);
 
-        if (builder == null)
+        if (builder == null) {
             throw new IllegalArgumentException(String.format("no aggregation named %s", name));
+        }
 
         try {
-            return builder.build(args, keywords);
+            return builder.build(context, args, keywords);
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to build aggregation", e);
         }
@@ -123,7 +123,7 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
         for (final Map.Entry<Class<? extends Aggregation>, String> e : types.entrySet())
             module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
 
-        for (final Map.Entry<Class<? extends AggregationQuery<?>>, String> e : queryTypes.entrySet())
+        for (final Map.Entry<Class<? extends AggregationQuery>, String> e : queryTypes.entrySet())
             module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
     }
 }

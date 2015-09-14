@@ -23,25 +23,25 @@ package com.spotify.heroic.aggregation;
 
 import java.util.List;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.Data;
+
 @Data
-public class ChainAggregationQuery implements AggregationQuery<ChainAggregation> {
-    private final List<Aggregation> chain;
+public class ChainAggregationQuery implements AggregationQuery {
+    private final List<AggregationQuery> chain;
 
     @JsonCreator
-    public ChainAggregationQuery(@JsonProperty("chain") List<AggregationQuery<?>> chain) {
+    public ChainAggregationQuery(@JsonProperty("chain") List<AggregationQuery> chain) {
         if (chain == null || chain.isEmpty())
             throw new IllegalArgumentException("chain must be specified and non-empty");
 
-        this.chain = ChainAggregation.convertQueriesAsList(chain);
+        this.chain = chain;
     }
 
     @Override
-    public ChainAggregation build() {
-        return new ChainAggregation(chain);
+    public ChainAggregation build(final AggregationContext context) {
+        return new ChainAggregation(ChainAggregation.convertQueriesAsList(context, chain));
     }
 }

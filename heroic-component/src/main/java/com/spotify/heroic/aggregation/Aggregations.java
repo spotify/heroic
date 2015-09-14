@@ -18,19 +18,22 @@ public abstract class Aggregations {
     public static Aggregation chain(Iterable<Aggregation> input) {
         final Iterator<Aggregation> it = input.iterator();
 
-        if (!it.hasNext())
+        if (!it.hasNext()) {
             return EmptyAggregation.INSTANCE;
+        }
 
         final Aggregation first = it.next();
 
-        if (!it.hasNext())
+        if (!it.hasNext()) {
             return first;
+        }
 
         final List<Aggregation> chain = new ArrayList<>();
         chain.add(first);
 
-        while (it.hasNext())
+        while (it.hasNext()) {
             chain.add(it.next());
+        }
 
         return new ChainAggregation(chain);
     }

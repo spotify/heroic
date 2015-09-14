@@ -50,6 +50,7 @@ import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardTrace;
+import com.spotify.heroic.http.query.QueryMetrics;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -147,7 +148,7 @@ public class QueryResource {
         return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
                 .queryString(query.getQuery()).filter(query.getFilter())
                 .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
-                .aggregation(query.makeAggregation()).source(query.getSource());
+                .aggregationQuery(query.getAggregators()).source(query.getSource());
     }
 
     @Data

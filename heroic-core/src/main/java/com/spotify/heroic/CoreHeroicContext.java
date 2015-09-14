@@ -66,7 +66,7 @@ public class CoreHeroicContext implements HeroicContext {
     private volatile ResolvableFuture<Void> startedFuture;
 
     @Override
-    public <T extends Aggregation, R extends AggregationQuery<T>> void aggregation(String id, Class<T> type,
+    public <T extends Aggregation, R extends AggregationQuery> void aggregation(String id, Class<T> type,
             Class<R> queryType, Serializer<T> serializer, AggregationBuilder<T> builder) {
         aggregationSerializer.register(id, type, serializer, builder);
         aggregationSerializer.registerQuery(id, queryType);

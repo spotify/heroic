@@ -21,24 +21,27 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.SimpleSamplingQuery;
+import com.spotify.heroic.common.Sampling;
+
+import lombok.Data;
 
 @Data
-public class SpreadAggregationQuery implements AggregationQuery<SpreadAggregation> {
-    private final AggregationSamplingQuery sampling;
+public class SpreadAggregationQuery implements AggregationQuery {
+    private final Optional<Sampling> sampling;
 
     @JsonCreator
-    public SpreadAggregationQuery(@JsonProperty("sampling") AggregationSamplingQuery sampling) {
-        this.sampling = Optional.fromNullable(sampling).or(AggregationSamplingQuery.DEFAULT_SUPPLIER);
+    public SpreadAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling) {
+        this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
     }
 
     @Override
-    public SpreadAggregation build() {
-        return new SpreadAggregation(sampling.build());
+    public SpreadAggregation build(AggregationContext context) {
+        return new SpreadAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER));
     }
 }

@@ -19,29 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregation.simple;
+package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.spotify.heroic.aggregation.AggregationContext;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.SimpleSamplingQuery;
 import com.spotify.heroic.common.Sampling;
 
 import lombok.Data;
 
 @Data
-public class SumAggregationQuery implements AggregationQuery {
+public class OptionsAggregationQuery implements AggregationQuery {
     private final Optional<Sampling> sampling;
+    private final AggregationQuery aggregation;
 
     @JsonCreator
-    public SumAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling) {
+    public OptionsAggregationQuery(@JsonProperty("sampling") SimpleSamplingQuery sampling, @JsonProperty("aggregation") AggregationQuery aggregation) {
         this.sampling = Optional.fromNullable(sampling).transform(SimpleSamplingQuery::build);
+        this.aggregation = aggregation;
     }
 
     @Override
-    public SumAggregation build(AggregationContext context) {
-        return new SumAggregation(sampling.or(context.getSampling()).or(SimpleSamplingQuery.DEFAULT_SUPPLIER));
+    public Aggregation build(final AggregationContext context) {
+        return aggregation.build(new OptionsContext(context, sampling));
     }
 }

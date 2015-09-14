@@ -34,5 +34,5 @@ import com.spotify.heroic.grammar.Value;
  * @author udoprog
  */
 public interface AggregationFactory {
-    public Aggregation build(String name, List<Value> args, Map<String, Value> keywords);
+    public Aggregation build(AggregationContext context, String name, List<Value> args, Map<String, Value> keywords);
 }

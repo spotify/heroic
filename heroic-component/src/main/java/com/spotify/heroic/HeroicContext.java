@@ -34,7 +34,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.Serializer;
 
 public interface HeroicContext {
-    <T extends Aggregation, R extends AggregationQuery<T>> void aggregation(String id, Class<T> type,
+    <T extends Aggregation, R extends AggregationQuery> void aggregation(String id, Class<T> type,
             Class<R> queryType, Serializer<T> serializer, AggregationBuilder<T> builder);
 
     public <T extends Filter.OneArg<A>, I extends T, A> void filter(String typeId, Class<T> type, Class<I> impl,
