@@ -60,10 +60,6 @@ public class StripedAverageBucket extends AbstractBucket implements DoubleBucket
         count.add(sample.getCount());
     }
 
-    public long count() {
-        return count.sum();
-    }
-
     @Override
     public double value() {
         final long count = this.count.sum();

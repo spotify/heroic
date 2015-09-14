@@ -49,12 +49,12 @@ public class AverageAggregation extends BucketAggregation<StripedAverageBucket> 
 
     @Override
     protected Metric build(StripedAverageBucket bucket) {
-        final long count = bucket.count();
+        final double value = bucket.value();
 
-        if (count == 0) {
+        if (!Double.isFinite(value)) {
             return Metric.invalid();
         }
 
-        return new Point(bucket.timestamp(), bucket.value() / count);
+        return new Point(bucket.timestamp(), bucket.value());
     }
 }

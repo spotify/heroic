@@ -30,8 +30,9 @@ public class AverageBucket extends AbstractBucket implements DoubleBucket {
     public double value() {
         final long count = this.count.get();
 
-        if (count == 0)
+        if (count == 0) {
             return Double.NaN;
+        }
 
         return value.get() / count;
     }
