@@ -24,4 +24,8 @@ public class MetricTypedGroup {
 
         return (List<T>) data;
     }
+
+    public boolean isEmpty() {
+        return data.isEmpty();
+    }
 }

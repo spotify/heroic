@@ -34,4 +34,8 @@ public final class ShardedResultGroup {
     private final List<TagValues> tags;
     private final MetricTypedGroup group;
     private final long cadence;
+
+    public boolean isEmpty() {
+        return group.isEmpty();
+    }
 }

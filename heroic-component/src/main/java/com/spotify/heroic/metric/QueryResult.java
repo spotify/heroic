@@ -69,7 +69,7 @@ public class QueryResult {
      * @return A complete QueryResult.
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(final DateRange range) {
-        return (Collection<QueryResultPart> parts) -> {
+        return parts -> {
             Statistics statistics = Statistics.EMPTY;
 
             final List<ShardedResultGroup> groups = new ArrayList<>();
@@ -78,9 +78,14 @@ public class QueryResult {
 
             for (final QueryResultPart part : parts) {
                 statistics = statistics.merge(part.getStatistics());
-                groups.addAll(part.getGroups());
                 errors.addAll(part.getErrors());
                 traces.add(part.getTrace());
+
+                if (part.isEmpty()) {
+                    continue;
+                }
+
+                groups.addAll(part.getGroups());
             }
 
             return new QueryResult(range, groups, statistics, errors, traces);

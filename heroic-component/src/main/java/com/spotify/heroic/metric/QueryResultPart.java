@@ -24,10 +24,8 @@ package com.spotify.heroic.metric;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
@@ -38,7 +36,6 @@ import lombok.Data;
 
 @Data
 public class QueryResultPart {
-    private static final List<ShardedResultGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
 
     /**
@@ -70,5 +67,9 @@ public class QueryResultPart {
                 ImmutableList.copyOf(result.getGroups().stream().map(ResultGroup.fromResultGroup(c)).iterator()),
                 result.getStatistics(), result.getErrors(),
                 ShardTrace.of(c.toString(), watch.elapsed(TimeUnit.MILLISECONDS)));
+    }
+
+    public boolean isEmpty() {
+        return groups.stream().allMatch(ShardedResultGroup::isEmpty);
     }
 }
