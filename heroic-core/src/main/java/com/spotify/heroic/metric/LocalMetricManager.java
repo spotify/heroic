@@ -37,6 +37,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.NotImplementedException;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -212,8 +213,9 @@ public class LocalMetricManager implements MetricManager {
                 for (final AggregationState state : traversal.getStates()) {
                     final Set<Series> series = state.getSeries();
 
-                    if (series.isEmpty())
+                    if (series.isEmpty()) {
                         continue;
+                    }
 
                     run((int disabled, MetricBackend backend) -> {
                         for (final Series serie : series) {
@@ -380,6 +382,11 @@ public class LocalMetricManager implements MetricManager {
                     final List<ResultGroup> groups = new ArrayList<>();
 
                     for (final AggregationData group : result.getResult()) {
+                        /* skip empty groups (no valid values) */
+                        if (group.isEmpty()) {
+                            continue;
+                        }
+
                         final List<TagValues> g = group(group.getSeries());
                         groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues()), aggregation.cadence()));
                     }
@@ -387,7 +394,7 @@ public class LocalMetricManager implements MetricManager {
                     final Statistics stat = Statistics.builder().aggregator(result.getStatistics())
                             .row(new Statistics.Row(resolved, failed)).build();
 
-                    return ResultGroups.fromResult(groups, stat);
+                    return new ResultGroups(groups, ImmutableList.of(), stat);
                 }
             };
         }

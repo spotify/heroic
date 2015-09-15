@@ -114,10 +114,6 @@ public final class ResultGroups {
         };
     }
 
-    public static ResultGroups fromResult(List<ResultGroup> groups, Statistics statistics) {
-        return new ResultGroups(groups, EMPTY_ERRORS, statistics);
-    }
-
     public static ResultGroups build(List<ResultGroup> groups, List<RequestError> errors, Statistics statistics) {
         return new ResultGroups(groups, errors, statistics);
     }

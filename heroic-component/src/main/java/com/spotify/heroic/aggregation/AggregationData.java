@@ -22,4 +22,8 @@ public final class AggregationData {
     public static AggregationData forSeries(Series s, ImmutableList<? extends Metric> values, MetricType type) {
         return new AggregationData(s.getTags(), ImmutableSet.of(s), values, type);
     }
+
+    public boolean isEmpty() {
+        return values.isEmpty();
+    }
 }
