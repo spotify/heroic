@@ -183,7 +183,7 @@ public abstract class GroupingAggregation implements Aggregation {
         public AggregationResult result() {
             final Map<ResultKey, ResultValues> groups = new HashMap<>();
 
-            Statistics.Aggregator statistics = Statistics.Aggregator.EMPTY;
+            Statistics statistics = Statistics.EMPTY;
 
             for (final Map.Entry<Map<String, String>, AggregationSession> e : sessions.entrySet()) {
                 final AggregationResult r = e.getValue().result();

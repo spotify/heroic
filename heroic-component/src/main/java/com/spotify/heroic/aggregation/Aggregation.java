@@ -26,6 +26,8 @@ import java.util.List;
 import com.spotify.heroic.common.DateRange;
 
 public interface Aggregation {
+    public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
+
     /**
      * Estimate number of points this aggregation will produce.
      *

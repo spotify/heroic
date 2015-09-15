@@ -118,7 +118,7 @@ public class PartitionAggregation implements Aggregation {
         @Override
         public AggregationResult result() {
             final ImmutableList.Builder<AggregationData> data = ImmutableList.builder();
-            Statistics.Aggregator statistics = Statistics.Aggregator.EMPTY;
+            Statistics statistics = Statistics.EMPTY;
 
             for (final AggregationSession s : sessions) {
                 final AggregationResult r = s.result();

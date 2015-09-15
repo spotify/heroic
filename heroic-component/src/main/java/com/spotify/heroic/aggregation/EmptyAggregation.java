@@ -101,7 +101,7 @@ public class EmptyAggregation implements Aggregation {
                 groups.add(new AggregationData(EMPTY_GROUP, c.getSeries(), c.getValues(), MetricType.GROUP));
             }
 
-            return new AggregationResult(groups.build(), Statistics.Aggregator.EMPTY);
+            return new AggregationResult(groups.build(), Statistics.EMPTY);
         }
     }
 

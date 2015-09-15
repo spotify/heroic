@@ -141,7 +141,7 @@ public class ChainAggregation implements Aggregation {
         public AggregationResult result() {
             final AggregationResult firstResult = first.result();
             List<AggregationData> current = firstResult.getResult();
-            Statistics.Aggregator statistics = firstResult.getStatistics();
+            Statistics statistics = firstResult.getStatistics();
 
             for (final AggregationSession session : rest) {
                 for (final AggregationData u : current) {

@@ -180,7 +180,7 @@ public abstract class BucketAggregation<B extends Bucket> implements
                 result.add(d);
             }
 
-            final Statistics.Aggregator statistics = new Statistics.Aggregator(sampleSize.sum(), 0l, 0l);
+            final Statistics statistics = new Statistics(ImmutableMap.of(Aggregation.SAMPLE_SIZE, sampleSize.sum()));
             final List<AggregationData> updates = ImmutableList.of(new AggregationData(EMPTY_GROUP, series, result, out));
             return new AggregationResult(updates, statistics);
         }

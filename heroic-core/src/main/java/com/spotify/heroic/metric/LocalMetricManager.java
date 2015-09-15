@@ -388,11 +388,12 @@ public class LocalMetricManager implements MetricManager {
                         }
 
                         final List<TagValues> g = group(group.getSeries());
-                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues()), aggregation.cadence()));
+                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues()),
+                                aggregation.cadence()));
                     }
 
-                    final Statistics stat = Statistics.builder().aggregator(result.getStatistics())
-                            .row(new Statistics.Row(resolved, failed)).build();
+                    final Statistics stat = result.getStatistics()
+                            .merge(Statistics.of(MetricManager.RESOLVED, resolved, MetricManager.FAILED, failed));
 
                     return new ResultGroups(groups, ImmutableList.of(), stat);
                 }
