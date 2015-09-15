@@ -82,6 +82,10 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
 
     private final ResolvableFuture<Void> initialized;
 
+    private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<Set<URI>>(new HashSet<URI>());
+
+    final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
+
     @Inject
     public ClusterManagerImpl(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
             Map<String, RpcProtocol> protocols, Scheduler scheduler, @Named("useLocal") Boolean useLocal,
@@ -106,10 +110,6 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         @Inject(optional = true)
         LocalClusterNode value = null;
     }
-
-    private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<Set<URI>>(new HashSet<URI>());
-
-    final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
 
     @Override
     public AsyncFuture<Void> addStaticNode(URI node) {
@@ -160,6 +160,91 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         return addStaticNodes(transform).lazyTransform(updateRegistry());
     }
 
+    @Override
+    public ClusterManager.Statistics getStatistics() {
+        final NodeRegistry registry = this.registry.get();
+
+        if (registry == null) {
+            return null;
+        }
+
+        return new ClusterManager.Statistics(registry.getOnlineNodes(), registry.getOfflineNodes());
+    }
+
+    @Override
+    public AsyncFuture<Void> start() {
+        final AsyncFuture<Void> startup;
+
+        if (!options.isOneshot()) {
+            startup = this.context.startedFuture().transform(new Transform<Void, Void>() {
+                @Override
+                public Void transform(Void result) throws Exception {
+                    scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES, new Task() {
+                        @Override
+                        public void run() throws Exception {
+                            refresh().get();
+                        }
+                    });
+
+                    return null;
+                }
+            });
+        } else {
+            startup = this.context.startedFuture();
+        }
+
+        startup.lazyTransform((Void result) -> 
+            refresh().catchFailed((Throwable e) -> {
+                log.error("initial metadata refresh failed", e);
+                return null;
+            })
+        ).on(new FutureFinished() {
+            @Override
+            public void finished() throws Exception {
+                initialized.resolve(null);
+            }
+        });
+
+        return async.resolved(null);
+    }
+
+    @Override
+    public AsyncFuture<Void> stop() {
+        return async.resolved(null);
+    }
+
+    @Override
+    public boolean isReady() {
+        final NodeRegistry registry = this.registry.get();
+
+        if (registry == null) {
+            return false;
+        }
+
+        return registry.getOnlineNodes() > 0;
+    }
+
+    @Override
+    public AsyncFuture<Void> initialized() {
+        return initialized;
+    }
+
+    @Override
+    public ClusterNodeGroup useDefaultGroup() {
+        return useGroup(null);
+    }
+
+    @Override
+    public ClusterNodeGroup useGroup(String group) {
+        final List<ClusterNode.Group> groups = new ArrayList<>();
+
+        for (final NodeRegistryEntry e : findAllShards(null)) {
+            groups.add(e.getClusterNode().useGroup(group));
+        }
+
+        return new CoreClusterNodeGroup(async, groups);
+    }
+
     private List<Map<String, String>> topologyOf(Collection<NodeRegistryEntry> entries) {
         final List<Map<String, String>> shards = new ArrayList<>();
 
@@ -168,16 +253,6 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         }
 
         return shards;
-    }
-
-    private NodeRegistryEntry findNode(final Map<String, String> tags, NodeCapability capability) {
-        final NodeRegistry registry = this.registry.get();
-
-        if (registry == null) {
-            throw new IllegalStateException("Registry not ready");
-        }
-
-        return registry.findEntry(tags, capability);
     }
 
     private Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
@@ -315,75 +390,6 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         };
     }
 
-    @Override
-    public ClusterManager.Statistics getStatistics() {
-        final NodeRegistry registry = this.registry.get();
-
-        if (registry == null) {
-            return null;
-        }
-
-        return new ClusterManager.Statistics(registry.getOnlineNodes(), registry.getOfflineNodes());
-    }
-
-    @Override
-    public AsyncFuture<Void> start() {
-        final AsyncFuture<Void> startup;
-
-        if (!options.isOneshot()) {
-            startup = this.context.startedFuture().transform(new Transform<Void, Void>() {
-                @Override
-                public Void transform(Void result) throws Exception {
-                    scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES, new Task() {
-                        @Override
-                        public void run() throws Exception {
-                            refresh().get();
-                        }
-                    });
-
-                    return null;
-                }
-            });
-        } else {
-            startup = this.context.startedFuture();
-        }
-
-        startup.lazyTransform((Void result) -> 
-            refresh().catchFailed((Throwable e) -> {
-                log.error("initial metadata refresh failed", e);
-                return null;
-            })
-        ).on(new FutureFinished() {
-            @Override
-            public void finished() throws Exception {
-                initialized.resolve(null);
-            }
-        });
-
-        return async.resolved(null);
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return async.resolved(null);
-    }
-
-    @Override
-    public boolean isReady() {
-        final NodeRegistry registry = this.registry.get();
-
-        if (registry == null) {
-            return false;
-        }
-
-        return registry.getOnlineNodes() > 0;
-    }
-
-    @Override
-    public AsyncFuture<Void> initialized() {
-        return initialized;
-    }
-
     private final LazyTransform<ClusterNode, NodeRegistryEntry> localTransform = new LazyTransform<ClusterNode, NodeRegistryEntry>() {
         @Override
         public AsyncFuture<NodeRegistryEntry> transform(final ClusterNode node) throws Exception {
@@ -419,21 +425,5 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         }
 
         return protocol.connect(uri).lazyTransform(localTransform);
-    }
-
-    @Override
-    public ClusterNodeGroup useDefaultGroup() {
-        return useGroup(null);
-    }
-
-    @Override
-    public ClusterNodeGroup useGroup(String group) {
-        final List<ClusterNode.Group> groups = new ArrayList<>();
-
-        for (final NodeRegistryEntry e : findAllShards(null)) {
-            groups.add(e.getClusterNode().useGroup(group));
-        }
-
-        return new CoreClusterNodeGroup(async, groups);
     }
 }
