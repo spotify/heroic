@@ -275,6 +275,10 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
                 return bind(request.execute()).lazyTransform((initial) -> {
+                    if (initial.getScrollId() == null) {
+                        return async.resolved(FindSeries.EMPTY);
+                    }
+
                     return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
                         final ResolvableFuture<FindSeries> future = async.future();
                         final Set<Series> series = new HashSet<>();
@@ -285,16 +289,16 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                             public void accept(final SearchResponse response) {
                                 final SearchHit[] hits = response.getHits().hits();
 
-                                if (hits.length == 0 || count.get() >= filter.getLimit()) {
-                                    future.resolve(new FindSeries(series, series.size(), 0));
-                                    return;
-                                }
-
                                 for (final SearchHit hit : hits) {
                                     series.add(buildSeries(hit.getSource()));
                                 }
 
                                 count.addAndGet(hits.length);
+
+                                if (hits.length == 0 || count.get() >= filter.getLimit() || response.getScrollId() == null) {
+                                    future.resolve(new FindSeries(series, series.size(), 0));
+                                    return;
+                                }
 
                                 bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
                                     @Override
