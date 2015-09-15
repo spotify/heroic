@@ -61,8 +61,6 @@ import lombok.extern.slf4j.Slf4j;
  * The primary responsibility is to receive refresh requests through {@link #refresh()} that should cause the cluster
  * state to be updated.
  *
- * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}.
- *
  * @author udoprog
  */
 @Slf4j
