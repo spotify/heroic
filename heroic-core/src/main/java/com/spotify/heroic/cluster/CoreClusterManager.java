@@ -67,7 +67,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @ToString(of = { "useLocal" })
-public class ClusterManagerImpl implements ClusterManager, LifeCycle {
+public class CoreClusterManager implements ClusterManager, LifeCycle {
     private final AsyncFramework async;
     private final ClusterDiscovery discovery;
     private final NodeMetadata localMetadata;
@@ -87,7 +87,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
 
     @Inject
-    public ClusterManagerImpl(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
+    public CoreClusterManager(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
             Map<String, RpcProtocol> protocols, Scheduler scheduler, @Named("useLocal") Boolean useLocal,
             @Named("topology") Set<Map<String, String>> topology, HeroicReporter reporter, HeroicOptions options,
             LocalClusterNodeHolder local, HeroicContext context) {

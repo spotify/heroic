@@ -130,7 +130,7 @@ public class ClusterManagerModule {
                 install(discovery.module(DISCOVERY_KEY));
                 installProtocols(protocols);
 
-                bind(ClusterManager.class).to(ClusterManagerImpl.class).in(Scopes.SINGLETON);
+                bind(ClusterManager.class).to(CoreClusterManager.class).in(Scopes.SINGLETON);
 
                 expose(ClusterManager.class);
                 expose(NodeMetadata.class);
