@@ -126,4 +126,8 @@ public class FindSeries {
             }
         };
     }
+
+    public boolean isEmpty() {
+        return series.isEmpty();
+    }
 }

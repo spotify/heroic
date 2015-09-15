@@ -178,6 +178,11 @@ public class LocalMetricManager implements MetricManager {
             final RangeFilter rangeFilter = RangeFilter.filterFor(filter, range, seriesLimit + 1);
 
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
+                /* if empty, there are not time series on this shard */
+                if (result.isEmpty()) {
+                    return async.resolved(ResultGroups.EMPTY);
+                }
+
                 if (result.getSize() >= seriesLimit) {
                     throw new IllegalArgumentException("The total number of series fetched " + result.getSize()
                             + " would exceed the allowed limit of " + seriesLimit);
@@ -190,7 +195,6 @@ public class LocalMetricManager implements MetricManager {
                             "aggregation is estimated more points [%d/%d] than what is allowed", estimate,
                             aggregationLimit));
                 }
-                aggregation.extent();
 
                 final AggregationTraversal traversal = aggregation.session(states(result.getSeries()), range);
 
