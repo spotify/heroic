@@ -75,6 +75,7 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.LifeCycle;
@@ -92,7 +93,6 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagSuggest.Suggestion;
@@ -148,7 +148,9 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
     @Inject
     private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
-    private final Set<String> groups;
+    @Inject
+    @Named("groups")
+    private Set<String> groups;
 
     private final String[] KEY_SUGGEST_SOURCES = new String[] { KEY };
     private static final String[] TAG_SUGGEST_SOURCES = new String[] { TAG_SKEY, TAG_SVAL };
@@ -682,8 +684,8 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
                     }
 
                     @Override
-                    public SuggestBackend instance() {
-                        return new SuggestBackendKV(module.groups());
+                    public Class<? extends SuggestBackend> type() {
+                        return SuggestBackendKV.class;
                     }
                 };
             }

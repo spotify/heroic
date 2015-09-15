@@ -42,6 +42,8 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -113,6 +115,13 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         return new PrivateModule() {
             @Provides
             @Singleton
+            @Named("groups")
+            public Set<String> groups() {
+                return groups;
+            }
+
+            @Provides
+            @Singleton
             public LocalMetadataBackendReporter reporter(LocalMetadataManagerReporter reporter) {
                 return reporter.newMetadataBackend(id);
             }
@@ -140,7 +149,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
-                bind(key).toInstance(backendType.instance());
+                bind(key).to(backendType.type()).in(Scopes.SINGLETON);
                 expose(key);
             }
         };

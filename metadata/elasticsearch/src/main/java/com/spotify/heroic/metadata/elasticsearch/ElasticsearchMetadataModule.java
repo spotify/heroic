@@ -44,6 +44,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -146,7 +147,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
-                bind(key).toInstance(backendType.instance());
+                bind(key).to(backendType.type()).in(Scopes.SINGLETON);
                 expose(key);
             }
         };

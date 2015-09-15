@@ -92,6 +92,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
@@ -125,32 +126,33 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = { "connection" })
-public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
+public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend implements MetadataBackend, LifeCycle {
     // private static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
     private static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     private static final int MAX_SIZE = 1000;
 
     public static final String TEMPLATE_NAME = "heroic";
 
-    @Inject
-    @Named("groups")
-    private Set<String> groups;
+    private final Set<String> groups;
+    private final LocalMetadataBackendReporter reporter;
+    private final AsyncFramework async;
+    private final Managed<Connection> connection;
+    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final FilterModifier modifier;
 
     @Inject
-    private LocalMetadataBackendReporter reporter;
-
-    @Inject
-    private FilterModifier modifier;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private Managed<Connection> connection;
-
-    @Inject
-    private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
-
+    public MetadataBackendV1(@Named("groups") Set<String> groups, LocalMetadataBackendReporter reporter,
+            AsyncFramework async, Managed<Connection> connection,
+            RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, FilterModifier modifier) {
+        super(async);
+        this.groups = groups;
+        this.reporter = reporter;
+        this.async = async;
+        this.connection = connection;
+        this.writeCache = writeCache;
+        this.modifier = modifier;
+    }
+    
     @Override
     public AsyncFuture<Void> configure() {
         return doto(new ManagedAction<Connection, Void>() {
@@ -316,52 +318,8 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute()).lazyTransform((initial) -> {
-                    return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
-                        final ResolvableFuture<FindSeries> future = async.future();
-                        final Set<Series> series = new HashSet<>();
-                        final AtomicInteger count = new AtomicInteger();
-
-                        final Consumer<SearchResponse> consumer = new Consumer<SearchResponse>() {
-                            @Override
-                            public void accept(final SearchResponse response) {
-                                final SearchHit[] hits = response.getHits().hits();
-
-                                if (hits.length == 0 || count.get() >= filter.getLimit()) {
-                                    future.resolve(new FindSeries(series, series.size(), 0));
-                                    return;
-                                }
-
-                                for (final SearchHit hit : hits) {
-                                    series.add(ElasticsearchUtils.toSeries(hit.getSource()));
-                                }
-
-                                count.addAndGet(hits.length);
-
-                                bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
-                                    @Override
-                                    public void failed(Throwable cause) throws Exception {
-                                        future.fail(cause);
-                                    }
-
-                                    @Override
-                                    public void resolved(SearchResponse result) throws Exception {
-                                        accept(result);
-                                    }
-
-                                    @Override
-                                    public void cancelled() throws Exception {
-                                        future.cancel();
-                                    }
-                                });
-                            }
-                        };
-
-                        consumer.accept(response);
-
-                        return future;
-                    });
-                }).on(reporter.reportFindTimeSeries());
+                return scrollOverSeries(c, request, filter.getLimit(), h -> ElasticsearchUtils.toSeries(h.getSource()))
+                        .on(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -587,31 +545,6 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
 
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
         return connection.doto(action);
-    }
-
-    private <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
-        final ResolvableFuture<T> future = async.future();
-
-        actionFuture.addListener(new ActionListener<T>() {
-            @Override
-            public void onResponse(T result) {
-                future.resolve(result);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                future.fail(e);
-            }
-        });
-
-        future.on(new FutureCancelled() {
-            @Override
-            public void cancelled() throws Exception {
-                actionFuture.cancel(false);
-            }
-        });
-
-        return future;
     }
 
     private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
@@ -886,8 +819,8 @@ public class MetadataBackendV1 implements MetadataBackend, LifeCycle {
                     }
 
                     @Override
-                    public MetadataBackend instance() {
-                        return new MetadataBackendV1();
+                    public Class<? extends MetadataBackend> type() {
+                        return MetadataBackendV1.class;
                     }
                 };
             }

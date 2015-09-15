@@ -46,7 +46,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -71,6 +70,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
@@ -92,7 +92,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
@@ -100,7 +99,7 @@ import eu.toolchain.async.Transform;
 import lombok.ToString;
 
 @ToString(of = { "connection" })
-public class MetadataBackendKV implements MetadataBackend, LifeCycle {
+public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend implements MetadataBackend, LifeCycle {
     static final String KEY = "key";
     static final String TAGS = "tags";
     static final String TAG_KEYS = "tag_keys";
@@ -116,21 +115,24 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
 
     public static final String TEMPLATE_NAME = "heroic";
 
-    @Inject
     @Named("groups")
-    private Set<String> groups;
+    private final Set<String> groups;
+    private final LocalMetadataBackendReporter reporter;
+    private final AsyncFramework async;
+    private final Managed<Connection> connection;
+    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
     @Inject
-    private LocalMetadataBackendReporter reporter;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private Managed<Connection> connection;
-
-    @Inject
-    private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    public MetadataBackendKV(@Named("groups") Set<String> groups, LocalMetadataBackendReporter reporter,
+            AsyncFramework async, Managed<Connection> connection,
+            RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache) {
+        super(async);
+        this.groups = groups;
+        this.reporter = reporter;
+        this.async = async;
+        this.connection = connection;
+        this.writeCache = writeCache;
+    }
 
     @Override
     public AsyncFuture<Void> configure() {
@@ -274,56 +276,8 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return bind(request.execute()).lazyTransform((initial) -> {
-                    if (initial.getScrollId() == null) {
-                        return async.resolved(FindSeries.EMPTY);
-                    }
-
-                    return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
-                        final ResolvableFuture<FindSeries> future = async.future();
-                        final Set<Series> series = new HashSet<>();
-                        final AtomicInteger count = new AtomicInteger();
-
-                        final Consumer<SearchResponse> consumer = new Consumer<SearchResponse>() {
-                            @Override
-                            public void accept(final SearchResponse response) {
-                                final SearchHit[] hits = response.getHits().hits();
-
-                                for (final SearchHit hit : hits) {
-                                    series.add(buildSeries(hit.getSource()));
-                                }
-
-                                count.addAndGet(hits.length);
-
-                                if (hits.length == 0 || count.get() >= filter.getLimit() || response.getScrollId() == null) {
-                                    future.resolve(new FindSeries(series, series.size(), 0));
-                                    return;
-                                }
-
-                                bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
-                                    @Override
-                                    public void failed(Throwable cause) throws Exception {
-                                        future.fail(cause);
-                                    }
-
-                                    @Override
-                                    public void resolved(SearchResponse result) throws Exception {
-                                        accept(result);
-                                    }
-
-                                    @Override
-                                    public void cancelled() throws Exception {
-                                        future.cancel();
-                                    }
-                                });
-                            }
-                        };
-
-                        consumer.accept(response);
-
-                        return future;
-                    });
-                }).on(reporter.reportFindTimeSeries());
+                return scrollOverSeries(c, request, filter.getLimit(), h -> buildSeries(h.getSource()))
+                        .on(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -400,24 +354,6 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                 }).on(reporter.reportFindKeys());
             }
         });
-    }
-
-    private <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
-        final ResolvableFuture<T> future = async.future();
-
-        actionFuture.addListener(new ActionListener<T>() {
-            @Override
-            public void onResponse(T result) {
-                future.resolve(result);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                future.fail(e);
-            }
-        });
-
-        return future;
     }
 
     private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
@@ -634,8 +570,8 @@ public class MetadataBackendKV implements MetadataBackend, LifeCycle {
                     }
 
                     @Override
-                    public MetadataBackend instance() {
-                        return new MetadataBackendKV();
+                    public Class<MetadataBackend> type() {
+                        return MetadataBackend.class;
                     }
                 };
             }

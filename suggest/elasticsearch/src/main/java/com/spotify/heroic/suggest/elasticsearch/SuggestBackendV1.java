@@ -90,6 +90,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.LifeCycle;
@@ -144,7 +145,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     @Inject
     private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
-    private final Set<String> groups;
+    @Inject
+    @Named("groups")
+    private Set<String> groups;
 
     // different locations for the series used in filtering.
     private final Utils.FilterContext SERIES_CTX = Utils.context();
@@ -883,8 +886,8 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                     }
 
                     @Override
-                    public SuggestBackend instance() {
-                        return new SuggestBackendV1(module.groups());
+                    public Class<? extends SuggestBackend> type() {
+                        return SuggestBackendV1.class;
                     }
                 };
             }
