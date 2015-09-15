@@ -9,7 +9,7 @@ BUILD=build
 
 HEROIC_JAR=$(BUILD)/heroic-full.jar
 HEROIC=$(BUILD)/heroic-RELEASE
-HEROICSH=$(BUILD)/heroicsh-RELEASE
+HEROIC_SHELL=$(BUILD)/heroic-shell-RELEASE
 HEROIC_STATUS=$(BUILD)/heroic-status-RELEASE
 
 %:
@@ -25,5 +25,5 @@ override_dh_auto_build:
 	mkdir -p $(BUILD)
 	cp heroic-DIST/target/heroic-DIST-0.0.1-SNAPSHOT.jar $(HEROIC_JAR)
 	cp debian/bin/heroic $(HEROIC)
-	cp debian/bin/heroicsh $(HEROICSH)
+	cp debian/bin/heroic-shell $(HEROIC_SHELL)
 	cp debian/bin/heroic-status $(HEROIC_STATUS)

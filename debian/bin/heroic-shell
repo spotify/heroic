@@ -1,0 +1,18 @@
+#!/bin/bash
+
+base=$(basename $0)
+base=heroic-${base##*-}
+
+HEROIC_JAR="/usr/share/${base}/heroic-full.jar"
+
+if [[ -z $HEROIC_JAR ]]; then
+    echo "HEROIC_JAR: not specified"
+    exit 1
+fi
+
+if [[ ! -f $HEROIC_JAR ]]; then
+    echo "HEROIC_JAR: no such file: $HEROIC_JAR"
+    exit 1
+fi
+
+exec env CLASSPATH="$HEROIC_JAR" java com.spotify.heroic.HeroicShell -c "$CONFIG" "$@"
