@@ -47,10 +47,11 @@ import com.google.inject.Inject;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardTrace;
-import com.spotify.heroic.http.query.QueryMetrics;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -65,6 +66,9 @@ public class QueryResource {
 
     @Inject
     private QueryManager query;
+
+    @Inject
+    private NodeMetadata localMetadata;
 
     private final Cache<UUID, StreamQuery> streamQueries = CacheBuilder.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery> build();
@@ -140,8 +144,8 @@ public class QueryResource {
         final Stopwatch watch = Stopwatch.createStarted();
 
         httpAsync.bind(response, callback,
-                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getStatistics(), r.getErrors(),
-                        ShardTrace.of("api", watch.elapsed(TimeUnit.MILLISECONDS), r.getTraces())));
+                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), new ShardTrace("api",
+                        localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.EMPTY, r.getTraces())));
     }
 
     private QueryBuilder setupBuilder(QueryMetrics query) {

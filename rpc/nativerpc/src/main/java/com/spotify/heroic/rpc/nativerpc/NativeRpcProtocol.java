@@ -136,7 +136,6 @@ public class NativeRpcProtocol implements RpcProtocol {
         });
     }
 
-    @ToString(of = { "client", "metadata" })
     @RequiredArgsConstructor
     public class NativeRpcClusterNode implements ClusterNode {
         private final NativeRpcClient client;
@@ -155,6 +154,11 @@ public class NativeRpcProtocol implements RpcProtocol {
         @Override
         public Group useGroup(String group) {
             return new Group(group);
+        }
+
+        @Override
+        public String toString() {
+            return client.toString();
         }
 
         @RequiredArgsConstructor

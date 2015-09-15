@@ -21,6 +21,17 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
+
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -30,24 +41,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.TimerTask;
-
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
-
 @RequiredArgsConstructor
-@ToString(of = { "address", "sendTimeout", "heartbeatInterval" })
 public class NativeRpcClient {
     private final AsyncFramework async;
     private final EventLoopGroup group;
@@ -140,5 +138,10 @@ public class NativeRpcClient {
 
     public <R> AsyncFuture<R> request(String endpoint, Class<R> expected) {
         return request(endpoint, EMPTY, expected);
+    }
+
+    @Override
+    public String toString() {
+        return "native://" + address.getHostString() + (address.getPort() != -1 ? ":" + address.getPort() : "");
     }
 }

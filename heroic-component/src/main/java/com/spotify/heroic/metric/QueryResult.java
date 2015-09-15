@@ -48,11 +48,6 @@ public class QueryResult {
     private final List<ShardedResultGroup> groups;
 
     /**
-     * Statistics about the query.
-     */
-    private final Statistics statistics;
-
-    /**
      * Errors that happened during the query.
      */
     private final List<RequestError> errors;
@@ -70,14 +65,11 @@ public class QueryResult {
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(final DateRange range) {
         return parts -> {
-            Statistics statistics = Statistics.EMPTY;
-
             final List<ShardedResultGroup> groups = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
             final List<ShardTrace> traces = new ArrayList<>();
 
             for (final QueryResultPart part : parts) {
-                statistics = statistics.merge(part.getStatistics());
                 errors.addAll(part.getErrors());
                 traces.add(part.getTrace());
 
@@ -88,7 +80,7 @@ public class QueryResult {
                 groups.addAll(part.getGroups());
             }
 
-            return new QueryResult(range, groups, statistics, errors, traces);
+            return new QueryResult(range, groups, errors, traces);
         };
     }
 }

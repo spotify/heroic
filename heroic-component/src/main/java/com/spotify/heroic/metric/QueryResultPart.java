@@ -29,7 +29,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.Transform;
 import lombok.Data;
@@ -46,11 +45,6 @@ public class QueryResultPart {
     private final List<ShardedResultGroup> groups;
 
     /**
-     * Statistics about the query.
-     */
-    private final Statistics statistics;
-
-    /**
      * Errors that happened during the query.
      */
     private final List<RequestError> errors;
@@ -65,8 +59,8 @@ public class QueryResultPart {
 
         return (ResultGroups result) -> new QueryResultPart(
                 ImmutableList.copyOf(result.getGroups().stream().map(ResultGroup.fromResultGroup(c)).iterator()),
-                result.getStatistics(), result.getErrors(),
-                ShardTrace.of(c.toString(), watch.elapsed(TimeUnit.MILLISECONDS)));
+                result.getErrors(), ShardTrace.of(c.toString(), c.metadata(), watch.elapsed(TimeUnit.MILLISECONDS),
+                        result.getStatistics()));
     }
 
     public boolean isEmpty() {
