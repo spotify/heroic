@@ -266,8 +266,9 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
             int found = 0;
 
             for (final NodeRegistryEntry entry : all) {
-                if (topology.contains(entry.getMetadata().getTags()))
+                if (topology.contains(entry.getMetadata().getTags())) {
                     found += 1;
+                }
             }
 
             if (found != topology.size())
