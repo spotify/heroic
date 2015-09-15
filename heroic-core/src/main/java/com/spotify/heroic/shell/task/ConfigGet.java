@@ -45,7 +45,7 @@ import com.spotify.heroic.shell.TaskUsage;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
-@TaskUsage("Load metadata from a file")
+@TaskUsage("Print the current configuration")
 @TaskName("get")
 public class ConfigGet implements ShellTask {
     @Inject
