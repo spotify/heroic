@@ -139,7 +139,38 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     }
 
     @Override
-    public NodeRegistryEntry findNode(final Map<String, String> tags, NodeCapability capability) {
+    public AsyncFuture<Void> refresh() {
+        final AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform;
+
+        if (discovery instanceof ClusterDiscoveryModule.Null) {
+            log.info("No discovery mechanism configured, using local node");
+            final List<MaybeError<NodeRegistryEntry>> results = new ArrayList<>();
+
+            if (useLocal && local.isPresent()) {
+                final LocalClusterNode l = local.get();
+                results.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
+            }
+
+            transform = async.resolved(results);
+        } else {
+            log.info("Refreshing cluster");
+            transform = discovery.find().lazyTransform(resolve());
+        }
+
+        return addStaticNodes(transform).lazyTransform(updateRegistry());
+    }
+
+    private List<Map<String, String>> topologyOf(Collection<NodeRegistryEntry> entries) {
+        final List<Map<String, String>> shards = new ArrayList<>();
+
+        for (final NodeRegistryEntry e : entries) {
+            shards.add(e.getMetadata().getTags());
+        }
+
+        return shards;
+    }
+
+    private NodeRegistryEntry findNode(final Map<String, String> tags, NodeCapability capability) {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
@@ -149,8 +180,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         return registry.findEntry(tags, capability);
     }
 
-    @Override
-    public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
+    private Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
         final NodeRegistry registry = this.registry.get();
 
         if (registry == null) {
@@ -176,59 +206,6 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
         return all;
     }
 
-    @Override
-    public <T> AsyncFuture<T> run(NodeCapability capability, Collector<T, T> reducer, ClusterOperation<T> op) {
-        final Collection<NodeRegistryEntry> nodes = findAllShards(capability);
-
-        final List<AsyncFuture<T>> requests = new ArrayList<>(nodes.size());
-
-        for (final NodeRegistryEntry node : nodes)
-            requests.add(op.run(node));
-
-        return async.collect(requests, reducer);
-    }
-
-    @Override
-    public <T> AsyncFuture<T> run(Map<String, String> tags, NodeCapability capability, Collector<T, T> reducer,
-            ClusterOperation<T> op) {
-        final NodeRegistryEntry node = findNode(tags, capability);
-
-        final List<AsyncFuture<T>> requests = new ArrayList<>(1);
-        requests.add(op.run(node));
-        return async.collect(requests, reducer);
-    }
-
-    private List<Map<String, String>> topologyOf(Collection<NodeRegistryEntry> entries) {
-        final List<Map<String, String>> shards = new ArrayList<>();
-
-        for (final NodeRegistryEntry e : entries)
-            shards.add(e.getMetadata().getTags());
-
-        return shards;
-    }
-
-    @Override
-    public AsyncFuture<Void> refresh() {
-        final AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform;
-
-        if (discovery instanceof ClusterDiscoveryModule.Null) {
-            log.info("No discovery mechanism configured, using local node");
-            final List<MaybeError<NodeRegistryEntry>> results = new ArrayList<>();
-
-            if (useLocal && local.isPresent()) {
-                final LocalClusterNode l = local.get();
-                results.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
-            }
-
-            transform = async.resolved(results);
-        } else {
-            log.info("Refreshing cluster");
-            transform = discovery.find().transform(resolve());
-        }
-
-        return addStaticNodes(transform).transform(updateRegistry());
-    }
-
     private static Collector<List<MaybeError<NodeRegistryEntry>>, List<MaybeError<NodeRegistryEntry>>> joinMaybeErrors = new Collector<List<MaybeError<NodeRegistryEntry>>, List<MaybeError<NodeRegistryEntry>>>() {
         @Override
         public List<MaybeError<NodeRegistryEntry>> collect(Collection<List<MaybeError<NodeRegistryEntry>>> results)
@@ -250,7 +227,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
 
         if (!staticNodes.isEmpty()) {
             final List<AsyncFuture<List<MaybeError<NodeRegistryEntry>>>> transforms = ImmutableList.of(transform, async
-                    .resolved(staticNodes).transform(resolve()));
+                    .resolved(staticNodes).lazyTransform(resolve()));
             finalTransform = async.collect(transforms, joinMaybeErrors);
         } else {
             finalTransform = transform;
@@ -274,7 +251,7 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
                 final List<AsyncFuture<MaybeError<NodeRegistryEntry>>> callbacks = new ArrayList<>(nodes.size());
 
                 for (final URI uri : nodes) {
-                    callbacks.add(resolve(uri).transform(MaybeError.<NodeRegistryEntry> transformJust()).error(
+                    callbacks.add(resolve(uri).transform(MaybeError.<NodeRegistryEntry> transformJust()).catchFailed(
                             handleError(uri)));
                 }
 
@@ -437,10 +414,11 @@ public class ClusterManagerImpl implements ClusterManager, LifeCycle {
     private AsyncFuture<NodeRegistryEntry> resolve(final URI uri) {
         final RpcProtocol protocol = protocols.get(uri.getScheme());
 
-        if (protocol == null)
+        if (protocol == null) {
             throw new IllegalArgumentException("Unsupported scheme '" + uri.getScheme());
+        }
 
-        return protocol.connect(uri).transform(localTransform);
+        return protocol.connect(uri).lazyTransform(localTransform);
     }
 
     @Override

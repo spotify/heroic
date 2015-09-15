@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -144,8 +145,9 @@ public class QueryResource {
         final Stopwatch watch = Stopwatch.createStarted();
 
         httpAsync.bind(response, callback,
-                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), new ShardTrace("api",
-                        localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.EMPTY, r.getTraces())));
+                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
+                        new ShardTrace("api", localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.EMPTY,
+                                Optional.empty(), r.getTraces())));
     }
 
     private QueryBuilder setupBuilder(QueryMetrics query) {

@@ -57,30 +57,9 @@ public interface ClusterManager extends LifeCycle {
 
     public List<NodeRegistryEntry> getNodes();
 
-    public NodeRegistryEntry findNode(final Map<String, String> tags, NodeCapability capability);
-
-    public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability);
-
     public AsyncFuture<Void> refresh();
 
     public Statistics getStatistics();
-
-    /**
-     * TODO Remove short path for v4 when all of the cluster is v5.
-     *
-     * @param capability
-     * @param reducer
-     * @param op
-     * @return
-     */
-    public <T> AsyncFuture<T> run(NodeCapability capability, Collector<T, T> reducer, ClusterOperation<T> op);
-
-    public <T> AsyncFuture<T> run(Map<String, String> tags, NodeCapability capability, Collector<T, T> reducer,
-            ClusterOperation<T> op);
-
-    public static interface ClusterOperation<T> {
-        public AsyncFuture<T> run(NodeRegistryEntry node);
-    }
 
     public ClusterNodeGroup useDefaultGroup();
 

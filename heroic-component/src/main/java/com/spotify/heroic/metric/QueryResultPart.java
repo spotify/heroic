@@ -23,6 +23,7 @@ package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Stopwatch;
@@ -60,7 +61,7 @@ public class QueryResultPart {
         return (ResultGroups result) -> new QueryResultPart(
                 ImmutableList.copyOf(result.getGroups().stream().map(ResultGroup.fromResultGroup(c)).iterator()),
                 result.getErrors(), ShardTrace.of(c.toString(), c.metadata(), watch.elapsed(TimeUnit.MILLISECONDS),
-                        result.getStatistics()));
+                        result.getStatistics(), Optional.empty()));
     }
 
     public boolean isEmpty() {

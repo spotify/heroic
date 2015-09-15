@@ -60,7 +60,7 @@ public class ClusterResource {
      */
     @GET
     @Path("/status")
-    public Response decodeRowKey() {
+    public Response status() {
         final List<ClusterNodeStatus> nodes = convert(cluster.getNodes());
         final ClusterStatus status = new ClusterStatus(nodes, cluster.getStatistics());
         return Response.status(Response.Status.OK).entity(status).build();
