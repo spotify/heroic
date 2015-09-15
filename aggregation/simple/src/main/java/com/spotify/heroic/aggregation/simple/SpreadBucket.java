@@ -84,6 +84,12 @@ public class SpreadBucket extends AbstractBucket {
     }
 
     public Metric newSpread() {
-        return new Spread(timestamp, count.sum(), sum.sum(), sum2.sum(), min.get(), max.get());
+        final long count = this.count.sum();
+
+        if (count == 0) {
+            return Metric.invalid();
+        }
+
+        return new Spread(timestamp, count, sum.sum(), sum2.sum(), min.get(), max.get());
     }
 }
