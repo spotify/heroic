@@ -9,6 +9,7 @@ import javax.inject.Singleton;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -106,6 +107,8 @@ public class HeroicPrimaryModule extends AbstractModule {
 
         mapper.registerModule(module);
         mapper.registerModule(serializerModule());
+        mapper.registerModule(new Jdk8Module());
+
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         return mapper;
     }
