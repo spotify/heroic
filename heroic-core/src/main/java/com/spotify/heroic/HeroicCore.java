@@ -210,14 +210,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
         this.primary.set(primary);
 
-        if (!skipLifecycles) {
-            try {
-                startLifeCycles(primary);
-            } catch (Exception e) {
-                throw new Exception("Failed to start all lifecycles", e);
-            }
-        } else {
-            log.info("Lifecycles initialization skipped (skipLifecycles = true)");
+        try {
+            startLifeCycles(primary);
+        } catch (Exception e) {
+            throw new Exception("Failed to start all lifecycles", e);
         }
 
         final HeroicInternalLifeCycle lifecycle = primary.getInstance(HeroicInternalLifeCycle.class);
@@ -296,14 +292,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
             log.info("Shutting down Heroic");
 
-            if (!skipLifecycles) {
-                try {
-                    stopLifeCycles(primary);
-                } catch (Exception e) {
-                    log.error("Failed to stop all lifecycles, continuing anyway...", e);
-                }
-            } else {
-                log.info("Lifecycles shutdown skipped (skipLifecycles = true)");
+            try {
+                stopLifeCycles(primary);
+            } catch (Exception e) {
+                log.error("Failed to stop all lifecycles, continuing anyway...", e);
             }
 
             log.info("Stopping internal life cycle");
@@ -482,8 +474,15 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
     private boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds, final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
+
+        // we still need to get instances to cause them to be created.
         final Set<LifeCycle> lifeCycles = primary.getInstance(Key.get(new TypeLiteral<Set<LifeCycle>>() {
         }));
+
+        if (skipLifecycles) {
+            log.info("{}: skipping (skipLifecycles = true)", op);
+            return true;
+        }
 
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
         final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();

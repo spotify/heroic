@@ -22,7 +22,7 @@ public class SelectedGroupTest {
         Mockito.when(a.getGroups()).thenReturn(groupA);
         Mockito.when(b.getGroups()).thenReturn(groupB);
 
-        final SelectedGroup<Grouped> g = new SelectedGroup<>(0, ImmutableList.of(a, b));
+        final SelectedGroup<Grouped> g = new SelectedGroup<>(0, ImmutableList.of(a, b), ImmutableList.of(a, b));
 
         Assert.assertEquals(ImmutableSortedSet.of("bar", "baz", "foo"), ImmutableSortedSet.copyOf(g.groups()));
     }

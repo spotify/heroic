@@ -116,7 +116,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return ImmutableList.copyOf(result);
     }
 
-    private SelectedGroup<T> filterAlive(List<T> backends) throws BackendGroupException {
+    private SelectedGroup<T> filterAlive(final List<T> backends) throws BackendGroupException {
         final List<T> alive = new ArrayList<T>();
 
         // Keep track of groups which are not ready.
@@ -131,7 +131,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
             alive.add(backend);
         }
 
-        return new SelectedGroup<T>(disabled, alive);
+        return new SelectedGroup<T>(disabled, alive, backends);
     }
 
     private static <T extends Grouped> Map<String, List<T>> buildBackends(Collection<T> backends) {

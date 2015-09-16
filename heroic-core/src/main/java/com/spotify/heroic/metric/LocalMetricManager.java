@@ -350,7 +350,7 @@ public class LocalMetricManager implements MetricManager {
         public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
             final List<AsyncFuture<List<String>>> callbacks = new ArrayList<>();
 
-            run((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
+            runAll((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
 
             return async.collect(callbacks).transform(new Transform<Collection<List<String>>, List<String>>() {
                 public java.util.List<String> transform(Collection<List<String>> result) throws Exception {
@@ -418,6 +418,16 @@ public class LocalMetricManager implements MetricManager {
                     return new ResultGroups(groups, ImmutableList.of(), stat);
                 }
             };
+        }
+
+        private void runAll(InternalOperation op) {
+            for (final MetricBackend b : backends.getAll()) {
+                try {
+                    op.run(backends.getDisabled(), b);
+                } catch (final Exception e) {
+                    throw new RuntimeException("setting up backend operation failed", e);
+                }
+            }
         }
 
         private void run(InternalOperation op) {
