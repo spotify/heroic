@@ -23,7 +23,7 @@ override_dh_auto_clean:
 override_dh_auto_build:
 	MAVEN_HOME=$(MAVEN_HOME) $(MVN) -Ddeb.skip=true package
 	mkdir -p $(BUILD)
-	cp heroic-DIST/target/heroic-DIST-0.0.1-SNAPSHOT.jar $(HEROIC_JAR)
+	cp heroic-DIST/target/heroic-DIST-0.0.1-SNAPSHOT-shaded.jar $(HEROIC_JAR)
 	cp debian/bin/heroic $(HEROIC)
 	cp debian/bin/heroic-shell $(HEROIC_SHELL)
 	cp debian/bin/heroic-status $(HEROIC_STATUS)
