@@ -50,6 +50,7 @@ import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
@@ -164,7 +165,7 @@ public class LocalMetricManager implements MetricManager {
         private final MetadataBackend metadata;
 
         @Override
-        public Set<String> getGroups() {
+        public Groups getGroups() {
             return backends.groups();
         }
 
@@ -342,6 +343,25 @@ public class LocalMetricManager implements MetricManager {
                 public Iterator<BackendKey> transform(Collection<Iterator<BackendKey>> result) throws Exception {
                     return Iterators.concat(result.iterator());
                 }
+            });
+        }
+
+        @Override
+        public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
+            final List<AsyncFuture<List<String>>> callbacks = new ArrayList<>();
+
+            run((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
+
+            return async.collect(callbacks).transform(new Transform<Collection<List<String>>, List<String>>() {
+                public java.util.List<String> transform(Collection<List<String>> result) throws Exception {
+                    final ImmutableList.Builder<String> builder = ImmutableList.builder();
+
+                    for (final List<String> k : result) {
+                        builder.addAll(k);
+                    }
+
+                    return builder.build();
+                };
             });
         }
 

@@ -44,15 +44,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.count.CountRequestBuilder;
@@ -89,6 +85,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -115,12 +112,9 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.FutureCancelled;
-import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -133,7 +127,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
 
     public static final String TEMPLATE_NAME = "heroic";
 
-    private final Set<String> groups;
+    private final Groups groups;
     private final LocalMetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
@@ -141,7 +135,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
     private final FilterModifier modifier;
 
     @Inject
-    public MetadataBackendV1(@Named("groups") Set<String> groups, LocalMetadataBackendReporter reporter,
+    public MetadataBackendV1(Groups groups, LocalMetadataBackendReporter reporter,
             AsyncFramework async, Managed<Connection> connection,
             RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, FilterModifier modifier) {
         super(async);
@@ -164,7 +158,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

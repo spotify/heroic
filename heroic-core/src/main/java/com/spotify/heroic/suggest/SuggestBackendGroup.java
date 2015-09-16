@@ -23,12 +23,9 @@ package com.spotify.heroic.suggest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-
-import lombok.Data;
-import lombok.ToString;
 
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
@@ -37,6 +34,8 @@ import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+import lombok.ToString;
 
 @Data
 @ToString(of = { "backends" })
@@ -159,7 +158,7 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return backends.groups();
     }
 

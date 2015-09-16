@@ -28,14 +28,13 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
@@ -51,6 +50,7 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
+import lombok.Data;
 
 @Data
 public final class BigtableMetricModule implements MetricModule {
@@ -59,7 +59,7 @@ public final class BigtableMetricModule implements MetricModule {
     public static final CredentialsBuilder DEFAULT_CREDENTIALS = new ComputeEngineCredentialsBuilder();
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
     private final String project;
     private final String zone;
     private final String cluster;
@@ -111,13 +111,20 @@ public final class BigtableMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public Serializer<RowKey> rowKeySerializer(Serializer<Series> series, @Named("common") SerializerFramework s) {
+            public Serializer<RowKey> rowKeySerializer(Serializer<Series> series,
+                    @Named("common") SerializerFramework s) {
                 return new RowKey_Serializer(s);
+            }
+
+            @Provides
+            @Singleton
+            public Groups groups() {
+                return groups;
             }
 
             @Override
             protected void configure() {
-                bind(key).toInstance(new BigtableBackend(groups));
+                bind(key).to(BigtableBackend.class).in(Scopes.SINGLETON);
                 expose(key);
             }
         };

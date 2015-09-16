@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric;
 
+import java.util.List;
+
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;

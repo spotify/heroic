@@ -5,10 +5,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.ImmutableList;
+
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
+    private final AsyncFramework async;
+
     @Override
     public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit) {
         return keys(start, null, limit).transform(new Transform<List<BackendKey>, Iterator<BackendKey>>() {
@@ -81,4 +88,9 @@ public abstract class AbstractMetricBackend implements MetricBackend {
             }
         });
     };
+
+    @Override
+    public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
+        return async.resolved(ImmutableList.of());
+    }
 }

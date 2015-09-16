@@ -26,8 +26,6 @@ import java.util.concurrent.Callable;
 
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -37,6 +35,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.netflix.astyanax.AstyanaxConfiguration;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
@@ -54,6 +53,7 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
+import lombok.Data;
 
 @Data
 public final class AstyanaxMetricModule implements MetricModule {
@@ -63,7 +63,7 @@ public final class AstyanaxMetricModule implements MetricModule {
     public static final int DEFAULT_MAX_CONNECTIONS_PER_HOST = 50;
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
     private final String keyspace;
     private final Set<String> seeds;
     private final int maxConnectionsPerHost;
@@ -95,6 +95,12 @@ public final class AstyanaxMetricModule implements MetricModule {
             @Singleton
             public ReadWriteThreadPools pools(AsyncFramework async, MetricBackendReporter reporter) {
                 return pools.construct(async, reporter.newThreadPool());
+            }
+
+            @Provides
+            @Singleton
+            public Groups groups() {
+                return groups;
             }
 
             @Provides
@@ -144,7 +150,7 @@ public final class AstyanaxMetricModule implements MetricModule {
 
             @Override
             protected void configure() {
-                bind(key).toInstance(new AstyanaxBackend(groups));
+                bind(key).to(AstyanaxBackend.class).in(Scopes.SINGLETON);
                 expose(key);
             }
         };

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.common;
 
-import java.util.Set;
-
 public interface Grouped {
-    public Set<String> getGroups();
+    public Groups getGroups();
 }

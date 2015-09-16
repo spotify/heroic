@@ -21,18 +21,31 @@
 
 package com.spotify.heroic.common;
 
+import java.util.Iterator;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
-public final class Groups {
-    public static Set<String> groups(String group, Set<String> groups, String defaultGroup) {
-        if (group != null)
-            return ImmutableSet.of(group);
+import lombok.Data;
 
-        if (groups != null)
-            return groups;
+@Data
+public final class Groups implements Iterable<String> {
+    private final Set<String> groups;
 
-        return ImmutableSet.of(defaultGroup);
+    public static Groups groups(String group, Set<String> groups, String defaultGroup) {
+        if (group != null) {
+            return new Groups(ImmutableSet.of(group));
+        }
+
+        if (groups != null) {
+            return new Groups(groups);
+        }
+
+        return new Groups(ImmutableSet.of(defaultGroup));
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+        return groups.iterator();
     }
 }

@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.common;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 
 import lombok.Data;
 
@@ -42,13 +42,13 @@ public class SelectedGroup<T extends Grouped> implements Iterable<T> {
         return members.isEmpty();
     }
 
-    public Set<String> groups() {
-        final Set<String> groups = new HashSet<>();
+    public Groups groups() {
+        final ImmutableSet.Builder<String> groups = ImmutableSet.builder();
 
         for (final T member : members) {
             groups.addAll(member.getGroups());
         }
 
-        return groups;
+        return new Groups(groups.build());
     }
 }

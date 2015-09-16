@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 import javax.inject.Inject;
@@ -36,8 +35,10 @@ import javax.inject.Inject;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.utils.Bytes;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
@@ -60,35 +61,36 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@RequiredArgsConstructor
 @ToString(of = { "connection" })
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle {
     private static final MetricsRowKeySerializer keySerializer = new MetricsRowKeySerializer();
 
-    @Inject
-    @Getter
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final ReadWriteThreadPools pools;
+    private final MetricBackendReporter reporter;
+    private final Managed<Connection> connection;
+    private final Groups groups;
 
     @Inject
-    private ReadWriteThreadPools pools;
-
-    @Inject
-    private MetricBackendReporter reporter;
-
-    @Inject
-    private Managed<Connection> connection;
-
-    private final Set<String> groups;
+    public DatastaxBackend(final AsyncFramework async, final ReadWriteThreadPools pools,
+            final MetricBackendReporter reporter, final Managed<Connection> connection,
+            final Groups groups) {
+        super(async);
+        this.async = async;
+        this.pools = pools;
+        this.reporter = reporter;
+        this.connection = connection;
+        this.groups = groups;
+    }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 
@@ -310,10 +312,25 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
             public BackendKey next() {
                 final Row r = it.next();
                 final ByteBuffer bytes = r.getBytes("metric_key");
-                final MetricsRowKey key = keySerializer.deserialize(bytes);
+
+                final MetricsRowKey key;
+
+                try {
+                    key = keySerializer.deserialize(bytes);
+                } catch (Exception e) {
+                    throw new RuntimeException(String.format("Could not deserialize key: %s", Bytes.toHexString(bytes)),
+                            e);
+                }
+
                 return new BackendKey(key.getSeries(), key.getBase());
             }
         });
+    }
+
+    @Override
+    public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
+        return async.resolved(ImmutableList
+                .of(Bytes.toHexString(keySerializer.serialize(new MetricsRowKey(key.getSeries(), key.getBase())))));
     }
 
     private BoundStatement keysStatement(final Connection c, final ByteBuffer first, final ByteBuffer last) {

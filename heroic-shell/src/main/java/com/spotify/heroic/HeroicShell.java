@@ -28,10 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -59,6 +55,9 @@ import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.TinyAsync;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class HeroicShell {
@@ -114,7 +113,7 @@ public class HeroicShell {
             return;
         }
 
-        final HeroicCore.Builder builder = setupBuilder(params.server, params.config(), params.profile());
+        final HeroicCore.Builder builder = setupBuilder(params);
 
         try {
             standalone(parsed.child, builder);
@@ -138,7 +137,7 @@ public class HeroicShell {
     }
 
     private static CoreInterface setupLocalCoreBridge(Parameters params, AsyncFramework async) throws Exception {
-        final HeroicCore.Builder builder = setupBuilder(params.server, params.config(), params.profile());
+        final HeroicCore.Builder builder = setupBuilder(params);
 
         final HeroicCore core = builder.build();
 
@@ -359,19 +358,20 @@ public class HeroicShell {
         return StringUtils.join(alternatives, ", ");
     }
 
-    static HeroicCore.Builder setupBuilder(boolean server, String config, String profile) {
-        HeroicCore.Builder builder = HeroicCore.builder().server(server).modules(HeroicModules.ALL_MODULES)
-                .oneshot(true);
+    static HeroicCore.Builder setupBuilder(Parameters params) {
+        HeroicCore.Builder builder = HeroicCore.builder().server(params.server).disableBackends(params.disableBackends)
+                .skipLifecycles(params.skipLifecycles).modules(HeroicModules.ALL_MODULES).oneshot(true);
 
-        if (config != null) {
-            builder.configPath(parseConfigPath(config));
+        if (params.config() != null) {
+            builder.configPath(parseConfigPath(params.config()));
         }
 
-        if (profile != null) {
-            final HeroicProfile p = HeroicModules.PROFILES.get(profile);
+        if (params.profile() != null) {
+            final HeroicProfile p = HeroicModules.PROFILES.get(params.profile());
 
-            if (p == null)
-                throw new IllegalArgumentException(String.format("not a valid profile: %s", profile));
+            if (p == null) {
+                throw new IllegalArgumentException(String.format("not a valid profile: %s", params.profile()));
+            }
 
             builder.profile(p);
         }
@@ -383,6 +383,12 @@ public class HeroicShell {
     public static class Parameters extends AbstractShellTaskParams {
         @Option(name = "--server", usage = "Start shell as server (enables listen port)")
         private boolean server = false;
+
+        @Option(name = "--skip-lifecycles", usage = "Start core without starting lifecycles")
+        private boolean skipLifecycles = false;
+
+        @Option(name = "--disable-backends", usage = "Start core without configuring backends")
+        private boolean disableBackends = false;
 
         @Option(name = "--connect", usage = "Connect to a remote heroic server")
         private String connect = null;

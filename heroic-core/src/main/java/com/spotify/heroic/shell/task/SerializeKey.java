@@ -24,8 +24,9 @@ package com.spotify.heroic.shell.task;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.PrintWriter;
-import java.util.Iterator;
+import java.util.List;
 
+import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -46,12 +47,10 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
-@TaskUsage("List available metric keys for all backends")
-@TaskName("keys")
-@Slf4j
-public class Keys implements ShellTask {
+@TaskUsage("Serialize the given backend key")
+@TaskName("serialize-key")
+public class SerializeKey implements ShellTask {
     @Inject
     private MetricManager metrics;
 
@@ -68,46 +67,21 @@ public class Keys implements ShellTask {
     public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final BackendKey start;
+        final BackendKey key = mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
 
-        if (params.start != null) {
-            start = mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey();
-        } else {
-            start = null;
-        }
-
-        final int limit = Math.max(1, Math.min(10000, params.limit));
-
-        return metrics.useGroup(params.group).allKeys(start, limit)
-                .transform(new Transform<Iterator<BackendKey>, Void>() {
+        return metrics.useGroup(params.group).serializeKeyToHex(key)
+                .transform(new Transform<List<String>, Void>() {
                     @Override
-                    public Void transform(Iterator<BackendKey> result) throws Exception {
-                        long i = 0;
+                    public Void transform(List<String> result) throws Exception {
+                        int i = 0;
 
-                        while (result.hasNext()) {
-                            final BackendKey next;
-
-                            try {
-                                next = result.next();
-                            } catch(Exception e) {
-                                log.warn("Exception when pulling key", e);
-                                continue;
-                            }
-
-                            out.println(mapper.writeValueAsString(next));
-                            out.flush();
+                        for (final String key : result) {
+                            out.println(String.format("%d: %s", i++, key));
                         }
 
                         return null;
                     }
                 });
-    }
-
-    private BackendKey seriesEnd(Series series) {
-        if (series == null)
-            return null;
-
-        return new BackendKey(series, 0xffffffffffffffffl);
     }
 
     @Data
@@ -128,13 +102,10 @@ public class Keys implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--start", usage = "First key to list (overrides start value from --series)", metaVar = "<json>")
-        private String start;
-
-        @Option(name = "--limit", usage = "Maximum number of keys to fetch per batch", metaVar = "<int>")
-        private int limit = 10000;
-
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
+
+        @Argument(metaVar = "<json>", usage = "Key to serialize")
+        private String key;
     }
 }

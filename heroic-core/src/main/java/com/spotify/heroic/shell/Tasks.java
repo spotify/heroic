@@ -56,6 +56,7 @@ import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.Query;
+import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
 import com.spotify.heroic.shell.task.SuggestTag;
@@ -74,6 +75,7 @@ public final class Tasks {
         available.add(shellTask(Configure.class));
         available.add(shellTask(ConfigGet.class));
         available.add(shellTask(Keys.class));
+        available.add(shellTask(SerializeKey.class));
         available.add(shellTask(ListBackends.class));
         available.add(shellTask(Fetch.class));
         available.add(shellTask(Write.class));

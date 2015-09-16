@@ -39,11 +39,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ListenableActionFuture;
@@ -67,6 +64,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -91,10 +89,8 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 import lombok.ToString;
 
@@ -115,15 +111,14 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
 
     public static final String TEMPLATE_NAME = "heroic";
 
-    @Named("groups")
-    private final Set<String> groups;
+    private final Groups groups;
     private final LocalMetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
 
     @Inject
-    public MetadataBackendKV(@Named("groups") Set<String> groups, LocalMetadataBackendReporter reporter,
+    public MetadataBackendKV(Groups groups, LocalMetadataBackendReporter reporter,
             AsyncFramework async, Managed<Connection> connection,
             RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache) {
         super(async);
@@ -145,7 +140,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

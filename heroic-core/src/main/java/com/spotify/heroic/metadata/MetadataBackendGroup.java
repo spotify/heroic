@@ -23,13 +23,10 @@ package com.spotify.heroic.metadata;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
@@ -39,6 +36,8 @@ import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 @ToString(of = { "backends" })
@@ -185,7 +184,7 @@ public class MetadataBackendGroup implements MetadataBackend {
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return backends.groups();
     }
 

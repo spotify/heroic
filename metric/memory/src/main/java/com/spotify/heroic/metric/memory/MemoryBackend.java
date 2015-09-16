@@ -25,20 +25,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.NavigableMap;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import lombok.Data;
-import lombok.Getter;
-import lombok.ToString;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
@@ -47,7 +40,6 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.WriteMetric;
@@ -55,6 +47,8 @@ import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -67,13 +61,14 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
 
     private final Object $create = new Object();
 
-    @Inject
-    @Getter
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final Groups groups;
 
-    @Inject
-    @Named("groups")
-    private Set<String> groups;
+    public MemoryBackend(final AsyncFramework async, final Groups groups) {
+        super(async);
+        this.async = async;
+        this.groups = groups;
+    }
 
     @Override
     public AsyncFuture<Void> start() {
@@ -91,7 +86,7 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

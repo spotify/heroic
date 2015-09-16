@@ -139,11 +139,12 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     private final URI startupPing;
     private final String startupId;
     private final boolean oneshot;
-    private final boolean disableLocal;
+    private final boolean disableBackends;
+    private final boolean skipLifecycles;
 
     public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> bootstrappers,
             Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter, URI startupPing,
-            String startupId, boolean oneshot, boolean disableLocal) {
+            String startupId, boolean oneshot, boolean disableBackends, boolean skipLifecycles) {
         this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
         this.port = port;
         this.modules = Optional.fromNullable(modules).or(DEFAULT_MODULES);
@@ -155,12 +156,13 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         this.startupPing = startupPing;
         this.startupId = startupId;
         this.oneshot = oneshot;
-        this.disableLocal = disableLocal;
+        this.disableBackends = disableBackends;
+        this.skipLifecycles = skipLifecycles;
     }
 
     @Override
     public boolean isDisableLocal() {
-        return disableLocal;
+        return disableBackends;
     }
 
     @Override
@@ -208,10 +210,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
         this.primary.set(primary);
 
-        try {
-            startLifeCycles(primary);
-        } catch (Exception e) {
-            throw new Exception("Failed to start all lifecycles", e);
+        if (!skipLifecycles) {
+            try {
+                startLifeCycles(primary);
+            } catch (Exception e) {
+                throw new Exception("Failed to start all lifecycles", e);
+            }
+        } else {
+            log.info("Lifecycles initialization skipped (skipLifecycles = true)");
         }
 
         final HeroicInternalLifeCycle lifecycle = primary.getInstance(HeroicInternalLifeCycle.class);
@@ -290,10 +296,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
             log.info("Shutting down Heroic");
 
-            try {
-                stopLifeCycles(primary);
-            } catch (Exception e) {
-                log.error("Failed to stop all lifecycles, continuing anyway...", e);
+            if (!skipLifecycles) {
+                try {
+                    stopLifeCycles(primary);
+                } catch (Exception e) {
+                    log.error("Failed to stop all lifecycles, continuing anyway...", e);
+                }
+            } else {
+                log.info("Lifecycles shutdown skipped (skipLifecycles = true)");
             }
 
             log.info("Stopping internal life cycle");
@@ -387,7 +397,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
         modules.add(config.getClient());
 
-        if (!disableLocal) {
+        if (!disableBackends) {
             modules.add(new AbstractModule() {
                 @Override
                 protected void configure() {
@@ -590,7 +600,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         private URI startupPing;
         private String startupId;
         private boolean oneshot = false;
-        private boolean disableLocal = false;
+        private boolean disableBackends = false;
+        private boolean skipLifecycles = false;
         private List<HeroicBootstrap> bootstrappers = new ArrayList<>();
 
         public Builder module(Class<?> module) {
@@ -614,8 +625,16 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         /**
          * Disable local backends.
          */
-        public Builder disableLocal(boolean disableLocal) {
-            this.disableLocal = disableLocal;
+        public Builder disableBackends(boolean disableBackends) {
+            this.disableBackends = disableBackends;
+            return this;
+        }
+
+        /**
+         * Skip startup of lifecycles.
+         */
+        public Builder skipLifecycles(boolean skipLifecycles) {
+            this.skipLifecycles = skipLifecycles;
             return this;
         }
 
@@ -681,7 +700,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
         public HeroicCore build() {
             return new HeroicCore(host, port, modules, bootstrappers, server, configPath, profile, reporter,
-                    startupPing, startupId, oneshot, disableLocal);
+                    startupPing, startupId, oneshot, disableBackends, skipLifecycles);
         }
 
         public Builder modules(List<String> modules) {

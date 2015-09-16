@@ -21,14 +21,12 @@
 
 package com.spotify.heroic.common;
 
-import java.util.Set;
-
 import lombok.Data;
 
 @Data
 public class GroupMember<T> {
     private final String group;
     private final T member;
-    private final Set<String> groups;
+    private final Groups groups;
     private final boolean defaultMember;
 }

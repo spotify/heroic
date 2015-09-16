@@ -17,10 +17,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
@@ -53,12 +53,10 @@ import eu.toolchain.async.Transform;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @ToString(of = { "connection" })
 @Slf4j
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycle {
@@ -71,21 +69,22 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     public static final String POINTS = "points";
     public static final long PERIOD = 0x100000000L;
 
-    @Inject
-    @Getter
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final SerializerFramework serializer;
+    private final Serializer<RowKey> rowKeySerializer;
+    private final Managed<BigtableConnection> connection;
+    private final Groups groups;
 
-    @Inject
-    @Named("common")
-    private SerializerFramework serializer;
-
-    @Inject
-    private Serializer<RowKey> rowKeySerializer;
-
-    @Inject
-    private Managed<BigtableConnection> connection;
-
-    private final Set<String> groups;
+    public BigtableBackend(final AsyncFramework async, final SerializerFramework serializer,
+            @Named("common") final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
+            final Groups groups) {
+        super(async);
+        this.async = async;
+        this.serializer = serializer;
+        this.rowKeySerializer = rowKeySerializer;
+        this.connection = connection;
+        this.groups = groups;
+    }
 
     @Override
     public AsyncFuture<Void> start() {
@@ -169,7 +168,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

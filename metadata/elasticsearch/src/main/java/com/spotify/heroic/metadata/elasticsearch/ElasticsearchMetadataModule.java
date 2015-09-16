@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -72,7 +71,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
     private final ManagedConnectionFactory connection;
     private final String templateName;
 
@@ -120,8 +119,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
 
             @Provides
             @Singleton
-            @Named("groups")
-            public Set<String> groups() {
+            public Groups groups() {
                 return groups;
             }
 

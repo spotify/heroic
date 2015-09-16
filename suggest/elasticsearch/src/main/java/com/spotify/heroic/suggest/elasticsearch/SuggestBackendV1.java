@@ -89,10 +89,9 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -121,42 +120,40 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@RequiredArgsConstructor
 @ToString(of = { "connection" })
 public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     private static final StandardAnalyzer analyzer = new StandardAnalyzer();
     public static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
 
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private Managed<Connection> connection;
-
-    @Inject
-    private LocalMetadataBackendReporter reporter;
-
-    /**
-     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
-     */
-    @Inject
-    private RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
-
-    @Inject
-    @Named("groups")
-    private Set<String> groups;
-
     // different locations for the series used in filtering.
-    private final Utils.FilterContext SERIES_CTX = Utils.context();
-    private final Utils.FilterContext TAG_CTX = Utils.context(Utils.TAG_SERIES);
+    private static final Utils.FilterContext SERIES_CTX = Utils.context();
+    private static final Utils.FilterContext TAG_CTX = Utils.context(Utils.TAG_SERIES);
 
-    private final String[] KEY_SUGGEST_SOURCES = new String[] { Utils.SERIES_KEY_RAW };
+    private static final String[] KEY_SUGGEST_SOURCES = new String[] { Utils.SERIES_KEY_RAW };
 
     private static final String[] TAG_SUGGEST_SOURCES = new String[] { Utils.TAG_KEY,
             Utils.TAG_VALUE };
+
+    private final AsyncFramework async;
+    private final Managed<Connection> connection;
+    private final LocalMetadataBackendReporter reporter;
+    /**
+     * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the series.
+     */
+    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final Groups groups;
+
+    public SuggestBackendV1(final AsyncFramework async, final Managed<Connection> connection,
+            final LocalMetadataBackendReporter reporter,
+            final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, final Groups groups) {
+        this.async = async;
+        this.connection = connection;
+        this.reporter = reporter;
+        this.writeCache = writeCache;
+        this.groups = groups;
+    }
 
     @Override
     public AsyncFuture<Void> configure() {
@@ -179,7 +176,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

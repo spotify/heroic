@@ -43,7 +43,6 @@ import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -72,7 +71,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     public static final String DEFAULT_BACKEND_TYPE = "default";
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
     private final ManagedConnectionFactory connection;
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
@@ -115,8 +114,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
         return new PrivateModule() {
             @Provides
             @Singleton
-            @Named("groups")
-            public Set<String> groups() {
+            public Groups groups() {
                 return groups;
             }
 
@@ -223,9 +221,5 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
             return new ElasticsearchSuggestModule(id, group, groups, connection, writesPerSecond,
                     writeCacheDurationMinutes, templateName, backendType);
         }
-    }
-
-    public Set<String> groups() {
-        return groups;
     }
 }

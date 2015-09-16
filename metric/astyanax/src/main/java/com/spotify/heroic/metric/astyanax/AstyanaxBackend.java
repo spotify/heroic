@@ -27,10 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
-
-import javax.inject.Inject;
 
 import org.apache.commons.lang3.NotImplementedException;
 
@@ -50,6 +47,7 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
@@ -71,14 +69,12 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@RequiredArgsConstructor
 @ToString(of = {})
 public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle {
     private static final MetricsRowKeySerializer KEY_SERIALIZER = MetricsRowKeySerializer.get();
@@ -86,17 +82,19 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF = new ColumnFamily<MetricsRowKey, Integer>(
             "metrics", KEY_SERIALIZER, IntegerSerializer.get());
 
-    @Inject
-    @Getter
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final ReadWriteThreadPools pools;
+    private final MetricBackendReporter reporter;
+    private final Groups groups;
 
-    @Inject
-    private ReadWriteThreadPools pools;
-
-    @Inject
-    private MetricBackendReporter reporter;
-
-    private final Set<String> groups;
+    public AstyanaxBackend(final AsyncFramework async, final ReadWriteThreadPools pools,
+            final MetricBackendReporter reporter, final Groups groups) {
+        super(async);
+        this.async = async;
+        this.pools = pools;
+        this.reporter = reporter;
+        this.groups = groups;
+    }
 
     private static final ColumnFamily<Integer, String> CQL3_CF = ColumnFamily.newColumnFamily("Cql3CF",
             IntegerSerializer.get(), StringSerializer.get());
@@ -106,7 +104,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     private Managed<Context> context;
 
     @Override
-    public Set<String> getGroups() {
+    public Groups getGroups() {
         return groups;
     }
 

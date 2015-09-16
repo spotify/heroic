@@ -23,10 +23,7 @@ package com.spotify.heroic.metric.memory;
 
 import java.util.Set;
 
-import javax.inject.Named;
 import javax.inject.Singleton;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -40,12 +37,14 @@ import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
+import lombok.Data;
+
 @Data
 public final class MemoryMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "memory";
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
 
     @JsonCreator
     public MemoryMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
@@ -65,8 +64,7 @@ public final class MemoryMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            @Named("groups")
-            public Set<String> groups() {
+            public Groups groups() {
                 return groups;
             }
 

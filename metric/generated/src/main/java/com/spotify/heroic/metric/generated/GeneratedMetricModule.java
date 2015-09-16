@@ -47,7 +47,7 @@ public final class GeneratedMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "generated";
 
     private final String id;
-    private final Set<String> groups;
+    private final Groups groups;
     private final GeneratorModule generatorModule;
 
     @JsonCreator
@@ -69,8 +69,7 @@ public final class GeneratedMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            @Named("groups")
-            public Set<String> groups() {
+            public Groups groups() {
                 return groups;
             }
 
