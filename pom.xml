@@ -26,7 +26,6 @@
     <module>aggregation/simple</module>
     <module>consumer/kafka</module>
     <module>aggregationcache/cassandra2</module>
-    <module>statistics/semantic</module>
     <module>rpc/httprpc</module>
     <module>rpc/nativerpc</module>
     <module>heroic-dist</module>
