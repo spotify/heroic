@@ -8,7 +8,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.DateRange;
@@ -75,6 +75,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
 
+    @Inject
     public BigtableBackend(final AsyncFramework async, final SerializerFramework serializer,
             @Named("common") final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
             final Groups groups) {

@@ -146,7 +146,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
         this.writeCache = writeCache;
         this.modifier = modifier;
     }
-    
+
     @Override
     public AsyncFuture<Void> configure() {
         return doto(new ManagedAction<Connection, Void>() {

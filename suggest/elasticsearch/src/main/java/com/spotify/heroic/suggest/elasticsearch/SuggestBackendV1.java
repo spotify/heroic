@@ -89,6 +89,7 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -145,6 +146,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
     private final Groups groups;
 
+    @Inject
     public SuggestBackendV1(final AsyncFramework async, final Managed<Connection> connection,
             final LocalMetadataBackendReporter reporter,
             final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, final Groups groups) {

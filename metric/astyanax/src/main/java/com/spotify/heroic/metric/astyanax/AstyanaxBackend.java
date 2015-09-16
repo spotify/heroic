@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 import org.apache.commons.lang3.NotImplementedException;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -87,6 +88,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     private final MetricBackendReporter reporter;
     private final Groups groups;
 
+    @Inject
     public AstyanaxBackend(final AsyncFramework async, final ReadWriteThreadPools pools,
             final MetricBackendReporter reporter, final Groups groups) {
         super(async);
