@@ -116,4 +116,9 @@ public interface MetricBackend extends Initializing, Grouped {
      * @return A list of all possible hex serialized keys.
      */
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key);
+
+    /**
+     * Serialize the given key, and return the corresponding BackendKey.
+     */
+    public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key);
 }

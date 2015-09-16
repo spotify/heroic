@@ -93,4 +93,9 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
         return async.resolved(ImmutableList.of());
     }
+
+    @Override
+    public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
+        return async.resolved(ImmutableList.of());
+    }
 }

@@ -353,10 +353,30 @@ public class LocalMetricManager implements MetricManager {
             runAll((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
 
             return async.collect(callbacks).transform(new Transform<Collection<List<String>>, List<String>>() {
-                public java.util.List<String> transform(Collection<List<String>> result) throws Exception {
+                public List<String> transform(Collection<List<String>> result) throws Exception {
                     final ImmutableList.Builder<String> builder = ImmutableList.builder();
 
                     for (final List<String> k : result) {
+                        builder.addAll(k);
+                    }
+
+                    return builder.build();
+                };
+            });
+        }
+
+
+        @Override
+        public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
+            final List<AsyncFuture<List<BackendKey>>> callbacks = new ArrayList<>();
+
+            runAll((disabled, backend) -> callbacks.add(backend.deserializeKeyFromHex(key)));
+
+            return async.collect(callbacks).transform(new Transform<Collection<List<BackendKey>>, List<BackendKey>>() {
+                public List<BackendKey> transform(Collection<List<BackendKey>> result) throws Exception {
+                    final ImmutableList.Builder<BackendKey> builder = ImmutableList.builder();
+
+                    for (final List<BackendKey> k : result) {
                         builder.addAll(k);
                     }
 

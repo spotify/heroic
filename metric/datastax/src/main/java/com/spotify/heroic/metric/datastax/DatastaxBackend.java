@@ -329,8 +329,14 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
     @Override
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
-        return async.resolved(ImmutableList
-                .of(Bytes.toHexString(keySerializer.serialize(new MetricsRowKey(key.getSeries(), key.getBase())))));
+        final MetricsRowKey rowKey = new MetricsRowKey(key.getSeries(), key.getBase());
+        return async.resolved(ImmutableList.of(Bytes.toHexString(keySerializer.serialize(rowKey))));
+    }
+
+    @Override
+    public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
+        final MetricsRowKey rowKey = keySerializer.deserialize(Bytes.fromHexString(key));
+        return async.resolved(ImmutableList.of(new BackendKey(rowKey.getSeries(), rowKey.getBase())));
     }
 
     private BoundStatement keysStatement(final Connection c, final ByteBuffer first, final ByteBuffer last) {
