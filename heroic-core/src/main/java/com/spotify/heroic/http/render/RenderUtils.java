@@ -27,18 +27,26 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.DeviationRenderer;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.data.xy.YIntervalSeries;
+import org.jfree.data.xy.YIntervalSeriesCollection;
 
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.metric.Spread;
 
 public final class RenderUtils {
     private static final List<Color> COLORS = new ArrayList<>();
@@ -49,11 +57,14 @@ public final class RenderUtils {
 
     public static JFreeChart createChart(final List<ShardedResultGroup> groups, final String title,
             Map<String, String> highlight, Double threshold, int height) {
-        final XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer(true, true);
+        final XYLineAndShapeRenderer lineAndShapeRenderer = new XYLineAndShapeRenderer(true, true);
+        final DeviationRenderer intervalRenderer = new DeviationRenderer();
 
-        final XYSeriesCollection dataset = new XYSeriesCollection();
+        final XYSeriesCollection regularData = new XYSeriesCollection();
+        final YIntervalSeriesCollection intervalData = new YIntervalSeriesCollection();
 
-        int i = 0;
+        int lineAndShapeCount = 0;
+        int intervalCount = 0;
 
         for (final ShardedResultGroup resultGroup : groups) {
             if (highlight != null && !highlight.equals(resultGroup.getGroup())) {
@@ -62,27 +73,41 @@ public final class RenderUtils {
 
             final MetricTypedGroup group = resultGroup.getGroup();
 
-            if (group.getType() != MetricType.POINT) {
-                continue;
+            if (group.getType() == MetricType.POINT) {
+                final XYSeries series = new XYSeries(resultGroup.getGroup().toString());
+
+                final List<Point> data = group.getDataAs(Point.class);
+
+                for (final Point d : data) {
+                    series.add(d.getTimestamp(), d.getValue());
+                }
+
+                lineAndShapeRenderer.setSeriesPaint(lineAndShapeCount, Color.BLUE);
+                lineAndShapeRenderer.setSeriesShapesVisible(lineAndShapeCount, false);
+                lineAndShapeRenderer.setSeriesStroke(lineAndShapeCount, new BasicStroke(2.0f));
+                regularData.addSeries(series);
+                ++lineAndShapeCount;
             }
 
-            final XYSeries series = new XYSeries(resultGroup.getGroup().toString());
+            if (group.getType() == MetricType.SPREAD) {
+                final YIntervalSeries series = new YIntervalSeries(resultGroup.getGroup().toString());
 
-            final List<Point> data = group.getDataAs(Point.class);
+                final List<Spread> data = group.getDataAs(Spread.class);
 
-            for (final Point d : data) {
-                series.add(d.getTimestamp(), d.getValue());
+                for (final Spread d : data) {
+                    series.add(d.getTimestamp(), d.getSum() / d.getCount(), d.getMin(), d.getMax());
+                }
+
+                intervalRenderer.setSeriesPaint(intervalCount, Color.GREEN);
+                intervalRenderer.setSeriesStroke(intervalCount, new BasicStroke(2.0f));
+                intervalRenderer.setSeriesFillPaint(intervalCount, new Color(200, 255, 200));
+                intervalRenderer.setSeriesShapesVisible(intervalCount, false);
+                intervalData.addSeries(series);
+                ++intervalCount;
             }
-
-            renderer.setSeriesPaint(i, Color.BLUE);
-            renderer.setSeriesShapesVisible(i, false);
-            renderer.setSeriesStroke(i, new BasicStroke(2.0f));
-            dataset.addSeries(series);
-
-            ++i;
         }
 
-        final JFreeChart chart = ChartFactory.createTimeSeriesChart(title, null, null, dataset, false, false, false);
+        final JFreeChart chart = buildChart(title, regularData, intervalData, lineAndShapeRenderer, intervalRenderer);
 
         chart.setAntiAlias(true);
         chart.setBackgroundPaint(Color.WHITE);
@@ -99,11 +124,36 @@ public final class RenderUtils {
             plot.addRangeMarker(marker);
         }
 
-        plot.setRenderer(renderer);
+        plot.setRenderer(lineAndShapeRenderer);
 
         // final DateAxis rangeAxis = (DateAxis) plot.getRangeAxis();
         // rangeAxis.setStandardTickUnits(DateAxis.createStandardDateTickUnits());
 
         return chart;
+    }
+
+    private static JFreeChart buildChart(final String title, final XYDataset lineAndShape, final XYDataset interval, final XYItemRenderer lineAndShapeRenderer, final XYItemRenderer intervalRenderer) {
+        final ValueAxis timeAxis = new DateAxis();
+        timeAxis.setLowerMargin(0.02);
+        timeAxis.setUpperMargin(0.02);
+
+        final NumberAxis valueAxis = new NumberAxis();
+        valueAxis.setAutoRangeIncludesZero(false);
+
+        final XYPlot plot = new XYPlot();
+
+        plot.setDomainAxis(0, timeAxis);
+        plot.setRangeAxis(0, valueAxis);
+
+        plot.setDataset(0, lineAndShape);
+        plot.setRenderer(0, lineAndShapeRenderer);
+
+        plot.setDomainAxis(1, timeAxis);
+        plot.setRangeAxis(1, valueAxis);
+
+        plot.setDataset(1, interval);
+        plot.setRenderer(1, intervalRenderer);
+
+        return new JFreeChart(title, JFreeChart.DEFAULT_TITLE_FONT, plot, false);
     }
 }
