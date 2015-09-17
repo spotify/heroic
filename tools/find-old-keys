@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+import sys
+import gzip
+import json
+import datetime
+import argparse
+
+
+def read_entries_to_delete(ns):
+    now = datetime.datetime.now()
+
+    with gzip.open(ns.input_path, 'r') as f:
+        for line in f:
+            entry = json.loads(line.decode('utf-8'))
+
+            try:
+                date = datetime.datetime.fromtimestamp(entry['base'] / 1000.0)
+            except:
+                yield True, entry
+                continue
+
+            if (now - date).days >= ns.days:
+                yield True, entry
+            else:
+                yield False, entry
+
+
+def setup_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', dest='input_path', help="File to read", metavar="<file>", required=True)
+    parser.add_argument('-o', '--output', dest='output_path', help="File to write", metavar="<file>", required=True)
+    parser.add_argument('--days', dest='days', type=int, help="Number of days to filter out", metavar="<number>", required=True)
+    return parser
+
+
+def main(args):
+    parser = setup_parser()
+    ns = parser.parse_args(args)
+
+    total = 0
+    deleted = 0
+
+    with open(ns.output_path, 'w') as out:
+        for should_delete, entry in read_entries_to_delete(ns):
+            total += 1
+
+            if should_delete:
+                deleted += 1
+                print(json.dumps(entry), file=out)
+
+            if total % 10000 == 0:
+                print("deleted: {}, total: {}".format(deleted, total))
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
