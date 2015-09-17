@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +40,7 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -147,14 +147,16 @@ public class QueryResource {
         httpAsync.bind(response, callback,
                 (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
                         new ShardTrace("api", localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.EMPTY,
-                                Optional.empty(), r.getTraces())));
+                                java.util.Optional.empty(), r.getTraces())));
     }
 
-    private QueryBuilder setupBuilder(QueryMetrics query) {
-        return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
-                .queryString(query.getQuery()).filter(query.getFilter())
-                .range(query.getRange().buildDateRange()).disableCache(query.isNoCache())
-                .aggregationQuery(query.getAggregators()).source(query.getSource());
+    @SuppressWarnings("deprecation")
+    private QueryBuilder setupBuilder(final QueryMetrics q) {
+        return q.getQuery().transform(query::newQueryFromString).or(() -> {
+            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
+                    .range(Optional.of(q.getRange().buildDateRange())).disableCache(q.isNoCache())
+                    .aggregationQuery(q.getAggregators()).source(q.getSource());
+        });
     }
 
     @Data

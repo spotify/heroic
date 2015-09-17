@@ -70,7 +70,7 @@ public class Query implements ShellTask {
         final String queryString = params.query.stream().collect(Collectors.joining(" "));
 
         final AsyncFuture<QueryResult> result = query.useGroup(params.group).query(
-                query.newQuery().queryString(queryString).build());
+                query.newQueryFromString(queryString).build());
 
         final ObjectMapper indent = mapper.copy();
         indent.configure(SerializationFeature.INDENT_OUTPUT, true);

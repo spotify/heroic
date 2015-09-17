@@ -38,6 +38,7 @@ import javax.ws.rs.core.Response;
 import org.jfree.chart.JFreeChart;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
@@ -102,9 +103,11 @@ public class RenderResource {
     }
 
     @SuppressWarnings("deprecation")
-    private QueryBuilder setupBuilder(QueryMetrics query) {
-        return this.query.newQuery().key(query.getKey()).tags(query.getTags()).groupBy(query.getGroupBy())
-                .queryString(query.getQuery()).filter(query.getFilter()).range(query.getRange().buildDateRange())
-                .disableCache(query.isNoCache()).aggregationQuery(query.getAggregators()).source(query.getSource());
+    private QueryBuilder setupBuilder(final QueryMetrics q) {
+        return q.getQuery().transform(query::newQueryFromString).or(() -> {
+            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
+                    .range(Optional.of(q.getRange().buildDateRange())).disableCache(q.isNoCache())
+                    .aggregationQuery(q.getAggregators()).source(q.getSource());
+        });
     }
 }

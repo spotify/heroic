@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.http.query;
 
+import static com.google.common.base.Optional.fromNullable;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,11 +47,11 @@ public class QueryMetrics {
     private static final boolean DEFAULT_NO_CACHE = false;
     private static final MetricType DEFAULT_SOURCE = MetricType.POINT;
 
-    private final String query;
-    private final String key;
+    private final Optional<String> query;
+    private final Optional<String> key;
     private final Map<String, String> tags;
-    private final Filter filter;
-    private final List<String> groupBy;
+    private final Optional<Filter> filter;
+    private final Optional<List<String>> groupBy;
     private final QueryDateRange range;
     private final boolean noCache;
     private final AggregationQuery aggregators;
@@ -62,14 +64,14 @@ public class QueryMetrics {
             @JsonProperty("noCache") Boolean noCache,
             @JsonProperty("aggregators") List<AggregationQuery> aggregators,
             @JsonProperty("source") String sourceName) {
-        this.query = query;
-        this.key = key;
-        this.tags = Optional.fromNullable(tags).or(DEFAULT_TAGS);
-        this.filter = filter;
-        this.groupBy = groupBy;
-        this.range = Optional.fromNullable(range).or(DEFAULT_DATE_RANGE);
-        this.noCache = Optional.fromNullable(noCache).or(DEFAULT_NO_CACHE);
-        this.aggregators = new ChainAggregationQuery(Optional.fromNullable(aggregators).or(EMPTY_AGGREGATIONS));
+        this.query = fromNullable(query);
+        this.key = fromNullable(key);
+        this.tags = fromNullable(tags).or(DEFAULT_TAGS);
+        this.filter = fromNullable(filter);
+        this.groupBy = fromNullable(groupBy);
+        this.range = fromNullable(range).or(DEFAULT_DATE_RANGE);
+        this.noCache = fromNullable(noCache).or(DEFAULT_NO_CACHE);
+        this.aggregators = new ChainAggregationQuery(fromNullable(aggregators).or(EMPTY_AGGREGATIONS));
         this.source = convertSource(sourceName);
     }
 

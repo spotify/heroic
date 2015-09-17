@@ -5,14 +5,23 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.AggregationValue;
+import com.spotify.heroic.grammar.FromDSL;
+import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.grammar.SelectDSL;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.ResultGroups;
@@ -20,7 +29,9 @@ import com.spotify.heroic.metric.ResultGroups;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class CoreQueryManager implements QueryManager {
     @Inject
     private AsyncFramework async;
@@ -71,7 +82,26 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryBuilder newQuery() {
-        return new QueryBuilder(aggregations, filters, parser);
+        return new QueryBuilder(filters);
+    }
+
+    @Override
+    public QueryBuilder newQueryFromString(final String queryString) {
+        final QueryDSL q = parser.parseQuery(queryString);
+
+        final FromDSL from = q.getSource();
+        final MetricType source = convertSource(from);
+        final SelectDSL select = q.getSelect();
+        final Optional<Filter> filter = q.getWhere();
+
+        /* get aggregation that is part of statement, if any */
+        final Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = select.getAggregation().transform(customAggregation(select));
+
+        /* incorporate legacy group by */
+        final Optional<List<String>> groupBy = q.getGroupBy().transform((g) -> g.getGroupBy());
+
+        return newQuery().source(source).range(from.getRange()).aggregationBuilder(aggregationBuilder).filter(filter)
+                .groupBy(groupBy);
     }
 
     @Override
@@ -107,5 +137,28 @@ public class CoreQueryManager implements QueryManager {
         public Iterator<ClusterNode.Group> iterator() {
             return groups.iterator();
         }
+    }
+
+    MetricType convertSource(final FromDSL s) {
+        final MetricType type = MetricType.fromIdentifier(s.getSource());
+
+        if (type == null) {
+            throw s.getContext().error("Invalid source: " + s.getSource());
+        }
+
+        return type;
+    }
+
+    Function<AggregationValue, Function<AggregationContext, Aggregation>> customAggregation(final SelectDSL select) {
+        return (a) -> {
+            return (context) -> {
+                try {
+                    return aggregations.build(context, a.getName(), a.getArguments(), a.getKeywordArguments());
+                } catch (final Exception e) {
+                    log.error("Failed to build aggregation", e);
+                    throw select.getContext().error(e);
+                }
+            };
+        };
     }
 }
