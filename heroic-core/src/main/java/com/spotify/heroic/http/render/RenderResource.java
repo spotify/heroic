@@ -38,12 +38,9 @@ import javax.ws.rs.core.Response;
 import org.jfree.chart.JFreeChart;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.http.query.QueryMetrics;
 import com.spotify.heroic.metric.QueryResult;
 
 @Path("render")
@@ -63,7 +60,7 @@ public class RenderResource {
     @GET
     @Path("image")
     @Produces("image/png")
-    public Response render(@QueryParam("query") String query, @QueryParam("backend") String backendGroup,
+    public Response render(@QueryParam("q") String queryString, @QueryParam("backend") String backendGroup,
             @QueryParam("title") String title, @QueryParam("width") Integer width,
             @QueryParam("height") Integer height, @QueryParam("highlight") String highlightRaw,
             @QueryParam("threshold") Double threshold) throws Exception {
@@ -87,8 +84,7 @@ public class RenderResource {
             highlight = null;
         }
 
-        final QueryMetrics queryMetrics = mapper.readValue(query, QueryMetrics.class);
-        final Query q = setupBuilder(queryMetrics).build();
+        final Query q = query.newQueryFromString(queryString).build();
 
         final QueryResult result = this.query.useGroup(backendGroup).query(q).get();
 
@@ -100,14 +96,5 @@ public class RenderResource {
         ImageIO.write(image, "png", buffer);
 
         return Response.ok(buffer.toByteArray()).build();
-    }
-
-    @SuppressWarnings("deprecation")
-    private QueryBuilder setupBuilder(final QueryMetrics q) {
-        return q.getQuery().transform(query::newQueryFromString).or(() -> {
-            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
-                    .range(Optional.of(q.getRange().buildDateRange())).disableCache(q.isNoCache())
-                    .aggregationQuery(q.getAggregators()).source(q.getSource());
-        });
     }
 }
