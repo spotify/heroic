@@ -316,7 +316,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 final MetricsRowKey key;
 
                 try {
-                    key = keySerializer.deserialize(bytes);
+                    key = keySerializer.deserialize(bytes.slice());
                 } catch (Exception e) {
                     throw new RuntimeException(String.format("Could not deserialize key: %s", Bytes.toHexString(bytes)),
                             e);
