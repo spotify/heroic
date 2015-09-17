@@ -130,6 +130,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
 
     private final String host;
     private final Integer port;
+    /**
+     * A list of configured modules that will be loaded during startup.
+     * @see #doStart()
+     */
     private final List<Class<?>> modules;
     private final List<HeroicBootstrap> bootstrappers;
     private final boolean server;
@@ -191,6 +195,26 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         }
     }
 
+    /**
+     * Start the Heroic core, step by step
+     * 
+     * <p> It sets up the early injector which is responsible for loading all the necessary components to
+     * parse a configuration file.
+     * 
+     * <p> Load all the external modules, which are configured in {@link #modules}.
+     * 
+     * <p> Load and build the configuration using the early injector
+     * 
+     * <p> Setup the primary injector which will provide the dependencies to the entire application
+     * 
+     * <p> Run all bootstraps that are configured in {@link #bootstrappers}
+     * 
+     * <p> Start all the external modules. {@link #startLifeCycles}
+     * 
+     * <p> Start all the internal modules. {@link #startInternalLifecycles}
+     * 
+     * @throws Exception
+     */
     private void doStart() throws Exception {
         final Injector early = earlyInjector();
 
@@ -199,23 +223,25 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         final HeroicConfig config = config(early);
         final Injector primary = primaryInjector(config, early);
 
-        for (final HeroicBootstrap bootstrap : bootstrappers) {
-            try {
-                primary.injectMembers(bootstrap);
-                bootstrap.run();
-            } catch (Exception e) {
-                throw new Exception("Failed to run bootstrapper " + bootstrap, e);
-            }
-        }
+        runBootsrappers(primary);
 
         this.primary.set(primary);
 
-        try {
-            startLifeCycles(primary);
-        } catch (Exception e) {
-            throw new Exception("Failed to start all lifecycles", e);
-        }
+        startLifeCycles(primary);
 
+        startInternalLifecycles(primary);
+        log.info("Heroic was successfully started!");
+    }
+
+    /**
+     * Start the internal lifecycles
+     * 
+     * First step is to register event hooks that makes sure that the lifecycle components gets
+     * started and shutdown correctly. After this the registered internal lifecycles are started.
+     * 
+     * @param primary
+     */
+    private void startInternalLifecycles(final Injector primary) {
         final HeroicInternalLifeCycle lifecycle = primary.getInstance(HeroicInternalLifeCycle.class);
 
         lifecycle.registerShutdown("Core Scheduler", new HeroicInternalLifeCycle.ShutdownHook() {
@@ -241,7 +267,23 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         });
 
         lifecycle.start();
-        log.info("Heroic was successfully started!");
+    }
+
+    /**
+     * This method basically goes through the list of bootstrappers registered by modules and runs them.
+     * 
+     * @param primary
+     * @throws Exception
+     */
+    private void runBootsrappers(final Injector primary) throws Exception {
+        for (final HeroicBootstrap bootstrap : bootstrappers) {
+            try {
+                primary.injectMembers(bootstrap);
+                bootstrap.run();
+            } catch (Exception e) {
+                throw new Exception("Failed to run bootstrapper " + bootstrap, e);
+            }
+        }
     }
 
     /**
