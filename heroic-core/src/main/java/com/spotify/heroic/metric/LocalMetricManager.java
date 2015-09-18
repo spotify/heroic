@@ -288,11 +288,11 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<List<BackendKey>> keys(final BackendKey start, final BackendKey end, final int limit) {
+        public AsyncFuture<List<BackendKey>> keys(final BackendKey start, final int limit) {
             final List<AsyncFuture<List<BackendKey>>> callbacks = new ArrayList<>();
 
             run((int disabled, MetricBackend backend) -> {
-                callbacks.add(backend.keys(start, end, limit));
+                callbacks.add(backend.keys(start, limit));
             });
 
             return async.collect(callbacks, BackendKey.merge());

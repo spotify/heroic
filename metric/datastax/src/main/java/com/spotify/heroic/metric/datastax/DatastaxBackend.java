@@ -256,11 +256,9 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, BackendKey end, final int limit) {
+    public AsyncFuture<List<BackendKey>> keys(BackendKey start, final int limit) {
         final ByteBuffer first = start == null ? null : keySerializer.serialize(new MetricsRowKey(start.getSeries(),
                 start.getBase()));
-        final ByteBuffer last = end == null ? null : keySerializer.serialize(new MetricsRowKey(end.getSeries(), end
-                .getBase()));
 
         final Borrowed<Connection> k = connection.borrow();
 
@@ -268,7 +266,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
             @Override
             public List<BackendKey> call() throws Exception {
                 final Connection c = k.get();
-                final BoundStatement stmt = keysStatement(c, first, last);
+                final BoundStatement stmt = keysPagingLimit(c, first, limit);
                 final ResultSet rows = c.session.execute(stmt);
 
                 final List<BackendKey> result = new ArrayList<>();
@@ -284,14 +282,21 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         }).on(k.releasing());
     }
 
-    @Override
-    public AsyncFuture<Iterator<BackendKey>> allKeys(BackendKey start, int limit) {
+    private BoundStatement keysPagingLimit(final Connection c, final ByteBuffer first, final int limit) {
+        if (first == null) {
+            return c.keysPagingLimit.bind(limit);
+        }
+
+        return c.keysPagingLeftLimit.bind(first, limit);
+    }
+
+    private AsyncFuture<Iterator<BackendKey>> automaticPagingKeys(BackendKey start, int limit) {
         final ByteBuffer first = start == null ? null
                 : keySerializer.serialize(new MetricsRowKey(start.getSeries(), start.getBase()));
 
         final Borrowed<Connection> k = connection.borrow();
         final Connection c = k.get();
-        final BoundStatement stmt = keysStatement(c, first, null);
+        final BoundStatement stmt = keysPaging(c, first);
         final ResultSet rows = c.session.execute(stmt);
 
         final Iterator<Row> it = rows.iterator();
@@ -327,6 +332,14 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         });
     }
 
+    private BoundStatement keysPaging(final Connection c, final ByteBuffer first) {
+        if (first == null) {
+            return c.keysPaging.bind();
+        }
+
+        return c.keysPagingLeft.bind(first);
+    }
+
     @Override
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
         final MetricsRowKey rowKey = new MetricsRowKey(key.getSeries(), key.getBase());
@@ -337,22 +350,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
         final MetricsRowKey rowKey = keySerializer.deserialize(Bytes.fromHexString(key));
         return async.resolved(ImmutableList.of(new BackendKey(rowKey.getSeries(), rowKey.getBase())));
-    }
-
-    private BoundStatement keysStatement(final Connection c, final ByteBuffer first, final ByteBuffer last) {
-        if (first == null && last == null) {
-            return c.keysUnbound.bind();
-        }
-
-        if (first != null && last == null) {
-            return c.keysLeftbound.bind(first);
-        }
-
-        if (first == null && last != null) {
-            return c.keysRightbound.bind(last);
-        }
-
-        return c.keysBound.bind(first, last);
     }
 
     private static List<PreparedQuery> ranges(final Series series, final DateRange range) {

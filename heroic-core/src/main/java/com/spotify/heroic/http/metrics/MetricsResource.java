@@ -60,7 +60,7 @@ public class MetricsResource {
     @Path("keys")
     public void metrics(@Suspended final AsyncResponse response, @QueryParam("group") String group,
             @QueryParam("limit") Integer limit) throws Exception {
-        final AsyncFuture<List<BackendKey>> keys = metrics.useGroup(group).keys(null, null,
+        final AsyncFuture<List<BackendKey>> keys = metrics.useGroup(group).keys(null,
                 limit == null ? 1000 : limit);
         httpAsync.bind(response, keys, KEYS);
     }

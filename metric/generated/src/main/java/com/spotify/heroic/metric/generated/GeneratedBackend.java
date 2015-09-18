@@ -121,8 +121,8 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, BackendKey end, int limit) {
-        return async.resolved((List<BackendKey>) new ArrayList<BackendKey>());
+    public AsyncFuture<List<BackendKey>> keys(BackendKey start, int limit) {
+        return async.resolved(ImmutableList.of());
     }
 
     @Override

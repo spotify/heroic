@@ -253,9 +253,8 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, BackendKey end, final int limit) {
+    public AsyncFuture<List<BackendKey>> keys(BackendKey start, final int limit) {
         final MetricsRowKey first = start != null ? new MetricsRowKey(start.getSeries(), start.getBase()) : null;
-        final MetricsRowKey last = end != null ? new MetricsRowKey(end.getSeries(), end.getBase()) : null;
 
         final Borrowed<Context> k = context.borrow();
 
@@ -263,7 +262,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             @Override
             public List<BackendKey> call() throws Exception {
                 final OperationResult<Rows<MetricsRowKey, Integer>> op = k.get().client.prepareQuery(METRICS_CF)
-                        .getKeyRange(first, last, null, null, limit).execute();
+                        .getKeyRange(first, null, null, null, limit).execute();
 
                 final Rows<MetricsRowKey, Integer> result = op.getResult();
 

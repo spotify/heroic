@@ -33,8 +33,8 @@ public final class Connection {
     protected final Session session;
     protected final PreparedStatement write;
     protected final PreparedStatement fetch;
-    protected final PreparedStatement keysUnbound;
-    protected final PreparedStatement keysLeftbound;
-    protected final PreparedStatement keysRightbound;
-    protected final PreparedStatement keysBound;
+    protected final PreparedStatement keysPaging;
+    protected final PreparedStatement keysPagingLeft;
+    protected final PreparedStatement keysPagingLimit;
+    protected final PreparedStatement keysPagingLeftLimit;
 }

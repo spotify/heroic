@@ -49,10 +49,10 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private static final String FETCH_METRICS_CQL = ("SELECT data_timestamp_offset, data_value FROM metrics "
             + "WHERE metric_key = ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?");
 
-    private static final String KEYS_UNBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics";
-    private static final String KEYS_LEFTBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?)";
-    private static final String KEYS_RIGHTBOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) <= token(?)";
-    private static final String KEYS_BOUND_CQL = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?) AND token(metric_key) <= token(?)";
+    private static final String KEYS_PAGING = "SELECT DISTINCT metric_key FROM metrics";
+    private static final String KEYS_PAGING_LEFT = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?)";
+    private static final String KEYS_PAGING_LIMIT = "SELECT DISTINCT metric_key FROM metrics limit ?";
+    private static final String KEYS_PAGING_LEFT_LIMIT = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?) limit ?";
 
     private final AsyncFramework async;
     private final Collection<InetSocketAddress> seeds;
@@ -79,13 +79,13 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
 
                 final PreparedStatement write = session.prepare(WRITE_METRICS_CQL);
                 final PreparedStatement fetch = session.prepare(FETCH_METRICS_CQL);
-                final PreparedStatement keysUnbound = session.prepare(KEYS_UNBOUND_CQL);
-                final PreparedStatement keysLeftbound = session.prepare(KEYS_LEFTBOUND_CQL);
-                final PreparedStatement keysRightbound = session.prepare(KEYS_RIGHTBOUND_CQL);
-                final PreparedStatement keysBound = session.prepare(KEYS_BOUND_CQL);
+                final PreparedStatement keysPaging = session.prepare(KEYS_PAGING);
+                final PreparedStatement keysPagingLeft = session.prepare(KEYS_PAGING_LEFT);
+                final PreparedStatement keysPagingLimit = session.prepare(KEYS_PAGING_LIMIT);
+                final PreparedStatement keysPagingLeftLimit = session.prepare(KEYS_PAGING_LEFT_LIMIT);
 
-                return new Connection(cluster, session, write, fetch, keysUnbound, keysLeftbound, keysRightbound,
-                        keysBound);
+                return new Connection(cluster, session, write, fetch, keysPaging, keysPagingLeft, keysPagingLimit,
+                        keysPagingLeftLimit);
             };
         });
     }

@@ -374,7 +374,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, BackendKey end, int limit) {
+    public AsyncFuture<List<BackendKey>> keys(BackendKey start, int limit) {
         return async.<List<BackendKey>> resolved(ImmutableList.<BackendKey> of());
     }
 

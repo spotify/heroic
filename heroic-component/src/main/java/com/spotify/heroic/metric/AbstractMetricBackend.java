@@ -18,71 +18,59 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
     @Override
     public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit) {
-        return keys(start, null, limit).transform(new Transform<List<BackendKey>, Iterator<BackendKey>>() {
+        return keys(start, limit).transform(new Transform<List<BackendKey>, Iterator<BackendKey>>() {
             @Override
             public Iterator<BackendKey> transform(final List<BackendKey> initialResult) throws Exception {
                 if (initialResult.isEmpty()) {
                     return Collections.emptyIterator();
                 }
 
-                final BackendKey start = initialResult.iterator().next();
-
                 return new Iterator<BackendKey>() {
-                    Iterator<BackendKey> currentIterator = initialResult.iterator();
-                    BackendKey nextStart = null;
+                    /* future for the next batch */
+                    AsyncFuture<List<BackendKey>> future = keys(initialResult.get(initialResult.size() - 1), limit);
+                    /* iterator over the current batch */
+                    Iterator<BackendKey> iterator = initialResult.iterator();
+
+                    boolean done = false;
 
                     @Override
                     public boolean hasNext() {
-                        if (!currentIterator.hasNext()) {
-                            nextStart = null;
-
-                            currentIterator = getNextIterator();
-
-                            if (currentIterator == null) {
-                                return false;
-                            }
+                        if (done) {
+                            return false;
                         }
 
-                        final BackendKey next = currentIterator.next();
+                        if (!iterator.hasNext()) {
+                            final List<BackendKey> nextBatch;
 
-                        if (nextStart != null) {
-                            /* we wrapped around, and are done! */
-                            if (next.equals(start)) {
+                            try {
+                                nextBatch = future.get();
+                            } catch (Exception e) {
+                                throw new RuntimeException("Failed to get next batch", e);
+                            }
+
+                            /* null to help out GC */
+                            iterator = null;
+                            future = null;
+
+                            if (nextBatch.isEmpty()) {
+                                done = true;
                                 return false;
                             }
+
+                            future = keys(nextBatch.get(nextBatch.size() - 1), limit);
+                            iterator = nextBatch.iterator();
                         }
 
-                        nextStart = next;
                         return true;
-                    }
-
-                    private Iterator<BackendKey> getNextIterator() {
-                        if (nextStart == null) {
-                            throw new IllegalStateException("no starting position recorded");
-                        }
-
-                        final Iterator<BackendKey> nextIterator;
-
-                        try {
-                            nextIterator = keys(nextStart, null, limit).get().iterator();
-                        } catch (final Exception e) {
-                            throw new RuntimeException(e);
-                        }
-
-                        if (!nextIterator.hasNext()) {
-                            return null;
-                        }
-
-                        return nextIterator;
                     }
 
                     @Override
                     public BackendKey next() {
-                        if (nextStart == null) {
+                        if (done) {
                             throw new NoSuchElementException();
                         }
 
-                        return nextStart;
+                        return iterator.next();
                     }
                 };
             }
