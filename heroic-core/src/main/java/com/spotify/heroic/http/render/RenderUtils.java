@@ -43,7 +43,7 @@ import org.jfree.data.xy.YIntervalSeries;
 import org.jfree.data.xy.YIntervalSeriesCollection;
 
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
@@ -71,7 +71,7 @@ public final class RenderUtils {
                 continue;
             }
 
-            final MetricTypedGroup group = resultGroup.getGroup();
+            final MetricCollection group = resultGroup.getGroup();
 
             if (group.getType() == MetricType.POINT) {
                 final XYSeries series = new XYSeries(resultGroup.getGroup().toString());

@@ -58,8 +58,8 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -135,7 +135,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                 final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
                 for (final WriteMetric write : writes) {
-                    for (final MetricTypedGroup g : write.getGroups()) {
+                    for (final MetricCollection g : write.getGroups()) {
                         if (g.getType() != MetricType.POINT)
                             continue;
 
@@ -234,14 +234,13 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                             final RowQuery<MetricsRowKey, Integer> query = ctx.client.prepareQuery(METRICS_CF)
                                     .getRow(q.rowKey).autoPaginate(true).withColumnRange(q.columnRange);
 
-                            final List<Metric> data = q.rowKey.buildDataPoints(query.execute().getResult());
+                            final List<Point> data = q.rowKey.buildPoints(query.execute().getResult());
 
                             if (!watcher.readData(data.size()))
                                 throw new IllegalArgumentException("data limit quota violated");
 
                             final List<Long> times = ImmutableList.of(System.nanoTime() - start);
-                            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT,
-                                    data));
+                            final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
                             return new FetchData(series, times, groups);
                         }
                     }, pools.read()).on(reporter.reportFetch()));
@@ -312,9 +311,8 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                         final MetricsRowKey rowKey = entry.getKey();
                         final Series series = rowKey.getSeries();
 
-                        final List<Metric> dataPoints = rowKey.buildDataPoints(entry.getColumns());
-
-                        return new BackendEntry(series, MetricType.POINT, dataPoints);
+                        final List<Point> points = rowKey.buildPoints(entry.getColumns());
+                        return new BackendEntry(series, MetricCollection.points(points));
                     }
 
                     @Override

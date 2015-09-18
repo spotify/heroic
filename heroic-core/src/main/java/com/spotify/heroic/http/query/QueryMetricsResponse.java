@@ -33,7 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
@@ -86,7 +86,7 @@ public class QueryMetricsResponse {
 
             for (final ShardedResultGroup resultGroup : result) {
                 final List<TagValues> tags = resultGroup.getTags();
-                final MetricTypedGroup group = resultGroup.getGroup();
+                final MetricCollection group = resultGroup.getGroup();
 
                 switch (group.getType()) {
                 case POINT:

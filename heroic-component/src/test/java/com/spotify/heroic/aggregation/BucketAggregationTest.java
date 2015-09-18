@@ -97,7 +97,7 @@ public class BucketAggregationTest {
 
         final AggregationResult result = session.result();
 
-        Assert.assertEquals(expected, result.getResult().get(0).getValues());
+        Assert.assertEquals(expected, result.getResult().get(0).getMetrics().getData());
     }
 
     @Test
@@ -109,6 +109,6 @@ public class BucketAggregationTest {
         final AggregationResult result = session.result();
 
         Assert.assertEquals(build().add(1000, 2.0).add(1999, 0.0).add(2998, 0.0).result(),
-                result.getResult().get(0).getValues());
+                result.getResult().get(0).getMetrics().getData());
     }
 }

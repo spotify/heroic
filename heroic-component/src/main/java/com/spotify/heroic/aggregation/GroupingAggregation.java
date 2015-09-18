@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +36,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -190,7 +190,8 @@ public abstract class GroupingAggregation implements Aggregation {
                 statistics = statistics.merge(r.getStatistics());
 
                 for (final AggregationData data : r.getResult()) {
-                    final ResultKey key = new ResultKey(e.getKey(), data.getType());
+                    final MetricCollection metrics = data.getMetrics();
+                    final ResultKey key = new ResultKey(e.getKey(), metrics.getType());
 
                     ResultValues result = groups.get(key);
 
@@ -200,7 +201,7 @@ public abstract class GroupingAggregation implements Aggregation {
                     }
 
                     result.series.addAll(data.getSeries());
-                    result.values.addAll(data.getValues());
+                    result.values.add(metrics.getData());
                 }
             }
 
@@ -209,10 +210,8 @@ public abstract class GroupingAggregation implements Aggregation {
             for (final Map.Entry<ResultKey, ResultValues> e : groups.entrySet()) {
                 final ResultKey k = e.getKey();
                 final ResultValues v = e.getValue();
-
-                Collections.sort(v.values, k.type.comparator());
-
-                data.add(new AggregationData(k.group, v.series, v.values, k.type));
+                final MetricCollection metrics = MetricCollection.mergeSorted(k.type, v.values);
+                data.add(new AggregationData(k.group, v.series, metrics));
             }
 
             return new AggregationResult(data, statistics);
@@ -227,6 +226,6 @@ public abstract class GroupingAggregation implements Aggregation {
 
     private static class ResultValues {
         final Set<Series> series = new HashSet<>();
-        final List<Metric> values = new ArrayList<>();
+        final List<List<? extends Metric>> values = new ArrayList<>();
     }
 }

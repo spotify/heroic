@@ -39,9 +39,9 @@ import eu.toolchain.async.Collector;
 public class FetchData {
     private final Series series;
     private final List<Long> times;
-    private final List<MetricTypedGroup> groups;
+    private final List<MetricCollection> groups;
 
-    public static <T extends Metric> Collector<FetchData, FetchData> merger(final Series series) {
+    public static Collector<FetchData, FetchData> merger(final Series series) {
         return new Collector<FetchData, FetchData>() {
             @Override
             public FetchData collect(Collection<FetchData> results) throws Exception {
@@ -51,7 +51,7 @@ public class FetchData {
                 for (final FetchData fetch : results) {
                     times.addAll(fetch.times);
 
-                    for (final MetricTypedGroup g : fetch.groups) {
+                    for (final MetricCollection g : fetch.groups) {
                         ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
 
                         if (data == null) {
@@ -63,10 +63,10 @@ public class FetchData {
                     }
                 }
 
-                final List<MetricTypedGroup> groups = fetchGroups
+                final List<MetricCollection> groups = fetchGroups
                         .entrySet()
                         .stream()
-                        .map((e) -> new MetricTypedGroup(e.getKey(), Ordering.from(e.getKey().comparator())
+                        .map((e) -> MetricCollection.build(e.getKey(), Ordering.from(e.getKey().comparator())
                                 .immutableSortedCopy(e.getValue().build()))).collect(Collectors.toList());
 
                 return new FetchData(series, times.build(), groups);

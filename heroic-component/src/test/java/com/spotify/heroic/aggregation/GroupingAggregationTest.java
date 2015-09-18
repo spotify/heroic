@@ -100,19 +100,19 @@ public class GroupingAggregationTest {
 
         for (final AggregationData data : result) {
             if (data.getGroup().equals(ImmutableMap.of("site", "lon"))) {
-                assertEquals(ImmutableList.of(new Point(3, 3.0)), data.getValues());
+                assertEquals(ImmutableList.of(new Point(3, 3.0)), data.getMetrics().getData());
                 expected.remove(ImmutableMap.of("site", "lon"));
                 continue;
             }
 
             if (data.getGroup().equals(ImmutableMap.of("site", "sto"))) {
-                assertEquals(ImmutableList.of(new Point(1, 1.0), new Point(2, 2.0)), data.getValues());
+                assertEquals(ImmutableList.of(new Point(1, 1.0), new Point(2, 2.0)), data.getMetrics().getData());
                 expected.remove(ImmutableMap.of("site", "sto"));
                 continue;
             }
 
             if (data.getGroup().equals(ImmutableMap.of())) {
-                assertEquals(ImmutableList.of(new Point(4, 4.0)), data.getValues());
+                assertEquals(ImmutableList.of(new Point(4, 4.0)), data.getMetrics().getData());
                 expected.remove(ImmutableMap.of());
                 continue;
             }

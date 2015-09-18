@@ -38,6 +38,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -180,8 +181,9 @@ public abstract class BucketAggregation<B extends Bucket> implements
                 result.add(d);
             }
 
+            final MetricCollection metrics = MetricCollection.build(out, result);
             final Statistics statistics = new Statistics(ImmutableMap.of(Aggregation.SAMPLE_SIZE, sampleSize.sum()));
-            final List<AggregationData> updates = ImmutableList.of(new AggregationData(EMPTY_GROUP, series, result, out));
+            final List<AggregationData> updates = ImmutableList.of(new AggregationData(EMPTY_GROUP, series, metrics));
             return new AggregationResult(updates, statistics);
         }
     }

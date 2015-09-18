@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import lombok.ToString;
-
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -43,9 +41,8 @@ import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -61,6 +58,7 @@ import com.spotify.heroic.suggest.SuggestManager;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.ToString;
 
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
@@ -105,10 +103,10 @@ public class Write implements ShellTask {
 
         final long now = System.currentTimeMillis();
 
-        final List<Metric> points = parsePoints(params.points, now);
-        final List<Metric> events = parseEvents(params.events, now);
+        final List<Point> points = parsePoints(params.points, now);
+        final List<Event> events = parseEvents(params.events, now);
 
-        final ImmutableList.Builder<MetricTypedGroup> groups = ImmutableList.builder();
+        final ImmutableList.Builder<MetricCollection> groups = ImmutableList.builder();
 
         out.println("series: " + series.toString());
 
@@ -121,7 +119,7 @@ public class Write implements ShellTask {
                 out.println(String.format("%d: %s", i++, p));
             }
 
-            groups.add(new MetricTypedGroup(MetricType.POINT, points));
+            groups.add(MetricCollection.points(points));
         }
 
         if (!events.isEmpty()) {
@@ -133,7 +131,7 @@ public class Write implements ShellTask {
                 out.println(String.format("%d: %s", i++, p));
             }
 
-            groups.add(new MetricTypedGroup(MetricType.EVENT, events));
+            groups.add(MetricCollection.events(events));
         }
 
         out.flush();
@@ -178,8 +176,8 @@ public class Write implements ShellTask {
         };
     }
 
-    List<Metric> parseEvents(List<String> points, long now) throws IOException {
-        final List<Metric> output = new ArrayList<>();
+    List<Event> parseEvents(List<String> points, long now) throws IOException {
+        final List<Event> output = new ArrayList<>();
 
         for (final String p : points) {
             final String parts[] = p.split("=");
@@ -201,8 +199,8 @@ public class Write implements ShellTask {
         return output;
     }
 
-    List<Metric> parsePoints(List<String> points, long now) {
-        final List<Metric> output = new ArrayList<>();
+    List<Point> parsePoints(List<String> points, long now) {
+        final List<Point> output = new ArrayList<>();
 
         for (final String p : points) {
             final String parts[] = p.split("=");

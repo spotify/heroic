@@ -32,8 +32,8 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricGroupSerialization;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypeSerialization;
-import com.spotify.heroic.metric.MetricTypedGroup;
-import com.spotify.heroic.metric.MetricTypedGroupSerialization;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricCollectionSerialization;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
@@ -151,8 +151,8 @@ public class HeroicPrimaryModule extends AbstractModule {
         module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
         module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
 
-        module.addSerializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Serializer());
-        module.addDeserializer(MetricTypedGroup.class, new MetricTypedGroupSerialization.Deserializer());
+        module.addSerializer(MetricCollection.class, new MetricCollectionSerialization.Serializer());
+        module.addDeserializer(MetricCollection.class, new MetricCollectionSerialization.Deserializer());
 
         module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
         module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());

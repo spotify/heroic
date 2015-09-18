@@ -36,7 +36,7 @@ import lombok.Data;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.ingestion.IngestionManager;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
 
 @Path("/write")
@@ -55,7 +55,7 @@ public class WriteResource {
     @Path("/metrics")
     public Response metrics(@QueryParam("backend") String backendGroup, WriteMetrics write) throws Exception {
         // XXX: perform write
-        final List<MetricTypedGroup> data = ImmutableList.of();
+        final List<MetricCollection> data = ImmutableList.of();
         ingestion.write(backendGroup, new WriteMetric(write.getSeries(), data));
         return Response.status(Response.Status.OK).entity(new WriteMetricsResponse(true)).build();
     }

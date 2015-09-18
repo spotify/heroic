@@ -21,15 +21,12 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.List;
+import com.spotify.heroic.common.Series;
 
 import lombok.Data;
-
-import com.spotify.heroic.common.Series;
 
 @Data
 public class BackendEntry {
     private final Series series;
-    private final MetricType type;
-    private final List<Metric> data;
+    private final MetricCollection metrics;
 }

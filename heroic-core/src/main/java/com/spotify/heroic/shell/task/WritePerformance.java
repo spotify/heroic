@@ -48,7 +48,7 @@ import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -114,7 +114,7 @@ public class WritePerformance implements ShellTask {
                 int totalWrites = 0;
 
                 for (final WriteMetric w : input) {
-                    for (MetricTypedGroup g : w.getGroups()) {
+                    for (MetricCollection g : w.getGroups()) {
                         totalWrites += (g.getData().size() * params.writes);
                     }
                 }

@@ -390,9 +390,8 @@ public class LocalMetricManager implements MetricManager {
             return new StreamCollector<FetchData, ResultGroups>() {
                 @Override
                 public void resolved(FetchData result) throws Exception {
-                    for (final MetricTypedGroup g : result.getGroups()) {
-                        g.getType().updateAggregation(session, result.getSeries().getTags(),
-                                ImmutableSet.of(result.getSeries()), g.getData());
+                    for (final MetricCollection g : result.getGroups()) {
+                        g.updateAggregation(session, result.getSeries().getTags(), ImmutableSet.of(result.getSeries()));
                     }
                 }
 
@@ -428,8 +427,7 @@ public class LocalMetricManager implements MetricManager {
                         }
 
                         final List<TagValues> g = group(group.getSeries());
-                        groups.add(new ResultGroup(g, new MetricTypedGroup(group.getType(), group.getValues()),
-                                aggregation.cadence()));
+                        groups.add(new ResultGroup(g, group.getMetrics(), aggregation.cadence()));
                     }
 
                     final Statistics stat = result.getStatistics()

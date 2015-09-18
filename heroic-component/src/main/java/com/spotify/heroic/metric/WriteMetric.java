@@ -34,10 +34,10 @@ import com.spotify.heroic.common.Series;
 @Data
 public class WriteMetric {
     final Series series;
-    final List<MetricTypedGroup> groups;
+    final List<MetricCollection> groups;
 
     @JsonCreator
-    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("groups") List<MetricTypedGroup> groups) {
+    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("groups") List<MetricCollection> groups) {
         this.series = series;
         this.groups = groups;
     }
@@ -49,7 +49,7 @@ public class WriteMetric {
     public Iterable<Metric> all() {
         final List<Iterable<? extends Metric>> iterables = new ArrayList<>(groups.size());
 
-        for (final MetricTypedGroup g : groups) {
+        for (final MetricCollection g : groups) {
             iterables.add(g.getData());
         }
 

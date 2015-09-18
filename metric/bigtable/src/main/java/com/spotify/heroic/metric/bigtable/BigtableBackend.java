@@ -28,9 +28,8 @@ import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
-import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -187,7 +186,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
                 final BigtableClient client = c.client();
 
-                for (final MetricTypedGroup g : w.getGroups()) {
+                for (final MetricCollection g : w.getGroups()) {
                     if (g.getType() == MetricType.POINT) {
                         for (final Point d : g.getDataAs(Point.class)) {
                             results.add(writePoint(series, client, d));
@@ -214,7 +213,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
                     final BigtableClient client = c.client();
 
-                    for (final MetricTypedGroup g : w.getGroups()) {
+                    for (final MetricCollection g : w.getGroups()) {
                         if (g.getType() == MetricType.POINT) {
                             for (final Point d : (List<? extends Point>) g.getData()) {
                                 results.add(writePoint(series, client, d));
@@ -357,9 +356,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                     }
 
                     final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
-                    final List<Metric> data = ImmutableList.copyOf(Iterables.mergeSorted(points,
-                            Point.comparator()));
-                    final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
+                    final List<Point> data = ImmutableList.copyOf(Iterables.mergeSorted(points, Point.comparator()));
+                    final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
                     return new FetchData(series, times, groups);
                 }
             }));

@@ -34,13 +34,13 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableList;
 
-public class MetricTypedGroupSerialization {
+public class MetricCollectionSerialization {
     private static final String TYPE = "type";
     private static final String DATA = "data";
 
-    public static class Deserializer extends JsonDeserializer<MetricTypedGroup> {
+    public static class Deserializer extends JsonDeserializer<MetricCollection> {
         @Override
-        public MetricTypedGroup deserialize(JsonParser p, DeserializationContext c)
+        public MetricCollection deserialize(JsonParser p, DeserializationContext c)
                 throws IOException, JsonProcessingException {
             if (p.getCurrentToken() != JsonToken.START_OBJECT) {
                 throw c.wrongTokenException(p, JsonToken.START_OBJECT, null);
@@ -97,13 +97,13 @@ public class MetricTypedGroupSerialization {
                 throw c.mappingException("'data' not specified");
             }
 
-            return new MetricTypedGroup(type, data);
+            return MetricCollection.build(type, data);
         }
     }
 
-    public static class Serializer extends JsonSerializer<MetricTypedGroup> {
+    public static class Serializer extends JsonSerializer<MetricCollection> {
         @Override
-        public void serialize(MetricTypedGroup group, JsonGenerator g, SerializerProvider provider) throws IOException,
+        public void serialize(MetricCollection group, JsonGenerator g, SerializerProvider provider) throws IOException,
                 JsonProcessingException {
             g.writeStartObject();
             g.writeObjectField(TYPE, group.getType());

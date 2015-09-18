@@ -145,7 +145,7 @@ public class ChainAggregation implements Aggregation {
 
             for (final AggregationSession session : rest) {
                 for (final AggregationData u : current) {
-                    u.getType().updateAggregation(session, u.getGroup(), u.getSeries(), u.getValues());
+                    u.getMetrics().updateAggregation(session, u.getGroup(), u.getSeries());
                 }
 
                 final AggregationResult next = session.result();

@@ -35,11 +35,12 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
-import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 
@@ -102,18 +103,18 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
         final long start = System.nanoTime();
 
         if (source == MetricType.POINT) {
-            final List<Metric> data = generator.generate(series, range, watcher);
+            final List<Point> data = generator.generatePoints(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
+            final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
             return async.resolved(new FetchData(series, times, groups));
         }
 
         if (source == MetricType.EVENT) {
-            final List<Metric> data = generator.generateEvents(series, range, watcher);
+            final List<Event> data = generator.generateEvents(series, range, watcher);
             final long diff = System.nanoTime() - start;
             final ImmutableList<Long> times = ImmutableList.of(diff);
-            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, data));
+            final List<MetricCollection> groups = ImmutableList.of(MetricCollection.events(data));
             return async.resolved(new FetchData(series, times, groups));
         }
 

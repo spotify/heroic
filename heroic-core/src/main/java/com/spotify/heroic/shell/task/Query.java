@@ -34,7 +34,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -83,7 +83,7 @@ public class Query implements ShellTask {
                 }
 
                 for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                    final MetricTypedGroup group = resultGroup.getGroup();
+                    final MetricCollection group = resultGroup.getGroup();
 
                     out.println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
                             resultGroup.getTags()));

@@ -34,7 +34,6 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
-import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
 
@@ -66,14 +65,14 @@ public class RandomGenerator implements Generator {
     private long step;
 
     @Override
-    public List<Metric> generate(Series series, DateRange range, FetchQuotaWatcher watcher) {
+    public List<Point> generatePoints(Series series, DateRange range, FetchQuotaWatcher watcher) {
         final double diff = max - min;
 
         int seriesHash = series.hashCode();
 
         final double localMin = min + diff * seriesRand(seriesHash);
 
-        final List<Metric> data = new ArrayList<>();
+        final List<Point> data = new ArrayList<>();
 
         final long start = calculateStart(range.getStart());
 
@@ -89,8 +88,8 @@ public class RandomGenerator implements Generator {
     }
 
     @Override
-    public List<Metric> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
-        final List<Metric> data = new ArrayList<>();
+    public List<Event> generateEvents(Series series, DateRange range, FetchQuotaWatcher watcher) {
+        final List<Event> data = new ArrayList<>();
 
         final DateRange rounded = range.rounded(1000);
 

@@ -24,22 +24,27 @@ package com.spotify.heroic.metric;
 import java.util.Comparator;
 import java.util.List;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(exclude = { "valueHash" })
 public class MetricGroup implements Metric {
-    static final List<MetricTypedGroup> EMPTY_GROUPS = ImmutableList.of();
+    static final List<MetricCollection> EMPTY_GROUPS = ImmutableList.of();
 
     private final long timestamp;
-    private final List<MetricTypedGroup> groups;
+    private final List<MetricCollection> groups;
+    @JsonIgnore
     private final int valueHash;
 
-    public MetricGroup(long timestamp, List<MetricTypedGroup> groups) {
+    @JsonCreator
+    public MetricGroup(@JsonProperty("timestamp") long timestamp, @JsonProperty("groups") List<MetricCollection> groups) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
         this.valueHash = calculateValueHash(this.groups);
@@ -71,11 +76,11 @@ public class MetricGroup implements Metric {
         }
     };
 
-    static int calculateValueHash(List<MetricTypedGroup> groups) {
+    static int calculateValueHash(List<MetricCollection> groups) {
         final int prime = 31;
         int result = 1;
 
-        for (final MetricTypedGroup g : groups) {
+        for (final MetricCollection g : groups) {
             for (final Metric d : g.getData()) {
                 result = prime * result + d.valueHash();
             }

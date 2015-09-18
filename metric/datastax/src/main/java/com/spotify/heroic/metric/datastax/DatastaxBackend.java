@@ -48,8 +48,8 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -138,7 +138,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
         final List<Long> times = new ArrayList<Long>();
 
-        for (final MetricTypedGroup g : w.getGroups()) {
+        for (final MetricCollection g : w.getGroups()) {
             if (g.getType() == MetricType.POINT) {
                 for (final Metric t : g.getData()) {
                     final Point d = (Point) t;
@@ -202,7 +202,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                             if (!watcher.mayReadData())
                                 throw new IllegalArgumentException("query violated data limit");
 
-                            final List<Metric> data = new ArrayList<>();
+                            final List<Point> data = new ArrayList<>();
 
                             final long start = System.nanoTime();
                             final ResultSet rows = c.session.execute(fetch);
@@ -218,8 +218,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                                 throw new IllegalArgumentException("query violated data limit");
 
                             final ImmutableList<Long> times = ImmutableList.of(diff);
-                            final List<MetricTypedGroup> groups = ImmutableList.of(new MetricTypedGroup(MetricType.POINT,
-                                    data));
+                            final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
                             return new FetchData(series, times, groups);
                         }
                     }, pools.read()).on(reporter.reportFetch()));

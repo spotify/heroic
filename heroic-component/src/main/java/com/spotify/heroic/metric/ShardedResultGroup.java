@@ -32,7 +32,7 @@ import lombok.EqualsAndHashCode;
 public final class ShardedResultGroup {
     private final Map<String, String> shard;
     private final List<TagValues> tags;
-    private final MetricTypedGroup group;
+    private final MetricCollection group;
     private final long cadence;
 
     public boolean isEmpty() {

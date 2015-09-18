@@ -21,13 +21,9 @@
 
 package com.spotify.heroic.consumer.schemas;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import lombok.Data;
-import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -40,11 +36,12 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.FatalSchemaException;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricTypedGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
+
+import lombok.Data;
+import lombok.ToString;
 
 @ToString
 public class Spotify100 implements ConsumerSchema {
@@ -107,11 +104,8 @@ public class Spotify100 implements ConsumerSchema {
         tags.put(HOST, metric.getHost());
 
         final Series series = Series.of(metric.getKey(), tags);
-        final Point datapoint = new Point(metric.getTime(), metric.getValue());
-        final List<Metric> points = new ArrayList<>();
-        points.add(datapoint);
-
-        final List<MetricTypedGroup> data = ImmutableList.of(new MetricTypedGroup(MetricType.POINT, points));
+        final List<Point> points = ImmutableList.of(new Point(metric.getTime(), metric.getValue()));
+        final List<MetricCollection> data = ImmutableList.of(MetricCollection.points(points));
 
         try {
             consumer.write(new WriteMetric(series, data)).get();

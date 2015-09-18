@@ -1,18 +1,23 @@
 package com.spotify.heroic.aggregation;
 
-import java.util.HashSet;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -85,23 +90,47 @@ public class EmptyAggregation implements Aggregation {
         public AggregationResult result() {
             final ImmutableList.Builder<AggregationData> groups = ImmutableList.builder();
 
-            for (final Collected<Point> c : this.points) {
-                groups.add(new AggregationData(EMPTY_GROUP, c.getSeries(), c.getValues(), MetricType.POINT));
+            if (!this.groups.isEmpty()) {
+                groups.add(collectGroup(this.groups, MetricType.GROUP.comparator(), MetricCollection::groups));
             }
 
-            for (final Collected<Event> c : this.events) {
-                groups.add(new AggregationData(EMPTY_GROUP, c.getSeries(), c.getValues(), MetricType.EVENT));
+            if (!this.points.isEmpty()) {
+                groups.add(collectGroup(this.points, MetricType.POINT.comparator(), MetricCollection::points));
             }
 
-            for (final Collected<Spread> c : this.spreads) {
-                groups.add(new AggregationData(EMPTY_GROUP, c.getSeries(), c.getValues(), MetricType.SPREAD));
+            if (!this.events.isEmpty()) {
+                groups.add(collectGroup(this.events, MetricType.EVENT.comparator(), MetricCollection::events));
             }
 
-            for (final Collected<MetricGroup> c : this.groups) {
-                groups.add(new AggregationData(EMPTY_GROUP, c.getSeries(), c.getValues(), MetricType.GROUP));
+            if (!this.spreads.isEmpty()) {
+                groups.add(collectGroup(this.spreads, MetricType.SPREAD.comparator(), MetricCollection::spreads));
             }
 
             return new AggregationResult(groups.build(), Statistics.EMPTY);
+        }
+
+        private <T extends Metric> AggregationData collectGroup(final ConcurrentLinkedQueue<Collected<T>> collected,
+                final Comparator<? super T> comparator, final Function<List<T>, MetricCollection> builder) {
+            final ImmutableSet.Builder<Series> series = ImmutableSet.builder();
+
+            final ImmutableList.Builder<List<T>> iterables = ImmutableList.builder();
+
+            for (final Collected<T> d : collected) {
+                series.addAll(d.getSeries());
+                iterables.add(d.getValues());
+            }
+
+            /* no need to merge, single results are already sorted */
+            if (collected.size() == 1) {
+                return new AggregationData(EMPTY_GROUP, series.build(),
+                        builder.apply(iterables.build().iterator().next()));
+            }
+
+            final ImmutableList<Iterator<T>> iterators = ImmutableList
+                    .copyOf(iterables.build().stream().map(Iterable::iterator).iterator());
+            final Iterator<T> metrics = Iterators.mergeSorted(iterators, comparator);
+
+            return new AggregationData(EMPTY_GROUP, series.build(), builder.apply(ImmutableList.copyOf(metrics)));
         }
     }
 
