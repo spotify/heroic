@@ -27,19 +27,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 @ToString(of = { "seeds", "keyspace" })
@@ -62,27 +63,41 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
         return async.call(new Callable<Connection>() {
             public Connection call() throws Exception {
                 // @formatter:off
-                    final HostDistance distance = HostDistance.LOCAL;
-                    final PoolingOptions pooling = new PoolingOptions()
-                        .setMaxConnectionsPerHost(distance, 20)
-                        .setCoreConnectionsPerHost(distance, 4)
-                        .setMaxSimultaneousRequestsPerHostThreshold(distance, Short.MAX_VALUE)
-                        .setMaxSimultaneousRequestsPerConnectionThreshold(distance, 128);
+                final HostDistance distance = HostDistance.LOCAL;
+                final PoolingOptions pooling = new PoolingOptions()
+                    .setMaxConnectionsPerHost(distance, 20)
+                    .setCoreConnectionsPerHost(distance, 4)
+                    .setMaxSimultaneousRequestsPerHostThreshold(distance, Short.MAX_VALUE)
+                    .setMaxSimultaneousRequestsPerConnectionThreshold(distance, 128);
 
-                    final Cluster cluster = Cluster.builder()
-                        .addContactPointsWithPorts(seeds)
-                        .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))
-                        .withPoolingOptions(pooling).build();
-                    // @formatter:on
+                final QueryOptions queryOptions = new QueryOptions()
+                    .setConsistencyLevel(ConsistencyLevel.ONE);
+
+                final Cluster cluster = Cluster.builder()
+                    .addContactPointsWithPorts(seeds)
+                    .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))
+                    .withPoolingOptions(pooling)
+                    .withQueryOptions(queryOptions)
+                    .build();
+                // @formatter:on
 
                 final Session session = cluster.connect(keyspace);
 
                 final PreparedStatement write = session.prepare(WRITE_METRICS_CQL);
+
                 final PreparedStatement fetch = session.prepare(FETCH_METRICS_CQL);
-                final PreparedStatement keysPaging = session.prepare(KEYS_PAGING);
-                final PreparedStatement keysPagingLeft = session.prepare(KEYS_PAGING_LEFT);
-                final PreparedStatement keysPagingLimit = session.prepare(KEYS_PAGING_LIMIT);
-                final PreparedStatement keysPagingLeftLimit = session.prepare(KEYS_PAGING_LEFT_LIMIT);
+
+                final PreparedStatement keysPaging = session.prepare(KEYS_PAGING)
+                        .setConsistencyLevel(ConsistencyLevel.ONE);
+
+                final PreparedStatement keysPagingLeft = session.prepare(KEYS_PAGING_LEFT)
+                        .setConsistencyLevel(ConsistencyLevel.ONE);
+
+                final PreparedStatement keysPagingLimit = session.prepare(KEYS_PAGING_LIMIT)
+                        .setConsistencyLevel(ConsistencyLevel.ONE);
+
+                final PreparedStatement keysPagingLeftLimit = session.prepare(KEYS_PAGING_LEFT_LIMIT)
+                        .setConsistencyLevel(ConsistencyLevel.ONE);
 
                 return new Connection(cluster, session, write, fetch, keysPaging, keysPagingLeft, keysPagingLimit,
                         keysPagingLeftLimit);
