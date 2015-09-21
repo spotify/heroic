@@ -46,7 +46,6 @@ import lombok.RequiredArgsConstructor;
 public class HeroicPrimaryModule extends AbstractModule {
     private final HeroicCore core;
     private final Set<LifeCycle> lifeCycles;
-    private final HeroicConfig config;
     private final InetSocketAddress bindAddress;
 
     private final boolean server;
@@ -69,12 +68,6 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Singleton
     public Set<LifeCycle> lifecycles() {
         return lifeCycles;
-    }
-
-    @Provides
-    @Singleton
-    public HeroicConfig config() {
-        return config;
     }
 
     @Provides

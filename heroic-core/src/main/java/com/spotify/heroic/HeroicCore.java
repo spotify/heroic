@@ -89,7 +89,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author udoprog
  */
 @Slf4j
-public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
+public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicReporterConfiguration {
     static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
     static final boolean DEFAULT_SERVER = true;
     static final String DEFAULT_HOST = "0.0.0.0";
@@ -132,6 +132,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     private final Integer port;
     /**
      * A list of configured modules that will be loaded during startup.
+     *
      * @see #doStart()
      */
     private final List<Class<?>> modules;
@@ -140,12 +141,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     private final boolean server;
     private final Path configPath;
     private final HeroicProfile profile;
-    private final HeroicReporter reporter;
+    private final Optional<HeroicReporter> reporter;
     private final URI startupPing;
     private final String startupId;
     private final boolean oneshot;
     private final boolean disableBackends;
     private final boolean skipLifecycles;
+
+    private final AtomicReference<HeroicReporter> registeredReporter = new AtomicReference<HeroicReporter>();
 
     public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> early,
             List<HeroicBootstrap> late, Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter,
@@ -158,7 +161,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         this.server = Optional.fromNullable(server).or(DEFAULT_SERVER);
         this.configPath = configPath;
         this.profile = profile;
-        this.reporter = Optional.fromNullable(reporter).or(NoopHeroicReporter.get());
+        this.reporter = Optional.fromNullable(reporter);
         this.startupPing = startupPing;
         this.startupId = startupId;
         this.oneshot = oneshot;
@@ -174,6 +177,13 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     @Override
     public boolean isOneshot() {
         return oneshot;
+    }
+
+    @Override
+    public void registerReporter(HeroicReporter reporter) {
+        if (!this.registeredReporter.compareAndSet(null, reporter)) {
+            log.warn("Tried to register more than one reporter: {}", reporter);
+        }
     }
 
     private final Object $lock = new Object();
@@ -241,8 +251,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     /**
      * Start the internal lifecycles
      * 
-     * First step is to register event hooks that makes sure that the lifecycle components gets
-     * started and shutdown correctly. After this the registered internal lifecycles are started.
+     * First step is to register event hooks that makes sure that the lifecycle components gets started and shutdown
+     * correctly. After this the registered internal lifecycles are started.
      * 
      * @param primary
      */
@@ -371,7 +381,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     }
 
     private Injector earlyInjector(final Injector loading, final HeroicConfig config) {
-        return loading.createChildInjector(new HeroicEarlyModule(config));
+        return loading.createChildInjector(new HeroicEarlyModule(config, this));
     }
 
     /**
@@ -381,10 +391,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
      * @return
      */
     private ExecutorService buildCoreExecutor(final int nThreads) {
-        return new ThreadPoolExecutor(nThreads, nThreads,
-                 0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>(),
-                new ThreadFactoryBuilder().setNameFormat("heroic-core-%d")
+        return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(), new ThreadFactoryBuilder().setNameFormat("heroic-core-%d")
                         .setUncaughtExceptionHandler(uncaughtExceptionHandler).build()) {
             @Override
             protected void afterExecute(Runnable r, Throwable t) {
@@ -436,8 +444,11 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
             pinger = null;
         }
 
+        final HeroicReporter reporter = this.reporter.or(Optional.fromNullable(registeredReporter.get()))
+                .or(NoopHeroicReporter::new);
+
         // register root components.
-        modules.add(new HeroicPrimaryModule(this, lifeCycles, config, bindAddress, server, reporter, pinger));
+        modules.add(new HeroicPrimaryModule(this, lifeCycles, bindAddress, server, reporter, pinger));
 
         modules.add(config.getClient());
 
@@ -480,13 +491,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     }
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
-        final String host = Optional.fromNullable(this.host).or(
-                Optional.fromNullable(config.getHost()).or(DEFAULT_HOST));
+        final String host = Optional.fromNullable(this.host)
+                .or(Optional.fromNullable(config.getHost()).or(DEFAULT_HOST));
         final int port = Optional.fromNullable(this.port).or(Optional.fromNullable(config.getPort()).or(DEFAULT_PORT));
         return new InetSocketAddress(host, port);
     }
 
-    private static List<Module> setupConsumers(final HeroicConfig config, final HeroicReporter reporter, Binder binder) {
+    private static List<Module> setupConsumers(final HeroicConfig config, final HeroicReporter reporter,
+            Binder binder) {
         final Multibinder<Consumer> bindings = Multibinder.newSetBinder(binder, Consumer.class);
 
         final List<Module> modules = new ArrayList<>();
@@ -524,7 +536,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         log.info("Stopped all life cycles");
     }
 
-    private boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds, final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
+    private boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds,
+            final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
 
         // we still need to get instances to cause them to be created.
@@ -622,8 +635,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     }
 
     private HeroicConfig parseConfig(final Injector earlyInjector) throws Exception {
-        final ObjectMapper mapper = earlyInjector.getInstance(Key.get(ObjectMapper.class,
-                Names.named(APPLICATION_HEROIC_CONFIG)));
+        final ObjectMapper mapper = earlyInjector
+                .getInstance(Key.get(ObjectMapper.class, Names.named(APPLICATION_HEROIC_CONFIG)));
 
         try {
             return mapper.readValue(Files.newInputStream(configPath), HeroicConfig.class);
@@ -761,8 +774,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         }
 
         public HeroicCore build() {
-            return new HeroicCore(host, port, modules, early, late, server, configPath, profile, reporter,
-                    startupPing, startupId, oneshot, disableBackends, skipLifecycles);
+            return new HeroicCore(host, port, modules, early, late, server, configPath, profile, reporter, startupPing,
+                    startupId, oneshot, disableBackends, skipLifecycles);
         }
 
         public Builder modules(List<String> modules) {
@@ -776,8 +789,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
                 try {
                     result.add(Class.forName(module + ".Entry"));
                 } catch (ClassNotFoundException e) {
-                    throw new IllegalArgumentException("Not a valid module name '" + module
-                            + "', doesnt have an Entry class");
+                    throw new IllegalArgumentException(
+                            "Not a valid module name '" + module + "', doesnt have an Entry class");
                 }
             }
 
