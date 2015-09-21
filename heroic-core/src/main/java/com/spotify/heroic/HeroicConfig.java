@@ -43,11 +43,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Data
 public class HeroicConfig {
+    public static final boolean DEFAULT_DISABLE_METRICS = false;
     public static final String DEFAULT_HOST = "0.0.0.0";
     public static final int DEFAULT_PORT = 8080;
     public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
     public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
 
+    private final boolean disableMetrics;
     private final String host;
     private final int port;
     private final String refreshClusterSchedule;
@@ -63,16 +65,16 @@ public class HeroicConfig {
     private final Optional<ShellServerModule> shellServer;
 
     @JsonCreator
-    public HeroicConfig(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
-            @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule,
-            @JsonProperty("cluster") ClusterManagerModule cluster,
-            @JsonProperty("metrics") MetricManagerModule metrics,
+    public HeroicConfig(@JsonProperty("disableMetrics") Boolean disableMetrics, @JsonProperty("host") String host,
+            @JsonProperty("port") Integer port, @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule,
+            @JsonProperty("cluster") ClusterManagerModule cluster, @JsonProperty("metrics") MetricManagerModule metrics,
             @JsonProperty("metadata") MetadataManagerModule metadata,
             @JsonProperty("suggest") SuggestManagerModule suggest, @JsonProperty("cache") AggregationCacheModule cache,
             @JsonProperty("client") HttpClientManagerModule client,
             @JsonProperty("ingestion") IngestionModule ingestion,
             @JsonProperty("consumers") List<ConsumerModule> consumers,
             @JsonProperty("shellServer") ShellServerModule shellServer) {
+        this.disableMetrics = Optional.fromNullable(disableMetrics).or(DEFAULT_DISABLE_METRICS);
         this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
         this.port = Optional.fromNullable(port).or(DEFAULT_PORT);
         this.refreshClusterSchedule = Optional.fromNullable(refreshClusterSchedule)
@@ -93,6 +95,7 @@ public class HeroicConfig {
     }
 
     public static class Builder {
+        private boolean disableMetrics = false;
         private String host;
         private Integer port;
         private String refreshClusterSchedule;
@@ -105,6 +108,11 @@ public class HeroicConfig {
         private IngestionModule ingestion;
         private List<ConsumerModule> consumers;
         private ShellServerModule shellServer;
+
+        public Builder disableMetrics(boolean disableMetrics) {
+            this.disableMetrics = disableMetrics;
+            return this;
+        }
 
         public Builder host(String host) {
             this.host = host;
@@ -167,8 +175,8 @@ public class HeroicConfig {
         }
 
         public HeroicConfig build() {
-            return new HeroicConfig(host, port, refreshClusterSchedule, cluster, metric, metadata, suggest, cache,
-                    client, ingestion, consumers, shellServer);
+            return new HeroicConfig(disableMetrics, host, port, refreshClusterSchedule, cluster, metric, metadata,
+                    suggest, cache, client, ingestion, consumers, shellServer);
         }
     }
 }

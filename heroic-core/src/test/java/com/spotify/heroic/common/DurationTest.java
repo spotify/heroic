@@ -11,7 +11,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.HeroicEarlyModule;
+import com.spotify.heroic.HeroicLoadingModule;
 
 public class DurationTest {
     private ObjectMapper mapper;
@@ -19,7 +19,7 @@ public class DurationTest {
     @Before
     public void before() {
         mapper = new ObjectMapper();
-        mapper.registerModule(HeroicEarlyModule.serialization());
+        mapper.registerModule(HeroicLoadingModule.serialization());
     }
 
     @Test

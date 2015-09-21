@@ -135,7 +135,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
      * @see #doStart()
      */
     private final List<Class<?>> modules;
-    private final List<HeroicBootstrap> bootstrappers;
+    private final List<HeroicBootstrap> early;
+    private final List<HeroicBootstrap> late;
     private final boolean server;
     private final Path configPath;
     private final HeroicProfile profile;
@@ -146,13 +147,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     private final boolean disableBackends;
     private final boolean skipLifecycles;
 
-    public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> bootstrappers,
-            Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter, URI startupPing,
-            String startupId, boolean oneshot, boolean disableBackends, boolean skipLifecycles) {
+    public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> early,
+            List<HeroicBootstrap> late, Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter,
+            URI startupPing, String startupId, boolean oneshot, boolean disableBackends, boolean skipLifecycles) {
         this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
         this.port = port;
         this.modules = Optional.fromNullable(modules).or(DEFAULT_MODULES);
-        this.bootstrappers = ImmutableList.copyOf(Optional.fromNullable(bootstrappers).or(ImmutableList.of()));
+        this.early = ImmutableList.copyOf(Optional.fromNullable(early).or(ImmutableList.of()));
+        this.late = ImmutableList.copyOf(Optional.fromNullable(late).or(ImmutableList.of()));
         this.server = Optional.fromNullable(server).or(DEFAULT_SERVER);
         this.configPath = configPath;
         this.profile = profile;
@@ -207,7 +209,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
      * 
      * <p> Setup the primary injector which will provide the dependencies to the entire application
      * 
-     * <p> Run all bootstraps that are configured in {@link #bootstrappers}
+     * <p> Run all bootstraps that are configured in {@link #late}
      * 
      * <p> Start all the external modules. {@link #startLifeCycles}
      * 
@@ -216,14 +218,17 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
      * @throws Exception
      */
     private void doStart() throws Exception {
-        final Injector early = earlyInjector();
+        final Injector loading = loadingInjector();
 
-        loadModules(early);
+        loadModules(loading);
 
-        final HeroicConfig config = config(early);
-        final Injector primary = primaryInjector(config, early);
+        final HeroicConfig config = config(loading);
 
-        runBootsrappers(primary);
+        final Injector early = earlyInjector(loading, config);
+        runBootsrappers(early, this.early);
+
+        final Injector primary = primaryInjector(early, config);
+        runBootsrappers(primary, this.late);
 
         this.primary.set(primary);
 
@@ -272,13 +277,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     /**
      * This method basically goes through the list of bootstrappers registered by modules and runs them.
      * 
-     * @param primary
+     * @param injector Injector to inject boostrappers using.
+     * @param bootstrappers Bootstrappers to run.
      * @throws Exception
      */
-    private void runBootsrappers(final Injector primary) throws Exception {
+    private void runBootsrappers(final Injector injector, final List<HeroicBootstrap> bootstrappers) throws Exception {
         for (final HeroicBootstrap bootstrap : bootstrappers) {
             try {
-                primary.injectMembers(bootstrap);
+                injector.injectMembers(bootstrap);
                 bootstrap.run();
             } catch (Exception e) {
                 throw new Exception("Failed to run bootstrapper " + bootstrap, e);
@@ -355,13 +361,17 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
     /**
      * Setup early injector, which is responsible for sufficiently providing dependencies to runtime components.
      */
-    private Injector earlyInjector() {
-        log.info("Building Early Injector");
+    private Injector loadingInjector() {
+        log.info("Building Loading Injector");
 
         final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
         final HeroicInternalLifeCycle lifeCycle = new HeroicInernalLifeCycleImpl();
 
-        return Guice.createInjector(new HeroicEarlyModule(executor, lifeCycle, this));
+        return Guice.createInjector(new HeroicLoadingModule(executor, lifeCycle, this));
+    }
+
+    private Injector earlyInjector(final Injector loading, final HeroicConfig config) {
+        return loading.createChildInjector(new HeroicEarlyModule(config));
     }
 
     /**
@@ -409,7 +419,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
      *            components.
      * @return The primary guice injector.
      */
-    private Injector primaryInjector(final HeroicConfig config, final Injector early) {
+    private Injector primaryInjector(final Injector early, final HeroicConfig config) {
         log.info("Building Primary Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -643,7 +653,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
         private boolean oneshot = false;
         private boolean disableBackends = false;
         private boolean skipLifecycles = false;
-        private List<HeroicBootstrap> bootstrappers = new ArrayList<>();
+        private List<HeroicBootstrap> early = new ArrayList<>();
+        private List<HeroicBootstrap> late = new ArrayList<>();
 
         public Builder module(Class<?> module) {
             this.modules.add(checkNotNull(module, "module must not be null"));
@@ -734,13 +745,23 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions {
             return this;
         }
 
+        public Builder early(HeroicBootstrap bootstrap) {
+            this.early.add(bootstrap);
+            return this;
+        }
+
+        public Builder late(HeroicBootstrap bootstrap) {
+            this.late.add(bootstrap);
+            return this;
+        }
+
         public Builder bootstrap(HeroicBootstrap bootstrap) {
-            this.bootstrappers.add(bootstrap);
+            this.late.add(bootstrap);
             return this;
         }
 
         public HeroicCore build() {
-            return new HeroicCore(host, port, modules, bootstrappers, server, configPath, profile, reporter,
+            return new HeroicCore(host, port, modules, early, late, server, configPath, profile, reporter,
                     startupPing, startupId, oneshot, disableBackends, skipLifecycles);
         }
 
