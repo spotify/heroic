@@ -55,12 +55,14 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
@@ -252,14 +254,14 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, final int limit) {
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, final int limit, final QueryOptions options) {
         final MetricsRowKey first = start != null ? new MetricsRowKey(start.getSeries(), start.getBase()) : null;
 
         final Borrowed<Context> k = context.borrow();
 
-        return async.call(new Callable<List<BackendKey>>() {
+        return async.call(new Callable<BackendKeySet>() {
             @Override
-            public List<BackendKey> call() throws Exception {
+            public BackendKeySet call() throws Exception {
                 final OperationResult<Rows<MetricsRowKey, Integer>> op = k.get().client.prepareQuery(METRICS_CF)
                         .getKeyRange(first, null, null, null, limit).execute();
 
@@ -272,7 +274,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                     keys.add(new BackendKey(k.getSeries(), k.getBase()));
                 }
 
-                return keys;
+                return new BackendKeySet(keys);
             }
         }, pools.read()).on(k.releasing());
     }

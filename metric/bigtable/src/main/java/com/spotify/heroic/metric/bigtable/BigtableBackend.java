@@ -26,11 +26,13 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.bigtable.api.BigtableCell;
@@ -372,8 +374,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, int limit) {
-        return async.<List<BackendKey>> resolved(ImmutableList.<BackendKey> of());
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, final QueryOptions options) {
+        return async.resolved(new BackendKeySet());
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {

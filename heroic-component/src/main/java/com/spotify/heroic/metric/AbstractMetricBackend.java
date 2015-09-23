@@ -17,17 +17,17 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     private final AsyncFramework async;
 
     @Override
-    public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit) {
-        return keys(start, limit).transform(new Transform<List<BackendKey>, Iterator<BackendKey>>() {
+    public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit, final QueryOptions options) {
+        return keys(start, limit, options).transform(new Transform<BackendKeySet, Iterator<BackendKey>>() {
             @Override
-            public Iterator<BackendKey> transform(final List<BackendKey> initialResult) throws Exception {
+            public Iterator<BackendKey> transform(final BackendKeySet initialResult) throws Exception {
                 if (initialResult.isEmpty()) {
                     return Collections.emptyIterator();
                 }
 
                 return new Iterator<BackendKey>() {
                     /* future for the next batch */
-                    AsyncFuture<List<BackendKey>> future = keys(initialResult.get(initialResult.size() - 1), limit);
+                    AsyncFuture<BackendKeySet> future = keys(initialResult.getKeys().get(initialResult.size() - 1), limit, options);
                     /* iterator over the current batch */
                     Iterator<BackendKey> iterator = initialResult.iterator();
 
@@ -40,7 +40,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
                         }
 
                         if (!iterator.hasNext()) {
-                            final List<BackendKey> nextBatch;
+                            final BackendKeySet nextBatch;
 
                             try {
                                 nextBatch = future.get();
@@ -57,7 +57,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
                                 return false;
                             }
 
-                            future = keys(nextBatch.get(nextBatch.size() - 1), limit);
+                            future = keys(nextBatch.getKeys().get(nextBatch.size() - 1), limit, options);
                             iterator = nextBatch.iterator();
                         }
 
@@ -85,5 +85,10 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     @Override
     public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
         return async.resolved(ImmutableList.of());
+    }
+
+    @Override
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, QueryOptions options) {
+        return async.resolved(new BackendKeySet());
     }
 }

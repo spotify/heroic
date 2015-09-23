@@ -104,12 +104,12 @@ public interface MetricBackend extends Initializing, Grouped {
      *            Limit the amount of results, max will always be 1000.
      * @return A future containing a list of backend keys.
      */
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, int limit);
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, final QueryOptions options);
 
     /**
      * Iterate all backend keys.
      */
-    public AsyncFuture<Iterator<BackendKey>> allKeys(BackendKey start, int limit);
+    public AsyncFuture<Iterator<BackendKey>> allKeys(BackendKey start, int limit, QueryOptions options);
 
     /**
      * Serialize the given key, and return the hex-representation.

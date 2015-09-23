@@ -122,11 +122,6 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, int limit) {
-        return async.resolved(ImmutableList.of());
-    }
-
-    @Override
     public boolean isReady() {
         return true;
     }

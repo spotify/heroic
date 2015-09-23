@@ -25,7 +25,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -45,12 +44,14 @@ import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
@@ -255,15 +256,15 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<List<BackendKey>> keys(BackendKey start, final int limit) {
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, final int limit, final QueryOptions options) {
         final ByteBuffer first = start == null ? null : keySerializer.serialize(new MetricsRowKey(start.getSeries(),
                 start.getBase()));
 
         final Borrowed<Connection> k = connection.borrow();
 
-        return async.call(new Callable<List<BackendKey>>() {
+        return async.call(new Callable<BackendKeySet>() {
             @Override
-            public List<BackendKey> call() throws Exception {
+            public BackendKeySet call() throws Exception {
                 final Connection c = k.get();
                 final BoundStatement stmt = keysPagingLimit(c, first, limit);
                 final ResultSet rows = c.session.execute(stmt);
@@ -276,7 +277,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                     result.add(new BackendKey(key.getSeries(), key.getBase()));
                 }
 
-                return result;
+                return new BackendKeySet(result);
             }
         }).on(k.releasing());
     }
@@ -287,48 +288,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         }
 
         return c.keysPagingLeftLimit.bind(first, limit);
-    }
-
-    private AsyncFuture<Iterator<BackendKey>> automaticPagingKeys(BackendKey start, int limit) {
-        final ByteBuffer first = start == null ? null
-                : keySerializer.serialize(new MetricsRowKey(start.getSeries(), start.getBase()));
-
-        final Borrowed<Connection> k = connection.borrow();
-        final Connection c = k.get();
-        final BoundStatement stmt = keysPaging(c, first);
-        final ResultSet rows = c.session.execute(stmt);
-
-        final Iterator<Row> it = rows.iterator();
-
-        return async.resolved(new Iterator<BackendKey>() {
-            @Override
-            public boolean hasNext() {
-                boolean hasNext = it.hasNext();
-
-                if (!hasNext) {
-                    k.release();
-                }
-
-                return hasNext;
-            }
-
-            @Override
-            public BackendKey next() {
-                final Row r = it.next();
-                final ByteBuffer bytes = r.getBytes("metric_key");
-
-                final MetricsRowKey key;
-
-                try {
-                    key = keySerializer.deserialize(bytes.slice());
-                } catch (Exception e) {
-                    throw new RuntimeException(String.format("Could not deserialize key: %s", Bytes.toHexString(bytes)),
-                            e);
-                }
-
-                return new BackendKey(key.getSeries(), key.getBase());
-            }
-        });
     }
 
     private BoundStatement keysPaging(final Connection c, final ByteBuffer first) {

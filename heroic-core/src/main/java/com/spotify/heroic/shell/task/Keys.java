@@ -36,6 +36,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
@@ -78,7 +79,7 @@ public class Keys implements ShellTask {
 
         final int limit = Math.max(1, Math.min(10000, params.limit));
 
-        return metrics.useGroup(params.group).allKeys(start, limit)
+        return metrics.useGroup(params.group).allKeys(start, limit, QueryOptions.defaults())
                 .transform(new Transform<Iterator<BackendKey>, Void>() {
                     @Override
                     public Void transform(Iterator<BackendKey> result) throws Exception {
