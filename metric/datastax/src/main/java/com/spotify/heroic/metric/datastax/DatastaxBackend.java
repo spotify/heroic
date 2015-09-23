@@ -290,14 +290,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         return c.keysPagingLeftLimit.bind(first, limit);
     }
 
-    private BoundStatement keysPaging(final Connection c, final ByteBuffer first) {
-        if (first == null) {
-            return c.keysPaging.bind();
-        }
-
-        return c.keysPagingLeft.bind(first);
-    }
-
     @Override
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
         final MetricsRowKey rowKey = new MetricsRowKey(key.getSeries(), key.getBase());

@@ -124,11 +124,6 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     }
 
     @Override
-    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, QueryOptions options) {
-        return async.resolved(new BackendKeySet());
-    }
-
-    @Override
     public boolean isReady() {
         return true;
     }

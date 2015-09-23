@@ -34,6 +34,7 @@ import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SocketOptions;
 import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
 
 import eu.toolchain.async.AsyncFramework;
@@ -71,13 +72,17 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                     .setMaxSimultaneousRequestsPerConnectionThreshold(distance, 128);
 
                 final QueryOptions queryOptions = new QueryOptions()
+                    .setFetchSize(1000)
                     .setConsistencyLevel(ConsistencyLevel.ONE);
+
+                final SocketOptions socketOptions = new SocketOptions();
 
                 final Cluster cluster = Cluster.builder()
                     .addContactPointsWithPorts(seeds)
                     .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))
                     .withPoolingOptions(pooling)
                     .withQueryOptions(queryOptions)
+                    .withSocketOptions(socketOptions)
                     .build();
                 // @formatter:on
 

@@ -77,9 +77,10 @@ public class Keys implements ShellTask {
             start = null;
         }
 
-        final int limit = Math.max(1, Math.min(10000, params.limit));
+        final int limit = Math.max(1, Math.min(1000, params.limit));
 
-        return metrics.useGroup(params.group).allKeys(start, limit, QueryOptions.defaults())
+        return metrics.useGroup(params.group)
+                .allKeys(start, limit, QueryOptions.builder().tracing(params.tracing).build())
                 .transform(new Transform<Iterator<BackendKey>, Void>() {
                     @Override
                     public Void transform(Iterator<BackendKey> result) throws Exception {
@@ -102,13 +103,6 @@ public class Keys implements ShellTask {
                         return null;
                     }
                 });
-    }
-
-    private BackendKey seriesEnd(Series series) {
-        if (series == null)
-            return null;
-
-        return new BackendKey(series, 0xffffffffffffffffl);
     }
 
     @Data
@@ -137,5 +131,8 @@ public class Keys implements ShellTask {
 
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
+
+        @Option(name = "--tracing", usage = "Trace the queries for more debugging when things go wrong")
+        private boolean tracing = false;
     }
 }
