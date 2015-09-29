@@ -14,12 +14,14 @@ import com.google.common.base.Optional;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicCore;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
+import eu.toolchain.serializer.SerializerFramework;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -37,6 +39,13 @@ public class ShellServerModule extends PrivateModule {
 
     @Provides
     @Singleton
+    @Named("shell-protocol")
+    SerializerFramework serializer() {
+        return ShellProtocol.setupSerializer();
+    }
+
+    @Provides
+    @Singleton
     Managed<ShellServerState> state(final AsyncFramework async, final HeroicCore core) {
         return async.managed(new ManagedSetup<ShellServerState>() {
             @Override
@@ -47,8 +56,8 @@ public class ShellServerModule extends PrivateModule {
                         log.info("Binding to {}:{}", host, port);
                         final ServerSocket serverSocket = new ServerSocket();
                         serverSocket.bind(new InetSocketAddress(host, port));
-                        final Collection<CoreTaskDefinition> commands = Tasks.available();
-                        final SortedMap<String, CoreShellTaskDefinition> tasks = setupTasks(commands, core);
+                        final Collection<ShellTaskDefinition> commands = Tasks.available();
+                        final ShellTasks tasks = new ShellTasks(setupTasks(commands, core), async);
                         return new ShellServerState(serverSocket, commands, tasks);
                     }
                 });
@@ -64,12 +73,12 @@ public class ShellServerModule extends PrivateModule {
                 });
             }
 
-            public SortedMap<String, CoreShellTaskDefinition> setupTasks(final Collection<CoreTaskDefinition> commands,
+            public SortedMap<String, ShellTask> setupTasks(final Collection<ShellTaskDefinition> commands,
                     final HeroicCore core) throws Exception {
-                final SortedMap<String, CoreShellTaskDefinition> tasks = new TreeMap<>();
+                final SortedMap<String, ShellTask> tasks = new TreeMap<>();
 
-                for (final CoreTaskDefinition def : commands) {
-                    final CoreShellTaskDefinition instance = def.setup(core);
+                for (final ShellTaskDefinition def : commands) {
+                    final ShellTask instance = def.setup(core);
 
                     for (final String n : def.names()) {
                         tasks.put(n, instance);

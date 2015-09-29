@@ -21,14 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
-
-import lombok.ToString;
 
 import org.kohsuke.args4j.Option;
 
@@ -40,10 +37,11 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -52,6 +50,7 @@ import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.ToString;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
@@ -69,7 +68,7 @@ public class Fetch implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
         final long now = System.currentTimeMillis();
 
@@ -108,10 +107,10 @@ public class Fetch implements ShellTask {
                         current.setTime(new Date(d.getTimestamp()));
 
                         if (flipped(last, current)) {
-                            out.println(flip.format(current.getTime()));
+                            io.out().println(flip.format(current.getTime()));
                         }
 
-                        out.println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
+                        io.out().println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
 
                         if (i++ >= limit)
                             break outer;

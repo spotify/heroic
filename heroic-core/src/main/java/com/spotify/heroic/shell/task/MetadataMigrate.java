@@ -21,12 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -39,6 +35,7 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -47,6 +44,8 @@ import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.Getter;
+import lombok.ToString;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-migrate")
@@ -69,7 +68,7 @@ public class MetadataMigrate implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -77,19 +76,19 @@ public class MetadataMigrate implements ShellTask {
         final MetadataBackend group = metadata.useGroup(params.group);
         final MetadataBackend target = metadata.useGroup(params.target);
 
-        out.println("Migrating:");
-        out.println("  from: " + group);
-        out.println("    to: " + target);
+        io.out().println("Migrating:");
+        io.out().println("  from: " + group);
+        io.out().println("    to: " + target);
 
         return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
             @Override
             public Void transform(CountSeries c) throws Exception {
                 final long count = c.getCount();
 
-                out.println(String.format("Migrating %d entrie(s)", count));
+                io.out().println(String.format("Migrating %d entrie(s)", count));
 
                 if (!params.ok) {
-                    out.println("Migration stopped, use --ok to proceed");
+                    io.out().println("Migration stopped, use --ok to proceed");
                     return null;
                 }
 
@@ -99,20 +98,20 @@ public class MetadataMigrate implements ShellTask {
 
                 for (final MetadataEntry e : entries) {
                     if (index % DOT_LIMIT == 0) {
-                        out.print(".");
-                        out.flush();
+                        io.out().print(".");
+                        io.out().flush();
                     }
 
                     if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
-                        out.println(String.format(" %d/%d", index, count));
-                        out.flush();
+                        io.out().println(String.format(" %d/%d", index, count));
+                        io.out().flush();
                     }
 
                     ++index;
                     target.write(e.getSeries(), filter.getRange());
                 }
 
-                out.println(String.format(" %d/%d", index, count));
+                io.out().println(String.format(" %d/%d", index, count));
                 return null;
             }
         });

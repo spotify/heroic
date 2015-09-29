@@ -9,6 +9,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.lang3.StringUtils;
+
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.shell.CoreInterface;
+import com.spotify.heroic.shell.QuoteParser;
+import com.spotify.heroic.shell.ShellIO;
+import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
+
+import eu.toolchain.async.AsyncFuture;
 import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
 import jline.console.completer.StringsCompleter;
@@ -16,20 +26,9 @@ import jline.console.history.FileHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.shell.CoreShellInterface;
-import com.spotify.heroic.shell.QuoteParser;
-import com.spotify.heroic.shell.ShellInterface;
-import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
-
-import eu.toolchain.async.AsyncFuture;
-
 @Slf4j
 @RequiredArgsConstructor
-public class HeroicInteractiveShell implements ShellInterface {
+public class HeroicInteractiveShell {
     final ConsoleReader reader;
     final List<CommandDefinition> commands;
     final FileHistory history;
@@ -39,7 +38,7 @@ public class HeroicInteractiveShell implements ShellInterface {
     // mutable state, a.k.a. settings
     int timeout = 10;
 
-    public void run(final CoreShellInterface core) throws Exception {
+    public void run(final CoreInterface core) throws Exception {
         final PrintWriter out = new PrintWriter(reader.getOutput());
 
         while (running) {
@@ -91,8 +90,10 @@ public class HeroicInteractiveShell implements ShellInterface {
                 continue;
             }
 
+            final ShellIO io = new DirectShellIO(out);
+
             final long start = System.nanoTime();
-            runTask(command, out, core);
+            runTask(command, io, core);
             final long diff = System.nanoTime() - start;
 
             out.println(String.format("time: %s", Tasks.formatTimeNanos(diff)));
@@ -151,35 +152,35 @@ public class HeroicInteractiveShell implements ShellInterface {
         }
     }
 
-    void runTask(List<String> command, final PrintWriter out, final CoreShellInterface core) throws Exception,
+    void runTask(List<String> command, final ShellIO io, final CoreInterface core) throws Exception,
             IOException {
         final AsyncFuture<Void> t;
 
         try {
-            t = core.command(command, out);
+            t = core.evaluate(command, io);
         } catch (Exception e) {
-            out.println("Command failed");
-            e.printStackTrace(out);
+            io.out().println("Command failed");
+            e.printStackTrace(io.out());
             return;
         }
 
         if (t == null) {
-            out.flush();
+            io.out().flush();
             return;
         }
 
         try {
             awaitFinished(t);
         } catch (TimeoutException e) {
-            out.println(String.format("Command timed out (current timeout = %ds)", timeout));
+            io.out().println(String.format("Command timed out (current timeout = %ds)", timeout));
             t.cancel(true);
         } catch (Exception e) {
-            out.println("Command failed");
-            e.printStackTrace(out);
+            io.out().println("Command failed");
+            e.printStackTrace(io.out());
             return;
         }
 
-        out.flush();
+        io.out().flush();
         return;
     }
 

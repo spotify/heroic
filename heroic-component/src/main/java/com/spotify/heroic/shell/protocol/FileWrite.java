@@ -5,9 +5,12 @@ import lombok.Data;
 
 @AutoSerialize
 @Data
-public class CommandsRequest implements Message {
+public class FileWrite implements Message {
+    final int handle;
+    final byte[] data;
+
     @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {
-        return visitor.visitCommandsRequest(this);
+        return visitor.visitFileWrite(this);
     }
 }

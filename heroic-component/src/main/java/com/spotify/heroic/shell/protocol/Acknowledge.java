@@ -5,9 +5,9 @@ import lombok.Data;
 
 @AutoSerialize
 @Data
-public class CommandsRequest implements Message {
+public class Acknowledge implements Message {
     @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {
-        return visitor.visitCommandsRequest(this);
+        return visitor.visitOk(this);
     }
 }

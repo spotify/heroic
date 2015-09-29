@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.spotify.heroic.HeroicCoreInjector;
 
-public interface CoreTaskDefinition {
+public interface ShellTaskDefinition {
     String name();
 
     List<String> aliases();
@@ -13,5 +13,5 @@ public interface CoreTaskDefinition {
 
     String usage();
 
-    CoreShellTaskDefinition setup(HeroicCoreInjector core) throws Exception;
+    ShellTask setup(HeroicCoreInjector core) throws Exception;
 }

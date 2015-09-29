@@ -4,10 +4,21 @@ import java.util.List;
 
 import com.spotify.heroic.shell.protocol.CommandDefinition;
 
+import eu.toolchain.async.AsyncFuture;
+
 public interface CoreInterface {
-    public CoreShellInterface setup(ShellInterface shell) throws Exception;
+    /**
+     * Evaluate the given command.
+     */
+    public AsyncFuture<Void> evaluate(final List<String> command, final ShellIO io) throws Exception;
 
-    public List<CommandDefinition> getCommands() throws Exception;
-
+    /**
+     * Shutdown this interface.
+     */
     public void shutdown() throws Exception;
+
+    /**
+     * Get information about available commands.
+     */
+    public List<CommandDefinition> commands() throws Exception;
 }

@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.List;
 
 import org.kohsuke.args4j.Argument;
@@ -33,6 +32,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -58,7 +58,7 @@ public class DeserializeKey implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         return metrics.useGroup(params.group).deserializeKeyFromHex(params.key)
@@ -68,7 +68,7 @@ public class DeserializeKey implements ShellTask {
                         int i = 0;
 
                         for (final BackendKey key : result) {
-                            out.println(String.format("%d: %s", i++, key));
+                            io.out().println(String.format("%d: %s", i++, key));
                         }
 
                         return null;

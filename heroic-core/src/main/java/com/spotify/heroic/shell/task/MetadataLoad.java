@@ -25,14 +25,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.zip.GZIPInputStream;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import org.kohsuke.args4j.Option;
 
@@ -44,6 +39,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskName;
@@ -54,6 +50,8 @@ import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.Getter;
+import lombok.ToString;
 
 @TaskUsage("Load metadata from a file")
 @TaskName("metadata-load")
@@ -76,7 +74,7 @@ public class MetadataLoad implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final SuggestBackend target = suggest.useGroup(params.target);
@@ -84,11 +82,11 @@ public class MetadataLoad implements ShellTask {
         final Optional<RateLimiter> rateLimiter = params.rate <= 0 ? Optional.<RateLimiter> absent() : Optional
                 .of(RateLimiter.create(params.rate));
 
-        out.println("Loading suggest data:");
-        out.println("  from (file): " + params.file);
-        out.println("  to  (suggest): " + target);
-        out.println("  rate-limit:" + (rateLimiter.isPresent() ? params.rate : "disabled"));
-        out.flush();
+        io.out().println("Loading suggest data:");
+        io.out().println("  from (file): " + params.file);
+        io.out().println("  to  (suggest): " + target);
+        io.out().println("  rate-limit:" + (rateLimiter.isPresent() ? params.rate : "disabled"));
+        io.out().flush();
 
         long total = 0;
         long failed = 0;
@@ -97,7 +95,7 @@ public class MetadataLoad implements ShellTask {
 
         final DateRange now = DateRange.now();
 
-        try (final BufferedReader input = new BufferedReader(open(params.file))) {
+        try (final BufferedReader input = new BufferedReader(open(io, params.file))) {
             String line;
 
             int index = 0;
@@ -123,10 +121,10 @@ public class MetadataLoad implements ShellTask {
 
                 if (total % OUTPUT_STEP == 0) {
                     if (failed > 0) {
-                        out.print('!');
+                        io.out().print('!');
                         failed = 0;
                     } else {
-                        out.print('#');
+                        io.out().print('#');
                     }
 
                     if (total % (OUTPUT_STEP * 20) == 0) {
@@ -139,31 +137,32 @@ public class MetadataLoad implements ShellTask {
                             rate = ((total - ratePosition) * 1000) / (rateNow - rateStart);
                         }
 
-                        out.println(String.format(" %d (%s/s)", total, rate == -1 ? "infinite" : rate));
+                        io.out().println(String.format(" %d (%s/s)", total, rate == -1 ? "infinite" : rate));
                         ratePosition = total;
                         rateStart = rateNow;
                     }
 
-                    out.flush();
+                    io.out().flush();
                 }
             }
         }
 
-        out.println();
-        out.println("Allegedly successful writes: " + (total - failed));
-        out.println("Allegedly failed writes: " + failed);
-        out.flush();
+        io.out().println();
+        io.out().println("Allegedly successful writes: " + (total - failed));
+        io.out().println("Allegedly failed writes: " + failed);
+        io.out().flush();
 
         return async.resolved();
     }
 
 
-    private InputStreamReader open(Path file) throws IOException {
-        final InputStream input = Files.newInputStream(file);
+    private InputStreamReader open(ShellIO io, Path file) throws IOException {
+        final InputStream input = io.newInputStream(file);
 
         // unpack gzip.
-        if (!file.getFileName().toString().endsWith(".gz"))
+        if (!file.getFileName().toString().endsWith(".gz")) {
             return new InputStreamReader(input);
+        }
 
         return new InputStreamReader(new GZIPInputStream(input));
     }

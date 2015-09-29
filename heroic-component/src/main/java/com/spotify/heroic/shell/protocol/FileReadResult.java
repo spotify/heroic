@@ -5,9 +5,11 @@ import lombok.Data;
 
 @AutoSerialize
 @Data
-public class CommandsRequest implements Message {
+public class FileReadResult implements Message {
+    final byte[] data;
+
     @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {
-        return visitor.visitCommandsRequest(this);
+        return visitor.visitFileReadResult(this);
     }
 }

@@ -21,12 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -39,6 +35,7 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -47,6 +44,8 @@ import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.Getter;
+import lombok.ToString;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-entries")
@@ -66,7 +65,7 @@ public class MetadataEntries implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -82,11 +81,11 @@ public class MetadataEntries implements ShellTask {
                 final long count = c.getCount();
 
                 for (final MetadataEntry e : entries) {
-                    out.println(String.format("%d/%d: %s", i++, count, e));
-                    out.flush();
+                    io.out().println(String.format("%d/%d: %s", i++, count, e));
+                    io.out().flush();
                 }
 
-                out.println(String.format("%d entrie(s)", (i - 1)));
+                io.out().println(String.format("%d entrie(s)", (i - 1)));
                 return null;
             }
         });

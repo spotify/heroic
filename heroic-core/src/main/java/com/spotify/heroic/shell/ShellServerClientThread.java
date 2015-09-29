@@ -1,31 +1,28 @@
 package com.spotify.heroic.shell;
 
-import java.io.CharArrayWriter;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Writer;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
+import com.spotify.heroic.shell.protocol.Acknowledge;
+import com.spotify.heroic.shell.protocol.Close;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
-import com.spotify.heroic.shell.protocol.CommandOutput;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
 import com.spotify.heroic.shell.protocol.CommandsResponse;
-import com.spotify.heroic.shell.protocol.EndOfCommand;
-import com.spotify.heroic.shell.protocol.Request;
-import com.spotify.heroic.shell.protocol.Response;
-import com.spotify.heroic.shell.protocol.RunTaskRequest;
+import com.spotify.heroic.shell.protocol.CommandDone;
+import com.spotify.heroic.shell.protocol.Message;
+import com.spotify.heroic.shell.protocol.EvaluateRequest;
 
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.FutureFinished;
 import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.SerialWriter;
-import eu.toolchain.serializer.Serializer;
+import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.StreamSerialWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,13 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 class ShellServerClientThread implements Runnable {
     final Socket socket;
-    final ShellServerConnection connection;
-    final Collection<CoreTaskDefinition> commands;
-
-    final ShellProtocol protocol = new ShellProtocol();
-
-    final Serializer<Request> requestSerializer = protocol.buildRequest();
-    final Serializer<Response> responseSerializer = protocol.buildResponse();
+    final ShellTasks tasks;
+    final Collection<ShellTaskDefinition> available;
+    final SerializerFramework serializer;
 
     @Override
     public void run() {
@@ -59,106 +52,68 @@ class ShellServerClientThread implements Runnable {
 
     void doRun() throws Exception {
         try (final InputStream input = socket.getInputStream()) {
-            final SerialReader reader = protocol.framework().readStream(input);
+            final SerialReader reader = serializer.readStream(input);
 
             try (final OutputStream output = socket.getOutputStream()) {
-                final StreamSerialWriter writer = protocol.framework().writeStream(output);
-                final PrintWriter out = setupPrintWriter(writer);
+                final AtomicBoolean running = new AtomicBoolean(true);
+                final StreamSerialWriter writer = serializer.writeStream(output);
+                final ServerConnection ch = new ServerConnection(serializer, reader, writer);
 
-                while (true) {
-                    final Request request;
+                final Message.Visitor<Void> visitor = new SimpleMessageVisitor<Void>() {
+                    @Override
+                    public Void visitCommandsRequest(CommandsRequest message) throws Exception {
+                        final List<CommandDefinition> commands = new ArrayList<>();
 
-                    try {
-                        request = requestSerializer.deserialize(reader);
-                        handleRequest(writer, request, out);
-                        output.flush();
-                    } catch (EOFException e) {
-                        log.info("closed connection");
-                        break;
+                        for (final ShellTaskDefinition def : available) {
+                            commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
+                        }
+
+                        ch.send(new CommandsResponse(commands));
+                        return null;
                     }
+
+                    @Override
+                    public Void visitRunTaskRequest(EvaluateRequest message) throws Exception {
+                        log.info("Run task: {}", message);
+
+                        tasks.evaluate(message.getCommand(), ch).on(new FutureDone<Void>() {
+                            @Override
+                            public void failed(Throwable cause) throws Exception {
+                                log.error("Command Failed", cause);
+                                ch.out().println("Command failed");
+                                cause.printStackTrace(ch.out());
+                            }
+
+                            @Override
+                            public void resolved(Void result) throws Exception {
+                            }
+
+                            @Override
+                            public void cancelled() throws Exception {
+                                ch.out().println("Command cancelled");
+                            }
+                        }).on((FutureFinished) ch::close);
+
+                        return null;
+                    }
+
+                    @Override
+                    public Void visitCloseMessage(Close message) throws Exception {
+                        running.set(false);
+                        return null;
+                    }
+
+                    @Override
+                    protected Void visitUnknown(Message message) throws Exception {
+                        throw new RuntimeException("Unhanded message: " + message);
+                    }
+                };
+
+                while (running.get()) {
+                    ch.receive().visit(visitor);
+                    output.flush();
                 }
             }
         }
-    }
-
-    PrintWriter setupPrintWriter(final StreamSerialWriter writer) {
-        return new PrintWriter(new Writer() {
-            CharArrayWriter array = new CharArrayWriter();
-
-            @Override
-            public void close() throws IOException {
-            }
-
-            @Override
-            public void flush() throws IOException {
-                final char[] data = array.toCharArray();
-
-                responseSerializer.serialize(writer, new CommandOutput(data));
-                writer.flush();
-
-                array = new CharArrayWriter();
-            }
-
-            @Override
-            public void write(char[] cbuf, int off, int len) throws IOException {
-                array.write(cbuf, off, len);
-            }
-        });
-    }
-
-    void handleRequest(final StreamSerialWriter writer, Request request, PrintWriter out) throws Exception {
-        if (request instanceof CommandsRequest) {
-            handleCommandsRequest(writer, (CommandsRequest) request);
-            return;
-        }
-
-        if (request instanceof RunTaskRequest) {
-            handleRunTask(writer, (RunTaskRequest) request, out);
-            return;
-        }
-
-        log.error("Unexpected message {}, closing connection", request);
-        socket.close();
-    }
-
-    void handleCommandsRequest(final StreamSerialWriter writer, final CommandsRequest request) throws IOException {
-        final List<CommandDefinition> commands = new ArrayList<>();
-
-        for (final CoreTaskDefinition def : this.commands) {
-            commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
-        }
-
-        responseSerializer.serialize(writer, new CommandsResponse(commands));
-        writer.flush();
-    }
-
-    void handleRunTask(final StreamSerialWriter writer, final RunTaskRequest request, final PrintWriter out) throws Exception {
-        log.info("Run task: {}", request);
-
-        connection.runTask(request.getCommand(), out).on(new FutureDone<Void>() {
-            @Override
-            public void failed(Throwable cause) throws Exception {
-                out.println("Command failed");
-                cause.printStackTrace(out);
-                out.flush();
-            }
-
-            @Override
-            public void resolved(Void result) throws Exception {
-                out.flush();
-            }
-
-            @Override
-            public void cancelled() throws Exception {
-                out.println("Command cancelled");
-                out.flush();
-            }
-        }).on(new FutureFinished() {
-            @Override
-            public void finished() throws Exception {
-                responseSerializer.serialize(writer, new EndOfCommand());
-                writer.flush();
-            }
-        });
     }
 }

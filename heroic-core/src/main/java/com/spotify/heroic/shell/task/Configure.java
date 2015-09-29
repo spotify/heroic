@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +30,7 @@ import com.google.inject.Inject;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -59,7 +59,7 @@ public class Configure implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final List<AsyncFuture<Void>> futures = new ArrayList<>();

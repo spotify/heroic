@@ -47,6 +47,7 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -88,7 +89,7 @@ public class Write implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final Series series;
@@ -108,15 +109,15 @@ public class Write implements ShellTask {
 
         final ImmutableList.Builder<MetricCollection> groups = ImmutableList.builder();
 
-        out.println("series: " + series.toString());
+        io.out().println("series: " + series.toString());
 
         if (!points.isEmpty()) {
             int i = 0;
 
-            out.println(String.format("Writing %d point(s):", points.size()));
+            io.out().println(String.format("Writing %d point(s):", points.size()));
 
             for (final Metric p : points) {
-                out.println(String.format("%d: %s", i++, p));
+                io.out().println(String.format("%d: %s", i++, p));
             }
 
             groups.add(MetricCollection.points(points));
@@ -125,16 +126,16 @@ public class Write implements ShellTask {
         if (!events.isEmpty()) {
             int i = 0;
 
-            out.println(String.format("Writing %d event(s):", events.size()));
+            io.out().println(String.format("Writing %d event(s):", events.size()));
 
             for (final Metric p : events) {
-                out.println(String.format("%d: %s", i++, p));
+                io.out().println(String.format("%d: %s", i++, p));
             }
 
             groups.add(MetricCollection.events(events));
         }
 
-        out.flush();
+        io.out().flush();
 
         List<AsyncFuture<Void>> writes = new ArrayList<>();
 
@@ -142,15 +143,15 @@ public class Write implements ShellTask {
 
         if (!params.noMetadata) {
             final MetadataBackend m = metadata.useGroup(params.group);
-            writes.add(m.write(series, range).transform(reportResult("metadata", out)));
+            writes.add(m.write(series, range).transform(reportResult("metadata", io.out())));
         }
 
         if (!params.noSuggest) {
             final SuggestBackend s = suggest.useGroup(params.group);
-            writes.add(s.write(series, range).transform(reportResult("suggest", out)));
+            writes.add(s.write(series, range).transform(reportResult("suggest", io.out())));
         }
 
-        writes.add(g.write(new WriteMetric(series, groups.build())).transform(reportResult("metrics", out)));
+        writes.add(g.write(new WriteMetric(series, groups.build())).transform(reportResult("metrics", io.out())));
 
         return async.collectAndDiscard(writes);
     }

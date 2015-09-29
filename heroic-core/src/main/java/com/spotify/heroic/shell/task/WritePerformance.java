@@ -31,9 +31,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import lombok.Data;
-import lombok.ToString;
-
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,12 +43,13 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -61,6 +59,8 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.ToString;
 
 @TaskUsage("Perform performance testing")
 @TaskName("write-performance")
@@ -81,7 +81,7 @@ public class WritePerformance implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final Date now = new Date();
@@ -121,25 +121,25 @@ public class WritePerformance implements ShellTask {
 
                 final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);
 
-                out.println(String.format("Read data, waiting for %d write batches...", writes.size()));
-                out.flush();
+                io.out().println(String.format("Read data, waiting for %d write batches...", writes.size()));
+                io.out().flush();
 
-                final AsyncFuture<CollectedTimes> results = collectWrites(out, writes);
+                final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes);
 
                 final CollectedTimes times = results.get();
                 final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
 
-                out.println(String.format("Failed: %d write(s)", times.errors));
-                out.println(String.format("Time: %.2fs", totalRuntime));
-                out.println(String.format("Write/s: %.2f", totalWrites / totalRuntime));
-                out.println();
+                io.out().println(String.format("Failed: %d write(s)", times.errors));
+                io.out().println(String.format("Time: %.2fs", totalRuntime));
+                io.out().println(String.format("Write/s: %.2f", totalWrites / totalRuntime));
+                io.out().println();
 
-                printHistogram("Overall", out, times.runTimes, TimeUnit.MILLISECONDS);
-                out.println();
+                printHistogram("Overall", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
+                io.out().println();
 
-                printHistogram("Execution Time", out, times.executionTimes, TimeUnit.NANOSECONDS);
+                printHistogram("Execution Time", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
 
-                out.flush();
+                io.out().flush();
                 return null;
             }
         });

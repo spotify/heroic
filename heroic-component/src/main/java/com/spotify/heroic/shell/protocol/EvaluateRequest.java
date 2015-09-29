@@ -1,13 +1,17 @@
 package com.spotify.heroic.shell.protocol;
 
+import java.util.List;
+
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 
 @AutoSerialize
 @Data
-public class CommandsRequest implements Message {
+public class EvaluateRequest implements Message {
+    final List<String> command;
+
     @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {
-        return visitor.visitCommandsRequest(this);
+        return visitor.visitRunTaskRequest(this);
     }
 }

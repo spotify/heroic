@@ -21,12 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -39,6 +35,7 @@ import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -49,6 +46,8 @@ import com.spotify.heroic.suggest.SuggestManager;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.Getter;
+import lombok.ToString;
 
 @TaskUsage("Migrate metadata with the given query to suggestion backend")
 @TaskName("metadata-migrate-suggestions")
@@ -74,7 +73,7 @@ public class MetadataMigrateSuggestions implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -82,17 +81,17 @@ public class MetadataMigrateSuggestions implements ShellTask {
         final MetadataBackend group = metadata.useGroup(params.group);
         final SuggestBackend target = suggest.useGroup(params.target);
 
-        out.println("Migrating:");
-        out.println("  from (metadata): " + group);
-        out.println("    to  (suggest): " + target);
+        io.out().println("Migrating:");
+        io.out().println("  from (metadata): " + group);
+        io.out().println("    to  (suggest): " + target);
 
         return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
             @Override
             public Void transform(CountSeries c) throws Exception {
-                out.println(String.format("Migrating %d entrie(s)", c.getCount()));
+                io.out().println(String.format("Migrating %d entrie(s)", c.getCount()));
 
                 if (!params.ok) {
-                    out.println("Migration stopped, use --ok to proceed");
+                    io.out().println("Migration stopped, use --ok to proceed");
                     return null;
                 }
 
@@ -104,20 +103,20 @@ public class MetadataMigrateSuggestions implements ShellTask {
 
                 for (final MetadataEntry e : entries) {
                     if (index % DOT_LIMIT == 0) {
-                        out.print(".");
-                        out.flush();
+                        io.out().print(".");
+                        io.out().flush();
                     }
 
                     if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
-                        out.println(String.format(" %d/%d", index, count));
-                        out.flush();
+                        io.out().println(String.format(" %d/%d", index, count));
+                        io.out().flush();
                     }
 
                     ++index;
                     target.write(e.getSeries(), filter.getRange());
                 }
 
-                out.println(String.format(" %d/%d", index, count));
+                io.out().println(String.format(" %d/%d", index, count));
                 return null;
             }
         });

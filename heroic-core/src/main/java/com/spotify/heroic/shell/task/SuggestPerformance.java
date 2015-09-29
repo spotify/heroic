@@ -3,7 +3,6 @@ package com.spotify.heroic.shell.task;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -20,12 +19,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -40,6 +33,7 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskName;
@@ -52,6 +46,11 @@ import com.spotify.heroic.suggest.TagSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @TaskUsage("Execute a set of suggest performance tests")
@@ -76,7 +75,7 @@ public class SuggestPerformance implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final SuggestBackend s = suggest.useGroup(params.group);
@@ -87,7 +86,7 @@ public class SuggestPerformance implements ShellTask {
 
         final DateRange range = DateRange.now();
 
-        try (final InputStream input = open(params.file)) {
+        try (final InputStream input = open(io, params.file)) {
             final TestSuite suite = mapper.readValue(input, TestSuite.class);
 
             for (final TestCase c : suite.getTests()) {
@@ -95,7 +94,7 @@ public class SuggestPerformance implements ShellTask {
                 final RangeFilter filter = new RangeFilter(context, range, params.limit);
 
                 for (final int concurrency : suite.getConcurrency()) {
-                    tests.add(setupTest(out, c.getContext(), concurrency, filter, c, s));
+                    tests.add(setupTest(io.out(), c.getContext(), concurrency, filter, c, s));
                 }
             }
         }
@@ -109,8 +108,8 @@ public class SuggestPerformance implements ShellTask {
                     result.getMismatches(), result.getMatches(), result.getCount(),
                     result.getTimes());
 
-            out.println(m.writeValueAsString(output));
-            out.flush();
+            io.out().println(m.writeValueAsString(output));
+            io.out().flush();
         }
 
         return async.resolved();
@@ -216,12 +215,13 @@ public class SuggestPerformance implements ShellTask {
         };
     }
 
-    private InputStream open(Path file) throws IOException {
-        final InputStream input = Files.newInputStream(file);
+    private InputStream open(ShellIO io, Path file) throws IOException {
+        final InputStream input = io.newInputStream(file);
 
         // unpack gzip.
-        if (!file.getFileName().toString().endsWith(".gz"))
+        if (!file.getFileName().toString().endsWith(".gz")) {
             return input;
+        }
 
         return new GZIPInputStream(input);
     }

@@ -23,7 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.io.PrintWriter;
 import java.util.Iterator;
 
 import org.kohsuke.args4j.Option;
@@ -38,6 +37,7 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -66,7 +66,7 @@ public class Keys implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final BackendKey start;
@@ -96,8 +96,8 @@ public class Keys implements ShellTask {
                                 continue;
                             }
 
-                            out.println(mapper.writeValueAsString(next));
-                            out.flush();
+                            io.out().println(mapper.writeValueAsString(next));
+                            io.out().flush();
                         }
 
                         return null;

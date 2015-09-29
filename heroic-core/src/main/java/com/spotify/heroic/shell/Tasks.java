@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell;
 
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,6 +56,7 @@ import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.Query;
+import com.spotify.heroic.shell.task.ReadWriteTest;
 import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
@@ -67,10 +67,8 @@ import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
 
-import eu.toolchain.async.AsyncFuture;
-
 public final class Tasks {
-    static final List<CoreTaskDefinition> available = new ArrayList<>();
+    static final List<ShellTaskDefinition> available = new ArrayList<>();
 
     static {
         available.add(shellTask(Configure.class));
@@ -97,20 +95,21 @@ public final class Tasks {
         available.add(shellTask(SuggestTagKeyCount.class));
         available.add(shellTask(SuggestPerformance.class));
         available.add(shellTask(Query.class));
+        available.add(shellTask(ReadWriteTest.class));
     }
 
-    public static Collection<CoreTaskDefinition> available() {
+    public static Collection<ShellTaskDefinition> available() {
         return available;
     }
 
-    static CoreTaskDefinition shellTask(final Class<? extends ShellTask> task) {
+    static ShellTaskDefinition shellTask(final Class<? extends ShellTask> task) {
         final String usage = taskUsage(task);
 
         final String name = name(task);
         final List<String> names = allNames(task);
         final List<String> aliases = aliases(task);
 
-        return new CoreTaskDefinition() {
+        return new ShellTaskDefinition() {
             @Override
             public String name() {
                 return name;
@@ -132,25 +131,8 @@ public final class Tasks {
             }
 
             @Override
-            public CoreShellTaskDefinition setup(final HeroicCoreInjector core) throws Exception {
-                final ShellTask instance = core.inject(newInstance(task));
-
-                return new CoreShellTaskDefinition() {
-                    @Override
-                    public TaskDefinition setup(ShellInterface shell, TaskContext ctx) {
-                        return new TaskDefinition() {
-                            @Override
-                            public TaskParameters params() {
-                                return instance.params();
-                            }
-
-                            @Override
-                            public AsyncFuture<Void> run(PrintWriter out, TaskParameters params) throws Exception {
-                                return instance.run(out, params);
-                            }
-                        };
-                    }
-                };
+            public ShellTask setup(final HeroicCoreInjector core) throws Exception {
+                return core.inject(newInstance(task));
             };
         };
     }

@@ -21,12 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Getter;
-import lombok.ToString;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -37,6 +33,7 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -47,6 +44,8 @@ import com.spotify.heroic.suggest.TagKeyCount;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.Getter;
+import lombok.ToString;
 
 @TaskUsage("Get approximate cardinality counts for each tag key")
 @TaskName("suggest-tag-key-count")
@@ -70,7 +69,7 @@ public class SuggestTagKeyCount implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
@@ -81,7 +80,7 @@ public class SuggestTagKeyCount implements ShellTask {
                 int i = 0;
 
                 for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
-                    out.println(String.format("%s: %s", i++, value));
+                    io.out().println(String.format("%s: %s", i++, value));
                 }
 
                 return null;

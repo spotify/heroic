@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +38,7 @@ import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
@@ -64,7 +64,7 @@ public class Query implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final PrintWriter out, final TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
         final String queryString = params.query.stream().collect(Collectors.joining(" "));
@@ -79,16 +79,16 @@ public class Query implements ShellTask {
             @Override
             public Void transform(QueryResult result) throws Exception {
                 for (final RequestError e : result.getErrors()) {
-                    out.println(String.format("ERR: %s", e.toString()));
+                    io.out().println(String.format("ERR: %s", e.toString()));
                 }
 
                 for (final ShardedResultGroup resultGroup : result.getGroups()) {
                     final MetricCollection group = resultGroup.getGroup();
 
-                    out.println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
+                    io.out().println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
                             resultGroup.getTags()));
-                    out.println(indent.writeValueAsString(group.getData()));
-                    out.flush();
+                    io.out().println(indent.writeValueAsString(group.getData()));
+                    io.out().flush();
                 }
 
                 return null;
