@@ -44,8 +44,8 @@ public class ShellServer implements LifeCycle {
 
     @Override
     public AsyncFuture<Void> start() {
-        return state.start().lazyTransform((s) -> {
-            return state.doto((state) -> {
+        return state.start().lazyTransform(s ->
+            state.doto(state -> {
                 final Thread thread = new Thread(() -> {
                     try {
                         doRun(state);
@@ -59,8 +59,8 @@ public class ShellServer implements LifeCycle {
                 thread.setName("remote-shell-server");
                 thread.start();
                 return async.resolved();
-            });
-        });
+            })
+        );
     }
 
     @Override
@@ -89,6 +89,8 @@ public class ShellServer implements LifeCycle {
     }
 
     void doRun(ShellServerState state) {
+        log.info("Running shell server...");
+
         while (true) {
             final Socket socket;
 

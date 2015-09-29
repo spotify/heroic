@@ -30,13 +30,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
-import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
@@ -64,6 +64,7 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     private final AsyncFramework async;
     private final Groups groups;
 
+    @Inject
     public MemoryBackend(final AsyncFramework async, final Groups groups) {
         super(async);
         this.async = async;

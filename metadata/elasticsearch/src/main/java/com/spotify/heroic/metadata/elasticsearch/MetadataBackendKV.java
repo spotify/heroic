@@ -565,8 +565,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
                     }
 
                     @Override
-                    public Class<MetadataBackend> type() {
-                        return MetadataBackend.class;
+                    public Class<? extends MetadataBackend> type() {
+                        return MetadataBackendKV.class;
                     }
                 };
             }

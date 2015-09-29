@@ -20,7 +20,9 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class ShellServerModule extends PrivateModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;
@@ -42,6 +44,7 @@ public class ShellServerModule extends PrivateModule {
                 return async.call(new Callable<ShellServerState>() {
                     @Override
                     public ShellServerState call() throws Exception {
+                        log.info("Binding to {}:{}", host, port);
                         final ServerSocket serverSocket = new ServerSocket();
                         serverSocket.bind(new InetSocketAddress(host, port));
                         final Collection<CoreTaskDefinition> commands = Tasks.available();
@@ -88,9 +91,9 @@ public class ShellServerModule extends PrivateModule {
         return new Builder();
     }
 
-    static class Builder {
+    public static class Builder {
         private String host;
-        private int port;
+        private int port = DEFAULT_PORT;
 
         public Builder host(String host) {
             this.host = checkNotNull(host, "host");
