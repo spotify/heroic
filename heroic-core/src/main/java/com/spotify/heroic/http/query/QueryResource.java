@@ -55,7 +55,6 @@ import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.ShardTrace;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
 import lombok.Data;
 
 @Path("/query")
@@ -108,21 +107,7 @@ public class QueryResource {
         final QueryManager.Group group = streamQuery.getGroup();
         final AsyncFuture<QueryResult> callback = group.query(q);
 
-        callback.on(new FutureDone<Object>() {
-            @Override
-            public void failed(Throwable cause) throws Exception {
-            }
-
-            @Override
-            public void resolved(Object result) throws Exception {
-                // invalidate on successful response to free up resources quicker.
-                streamQueries.invalidate(id);
-            }
-
-            @Override
-            public void cancelled() throws Exception {
-            }
-        });
+        callback.onResolved(r -> streamQueries.invalidate(id));
 
         bindMetricsResponse(response, callback);
     }

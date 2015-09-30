@@ -27,8 +27,6 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import lombok.extern.slf4j.Slf4j;
-
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -46,7 +44,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
-@Slf4j
 public class IngestionManagerImpl implements IngestionManager {
     @Inject
     protected AsyncFramework async;
@@ -158,8 +155,8 @@ public class IngestionManagerImpl implements IngestionManager {
          */
         return async
           .collect(doWriteMetadataMerged(write, metadata, suggest), WriteResult.merger())
-          .on(reporter.reportMetadataWrite())
-          .cancelled(HANDLE_CANCELLED);
+          .onDone(reporter.reportMetadataWrite())
+          .catchCancelled(HANDLE_CANCELLED);
         // @formatter:on
     }
 

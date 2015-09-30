@@ -34,7 +34,6 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -44,7 +43,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -75,20 +73,17 @@ public class MetadataFetch implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return metadata.useGroup(params.group).findSeries(filter).transform(new Transform<FindSeries, Void>() {
-            @Override
-            public Void transform(FindSeries result) throws Exception {
-                int i = 0;
+        return metadata.useGroup(params.group).findSeries(filter).directTransform(result -> {
+            int i = 0;
 
-                for (final Series series : result.getSeries()) {
-                    io.out().println(String.format("%s: %s", i++, series));
+            for (final Series series : result.getSeries()) {
+                io.out().println(String.format("%s: %s", i++, series));
 
-                    if (i >= params.limit)
-                        break;
-                }
-
-                return null;
+                if (i >= params.limit)
+                    break;
             }
+
+            return null;
         });
     }
 

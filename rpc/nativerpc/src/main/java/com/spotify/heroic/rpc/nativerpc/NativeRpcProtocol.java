@@ -22,41 +22,22 @@
 package com.spotify.heroic.rpc.nativerpc;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.Timer;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
-
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.name.Named;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
@@ -65,15 +46,12 @@ import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
-import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
@@ -81,8 +59,12 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.Timer;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @ToString(of = {})
 @RequiredArgsConstructor
@@ -128,12 +110,8 @@ public class NativeRpcProtocol implements RpcProtocol {
         final NativeRpcClient client = new NativeRpcClient(async, workerGroup, maxFrameSize, address, mapper, timer,
                 sendTimeout, heartbeatReadInterval);
 
-        return client.request(METADATA, NodeMetadata.class).transform(new Transform<NodeMetadata, ClusterNode>() {
-            @Override
-            public ClusterNode transform(final NodeMetadata metadata) throws Exception {
-                return new NativeRpcClusterNode(client, metadata);
-            }
-        });
+        return client.request(METADATA, NodeMetadata.class)
+                .directTransform(m -> new NativeRpcClusterNode(client, m));
     }
 
     @RequiredArgsConstructor

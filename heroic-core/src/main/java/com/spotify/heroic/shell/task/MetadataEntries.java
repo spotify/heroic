@@ -31,7 +31,6 @@ import com.google.inject.Inject;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -43,7 +42,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -72,22 +70,19 @@ public class MetadataEntries implements ShellTask {
 
         final MetadataBackend group = metadata.useGroup(params.group);
 
-        return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
-            @Override
-            public Void transform(CountSeries c) throws Exception {
-                Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+        return group.countSeries(filter).directTransform(c -> {
+            Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
 
-                int i = 1;
-                final long count = c.getCount();
+            int i = 1;
+            final long count = c.getCount();
 
-                for (final MetadataEntry e : entries) {
-                    io.out().println(String.format("%d/%d: %s", i++, count, e));
-                    io.out().flush();
-                }
-
-                io.out().println(String.format("%d entrie(s)", (i - 1)));
-                return null;
+            for (final MetadataEntry e : entries) {
+                io.out().println(String.format("%d/%d: %s", i++, count, e));
+                io.out().flush();
             }
+
+            io.out().println(String.format("%d entrie(s)", (i - 1)));
+            return null;
         });
     }
 

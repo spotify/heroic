@@ -98,8 +98,6 @@ public class MetadataLoad implements ShellTask {
         try (final BufferedReader input = new BufferedReader(open(io, params.file))) {
             String line;
 
-            int index = 0;
-
             while ((line = input.readLine()) != null) {
                 if (rateLimiter.isPresent()) {
                     rateLimiter.get().acquire();

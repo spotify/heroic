@@ -23,8 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.List;
-
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -44,7 +42,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.ToString;
 
@@ -67,21 +64,17 @@ public class SerializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final BackendKey key = mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
+        final BackendKey backendKey = mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
 
-        return metrics.useGroup(params.group).serializeKeyToHex(key)
-                .transform(new Transform<List<String>, Void>() {
-                    @Override
-                    public Void transform(List<String> result) throws Exception {
-                        int i = 0;
+        return metrics.useGroup(params.group).serializeKeyToHex(backendKey).directTransform(result -> {
+            int i = 0;
 
-                        for (final String key : result) {
-                            io.out().println(String.format("%d: %s", i++, key));
-                        }
+            for (final String key : result) {
+                io.out().println(String.format("%d: %s", i++, key));
+            }
 
-                        return null;
-                    }
-                });
+            return null;
+        });
     }
 
     @Data

@@ -48,7 +48,6 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Collector;
-import eu.toolchain.async.FutureFinished;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
@@ -174,34 +173,24 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
         final AsyncFuture<Void> startup;
 
         if (!options.isOneshot()) {
-            startup = this.context.startedFuture().transform(new Transform<Void, Void>() {
-                @Override
-                public Void transform(Void result) throws Exception {
-                    scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES, new Task() {
-                        @Override
-                        public void run() throws Exception {
-                            refresh().get();
-                        }
-                    });
+            startup = context.startedFuture().directTransform(result -> {
+                scheduler.periodically("cluster-refresh", 1, TimeUnit.MINUTES, new Task() {
+                    @Override
+                    public void run() throws Exception {
+                        refresh().get();
+                    }
+                });
 
-                    return null;
-                }
+                return null;
             });
         } else {
-            startup = this.context.startedFuture();
+            startup = context.startedFuture();
         }
 
-        startup.lazyTransform((Void result) -> 
-            refresh().catchFailed((Throwable e) -> {
-                log.error("initial metadata refresh failed", e);
-                return null;
-            })
-        ).on(new FutureFinished() {
-            @Override
-            public void finished() throws Exception {
-                initialized.resolve(null);
-            }
-        });
+        startup.lazyTransform(result -> refresh().catchFailed((Throwable e) -> {
+            log.error("initial metadata refresh failed", e);
+            return null;
+        })).onFinished(() -> initialized.resolve(null));
 
         return async.resolved(null);
     }
@@ -325,8 +314,8 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
                 final List<AsyncFuture<MaybeError<NodeRegistryEntry>>> callbacks = new ArrayList<>(nodes.size());
 
                 for (final URI uri : nodes) {
-                    callbacks.add(resolve(uri).transform(MaybeError.<NodeRegistryEntry> transformJust()).catchFailed(
-                            handleError(uri)));
+                    callbacks.add(
+                            resolve(uri).directTransform(MaybeError.transformJust()).catchFailed(handleError(uri)));
                 }
 
                 return async.collect(callbacks, joinMaybeErrorsCollection);
@@ -397,12 +386,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
 
                 final LocalClusterNode l = local.get();
 
-                return node.close().transform(new Transform<Void, NodeRegistryEntry>() {
-                    @Override
-                    public NodeRegistryEntry transform(Void result) throws Exception {
-                        return new NodeRegistryEntry(l, l.metadata());
-                    }
-                });
+                return node.close().directTransform(r -> new NodeRegistryEntry(l, l.metadata()));
             }
 
             return async.resolved(new NodeRegistryEntry(node, node.metadata()));

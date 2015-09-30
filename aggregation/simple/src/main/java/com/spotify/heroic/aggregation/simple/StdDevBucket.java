@@ -24,12 +24,11 @@ package com.spotify.heroic.aggregation.simple;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-import lombok.RequiredArgsConstructor;
-
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that calculates the standard deviation of all buckets seen.

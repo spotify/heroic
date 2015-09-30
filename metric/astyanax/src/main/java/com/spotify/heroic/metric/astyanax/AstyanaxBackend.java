@@ -164,7 +164,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             }
         };
 
-        return async.call(resolver, pools.write()).on(reporter.reportWriteBatch()).on(k.releasing());
+        return async.call(resolver, pools.write()).onDone(reporter.reportWriteBatch()).onFinished(k::release);
     }
 
     /**
@@ -200,10 +200,9 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 return datapoints.size();
             }
-        }, pools.read()).on(k.releasing());
+        }, pools.read()).onFinished(k::release);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             FetchQuotaWatcher watcher) {
@@ -245,12 +244,12 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                             final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
                             return new FetchData(series, times, groups);
                         }
-                    }, pools.read()).on(reporter.reportFetch()));
+                    }, pools.read()).onDone(reporter.reportFetch()));
                 }
 
-                return async.collect(queries, FetchData.<Point> merger(series));
+                return async.collect(queries, FetchData.merger(series));
             }
-        }).on(k.releasing());
+        }).onFinished(k::release);
     }
 
     @Override
@@ -276,7 +275,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 return new BackendKeySet(keys);
             }
-        }, pools.read()).on(k.releasing());
+        }, pools.read()).onFinished(k::release);
     }
 
     @Override

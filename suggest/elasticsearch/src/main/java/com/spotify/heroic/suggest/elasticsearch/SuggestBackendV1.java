@@ -683,7 +683,6 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
         public static final String TAGS_KEY_RAW = "key.raw";
         public static final String TAGS_VALUE = "value";
         public static final String TAGS_VALUE_RAW = "value.raw";
-        public static final String ID = "id";
 
         public static void buildMetadataDoc(final XContentBuilder b, Series series) throws IOException {
             b.field(METADATA_KEY, series.getKey());
@@ -747,7 +746,6 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
         public static final class FilterContext {
             private final String seriesKey;
             private final String tags;
-            private final String seriesId;
             private final String tagsKey;
             private final String tagsValue;
 
@@ -758,7 +756,6 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
             private FilterContext(List<String> path) {
                 this.seriesKey = path(path, KEY);
                 this.tags = path(path, TAGS);
-                this.seriesId = path(path, ID);
                 this.tagsKey = path(path, TAGS, TAGS_KEY_RAW);
                 this.tagsValue = path(path, TAGS, TAGS_VALUE_RAW);
             }
@@ -769,26 +766,6 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
             private String path(List<String> path, String tailN, String tail) {
                 return StringUtils.join(ImmutableList.builder().addAll(path).add(tailN).add(tail).build(), '.');
-            }
-
-            public String seriesKey() {
-                return seriesKey;
-            }
-
-            public String tags() {
-                return tags;
-            }
-
-            public String tagsKey() {
-                return tagsKey;
-            }
-
-            public String tagsValue() {
-                return tagsValue;
-            }
-
-            public String seriesId() {
-                return seriesId;
             }
 
             public FilterBuilder filter(final Filter filter) {

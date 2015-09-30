@@ -143,37 +143,34 @@ public class Write implements ShellTask {
 
         if (!params.noMetadata) {
             final MetadataBackend m = metadata.useGroup(params.group);
-            writes.add(m.write(series, range).transform(reportResult("metadata", io.out())));
+            writes.add(m.write(series, range).directTransform(reportResult("metadata", io.out())));
         }
 
         if (!params.noSuggest) {
             final SuggestBackend s = suggest.useGroup(params.group);
-            writes.add(s.write(series, range).transform(reportResult("suggest", io.out())));
+            writes.add(s.write(series, range).directTransform(reportResult("suggest", io.out())));
         }
 
-        writes.add(g.write(new WriteMetric(series, groups.build())).transform(reportResult("metrics", io.out())));
+        writes.add(g.write(new WriteMetric(series, groups.build())).directTransform(reportResult("metrics", io.out())));
 
         return async.collectAndDiscard(writes);
     }
 
     private Transform<WriteResult, Void> reportResult(final String title, final PrintWriter out) {
-        return new Transform<WriteResult, Void>() {
-            @Override
-            public Void transform(WriteResult result) throws Exception {
-                synchronized (out) {
-                    int i = 0;
+        return (result) -> {
+            synchronized (out) {
+                int i = 0;
 
-                    out.println(String.format("%s: Wrote %d", title, result.getTimes().size()));
+                out.println(String.format("%s: Wrote %d", title, result.getTimes().size()));
 
-                    for (final long time : result.getTimes()) {
-                        out.println(String.format("  #%03d %s", i++, Tasks.formatTimeNanos(time)));
-                    }
-
-                    out.flush();
+                for (final long time : result.getTimes()) {
+                    out.println(String.format("  #%03d %s", i++, Tasks.formatTimeNanos(time)));
                 }
 
-                return null;
+                out.flush();
             }
+
+            return null;
         };
     }
 

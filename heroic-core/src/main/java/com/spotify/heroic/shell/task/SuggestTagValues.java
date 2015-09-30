@@ -43,7 +43,6 @@ import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -75,17 +74,14 @@ public class SuggestTagValues implements ShellTask {
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
         return suggest.useGroup(params.group).tagValuesSuggest(filter, params.exclude, params.groupLimit)
-                .transform(new Transform<TagValuesSuggest, Void>() {
-                    @Override
-                    public Void transform(TagValuesSuggest result) throws Exception {
-                        int i = 0;
+                .directTransform(result -> {
+                    int i = 0;
 
-                        for (final TagValuesSuggest.Suggestion suggestion : result.getSuggestions()) {
-                            io.out().println(String.format("%s: %s", i++, suggestion));
-                        }
-
-                        return null;
+                    for (final TagValuesSuggest.Suggestion suggestion : result.getSuggestions()) {
+                        io.out().println(String.format("%s: %s", i++, suggestion));
                     }
+
+                    return null;
                 });
     }
 

@@ -18,7 +18,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
     @Override
     public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit, final QueryOptions options) {
-        return keys(start, limit, options).transform(new Transform<BackendKeySet, Iterator<BackendKey>>() {
+        return keys(start, limit, options).directTransform(new Transform<BackendKeySet, Iterator<BackendKey>>() {
             @Override
             public Iterator<BackendKey> transform(final BackendKeySet initialResult) throws Exception {
                 if (initialResult.isEmpty()) {

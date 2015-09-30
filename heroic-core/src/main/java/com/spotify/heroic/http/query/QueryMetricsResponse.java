@@ -98,6 +98,9 @@ public class QueryMetricsResponse {
                 case SPREAD:
                     writeSpreads(g, resultGroup, tags, group.getDataAs(Spread.class));
                     break;
+                default:
+                    // ignore
+                    break;
                 }
             }
 

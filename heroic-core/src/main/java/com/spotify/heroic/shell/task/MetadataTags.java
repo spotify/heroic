@@ -33,7 +33,6 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -43,7 +42,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -74,12 +72,9 @@ public class MetadataTags implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return metadata.useGroup(params.group).findTags(filter).transform(new Transform<FindTags, Void>() {
-            @Override
-            public Void transform(FindTags result) throws Exception {
-                io.out().println(result.toString());
-                return null;
-            }
+        return metadata.useGroup(params.group).findTags(filter).directTransform(result -> {
+            io.out().println(result.toString());
+            return null;
         });
     }
 

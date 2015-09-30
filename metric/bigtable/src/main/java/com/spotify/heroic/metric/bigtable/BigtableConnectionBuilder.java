@@ -9,9 +9,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-
 import com.google.bigtable.admin.table.v1.ColumnFamily;
 import com.google.bigtable.admin.table.v1.CreateColumnFamilyRequest;
 import com.google.bigtable.admin.table.v1.CreateTableRequest;
@@ -51,7 +48,8 @@ import com.spotify.heroic.metric.bigtable.api.BigtableTableBuilder;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.Transform;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 @RequiredArgsConstructor
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
@@ -268,29 +266,22 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
                 return async.failed(e);
             }
 
-            final Transform<List<Row>, List<BigtableLatestRow>> transform = new Transform<List<Row>, List<BigtableLatestRow>>() {
+            return convert(readRowsAsync).directTransform(result -> {
+                final List<BigtableLatestRow> rows = new ArrayList<>();
 
-                @Override
-                public List<BigtableLatestRow> transform(List<Row> result) throws Exception {
+                for (final Row row : result) {
+                    final List<BigtableLatestColumnFamily> families = new ArrayList<>();
 
-                    final List<BigtableLatestRow> rows = new ArrayList<>();
-
-                    for (final Row row : result) {
-                        final List<BigtableLatestColumnFamily> families = new ArrayList<>();
-
-                        for (final Family family : row.getFamiliesList()) {
-                            final Iterable<BigtableCell> columns = makeColumnIterator(family);
-                            families.add(new BigtableLatestColumnFamily(family.getName(), columns));
-                        }
-
-                        rows.add(new BigtableLatestRow(families));
+                    for (final Family family : row.getFamiliesList()) {
+                        final Iterable<BigtableCell> columns = makeColumnIterator(family);
+                        families.add(new BigtableLatestColumnFamily(family.getName(), columns));
                     }
 
-                    return rows;
+                    rows.add(new BigtableLatestRow(families));
                 }
-            };
 
-            return convert(readRowsAsync).transform(transform);
+                return rows;
+            });
         }
 
         @Override

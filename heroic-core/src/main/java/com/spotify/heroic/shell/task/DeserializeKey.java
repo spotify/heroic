@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.List;
-
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -39,7 +37,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 
 @TaskUsage("Deserialize the given backend key")
@@ -61,19 +58,15 @@ public class DeserializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        return metrics.useGroup(params.group).deserializeKeyFromHex(params.key)
-                .transform(new Transform<List<BackendKey>, Void>() {
-                    @Override
-                    public Void transform(List<BackendKey> result) throws Exception {
-                        int i = 0;
+        return metrics.useGroup(params.group).deserializeKeyFromHex(params.key).directTransform(result -> {
+            int i = 0;
 
-                        for (final BackendKey key : result) {
-                            io.out().println(String.format("%d: %s", i++, key));
-                        }
+            for (final BackendKey key : result) {
+                io.out().println(String.format("%d: %s", i++, key));
+            }
 
-                        return null;
-                    }
-                });
+            return null;
+        });
     }
 
     @ToString

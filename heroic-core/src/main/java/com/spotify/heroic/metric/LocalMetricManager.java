@@ -65,7 +65,6 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
-import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -234,8 +233,8 @@ public class LocalMetricManager implements MetricManager {
                         fetchParallelism);
             };
 
-            return metadata.findSeries(rangeFilter).on(reporter.reportFindSeries()).lazyTransform(transform)
-                    .on(reporter.reportQueryMetrics());
+            return metadata.findSeries(rangeFilter).onDone(reporter.reportFindSeries()).lazyTransform(transform)
+                    .onDone(reporter.reportQueryMetrics());
         }
 
         @Override
@@ -264,7 +263,7 @@ public class LocalMetricManager implements MetricManager {
                 callbacks.add(backend.write(write));
             });
 
-            return async.collect(callbacks, WriteResult.merger()).on(reporter.reportWrite());
+            return async.collect(callbacks, WriteResult.merger()).onDone(reporter.reportWrite());
         }
 
         /**
@@ -284,7 +283,7 @@ public class LocalMetricManager implements MetricManager {
                 callbacks.add(backend.write(writes));
             });
 
-            return async.collect(callbacks, WriteResult.merger()).on(reporter.reportWriteBatch());
+            return async.collect(callbacks, WriteResult.merger()).onDone(reporter.reportWriteBatch());
         }
 
         @Override
@@ -338,11 +337,8 @@ public class LocalMetricManager implements MetricManager {
                 }
             });
 
-            return async.collect(callbacks).transform(new Transform<Collection<Iterator<BackendKey>>, Iterator<BackendKey>>() {
-                @Override
-                public Iterator<BackendKey> transform(Collection<Iterator<BackendKey>> result) throws Exception {
-                    return Iterators.concat(result.iterator());
-                }
+            return async.collect(callbacks).directTransform(result -> {
+                return Iterators.concat(result.iterator());
             });
         }
 
@@ -352,16 +348,14 @@ public class LocalMetricManager implements MetricManager {
 
             runAll((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
 
-            return async.collect(callbacks).transform(new Transform<Collection<List<String>>, List<String>>() {
-                public List<String> transform(Collection<List<String>> result) throws Exception {
-                    final ImmutableList.Builder<String> builder = ImmutableList.builder();
+            return async.collect(callbacks).directTransform(result -> {
+                final ImmutableList.Builder<String> builder = ImmutableList.builder();
 
-                    for (final List<String> k : result) {
-                        builder.addAll(k);
-                    }
+                for (final List<String> k : result) {
+                    builder.addAll(k);
+                }
 
-                    return builder.build();
-                };
+                return builder.build();
             });
         }
 
@@ -372,16 +366,14 @@ public class LocalMetricManager implements MetricManager {
 
             runAll((disabled, backend) -> callbacks.add(backend.deserializeKeyFromHex(key)));
 
-            return async.collect(callbacks).transform(new Transform<Collection<List<BackendKey>>, List<BackendKey>>() {
-                public List<BackendKey> transform(Collection<List<BackendKey>> result) throws Exception {
-                    final ImmutableList.Builder<BackendKey> builder = ImmutableList.builder();
+            return async.collect(callbacks).directTransform(result -> {
+                final ImmutableList.Builder<BackendKey> builder = ImmutableList.builder();
 
-                    for (final List<BackendKey> k : result) {
-                        builder.addAll(k);
-                    }
+                for (final List<BackendKey> k : result) {
+                    builder.addAll(k);
+                }
 
-                    return builder.build();
-                };
+                return builder.build();
             });
         }
 

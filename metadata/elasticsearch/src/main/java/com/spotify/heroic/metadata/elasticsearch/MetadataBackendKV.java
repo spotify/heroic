@@ -43,7 +43,6 @@ import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
 import org.elasticsearch.action.index.IndexRequest.OpType;
@@ -91,7 +90,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 
 @ToString(of = { "connection" })
@@ -159,7 +157,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
         return doto(new ManagedAction<Connection, FindTags>() {
             @Override
             public AsyncFuture<FindTags> action(final Connection c) throws Exception {
-                return async.resolved(FindTags.EMPTY).on(reporter.reportFindTags());
+                return async.resolved(FindTags.EMPTY).onDone(reporter.reportFindTags());
             }
         });
     }
@@ -197,7 +195,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
                                     .setSource(source).setOpType(OpType.CREATE);
 
                             final long start = System.nanoTime();
-                            return transform(request.execute(), (response) -> WriteResult.of(System.nanoTime() - start));
+                            return bind(request.execute()).directTransform(response -> WriteResult.of(System.nanoTime() - start));
                         }
                     };
 
@@ -242,7 +240,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return transform(request.execute(), (response) -> new CountSeries(response.getCount(), false));
+                return bind(request.execute()).directTransform(response -> new CountSeries(response.getCount(), false));
             }
         });
     }
@@ -272,7 +270,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
                 return scrollOverSeries(c, request, filter.getLimit(), h -> buildSeries(h.getSource()))
-                        .on(reporter.reportFindTimeSeries());
+                        .onDone(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -297,7 +295,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return transform(request.execute(), (response) -> new DeleteSeries(0, 0));
+                return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
             }
         });
     }
@@ -328,31 +326,24 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
                     request.addAggregation(terms);
                 }
 
-                return transform(request.execute(), new Transform<SearchResponse, FindKeys>() {
-                    @Override
-                    public FindKeys transform(SearchResponse response) throws Exception {
-                        final Terms terms = (Terms) response.getAggregations().get("terms");
+                return bind(request.execute()).directTransform(response -> {
+                    final Terms terms = (Terms) response.getAggregations().get("terms");
 
-                        final Set<String> keys = new HashSet<String>();
+                    final Set<String> keys = new HashSet<String>();
 
-                        int size = terms.getBuckets().size();
-                        int duplicates = 0;
+                    int size = terms.getBuckets().size();
+                    int duplicates = 0;
 
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            if (keys.add(bucket.getKey())) {
-                                duplicates += 1;
-                            }
+                    for (final Terms.Bucket bucket : terms.getBuckets()) {
+                        if (keys.add(bucket.getKey())) {
+                            duplicates += 1;
                         }
-
-                        return new FindKeys(keys, size, duplicates);
                     }
-                }).on(reporter.reportFindKeys());
+
+                    return new FindKeys(keys, size, duplicates);
+                }).onDone(reporter.reportFindKeys());
             }
         });
-    }
-
-    private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
-        return bind(actionFuture).transform(transform);
     }
 
     @Override

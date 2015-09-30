@@ -49,15 +49,10 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.ListenableActionFuture;
-import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.count.CountResponse;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryResponse;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -115,7 +110,6 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
@@ -187,7 +181,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
                 };
 
                 return findTagKeys(filter).lazyTransform(new FindTagsTransformer(filter.getFilter(), setup, CTX))
-                        .on(reporter.reportFindTags());
+                        .onDone(reporter.reportFindTags());
             }
         });
     }
@@ -197,8 +191,6 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
         return doto(new ManagedAction<Connection, WriteResult>() {
             @Override
             public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final BulkProcessor bulk = c.bulk();
-
                 final String id = Integer.toHexString(series.hashCode());
 
                 final String[] indices;
@@ -228,11 +220,8 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
 
                             final Stopwatch watch = Stopwatch.createStarted();
 
-                            return transform(request.execute(), new Transform<IndexResponse, WriteResult>() {
-                                @Override
-                                public WriteResult transform(IndexResponse result) throws Exception {
-                                    return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
-                                }
+                            return bind(request.execute()).directTransform(result -> {
+                                return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
                             });
                         }
                     };
@@ -275,12 +264,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return transform(request.execute(), new Transform<CountResponse, CountSeries>() {
-                    @Override
-                    public CountSeries transform(final CountResponse response) throws Exception {
-                        return new CountSeries(response.getCount(), false);
-                    }
-                });
+                return bind(request.execute()).directTransform(response -> new CountSeries(response.getCount(), false));
             }
         });
     }
@@ -313,7 +297,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
                 return scrollOverSeries(c, request, filter.getLimit(), h -> ElasticsearchUtils.toSeries(h.getSource()))
-                        .on(reporter.reportFindTimeSeries());
+                        .onDone(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -338,12 +322,7 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return transform(request.execute(), new Transform<DeleteByQueryResponse, DeleteSeries>() {
-                    @Override
-                    public DeleteSeries transform(DeleteByQueryResponse response) throws Exception {
-                        return new DeleteSeries(0, 0);
-                    }
-                });
+                return bind(request.execute()).directTransform(response -> new DeleteSeries(0, 0));
             }
         });
     }
@@ -374,26 +353,23 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
                     request.addAggregation(nested);
                 }
 
-                return transform(request.execute(), new Transform<SearchResponse, FindTagKeys>() {
-                    @Override
-                    public FindTagKeys transform(SearchResponse response) throws Exception {
-                        final Terms terms;
+                return bind(request.execute()).directTransform(response -> {
+                    final Terms terms;
 
-                        {
-                            final Aggregations aggregations = response.getAggregations();
-                            final Nested attributes = (Nested) aggregations.get("nested");
-                            terms = (Terms) attributes.getAggregations().get("terms");
-                        }
-
-                        final Set<String> keys = new HashSet<String>();
-
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            keys.add(bucket.getKey());
-                        }
-
-                        return new FindTagKeys(keys, keys.size());
+                    {
+                        final Aggregations aggregations = response.getAggregations();
+                        final Nested attributes = (Nested) aggregations.get("nested");
+                        terms = (Terms) attributes.getAggregations().get("terms");
                     }
-                }).on(reporter.reportFindTagKeys());
+
+                    final Set<String> keys = new HashSet<String>();
+
+                    for (final Terms.Bucket bucket : terms.getBuckets()) {
+                        keys.add(bucket.getKey());
+                    }
+
+                    return new FindTagKeys(keys, keys.size());
+                }).onDone(reporter.reportFindTagKeys());
             }
         });
     }
@@ -424,25 +400,22 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
                     request.addAggregation(terms);
                 }
 
-                return transform(request.execute(), new Transform<SearchResponse, FindKeys>() {
-                    @Override
-                    public FindKeys transform(SearchResponse response) throws Exception {
-                        final Terms terms = (Terms) response.getAggregations().get("terms");
+                return bind(request.execute()).directTransform(response -> {
+                    final Terms terms = (Terms) response.getAggregations().get("terms");
 
-                        final Set<String> keys = new HashSet<String>();
+                    final Set<String> keys = new HashSet<String>();
 
-                        int size = terms.getBuckets().size();
-                        int duplicates = 0;
+                    int size = terms.getBuckets().size();
+                    int duplicates = 0;
 
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            if (keys.add(bucket.getKey())) {
-                                duplicates += 1;
-                            }
+                    for (final Terms.Bucket bucket : terms.getBuckets()) {
+                        if (keys.add(bucket.getKey())) {
+                            duplicates += 1;
                         }
-
-                        return new FindKeys(keys, size, duplicates);
                     }
-                }).on(reporter.reportFindKeys());
+
+                    return new FindKeys(keys, size, duplicates);
+                }).onDone(reporter.reportFindKeys());
             }
         });
     }
@@ -539,10 +512,6 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
 
     private <T> AsyncFuture<T> doto(ManagedAction<Connection, T> action) {
         return connection.doto(action);
-    }
-
-    private <S, T> AsyncFuture<T> transform(final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform) {
-        return bind(actionFuture).transform(transform);
     }
 
     private static final class ElasticsearchUtils {
@@ -737,29 +706,26 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
             request.addAggregation(nestedAggregation);
         }
 
-        return transform(request.execute(), new Transform<SearchResponse, FindTags>() {
-            @Override
-            public FindTags transform(final SearchResponse response) throws Exception {
-                final Terms terms;
+        return bind(request.execute()).directTransform(response -> {
+            final Terms terms;
 
-                /* IMPORTANT: has to be unwrapped with the correct type in the correct order as specified above! */
-                {
-                    final Aggregations aggregations = response.getAggregations();
-                    final Nested tags = aggregations.get("nested");
-                    final SingleBucketAggregation f = tags.getAggregations().get("filter");
-                    terms = f.getAggregations().get("terms");
-                }
-
-                final Set<String> values = new HashSet<String>();
-
-                for (final Terms.Bucket bucket : terms.getBuckets()) {
-                    values.add(bucket.getKey());
-                }
-
-                final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
-                result.put(key, values);
-                return new FindTags(result, result.size());
+            /* IMPORTANT: has to be unwrapped with the correct type in the correct order as specified above! */
+            {
+                final Aggregations aggregations = response.getAggregations();
+                final Nested tags = aggregations.get("nested");
+                final SingleBucketAggregation f = tags.getAggregations().get("filter");
+                terms = f.getAggregations().get("terms");
             }
+
+            final Set<String> values = new HashSet<String>();
+
+            for (final Terms.Bucket bucket : terms.getBuckets()) {
+                values.add(bucket.getKey());
+            }
+
+            final Map<String, Set<String>> result = new HashMap<String, Set<String>>();
+            result.put(key, values);
+            return new FindTags(result, result.size());
         });
     }
 

@@ -46,9 +46,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Data
 @EqualsAndHashCode(of = { "of", "each" })
 public abstract class GroupingAggregation implements Aggregation {

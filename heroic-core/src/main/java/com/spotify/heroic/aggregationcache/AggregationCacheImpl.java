@@ -108,7 +108,7 @@ public class AggregationCacheImpl implements AggregationCache {
 
         final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
 
-        return backend.get(key, range).transform(new BackendCacheGetHandle(reporter, range));
+        return backend.get(key, range).directTransform(new BackendCacheGetHandle(reporter, range));
     }
 
     @Override
@@ -119,6 +119,6 @@ public class AggregationCacheImpl implements AggregationCache {
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");
 
-        return backend.put(key, datapoints).transform(new BackendCachePutHandle()).onAny(reporter.reportPut());
+        return backend.put(key, datapoints).directTransform(new BackendCachePutHandle()).onDone(reporter.reportPut());
     }
 }

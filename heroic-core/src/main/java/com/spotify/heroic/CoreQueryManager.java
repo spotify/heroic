@@ -122,7 +122,7 @@ public class CoreQueryManager implements QueryManager {
                 futures.add(
                         group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.isDisableCache())
                                 .catchFailed(ResultGroups.nodeError(group))
-                                .transform(QueryResultPart.fromResultGroup(q.getRange(), c)));
+                                .directTransform(QueryResultPart.fromResultGroup(q.getRange(), c)));
             }
 
             return async.collect(futures, QueryResult.collectParts(q.getRange()));

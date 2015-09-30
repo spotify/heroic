@@ -32,7 +32,6 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.CountSeries;
-import com.spotify.heroic.metadata.DeleteSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -45,7 +44,6 @@ import com.spotify.heroic.shell.Tasks;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -77,7 +75,7 @@ public class MetadataDelete implements ShellTask {
 
         final MetadataBackend group = metadata.useGroup(params.group);
 
-        return group.countSeries(filter).transform(new LazyTransform<CountSeries, Void>() {
+        return group.countSeries(filter).lazyTransform(new LazyTransform<CountSeries, Void>() {
             @Override
             public AsyncFuture<Void> transform(CountSeries c) throws Exception {
                 io.out().println(String.format("Deleteing %d entrie(s)", c.getCount()));
@@ -87,14 +85,8 @@ public class MetadataDelete implements ShellTask {
                     return async.resolved(null);
                 }
 
-                return group.deleteSeries(filter).transform(new Transform<DeleteSeries, Void>() {
-                    @Override
-                    public Void transform(DeleteSeries result) throws Exception {
-                        return null;
-                    }
-                });
+                return group.deleteSeries(filter).directTransform(r -> null);
             }
-
         });
     }
 

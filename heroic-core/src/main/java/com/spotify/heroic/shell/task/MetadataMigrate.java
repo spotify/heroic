@@ -31,7 +31,6 @@ import com.google.inject.Inject;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.CountSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -43,7 +42,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -80,40 +78,37 @@ public class MetadataMigrate implements ShellTask {
         io.out().println("  from: " + group);
         io.out().println("    to: " + target);
 
-        return group.countSeries(filter).transform(new Transform<CountSeries, Void>() {
-            @Override
-            public Void transform(CountSeries c) throws Exception {
-                final long count = c.getCount();
+        return group.countSeries(filter).directTransform(c -> {
+            final long count = c.getCount();
 
-                io.out().println(String.format("Migrating %d entrie(s)", count));
+            io.out().println(String.format("Migrating %d entrie(s)", count));
 
-                if (!params.ok) {
-                    io.out().println("Migration stopped, use --ok to proceed");
-                    return null;
-                }
-
-                final Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
-
-                int index = 1;
-
-                for (final MetadataEntry e : entries) {
-                    if (index % DOT_LIMIT == 0) {
-                        io.out().print(".");
-                        io.out().flush();
-                    }
-
-                    if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
-                        io.out().println(String.format(" %d/%d", index, count));
-                        io.out().flush();
-                    }
-
-                    ++index;
-                    target.write(e.getSeries(), filter.getRange());
-                }
-
-                io.out().println(String.format(" %d/%d", index, count));
+            if (!params.ok) {
+                io.out().println("Migration stopped, use --ok to proceed");
                 return null;
             }
+
+            final Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+
+            int index = 1;
+
+            for (final MetadataEntry e : entries) {
+                if (index % DOT_LIMIT == 0) {
+                    io.out().print(".");
+                    io.out().flush();
+                }
+
+                if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
+                    io.out().println(String.format(" %d/%d", index, count));
+                    io.out().flush();
+                }
+
+                ++index;
+                target.write(e.getSeries(), filter.getRange());
+            }
+
+            io.out().println(String.format(" %d/%d", index, count));
+            return null;
         });
     }
 

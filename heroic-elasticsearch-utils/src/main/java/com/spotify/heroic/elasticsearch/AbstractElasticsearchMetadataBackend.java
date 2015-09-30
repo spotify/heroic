@@ -74,7 +74,7 @@ public abstract class AbstractElasticsearchMetadataBackend {
                             return;
                         }
 
-                        bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).on(new FutureDone<SearchResponse>() {
+                        bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).onDone(new FutureDone<SearchResponse>() {
                             @Override
                             public void failed(Throwable cause) throws Exception {
                                 future.fail(cause);

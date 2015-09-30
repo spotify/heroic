@@ -105,7 +105,6 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @ToString(of = { "connection" })

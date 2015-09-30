@@ -10,19 +10,18 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class HeroicEarlyModule extends AbstractModule {
     private final HeroicConfig config;
+    private final HeroicOptions options;
 
-    private final HeroicReporterConfiguration reporterConfiguration;
+    @Provides
+    @Singleton
+    HeroicOptions options() {
+        return options;
+    }
 
     @Provides
     @Singleton
     public HeroicConfig config() {
         return config;
-    }
-
-    @Provides
-    @Singleton
-    public HeroicReporterConfiguration reporterConfiguration() {
-        return reporterConfiguration;
     }
 
     @Override

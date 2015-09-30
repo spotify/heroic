@@ -26,8 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import lombok.Data;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -38,6 +36,7 @@ import com.spotify.heroic.metadata.FindTags;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
+import lombok.Data;
 
 public class MetadataResourceCache {
     @Inject
@@ -54,7 +53,7 @@ public class MetadataResourceCache {
     public AsyncFuture<FindTags> findTags(final String group, final RangeFilter filter) throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
-        return findTags.get(e).on(new FutureDone<FindTags>() {
+        return findTags.get(e).onDone(new FutureDone<FindTags>() {
             @Override
             public void cancelled() {
                 findTags.invalidate(e);
@@ -82,7 +81,7 @@ public class MetadataResourceCache {
     public AsyncFuture<FindKeys> findKeys(final String group, final RangeFilter filter) throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
-        return findKeys.get(e).on(new FutureDone<FindKeys>() {
+        return findKeys.get(e).onDone(new FutureDone<FindKeys>() {
             @Override
             public void cancelled() {
                 findKeys.invalidate(e);

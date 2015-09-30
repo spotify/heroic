@@ -23,10 +23,7 @@ package com.spotify.heroic.metric.generated;
 
 import java.util.Set;
 
-import javax.inject.Named;
 import javax.inject.Singleton;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -41,6 +38,8 @@ import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.generated.generator.SineGeneratorModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+
+import lombok.Data;
 
 @Data
 public final class GeneratedMetricModule implements MetricModule {

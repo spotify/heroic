@@ -51,7 +51,7 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
     @Override
     public <T, R> void bind(final AsyncResponse response, final AsyncFuture<T> callback,
             final Resume<T, R> resume) {
-        callback.on(new FutureDone<T>() {
+        callback.onDone(new FutureDone<T>() {
             @Override
             public void failed(Throwable e) throws Exception {
                 log.error("Request failed", e);

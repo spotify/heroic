@@ -74,7 +74,9 @@ public final class ResourceFileLoader {
                                 throw ctx.exception(trimmed + " does not extend "
                                         + Configuration.class.getCanonicalName());
 
+                            @SuppressWarnings("unchecked")
                             final Class<T> type = (Class<T>) c;
+
                             final Constructor<T> constructor = type.getConstructor();
                             final T newInstance = constructor.newInstance();
 

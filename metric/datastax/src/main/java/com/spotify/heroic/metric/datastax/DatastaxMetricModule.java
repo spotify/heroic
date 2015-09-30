@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.inject.Named;
 import javax.inject.Singleton;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

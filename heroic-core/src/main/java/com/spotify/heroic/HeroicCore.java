@@ -555,7 +555,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         for (final LifeCycle l : lifeCycles) {
             log.info("{}: running {}", op, l);
 
-            final AsyncFuture<Void> future = fn.apply(l).on(new FutureDone<Void>() {
+            final AsyncFuture<Void> future = fn.apply(l).onDone(new FutureDone<Void>() {
                 @Override
                 public void failed(Throwable cause) throws Exception {
                     log.info("{}: failed: {}", op, l, cause);

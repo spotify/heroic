@@ -22,13 +22,9 @@
 package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Stopwatch;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.Collector;
 import lombok.Data;

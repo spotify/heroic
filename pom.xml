@@ -52,7 +52,7 @@
     <guice.version>4.0</guice.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.0.27.Final</netty.version>
-    <tiny-async.version>1.6.0</tiny-async.version>
+    <tiny-async.version>1.7.0</tiny-async.version>
     <tiny-serializer.version>1.4.1</tiny-serializer.version>
     <microrpc.version>1.0.1</microrpc.version>
     <antlr.version>4.5</antlr.version>

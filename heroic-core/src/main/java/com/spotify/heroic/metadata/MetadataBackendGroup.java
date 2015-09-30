@@ -71,7 +71,7 @@ public class MetadataBackendGroup implements MetadataBackend {
             }
         });
 
-        return async.collect(callbacks, FindTags.reduce()).onAny(reporter.reportFindTags());
+        return async.collect(callbacks, FindTags.reduce()).onDone(reporter.reportFindTags());
     }
 
     @Override
@@ -85,7 +85,7 @@ public class MetadataBackendGroup implements MetadataBackend {
             }
         });
 
-        return async.collect(callbacks, CountSeries.reduce()).onAny(reporter.reportCountSeries());
+        return async.collect(callbacks, CountSeries.reduce()).onDone(reporter.reportCountSeries());
     }
 
     @Override
@@ -99,7 +99,7 @@ public class MetadataBackendGroup implements MetadataBackend {
             }
         });
 
-        return async.collect(callbacks, FindSeries.reduce(filter.getLimit())).onAny(reporter.reportFindTimeSeries());
+        return async.collect(callbacks, FindSeries.reduce(filter.getLimit())).onDone(reporter.reportFindTimeSeries());
     }
 
     @Override
@@ -127,7 +127,7 @@ public class MetadataBackendGroup implements MetadataBackend {
             }
         });
 
-        return async.collect(callbacks, FindKeys.reduce()).onAny(reporter.reportFindKeys());
+        return async.collect(callbacks, FindKeys.reduce()).onDone(reporter.reportFindKeys());
     }
 
     @Override
@@ -141,7 +141,7 @@ public class MetadataBackendGroup implements MetadataBackend {
             }
         });
 
-        return async.collectAndDiscard(callbacks).onAny(reporter.reportRefresh());
+        return async.collectAndDiscard(callbacks).onDone(reporter.reportRefresh());
     }
 
     @Override

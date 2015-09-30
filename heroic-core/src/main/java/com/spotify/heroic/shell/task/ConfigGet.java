@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.zip.GZIPInputStream;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Inject;
@@ -71,16 +64,6 @@ public class ConfigGet implements ShellTask {
         io.out().println(m.writeValueAsString(config));
 
         return async.resolved();
-    }
-
-    private InputStreamReader open(Path file) throws IOException {
-        final InputStream input = Files.newInputStream(file);
-
-        // unpack gzip.
-        if (!file.getFileName().toString().endsWith(".gz"))
-            return new InputStreamReader(input);
-
-        return new InputStreamReader(new GZIPInputStream(input));
     }
 
     @ToString

@@ -15,7 +15,6 @@ import com.spotify.heroic.HeroicBootstrap;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicInternalLifeCycle;
 import com.spotify.heroic.HeroicModules;
-import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryManager;
 
 import lombok.ToString;

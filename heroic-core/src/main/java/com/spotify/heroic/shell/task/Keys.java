@@ -23,8 +23,6 @@ package com.spotify.heroic.shell.task;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.Iterator;
-
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -44,7 +42,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -81,27 +78,22 @@ public class Keys implements ShellTask {
 
         return metrics.useGroup(params.group)
                 .allKeys(start, limit, QueryOptions.builder().tracing(params.tracing).build())
-                .transform(new Transform<Iterator<BackendKey>, Void>() {
-                    @Override
-                    public Void transform(Iterator<BackendKey> result) throws Exception {
-                        long i = 0;
+                .directTransform(result -> {
+                    while (result.hasNext()) {
+                        final BackendKey next;
 
-                        while (result.hasNext()) {
-                            final BackendKey next;
-
-                            try {
-                                next = result.next();
-                            } catch(Exception e) {
-                                log.warn("Exception when pulling key", e);
-                                continue;
-                            }
-
-                            io.out().println(mapper.writeValueAsString(next));
-                            io.out().flush();
+                        try {
+                            next = result.next();
+                        } catch (Exception e) {
+                            log.warn("Exception when pulling key", e);
+                            continue;
                         }
 
-                        return null;
+                        io.out().println(mapper.writeValueAsString(next));
+                        io.out().flush();
                     }
+
+                    return null;
                 });
     }
 

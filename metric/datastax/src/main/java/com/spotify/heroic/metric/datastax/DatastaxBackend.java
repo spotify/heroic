@@ -113,7 +113,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 return new WriteResult(times);
             }
 
-        }, pools.write()).on(k.releasing());
+        }, pools.write()).onFinished(k::release);
     }
 
     @Override
@@ -133,7 +133,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 return new WriteResult(times);
             }
-        }, pools.write()).on(k.releasing());
+        }, pools.write()).onFinished(k::release);
     }
 
     private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
@@ -165,7 +165,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         return times;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
             final FetchQuotaWatcher watcher) {
@@ -187,49 +186,46 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
         final Borrowed<Connection> k = connection.borrow();
 
-        final LazyTransform<List<PreparedQuery>, FetchData> transform = new LazyTransform<List<PreparedQuery>, FetchData>() {
-            @Override
-            public AsyncFuture<FetchData> transform(List<PreparedQuery> result) throws Exception {
-                final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
+        final LazyTransform<List<PreparedQuery>, FetchData> transform = result -> {
+            final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
-                final Connection c = k.get();
+            final Connection c = k.get();
 
-                for (final PreparedQuery q : prepared) {
-                    final BoundStatement fetch = c.fetch.bind(q.keyBlob, q.startKey, q.endKey, limit);
+            for (final PreparedQuery q : prepared) {
+                final BoundStatement fetch = c.fetch.bind(q.keyBlob, q.startKey, q.endKey, limit);
 
-                    queries.add(async.call(new Callable<FetchData>() {
-                        @Override
-                        public FetchData call() throws Exception {
-                            if (!watcher.mayReadData())
-                                throw new IllegalArgumentException("query violated data limit");
+                queries.add(async.call(new Callable<FetchData>() {
+                    @Override
+                    public FetchData call() throws Exception {
+                        if (!watcher.mayReadData())
+                            throw new IllegalArgumentException("query violated data limit");
 
-                            final List<Point> data = new ArrayList<>();
+                        final List<Point> data = new ArrayList<>();
 
-                            final long start = System.nanoTime();
-                            final ResultSet rows = c.session.execute(fetch);
-                            final long diff = System.nanoTime() - start;
+                        final long start = System.nanoTime();
+                        final ResultSet rows = c.session.execute(fetch);
+                        final long diff = System.nanoTime() - start;
 
-                            for (final Row row : rows) {
-                                final long timestamp = MetricsRowKey.calculateAbsoluteTimestamp(q.base, row.getInt(0));
-                                final double value = row.getDouble(1);
-                                data.add(new Point(timestamp, value));
-                            }
-
-                            if (!watcher.readData(data.size()))
-                                throw new IllegalArgumentException("query violated data limit");
-
-                            final ImmutableList<Long> times = ImmutableList.of(diff);
-                            final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
-                            return new FetchData(series, times, groups);
+                        for (final Row row : rows) {
+                            final long timestamp = MetricsRowKey.calculateAbsoluteTimestamp(q.base, row.getInt(0));
+                            final double value = row.getDouble(1);
+                            data.add(new Point(timestamp, value));
                         }
-                    }, pools.read()).on(reporter.reportFetch()));
-                }
 
-                return async.collect(queries, FetchData.<Point> merger(series));
+                        if (!watcher.readData(data.size()))
+                            throw new IllegalArgumentException("query violated data limit");
+
+                        final ImmutableList<Long> times = ImmutableList.of(diff);
+                        final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
+                        return new FetchData(series, times, groups);
+                    }
+                }, pools.read()).onDone(reporter.reportFetch()));
             }
+
+            return async.collect(queries, FetchData.merger(series));
         };
 
-        return async.resolved(prepared).lazyTransform(transform).on(k.releasing());
+        return async.resolved(prepared).lazyTransform(transform).onFinished(k::release);
     }
 
     @Override
@@ -279,7 +275,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 return new BackendKeySet(result);
             }
-        }).on(k.releasing());
+        }).onFinished(k::release);
     }
 
     private BoundStatement keysPagingLimit(final Connection c, final ByteBuffer first, final int limit) {

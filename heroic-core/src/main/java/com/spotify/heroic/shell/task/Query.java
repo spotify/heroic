@@ -34,7 +34,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -45,7 +44,6 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 
 @TaskUsage("Execute a query")
@@ -69,31 +67,26 @@ public class Query implements ShellTask {
 
         final String queryString = params.query.stream().collect(Collectors.joining(" "));
 
-        final AsyncFuture<QueryResult> result = query.useGroup(params.group).query(
-                query.newQueryFromString(queryString).build());
-
         final ObjectMapper indent = mapper.copy();
         indent.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-        return result.transform(new Transform<QueryResult, Void>() {
-            @Override
-            public Void transform(QueryResult result) throws Exception {
-                for (final RequestError e : result.getErrors()) {
-                    io.out().println(String.format("ERR: %s", e.toString()));
-                }
+        return query.useGroup(params.group).query(query.newQueryFromString(queryString).build())
+                .directTransform(result -> {
+                    for (final RequestError e : result.getErrors()) {
+                        io.out().println(String.format("ERR: %s", e.toString()));
+                    }
 
-                for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                    final MetricCollection group = resultGroup.getGroup();
+                    for (final ShardedResultGroup resultGroup : result.getGroups()) {
+                        final MetricCollection group = resultGroup.getGroup();
 
-                    io.out().println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
-                            resultGroup.getTags()));
-                    io.out().println(indent.writeValueAsString(group.getData()));
-                    io.out().flush();
-                }
+                        io.out().println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
+                                resultGroup.getTags()));
+                        io.out().println(indent.writeValueAsString(group.getData()));
+                        io.out().flush();
+                    }
 
-                return null;
-            }
-        });
+                    return null;
+                });
     }
 
     @ToString

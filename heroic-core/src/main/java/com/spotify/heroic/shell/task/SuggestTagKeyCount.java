@@ -43,7 +43,6 @@ import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagKeyCount;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -74,17 +73,14 @@ public class SuggestTagKeyCount implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return suggest.useGroup(params.group).tagKeyCount(filter).transform(new Transform<TagKeyCount, Void>() {
-            @Override
-            public Void transform(TagKeyCount result) throws Exception {
-                int i = 0;
+        return suggest.useGroup(params.group).tagKeyCount(filter).directTransform(result -> {
+            int i = 0;
 
-                for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
-                    io.out().println(String.format("%s: %s", i++, value));
-                }
-
-                return null;
+            for (final TagKeyCount.Suggestion value : result.getSuggestions()) {
+                io.out().println(String.format("%s: %s", i++, value));
             }
+
+            return null;
         });
     }
 

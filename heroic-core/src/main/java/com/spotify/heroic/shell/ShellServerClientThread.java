@@ -9,18 +9,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
-import com.spotify.heroic.shell.protocol.Acknowledge;
 import com.spotify.heroic.shell.protocol.Close;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
 import com.spotify.heroic.shell.protocol.CommandsResponse;
-import com.spotify.heroic.shell.protocol.CommandDone;
-import com.spotify.heroic.shell.protocol.Message;
 import com.spotify.heroic.shell.protocol.EvaluateRequest;
+import com.spotify.heroic.shell.protocol.Message;
+import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 
 import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.FutureFinished;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.StreamSerialWriter;
@@ -76,7 +73,7 @@ class ShellServerClientThread implements Runnable {
                     public Void visitRunTaskRequest(EvaluateRequest message) throws Exception {
                         log.info("Run task: {}", message);
 
-                        tasks.evaluate(message.getCommand(), ch).on(new FutureDone<Void>() {
+                        tasks.evaluate(message.getCommand(), ch).onDone(new FutureDone<Void>() {
                             @Override
                             public void failed(Throwable cause) throws Exception {
                                 log.error("Command Failed", cause);
@@ -92,7 +89,7 @@ class ShellServerClientThread implements Runnable {
                             public void cancelled() throws Exception {
                                 ch.out().println("Command cancelled");
                             }
-                        }).on((FutureFinished) ch::close);
+                        }).onFinished(ch::close);
 
                         return null;
                     }

@@ -34,7 +34,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
@@ -49,7 +48,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 
 @TaskUsage("Fetch a range of data points")
@@ -92,36 +90,32 @@ public class Fetch implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useGroup(params.group);
         final MetricType source = MetricType.fromIdentifier(params.source);
 
-        return readGroup.fetch(source, series, range).transform(new Transform<FetchData, Void>() {
-            @Override
-            public Void transform(FetchData result) throws Exception {
-                outer:
-                for (final MetricCollection g : result.getGroups()) {
-                    int i = 0;
+        return readGroup.fetch(source, series, range).directTransform(result -> {
+            outer:
+            for (final MetricCollection g : result.getGroups()) {
+                int i = 0;
 
-                    Calendar current = null;
-                    Calendar last = null;
+                Calendar current = null;
+                Calendar last = null;
 
-                    for (final Metric d : g.getData()) {
-                        current = Calendar.getInstance();
-                        current.setTime(new Date(d.getTimestamp()));
+                for (final Metric d : g.getData()) {
+                    current = Calendar.getInstance();
+                    current.setTime(new Date(d.getTimestamp()));
 
-                        if (flipped(last, current)) {
-                            io.out().println(flip.format(current.getTime()));
-                        }
-
-                        io.out().println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
-
-                        if (i++ >= limit)
-                            break outer;
-
-                        last = current;
+                    if (flipped(last, current)) {
+                        io.out().println(flip.format(current.getTime()));
                     }
 
-                }
+                    io.out().println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
 
-                return null;
+                    if (i++ >= limit)
+                        break outer;
+
+                    last = current;
+                }
             }
+
+            return null;
         });
     }
 

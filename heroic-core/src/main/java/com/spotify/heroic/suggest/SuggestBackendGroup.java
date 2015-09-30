@@ -70,7 +70,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagValuesSuggest.reduce(filter.getLimit(), groupLimit)).on(
+        return async.collect(callbacks, TagValuesSuggest.reduce(filter.getLimit(), groupLimit)).onDone(
                 reporter.reportTagValuesSuggest());
     }
 
@@ -85,7 +85,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagValueSuggest.reduce(filter.getLimit())).on(
+        return async.collect(callbacks, TagValueSuggest.reduce(filter.getLimit())).onDone(
                 reporter.reportTagValueSuggest());
     }
 
@@ -100,7 +100,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagKeyCount.reduce(filter.getLimit())).on(reporter.reportTagKeySuggest());
+        return async.collect(callbacks, TagKeyCount.reduce(filter.getLimit())).onDone(reporter.reportTagKeySuggest());
     }
 
     @Override
@@ -115,7 +115,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, TagSuggest.reduce(filter.getLimit())).on(reporter.reportTagSuggest());
+        return async.collect(callbacks, TagSuggest.reduce(filter.getLimit())).onDone(reporter.reportTagSuggest());
     }
 
     @Override
@@ -129,7 +129,7 @@ public class SuggestBackendGroup implements SuggestBackend {
             }
         });
 
-        return async.collect(callbacks, KeySuggest.reduce(filter.getLimit())).on(reporter.reportKeySuggest());
+        return async.collect(callbacks, KeySuggest.reduce(filter.getLimit())).onDone(reporter.reportKeySuggest());
     }
 
     @Override

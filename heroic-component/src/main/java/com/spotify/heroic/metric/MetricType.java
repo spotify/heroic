@@ -23,17 +23,10 @@ package com.spotify.heroic.metric;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.common.Series;
 
 /**
  * Represents which type of metric to operate on.

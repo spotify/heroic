@@ -40,14 +40,12 @@ import com.google.inject.name.Named;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -58,7 +56,6 @@ import com.spotify.heroic.shell.TaskUsage;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
-import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.ToString;
 
@@ -88,9 +85,9 @@ public class WritePerformance implements ShellTask {
 
         final List<Series> series = generateSeries(params.series);
 
-        final long start = now.getTime() - TimeUnit.MILLISECONDS.convert(params.history, TimeUnit.SECONDS);
-        final long end = now.getTime();
-        final DateRange range = new DateRange(start, end);
+        final long startRange = now.getTime() - TimeUnit.MILLISECONDS.convert(params.history, TimeUnit.SECONDS);
+        final long endRange = now.getTime();
+        final DateRange range = new DateRange(startRange, endRange);
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.from);
         final List<MetricBackend> targets = resolveTargets(params.targets);
@@ -98,50 +95,43 @@ public class WritePerformance implements ShellTask {
         final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
 
         for (final Series s : series) {
-            reads.add(readGroup.fetch(MetricType.POINT, s, range).transform(new Transform<FetchData, WriteMetric>() {
-                @Override
-                public WriteMetric transform(FetchData result) throws Exception {
-                    return new WriteMetric(s, result.getGroups());
-                }
-            }));
+            reads.add(readGroup.fetch(MetricType.POINT, s, range)
+                    .directTransform(result -> new WriteMetric(s, result.getGroups())));
         }
 
-        return async.collect(reads).transform(new Transform<Collection<WriteMetric>, Void>() {
-            @Override
-            public Void transform(Collection<WriteMetric> input) throws Exception {
-                final long start = System.currentTimeMillis();
+        return async.collect(reads).directTransform(input -> {
+            final long start = System.currentTimeMillis();
 
-                int totalWrites = 0;
+            int totalWrites = 0;
 
-                for (final WriteMetric w : input) {
-                    for (MetricCollection g : w.getGroups()) {
-                        totalWrites += (g.getData().size() * params.writes);
-                    }
+            for (final WriteMetric w : input) {
+                for (MetricCollection g : w.getGroups()) {
+                    totalWrites += (g.getData().size() * params.writes);
                 }
-
-                final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);
-
-                io.out().println(String.format("Read data, waiting for %d write batches...", writes.size()));
-                io.out().flush();
-
-                final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes);
-
-                final CollectedTimes times = results.get();
-                final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
-
-                io.out().println(String.format("Failed: %d write(s)", times.errors));
-                io.out().println(String.format("Time: %.2fs", totalRuntime));
-                io.out().println(String.format("Write/s: %.2f", totalWrites / totalRuntime));
-                io.out().println();
-
-                printHistogram("Overall", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
-                io.out().println();
-
-                printHistogram("Execution Time", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
-
-                io.out().flush();
-                return null;
             }
+
+            final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);
+
+            io.out().println(String.format("Read data, waiting for %d write batches...", writes.size()));
+            io.out().flush();
+
+            final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes);
+
+            final CollectedTimes times = results.get();
+            final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
+
+            io.out().println(String.format("Failed: %d write(s)", times.errors));
+            io.out().println(String.format("Time: %.2fs", totalRuntime));
+            io.out().println(String.format("Write/s: %.2f", totalWrites / totalRuntime));
+            io.out().println();
+
+            printHistogram("Overall", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
+            io.out().println();
+
+            printHistogram("Execution Time", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
+
+            io.out().flush();
+            return null;
         });
     }
 
@@ -193,12 +183,9 @@ public class WritePerformance implements ShellTask {
             for (int i = 0; i < params.writes; i++) {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
-                writes.add(target.write(input).transform(new Transform<WriteResult, Times>() {
-                    @Override
-                    public Times transform(WriteResult result) throws Exception {
-                        final long runtime = System.currentTimeMillis() - start;
-                        return new Times(result.getTimes(), runtime);
-                    }
+                writes.add(target.write(input).directTransform(result -> {
+                    final long runtime = System.currentTimeMillis() - start;
+                    return new Times(result.getTimes(), runtime);
                 }));
             }
 
@@ -209,12 +196,9 @@ public class WritePerformance implements ShellTask {
             for (final WriteMetric w : input) {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
-                writes.add(target.write(w).transform(new Transform<WriteResult, Times>() {
-                    @Override
-                    public Times transform(WriteResult result) throws Exception {
-                        final long runtime = System.currentTimeMillis() - start;
-                        return new Times(result.getTimes(), runtime);
-                    }
+                writes.add(target.write(w).directTransform(result -> {
+                    final long runtime = System.currentTimeMillis() - start;
+                    return new Times(result.getTimes(), runtime);
                 }));
             }
         }

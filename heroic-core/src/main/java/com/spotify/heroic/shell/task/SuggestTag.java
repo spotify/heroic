@@ -44,7 +44,6 @@ import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagSuggest;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -78,17 +77,14 @@ public class SuggestTag implements ShellTask {
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
         return suggest.useGroup(params.group).tagSuggest(filter, fuzzyOptions, params.key, params.value)
-                .transform(new Transform<TagSuggest, Void>() {
-                    @Override
-                    public Void transform(TagSuggest result) throws Exception {
-                        int i = 0;
+                .directTransform(result -> {
+                    int i = 0;
 
-                        for (final TagSuggest.Suggestion suggestion : result.getSuggestions()) {
-                            io.out().println(String.format("%s: %s", i++, suggestion));
-                        }
-
-                        return null;
+                    for (final TagSuggest.Suggestion suggestion : result.getSuggestions()) {
+                        io.out().println(String.format("%s: %s", i++, suggestion));
                     }
+
+                    return null;
                 });
     }
 

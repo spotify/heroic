@@ -43,7 +43,6 @@ import java.util.ListIterator;
 import java.util.Map;
 
 import com.spotify.heroic.aggregation.AbstractBucket;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 import lombok.AllArgsConstructor;
@@ -110,13 +109,7 @@ public class QuantileBucket extends AbstractBucket {
             compact();
         }
 
-        final Double value = query(quantile);
-
-        if (value == null) {
-            return Double.NaN;
-        }
-
-        return value;
+        return query(quantile);
     }
 
     public synchronized int getSampleSize() {

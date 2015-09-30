@@ -22,16 +22,13 @@
 package com.spotify.heroic.cluster;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import lombok.Data;
 
 import com.spotify.heroic.common.LifeCycle;
 
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Collector;
+import lombok.Data;
 
 /**
  * Handles management of cluster state.

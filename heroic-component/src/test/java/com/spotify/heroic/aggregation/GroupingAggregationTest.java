@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 @RunWith(MockitoJUnitRunner.class)

@@ -38,7 +38,6 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
-import org.elasticsearch.common.unit.TimeValue;
 
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.elasticsearch.index.IndexMapping;
@@ -46,7 +45,6 @@ import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureCancelled;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -125,13 +123,7 @@ public class Connection {
             }
         });
 
-        future.on(new FutureCancelled() {
-            @Override
-            public void cancelled() throws Exception {
-                target.cancel(false);
-            }
-        });
-
+        future.onCancelled(() -> target.cancel(false));
         return future;
     }
 

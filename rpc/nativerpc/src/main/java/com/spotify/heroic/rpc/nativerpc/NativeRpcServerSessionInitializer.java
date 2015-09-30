@@ -33,7 +33,6 @@ import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.FutureFinished;
 import eu.toolchain.async.Transform;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -132,17 +131,13 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
 
             final AsyncFuture<Object> handleFuture = handle.handle(body);
 
-            // serialize in a separate thread on the async thread pool.
+            // Serialize in a separate thread on the async thread pool.
             // this also neatly catches errors for us in the next step.
-            handleFuture.transform(serialize(request)).on(new FutureFinished() {
-                @Override
-                public void finished() throws Exception {
-                    // stop sending heartbeats when the future has been resolved.
-                    // this will cause the other end to time out if a response is available, but its unable to pass the
-                    // network.
-                    stopCurrentTimeout(heartbeatTimeout);
-                }
-            }).on(sendResponseHandle(ch));
+            // Stop sending heartbeats immediately when the future has been finished.
+            // this will cause the other end to time out if a response is available, but its unable to pass the
+            // network.
+            handleFuture.directTransform(serialize(request)).onFinished(() -> stopCurrentTimeout(heartbeatTimeout))
+                    .onDone(sendResponseHandle(ch));
         }
 
         private long calculcateHeartbeatInterval(NativeRpcRequest msg) {
