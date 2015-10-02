@@ -19,7 +19,7 @@ public interface QueryOptions {
     }
 
     public static class Builder {
-        private boolean tracing;
+        private boolean tracing = false;
 
         public Builder tracing(boolean tracing) {
             this.tracing = tracing;

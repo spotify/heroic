@@ -23,6 +23,8 @@ import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.DurationSerialization;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
@@ -156,6 +158,7 @@ public class HeroicLoadingModule extends AbstractModule {
     public static Module serialization() {
         final SimpleModule serializers = new SimpleModule("serialization");
         serializers.addDeserializer(Duration.class, new DurationSerialization.Deserializer());
+        serializers.addDeserializer(Groups.class, new GroupsSerialization.Deserializer());
         return serializers;
     }
 }

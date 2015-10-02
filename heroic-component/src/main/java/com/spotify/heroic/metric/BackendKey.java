@@ -24,8 +24,10 @@ package com.spotify.heroic.metric;
 import com.spotify.heroic.common.Series;
 
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor
 public class BackendKey {
     private final Series series;
     private final long base;

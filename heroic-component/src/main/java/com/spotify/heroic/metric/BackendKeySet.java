@@ -1,10 +1,12 @@
 package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
 import eu.toolchain.async.Collector;
@@ -15,14 +17,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BackendKeySet implements Iterable<BackendKey> {
     private final List<BackendKey> keys;
-    private final List<QueryTrace> traces;
+    private final Optional<QueryTrace> trace;
 
     public BackendKeySet() {
-        this(ImmutableList.of(), ImmutableList.of());
+        this(ImmutableList.of(), Optional.empty());
     }
 
     public BackendKeySet(List<BackendKey> keys) {
-        this(keys, ImmutableList.of());
+        this(keys, Optional.empty());
     }
 
     public int size() {
@@ -38,22 +40,27 @@ public class BackendKeySet implements Iterable<BackendKey> {
         return keys.iterator();
     }
 
-    private static Collector<BackendKeySet, BackendKeySet> collector = new Collector<BackendKeySet, BackendKeySet>() {
-        @Override
-        public BackendKeySet collect(Collection<BackendKeySet> results) throws Exception {
+    public static Collector<BackendKeySet, BackendKeySet> merge(final String what) {
+        final Stopwatch w = Stopwatch.createStarted();
+
+        return results -> {
             final List<BackendKey> result = new ArrayList<>();
-            final List<QueryTrace> traces = new ArrayList<>();
+            final List<QueryTrace> children = new ArrayList<>();
 
             for (final BackendKeySet r : results) {
                 result.addAll(r.getKeys());
-                traces.addAll(r.getTraces());
+                r.trace.ifPresent(children::add);
             }
 
-            return new BackendKeySet(result, traces);
-        }
-    };
+            final Optional<QueryTrace> trace;
 
-    public static Collector<BackendKeySet, BackendKeySet> merge() {
-        return collector;
+            if (!children.isEmpty()) {
+                trace = Optional.of(new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.copyOf(children)));
+            } else {
+                trace = Optional.empty();
+            }
+
+            return new BackendKeySet(result, trace);
+        };
     }
 }

@@ -22,47 +22,38 @@
 package com.spotify.heroic.metric.datastax;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PoolingOptions;
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.QueryOptions;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SocketOptions;
 import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
+import com.spotify.heroic.metric.datastax.schema.Schema;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
-@ToString(of = { "seeds", "keyspace" })
+@ToString(of = { "seeds" })
+@Slf4j
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
-    private static final String WRITE_METRICS_CQL = "INSERT INTO metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
-
-    private static final String FETCH_METRICS_CQL = ("SELECT data_timestamp_offset, data_value FROM metrics "
-            + "WHERE metric_key = ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?");
-
-    private static final String KEYS_PAGING = "SELECT DISTINCT metric_key FROM metrics";
-    private static final String KEYS_PAGING_LEFT = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?)";
-    private static final String KEYS_PAGING_LIMIT = "SELECT DISTINCT metric_key FROM metrics limit ?";
-    private static final String KEYS_PAGING_LEFT_LIMIT = "SELECT DISTINCT metric_key FROM metrics WHERE token(metric_key) > token(?) limit ?";
-
     private final AsyncFramework async;
     private final Collection<InetSocketAddress> seeds;
-    private final String keyspace;
+    private final boolean configure;
+    private final Schema schema;
 
     public AsyncFuture<Connection> construct() {
-        return async.call(new Callable<Connection>() {
-            public Connection call() throws Exception {
+        AsyncFuture<Session> session = async.call(new Callable<Session>() {
+            public Session call() throws Exception {
                 // @formatter:off
                 final HostDistance distance = HostDistance.LOCAL;
                 final PoolingOptions pooling = new PoolingOptions()
@@ -86,50 +77,25 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                     .build();
                 // @formatter:on
 
-                final Session session = cluster.connect(keyspace);
+                return cluster.connect();
+            }
+        });
 
-                final PreparedStatement write = session.prepare(WRITE_METRICS_CQL);
+        if (configure) {
+            session = session.lazyTransform(s -> {
+                return schema.configure(s).directTransform(i -> s);
+            });
+        }
 
-                final PreparedStatement fetch = session.prepare(FETCH_METRICS_CQL);
-
-                final PreparedStatement keysPaging = session.prepare(KEYS_PAGING)
-                        .setConsistencyLevel(ConsistencyLevel.ONE);
-
-                final PreparedStatement keysPagingLeft = session.prepare(KEYS_PAGING_LEFT)
-                        .setConsistencyLevel(ConsistencyLevel.ONE);
-
-                final PreparedStatement keysPagingLimit = session.prepare(KEYS_PAGING_LIMIT)
-                        .setConsistencyLevel(ConsistencyLevel.ONE);
-
-                final PreparedStatement keysPagingLeftLimit = session.prepare(KEYS_PAGING_LEFT_LIMIT)
-                        .setConsistencyLevel(ConsistencyLevel.ONE);
-
-                return new Connection(cluster, session, write, fetch, keysPaging, keysPagingLeft, keysPagingLimit,
-                        keysPagingLeftLimit);
-            };
+        return session.lazyTransform(s -> {
+            return schema.instance(s).directTransform(schema -> {
+                return new Connection(s, schema);
+            });
         });
     }
 
     @Override
     public AsyncFuture<Void> destruct(final Connection c) {
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
-
-        futures.add(async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                c.session.close();
-                return null;
-            }
-        }));
-
-        futures.add(async.call(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                c.cluster.close();
-                return null;
-            }
-        }));
-
-        return async.collectAndDiscard(futures);
+        return Async.bind(async, c.session.closeAsync()).directTransform(ign -> null);
     }
 }

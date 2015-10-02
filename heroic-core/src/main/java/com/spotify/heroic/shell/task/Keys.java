@@ -32,6 +32,8 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricBackends;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -76,25 +78,32 @@ public class Keys implements ShellTask {
 
         final int limit = Math.max(1, Math.min(1000, params.limit));
 
-        return metrics.useGroup(params.group)
-                .allKeys(start, limit, QueryOptions.builder().tracing(params.tracing).build())
-                .directTransform(result -> {
-                    while (result.hasNext()) {
-                        final BackendKey next;
+        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-                        try {
-                            next = result.next();
-                        } catch (Exception e) {
-                            log.warn("Exception when pulling key", e);
-                            continue;
-                        }
+        final MetricBackendGroup group = metrics.useGroup(params.group);
 
-                        io.out().println(mapper.writeValueAsString(next));
-                        io.out().flush();
-                    }
+        return MetricBackends.keysPager(start, limit, (s, l) -> group.keys(s, l, options), (set) -> {
+            if (set.getTrace().isPresent()) {
+                set.getTrace().get().formatTrace(io.out());
+                io.out().flush();
+            }
+        }).directTransform(result -> {
+            while (result.hasNext()) {
+                final BackendKey next;
 
-                    return null;
-                });
+                try {
+                    next = result.next();
+                } catch (Exception e) {
+                    log.warn("Exception when pulling key", e);
+                    continue;
+                }
+
+                io.out().println(mapper.writeValueAsString(next));
+                io.out().flush();
+            }
+
+            return null;
+        });
     }
 
     @Data

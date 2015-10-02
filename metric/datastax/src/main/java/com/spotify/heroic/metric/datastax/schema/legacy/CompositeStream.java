@@ -19,20 +19,33 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.serializer;
+package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class LongSerializer implements CustomSerializer<Long> {
-    @Override
-    public ByteBuffer serialize(Long value) {
-        final ByteBuffer buffer = ByteBuffer.allocate(8).putLong(value);
-        buffer.flip();
-        return buffer;
-    }
+import com.spotify.heroic.metric.datastax.TypeSerializer;
 
-    @Override
-    public Long deserialize(ByteBuffer buffer) {
-        return buffer.getLong();
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public class CompositeStream {
+    private static final byte EQ = 0x0;
+
+    private final ByteBuffer buffer;
+
+    public <T> T next(TypeSerializer<T> serializer) throws IOException {
+        final short segment = buffer.getShort();
+        final ByteBuffer part = buffer.slice();
+        part.limit(segment);
+
+        final T result = serializer.deserialize(part);
+
+        buffer.position(buffer.position() + segment);
+
+        if (buffer.get() != EQ)
+            throw new IllegalStateException("Illegal state in ComponentReader, expected EQ (0)");
+
+        return result;
     }
 }

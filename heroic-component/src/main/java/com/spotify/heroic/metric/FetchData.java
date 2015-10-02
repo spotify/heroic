@@ -21,19 +21,17 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import lombok.Data;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.spotify.heroic.common.Series;
 
 import eu.toolchain.async.Collector;
+import lombok.Data;
 
 @Data
 public class FetchData {
@@ -42,35 +40,31 @@ public class FetchData {
     private final List<MetricCollection> groups;
 
     public static Collector<FetchData, FetchData> merger(final Series series) {
-        return new Collector<FetchData, FetchData>() {
-            @Override
-            public FetchData collect(Collection<FetchData> results) throws Exception {
-                final ImmutableList.Builder<Long> times = ImmutableList.builder();
-                final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
+        return results -> {
+            final ImmutableList.Builder<Long> times = ImmutableList.builder();
+            final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
 
-                for (final FetchData fetch : results) {
-                    times.addAll(fetch.times);
+            for (final FetchData fetch : results) {
+                times.addAll(fetch.times);
 
-                    for (final MetricCollection g : fetch.groups) {
-                        ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
+                for (final MetricCollection g : fetch.groups) {
+                    ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
 
-                        if (data == null) {
-                            data = new ImmutableList.Builder<>();
-                            fetchGroups.put(g.getType(), data);
-                        }
-
-                        data.addAll(g.data);
+                    if (data == null) {
+                        data = new ImmutableList.Builder<>();
+                        fetchGroups.put(g.getType(), data);
                     }
+
+                    data.addAll(g.data);
                 }
-
-                final List<MetricCollection> groups = fetchGroups
-                        .entrySet()
-                        .stream()
-                        .map((e) -> MetricCollection.build(e.getKey(), Ordering.from(e.getKey().comparator())
-                                .immutableSortedCopy(e.getValue().build()))).collect(Collectors.toList());
-
-                return new FetchData(series, times.build(), groups);
             }
+
+            final List<MetricCollection> groups = fetchGroups.entrySet().stream()
+                    .map((e) -> MetricCollection.build(e.getKey(),
+                            Ordering.from(e.getKey().comparator()).immutableSortedCopy(e.getValue().build())))
+                    .collect(Collectors.toList());
+
+            return new FetchData(series, times.build(), groups);
         };
     }
 }

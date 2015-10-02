@@ -19,25 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.serializer;
+package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
-
 import org.apache.commons.lang3.tuple.Pair;
 
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+
+import lombok.RequiredArgsConstructor;
+
 @RequiredArgsConstructor
-public class MapSerializer<A, B> implements CustomSerializer<Map<A, B>> {
-    private final CustomSerializer<A> a;
-    private final CustomSerializer<B> b;
+public class MapSerializer<A, B> implements TypeSerializer<Map<A, B>> {
+    private final TypeSerializer<A> a;
+    private final TypeSerializer<B> b;
 
     @Override
-    public ByteBuffer serialize(final Map<A, B> value) {
+    public ByteBuffer serialize(final Map<A, B> value) throws IOException {
         final List<Pair<ByteBuffer, ByteBuffer>> buffers = new ArrayList<>();
 
         short size = 0;
@@ -66,7 +69,7 @@ public class MapSerializer<A, B> implements CustomSerializer<Map<A, B>> {
     }
 
     @Override
-    public Map<A, B> deserialize(ByteBuffer buffer) {
+    public Map<A, B> deserialize(ByteBuffer buffer) throws IOException {
         final short len = buffer.getShort();
 
         final Map<A, B> map = new LinkedHashMap<>();
@@ -80,7 +83,7 @@ public class MapSerializer<A, B> implements CustomSerializer<Map<A, B>> {
         return map;
     }
 
-    private <T> T next(ByteBuffer buffer, CustomSerializer<T> serializer) {
+    private <T> T next(ByteBuffer buffer, TypeSerializer<T> serializer) throws IOException {
         final short segment = buffer.getShort();
         final ByteBuffer slice = buffer.slice();
         slice.limit(segment);

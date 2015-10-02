@@ -21,70 +21,76 @@
 
 package com.spotify.heroic.metric.datastax;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.ExecutionInfo;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.utils.Bytes;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
-import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryOptions;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
+import com.spotify.heroic.metric.datastax.schema.Schema;
+import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
+import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.LazyTransform;
+import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.StreamCollector;
+import eu.toolchain.async.Transform;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
+@Slf4j
 @ToString(of = { "connection" })
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle {
-    private static final MetricsRowKeySerializer keySerializer = new MetricsRowKeySerializer();
-
     private final AsyncFramework async;
-    private final ReadWriteThreadPools pools;
     private final MetricBackendReporter reporter;
     private final Managed<Connection> connection;
     private final Groups groups;
 
     @Inject
-    public DatastaxBackend(final AsyncFramework async, final ReadWriteThreadPools pools,
-            final MetricBackendReporter reporter, final Managed<Connection> connection,
-            final Groups groups) {
+    public DatastaxBackend(final AsyncFramework async, final MetricBackendReporter reporter,
+            final Managed<Connection> connection, final Groups groups) {
         super(async);
         this.async = async;
-        this.pools = pools;
         this.reporter = reporter;
         this.connection = connection;
         this.groups = groups;
@@ -102,67 +108,22 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
     @Override
     public AsyncFuture<WriteResult> write(final WriteMetric w) {
-        final Borrowed<Connection> k = connection.borrow();
-
-        return async.call(new Callable<WriteResult>() {
-            @Override
-            public WriteResult call() throws Exception {
-                final Connection c = k.get();
-                final Map<Long, ByteBuffer> cache = new HashMap<>();
-                final List<Long> times = writeDataPoints(c, cache, w);
-                return new WriteResult(times);
-            }
-
-        }, pools.write()).onFinished(k::release);
+        return connection.doto(c -> {
+            return doWrite(c, c.schema.writeSession(), w);
+        });
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-        final Borrowed<Connection> k = connection.borrow();
+        return connection.doto(c -> {
+            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
 
-        return async.call(new Callable<WriteResult>() {
-            @Override
-            public WriteResult call() throws Exception {
-                final Connection c = k.get();
-                final Map<Long, ByteBuffer> cache = new HashMap<>();
-                final List<Long> times = new ArrayList<>();
-
-                for (final WriteMetric w : writes) {
-                    times.addAll(writeDataPoints(c, cache, w));
-                }
-
-                return new WriteResult(times);
+            for (final WriteMetric w : writes) {
+                futures.add(doWrite(c, c.schema.writeSession(), w));
             }
-        }, pools.write()).onFinished(k::release);
-    }
 
-    private List<Long> writeDataPoints(final Connection c, final Map<Long, ByteBuffer> cache, final WriteMetric w) {
-        final List<Long> times = new ArrayList<Long>();
-
-        for (final MetricCollection g : w.getGroups()) {
-            if (g.getType() == MetricType.POINT) {
-                for (final Metric t : g.getData()) {
-                    final Point d = (Point) t;
-                    final long base = MetricsRowKey.calculateBaseTimestamp(d.getTimestamp());
-
-                    ByteBuffer keyBlob = cache.get(base);
-
-                    if (keyBlob == null) {
-                        final MetricsRowKey key = new MetricsRowKey(w.getSeries(), base);
-                        keyBlob = keySerializer.serialize(key);
-                    }
-
-                    final int offset = MetricsRowKey.calculateColumnKey(d.getTimestamp());
-
-                    final long start = System.nanoTime();
-                    c.session.execute(c.write.bind(keyBlob.asReadOnlyBuffer(), offset, d.getValue()));
-                    final long diff = System.nanoTime() - start;
-                    times.add(diff);
-                }
-            }
-        }
-
-        return times;
+            return async.collect(futures, WriteResult.merger());
+        });
     }
 
     @Override
@@ -175,59 +136,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         throw new IllegalArgumentException("unsupported source: " + source);
     }
 
-    private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
-            final FetchQuotaWatcher watcher) {
-        final List<PreparedQuery> prepared = ranges(series, range);
-
-        if (!watcher.mayReadData())
-            throw new IllegalArgumentException("query violated data limit");
-
-        final int limit = watcher.getReadDataQuota() + 1;
-
-        final Borrowed<Connection> k = connection.borrow();
-
-        final LazyTransform<List<PreparedQuery>, FetchData> transform = result -> {
-            final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
-
-            final Connection c = k.get();
-
-            for (final PreparedQuery q : prepared) {
-                final BoundStatement fetch = c.fetch.bind(q.keyBlob, q.startKey, q.endKey, limit);
-
-                queries.add(async.call(new Callable<FetchData>() {
-                    @Override
-                    public FetchData call() throws Exception {
-                        if (!watcher.mayReadData())
-                            throw new IllegalArgumentException("query violated data limit");
-
-                        final List<Point> data = new ArrayList<>();
-
-                        final long start = System.nanoTime();
-                        final ResultSet rows = c.session.execute(fetch);
-                        final long diff = System.nanoTime() - start;
-
-                        for (final Row row : rows) {
-                            final long timestamp = MetricsRowKey.calculateAbsoluteTimestamp(q.base, row.getInt(0));
-                            final double value = row.getDouble(1);
-                            data.add(new Point(timestamp, value));
-                        }
-
-                        if (!watcher.readData(data.size()))
-                            throw new IllegalArgumentException("query violated data limit");
-
-                        final ImmutableList<Long> times = ImmutableList.of(diff);
-                        final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
-                        return new FetchData(series, times, groups);
-                    }
-                }, pools.read()).onDone(reporter.reportFetch()));
-            }
-
-            return async.collect(queries, FetchData.merger(series));
-        };
-
-        return async.resolved(prepared).lazyTransform(transform).onFinished(k::release);
-    }
-
     @Override
     public AsyncFuture<Void> start() {
         return connection.start();
@@ -235,10 +143,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
     @Override
     public AsyncFuture<Void> stop() {
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
-        futures.add(connection.stop());
-        futures.add(pools.stop());
-        return async.collectAndDiscard(futures);
+        return connection.stop();
     }
 
     @Override
@@ -253,79 +158,238 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
     @Override
     public AsyncFuture<BackendKeySet> keys(BackendKey start, final int limit, final QueryOptions options) {
-        final ByteBuffer first = start == null ? null : keySerializer.serialize(new MetricsRowKey(start.getSeries(),
-                start.getBase()));
+        return connection.doto(c -> {
+            final Optional<ByteBuffer> first = start == null ? Optional.empty()
+                    : Optional.of(c.schema.rowKey().serialize(new MetricsRowKey(start.getSeries(), start.getBase())));
 
-        final Borrowed<Connection> k = connection.borrow();
+            final Statement stmt;
+            final Transform<RowFetchResult<BackendKey>, BackendKeySet> converter;
 
-        return async.call(new Callable<BackendKeySet>() {
-            @Override
-            public BackendKeySet call() throws Exception {
-                final Connection c = k.get();
-                final BoundStatement stmt = keysPagingLimit(c, first, limit);
-                final ResultSet rows = c.session.execute(stmt);
+            if (options.isTracing()) {
+                final Stopwatch w = Stopwatch.createStarted();
 
-                final List<BackendKey> result = new ArrayList<>();
+                stmt = c.schema.keysPaging(first, limit).enableTracing();
+                converter = result -> {
+                    final QueryTrace trace = buildTrace(DatastaxBackend.class.getName() + "#keys",
+                            w.elapsed(TimeUnit.NANOSECONDS), result.info);
+                    return new BackendKeySet(result.data, Optional.of(trace));
+                };
+            } else {
+                final Stopwatch w = Stopwatch.createStarted();
 
-                for (final Row r : rows.all()) {
-                    final ByteBuffer bytes = r.getBytes("metric_key");
-                    final MetricsRowKey key = keySerializer.deserialize(bytes);
-                    result.add(new BackendKey(key.getSeries(), key.getBase()));
-                }
-
-                return new BackendKeySet(result);
+                stmt = c.schema.keysPaging(first, limit);
+                converter = result -> {
+                    final QueryTrace trace = new QueryTrace(DatastaxBackend.class.getName() + "#keys",
+                            w.elapsed(TimeUnit.NANOSECONDS));
+                    return new BackendKeySet(result.data, Optional.of(trace));
+                };
             }
-        }).onFinished(k::release);
-    }
 
-    private BoundStatement keysPagingLimit(final Connection c, final ByteBuffer first, final int limit) {
-        if (first == null) {
-            return c.keysPagingLimit.bind(limit);
-        }
+            final ResolvableFuture<BackendKeySet> future = async.future();
 
-        return c.keysPagingLeftLimit.bind(first, limit);
+            Async.bind(async, c.session.executeAsync(stmt)).onDone(
+                    new RowFetchHelper<BackendKey, BackendKeySet>(future, c.schema.keyConverter(), converter));
+
+            return future;
+        });
     }
 
     @Override
-    public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
+    public AsyncFuture<List<String>> serializeKeyToHex(final BackendKey key) {
         final MetricsRowKey rowKey = new MetricsRowKey(key.getSeries(), key.getBase());
-        return async.resolved(ImmutableList.of(Bytes.toHexString(keySerializer.serialize(rowKey))));
+
+        return connection.doto(c -> {
+            return async.resolved(ImmutableList.of(Bytes.toHexString(c.schema.rowKey().serialize(rowKey))));
+        });
     }
 
     @Override
     public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
-        final MetricsRowKey rowKey = keySerializer.deserialize(Bytes.fromHexString(key));
-        return async.resolved(ImmutableList.of(new BackendKey(rowKey.getSeries(), rowKey.getBase())));
+        return connection.doto(c -> {
+            final MetricsRowKey rowKey = c.schema.rowKey().deserialize(Bytes.fromHexString(key));
+            return async.resolved(ImmutableList.of(new BackendKey(rowKey.getSeries(), rowKey.getBase())));
+        });
     }
 
-    private static List<PreparedQuery> ranges(final Series series, final DateRange range) {
-        final List<PreparedQuery> bases = new ArrayList<>();
+    private AsyncFuture<WriteResult> doWrite(final Connection c, final SchemaInstance.WriteSession session, final WriteMetric w) throws IOException {
+        final List<Callable<AsyncFuture<Long>>> callables = new ArrayList<>();
 
-        final long start = MetricsRowKey.calculateBaseTimestamp(range.getStart());
-        final long end = MetricsRowKey.calculateBaseTimestamp(range.getEnd());
+        for (final MetricCollection g : w.getGroups()) {
+            if (g.getType() == MetricType.POINT) {
+                for (final Point d : g.getDataAs(Point.class)) {
+                    final BoundStatement stmt = session.writePoint(w.getSeries(), d);
 
-        for (long base = start; base <= end; base += MetricsRowKey.MAX_WIDTH) {
-            final DateRange modified = range.modify(base, base + MetricsRowKey.MAX_WIDTH - 1);
-
-            if (modified.isEmpty())
-                continue;
-
-            final MetricsRowKey key = new MetricsRowKey(series, base);
-            final ByteBuffer keyBlob = keySerializer.serialize(key);
-            final int startKey = MetricsRowKey.calculateColumnKey(modified.start());
-            final int endKey = MetricsRowKey.calculateColumnKey(modified.end());
-
-            bases.add(new PreparedQuery(keyBlob, startKey, endKey, base));
+                    callables.add(() -> {
+                        final long start = System.nanoTime();
+                        return Async.bind(async, c.session.executeAsync(stmt)).directTransform((r) -> System.nanoTime() - start);
+                    });
+                }
+            }
         }
 
-        return bases;
+        return async.eventuallyCollect(callables, new StreamCollector<Long, WriteResult>() {
+            final ConcurrentLinkedQueue<Long> q = new ConcurrentLinkedQueue<Long>();
+
+            @Override
+            public void resolved(Long result) throws Exception {
+                q.add(result);
+            }
+
+            @Override
+            public void failed(Throwable cause) throws Exception {
+            }
+
+            @Override
+            public void cancelled() throws Exception {
+            }
+
+            @Override
+            public WriteResult end(int resolved, int failed, int cancelled) throws Exception {
+                return WriteResult.of(q);
+            }
+        }, 500);
+    }
+
+    private QueryTrace buildTrace(final String what, final long elapsed, List<ExecutionInfo> info) {
+        final ImmutableList.Builder<QueryTrace> top = ImmutableList.builder();
+
+        for (final ExecutionInfo i : info) {
+            final ImmutableList.Builder<QueryTrace> children = ImmutableList.builder();
+
+            com.datastax.driver.core.QueryTrace qt = i.getQueryTrace();
+
+            for (final com.datastax.driver.core.QueryTrace.Event e : qt.getEvents()) {
+                final long eventElapsed = TimeUnit.NANOSECONDS.convert(e.getSourceElapsedMicros(),
+                        TimeUnit.MICROSECONDS);
+                children.add(new QueryTrace(e.getDescription(), eventElapsed));
+            }
+
+            top.add(new QueryTrace(qt.getTraceId().toString(),
+                    TimeUnit.NANOSECONDS.convert(qt.getDurationMicros(), TimeUnit.MICROSECONDS), children.build()));
+        }
+
+        return new QueryTrace(what, elapsed, top.build());
+    }
+
+    private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
+            final FetchQuotaWatcher watcher) {
+
+        if (!watcher.mayReadData())
+            throw new IllegalArgumentException("query violated data limit");
+
+        final int limit = watcher.getReadDataQuota();
+
+        return connection.doto(c -> {
+            final List<PreparedFetch> prepared;
+
+            try {
+                prepared = c.schema.ranges(series, range);
+            } catch (IOException e) {
+                return async.failed(e);
+            }
+
+            final List<AsyncFuture<FetchData>> futures = new ArrayList<>();
+
+            for (final Schema.PreparedFetch f : prepared) {
+                final BoundStatement fetch = f.fetch(limit);
+
+                final ResolvableFuture<FetchData> future = async.future();
+
+                final long start = System.nanoTime();
+
+                final RowFetchHelper<Point, FetchData> helper = new RowFetchHelper<Point, FetchData>(future, f.converter(), result -> {
+                    final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
+                    final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(result.data));
+                    return new FetchData(series, times, groups);
+                });
+
+                Async.bind(async, c.session.executeAsync(fetch)).onDone(helper);
+                futures.add(future.onDone(reporter.reportFetch()));
+            }
+
+            return async.collect(futures, FetchData.merger(series));
+        });
     }
 
     @RequiredArgsConstructor
-    private static final class PreparedQuery {
-        private final ByteBuffer keyBlob;
-        private final int startKey;
-        private final int endKey;
-        private final long base;
+    private final class RowFetchHelper<R, T> implements FutureDone<ResultSet> {
+        private final List<R> data = new ArrayList<>();
+
+        private final ResolvableFuture<T> future;
+        private final Transform<Row, R> rowConverter;
+        private final Transform<RowFetchResult<R>, T> endConverter;
+
+        @Override
+        public void failed(Throwable cause) throws Exception {
+            future.fail(cause);
+        }
+
+        @Override
+        public void cancelled() throws Exception {
+            future.cancel();
+        }
+
+        @Override
+        public void resolved(final ResultSet rows) throws Exception {
+            if (future.isDone()) {
+                return;
+            }
+
+            int count = rows.getAvailableWithoutFetching();
+
+            final Optional<AsyncFuture<Void>> nextFetch = rows.isFullyFetched() ? Optional.empty()
+                    : Optional.of(Async.bind(async, rows.fetchMoreResults()));
+
+            while (count-- > 0) {
+                final R part;
+
+                try {
+                    part = rowConverter.transform(rows.one());
+                } catch (Exception e) {
+                    future.fail(e);
+                    return;
+                }
+
+                data.add(part);
+            }
+
+            if (nextFetch.isPresent()) {
+                nextFetch.get().onDone(new FutureDone<Void>() {
+                    @Override
+                    public void failed(Throwable cause) throws Exception {
+                        RowFetchHelper.this.failed(cause);
+                    }
+
+                    @Override
+                    public void cancelled() throws Exception {
+                        RowFetchHelper.this.cancelled();
+                    }
+
+                    @Override
+                    public void resolved(Void result) throws Exception {
+                        RowFetchHelper.this.resolved(rows);
+                    }
+                });
+
+                return;
+            }
+
+            final T result;
+
+            try {
+                result = endConverter.transform(new RowFetchResult<>(rows.getAllExecutionInfo(), data));
+            } catch (final Exception e) {
+                future.fail(e);
+                return;
+            }
+
+            future.resolve(result);
+        }
+    }
+
+    @Data
+    private static class RowFetchResult<T> {
+        final List<ExecutionInfo> info;
+        final List<T> data;
     }
 }

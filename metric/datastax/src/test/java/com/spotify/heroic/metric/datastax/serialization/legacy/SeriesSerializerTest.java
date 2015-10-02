@@ -1,5 +1,6 @@
-package com.spotify.heroic.metric.datastax;
+package com.spotify.heroic.metric.datastax.serialization.legacy;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,12 +9,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.datastax.serializer.SeriesSerializer;
+import com.spotify.heroic.metric.datastax.schema.legacy.SeriesSerializer;
 
 public class SeriesSerializerTest {
     private static final SeriesSerializer serializer = new SeriesSerializer();
 
-    private Series roundTrip(Series series) {
+    private Series roundTrip(Series series) throws IOException {
         final ByteBuffer bb = serializer.serialize(series);
         final Series after = serializer.deserialize(bb);
         bb.rewind();

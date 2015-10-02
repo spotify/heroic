@@ -19,18 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.serializer;
+package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.datastax.TypeSerializer;
 
-public class SeriesSerializer implements CustomSerializer<Series> {
-    private final CustomSerializer<String> key = new StringSerializer();
-    private final CustomSerializer<Map<String, String>> tags = new MapSerializer<>(new StringSerializer(),
+public class SeriesSerializer implements TypeSerializer<Series> {
+    private final TypeSerializer<String> key = new StringSerializer();
+    private final TypeSerializer<Map<String, String>> tags = new MapSerializer<>(new StringSerializer(),
             new StringSerializer());
 
     private static final Comparator<String> COMPARATOR = new Comparator<String>() {
@@ -50,7 +52,7 @@ public class SeriesSerializer implements CustomSerializer<Series> {
     };
 
     @Override
-    public ByteBuffer serialize(Series value) {
+    public ByteBuffer serialize(Series value) throws IOException {
         final TreeMap<String, String> sorted = new TreeMap<>(COMPARATOR);
         sorted.putAll(value.getTags());
 
@@ -61,7 +63,7 @@ public class SeriesSerializer implements CustomSerializer<Series> {
     }
 
     @Override
-    public Series deserialize(ByteBuffer buffer) {
+    public Series deserialize(ByteBuffer buffer) throws IOException {
         final CompositeStream reader = new CompositeStream(buffer);
         final String key = reader.next(this.key);
         final Map<String, String> tags = reader.next(this.tags);

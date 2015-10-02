@@ -19,12 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.serializer;
+package com.spotify.heroic.metric.datastax.schema.legacy;
 
 import java.nio.ByteBuffer;
 
-public interface CustomSerializer<T> {
-    public ByteBuffer serialize(T value);
+import com.spotify.heroic.metric.datastax.TypeSerializer;
 
-    public T deserialize(ByteBuffer buffer);
+public class LongSerializer implements TypeSerializer<Long> {
+    @Override
+    public ByteBuffer serialize(Long value) {
+        final ByteBuffer buffer = ByteBuffer.allocate(8).putLong(value);
+        buffer.flip();
+        return buffer;
+    }
+
+    @Override
+    public Long deserialize(ByteBuffer buffer) {
+        return buffer.getLong();
+    }
 }

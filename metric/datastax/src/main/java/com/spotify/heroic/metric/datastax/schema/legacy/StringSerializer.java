@@ -19,12 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax.serializer;
+package com.spotify.heroic.metric.datastax.schema.legacy;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-public class StringSerializer implements CustomSerializer<String> {
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+
+public class StringSerializer implements TypeSerializer<String> {
     private static final int IS_NULL = 0x0;
     private static final int IS_EMPTY = 0x1;
     private static final int IS_STRING = 0x2;

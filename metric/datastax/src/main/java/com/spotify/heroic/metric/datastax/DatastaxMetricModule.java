@@ -39,9 +39,11 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.datastax.schema.Schema;
+import com.spotify.heroic.metric.datastax.schema.SchemaModule;
+import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
@@ -52,25 +54,30 @@ import lombok.Data;
 @Data
 public final class DatastaxMetricModule implements MetricModule {
     public static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
-    public static final String DEFAULT_KEYSPACE = "heroic";
     public static final String DEFAULT_GROUP = "heroic";
     public static final int DEFAULT_PORT = 9042;
+    public static final boolean DEFAULT_CONFIGURE = false;
 
+    /* id of backend (defualt will be generated) */
     private final String id;
+    /* groups for this backend */
     private final Groups groups;
-    private final String keyspace;
+    /* database seeds */
     private final List<InetSocketAddress> seeds;
-    private final ReadWriteThreadPools.Config pools;
+    /* row key serialization method to use */
+    private final SchemaModule schema;
+    /* automatically configure database */
+    private final boolean configure;
 
     @JsonCreator
-    public DatastaxMetricModule(@JsonProperty("id") String id, @JsonProperty("seeds") Set<String> seeds,
-            @JsonProperty("keyspace") String keyspace, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
+    public DatastaxMetricModule(@JsonProperty("id") String id, @JsonProperty("groups") Groups groups,
+            @JsonProperty("seeds") Set<String> seeds, @JsonProperty("schema") SchemaModule schema,
+            @JsonProperty("configure") Boolean configure) {
         this.id = id;
-        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
-        this.keyspace = Optional.fromNullable(keyspace).or(DEFAULT_KEYSPACE);
+        this.groups = Optional.fromNullable(groups).or(Groups::empty).or("heroic");
         this.seeds = convert(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
-        this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
+        this.schema = Optional.fromNullable(schema).or(NextGenSchemaModule.builder()::build);
+        this.configure = Optional.fromNullable(configure).or(DEFAULT_CONFIGURE);
     }
 
     private static List<InetSocketAddress> convert(Set<String> source) {
@@ -115,24 +122,19 @@ public final class DatastaxMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(AsyncFramework async, MetricBackendReporter reporter) {
-                return pools.construct(async, reporter.newThreadPool());
-            }
-
-            @Provides
-            @Singleton
             public Groups groups() {
                 return groups;
             }
 
             @Provides
             @Singleton
-            public Managed<Connection> connection(final AsyncFramework async) {
-                return async.managed(new ManagedSetupConnection(async, seeds, keyspace));
+            public Managed<Connection> connection(final AsyncFramework async, final Schema schema) {
+                return async.managed(new ManagedSetupConnection(async, seeds, configure, schema));
             }
 
             @Override
             protected void configure() {
+                install(schema.module());
                 bind(key).to(DatastaxBackend.class).in(Scopes.SINGLETON);
                 expose(key);
             }
@@ -147,5 +149,46 @@ public final class DatastaxMetricModule implements MetricModule {
     @Override
     public String buildId(int i) {
         return String.format("heroic#%d", i);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String id;
+        private Groups groups;
+        private Set<String> seeds;
+        private SchemaModule schema;
+        private boolean configure = DEFAULT_CONFIGURE;
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder groups(Groups groups) {
+            this.groups = groups;
+            return this;
+        }
+
+        public Builder seeds(Set<String> seeds) {
+            this.seeds = seeds;
+            return this;
+        }
+
+        public Builder serialization(SchemaModule schema) {
+            this.schema = schema;
+            return this;
+        }
+
+        public Builder configure(boolean configure) {
+            this.configure = configure;
+            return this;
+        }
+
+        public DatastaxMetricModule build() {
+            return new DatastaxMetricModule(id, groups, seeds, schema, configure);
+        }
     }
 }

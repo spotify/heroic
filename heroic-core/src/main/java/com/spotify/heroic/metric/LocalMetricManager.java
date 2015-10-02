@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +38,6 @@ import org.apache.commons.lang3.NotImplementedException;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -294,7 +292,7 @@ public class LocalMetricManager implements MetricManager {
                 callbacks.add(backend.keys(start, limit, options));
             });
 
-            return async.collect(callbacks, BackendKeySet.merge());
+            return async.collect(callbacks, BackendKeySet.merge("local"));
         }
 
         @Override
@@ -324,22 +322,6 @@ public class LocalMetricManager implements MetricManager {
             });
 
             return async.collectAndDiscard(callbacks);
-        }
-
-        @Override
-        public AsyncFuture<Iterator<BackendKey>> allKeys(final BackendKey start, final int limit, final QueryOptions options) {
-            final List<AsyncFuture<Iterator<BackendKey>>> callbacks = new ArrayList<>();
-
-            run(new InternalOperation() {
-                @Override
-                public void run(int disabled, MetricBackend backend) throws Exception {
-                    callbacks.add(backend.allKeys(start, limit, options));
-                }
-            });
-
-            return async.collect(callbacks).directTransform(result -> {
-                return Iterators.concat(result.iterator());
-            });
         }
 
         @Override

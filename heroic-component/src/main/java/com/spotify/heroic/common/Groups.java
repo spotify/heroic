@@ -30,6 +30,8 @@ import lombok.Data;
 
 @Data
 public final class Groups implements Iterable<String> {
+    public static final Groups EMPTY = new Groups(ImmutableSet.of());
+
     private final Set<String> groups;
 
     public static Groups groups(String group, Set<String> groups, String defaultGroup) {
@@ -44,8 +46,28 @@ public final class Groups implements Iterable<String> {
         return new Groups(ImmutableSet.of(defaultGroup));
     }
 
+    public Groups or(String... defaultGroups) {
+        if (defaultGroups.length == 0) {
+            throw new IllegalArgumentException("Set of default groups must not be empty");
+        }
+
+        if (!groups.isEmpty()) {
+            return this;
+        }
+
+        return new Groups(ImmutableSet.copyOf(defaultGroups));
+    }
+
+    public static Groups empty() {
+        return EMPTY;
+    }
+
     @Override
     public Iterator<String> iterator() {
         return groups.iterator();
+    }
+
+    public boolean isEmpty() {
+        return groups.isEmpty();
     }
 }

@@ -138,6 +138,10 @@ public class BackendGroups<T extends Initializing & Grouped> {
         final Map<String, List<T>> groups = new HashMap<>();
 
         for (final T backend : backends) {
+            if (backend.getGroups().isEmpty()) {
+                throw new IllegalStateException("Backend " + backend + " does not belong to any groups");
+            }
+
             for (final String name : backend.getGroups()) {
                 List<T> group = groups.get(name);
 

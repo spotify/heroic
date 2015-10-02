@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -34,6 +32,7 @@ import com.spotify.heroic.cluster.ClusterNode;
 
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
 
 @Data
 public class WriteResult {
@@ -68,32 +67,24 @@ public class WriteResult {
         return of(EMPTY_TIMES);
     }
 
-    public WriteResult merge(WriteResult other) {
-        final List<RequestError> errors = new ArrayList<>(this.errors);
-        errors.addAll(other.errors);
+    private static final Collector<WriteResult, WriteResult> collector = results -> {
+        if (results.isEmpty()) {
+            return WriteResult.EMPTY;
+        }
 
-        final List<Long> times = new ArrayList<>(this.times);
-        times.addAll(other.times);
+        final List<RequestError> errors = new ArrayList<>();
+        final List<Long> times = new ArrayList<>();
+
+        for (final WriteResult r : results) {
+            errors.addAll(r.errors);
+            times.addAll(r.times);
+        }
 
         return new WriteResult(errors, times);
-    }
+    };
 
-    private static class Merger implements Collector<WriteResult, WriteResult> {
-        @Override
-        public WriteResult collect(Collection<WriteResult> results) throws Exception {
-            WriteResult result = EMPTY;
-
-            for (final WriteResult r : results)
-                result = result.merge(r);
-
-            return result;
-        }
-    }
-
-    private static final Merger merger = new Merger();
-
-    public static Merger merger() {
-        return merger;
+    public static Collector<WriteResult, WriteResult> merger() {
+        return collector;
     }
 
     public static Transform<Throwable, WriteResult> nodeError(final ClusterNode.Group group) {

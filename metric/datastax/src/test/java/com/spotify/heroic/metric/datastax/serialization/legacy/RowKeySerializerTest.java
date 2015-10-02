@@ -1,4 +1,4 @@
-package com.spotify.heroic.metric.datastax;
+package com.spotify.heroic.metric.datastax.serialization.legacy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -6,8 +6,9 @@ import java.nio.ByteBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.metric.datastax.serializer.CustomSerializer;
-import com.spotify.heroic.metric.datastax.serializer.MetricsRowKeySerializer;
+import com.spotify.heroic.metric.datastax.MetricsRowKey;
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+import com.spotify.heroic.metric.datastax.schema.legacy.MetricsRowKeySerializer;
 
 public class RowKeySerializerTest {
     private static byte[] bytes(int... source) {
@@ -39,7 +40,7 @@ public class RowKeySerializerTest {
         buffer.put(bytes);
         buffer.flip();
 
-        final CustomSerializer<MetricsRowKey> rowKey = new MetricsRowKeySerializer();
+        final TypeSerializer<MetricsRowKey> rowKey = new MetricsRowKeySerializer();
 
         final MetricsRowKey key = rowKey.deserialize(buffer.asReadOnlyBuffer());
         final ByteBuffer result = rowKey.serialize(key);
