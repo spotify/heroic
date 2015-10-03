@@ -1,12 +1,12 @@
 package com.spotify.heroic.shell;
 
-import java.io.PrintWriter;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+
+import com.google.common.base.Joiner;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ShellTasks {
+    public static final Joiner joiner = Joiner.on(", ");
+
     final SortedMap<String, ShellTask> tasks;
     final AsyncFramework async;
 
@@ -25,10 +27,12 @@ public class ShellTasks {
         final String taskName = command.iterator().next();
         final List<String> args = command.subList(1, command.size());
 
-        final ShellTask task = resolveTask(io.out(), taskName);
+        final ShellTask task;
 
-        if (task == null) {
-            return async.failed(new Exception("No task matching: " + taskName));
+        try {
+            task = resolveTask(taskName);
+        } catch(final Exception e) {
+            return async.failed(e);
         }
 
         final TaskParameters params = task.params();
@@ -55,7 +59,7 @@ public class ShellTasks {
         }
     }
 
-    ShellTask resolveTask(final PrintWriter out, final String taskName) {
+    ShellTask resolveTask(final String taskName) {
         final SortedMap<String, ShellTask> selected = tasks.subMap(taskName, taskName
                 + Character.MAX_VALUE);
 
@@ -68,18 +72,12 @@ public class ShellTasks {
 
         // no fuzzy matches
         if (selected.isEmpty()) {
-            out.println("No such task '" + taskName + "'");
-            return null;
+            throw new IllegalArgumentException(String.format("No task matching (%s)", taskName));
         }
 
         if (selected.size() > 1) {
-            out.println(String.format("Too many (%d) matching tasks:", selected.size()));
-
-            for (final Map.Entry<String, ShellTask> e : tasks.entrySet()) {
-                out.println(String.format("  %s", e.getKey()));
-            }
-
-            return null;
+            throw new IllegalArgumentException(String.format("Too many (%d) matching tasks (%s)", selected.size(),
+                    joiner.join(selected.keySet())));
         }
 
         return selected.values().iterator().next();
