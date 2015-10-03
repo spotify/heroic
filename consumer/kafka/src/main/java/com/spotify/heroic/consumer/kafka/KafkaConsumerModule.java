@@ -22,23 +22,20 @@
 package com.spotify.heroic.consumer.kafka;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
-import kafka.javaapi.consumer.ConsumerConnector;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
@@ -56,45 +53,32 @@ import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.async.ResolvableFuture;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
 public class KafkaConsumerModule implements ConsumerModule {
     public static final int DEFAULT_THREADS_PER_TOPIC = 2;
 
-    private final String id;
+    private final Optional<String> id;
     private final List<String> topics;
     private final int threads;
     private final Map<String, String> config;
     private final ConsumerSchema schema;
 
-    private final AtomicInteger consuming = new AtomicInteger();
-    private final AtomicInteger total = new AtomicInteger();
-    private final AtomicLong errors = new AtomicLong();
-
-    @JsonCreator
-    public static KafkaConsumerModule create(@JsonProperty("id") String id, @JsonProperty("schema") String schema,
-            @JsonProperty("topics") List<String> topics, @JsonProperty("threadsPerTopic") Integer threads,
-            @JsonProperty("config") Map<String, String> config) {
-        if (threads == null)
-            threads = DEFAULT_THREADS_PER_TOPIC;
-
-        if (schema == null)
-            throw new RuntimeException("'schema' not defined");
-
-        final ConsumerSchema schemaClass = ReflectionUtils.buildInstance(schema, ConsumerSchema.class);
-
-        if (topics == null || topics.isEmpty())
-            throw new RuntimeException("'topics' must be defined and non-empty");
-
-        if (config == null)
-            config = new HashMap<String, String>();
-
-        return new KafkaConsumerModule(id, topics, threads, config, schemaClass);
-    }
-
     @Override
     public Module module(final Key<Consumer> key, final ConsumerReporter reporter) {
+        final AtomicInteger consuming = new AtomicInteger();
+        final AtomicInteger total = new AtomicInteger();
+        final AtomicLong errors = new AtomicLong();
+
         return new PrivateModule() {
             @Provides
             public Managed<Connection> connection(final AsyncFramework async, final Consumer consumer) {
@@ -211,12 +195,95 @@ public class KafkaConsumerModule implements ConsumerModule {
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
     @Override
     public String buildId(int i) {
         return String.format("kafka#%d", i);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    public static class Builder implements ConsumerModule.Builder {
+        private Optional<String> id = Optional.empty();
+        private Optional<List<String>> topics = Optional.empty();
+        private Optional<Integer> threads = Optional.empty();
+        private Optional<Map<String, String>> config = Optional.empty();
+        private Optional<ConsumerSchema> schema = Optional.empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("id") String id, @JsonProperty("schema") String schema,
+                @JsonProperty("topics") List<String> topics, @JsonProperty("threadsPerTopic") Integer threads,
+                @JsonProperty("config") Map<String, String> config) {
+            this.id = Optional.ofNullable(id);
+            this.threads = Optional.ofNullable(threads);
+            this.topics = Optional.ofNullable(topics);
+            this.config = Optional.ofNullable(config);
+            this.schema = Optional.ofNullable(schema).map(s -> ReflectionUtils.buildInstance(s, ConsumerSchema.class));
+        }
+
+        public Builder id(String id) {
+            this.id = Optional.of(id);
+            return this;
+        }
+
+        public Builder topics(List<String> topics) {
+            this.topics = Optional.of(topics);
+            return this;
+        }
+
+        public Builder threads(int threads) {
+            this.threads = Optional.of(threads);
+            return this;
+        }
+
+        public Builder config(Map<String, String> config) {
+            this.config = Optional.of(config);
+            return this;
+        }
+
+        public Builder schema(String schemaClass) {
+            this.schema = Optional.of(ReflectionUtils.buildInstance(schemaClass, ConsumerSchema.class));
+            return this;
+        }
+
+        public ConsumerModule.Builder merge(final ConsumerModule.Builder u) {
+            final Builder o = (Builder) u;
+
+            // @formatter:off
+            return new Builder(
+                o.id.isPresent() ? o.id : id,
+                o.topics.isPresent() ? o.topics : topics,
+                o.threads.isPresent() ? o.threads : threads,
+                o.config.isPresent() ? o.config : config,
+                o.schema.isPresent() ? o.schema : schema
+            );
+            // @formatter:on
+        }
+
+        @Override
+        public ConsumerModule build() {
+            if (!topics.map(Collection::isEmpty).orElse(true))
+                throw new RuntimeException("No topics are defined");
+
+            if (!schema.isPresent())
+                throw new RuntimeException("Schema is not defined");
+
+            // @formatter:off
+            return new KafkaConsumerModule(
+                id,
+                topics.get(),
+                threads.orElse(DEFAULT_THREADS_PER_TOPIC),
+                config.orElseGet(ImmutableMap::of),
+                schema.get()
+            );
+            // @formatter:on
+        }
     }
 }

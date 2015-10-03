@@ -55,7 +55,7 @@ public class CoalesceService {
         };
 
         /* create a core which does not attempt to use local backends */
-        final HeroicCore core = HeroicCore.builder().disableBackends(true).server(false).modules(HeroicModules.ALL_MODULES)
+        final HeroicCore core = HeroicCore.builder().disableBackends(true).setupServer(false).modules(HeroicModules.ALL_MODULES)
                 .configPath(params.heroicConfig).bootstrap(bootstrap).build();
 
         try {

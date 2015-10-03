@@ -23,6 +23,7 @@ package com.spotify.heroic.profile;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.HeroicParameters;
 import com.spotify.heroic.HeroicProfile;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.aggregationcache.InMemoryAggregationCacheBackendConfig;
@@ -35,12 +36,12 @@ import com.spotify.heroic.metric.generated.generator.SineGeneratorModule;
 
 public class GeneratedProfile implements HeroicProfile {
     @Override
-    public HeroicConfig build() throws Exception {
+    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         // @formatter:off
         // final SuggestManagerModule suggest = SuggestManagerModule.create(suggestModules, null);
         return HeroicConfig.builder()
             .cluster(
-                ClusterManagerModule.builder().build()
+                ClusterManagerModule.builder()
             )
             .metric(
                 MetricManagerModule.builder()
@@ -49,23 +50,19 @@ public class GeneratedProfile implements HeroicProfile {
                             .generatorModule(SineGeneratorModule.builder().build())
                             .build()
                     ))
-                    .build()
             )
             .metadata(
                 MetadataManagerModule.builder()
-                    .build()
             )
             .cache(
                 AggregationCacheModule.builder()
                     .backend(InMemoryAggregationCacheBackendConfig.builder().build())
-                    .build()
-            )
-            .build();
+            );
         // @formatter:on
     }
 
     @Override
     public String description() {
-        return "Profile that sets up a completely in-memory, generated data, heroic instance.";
+        return "Generated Source Data";
     }
 }

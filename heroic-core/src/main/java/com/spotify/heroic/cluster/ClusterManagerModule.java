@@ -21,8 +21,14 @@
 
 package com.spotify.heroic.cluster;
 
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -31,9 +37,8 @@ import javax.inject.Singleton;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.inject.Exposed;
@@ -46,7 +51,10 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicOptions;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
@@ -58,8 +66,6 @@ public class ClusterManagerModule {
     public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.copyOf(Sets.newHashSet(
             NodeCapability.QUERY, NodeCapability.WRITE));
     public static final boolean DEFAULT_USE_LOCAL = true;
-    public static final Set<Map<String, String>> DEFAULT_TOPOLOGY = ImmutableSet.of();
-    public static final List<RpcProtocolModule> DEFAULT_PROTOCOLS = ImmutableList.of();
 
     private final UUID id;
     private final Map<String, String> tags;
@@ -68,39 +74,6 @@ public class ClusterManagerModule {
     private final ClusterDiscoveryModule discovery;
     private final List<RpcProtocolModule> protocols;
     private final Set<Map<String, String>> topology;
-
-    @JsonCreator
-    public ClusterManagerModule(@JsonProperty("id") UUID id, @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("topology") Set<Map<String, String>> topology,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities, @JsonProperty("useLocal") Boolean useLocal,
-            @JsonProperty("discovery") ClusterDiscoveryModule discovery,
-            @JsonProperty("protocols") List<RpcProtocolModule> protocols) {
-        this.id = Optional.fromNullable(id).or(defaultId());
-        this.tags = tags;
-        this.capabilities = Optional.fromNullable(capabilities).or(DEFAULT_CAPABILITIES);
-        this.useLocal = Optional.fromNullable(useLocal).or(DEFAULT_USE_LOCAL);
-        this.discovery = Optional.fromNullable(discovery).or(ClusterDiscoveryModule.Null.supplier());
-        this.protocols = Optional.fromNullable(protocols).or(DEFAULT_PROTOCOLS);
-        this.topology = Optional.fromNullable(topology).or(DEFAULT_TOPOLOGY);
-    }
-
-    private Supplier<UUID> defaultId() {
-        return new Supplier<UUID>() {
-            @Override
-            public UUID get() {
-                return UUID.randomUUID();
-            }
-        };
-    }
-
-    public static Supplier<ClusterManagerModule> defaultSupplier() {
-        return new Supplier<ClusterManagerModule>() {
-            @Override
-            public ClusterManagerModule get() {
-                return new ClusterManagerModule(null, null, null, null, null, null, null);
-            }
-        };
-    }
 
     public Module make(final HeroicOptions options) {
         return new PrivateModule() {
@@ -153,52 +126,93 @@ public class ClusterManagerModule {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private UUID id;
-        private Map<String, String> tags;
-        private Set<NodeCapability> capabilities;
-        private Boolean useLocal;
-        private ClusterDiscoveryModule discovery;
-        private List<RpcProtocolModule> protocols;
-        private Set<Map<String, String>> topology;
+        private Optional<UUID> id = empty();
+        private Optional<Map<String, String>> tags = empty();
+        private Optional<Set<NodeCapability>> capabilities = empty();
+        private Optional<Boolean> useLocal = empty();
+        private Optional<ClusterDiscoveryModule> discovery = empty();
+        private Optional<List<RpcProtocolModule>> protocols = empty();
+        private Optional<Set<Map<String, String>>> topology = empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("id") UUID id, @JsonProperty("tags") Map<String, String> tags,
+                @JsonProperty("topology") Set<Map<String, String>> topology,
+                @JsonProperty("capabilities") Set<NodeCapability> capabilities, @JsonProperty("useLocal") Boolean useLocal,
+                @JsonProperty("discovery") ClusterDiscoveryModule discovery,
+                @JsonProperty("protocols") List<RpcProtocolModule> protocols) {
+            this.id = ofNullable(id);
+            this.tags = ofNullable(tags);
+            this.capabilities = ofNullable(capabilities);
+            this.useLocal = ofNullable(useLocal);
+            this.discovery = ofNullable(discovery);
+            this.protocols = ofNullable(protocols);
+            this.topology = ofNullable(topology);
+        }
 
         public Builder id(UUID id) {
-            this.id = id;
+            this.id = of(id);
             return this;
         }
 
         public Builder tags(Map<String, String> tags) {
-            this.tags = tags;
+            this.tags = of(tags);
             return this;
         }
 
         public Builder capabilities(Set<NodeCapability> capabilities) {
-            this.capabilities = capabilities;
+            this.capabilities = of(capabilities);
             return this;
         }
 
         public Builder useLocal(Boolean useLocal) {
-            this.useLocal = useLocal;
+            this.useLocal = of(useLocal);
             return this;
         }
 
         public Builder discovery(ClusterDiscoveryModule discovery) {
-            this.discovery = discovery;
+            this.discovery = of(discovery);
             return this;
         }
 
         public Builder protocols(List<RpcProtocolModule> protocols) {
-            this.protocols = protocols;
+            this.protocols = of(protocols);
             return this;
         }
 
         public Builder topology(Set<Map<String, String>> topology) {
-            this.topology = topology;
+            this.topology = of(topology);
             return this;
         }
 
+        public Builder merge(Builder o) {
+            // @formatter:off
+            return new Builder(
+                pickOptional(id, o.id),
+                pickOptional(tags, o.tags),
+                pickOptional(capabilities, o.capabilities),
+                pickOptional(useLocal, o.useLocal),
+                pickOptional(discovery, o.discovery),
+                pickOptional(protocols, o.protocols),
+                pickOptional(topology, o.topology)
+            );
+            // @formatter:on
+        }
+
         public ClusterManagerModule build() {
-            return new ClusterManagerModule(id, tags, topology, capabilities, useLocal, discovery, protocols);
+            // @formatter:off
+            return new ClusterManagerModule(
+                id.orElseGet(UUID::randomUUID),
+                tags.orElseGet(ImmutableMap::of),
+                capabilities.orElse(DEFAULT_CAPABILITIES),
+                useLocal.orElse(DEFAULT_USE_LOCAL),
+                discovery.orElseGet(ClusterDiscoveryModule::nullModule),
+                protocols.orElseGet(ImmutableList::of),
+                topology.orElseGet(ImmutableSet::of)
+            );
+            // @formatter:on
         }
     }
 }

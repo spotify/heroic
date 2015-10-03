@@ -1,16 +1,19 @@
 package com.spotify.heroic.shell;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -22,20 +25,20 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.SerializerFramework;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Data
 public class ShellServerModule extends PrivateModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;
 
     final String host;
     final int port;
-
-    public ShellServerModule(@JsonProperty("host") String host, @JsonProperty("port") Integer port) {
-        this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
-        this.port = Optional.fromNullable(port).or(DEFAULT_PORT);
-    }
 
     @Provides
     @Singleton
@@ -100,22 +103,33 @@ public class ShellServerModule extends PrivateModule {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private String host;
-        private int port = DEFAULT_PORT;
+        private Optional<String> host = empty();
+        private Optional<Integer> port = empty();
+
+        public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port) {
+            this.host = ofNullable(host);
+            this.port = ofNullable(port);
+        }
 
         public Builder host(String host) {
-            this.host = checkNotNull(host, "host");
+            this.host = of(host);
             return this;
         }
 
         public Builder port(int port) {
-            this.port = port;
+            this.port = of(port);
             return this;
         }
 
+        public Builder merge(Builder o) {
+            return new Builder(pickOptional(host, o.host), pickOptional(port, o.port));
+        }
+
         public ShellServerModule build() {
-            return new ShellServerModule(host, port);
+            return new ShellServerModule(host.orElse(DEFAULT_HOST), port.orElse(DEFAULT_PORT));
         }
     }
 }

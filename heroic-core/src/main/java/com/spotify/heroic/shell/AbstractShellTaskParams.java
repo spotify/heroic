@@ -1,5 +1,8 @@
 package com.spotify.heroic.shell;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.kohsuke.args4j.Option;
 
 
@@ -14,7 +17,7 @@ public abstract class AbstractShellTaskParams implements TaskParameters {
     public String output;
 
     @Option(name = "-P", aliases = { "--profile" }, usage = "Activate the given heroic profile", metaVar = "<profile>")
-    public String profile;
+    public List<String> profiles = new ArrayList<>();
 
     @Override
     public String config() {
@@ -32,7 +35,7 @@ public abstract class AbstractShellTaskParams implements TaskParameters {
     }
 
     @Override
-    public String profile() {
-        return profile;
+    public List<String> profiles() {
+        return profiles;
     }
 }

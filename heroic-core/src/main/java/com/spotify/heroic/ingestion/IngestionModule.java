@@ -21,17 +21,25 @@
 
 package com.spotify.heroic.ingestion;
 
-import lombok.Data;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
+
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 public class IngestionModule extends PrivateModule {
@@ -42,15 +50,6 @@ public class IngestionModule extends PrivateModule {
     private final boolean updateMetrics;
     private final boolean updateMetadata;
     private final boolean updateSuggestions;
-
-    @JsonCreator
-    public IngestionModule(@JsonProperty("updateMetrics") Boolean updateMetrics,
-            @JsonProperty("updateMetadata") Boolean updateMetadata,
-            @JsonProperty("updateSuggestions") Boolean updateSuggestions) {
-        this.updateMetadata = Optional.fromNullable(updateMetadata).or(DEFAULT_UPDATE_METADATA);
-        this.updateMetrics = Optional.fromNullable(updateMetrics).or(DEFAULT_UPDATE_METRICS);
-        this.updateSuggestions = Optional.fromNullable(updateSuggestions).or(DEFAULT_UPDATE_SUGGESTIONS);
-    }
 
     @Provides
     @Singleton
@@ -65,48 +64,66 @@ public class IngestionModule extends PrivateModule {
         expose(IngestionManager.class);
     }
 
-    public static Supplier<IngestionModule> defaultSupplier() {
-        return new Supplier<IngestionModule>() {
-            @Override
-            public IngestionModule get() {
-                return new IngestionModule(null, null, null);
-            }
-        };
-    }
-
     public static Builder builder() {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private Boolean updateMetrics;
-        private Boolean updateMetadata;
-        private Boolean updateSuggestions;
+        private Optional<Boolean> updateMetrics = empty();
+        private Optional<Boolean> updateMetadata = empty();
+        private Optional<Boolean> updateSuggestions = empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("updateMetrics") Boolean updateMetrics,
+                @JsonProperty("updateMetadata") Boolean updateMetadata,
+                @JsonProperty("updateSuggestions") Boolean updateSuggestions) {
+            this.updateMetadata = ofNullable(updateMetadata);
+            this.updateMetrics = ofNullable(updateMetrics);
+            this.updateSuggestions = ofNullable(updateSuggestions);
+        }
 
         public Builder updateAll() {
-            this.updateMetrics = true;
-            this.updateMetadata = true;
-            this.updateSuggestions = true;
+            this.updateMetrics = of(true);
+            this.updateMetadata = of(true);
+            this.updateSuggestions = of(true);
             return this;
         }
 
-        public Builder updateMetrics(Boolean updateMetrics) {
-            this.updateMetrics = updateMetrics;
+        public Builder updateMetrics(boolean updateMetrics) {
+            this.updateMetrics = of(updateMetrics);
             return this;
         }
 
-        public Builder updateMetadata(Boolean updateMetadata) {
-            this.updateMetadata = updateMetadata;
+        public Builder updateMetadata(boolean updateMetadata) {
+            this.updateMetadata = of(updateMetadata);
             return this;
         }
 
-        public Builder updateSuggestions(Boolean updateSuggestions) {
-            this.updateSuggestions = updateSuggestions;
+        public Builder updateSuggestions(boolean updateSuggestions) {
+            this.updateSuggestions = of(updateSuggestions);
             return this;
+        }
+
+        public Builder merge(final Builder o) {
+         // @formatter:off
+            return new Builder(
+                pickOptional(updateMetrics, o.updateMetrics),
+                pickOptional(updateMetadata, o.updateMetadata),
+                pickOptional(updateSuggestions, o.updateSuggestions)
+            );
+            // @formatter:on
         }
 
         public IngestionModule build() {
-            return new IngestionModule(updateMetrics, updateMetadata, updateSuggestions);
+            // @formatter:off
+            return new IngestionModule(
+                updateMetrics.orElse(false),
+                updateMetadata.orElse(false),
+                updateSuggestions.orElse(false)
+            );
+            // @formatter:on
         }
     }
 }

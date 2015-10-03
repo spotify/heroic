@@ -21,162 +21,180 @@
 
 package com.spotify.heroic;
 
+import static com.spotify.heroic.common.Optionals.mergeOptional;
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.consumer.ConsumerModule;
-import com.spotify.heroic.httpclient.HttpClientManagerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Data
 public class HeroicConfig {
-    public static final boolean DEFAULT_DISABLE_METRICS = false;
-    public static final String DEFAULT_HOST = "0.0.0.0";
-    public static final int DEFAULT_PORT = 8080;
-    public static final String DEFAULT_REFRESH_CLUSTER_SCHEDULE = "0 */5 * * * ?";
     public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
 
-    private final boolean disableMetrics;
-    private final String host;
-    private final int port;
-    private final String refreshClusterSchedule;
-
+    private final Optional<String> host;
+    private final Optional<Integer> port;
+    private final Optional<Boolean> disableMetrics;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
     private final SuggestManagerModule suggest;
     private final AggregationCacheModule cache;
-    private final HttpClientManagerModule client;
     private final IngestionModule ingestion;
     private final List<ConsumerModule> consumers;
     private final Optional<ShellServerModule> shellServer;
-
-    @JsonCreator
-    public HeroicConfig(@JsonProperty("disableMetrics") Boolean disableMetrics, @JsonProperty("host") String host,
-            @JsonProperty("port") Integer port, @JsonProperty("refreshClusterSchedule") String refreshClusterSchedule,
-            @JsonProperty("cluster") ClusterManagerModule cluster, @JsonProperty("metrics") MetricManagerModule metrics,
-            @JsonProperty("metadata") MetadataManagerModule metadata,
-            @JsonProperty("suggest") SuggestManagerModule suggest, @JsonProperty("cache") AggregationCacheModule cache,
-            @JsonProperty("client") HttpClientManagerModule client,
-            @JsonProperty("ingestion") IngestionModule ingestion,
-            @JsonProperty("consumers") List<ConsumerModule> consumers,
-            @JsonProperty("shellServer") ShellServerModule shellServer) {
-        this.disableMetrics = Optional.fromNullable(disableMetrics).or(DEFAULT_DISABLE_METRICS);
-        this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
-        this.port = Optional.fromNullable(port).or(DEFAULT_PORT);
-        this.refreshClusterSchedule = Optional.fromNullable(refreshClusterSchedule)
-                .or(DEFAULT_REFRESH_CLUSTER_SCHEDULE);
-        this.cluster = Optional.fromNullable(cluster).or(ClusterManagerModule.defaultSupplier());
-        this.metric = Optional.fromNullable(metrics).or(MetricManagerModule.defaultSupplier());
-        this.metadata = Optional.fromNullable(metadata).or(MetadataManagerModule.defaultSupplier());
-        this.suggest = Optional.fromNullable(suggest).or(SuggestManagerModule.defaultSupplier());
-        this.client = Optional.fromNullable(client).or(HttpClientManagerModule.defaultSupplier());
-        this.cache = Optional.fromNullable(cache).or(AggregationCacheModule.defaultSupplier());
-        this.ingestion = Optional.fromNullable(ingestion).or(IngestionModule.defaultSupplier());
-        this.consumers = Optional.fromNullable(consumers).or(DEFAULT_CONSUMERS);
-        this.shellServer = Optional.fromNullable(shellServer);
-    }
 
     public static Builder builder() {
         return new Builder();
     }
 
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Builder {
-        private boolean disableMetrics = false;
-        private String host;
-        private Integer port;
-        private String refreshClusterSchedule;
-        private ClusterManagerModule cluster;
-        private MetricManagerModule metric;
-        private MetadataManagerModule metadata;
-        private SuggestManagerModule suggest;
-        private AggregationCacheModule cache;
-        private HttpClientManagerModule client;
-        private IngestionModule ingestion;
-        private List<ConsumerModule> consumers;
-        private ShellServerModule shellServer;
+        private Optional<String> host = empty();
+        private Optional<Integer> port = empty();
+        private Optional<Boolean> disableMetrics = empty();
+        private Optional<ClusterManagerModule.Builder> cluster = empty();
+        private Optional<MetricManagerModule.Builder> metric = empty();
+        private Optional<MetadataManagerModule.Builder> metadata = empty();
+        private Optional<SuggestManagerModule.Builder> suggest = empty();
+        private Optional<AggregationCacheModule.Builder> cache = empty();
+        private Optional<IngestionModule.Builder> ingestion = empty();
+        private Optional<List<ConsumerModule.Builder>> consumers = empty();
+        private Optional<ShellServerModule.Builder> shellServer = empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
+                @JsonProperty("cluster") ClusterManagerModule.Builder cluster,
+                @JsonProperty("metrics") MetricManagerModule.Builder metrics,
+                @JsonProperty("metadata") MetadataManagerModule.Builder metadata,
+                @JsonProperty("suggest") SuggestManagerModule.Builder suggest,
+                @JsonProperty("cache") AggregationCacheModule.Builder cache,
+                @JsonProperty("ingestion") IngestionModule.Builder ingestion,
+                @JsonProperty("consumers") List<ConsumerModule.Builder> consumers,
+                @JsonProperty("shellServer") ShellServerModule.Builder shellServer) {
+            this.host = ofNullable(host);
+            this.port = ofNullable(port);
+            this.cluster = ofNullable(cluster);
+            this.metric = ofNullable(metrics);
+            this.metadata = ofNullable(metadata);
+            this.suggest = ofNullable(suggest);
+            this.cache = ofNullable(cache);
+            this.ingestion = ofNullable(ingestion);
+            this.consumers = ofNullable(consumers);
+            this.shellServer = ofNullable(shellServer);
+        }
 
         public Builder disableMetrics(boolean disableMetrics) {
-            this.disableMetrics = disableMetrics;
+            this.disableMetrics = of(disableMetrics);
             return this;
         }
 
         public Builder host(String host) {
-            this.host = host;
+            this.host = of(host);
             return this;
         }
 
         public Builder port(Integer port) {
-            this.port = port;
+            this.port = of(port);
             return this;
         }
 
-        public Builder refreshClusterSchedule(String refreshClusterSchedule) {
-            this.refreshClusterSchedule = refreshClusterSchedule;
+        public Builder cluster(ClusterManagerModule.Builder cluster) {
+            this.cluster = of(cluster);
             return this;
         }
 
-        public Builder cluster(ClusterManagerModule cluster) {
-            this.cluster = cluster;
+        public Builder metric(MetricManagerModule.Builder metric) {
+            this.metric = of(metric);
             return this;
         }
 
-        public Builder metric(MetricManagerModule metric) {
-            this.metric = metric;
+        public Builder metadata(MetadataManagerModule.Builder metadata) {
+            this.metadata = of(metadata);
             return this;
         }
 
-        public Builder metadata(MetadataManagerModule metadata) {
-            this.metadata = metadata;
+        public Builder suggest(SuggestManagerModule.Builder suggest) {
+            this.suggest = of(suggest);
             return this;
         }
 
-        public Builder suggest(SuggestManagerModule suggest) {
-            this.suggest = suggest;
+        public Builder cache(AggregationCacheModule.Builder cache) {
+            this.cache = of(cache);
             return this;
         }
 
-        public Builder cache(AggregationCacheModule cache) {
-            this.cache = cache;
+        public Builder ingestion(IngestionModule.Builder ingestion) {
+            this.ingestion = of(ingestion);
             return this;
         }
 
-        public Builder client(HttpClientManagerModule client) {
-            this.client = client;
+        public Builder consumers(List<ConsumerModule.Builder> consumers) {
+            this.consumers = of(consumers);
             return this;
         }
 
-        public Builder ingestion(IngestionModule ingestion) {
-            this.ingestion = ingestion;
+        public Builder shellServer(ShellServerModule.Builder shellServer) {
+            this.shellServer = of(shellServer);
             return this;
         }
 
-        public Builder consumers(List<ConsumerModule> consumers) {
-            this.consumers = consumers;
-            return this;
-        }
-
-        public Builder shellServer(ShellServerModule shellServer) {
-            this.shellServer = shellServer;
-            return this;
+        public Builder merge(Builder o) {
+            // @formatter:off
+            return new Builder(
+                pickOptional(host, o.host),
+                pickOptional(port, o.port),
+                pickOptional(disableMetrics, o.disableMetrics),
+                mergeOptional(cluster, o.cluster, (a, b) -> a.merge(b)),
+                mergeOptional(metric, o.metric, (a, b) -> a.merge(b)),
+                mergeOptional(metadata, o.metadata, (a, b) -> a.merge(b)),
+                mergeOptional(suggest, o.suggest, (a, b) -> a.merge(b)),
+                mergeOptional(cache, o.cache, (a, b) -> a.merge(b)),
+                mergeOptional(ingestion, o.ingestion, (a, b) -> a.merge(b)),
+                mergeOptionalList(consumers, o.consumers),
+                mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b))
+            );
+            // @formatter:on
         }
 
         public HeroicConfig build() {
-            return new HeroicConfig(disableMetrics, host, port, refreshClusterSchedule, cluster, metric, metadata,
-                    suggest, cache, client, ingestion, consumers, shellServer);
+            // @formatter:off
+            return new HeroicConfig(
+                host,
+                port,
+                disableMetrics,
+                cluster.orElseGet(ClusterManagerModule::builder).build(),
+                metric.orElseGet(MetricManagerModule::builder).build(),
+                metadata.orElseGet(MetadataManagerModule::builder).build(),
+                suggest.orElseGet(SuggestManagerModule::builder).build(),
+                cache.orElseGet(AggregationCacheModule::builder).build(),
+                ingestion.orElseGet(IngestionModule::builder).build(),
+                consumers.map(cl -> ImmutableList.copyOf(cl.stream().map(ConsumerModule.Builder::build).iterator())).orElseGet(ImmutableList::of),
+                shellServer.map(ShellServerModule.Builder::build)
+            );
+            // @formatter:on
         }
     }
 }

@@ -21,20 +21,22 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.ArrayList;
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
@@ -46,28 +48,15 @@ import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 @Data
 public class SuggestManagerModule extends PrivateModule {
-    private static final List<SuggestModule> DEFAULT_BACKENDS = new ArrayList<>();
-
     private final List<SuggestModule> backends;
-    private final List<String> defaultBackends;
-
-    @JsonCreator
-    public SuggestManagerModule(@JsonProperty("backends") List<SuggestModule> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends) {
-        this.backends = Optional.fromNullable(backends).or(DEFAULT_BACKENDS);
-        this.defaultBackends = defaultBackends;
-    }
-
-    public static Supplier<SuggestManagerModule> defaultSupplier() {
-        return new Supplier<SuggestManagerModule>() {
-            @Override
-            public SuggestManagerModule get() {
-                return new SuggestManagerModule(null, null);
-            }
-        };
-    }
+    private final Optional<List<String>> defaultBackends;
 
     @Provides
     @Singleton
@@ -115,22 +104,45 @@ public class SuggestManagerModule extends PrivateModule {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private List<SuggestModule> backends;
-        private List<String> defaultBackends;
+        private Optional<List<SuggestModule>> backends = empty();
+        private Optional<List<String>> defaultBackends = empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("backends") List<SuggestModule> backends,
+                @JsonProperty("defaultBackends") List<String> defaultBackends) {
+            this.backends = ofNullable(backends);
+            this.defaultBackends = ofNullable(defaultBackends);
+        }
 
         public Builder backends(List<SuggestModule> backends) {
-            this.backends = backends;
+            this.backends = of(backends);
             return this;
         }
 
         public Builder defaultBackends(List<String> defaultBackends) {
-            this.defaultBackends = defaultBackends;
+            this.defaultBackends = of(defaultBackends);
             return this;
         }
 
+        public Builder merge(Builder o) {
+            // @formatter:off
+            return new Builder(
+                mergeOptionalList(o.backends, backends),
+                mergeOptionalList(o.defaultBackends, defaultBackends)
+            );
+            // @formatter:on
+        }
+
         public SuggestManagerModule build() {
-            return new SuggestManagerModule(backends, defaultBackends);
+            // @formatter:off
+            return new SuggestManagerModule(
+                backends.orElseGet(ImmutableList::of),
+                defaultBackends
+            );
+            // @formatter:on
         }
     }
 }

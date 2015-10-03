@@ -21,19 +21,21 @@
 
 package com.spotify.heroic.metadata;
 
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
@@ -46,28 +48,15 @@ import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 @Data
 public class MetadataManagerModule extends PrivateModule {
-    private static final List<MetadataModule> DEFAULT_BACKENDS = ImmutableList.of();
-
     private final List<MetadataModule> backends;
-    private final List<String> defaultBackends;
-
-    @JsonCreator
-    public MetadataManagerModule(@JsonProperty("backends") List<MetadataModule> backends,
-            @JsonProperty("defaultBackends") List<String> defaultBackends) {
-        this.backends = Optional.fromNullable(backends).or(DEFAULT_BACKENDS);
-        this.defaultBackends = defaultBackends;
-    }
-
-    public static Supplier<MetadataManagerModule> defaultSupplier() {
-        return new Supplier<MetadataManagerModule>() {
-            @Override
-            public MetadataManagerModule get() {
-                return new MetadataManagerModule(null, null);
-            }
-        };
-    }
+    private final Optional<List<String>> defaultBackends;
 
     @Provides
     @Singleton
@@ -115,22 +104,45 @@ public class MetadataManagerModule extends PrivateModule {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private List<MetadataModule> backends;
-        private List<String> defaultBackends;
+        private Optional<List<MetadataModule>> backends = empty();
+        private Optional<List<String>> defaultBackends = empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("backends") List<MetadataModule> backends,
+                @JsonProperty("defaultBackends") List<String> defaultBackends) {
+            this.backends = ofNullable(backends);
+            this.defaultBackends = ofNullable(defaultBackends);
+        }
 
         public Builder backends(List<MetadataModule> backends) {
-            this.backends = backends;
+            this.backends = of(backends);
             return this;
         }
 
         public Builder defaultBackends(List<String> defaultBackends) {
-            this.defaultBackends = defaultBackends;
+            this.defaultBackends = of(defaultBackends);
             return this;
         }
 
+        public Builder merge(final Builder o) {
+            // @formatter:off
+            return new Builder(
+                mergeOptionalList(o.backends, backends),
+                mergeOptionalList(o.defaultBackends, defaultBackends)
+            );
+            // @formatter:on
+        }
+
         public MetadataManagerModule build() {
-            return new MetadataManagerModule(backends, defaultBackends);
+            // @formatter:off
+            return new MetadataManagerModule(
+                backends.orElseGet(ImmutableList::of),
+                defaultBackends
+            );
+            // @formatter:on
         }
     }
 }

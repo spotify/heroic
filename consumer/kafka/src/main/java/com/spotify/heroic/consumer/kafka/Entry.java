@@ -32,6 +32,6 @@ public class Entry implements HeroicModule {
 
     @Override
     public void setup() {
-        configurationContext.registerType("kafka", KafkaConsumerModule.class);
+        configurationContext.registerType("kafka", KafkaConsumerModule.Builder.class);
     }
 }

@@ -288,11 +288,9 @@ public class HeroicShell {
         final String backendType = params.getBackendType();
 
         builder.profile(new HeroicProfile() {
-
             @Override
-            public HeroicConfig build() throws Exception {
+            public HeroicConfig.Builder build(HeroicParameters params) throws Exception {
                 // @formatter:off
-
                 final TransportClientSetup clientSetup = TransportClientSetup.builder()
                     .clusterName(clusterName)
                     .seeds(seeds)
@@ -308,7 +306,7 @@ public class HeroicShell {
                                     .writesPerSecond(0d)
                                     .build()
                                 )
-                            ).build()
+                            )
                         )
                         .suggest(
                             SuggestManagerModule.builder()
@@ -321,10 +319,7 @@ public class HeroicShell {
                                     .build()
                                 )
                             )
-                            .build()
-                        )
-
-                .build();
+                        );
                 // @formatter:on
             }
 
@@ -385,18 +380,20 @@ public class HeroicShell {
     }
 
     static HeroicCore.Builder setupBuilder(Parameters params) {
-        HeroicCore.Builder builder = HeroicCore.builder().server(params.server).disableBackends(params.disableBackends)
+        HeroicCore.Builder builder = HeroicCore.builder().setupServer(params.server).disableBackends(params.disableBackends)
                 .skipLifecycles(params.skipLifecycles).modules(HeroicModules.ALL_MODULES).oneshot(true);
 
         if (params.config() != null) {
             builder.configPath(parseConfigPath(params.config()));
         }
 
-        if (params.profile() != null) {
-            final HeroicProfile p = HeroicModules.PROFILES.get(params.profile());
+        builder.parameters(HeroicParameters.ofList(params.parameters));
+
+        for (final String profile : params.profiles()) {
+            final HeroicProfile p = HeroicModules.PROFILES.get(profile);
 
             if (p == null) {
-                throw new IllegalArgumentException(String.format("not a valid profile: %s", params.profile()));
+                throw new IllegalArgumentException(String.format("not a valid profile: %s", profile));
             }
 
             builder.profile(p);
@@ -418,6 +415,9 @@ public class HeroicShell {
 
         @Option(name = "--connect", usage = "Connect to a remote heroic server")
         private String connect = null;
+
+        @Option(name = "-X", usage="Define an extra parameter", metaVar="<key>=<value>")
+        private final List<String> parameters = new ArrayList<>();
     }
 
     @RequiredArgsConstructor

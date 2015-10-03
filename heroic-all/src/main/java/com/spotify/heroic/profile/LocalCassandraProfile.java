@@ -21,41 +21,44 @@
 
 package com.spotify.heroic.profile;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.HeroicParameters;
 import com.spotify.heroic.HeroicProfile;
-import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.shell.ShellServerModule;
 
 public class LocalCassandraProfile implements HeroicProfile {
+    private static final Splitter splitter = Splitter.on(',').trimResults();
+
     @Override
-    public HeroicConfig build() throws Exception {
+    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
+        final boolean configure = params.contains("cassandra.configure");
+
+        final Optional<String> seeds = params.get("cassandra.seeds");
+
         // @formatter:off
-        // final SuggestManagerModule suggest = SuggestManagerModule.create(suggestModules, null);
         return HeroicConfig.builder()
-            .cluster(
-                ClusterManagerModule.builder()
-                .tags(ImmutableMap.of("site", "local"))
-                .build()
-            )
             .metric(
                 MetricManagerModule.builder()
                     .backends(ImmutableList.<MetricModule>of(
-                        DatastaxMetricModule.builder().configure(true).build()
+                        DatastaxMetricModule.builder()
+                        .seeds(seeds.transform(s -> ImmutableSet.copyOf(splitter.split(s))).or(ImmutableSet.of("localhost")))
+                        .configure(configure)
+                        .build()
                     ))
-                    .build()
             )
-            .shellServer(ShellServerModule.builder().build())
-            .build();
+            .shellServer(ShellServerModule.builder());
         // @formatter:on
     }
 
     @Override
     public String description() {
-        return "Profile that sets up a completely in-memory, generated data, heroic instance.";
+        return "Connect to a Local Cassandra for Data";
     }
 }

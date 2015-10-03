@@ -21,37 +21,30 @@
 
 package com.spotify.heroic.aggregationcache;
 
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
+import java.util.Optional;
+
 import javax.inject.Singleton;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.statistics.AggregationCacheReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
 public class AggregationCacheModule extends PrivateModule {
     private final AggregationCacheBackendModule backend;
-
-    /**
-     * @param backend Backend to use for caching the results of an aggregation.
-     */
-    @JsonCreator
-    public AggregationCacheModule(@JsonProperty("backend") AggregationCacheBackendModule backend) {
-        this.backend = Optional.fromNullable(backend).or(InMemoryAggregationCacheBackendConfig.defaultSupplier());
-    }
-
-    public static Supplier<AggregationCacheModule> defaultSupplier() {
-        return new Supplier<AggregationCacheModule>() {
-            @Override
-            public AggregationCacheModule get() {
-                return new AggregationCacheModule(null);
-            }
-        };
-    }
 
     @Provides
     @Singleton
@@ -70,16 +63,27 @@ public class AggregationCacheModule extends PrivateModule {
         return new Builder();
     }
 
+    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @AllArgsConstructor(access=AccessLevel.PRIVATE)
     public static class Builder {
-        private AggregationCacheBackendModule backend;
+        private Optional<AggregationCacheBackendModule> backend = Optional.empty();
+
+        @JsonCreator
+        public Builder(@JsonProperty("backend") AggregationCacheBackendModule backend) {
+            this.backend = ofNullable(backend);
+        }
 
         public Builder backend(AggregationCacheBackendModule backend) {
-            this.backend = backend;
+            this.backend = of(backend);
             return this;
         }
 
+        public Builder merge(final Builder o) {
+            return new Builder(pickOptional(backend, o.backend));
+        }
+
         public AggregationCacheModule build() {
-            return new AggregationCacheModule(backend);
+            return new AggregationCacheModule(backend.orElseGet(InMemoryAggregationCacheBackendConfig.builder()::build));
         }
     }
 }

@@ -22,9 +22,12 @@
 package com.spotify.heroic.common;
 
 import java.lang.reflect.Constructor;
+import java.util.Objects;
 
 public final class ReflectionUtils {
     public static <T> T buildInstance(String className, Class<T> expectedType) {
+        Objects.requireNonNull(className, "className");
+
         final Class<?> clazz;
 
         try {

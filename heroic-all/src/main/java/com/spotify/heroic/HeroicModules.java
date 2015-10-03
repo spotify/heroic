@@ -31,7 +31,6 @@ public class HeroicModules {
 
         com.spotify.heroic.aggregationcache.cassandra2.Entry.class,
 
-        com.spotify.heroic.rpc.httprpc.Entry.class,
         com.spotify.heroic.rpc.nativerpc.Entry.class
     );
 

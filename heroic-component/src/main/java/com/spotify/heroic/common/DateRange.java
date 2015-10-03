@@ -45,7 +45,10 @@ public class DateRange implements Comparable<DateRange> {
 
     public DateRange(long start, long end) {
         checkArgument(start >= 0, "start must be a positive number");
-        checkArgument(end >= start, "end must be equal to, or come after start");
+
+        if (end < start) {
+            throw new IllegalArgumentException(String.format("start (%d) must come before end (%d)", start, end));
+        }
 
         this.start = start;
         this.end = end;

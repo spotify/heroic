@@ -1,6 +1,7 @@
 package com.spotify.heroic;
 
 import java.net.InetSocketAddress;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Named;
@@ -28,12 +29,12 @@ import com.spotify.heroic.filter.FilterJsonSerializer;
 import com.spotify.heroic.filter.FilterJsonSerializerImpl;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.EventSerialization;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricCollectionSerialization;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricGroupSerialization;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricTypeSerialization;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricCollectionSerialization;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
@@ -50,7 +51,7 @@ public class HeroicPrimaryModule extends AbstractModule {
 
     private final boolean server;
     private final HeroicReporter reporter;
-    private final HeroicStartupPinger pinger;
+    private final Optional<HeroicStartupPinger> pinger;
 
     @Provides
     @Singleton
@@ -122,8 +123,8 @@ public class HeroicPrimaryModule extends AbstractModule {
             bind(HeroicServer.class).in(Scopes.SINGLETON);
         }
 
-        if (pinger != null) {
-            bind(HeroicStartupPinger.class).toInstance(pinger);
+        if (pinger.isPresent()) {
+            bind(HeroicStartupPinger.class).toInstance(pinger.get());
         }
 
         bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifeCycles));

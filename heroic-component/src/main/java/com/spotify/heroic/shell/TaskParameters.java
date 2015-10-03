@@ -1,5 +1,6 @@
 package com.spotify.heroic.shell;
 
+import java.util.List;
 
 public interface TaskParameters {
     public String config();
@@ -8,5 +9,5 @@ public interface TaskParameters {
 
     public String output();
 
-    public String profile();
+    public List<String> profiles();
 }

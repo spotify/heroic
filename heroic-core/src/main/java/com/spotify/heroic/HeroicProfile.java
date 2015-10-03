@@ -22,7 +22,7 @@
 package com.spotify.heroic;
 
 public interface HeroicProfile {
-    HeroicConfig build() throws Exception;
+    HeroicConfig.Builder build(final HeroicParameters params) throws Exception;
 
     String description();
 }

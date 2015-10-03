@@ -24,6 +24,7 @@ package com.spotify.heroic.profile;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.HeroicParameters;
 import com.spotify.heroic.HeroicProfile;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.aggregationcache.InMemoryAggregationCacheBackendConfig;
@@ -44,14 +45,13 @@ import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 public class MemoryProfile implements HeroicProfile {
     @Override
-    public HeroicConfig build() throws Exception {
+    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         // @formatter:off
         // final SuggestManagerModule suggest = SuggestManagerModule.create(suggestModules, null);
         return HeroicConfig.builder()
             .cluster(
                 ClusterManagerModule.builder()
                 .tags(ImmutableMap.of("site", "local"))
-                .build()
             )
             .metric(
                 MetricManagerModule.builder()
@@ -59,7 +59,6 @@ public class MemoryProfile implements HeroicProfile {
                         MemoryMetricModule.builder()
                             .build()
                     ))
-                    .build()
             )
             .metadata(
                 MetadataManagerModule.builder()
@@ -79,7 +78,6 @@ public class MemoryProfile implements HeroicProfile {
                             )
                             .build()
                     ))
-                    .build()
             )
             .suggest(
                 SuggestManagerModule.builder()
@@ -99,20 +97,17 @@ public class MemoryProfile implements HeroicProfile {
                             )
                             .build()
                     ))
-                    .build()
             )
             .cache(
                 AggregationCacheModule.builder()
                     .backend(InMemoryAggregationCacheBackendConfig.builder().build())
-                    .build()
             )
-            .shellServer(ShellServerModule.builder().build())
-            .build();
+            .shellServer(ShellServerModule.builder());
         // @formatter:on
     }
 
     @Override
     public String description() {
-        return "Profile that sets up a completely in-memory, generated data, heroic instance.";
+        return "Store Data In-Memory";
     }
 }

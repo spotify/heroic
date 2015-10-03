@@ -28,10 +28,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -43,6 +39,9 @@ import com.spotify.heroic.reflection.ResourceFileLoader;
 import com.spotify.heroic.reflection.ResourceInstance;
 
 import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class HeroicService {
@@ -140,7 +139,7 @@ public class HeroicService {
     private static void configureBuilder(final HeroicCore.Builder builder, final Parameters params) {
         final Path config = getConfigPath(params.extra);
 
-        builder.server(true);
+        builder.setupServer(true);
 
         if (config != null)
             builder.configPath(config);
@@ -157,9 +156,11 @@ public class HeroicService {
         if (params.startupId != null)
             builder.startupId(params.startupId);
 
-        if (params.profile != null)
-            builder.profile(setupProfile(params.profile));
+        for (final String profile : params.profiles) {
+            builder.profile(setupProfile(profile));
+        }
 
+        builder.parameters(HeroicParameters.ofList(params.parameters));
         builder.modules(HeroicModules.ALL_MODULES);
     }
 
@@ -208,7 +209,7 @@ public class HeroicService {
     @Data
     public static class Parameters {
         @Option(name = "-P", aliases = { "--profile" }, usage = "Activate a pre-defined profile instead of a configuration file. Profiles are pre-defined configurations, useful for messing around with the system.")
-        private String profile;
+        private List<String> profiles = new ArrayList<>();
 
         @Option(name = "--port", usage = "Port number to bind to")
         private final Integer port = null;
@@ -227,6 +228,9 @@ public class HeroicService {
 
         @Option(name = "--startup-id", usage = "Explicit id of a specific startup instance.")
         private String startupId;
+
+        @Option(name = "-X", usage="Define an extra parameter", metaVar="<key>=<value>")
+        private final List<String> parameters = new ArrayList<>();
 
         @Argument
         private final List<String> extra = new ArrayList<>();

@@ -22,6 +22,8 @@
 package com.spotify.heroic;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -32,10 +34,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -45,6 +47,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -53,7 +56,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.AbstractModule;
@@ -70,6 +72,7 @@ import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicInternalLifeCycle.Context;
 import com.spotify.heroic.cluster.LocalClusterNode;
 import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.scheduler.Scheduler;
@@ -79,6 +82,8 @@ import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -86,19 +91,21 @@ import lombok.extern.slf4j.Slf4j;
  *
  * All public methods are thread-safe.
  *
+ * All fields are non-null.
+ *
  * @author udoprog
  */
 @Slf4j
+@RequiredArgsConstructor(access=AccessLevel.PRIVATE)
 public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicReporterConfiguration {
-    static final List<Class<?>> DEFAULT_MODULES = ImmutableList.of();
-    static final boolean DEFAULT_SERVER = true;
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
-    static final boolean DEFAULT_ONESHOT = false;
 
-    /**
-     * Which resource file to load modules from.
-     */
+    static final boolean DEFAULT_SETUP_SERVER = true;
+    static final boolean DEFAULT_ONESHOT = false;
+    static final boolean DEFAULT_DISABLE_BACKENDS = false;
+    static final boolean DEFAULT_SKIP_LIFECYCLES = false;
+
     static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
     static final String APPLICATION_JSON = "application/json";
     static final String APPLICATION_HEROIC_CONFIG = "application/heroic-config";
@@ -126,47 +133,50 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     };
     // @formatter:on
 
+    /**
+     * Maintained reference to the primary injector.
+     * This being set implies that the application is in a running state.
+     **/
     private final AtomicReference<Injector> primary = new AtomicReference<>();
 
-    private final String host;
-    private final Integer port;
     /**
-     * A list of configured modules that will be loaded during startup.
-     *
-     * @see #doStart()
+     * Global lock that must be acquired when starting and shutting down core.
+     * @see {@link #start()}
+     * @see {@link #shutdown()}
      */
-    private final List<Class<?>> modules;
-    private final List<HeroicBootstrap> early;
-    private final List<HeroicBootstrap> late;
-    private final boolean server;
-    private final Path configPath;
-    private final HeroicProfile profile;
-    private final Optional<HeroicReporter> reporter;
-    private final URI startupPing;
-    private final String startupId;
+    private final Object $lock = new Object();
+
+    private final Optional<String> host;
+    private final Optional<Integer> port;
+    private final Optional<Path> configPath;
+    private final Optional<URI> startupPing;
+    private final Optional<String> startupId;
+
+    /**
+     * Additional dynamic parameters to pass into the configuration of a profile.
+     * These are typically extracted from the commandline, or a properties file.
+     */
+    private final HeroicParameters params;
+
+    /**
+     * Root entry for the metric reporter.
+     */
+    private final AtomicReference<HeroicReporter> reporter;
+
+    /* flags */
+    private final boolean setupServer;
     private final boolean oneshot;
     private final boolean disableBackends;
     private final boolean skipLifecycles;
 
-    private final AtomicReference<HeroicReporter> registeredReporter = new AtomicReference<HeroicReporter>();
+    /* extensions */
+    private final List<Class<?>> modules;
+    private final List<HeroicProfile> profiles;
+    private final List<HeroicBootstrap> early;
+    private final List<HeroicBootstrap> late;
 
-    public HeroicCore(String host, Integer port, List<Class<?>> modules, List<HeroicBootstrap> early,
-            List<HeroicBootstrap> late, Boolean server, Path configPath, HeroicProfile profile, HeroicReporter reporter,
-            URI startupPing, String startupId, boolean oneshot, boolean disableBackends, boolean skipLifecycles) {
-        this.host = Optional.fromNullable(host).or(DEFAULT_HOST);
-        this.port = port;
-        this.modules = Optional.fromNullable(modules).or(DEFAULT_MODULES);
-        this.early = ImmutableList.copyOf(Optional.fromNullable(early).or(ImmutableList.of()));
-        this.late = ImmutableList.copyOf(Optional.fromNullable(late).or(ImmutableList.of()));
-        this.server = Optional.fromNullable(server).or(DEFAULT_SERVER);
-        this.configPath = configPath;
-        this.profile = profile;
-        this.reporter = Optional.fromNullable(reporter);
-        this.startupPing = startupPing;
-        this.startupId = startupId;
-        this.oneshot = oneshot;
-        this.disableBackends = disableBackends;
-        this.skipLifecycles = skipLifecycles;
+    @Override
+    public void registerReporter(final HeroicReporter reporter) {
     }
 
     @Override
@@ -178,15 +188,6 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     public boolean isOneshot() {
         return oneshot;
     }
-
-    @Override
-    public void registerReporter(HeroicReporter reporter) {
-        if (!this.registeredReporter.compareAndSet(null, reporter)) {
-            log.warn("Tried to register more than one reporter: {}", reporter);
-        }
-    }
-
-    private final Object $lock = new Object();
 
     /**
      * Main entry point, will block until service is finished.
@@ -436,21 +437,18 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
 
         final InetSocketAddress bindAddress = setupBindAddress(config);
 
-        final HeroicStartupPinger pinger;
+        final Optional<HeroicStartupPinger> pinger;
 
-        if (startupPing != null && startupId != null) {
-            pinger = new HeroicStartupPinger(startupPing, startupId);
+        if (startupPing.isPresent() && startupId.isPresent()) {
+            pinger = of(new HeroicStartupPinger(startupPing.get(), startupId.get()));
         } else {
-            pinger = null;
+            pinger = empty();
         }
 
-        final HeroicReporter reporter = this.reporter.or(Optional.fromNullable(registeredReporter.get()))
-                .or(NoopHeroicReporter::new);
+        final HeroicReporter reporter = this.reporter.get();
 
         // register root components.
-        modules.add(new HeroicPrimaryModule(this, lifeCycles, bindAddress, server, reporter, pinger));
-
-        modules.add(config.getClient());
+        modules.add(new HeroicPrimaryModule(this, lifeCycles, bindAddress, setupServer, reporter, pinger));
 
         if (!disableBackends) {
             modules.add(new AbstractModule() {
@@ -459,12 +457,13 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
                     bind(LocalClusterNode.class).in(Scopes.SINGLETON);
                 }
             });
+
             modules.add(config.getMetric());
             modules.add(config.getMetadata());
             modules.add(config.getSuggest());
             modules.add(config.getIngestion());
 
-            config.getShellServer().transform(modules::add);
+            config.getShellServer().map(modules::add);
         }
 
         modules.add(config.getCluster().make(this));
@@ -491,9 +490,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     }
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
-        final String host = Optional.fromNullable(this.host)
-                .or(Optional.fromNullable(config.getHost()).or(DEFAULT_HOST));
-        final int port = Optional.fromNullable(this.port).or(Optional.fromNullable(config.getPort()).or(DEFAULT_PORT));
+        final String host = Optionals.pickOptional(config.getHost(), this.host).orElse(DEFAULT_HOST);
+        final int port = Optionals.pickOptional(config.getPort(), this.port).orElse(DEFAULT_PORT);
         return new InetSocketAddress(host, port);
     }
 
@@ -503,10 +501,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
 
         final List<Module> modules = new ArrayList<>();
 
-        int index = 0;
+        final AtomicInteger index = new AtomicInteger();
 
         for (final ConsumerModule consumer : config.getConsumers()) {
-            final String id = consumer.id() != null ? consumer.id() : consumer.buildId(index++);
+            final String id = consumer.id().orElseGet(() -> consumer.buildId(index.getAndIncrement()));
             final Key<Consumer> key = Key.get(Consumer.class, Names.named(id));
             modules.add(consumer.module(key, reporter.newConsumer(id)));
             bindings.addBinding().to(key);
@@ -594,18 +592,15 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     }
 
     private HeroicConfig config(Injector earlyInjector) throws Exception {
-        if (profile != null) {
-            log.info("Building configuration using profile");
-            return profile.build();
+        HeroicConfig.Builder builder = HeroicConfig.builder();
+
+        for (final HeroicProfile profile : profiles) {
+            log.info("Loading profile '{}' (params: {})", profile.description(), params);
+            builder = builder.merge(profile.build(params));
         }
 
-        if (configPath == null) {
-            log.info("Setting up default configuration");
-            return HeroicConfig.builder().build();
-        }
-
-        log.info("Loading configuration from {}", configPath.toAbsolutePath());
-        return parseConfig(earlyInjector);
+        final HeroicConfig.Builder b = builder;
+        return configPath.map(c -> b.merge(loadConfig(earlyInjector, c))).orElse(b).build();
     }
 
     /**
@@ -634,18 +629,20 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         }
     }
 
-    private HeroicConfig parseConfig(final Injector earlyInjector) throws Exception {
-        final ObjectMapper mapper = earlyInjector
-                .getInstance(Key.get(ObjectMapper.class, Names.named(APPLICATION_HEROIC_CONFIG)));
+    private HeroicConfig.Builder loadConfig(final Injector earlyInjector, final Path path) {
+        final ObjectMapper mapper = earlyInjector.getInstance(Key.get(ObjectMapper.class,
+                Names.named(APPLICATION_HEROIC_CONFIG)));
 
         try {
-            return mapper.readValue(Files.newInputStream(configPath), HeroicConfig.class);
+            return mapper.readValue(Files.newInputStream(path), HeroicConfig.Builder.class);
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
             final String message = String.format("%s[%d:%d]: %s", configPath,
                     location == null ? null : location.getLineNr(), location == null ? null : location.getColumnNr(),
                     e.getOriginalMessage());
-            throw new Exception(message, e);
+            throw new RuntimeException(message, e);
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -654,147 +651,174 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     }
 
     public static final class Builder {
-        private String host;
-        private Integer port;
-        private List<Class<?>> modules = new ArrayList<>();
-        private boolean server = false;
-        private Path configPath;
-        private HeroicProfile profile;
-        private HeroicReporter reporter;
-        private URI startupPing;
-        private String startupId;
-        private boolean oneshot = false;
-        private boolean disableBackends = false;
-        private boolean skipLifecycles = false;
-        private List<HeroicBootstrap> early = new ArrayList<>();
-        private List<HeroicBootstrap> late = new ArrayList<>();
+        private Optional<String> host = empty();
+        private Optional<Integer> port = empty();
+        private Optional<Path> configPath = empty();
+        private Optional<HeroicParameters> params = empty();
+        private Optional<HeroicReporter> reporter = empty();
+        private Optional<URI> startupPing = empty();
+        private Optional<String> startupId = empty();
 
-        public Builder module(Class<?> module) {
-            this.modules.add(checkNotNull(module, "module must not be null"));
+        /* flags */
+        private Optional<Boolean> setupServer = empty();
+        private Optional<Boolean> oneshot = empty();
+        private Optional<Boolean> disableBackends = empty();
+        private Optional<Boolean> skipLifecycles = empty();
+
+        /* extensions */
+        private final ImmutableList.Builder<Class<?>> modules = ImmutableList.builder();
+        private final ImmutableList.Builder<HeroicProfile> profiles = ImmutableList.builder();
+        private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
+        private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
+
+        public Builder port(final int port) {
+            this.port = of(port);
             return this;
         }
 
-        public Builder modules(Collection<Class<?>> modules) {
-            this.modules.addAll(checkNotNull(modules, "list of modules must not be null"));
+        public Builder host(final String host) {
+            checkNotNull(host, "host");
+            this.host = of(host);
+            return this;
+        }
+
+        public Builder configPath(final String configPath) {
+            checkNotNull(configPath, "configPath");
+            return configPath(Paths.get(configPath));
+        }
+
+        public Builder configPath(final Path configPath) {
+            checkNotNull(configPath, "configPath");
+
+            if (!Files.isReadable(configPath)) {
+                throw new IllegalArgumentException("Configuration is not readable: " + configPath.toAbsolutePath());
+            }
+
+            this.configPath = of(configPath);
+            return this;
+        }
+
+        public Builder startupPing(final String startupPing) {
+            checkNotNull(startupPing, "startupPing");
+            this.startupPing = of(URI.create(startupPing));
+            return this;
+        }
+
+        public Builder startupId(final String startupId) {
+            checkNotNull(startupId, "startupId");
+            this.startupId = of(startupId);
+            return this;
+        }
+
+        public Builder parameters(final HeroicParameters params) {
+            checkNotNull(params, "params");
+            this.params = of(params);
+            return this;
+        }
+
+        public Builder reporter(final HeroicReporter reporter) {
+            checkNotNull(reporter, "reporter");
+            this.reporter = of(reporter);
             return this;
         }
 
         /**
          * Configure setup of the server component of heroic or not.
          */
-        public Builder server(boolean server) {
-            this.server = server;
-            return this;
-        }
-
-        /**
-         * Disable local backends.
-         */
-        public Builder disableBackends(boolean disableBackends) {
-            this.disableBackends = disableBackends;
-            return this;
-        }
-
-        /**
-         * Skip startup of lifecycles.
-         */
-        public Builder skipLifecycles(boolean skipLifecycles) {
-            this.skipLifecycles = skipLifecycles;
-            return this;
-        }
-
-        public Builder port(Integer port) {
-            this.port = checkNotNull(port, "port must not be null");
-            return this;
-        }
-
-        public Builder host(String host) {
-            this.host = checkNotNull(host, "host must not be null");
-            return this;
-        }
-
-        public Builder configPath(String configPath) {
-            return configPath(Paths.get(checkNotNull(configPath, "configPath must not be null")));
-        }
-
-        public Builder configPath(Path configPath) {
-            if (configPath == null) {
-                throw new NullPointerException("configPath must not be null");
-            }
-
-            if (!Files.isReadable(configPath)) {
-                throw new IllegalArgumentException("Configuration is not readable: " + configPath.toAbsolutePath());
-            }
-
-            this.configPath = configPath;
-            return this;
-        }
-
-        public Builder reporter(HeroicReporter reporter) {
-            this.reporter = checkNotNull(reporter, "reporter must not be null");
-            return this;
-        }
-
-        public Builder startupPing(String startupPing) {
-            this.startupPing = URI.create(checkNotNull(startupPing, "startupPing must not be null"));
-            return this;
-        }
-
-        public Builder startupId(String startupId) {
-            this.startupId = checkNotNull(startupId, "startupId must not be null");
-            return this;
-        }
-
-        public Builder profile(HeroicProfile profile) {
-            this.profile = checkNotNull(profile, "profile must not be null");
+        public Builder setupServer(final boolean setupServer) {
+            this.setupServer = of(setupServer);
             return this;
         }
 
         /**
          * Do not perform any scheduled tasks, only perform then once during startup.
          */
-        public Builder oneshot(boolean oneshot) {
-            this.oneshot = oneshot;
+        public Builder oneshot(final boolean oneshot) {
+            this.oneshot = of(oneshot);
             return this;
         }
 
-        public Builder early(HeroicBootstrap bootstrap) {
+        /**
+         * Disable local backends.
+         */
+        public Builder disableBackends(final boolean disableBackends) {
+            this.disableBackends = of(disableBackends);
+            return this;
+        }
+
+        /**
+         * Skip startup of lifecycles.
+         */
+        public Builder skipLifecycles(final boolean skipLifecycles) {
+            this.skipLifecycles = of(skipLifecycles);
+            return this;
+        }
+
+        public Builder modules(final List<Class<?>> modules) {
+            checkNotNull(modules, "modules");
+            this.modules.addAll(modules);
+            return this;
+        }
+
+        public Builder module(final Class<?> module) {
+            checkNotNull(module, "module");
+            this.modules.add(module);
+            return this;
+        }
+
+        public Builder profiles(final List<HeroicProfile> profiles) {
+            checkNotNull(profiles, "profiles");
+            this.profiles.addAll(profiles);
+            return this;
+        }
+
+        public Builder profile(final HeroicProfile profile) {
+            checkNotNull(profile, "profile");
+            this.profiles.add(profile);
+            return this;
+        }
+
+        public Builder earlyBootstrap(final HeroicBootstrap bootstrap) {
+            checkNotNull(bootstrap, "bootstrap");
             this.early.add(bootstrap);
             return this;
         }
 
-        public Builder late(HeroicBootstrap bootstrap) {
-            this.late.add(bootstrap);
+        public Builder bootstrappers(final List<HeroicBootstrap> bootstrappers) {
+            checkNotNull(bootstrappers, "bootstrappers");
+            this.late.addAll(bootstrappers);
             return this;
         }
 
-        public Builder bootstrap(HeroicBootstrap bootstrap) {
+        public Builder bootstrap(final HeroicBootstrap bootstrap) {
+            checkNotNull(bootstrap, "bootstrap");
             this.late.add(bootstrap);
             return this;
         }
 
         public HeroicCore build() {
-            return new HeroicCore(host, port, modules, early, late, server, configPath, profile, reporter, startupPing,
-                    startupId, oneshot, disableBackends, skipLifecycles);
-        }
+            // @formatter:off
+            return new HeroicCore(
+                host,
+                port,
+                configPath,
+                startupPing,
+                startupId,
 
-        public Builder modules(List<String> modules) {
-            return modules(resolveModuleNames(modules));
-        }
+                params.orElseGet(HeroicParameters::empty),
+                new AtomicReference<>(reporter.orElseGet(NoopHeroicReporter::get)),
 
-        private Collection<Class<?>> resolveModuleNames(List<String> modules) {
-            final List<Class<?>> result = new ArrayList<>();
+                setupServer.orElse(DEFAULT_SETUP_SERVER),
+                oneshot.orElse(DEFAULT_ONESHOT),
+                disableBackends.orElse(DEFAULT_DISABLE_BACKENDS),
+                skipLifecycles.orElse(DEFAULT_SKIP_LIFECYCLES),
 
-            for (final String module : modules) {
-                try {
-                    result.add(Class.forName(module + ".Entry"));
-                } catch (ClassNotFoundException e) {
-                    throw new IllegalArgumentException(
-                            "Not a valid module name '" + module + "', doesnt have an Entry class");
-                }
-            }
-
-            return result;
+                modules.build(),
+                profiles.build(),
+                early.build(),
+                late.build()
+            );
+            // @formatter:on
         }
     }
 }
