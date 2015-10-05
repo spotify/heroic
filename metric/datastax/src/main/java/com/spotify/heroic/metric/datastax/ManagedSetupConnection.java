@@ -55,12 +55,7 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
         AsyncFuture<Session> session = async.call(new Callable<Session>() {
             public Session call() throws Exception {
                 // @formatter:off
-                final HostDistance distance = HostDistance.LOCAL;
-                final PoolingOptions pooling = new PoolingOptions()
-                    .setMaxConnectionsPerHost(distance, 20)
-                    .setCoreConnectionsPerHost(distance, 4)
-                    .setMaxSimultaneousRequestsPerHostThreshold(distance, Short.MAX_VALUE)
-                    .setMaxSimultaneousRequestsPerConnectionThreshold(distance, 128);
+                final PoolingOptions pooling = new PoolingOptions();
 
                 final QueryOptions queryOptions = new QueryOptions()
                     .setFetchSize(1000)

@@ -22,11 +22,13 @@
 package com.spotify.heroic.metric.datastax;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -168,21 +170,22 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                     : Optional.of(c.schema.rowKey().serialize(new MetricsRowKey(start.getSeries(), start.getBase())));
 
             final Statement stmt;
-            final Transform<RowFetchResult<BackendKey>, BackendKeySet> converter;
+            final Transform<RowFetchResult<BackendKey>, AsyncFuture<BackendKeySet>> converter;
 
             final Stopwatch w = Stopwatch.createStarted();
 
             if (options.isTracing()) {
                 stmt = c.schema.keysPaging(first, limit).enableTracing();
                 converter = result -> {
-                    final QueryTrace trace = buildTrace(KEYS, w.elapsed(TimeUnit.NANOSECONDS), result.info);
-                    return new BackendKeySet(result.data, Optional.of(trace));
+                    return buildTrace(c, KEYS, w.elapsed(TimeUnit.NANOSECONDS), result.info).directTransform(trace -> {
+                        return new BackendKeySet(result.data, Optional.of(trace));
+                    });
                 };
             } else {
                 stmt = c.schema.keysPaging(first, limit);
                 converter = result -> {
                     final QueryTrace trace = new QueryTrace(KEYS, w.elapsed(TimeUnit.NANOSECONDS));
-                    return new BackendKeySet(result.data, Optional.of(trace));
+                    return async.resolved(new BackendKeySet(result.data, Optional.of(trace)));
                 };
             }
 
@@ -251,12 +254,10 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         }, 500);
     }
 
-    private QueryTrace buildTrace(final QueryTrace.Identifier ident, final long elapsed, List<ExecutionInfo> info) {
-        final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
+    private AsyncFuture<QueryTrace> buildTrace(final Connection c, final QueryTrace.Identifier ident, final long elapsed, List<ExecutionInfo> info) {
+        final ImmutableList.Builder<AsyncFuture<QueryTrace>> traces = ImmutableList.builder();
 
         for (final ExecutionInfo i : info) {
-            final ImmutableList.Builder<QueryTrace> children = ImmutableList.builder();
-
             com.datastax.driver.core.QueryTrace qt = i.getQueryTrace();
 
             if (qt == null) {
@@ -264,22 +265,27 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 continue;
             }
 
-            // XXX: call to getEvents may block for a long time.
-            for (final com.datastax.driver.core.QueryTrace.Event e : qt.getEvents()) {
-                final long eventElapsed = TimeUnit.NANOSECONDS.convert(e.getSourceElapsedMicros(),
-                        TimeUnit.MICROSECONDS);
-                children.add(new QueryTrace(QueryTrace.identifier(e.getDescription()), eventElapsed));
-            }
+            traces.add(getEvents(c, qt.getTraceId()).directTransform(events -> {
+                final ImmutableList.Builder<QueryTrace> children = ImmutableList.builder();
 
-            final QueryTrace.Identifier segment = QueryTrace
-                    .identifier(i.getQueriedHost().toString() + "[" + qt.getTraceId().toString() + "]");
+                for (final Event e : events) {
+                    final long eventElapsed = TimeUnit.NANOSECONDS.convert(e.getSourceElapsed(),
+                            TimeUnit.MICROSECONDS);
+                    children.add(new QueryTrace(QueryTrace.identifier(e.getName()), eventElapsed));
+                }
 
-            final long segmentElapsed = TimeUnit.NANOSECONDS.convert(qt.getDurationMicros(), TimeUnit.MICROSECONDS);
+                final QueryTrace.Identifier segment = QueryTrace
+                        .identifier(i.getQueriedHost().toString() + "[" + qt.getTraceId().toString() + "]");
 
-            traces.add(new QueryTrace(segment, segmentElapsed, children.build()));
+                final long segmentElapsed = TimeUnit.NANOSECONDS.convert(qt.getDurationMicros(), TimeUnit.MICROSECONDS);
+
+                return new QueryTrace(segment, segmentElapsed, children.build());
+            }));
         }
 
-        return new QueryTrace(ident, elapsed, traces.build());
+        return async.collect(traces.build()).directTransform(t -> {
+            return new QueryTrace(ident, elapsed, ImmutableList.copyOf(t));
+        });
     }
 
     private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
@@ -306,27 +312,26 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 final Stopwatch w = Stopwatch.createStarted();
 
-                final Function<RowFetchResult<Point>, QueryTrace> traceBuilder;
+                final Function<RowFetchResult<Point>, AsyncFuture<QueryTrace>> traceBuilder;
 
                 final Statement stmt;
 
                 if (options.isTracing()) {
                     stmt = f.fetch(limit).enableTracing();
-                    traceBuilder = result -> buildTrace(FETCH_SEGMENT.extend(f.toString()),
+                    traceBuilder = result -> buildTrace(c, FETCH_SEGMENT.extend(f.toString()),
                             w.elapsed(TimeUnit.NANOSECONDS), result.getInfo());
                 } else {
                     stmt = f.fetch(limit);
-                    traceBuilder = result -> new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
+                    traceBuilder = result -> async.resolved(new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS)));
                 }
 
-                final Transform<RowFetchResult<Point>, FetchData> converter = result -> {
-                    final QueryTrace trace = traceBuilder.apply(result);
-                    final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
-                    final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(result.getData()));
-                    return new FetchData(series, times, groups, trace);
-                };
-
-                Async.bind(async, c.session.executeAsync(stmt)).onDone(new RowFetchHelper<Point, FetchData>(future, f.converter(), converter));
+                Async.bind(async, c.session.executeAsync(stmt)).onDone(new RowFetchHelper<Point, FetchData>(future, f.converter(), result -> {
+                    return traceBuilder.apply(result).directTransform(trace -> {
+                        final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
+                        final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(result.getData()));
+                        return new FetchData(series, times, groups, trace);
+                    });
+                }));
 
                 futures.add(future.onDone(reporter.reportFetch()));
             }
@@ -341,7 +346,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
         private final ResolvableFuture<T> future;
         private final Transform<Row, R> rowConverter;
-        private final Transform<RowFetchResult<R>, T> endConverter;
+        private final Transform<RowFetchResult<R>, AsyncFuture<T>> converter;
 
         @Override
         public void failed(Throwable cause) throws Exception {
@@ -398,17 +403,64 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 return;
             }
 
-            final T result;
+            final AsyncFuture<T> result;
 
             try {
-                result = endConverter.transform(new RowFetchResult<>(rows.getAllExecutionInfo(), data));
+                result = converter.transform(new RowFetchResult<>(rows.getAllExecutionInfo(), data));
             } catch (final Exception e) {
                 future.fail(e);
                 return;
             }
 
-            future.resolve(result);
+            future.onCancelled(result::cancel);
+
+            result.onDone(new FutureDone<T>() {
+                @Override
+                public void failed(Throwable cause) throws Exception {
+                    future.fail(cause);
+                }
+
+                @Override
+                public void resolved(T result) throws Exception {
+                    future.resolve(result);
+                }
+
+                @Override
+                public void cancelled() throws Exception {
+                    future.cancel();
+                }
+            });
         }
+    }
+
+    private static final String SELECT_EVENTS_FORMAT = "SELECT * FROM system_traces.events WHERE session_id = ?";
+
+    /**
+     * Custom event fetcher based on the one available in {@link com.datastax.driver.core.QueryTrace}.
+     *
+     * We roll our own since the one available is blocking :(.
+     */
+    private AsyncFuture<List<Event>> getEvents(final Connection c, final UUID id) {
+        final ResolvableFuture<List<Event>> future = async.future();
+
+        Async.bind(async, c.session.executeAsync(SELECT_EVENTS_FORMAT, id)).onDone(
+                new RowFetchHelper<Event, List<Event>>(future, row -> {
+                    return new Event(row.getString("activity"), row.getUUID("event_id").timestamp(),
+                            row.getInet("source"), row.getInt("source_elapsed"), row.getString("thread"));
+                }, result -> {
+                    return async.resolved(ImmutableList.copyOf(result.getData()));
+                }));
+
+        return future;
+    }
+
+    @Data
+    public static class Event {
+        private final String name;
+        private final long timestamp;
+        private final InetAddress source;
+        private final int sourceElapsed;
+        private final String threadName;
     }
 
     @Data
