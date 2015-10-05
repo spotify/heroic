@@ -177,7 +177,7 @@ public final class DatastaxMetricModule implements MetricModule {
             return this;
         }
 
-        public Builder serialization(SchemaModule schema) {
+        public Builder schema(SchemaModule schema) {
             this.schema = schema;
             return this;
         }

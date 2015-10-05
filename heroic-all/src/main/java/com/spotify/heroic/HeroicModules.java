@@ -8,7 +8,7 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.GeneratedProfile;
-import com.spotify.heroic.profile.LocalCassandraProfile;
+import com.spotify.heroic.profile.CassandraProfile;
 import com.spotify.heroic.profile.MemoryProfile;
 
 public class HeroicModules {
@@ -37,7 +37,7 @@ public class HeroicModules {
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String, HeroicProfile>builder()
         .put("generated", new GeneratedProfile())
         .put("memory", new MemoryProfile())
-        .put("local-cassandra", new LocalCassandraProfile())
+        .put("cassandra", new CassandraProfile())
     .build();
     // @formatter:on
 
