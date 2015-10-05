@@ -58,7 +58,7 @@ public class QueryBuilder {
     private AggregationQuery aggregationQuery = EmptyAggregationQuery.INSTANCE;
     private Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = Optional.absent();
     private AggregationContext context = new DefaultAggregationContext();
-    private boolean disableCache = false;
+    private Optional<QueryOptions> options = Optional.absent();
 
     /**
      * Specify a set of tags that has to match.
@@ -133,8 +133,8 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder disableCache(boolean disableCache) {
-        this.disableCache = disableCache;
+    public QueryBuilder options(QueryOptions options) {
+        this.options = Optional.of(options);
         return this;
     }
 
@@ -160,7 +160,7 @@ public class QueryBuilder {
             throw new IllegalStateException("Range is not specified");
         }
 
-        final QueryOptions options = QueryOptions.defaults();
+        final QueryOptions options = this.options.or(QueryOptions::defaults);
 
         return new Query(filter, range.get(), aggregation, source, options);
     }

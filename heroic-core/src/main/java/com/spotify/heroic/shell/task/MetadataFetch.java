@@ -77,7 +77,7 @@ public class MetadataFetch implements ShellTask {
             int i = 0;
 
             for (final Series series : result.getSeries()) {
-                io.out().println(String.format("%s: %s", i++, series));
+                io.out().println(String.format("%s: %s", i++, mapper.writeValueAsString(series)));
 
                 if (i >= params.limit)
                     break;

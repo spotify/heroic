@@ -87,7 +87,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
     public CoreClusterManager(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
             Map<String, RpcProtocol> protocols, Scheduler scheduler, @Named("useLocal") Boolean useLocal,
             @Named("topology") Set<Map<String, String>> topology, HeroicReporter reporter, HeroicOptions options,
-            LocalClusterNodeHolder local, HeroicContext context) {
+            LocalClusterNode local, HeroicContext context) {
         this.async = async;
         this.discovery = discovery;
         this.localMetadata = localMetadata;
@@ -97,15 +97,10 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
         this.topology = topology;
         this.reporter = reporter;
         this.options = options;
-        this.local = Optional.fromNullable(local.value);
+        this.local = Optional.fromNullable(local);
         this.context = context;
 
         this.initialized = async.future();
-    }
-
-    static class LocalClusterNodeHolder {
-        @Inject(optional = true)
-        LocalClusterNode value = null;
     }
 
     @Override
@@ -140,12 +135,16 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
         final AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform;
 
         if (discovery instanceof ClusterDiscoveryModule.Null) {
-            log.info("No discovery mechanism configured, using local node");
             final List<MaybeError<NodeRegistryEntry>> results = new ArrayList<>();
 
             if (useLocal && local.isPresent()) {
+                log.info("No discovery mechanism configured, using local node");
                 final LocalClusterNode l = local.get();
                 results.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
+            } else {
+                log.warn(
+                        "No discovery mechanism configured, clustered operations will not work (useLocal: {}, local: {})",
+                        useLocal, local);
             }
 
             transform = async.resolved(results);

@@ -139,8 +139,8 @@ public class QueryResource {
     private QueryBuilder setupBuilder(final QueryMetrics q) {
         return q.getQuery().transform(query::newQueryFromString).or(() -> {
             return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
-                    .range(Optional.of(q.getRange().buildDateRange())).disableCache(q.isNoCache())
-                    .aggregationQuery(q.getAggregators()).source(q.getSource());
+                    .range(Optional.of(q.getRange().buildDateRange())).aggregationQuery(q.getAggregators())
+                    .source(q.getSource());
         });
     }
 

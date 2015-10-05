@@ -7,8 +7,9 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.profile.CassandraProfile;
+import com.spotify.heroic.profile.ElasticsearchProfile;
+import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.profile.MemoryProfile;
 
 public class HeroicModules {
@@ -38,6 +39,7 @@ public class HeroicModules {
         .put("generated", new GeneratedProfile())
         .put("memory", new MemoryProfile())
         .put("cassandra", new CassandraProfile())
+        .put("elasticsearch", new ElasticsearchProfile())
     .build();
     // @formatter:on
 

@@ -238,7 +238,7 @@ public class ManagedConnectionFactory {
             return this;
         }
 
-        public Builder clusterName(List<String> seeds) {
+        public Builder seeds(List<String> seeds) {
             this.seeds = seeds;
             return this;
         }

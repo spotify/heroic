@@ -34,6 +34,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -70,7 +71,9 @@ public class Query implements ShellTask {
         final ObjectMapper indent = mapper.copy();
         indent.configure(SerializationFeature.INDENT_OUTPUT, true);
 
-        return query.useGroup(params.group).query(query.newQueryFromString(queryString).build())
+        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+
+        return query.useGroup(params.group).query(query.newQueryFromString(queryString).options(options).build())
                 .directTransform(result -> {
                     for (final RequestError e : result.getErrors()) {
                         io.out().println(String.format("ERR: %s", e.toString()));
@@ -85,6 +88,10 @@ public class Query implements ShellTask {
                         io.out().flush();
                     }
 
+                    io.out().println("TRACE:");
+                    result.getTrace().formatTrace(io.out());
+                    io.out().flush();
+
                     return null;
                 });
     }
@@ -96,5 +103,8 @@ public class Query implements ShellTask {
 
         @Argument(metaVar = "<query>")
         private List<String> query = new ArrayList<>();
+
+        @Option(name = "--tracing", usage = "Enable extensive tracing")
+        private boolean tracing = false;
     }
 }
