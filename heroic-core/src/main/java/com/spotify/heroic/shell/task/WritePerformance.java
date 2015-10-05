@@ -45,6 +45,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -95,7 +96,7 @@ public class WritePerformance implements ShellTask {
         final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
 
         for (final Series s : series) {
-            reads.add(readGroup.fetch(MetricType.POINT, s, range)
+            reads.add(readGroup.fetch(MetricType.POINT, s, range, QueryOptions.defaults())
                     .directTransform(result -> new WriteMetric(s, result.getGroups())));
         }
 

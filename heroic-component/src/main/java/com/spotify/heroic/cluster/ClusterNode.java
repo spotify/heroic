@@ -34,6 +34,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -57,7 +58,7 @@ public interface ClusterNode {
         public ClusterNode node();
 
         public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-                DateRange range, Aggregation aggregation, boolean disableCache);
+                DateRange range, Aggregation aggregation, QueryOptions options);
 
         public AsyncFuture<FindTags> findTags(RangeFilter filter);
 

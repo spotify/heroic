@@ -23,7 +23,10 @@ package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 
 import eu.toolchain.async.Collector;
@@ -54,20 +57,29 @@ public class QueryResult {
     private final List<ShardTrace> traces;
 
     /**
+     * Query trace, if available.
+     */
+    private final QueryTrace trace;
+
+    /**
      * Collect result parts into a complete result.
      * 
      * @param range The range which the result represents.
      * @return A complete QueryResult.
      */
-    public static Collector<QueryResultPart, QueryResult> collectParts(final DateRange range) {
+    public static Collector<QueryResultPart, QueryResult> collectParts(final QueryTrace.Identifier what, final DateRange range) {
+        final Stopwatch w = Stopwatch.createStarted();
+
         return parts -> {
             final List<ShardedResultGroup> groups = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
             final List<ShardTrace> traces = new ArrayList<>();
+            final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
 
             for (final QueryResultPart part : parts) {
                 errors.addAll(part.getErrors());
                 traces.add(part.getTrace());
+                queryTraces.add(part.getQueryTrace());
 
                 if (part.isEmpty()) {
                     continue;
@@ -76,7 +88,7 @@ public class QueryResult {
                 groups.addAll(part.getGroups());
             }
 
-            return new QueryResult(range, groups, errors, traces);
+            return new QueryResult(range, groups, errors, traces, new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
         };
     }
 }

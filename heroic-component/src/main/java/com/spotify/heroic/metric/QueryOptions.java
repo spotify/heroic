@@ -1,5 +1,10 @@
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes({ @JsonSubTypes.Type(value = CoreQueryOptions.class, name = "core") })
 public interface QueryOptions {
     /**
      * Indicates if tracing is enabled.
@@ -11,7 +16,7 @@ public interface QueryOptions {
     public boolean isTracing();
 
     public static QueryOptions defaults() {
-        return QueryOptionsImpl.DEFAULTS;
+        return CoreQueryOptions.DEFAULTS;
     }
 
     static Builder builder() {
@@ -27,7 +32,7 @@ public interface QueryOptions {
         }
 
         public QueryOptions build() {
-            return new QueryOptionsImpl(tracing);
+            return new CoreQueryOptions(tracing);
         }
     }
 }

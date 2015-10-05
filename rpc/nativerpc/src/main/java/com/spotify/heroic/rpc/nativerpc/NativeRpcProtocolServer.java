@@ -105,7 +105,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 final RpcQuery query = grouped.getQuery();
 
                 return metrics.useGroup(grouped.getGroup()).query(query.getSource(), query.getFilter(),
-                        query.getRange(), query.getAggregation(), query.isNoCache());
+                        query.getRange(), query.getAggregation(), query.getOptions());
             }
         });
 

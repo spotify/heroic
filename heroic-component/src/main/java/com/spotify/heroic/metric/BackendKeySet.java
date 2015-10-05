@@ -40,7 +40,7 @@ public class BackendKeySet implements Iterable<BackendKey> {
         return keys.iterator();
     }
 
-    public static Collector<BackendKeySet, BackendKeySet> merge(final String what) {
+    public static Collector<BackendKeySet, BackendKeySet> collect(final QueryTrace.Identifier what) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return results -> {

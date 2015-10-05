@@ -28,7 +28,9 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.common.DateRange;
@@ -42,6 +44,8 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 
@@ -55,6 +59,8 @@ import lombok.ToString;
  */
 @ToString
 public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
+    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(MemoryBackend.class, "fetch");
+
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
     private final ConcurrentMap<MemoryKey, NavigableMap<Long, Metric>> storage = new ConcurrentHashMap<>();
@@ -113,12 +119,13 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
 
     @Override
     public AsyncFuture<FetchData> fetch(MetricType source, Series series, DateRange range,
-            FetchQuotaWatcher watcher) {
-        final long start = System.nanoTime();
+            FetchQuotaWatcher watcher, QueryOptions options) {
+        final Stopwatch w = Stopwatch.createStarted();
         final MemoryKey key = new MemoryKey(source, series);
         final List<MetricCollection> groups = doFetch(key, range);
-        final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
-        return async.resolved(new FetchData(series, times, groups));
+        final QueryTrace trace = new QueryTrace(FETCH, w.elapsed(TimeUnit.NANOSECONDS));
+        final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
+        return async.resolved(new FetchData(series, times, groups, trace));
     }
 
     @Override

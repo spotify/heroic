@@ -47,6 +47,7 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -59,7 +60,6 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.Timer;
 import lombok.Data;
@@ -150,8 +150,8 @@ public class NativeRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
-                    Aggregation aggregation, boolean disableCache) {
-                return request(METRICS_QUERY, new RpcQuery(source, filter, range, aggregation, disableCache),
+                    Aggregation aggregation, QueryOptions options) {
+                return request(METRICS_QUERY, new RpcQuery(source, filter, range, aggregation, options),
                         ResultGroups.class);
             }
 
@@ -242,18 +242,18 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final Filter filter;
         private final DateRange range;
         private final Aggregation aggregation;
-        private final boolean noCache;
+        private final QueryOptions options;
 
         @JsonCreator
         public RpcQuery(@JsonProperty("source") final MetricType source, @JsonProperty("filter") final Filter filter,
                 @JsonProperty("range") final DateRange range,
                 @JsonProperty("aggregation") final Aggregation aggregation,
-                @JsonProperty("noCache") final Boolean noCache) {
+                @JsonProperty("options") final QueryOptions options) {
             this.source = checkNotNull(source, "source");
             this.filter = checkNotNull(filter, "filter");
             this.range = checkNotNull(range, "range");
             this.aggregation = checkNotNull(aggregation, "aggregation");
-            this.noCache = checkNotNull(noCache, "noCache");
+            this.options = checkNotNull(options, "options");
         }
     }
 

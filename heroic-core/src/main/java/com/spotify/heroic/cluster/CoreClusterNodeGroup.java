@@ -5,8 +5,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.cluster.ClusterNode.Group;
 import com.spotify.heroic.common.DateRange;
@@ -19,6 +17,8 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -31,9 +31,13 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreClusterNodeGroup implements ClusterNodeGroup {
+    public static final QueryTrace.Identifier QUERY_NODE = QueryTrace.identifier(CoreClusterNodeGroup.class, "query_node");
+    public static final QueryTrace.Identifier QUERY = QueryTrace.identifier(CoreClusterNodeGroup.class, "query");
+
     private final AsyncFramework async;
     private final Collection<ClusterNode.Group> entries;
 
@@ -49,15 +53,15 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
 
     @Override
     public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-            DateRange range, Aggregation aggregation, boolean disableCache) {
+            DateRange range, Aggregation aggregation, QueryOptions options) {
         final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.query(source, filter, range, aggregation, disableCache)
-                    .catchFailed(ResultGroups.nodeError(g)));
+            futures.add(g.query(source, filter, range, aggregation, options)
+                    .catchFailed(ResultGroups.nodeError(QUERY_NODE, g)));
         }
 
-        return async.collect(futures, ResultGroups.merger());
+        return async.collect(futures, ResultGroups.collect(QUERY));
     }
 
     @Override

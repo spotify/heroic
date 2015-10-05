@@ -41,6 +41,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 
 import lombok.RequiredArgsConstructor;
 
@@ -159,7 +160,9 @@ public class QueryBuilder {
             throw new IllegalStateException("Range is not specified");
         }
 
-        return new Query(filter, range.get(), aggregation, disableCache, source);
+        final QueryOptions options = QueryOptions.defaults();
+
+        return new Query(filter, range.get(), aggregation, source, options);
     }
 
     Aggregation legacyGroupBy(final Aggregation aggregation) {

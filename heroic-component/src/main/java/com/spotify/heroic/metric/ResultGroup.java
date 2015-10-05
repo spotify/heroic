@@ -51,7 +51,7 @@ public class ResultGroup {
         this.cadence = checkNotNull(cadence, "cadence");
     }
 
-    public static Function<? super ResultGroup, ? extends ShardedResultGroup> fromResultGroup(final ClusterNode c) {
+    public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(final ClusterNode c) {
         return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getTags(), g.getGroup(), g.getCadence());
     }
 }

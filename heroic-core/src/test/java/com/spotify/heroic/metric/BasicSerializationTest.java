@@ -56,7 +56,7 @@ public class BasicSerializationTest {
     public void testResultGroups() throws Exception {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
-        final ResultGroups expected = new ResultGroups(groups, errors, Statistics.EMPTY);
+        final ResultGroups expected = new ResultGroups(groups, errors, Statistics.EMPTY, new QueryTrace(QueryTrace.identifier("test")));
 
         assertSerialization("ResultGroups.json", expected, ResultGroups.class);
     }

@@ -21,18 +21,19 @@
 
 package com.spotify.heroic;
 
-import lombok.Data;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
+
+import lombok.Data;
 
 @Data
 public class Query {
     private final Filter filter;
     private final DateRange range;
     private final Aggregation aggregation;
-    private final boolean disableCache;
     private final MetricType source;
+    private final QueryOptions options;
 }

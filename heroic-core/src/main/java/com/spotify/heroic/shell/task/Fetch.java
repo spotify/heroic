@@ -39,6 +39,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -90,7 +91,9 @@ public class Fetch implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useGroup(params.group);
         final MetricType source = MetricType.fromIdentifier(params.source);
 
-        return readGroup.fetch(source, series, range).directTransform(result -> {
+        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+
+        return readGroup.fetch(source, series, range, options).directTransform(result -> {
             outer:
             for (final MetricCollection g : result.getGroups()) {
                 int i = 0;
@@ -114,6 +117,10 @@ public class Fetch implements ShellTask {
                     last = current;
                 }
             }
+
+            io.out().println("TRACE:");
+            result.getTrace().formatTrace(io.out());
+            io.out().flush();
 
             return null;
         });
@@ -161,5 +168,8 @@ public class Fetch implements ShellTask {
 
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
+
+        @Option(name = "--tracing", usage = "Enable extensive tracing")
+        private boolean tracing = false;
     }
 }

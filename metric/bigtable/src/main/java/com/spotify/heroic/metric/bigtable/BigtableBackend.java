@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.base.Function;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -33,6 +35,7 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryOptions;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.bigtable.api.BigtableCell;
@@ -60,6 +63,9 @@ import lombok.extern.slf4j.Slf4j;
 @ToString(of = { "connection" })
 @Slf4j
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycle {
+    public static final QueryTrace.Identifier FETCH_SEGMENT = QueryTrace.identifier(BigtableBackend.class, "fetch_segment");
+    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(BigtableBackend.class, "fetch");
+
     public static final String METRICS = "metrics";
     public static final String POINTS = "points";
     public static final long PERIOD = 0x100000000L;
@@ -263,8 +269,8 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(MetricType type, final Series series, DateRange range,
-            FetchQuotaWatcher watcher) {
+    public AsyncFuture<FetchData> fetch(final MetricType type, final Series series, final DateRange range,
+            final FetchQuotaWatcher watcher, final QueryOptions options) {
         final List<PreparedQuery> prepared;
 
         try {
@@ -279,7 +285,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         return connection.doto(new ManagedAction<BigtableConnection, FetchData>() {
             @Override
             public AsyncFuture<FetchData> action(final BigtableConnection c) throws Exception {
-                return fetchPoints(series, prepared, c);
+                return fetchPoints(series, prepared, c, options);
             }
         });
     }
@@ -305,7 +311,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     private AsyncFuture<FetchData> fetchPoints(final Series series,
-            final List<PreparedQuery> prepared, final BigtableConnection c) {
+            final List<PreparedQuery> prepared, final BigtableConnection c, final QueryOptions options) {
         final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
         final BigtableClient client = c.client();
@@ -323,7 +329,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                 }
             };
 
-            final long start = System.nanoTime();
+            final Stopwatch w = Stopwatch.createStarted();
 
             queries.add(readRows.directTransform(result -> {
                 final List<Iterable<Point>> points = new ArrayList<>();
@@ -338,14 +344,15 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                     }
                 }
 
-                final ImmutableList<Long> times = ImmutableList.of(System.nanoTime() - start);
+                final QueryTrace trace = new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
+                final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
                 final List<Point> data = ImmutableList.copyOf(Iterables.mergeSorted(points, Point.comparator()));
                 final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
-                return new FetchData(series, times, groups);
+                return new FetchData(series, times, groups, trace);
             }));
         }
 
-        return async.collect(queries, FetchData.merger(series));
+        return async.collect(queries, FetchData.collect(FETCH, series));
     }
 
     @Override

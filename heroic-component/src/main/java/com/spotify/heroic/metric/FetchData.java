@@ -24,8 +24,10 @@ package com.spotify.heroic.metric;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.spotify.heroic.common.Series;
@@ -38,14 +40,19 @@ public class FetchData {
     private final Series series;
     private final List<Long> times;
     private final List<MetricCollection> groups;
+    private final QueryTrace trace;
 
-    public static Collector<FetchData, FetchData> merger(final Series series) {
+    public static Collector<FetchData, FetchData> collect(final QueryTrace.Identifier what, final Series series) {
+        final Stopwatch w = Stopwatch.createStarted();
+
         return results -> {
             final ImmutableList.Builder<Long> times = ImmutableList.builder();
             final Map<MetricType, ImmutableList.Builder<Metric>> fetchGroups = new HashMap<>();
+            final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
 
             for (final FetchData fetch : results) {
                 times.addAll(fetch.times);
+                traces.add(fetch.trace);
 
                 for (final MetricCollection g : fetch.groups) {
                     ImmutableList.Builder<Metric> data = fetchGroups.get(g.getType());
@@ -64,7 +71,8 @@ public class FetchData {
                             Ordering.from(e.getKey().comparator()).immutableSortedCopy(e.getValue().build())))
                     .collect(Collectors.toList());
 
-            return new FetchData(series, times.build(), groups);
+            return new FetchData(series, times.build(), groups,
+                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
         };
     }
 }

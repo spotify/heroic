@@ -40,6 +40,7 @@ import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -101,8 +102,8 @@ public class LocalClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-                DateRange range, Aggregation aggregation, boolean disableCache) {
-            return metrics().query(source, filter, range, aggregation, disableCache);
+                DateRange range, Aggregation aggregation, QueryOptions options) {
+            return metrics().query(source, filter, range, aggregation, options);
         }
 
         @Override

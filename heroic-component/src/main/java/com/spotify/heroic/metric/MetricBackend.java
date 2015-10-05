@@ -79,7 +79,7 @@ public interface MetricBackend extends Initializing, Grouped {
      * @return A future containing the fetched data wrapped in a {@link FetchData} structure.
      */
     public AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range,
-            FetchQuotaWatcher watcher);
+            FetchQuotaWatcher watcher, QueryOptions options);
 
     /**
      * List all series directly from the database.

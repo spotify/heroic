@@ -22,15 +22,14 @@
 package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.spotify.heroic.cluster.ClusterNode;
@@ -38,6 +37,8 @@ import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Data
@@ -45,46 +46,45 @@ public final class ResultGroups {
     private static final List<ResultGroup> EMPTY_GROUPS = new ArrayList<>();
     public static final List<RequestError> EMPTY_ERRORS = new ArrayList<>();
 
-    public static final ResultGroups EMPTY = new ResultGroups(new ArrayList<ResultGroup>(), EMPTY_ERRORS,
-            Statistics.EMPTY);
-
     private final List<ResultGroup> groups;
     private final List<RequestError> errors;
     private final Statistics statistics;
+    private final QueryTrace trace;
 
     @JsonCreator
     public ResultGroups(@JsonProperty("groups") List<ResultGroup> groups,
-            @JsonProperty("errors") List<RequestError> errors, @JsonProperty("statistics") Statistics statistics) {
+            @JsonProperty("errors") List<RequestError> errors, @JsonProperty("statistics") Statistics statistics,
+            @JsonProperty("trace") QueryTrace trace) {
         this.groups = groups;
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
-        this.statistics = statistics;
+        this.statistics = Objects.requireNonNull(statistics, "statistics");
+        this.trace = Objects.requireNonNull(trace, "trace");
     }
 
-    public static ResultGroups merge(Collection<ResultGroups> results) {
-        final List<ResultGroup> groups = Lists.newArrayList();
-        final List<RequestError> errors = Lists.newArrayList();
-        Statistics statistics = Statistics.EMPTY;
-
-        for (final ResultGroups r : results) {
-            groups.addAll(r.groups);
-            errors.addAll(r.errors);
-            statistics = statistics.merge(r.statistics);
-        }
-
-        return new ResultGroups(groups, errors, statistics);
+    public static ResultGroups empty(final QueryTrace.Identifier what) {
+        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.EMPTY, new QueryTrace(what));
     }
 
-    private static class SelfReducer implements Collector<ResultGroups, ResultGroups> {
-        @Override
-        public ResultGroups collect(Collection<ResultGroups> results) throws Exception {
-            return merge(results);
-        }
-    }
+    public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
+        final Stopwatch w = Stopwatch.createStarted();
 
-    private static final SelfReducer merger = new SelfReducer();
+        return results -> {
+            final ImmutableList.Builder<ResultGroup> groups = ImmutableList.builder();
+            final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
+            final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
 
-    public static SelfReducer merger() {
-        return merger;
+            Statistics statistics = Statistics.EMPTY;
+
+            for (final ResultGroups r : results) {
+                groups.addAll(r.groups);
+                errors.addAll(r.errors);
+                traces.add(r.trace);
+                statistics = statistics.merge(r.statistics);
+            }
+
+            return new ResultGroups(groups.build(), errors.build(), statistics,
+                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
+        };
     }
 
     public static final Transform<ResultGroups, ResultGroups> identity = new Transform<ResultGroups, ResultGroups>() {
@@ -98,33 +98,29 @@ public final class ResultGroups {
         return identity;
     }
 
-    public static ResultGroups seriesError(final List<TagValues> tags, Throwable e) {
+    public static ResultGroups seriesError(final QueryTrace.Identifier what, final List<TagValues> tags, final Throwable e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(SeriesError.fromThrowable(tags, e));
-        return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY);
+        return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY, new QueryTrace(what));
     }
 
-    public static Transform<Throwable, ResultGroups> seriesError(final List<TagValues> tags) {
+    public static Transform<Throwable, ResultGroups> seriesError(final QueryTrace.Identifier what, final List<TagValues> tags) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
                 log.error("Encountered error in transform", e);
-                return ResultGroups.seriesError(tags, e);
+                return ResultGroups.seriesError(what, tags, e);
             }
         };
     }
 
-    public static ResultGroups build(List<ResultGroup> groups, List<RequestError> errors, Statistics statistics) {
-        return new ResultGroups(groups, errors, statistics);
-    }
-
-    public static Transform<Throwable, ResultGroups> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ResultGroups> nodeError(final QueryTrace.Identifier what, final ClusterNode.Group group) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
                 final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
                         e));
-                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY);
+                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY, new QueryTrace(what));
             }
         };
     }

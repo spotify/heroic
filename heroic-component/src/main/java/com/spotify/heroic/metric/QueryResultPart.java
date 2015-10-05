@@ -55,13 +55,23 @@ public class QueryResultPart {
      */
     private final ShardTrace trace;
 
-    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range, final ClusterNode c) {
-        final Stopwatch watch = Stopwatch.createStarted();
+    /**
+     * Query trace.
+     */
+    private final QueryTrace queryTrace;
 
-        return (ResultGroups result) -> new QueryResultPart(
-                ImmutableList.copyOf(result.getGroups().stream().map(ResultGroup.fromResultGroup(c)).iterator()),
-                result.getErrors(), ShardTrace.of(c.toString(), c.metadata(), watch.elapsed(TimeUnit.MILLISECONDS),
-                        result.getStatistics(), Optional.empty()));
+    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range, final ClusterNode c) {
+        final Stopwatch w = Stopwatch.createStarted();
+
+        return result -> {
+            final ImmutableList<ShardedResultGroup> groups = ImmutableList
+                    .copyOf(result.getGroups().stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
+
+            final ShardTrace shardTrace = ShardTrace.of(c.toString(), c.metadata(), w.elapsed(TimeUnit.MILLISECONDS),
+                    result.getStatistics(), Optional.empty());
+
+            return new QueryResultPart(groups, result.getErrors(), shardTrace, result.getTrace());
+        };
     }
 
     public boolean isEmpty() {

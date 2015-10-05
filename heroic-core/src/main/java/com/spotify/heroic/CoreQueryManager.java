@@ -24,6 +24,7 @@ import com.spotify.heroic.grammar.SelectDSL;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultGroups;
 
 import eu.toolchain.async.AsyncFramework;
@@ -33,6 +34,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoreQueryManager implements QueryManager {
+    public static final QueryTrace.Identifier QUERY_NODE = QueryTrace.identifier(CoreQueryManager.class, "query_node");
+    public static final QueryTrace.Identifier QUERY = QueryTrace.identifier(CoreQueryManager.class, "query");
+
     @Inject
     private AsyncFramework async;
 
@@ -120,12 +124,12 @@ public class CoreQueryManager implements QueryManager {
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
                 futures.add(
-                        group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.isDisableCache())
-                                .catchFailed(ResultGroups.nodeError(group))
+                        group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.getOptions())
+                                .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
                                 .directTransform(QueryResultPart.fromResultGroup(q.getRange(), c)));
             }
 
-            return async.collect(futures, QueryResult.collectParts(q.getRange()));
+            return async.collect(futures, QueryResult.collectParts(QUERY, q.getRange()));
         }
 
         @Override
