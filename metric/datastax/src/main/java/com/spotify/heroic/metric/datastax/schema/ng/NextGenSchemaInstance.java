@@ -131,6 +131,11 @@ public class NextGenSchemaInstance implements SchemaInstance {
                         return new Point(timestamp, value);
                     };
                 }
+
+                @Override
+                public String toString() {
+                    return modified.toString();
+                }
             });
         }
 

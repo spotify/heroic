@@ -76,6 +76,10 @@ public class QueryTrace {
             this.name = name;
         }
 
+        public Identifier extend(String key) {
+            return new Identifier(name + "[" + key + "]");
+        }
+
         @Override
         public String toString() {
             return name;

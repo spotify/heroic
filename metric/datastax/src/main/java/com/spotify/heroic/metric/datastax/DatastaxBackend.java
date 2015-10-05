@@ -312,7 +312,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 if (options.isTracing()) {
                     stmt = f.fetch(limit).enableTracing();
-                    traceBuilder = result -> buildTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS), result.getInfo());
+                    traceBuilder = result -> buildTrace(FETCH_SEGMENT.extend(f.toString()),
+                            w.elapsed(TimeUnit.NANOSECONDS), result.getInfo());
                 } else {
                     stmt = f.fetch(limit);
                     traceBuilder = result -> new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
