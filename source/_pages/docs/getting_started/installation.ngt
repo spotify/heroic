@@ -46,18 +46,14 @@
   Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
 </p>
 
-<pre><code language="bash">
-tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
-cd apache-cassandra-&lt;version&gt;
-</code></pre>
+<pre><code language="bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
+cd apache-cassandra-&lt;version&gt;</code></pre>
 
 <p>
   Run cassandra (<code language="bash">-f</code> keeps it in the foreground)
 </p>
 
-<pre><code language="bash">
-bin/cassandra -f
-</code></pre>
+<pre><code language="bash">bin/cassandra -f</code></pre>
 
 <p>
   Next you should read how to <a ui-sref="^.configuration({'#': 'cassandra'})">configure cassandra</a>.
@@ -122,16 +118,12 @@ cd elasticsearch-&lt;version&gt;</code></pre>
   Unpack and run (replace <code>&lt;scala-version&gt;</code>, and <code>&lt;version&gt;</code> with the actual versions)
 </p>
 
-<pre><code language="bash">
-tar -xvf kafka_&lt;scala-version&gt;-&lt;version&gt;.tgz
-cd kafka_&lt;scala-version&gt;-&lt;version&gt;
-</code></pre>
+<pre><code language="bash">tar -xvf kafka_&lt;scala-version&gt;-&lt;version&gt;.tgz
+cd kafka_&lt;scala-version&gt;-&lt;version&gt;</code></pre>
 
 <p>
   Run ZooKeeper and Kafka.
 </p>
 
-<pre><code language="bash">
-bin/zookeeper-server-start.sh config/zookeeper.properties
-bin/kafka-server-start.sh config/server.properties
-</code></pre>
+<pre><code language="bash">bin/zookeeper-server-start.sh config/zookeeper.properties
+bin/kafka-server-start.sh config/server.properties</code></pre>

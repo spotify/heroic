@@ -86,7 +86,7 @@
         The range in time for which to query
       </api-field>
 
-      <api-field name="filter">
+      <api-field name="filter" type-href="Filter">
         <p>
           A statement used to filter down the selected time series.
           Each individual filtering field (<code>filter</code>, <code>key</code>, <code>tags</code>, and <code>hasTags</code>) may be empty.
@@ -98,7 +98,7 @@
         </p>
       </api-field>
 
-      <api-field name="aggregators">
+      <api-field name="aggregators" type-href="Aggregation">
         Aggregators used to downsample the response.
       </api-field>
 
@@ -202,7 +202,7 @@
         <p>Time series to write data to.</p>
       </api-field>
 
-      <api-field name="data" required="true" type-array-href="DataPoint">
+      <api-field name="data" required="true" type-array-href="Point">
         <p>Data to write.</p>
       </api-field>
     </api-type>
@@ -293,7 +293,7 @@
 
 <api-type name="Series">
   <p>
-    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.Series</a>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.common.Series</a>
   </p>
 
   <p>
@@ -310,14 +310,14 @@
   </api-field>
 </api-type>
 
-<api-type name="DataPoint" kind="structural">
+<api-type name="Point" kind="structural">
   <p>
-    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.DataPoint</a>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.Point</a>
   </p>
 
   <p>
     See the <a ui-sref="^.data_model({'#': 'data-points'})">Data Points section in Data Model</a>
-    for more details about <em>what</em> a data point is.
+    for more details about <em>what</em> a point is.
   </p>
 
   <api-field required="true" name="datapoint" type-json='[<timestamp>, <value>]'>
@@ -331,6 +331,31 @@
 
     <p>
       The <code language="json">&lt;value&gt;</code> is the sample value.
+    </p>
+  </api-field>
+</api-type>
+
+<api-type name="Event" kind="structural">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.Event</a>
+  </p>
+
+  <p>
+    See the <a ui-sref="^.data_model({'#': 'events'})">Events section in Data Model</a>
+    for more details about <em>what</em> an event is.
+  </p>
+
+  <api-field required="true" name="datapoint" type-json='[<timestamp>, {<payload>}]'>
+    <p>
+      A single event.
+    </p>
+
+    <p>
+      The <code language="json">&lt;timestamp&gt;</code> is the number of milliseconds since unix epoch.
+    </p>
+
+    <p>
+      The <code language="json">&lt;payload&gt;</code> is the sample payload.
     </p>
   </api-field>
 </api-type>
@@ -424,5 +449,28 @@
 
   <api-field name="value" type-json='<number>'>
     How many <code>unit</code> timespans back in time this date starts.
+  </api-field>
+</api-type>
+
+<api-type name="Aggregation">
+  <p>
+    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.metric.Aggregation</a>
+  </p>
+
+  <p>
+    Relative date ranges range from <em>the current</em> time, to a specific
+    point in the past.
+  </p>
+
+  <p>
+    This object tells the distance to the point in the past.
+  </p>
+
+  <api-field required="true" name="type" type-json='"relative"'>
+    Type of the aggregation.
+  </api-field>
+
+  <api-field name="sampling" type-href='Sampling'>
+    Sampling to use with aggregation.
   </api-field>
 </api-type>
