@@ -215,6 +215,16 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         });
     }
 
+    @Override
+    public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
+        return connection.doto(c -> {
+            final ByteBuffer k = c.schema.rowKey().serialize(new MetricsRowKey(key.getSeries(), key.getBase()));
+            return Async.bind(async, c.session.executeAsync(c.schema.deleteKey(k))).directTransform(result -> {
+                return null;
+            });
+        });
+    }
+
     private AsyncFuture<WriteResult> doWrite(final Connection c, final SchemaInstance.WriteSession session, final WriteMetric w) throws IOException {
         final List<Callable<AsyncFuture<Long>>> callables = new ArrayList<>();
 

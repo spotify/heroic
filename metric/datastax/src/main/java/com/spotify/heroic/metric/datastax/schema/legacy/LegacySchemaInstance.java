@@ -27,6 +27,7 @@ import lombok.Data;
 public class LegacySchemaInstance implements SchemaInstance {
     private final PreparedStatement write;
     private final PreparedStatement fetch;
+    private final PreparedStatement delete;
     private final PreparedStatement keysPaging;
     private final PreparedStatement keysPagingLeft;
     private final PreparedStatement keysPagingLimit;
@@ -125,6 +126,11 @@ public class LegacySchemaInstance implements SchemaInstance {
                 return write.bind(key, offset, d.getValue());
             }
         };
+    }
+
+    @Override
+    public BoundStatement deleteKey(ByteBuffer k) {
+        return delete.bind(k);
     }
 
     private long calculateBaseTimestamp(long timestamp) {
