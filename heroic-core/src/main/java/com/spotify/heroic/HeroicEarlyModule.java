@@ -10,13 +10,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class HeroicEarlyModule extends AbstractModule {
     private final HeroicConfig config;
-    private final HeroicOptions options;
-
-    @Provides
-    @Singleton
-    HeroicOptions options() {
-        return options;
-    }
 
     @Provides
     @Singleton

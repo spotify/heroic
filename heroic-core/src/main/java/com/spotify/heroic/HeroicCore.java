@@ -382,7 +382,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     }
 
     private Injector earlyInjector(final Injector loading, final HeroicConfig config) {
-        return loading.createChildInjector(new HeroicEarlyModule(config, this));
+        return loading.createChildInjector(new HeroicEarlyModule(config));
     }
 
     /**
