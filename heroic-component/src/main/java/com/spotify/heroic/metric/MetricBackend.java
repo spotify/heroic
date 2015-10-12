@@ -120,4 +120,9 @@ public interface MetricBackend extends Initializing, Grouped {
      * Delete all data associated with the given key.
      */
     public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options);
+
+    /**
+     * Count the number of data points for the given key.
+     */
+    public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options);
 }

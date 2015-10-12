@@ -408,6 +408,23 @@ public class LocalMetricManager implements MetricManager {
             return async.collectAndDiscard(callbacks);
         }
 
+        @Override
+        public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options) {
+            final List<AsyncFuture<Long>> callbacks = new ArrayList<>();
+
+            runAll((disabled, backend) -> callbacks.add(backend.countKey(key, options)));
+
+            return async.collect(callbacks).directTransform(result -> {
+                long count = 0;
+
+                for (final long c : result) {
+                    count += c;
+                }
+
+                return count;
+            });
+        }
+
         private void runAll(InternalOperation op) {
             for (final MetricBackend b : backends.getAll()) {
                 try {

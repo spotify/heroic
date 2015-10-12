@@ -43,6 +43,7 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
+import com.spotify.heroic.shell.task.CountData;
 import com.spotify.heroic.shell.task.DeleteKeys;
 import com.spotify.heroic.shell.task.DeserializeKey;
 import com.spotify.heroic.shell.task.Fetch;
@@ -76,6 +77,7 @@ public final class Tasks {
         available.add(shellTask(ConfigGet.class));
         available.add(shellTask(Keys.class));
         available.add(shellTask(DeleteKeys.class));
+        available.add(shellTask(CountData.class));
         available.add(shellTask(SerializeKey.class));
         available.add(shellTask(DeserializeKey.class));
         available.add(shellTask(ListBackends.class));
