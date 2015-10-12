@@ -53,7 +53,6 @@ public class CassandraProfile implements HeroicProfile {
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         final boolean configure = params.contains("cassandra.configure");
-
         final Optional<String> seeds = params.get("cassandra.seeds");
         final Optional<String> type = params.get("cassandra.type");
 
@@ -68,7 +67,7 @@ public class CassandraProfile implements HeroicProfile {
 
             schema = builder.call();
         } else {
-            schema = NextGenSchemaModule.builder().build();
+            schema = LegacySchemaModule.builder().build();
         }
 
         // @formatter:off

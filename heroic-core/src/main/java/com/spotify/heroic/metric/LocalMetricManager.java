@@ -399,6 +399,15 @@ public class LocalMetricManager implements MetricManager {
             });
         }
 
+        @Override
+        public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
+            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
+
+            runAll((disabled, backend) -> callbacks.add(backend.deleteKey(key, options)));
+
+            return async.collectAndDiscard(callbacks);
+        }
+
         private void runAll(InternalOperation op) {
             for (final MetricBackend b : backends.getAll()) {
                 try {

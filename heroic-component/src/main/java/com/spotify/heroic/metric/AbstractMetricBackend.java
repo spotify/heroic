@@ -26,4 +26,9 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, QueryOptions options) {
         return async.resolved(new BackendKeySet());
     }
+
+    @Override
+    public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
+        return async.resolved(null);
+    }
 }

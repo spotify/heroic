@@ -115,4 +115,9 @@ public interface MetricBackend extends Initializing, Grouped {
      * Serialize the given key, and return the corresponding BackendKey.
      */
     public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key);
+
+    /**
+     * Delete all data associated with the given key.
+     */
+    public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options);
 }
