@@ -149,7 +149,7 @@ public class Series {
         return true;
     }
 
-    static final Series empty = new Series(null, EMPTY_TAGS);
+    static final Series empty = new Series(EMPTY_STRING, EMPTY_TAGS);
 
     public static Series empty() {
         return empty;
