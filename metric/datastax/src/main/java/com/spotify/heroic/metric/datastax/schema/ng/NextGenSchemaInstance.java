@@ -34,6 +34,7 @@ public class NextGenSchemaInstance implements SchemaInstance {
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
+    private final PreparedStatement count;
     private final PreparedStatement keysPagingLimit;
     private final PreparedStatement keysPagingLeftLimit;
 
@@ -146,6 +147,11 @@ public class NextGenSchemaInstance implements SchemaInstance {
     @Override
     public BoundStatement deleteKey(ByteBuffer k) {
         return delete.bind(k);
+    }
+
+    @Override
+    public BoundStatement countKey(ByteBuffer k) {
+        return count.bind(k);
     }
 
     private long calculateBaseTimestamp(long timestamp) {

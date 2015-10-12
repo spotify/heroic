@@ -225,6 +225,20 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         });
     }
 
+    @Override
+    public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options) {
+        return connection.doto(c -> {
+            final ByteBuffer k = c.schema.rowKey().serialize(new MetricsRowKey(key.getSeries(), key.getBase()));
+            return Async.bind(async, c.session.executeAsync(c.schema.countKey(k))).directTransform(result -> {
+                if (!result.isFullyFetched()) {
+                    throw new IllegalStateException("Row is not fully fetched");
+                }
+
+                return result.iterator().next().getLong(0);
+            });
+        });
+    }
+
     private AsyncFuture<WriteResult> doWrite(final Connection c, final SchemaInstance.WriteSession session, final WriteMetric w) throws IOException {
         final List<Callable<AsyncFuture<Long>>> callables = new ArrayList<>();
 

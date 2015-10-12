@@ -28,6 +28,7 @@ public class LegacySchemaInstance implements SchemaInstance {
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
+    private final PreparedStatement count;
     private final PreparedStatement keysPaging;
     private final PreparedStatement keysPagingLeft;
     private final PreparedStatement keysPagingLimit;
@@ -131,6 +132,11 @@ public class LegacySchemaInstance implements SchemaInstance {
     @Override
     public BoundStatement deleteKey(ByteBuffer k) {
         return delete.bind(k);
+    }
+
+    @Override
+    public BoundStatement countKey(ByteBuffer k) {
+        return count.bind(k);
     }
 
     private long calculateBaseTimestamp(long timestamp) {
