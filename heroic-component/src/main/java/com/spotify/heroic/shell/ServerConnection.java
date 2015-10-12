@@ -2,7 +2,8 @@ package com.spotify.heroic.shell;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,7 +14,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 import com.spotify.heroic.shell.protocol.Acknowledge;
-import com.spotify.heroic.shell.protocol.CommandDone;
 import com.spotify.heroic.shell.protocol.CommandOutput;
 import com.spotify.heroic.shell.protocol.FileClose;
 import com.spotify.heroic.shell.protocol.FileFlush;
@@ -36,22 +36,24 @@ final class ServerConnection extends ShellConnection implements ShellIO {
     public ServerConnection(final SerializerFramework framework, final SerialReader reader, final StreamSerialWriter writer) throws IOException {
         super(framework, reader, writer);
 
-        this.out = new PrintWriter(new BufferedWriter(new Writer() {
+        this.out = new PrintWriter(new Writer() {
+            private CharArrayWriter out = new CharArrayWriter(BUFFER_SIZE);
+
             @Override
             public void close() throws IOException {
             }
 
             @Override
             public void flush() throws IOException {
+                send(new CommandOutput(out.toCharArray()));
+                out.reset();
             }
 
             @Override
             public void write(char[] b, int off, int len) throws IOException {
-                final char[] buffer = new char[len];
-                System.arraycopy(b, off, buffer, 0, len);
-                request(new CommandOutput(buffer), Acknowledge.class);
+                out.write(b, off, len);
             }
-        }, BUFFER_SIZE));
+        });
     }
 
     @Override
@@ -120,11 +122,5 @@ final class ServerConnection extends ShellConnection implements ShellIO {
     @Override
     public PrintWriter out() {
         return out;
-    }
-
-    @Override
-    public void close() throws IOException {
-        out.flush();
-        request(new CommandDone(), Acknowledge.class);
     }
 }

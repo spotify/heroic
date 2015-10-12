@@ -3,8 +3,6 @@ package com.spotify.heroic.shell;
 import java.io.Closeable;
 import java.io.IOException;
 
-import com.spotify.heroic.shell.protocol.Close;
-import com.spotify.heroic.shell.protocol.ErrorMessage;
 import com.spotify.heroic.shell.protocol.Message;
 import com.spotify.heroic.shell.protocol.Message_Serializer;
 
@@ -35,7 +33,6 @@ public class ShellConnection implements Closeable {
 
     @Override
     public void close() throws IOException {
-        send(new Close());
         writer.close();
     }
 
@@ -44,10 +41,6 @@ public class ShellConnection implements Closeable {
         send(request);
 
         final Message response = receive();
-
-        if (response instanceof ErrorMessage) {
-            throw new IOException("Remote error: " + (ErrorMessage)response);
-        }
 
         if (!expected.isAssignableFrom(response.getClass())) {
             throw new IOException(

@@ -47,11 +47,6 @@ public abstract class SimpleMessageVisitor<R> implements Message.Visitor<R> {
     }
 
     @Override
-    public R visitErrorMessage(ErrorMessage message) throws Exception {
-        return visitUnknown(message);
-    }
-
-    @Override
     public R visitCommandsRequest(CommandsRequest message) throws Exception {
         return visitUnknown(message);
     }
@@ -68,11 +63,6 @@ public abstract class SimpleMessageVisitor<R> implements Message.Visitor<R> {
 
     @Override
     public R visitFileReadResult(FileReadResult message) throws Exception {
-        return visitUnknown(message);
-    }
-
-    @Override
-    public R visitCloseMessage(Close message) throws Exception {
         return visitUnknown(message);
     }
 

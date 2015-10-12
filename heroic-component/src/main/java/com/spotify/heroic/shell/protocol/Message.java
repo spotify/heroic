@@ -19,9 +19,7 @@ import eu.toolchain.serializer.AutoSerialize.SubType;
     @SubType(FileReadResult.class),
     @SubType(EvaluateRequest.class),
     @SubType(CommandsRequest.class),
-    @SubType(ErrorMessage.class),
-    @SubType(Acknowledge.class),
-    @SubType(Close.class)
+    @SubType(Acknowledge.class)
 })
 // @formatter:on
 public interface Message {
@@ -46,8 +44,6 @@ public interface Message {
 
         R visitFileWrite(FileWrite message) throws Exception;
 
-        R visitErrorMessage(ErrorMessage message) throws Exception;
-
         R visitCommandsRequest(CommandsRequest message) throws Exception;
 
         R visitRunTaskRequest(EvaluateRequest message) throws Exception;
@@ -55,8 +51,6 @@ public interface Message {
         R visitFileOpened(FileOpened message) throws Exception;
 
         R visitFileReadResult(FileReadResult message) throws Exception;
-
-        R visitCloseMessage(Close message) throws Exception;
 
         R visitOk(Acknowledge message) throws Exception;
     }
