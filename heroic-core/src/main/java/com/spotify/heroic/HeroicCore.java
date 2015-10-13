@@ -76,6 +76,7 @@ import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 
@@ -105,6 +106,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SKIP_LIFECYCLES = false;
+    static final boolean DEFAULT_REQUIRE_SHELL_SERVER = false;
 
     static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
     static final String APPLICATION_JSON = "application/json";
@@ -168,6 +170,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     private final boolean oneshot;
     private final boolean disableBackends;
     private final boolean skipLifecycles;
+    private final boolean requireShellServer;
 
     /* extensions */
     private final List<Class<?>> modules;
@@ -462,9 +465,9 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
             modules.add(config.getMetadata());
             modules.add(config.getSuggest());
             modules.add(config.getIngestion());
-
-            config.getShellServer().map(modules::add);
         }
+
+        getShellServer(config).map(modules::add);
 
         modules.add(config.getCluster().make(this));
         modules.add(config.getCache());
@@ -487,6 +490,14 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         }
 
         return injector;
+    }
+
+    private Optional<ShellServerModule> getShellServer(HeroicConfig config) {
+        if (!config.getShellServer().isPresent() && requireShellServer) {
+            return Optional.of(ShellServerModule.builder().build());
+        }
+
+        return config.getShellServer();
     }
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
@@ -664,12 +675,18 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         private Optional<Boolean> oneshot = empty();
         private Optional<Boolean> disableBackends = empty();
         private Optional<Boolean> skipLifecycles = empty();
+        private Optional<Boolean> requireShellServer = empty();
 
         /* extensions */
         private final ImmutableList.Builder<Class<?>> modules = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicProfile> profiles = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
+
+        public Builder requireShellServer(boolean requireShellServer) {
+            this.requireShellServer = of(requireShellServer);
+            return this;
+        }
 
         public Builder port(final int port) {
             this.port = of(port);
@@ -812,6 +829,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
                 oneshot.orElse(DEFAULT_ONESHOT),
                 disableBackends.orElse(DEFAULT_DISABLE_BACKENDS),
                 skipLifecycles.orElse(DEFAULT_SKIP_LIFECYCLES),
+                requireShellServer.orElse(DEFAULT_REQUIRE_SHELL_SERVER),
 
                 modules.build(),
                 profiles.build(),

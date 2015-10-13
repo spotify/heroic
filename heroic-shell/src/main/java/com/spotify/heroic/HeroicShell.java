@@ -399,6 +399,8 @@ public class HeroicShell {
             builder.profile(p);
         }
 
+        // HeroicShell requires a shell server to be provided.
+        builder.requireShellServer(true);
         return builder;
     }
 
