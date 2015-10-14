@@ -22,14 +22,20 @@ Heroic comes with a shell that contains a set of useful tasks, these can either
 be run in a readline-based shell with some basic completions and history, or
 standalone.
 
-To run the shell, first [build the project](#building), then run.
+You can use the following helper script to run the shell.
 
 ```bash
-$ java -cp heroic-dist/target/heroic-dist-0.0.1.jar com.spotify.heroic.HeroicShell [config]
+$ tools/heroic-shell [opts]
 ```
 
+There are a few interesting options available, most notably is `--connect` that
+allows the shell to connect to a remote heroic instance.
+
+See `-h` for a full listing of options.
+
 You can run individual tasks in _standalone_ mode, giving you a bit more
-options (like redirecting output) like the following.
+options (like redirecting output) through the following.
 
 ```bash
-java com.spotify.heroic.HeroicShell <heroic-options> -- com.spotify.heroic.shell.task.<task-name> <task-options>
+$ tools/heroic-shell <heroic-options> -- com.spotify.heroic.shell.task.<task-name> <task-options>
+```
