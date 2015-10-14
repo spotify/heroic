@@ -1,0 +1,23 @@
+#!/bin/bash
+
+root=$(dirname $(dirname $0))
+dist="$root/heroic-dist"
+
+CLASSPATH=
+
+if [[ -d $dist ]]; then
+    jar="$dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
+
+    if [[ ! -f $jar ]]; then
+        (cd $root && mvn clean package)
+    fi
+
+    if [[ ! -f $jar ]]; then
+        echo "No such jar: $jar" 1>&2
+        exit 1
+    fi
+
+    CLASSPATH="$root/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
+fi
+
+exec env CLASSPATH="$CLASSPATH" java com.spotify.heroic.HeroicShell "$@"
