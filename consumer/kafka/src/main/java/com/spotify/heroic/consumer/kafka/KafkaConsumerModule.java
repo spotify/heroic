@@ -253,6 +253,7 @@ public class KafkaConsumerModule implements ConsumerModule {
             return this;
         }
 
+        @Override
         public ConsumerModule.Builder merge(final ConsumerModule.Builder u) {
             final Builder o = (Builder) u;
 
@@ -269,7 +270,7 @@ public class KafkaConsumerModule implements ConsumerModule {
 
         @Override
         public ConsumerModule build() {
-            if (!topics.map(Collection::isEmpty).orElse(true))
+            if (topics.map(Collection::isEmpty).orElse(true))
                 throw new RuntimeException("No topics are defined");
 
             if (!schema.isPresent())
