@@ -2,6 +2,7 @@ package com.spotify.heroic.shell;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.Socket;
 
 import com.spotify.heroic.shell.protocol.Message;
 import com.spotify.heroic.shell.protocol.Message_Serializer;
@@ -10,15 +11,19 @@ import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.StreamSerialWriter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class ShellConnection implements Closeable {
+    final Socket socket;
     final SerialReader reader;
     final StreamSerialWriter writer;
     final Serializer<Message> message;
 
-    public ShellConnection(final SerializerFramework framework, final SerialReader reader, final StreamSerialWriter writer) throws IOException {
-        this.reader = reader;
-        this.writer = writer;
+    public ShellConnection(final SerializerFramework framework, final Socket socket) throws IOException {
+        this.socket = socket;
+        this.reader = framework.readStream(socket.getInputStream());
+        this.writer = framework.writeStream(socket.getOutputStream());
         this.message = new Message_Serializer(framework);
     }
 
@@ -33,7 +38,7 @@ public class ShellConnection implements Closeable {
 
     @Override
     public void close() throws IOException {
-        writer.close();
+        socket.close();
     }
 
     @SuppressWarnings("unchecked")

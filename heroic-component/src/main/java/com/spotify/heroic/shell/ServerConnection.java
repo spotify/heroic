@@ -2,13 +2,13 @@ package com.spotify.heroic.shell;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
@@ -24,17 +24,15 @@ import com.spotify.heroic.shell.protocol.FileRead;
 import com.spotify.heroic.shell.protocol.FileReadResult;
 import com.spotify.heroic.shell.protocol.FileWrite;
 
-import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerializerFramework;
-import eu.toolchain.serializer.StreamSerialWriter;
 
 final class ServerConnection extends ShellConnection implements ShellIO {
     public static final int BUFFER_SIZE = (1 << 16);
 
     final PrintWriter out;
 
-    public ServerConnection(final SerializerFramework framework, final SerialReader reader, final StreamSerialWriter writer) throws IOException {
-        super(framework, reader, writer);
+    public ServerConnection(final SerializerFramework framework, final Socket socket) throws IOException {
+        super(framework, socket);
 
         this.out = new PrintWriter(new Writer() {
             private CharArrayWriter out = new CharArrayWriter(BUFFER_SIZE);

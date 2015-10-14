@@ -1,8 +1,6 @@
 package com.spotify.heroic.shell;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,10 +14,9 @@ import com.spotify.heroic.shell.protocol.EvaluateRequest;
 import com.spotify.heroic.shell.protocol.Message;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 
-import eu.toolchain.async.FutureDone;
-import eu.toolchain.serializer.SerialReader;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.SerializerFramework;
-import eu.toolchain.serializer.StreamSerialWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,6 +27,7 @@ class ShellServerClientThread implements Runnable {
     final ShellTasks tasks;
     final Collection<ShellTaskDefinition> available;
     final SerializerFramework serializer;
+    final AsyncFramework async;
 
     @Override
     public void run() {
@@ -47,62 +45,45 @@ class ShellServerClientThread implements Runnable {
     }
 
     void doRun() throws Exception {
-        try (final InputStream input = socket.getInputStream()) {
-            final SerialReader reader = serializer.readStream(input);
+        try (final ServerConnection ch = new ServerConnection(serializer, socket)) {
+            final SimpleMessageVisitor<AsyncFuture<Void>> visitor = new SimpleMessageVisitor<AsyncFuture<Void>>() {
+                @Override
+                public AsyncFuture<Void> visitCommandsRequest(CommandsRequest message) throws Exception {
+                    final List<CommandDefinition> commands = new ArrayList<>();
 
-            try (final OutputStream output = socket.getOutputStream()) {
-                final StreamSerialWriter writer = serializer.writeStream(output);
+                    for (final ShellTaskDefinition def : available) {
+                        commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
+                    }
 
-                try (final ServerConnection ch = new ServerConnection(serializer, reader, writer)) {
-                    ch.receive().visit(new SimpleMessageVisitor<Void>() {
-                        @Override
-                        public Void visitCommandsRequest(CommandsRequest message) throws Exception {
-                            final List<CommandDefinition> commands = new ArrayList<>();
-
-                            for (final ShellTaskDefinition def : available) {
-                                commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
-                            }
-
-                            ch.send(new CommandsResponse(commands));
-                            return null;
-                        }
-
-                        @Override
-                        public Void visitRunTaskRequest(EvaluateRequest message) throws Exception {
-                            log.info("Run task: {}", message);
-
-                            tasks.evaluate(message.getCommand(), ch).onDone(new FutureDone<Void>() {
-                                @Override
-                                public void failed(Throwable cause) throws Exception {
-                                    log.error("Command Failed", cause);
-                                    ch.out().println("Command Failed: " + cause.getMessage());
-                                    ch.out().flush();
-                                    ch.send(new CommandDone());
-                                }
-
-                                @Override
-                                public void resolved(Void result) throws Exception {
-                                    ch.send(new CommandDone());
-                                }
-
-                                @Override
-                                public void cancelled() throws Exception {
-                                    ch.out().println("Command cancelled");
-                                    ch.out().flush();
-                                    ch.send(new CommandDone());
-                                }
-                            });
-
-                            return null;
-                        }
-
-                        @Override
-                        protected Void visitUnknown(Message message) throws Exception {
-                            throw new RuntimeException("Unhandled message: " + message);
-                        }
-                    });
+                    ch.send(new CommandsResponse(commands));
+                    return async.resolved();
                 }
+
+                @Override
+                public AsyncFuture<Void> visitRunTaskRequest(EvaluateRequest message) throws Exception {
+                    log.info("Run task: {}", message);
+
+                    return tasks.evaluate(message.getCommand(), ch);
+                }
+
+                @Override
+                protected AsyncFuture<Void> visitUnknown(Message message) throws Exception {
+                    return async.failed(new RuntimeException("Unhandled message: " + message));
+                }
+            };
+
+            final AsyncFuture<Void> future = ch.receive().visit(visitor);
+
+            try {
+                future.get();
+            } catch(Exception e) {
+                log.error("Command Failed", e);
+                ch.out().println("Command Failed: " + e.getMessage());
+                e.printStackTrace(ch.out());
+                ch.out().flush();
             }
+
+            ch.send(new CommandDone());
         }
     }
 }

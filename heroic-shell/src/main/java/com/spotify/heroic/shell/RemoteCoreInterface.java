@@ -37,9 +37,7 @@ import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerializerFramework;
-import eu.toolchain.serializer.StreamSerialWriter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -59,15 +57,15 @@ public class RemoteCoreInterface implements CoreInterface {
     @Override
     public AsyncFuture<Void> evaluate(final List<String> command, final ShellIO io) throws Exception {
         return async.call(() -> {
+            final AtomicBoolean running = new AtomicBoolean(true);
+            final AtomicInteger fileCounter = new AtomicInteger();
+
+            final Map<Integer, InputStream> reading = new HashMap<>();
+            final Map<Integer, OutputStream> writing = new HashMap<>();
+            final Map<Integer, Callable<Void>> closers = new HashMap<>();
+
             try (final ShellConnection c = connect()) {
                 c.send(new EvaluateRequest(command));
-
-                final AtomicBoolean running = new AtomicBoolean();
-                final AtomicInteger fileCounter = new AtomicInteger();
-
-                final Map<Integer, InputStream> reading = new HashMap<>();
-                final Map<Integer, OutputStream> writing = new HashMap<>();
-                final Map<Integer, Callable<Void>> closers = new HashMap<>();
 
                 final Message.Visitor<Optional<Message>> visitor = new SimpleMessageVisitor<Optional<Message>>() {
                     public Optional<Message> visitCommandDone(CommandDone m) {
@@ -187,8 +185,9 @@ public class RemoteCoreInterface implements CoreInterface {
 
                     final Optional<Message> out = in.visit(visitor);
 
-                    if (!running.get())
+                    if (!running.get()) {
                         break;
+                    }
 
                     if (out.isPresent()) {
                         final Message o = out.get();
@@ -240,18 +239,6 @@ public class RemoteCoreInterface implements CoreInterface {
 
         socket.connect(address);
 
-        final SerialReader reader = serializer.readStream(socket.getInputStream());
-        final StreamSerialWriter writer = serializer.writeStream(socket.getOutputStream());
-
-        return new ShellConnection(serializer, reader, writer) {
-            @Override
-            public void close() throws IOException {
-                try {
-                    super.close();
-                } finally {
-                    socket.close();
-                }
-            }
-        };
+        return new ShellConnection(serializer, socket);
     }
 }
