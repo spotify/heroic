@@ -213,22 +213,22 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
 
     /**
      * Start the Heroic core, step by step
-     * 
+     *
      * <p> It sets up the early injector which is responsible for loading all the necessary components to
      * parse a configuration file.
-     * 
+     *
      * <p> Load all the external modules, which are configured in {@link #modules}.
-     * 
+     *
      * <p> Load and build the configuration using the early injector
-     * 
+     *
      * <p> Setup the primary injector which will provide the dependencies to the entire application
-     * 
+     *
      * <p> Run all bootstraps that are configured in {@link #late}
-     * 
+     *
      * <p> Start all the external modules. {@link #startLifeCycles}
-     * 
+     *
      * <p> Start all the internal modules. {@link #startInternalLifecycles}
-     * 
+     *
      * @throws Exception
      */
     private void doStart() throws Exception {
@@ -254,10 +254,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
 
     /**
      * Start the internal lifecycles
-     * 
+     *
      * First step is to register event hooks that makes sure that the lifecycle components gets started and shutdown
      * correctly. After this the registered internal lifecycles are started.
-     * 
+     *
      * @param primary
      */
     private void startInternalLifecycles(final Injector primary) {
@@ -290,7 +290,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
 
     /**
      * This method basically goes through the list of bootstrappers registered by modules and runs them.
-     * 
+     *
      * @param injector Injector to inject boostrappers using.
      * @param bootstrappers Bootstrappers to run.
      * @throws Exception
@@ -381,7 +381,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
         final HeroicInternalLifeCycle lifeCycle = new HeroicInernalLifeCycleImpl();
 
-        return Guice.createInjector(new HeroicLoadingModule(executor, lifeCycle, this));
+        return Guice.createInjector(new HeroicLoadingModule(executor, lifeCycle, this, this));
     }
 
     private Injector earlyInjector(final Injector loading, final HeroicConfig config) {

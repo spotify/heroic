@@ -60,6 +60,13 @@ public class HeroicLoadingModule extends AbstractModule {
     private final ExecutorService executor;
     private final HeroicInternalLifeCycle lifeCycle;
     private final HeroicOptions options;
+    private final HeroicReporterConfiguration reporterConfig;
+
+    @Provides
+    @Singleton
+    HeroicReporterConfiguration reporterConfig() {
+        return reporterConfig;
+    }
 
     @Provides
     @Singleton
