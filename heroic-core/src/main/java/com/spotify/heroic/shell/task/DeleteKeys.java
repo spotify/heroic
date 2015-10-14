@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -109,22 +110,31 @@ public class DeleteKeys implements ShellTask {
             return async.resolved();
         }
 
-        final ImmutableList.Builder<Callable<AsyncFuture<Void>>> futures = ImmutableList.builder();
+        final ImmutableList.Builder<Callable<AsyncFuture<Pair<BackendKey, Long>>>> futures = ImmutableList.builder();
 
         for (final BackendKey k : keys.build()) {
-            futures.add(() -> group.deleteKey(k, options));
+            futures.add(() -> group.countKey(k, options)
+                    .lazyTransform(count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count))));
         }
 
-        return async.eventuallyCollect(futures.build(), new StreamCollector<Void, Void>() {
+        return async.eventuallyCollect(futures.build(), new StreamCollector<Pair<BackendKey, Long>, Void>() {
             @Override
-            public void resolved(Void result) throws Exception {
+            public void resolved(Pair<BackendKey, Long> result) throws Exception {
+                if (params.verbose) {
+                    synchronized (io) {
+                        io.out().println("Deleted: " + result.getLeft() + " (" + result.getRight() + ")");
+                        io.out().flush();
+                    }
+                }
             }
 
             @Override
             public void failed(Throwable cause) throws Exception {
-                io.out().println("Delete Failed: " + cause);
-                cause.printStackTrace(io.out());
-                io.out().flush();
+                synchronized (io) {
+                    io.out().println("Delete Failed: " + cause);
+                    cause.printStackTrace(io.out());
+                    io.out().flush();
+                }
             }
 
             @Override
@@ -166,7 +176,10 @@ public class DeleteKeys implements ShellTask {
         private List<String> keys = new ArrayList<>();
 
         @Option(name = "--ok", usage = "Really delete keys", metaVar = "<file>")
-        private boolean ok;
+        private boolean ok = false;
+
+        @Option(name = "--verbose", usage = "Print information about every deleted key")
+        private boolean verbose = false;
 
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
