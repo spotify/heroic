@@ -24,11 +24,14 @@ package com.spotify.heroic.shell.task;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Option;
@@ -37,6 +40,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.Series;
@@ -53,6 +57,8 @@ import com.spotify.heroic.shell.TaskUsage;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
 import lombok.Data;
 import lombok.ToString;
@@ -83,41 +89,85 @@ public class DeleteKeys implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
+        final ImmutableList.Builder<Iterable<BackendKey>> keys = ImmutableList.builder();
 
         if (params.file != null) {
-            try (final BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(io.newInputStream(params.file)))) {
-                String line;
+            keys.add(new Iterable<BackendKey>() {
+                @Override
+                public Iterator<BackendKey> iterator() {
+                    final BufferedReader reader;
 
-                while ((line = reader.readLine()) != null) {
-                    keys.add(mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
+                    try {
+                        reader = new BufferedReader(new InputStreamReader(io.newInputStream(params.file)));
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to open file", e);
+                    }
+
+                    return new Iterator<BackendKey>() {
+                        private String line;
+
+                        @Override
+                        public boolean hasNext() {
+                            if (line != null) {
+                                return true;
+                            }
+
+                            try {
+                                line = reader.readLine();
+                            } catch (IOException e) {
+                                throw new RuntimeException("Failed to read line", e);
+                            }
+
+                            return line != null;
+                        }
+
+                        @Override
+                        public BackendKey next() {
+                            if (line == null) {
+                                throw new IllegalStateException("No line ready");
+                            }
+
+                            try {
+                                return mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey();
+                            } catch (IOException e) {
+                                throw new RuntimeException("Failed to read next line", e);
+                            } finally {
+                                line = null;
+                            }
+                        }
+                    };
                 }
-            }
+            });
         }
+
+        final ImmutableList.Builder<BackendKey> arguments = ImmutableList.builder();
 
         for (final String k : params.keys) {
-            keys.add(mapper.readValue(k, BackendKeyArgument.class).toBackendKey());
+            arguments.add(mapper.readValue(k, BackendKeyArgument.class).toBackendKey());
         }
+
+        keys.add(arguments.build());
 
         if (!params.ok) {
             io.out().println("Would have deleted the following keys (use --ok to perform):");
 
-            for (final BackendKey k : keys.build()) {
+            int index = 0;
+
+            for (final BackendKey k : Iterables.concat(keys.build())) {
                 io.out().println(k.toString());
+
+                if (index++ > 100) {
+                    io.out().println("... more than 100");
+                    break;
+                }
             }
 
             return async.resolved();
         }
 
-        final ImmutableList.Builder<Callable<AsyncFuture<Pair<BackendKey, Long>>>> futures = ImmutableList.builder();
+        final Iterator<BackendKey> iterator = Iterables.concat(keys.build()).iterator();
 
-        for (final BackendKey k : keys.build()) {
-            futures.add(() -> group.countKey(k, options)
-                    .lazyTransform(count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count))));
-        }
-
-        return async.eventuallyCollect(futures.build(), new StreamCollector<Pair<BackendKey, Long>, Void>() {
+        final StreamCollector<Pair<BackendKey, Long>, Void> collector = new StreamCollector<Pair<BackendKey, Long>, Void>() {
             @Override
             public void resolved(Pair<BackendKey, Long> result) throws Exception {
                 if (params.verbose) {
@@ -148,7 +198,59 @@ public class DeleteKeys implements ShellTask {
                 io.out().flush();
                 return null;
             }
-        }, params.parallelism);
+        };
+
+        final AtomicInteger outstanding = new AtomicInteger(params.parallelism);
+
+        final ResolvableFuture<Void> future = async.future();
+
+        for (int i = 0; i < params.parallelism; i++) {
+            async.call(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    final BackendKey k;
+
+                    synchronized (iterator) {
+                        k = iterator.hasNext() ? iterator.next() : null;
+                    }
+
+                    if (k == null) {
+                        if (outstanding.decrementAndGet() == 0) {
+                            future.resolve(null);
+                        }
+
+                        return null;
+                    }
+
+                    deleteKey(group, k, options).onDone(new FutureDone<Pair<BackendKey, Long>>() {
+                        @Override
+                        public void failed(Throwable cause) throws Exception {
+                            collector.failed(cause);
+                        }
+
+                        @Override
+                        public void resolved(Pair<BackendKey, Long> result) throws Exception {
+                            collector.resolved(result);
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            collector.cancelled();
+                        }
+                    }).onFinished(this::call);
+
+                    return null;
+                }
+            });
+        }
+
+        return future;
+    }
+
+    private AsyncFuture<Pair<BackendKey, Long>> deleteKey(final MetricBackendGroup group, final BackendKey k,
+            final QueryOptions options) {
+        return group.countKey(k, options)
+                .lazyTransform(count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count)));
     }
 
     @Data
