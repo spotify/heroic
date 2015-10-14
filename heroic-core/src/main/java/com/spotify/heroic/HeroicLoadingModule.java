@@ -126,7 +126,7 @@ public class HeroicLoadingModule extends AbstractModule {
         m.addMixIn(AggregationCacheBackendModule.class, TypeNameMixin.class);
         m.addMixIn(ClusterDiscoveryModule.class, TypeNameMixin.class);
         m.addMixIn(RpcProtocolModule.class, TypeNameMixin.class);
-        m.addMixIn(ConsumerModule.class, TypeNameMixin.class);
+        m.addMixIn(ConsumerModule.Builder.class, TypeNameMixin.class);
         m.addMixIn(MetadataModule.class, TypeNameMixin.class);
         m.addMixIn(SuggestModule.class, TypeNameMixin.class);
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
