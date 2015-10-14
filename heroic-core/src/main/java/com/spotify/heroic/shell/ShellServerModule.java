@@ -7,10 +7,7 @@ import static java.util.Optional.ofNullable;
 
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.util.Collection;
 import java.util.Optional;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -18,7 +15,6 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicCore;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -49,7 +45,7 @@ public class ShellServerModule extends PrivateModule {
 
     @Provides
     @Singleton
-    Managed<ShellServerState> state(final AsyncFramework async, final HeroicCore core) {
+    Managed<ShellServerState> state(final AsyncFramework async) {
         return async.managed(new ManagedSetup<ShellServerState>() {
             @Override
             public AsyncFuture<ShellServerState> construct() throws Exception {
@@ -59,9 +55,7 @@ public class ShellServerModule extends PrivateModule {
                         log.info("Binding to {}:{}", host, port);
                         final ServerSocket serverSocket = new ServerSocket();
                         serverSocket.bind(new InetSocketAddress(host, port));
-                        final Collection<ShellTaskDefinition> commands = Tasks.available();
-                        final ShellTasks tasks = new ShellTasks(setupTasks(commands, core), async);
-                        return new ShellServerState(serverSocket, commands, tasks);
+                        return new ShellServerState(serverSocket);
                     }
                 });
             }
@@ -74,21 +68,6 @@ public class ShellServerModule extends PrivateModule {
                         return null;
                     };
                 });
-            }
-
-            public SortedMap<String, ShellTask> setupTasks(final Collection<ShellTaskDefinition> commands,
-                    final HeroicCore core) throws Exception {
-                final SortedMap<String, ShellTask> tasks = new TreeMap<>();
-
-                for (final ShellTaskDefinition def : commands) {
-                    final ShellTask instance = def.setup(core);
-
-                    for (final String n : def.names()) {
-                        tasks.put(n, instance);
-                    }
-                }
-
-                return tasks;
             }
         });
     }

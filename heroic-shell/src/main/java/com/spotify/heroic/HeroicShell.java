@@ -47,7 +47,6 @@ import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellProtocol;
-import com.spotify.heroic.shell.ShellServer;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskParameters;
@@ -151,25 +150,25 @@ public class HeroicShell {
 
         log.info("Starting local Heroic...");
 
-        core.start();
+        final HeroicCoreInstance instance = core.start();
 
-        return core.inject(new CoreInterface() {
+        return instance.inject(new CoreInterface() {
             @Inject
-            public ShellServer server;
+            public HeroicShellTasks tasks;
 
             @Override
             public AsyncFuture<Void> evaluate(List<String> command, ShellIO io) throws Exception {
-                return server.tasks().evaluate(command, io);
+                return tasks.evaluate(command, io);
             }
 
             @Override
             public List<CommandDefinition> commands() throws Exception {
-                return server.commands();
+                return tasks.commands();
             }
 
             @Override
             public void shutdown() throws Exception {
-                core.shutdown();
+                instance.shutdown();
             }
         });
     }
@@ -250,10 +249,10 @@ public class HeroicShell {
         final HeroicCore core = builder.build();
 
         log.info("Starting Heroic...");
-        core.start();
+        final HeroicCoreInstance instance = core.start();
 
         try {
-            core.inject(task);
+            instance.inject(task);
 
             final PrintWriter o = standaloneOutput(params, System.out);
             final ShellIO io = new DirectShellIO(o);
@@ -266,7 +265,7 @@ public class HeroicShell {
                 o.flush();
             }
         } finally {
-            core.shutdown();
+            instance.shutdown();
         }
     }
 
@@ -399,8 +398,8 @@ public class HeroicShell {
             builder.profile(p);
         }
 
-        // HeroicShell requires a shell server to be provided.
-        builder.requireShellServer(true);
+        builder.shellServer(params.shellServer);
+
         return builder;
     }
 
@@ -409,13 +408,16 @@ public class HeroicShell {
         @Option(name = "--server", usage = "Start shell as server (enables listen port)")
         private boolean server = false;
 
+        @Option(name = "--shell-server", usage = "Start shell with shell server (enables remote connections)")
+        private boolean shellServer = false;
+
         @Option(name = "--skip-lifecycles", usage = "Start core without starting lifecycles")
         private boolean skipLifecycles = false;
 
         @Option(name = "--disable-backends", usage = "Start core without configuring backends")
         private boolean disableBackends = false;
 
-        @Option(name = "--connect", usage = "Connect to a remote heroic server")
+        @Option(name = "--connect", usage = "Connect to a remote heroic server", metaVar="<host>[:<port>]")
         private String connect = null;
 
         @Option(name = "-X", usage="Define an extra parameter", metaVar="<key>=<value>")

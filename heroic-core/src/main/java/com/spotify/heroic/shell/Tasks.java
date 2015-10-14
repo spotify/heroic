@@ -23,7 +23,6 @@ package com.spotify.heroic.shell;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -35,7 +34,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
 
-import com.spotify.heroic.HeroicCoreInjector;
+import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
@@ -102,7 +101,7 @@ public final class Tasks {
         available.add(shellTask(ReadWriteTest.class));
     }
 
-    public static Collection<ShellTaskDefinition> available() {
+    public static List<ShellTaskDefinition> available() {
         return available;
     }
 
@@ -135,7 +134,7 @@ public final class Tasks {
             }
 
             @Override
-            public ShellTask setup(final HeroicCoreInjector core) throws Exception {
+            public ShellTask setup(final HeroicCoreInstance core) throws Exception {
                 return core.inject(newInstance(task));
             };
         };

@@ -1,5 +1,6 @@
-package com.spotify.heroic.shell;
+package com.spotify.heroic;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
 
@@ -7,17 +8,33 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
 import com.google.common.base.Joiner;
+import com.spotify.heroic.shell.ShellIO;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.ShellTaskDefinition;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class ShellTasks {
+public class HeroicShellTasks {
     public static final Joiner joiner = Joiner.on(", ");
 
+    final List<ShellTaskDefinition> available;
     final SortedMap<String, ShellTask> tasks;
     final AsyncFramework async;
+
+    public List<CommandDefinition> commands() {
+        final List<CommandDefinition> commands = new ArrayList<>();
+
+        for (final ShellTaskDefinition def : available) {
+            commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
+        }
+
+        return commands;
+    }
 
     public AsyncFuture<Void> evaluate(List<String> command, ShellIO io) throws Exception {
         if (command.isEmpty()) {

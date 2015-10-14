@@ -2,7 +2,7 @@ package com.spotify.heroic.shell;
 
 import java.util.List;
 
-import com.spotify.heroic.HeroicCoreInjector;
+import com.spotify.heroic.HeroicCoreInstance;
 
 public interface ShellTaskDefinition {
     String name();
@@ -13,5 +13,5 @@ public interface ShellTaskDefinition {
 
     String usage();
 
-    ShellTask setup(HeroicCoreInjector core) throws Exception;
+    ShellTask setup(HeroicCoreInstance injector) throws Exception;
 }

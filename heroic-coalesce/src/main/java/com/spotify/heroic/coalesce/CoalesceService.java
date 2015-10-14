@@ -13,6 +13,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.inject.Inject;
 import com.spotify.heroic.HeroicBootstrap;
 import com.spotify.heroic.HeroicCore;
+import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.HeroicInternalLifeCycle;
 import com.spotify.heroic.HeroicModules;
 import com.spotify.heroic.QueryManager;
@@ -58,8 +59,10 @@ public class CoalesceService {
         final HeroicCore core = HeroicCore.builder().disableBackends(true).setupServer(false).modules(HeroicModules.ALL_MODULES)
                 .configPath(params.heroicConfig).bootstrap(bootstrap).build();
 
+        final HeroicCoreInstance instance;
+
         try {
-            core.start();
+            instance = core.start();
         } catch (Exception e) {
             log.error("Failed to start heroic core", e);
             System.exit(1);
@@ -79,13 +82,13 @@ public class CoalesceService {
         }
 
         try {
-            core.injectInstance(CoalesceService.class).run(latch, config);
+            instance.injectInstance(CoalesceService.class).run(latch, config);
         } catch (Exception e) {
             log.error("Failed to run coalesce service", e);
         }
 
         try {
-            core.shutdown();
+            instance.shutdown();
         } catch (Exception e) {
             log.error("Failed to shutdown heroic core", e);
             System.exit(1);

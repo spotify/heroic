@@ -98,7 +98,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RequiredArgsConstructor(access=AccessLevel.PRIVATE)
-public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicReporterConfiguration {
+public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
 
@@ -106,7 +106,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SKIP_LIFECYCLES = false;
-    static final boolean DEFAULT_REQUIRE_SHELL_SERVER = false;
+    static final boolean DEFAULT_SHELL_SERVER = true;
 
     static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
     static final String APPLICATION_JSON = "application/json";
@@ -136,18 +136,10 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     // @formatter:on
 
     /**
-     * Maintained reference to the primary injector.
-     * This being set implies that the application is in a running state.
-     **/
-    private final AtomicReference<Injector> primary = new AtomicReference<>();
-
-    /**
      * Global lock that must be acquired when starting and shutting down core.
      * @see {@link #start()}
      * @see {@link #shutdown()}
      */
-    private final Object $lock = new Object();
-
     private final Optional<String> host;
     private final Optional<Integer> port;
     private final Optional<Path> configPath;
@@ -170,7 +162,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
     private final boolean oneshot;
     private final boolean disableBackends;
     private final boolean skipLifecycles;
-    private final boolean requireShellServer;
+    private final boolean shellServer;
 
     /* extensions */
     private final List<Class<?>> modules;
@@ -197,18 +189,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
      *
      * @throws Exception
      */
-    public void start() throws Exception {
-        if (primary.get() != null) {
-            return;
-        }
-
-        synchronized ($lock) {
-            if (primary.get() != null) {
-                return;
-            }
-
-            doStart();
-        }
+    public HeroicCoreInstance start() throws Exception {
+        return doStart();
     }
 
     /**
@@ -231,7 +213,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
      *
      * @throws Exception
      */
-    private void doStart() throws Exception {
+    private HeroicCoreInstance doStart() throws Exception {
         final Injector loading = loadingInjector();
 
         loadModules(loading);
@@ -239,17 +221,101 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         final HeroicConfig config = config(loading);
 
         final Injector early = earlyInjector(loading, config);
-        runBootsrappers(early, this.early);
+        runBootstrappers(early, this.early);
 
-        final Injector primary = primaryInjector(early, config);
-        runBootsrappers(primary, this.late);
+        // Initialize the instance injector with access to early components.
+        final AtomicReference<Injector> injector = new AtomicReference<>(early);
 
-        this.primary.set(primary);
+        final HeroicCoreInstance instance = setupInstance(injector);
 
+        final Injector primary = primaryInjector(early, config, instance);
+
+        // Update the instance injector, giving dynamic components initialized after this point access to the primary
+        // injector.
+        injector.set(primary);
+
+        // Must happen after updating the instance injector above.
+        fetchAllBindings(primary);
+
+        runBootstrappers(primary, this.late);
         startLifeCycles(primary);
-
         startInternalLifecycles(primary);
+
         log.info("Heroic was successfully started!");
+        return instance;
+    }
+
+    /**
+     * Goes through _all_ bindings for the given injector and gets their value to make sure they have been initialized.
+     */
+    private void fetchAllBindings(final Injector injector) {
+        for (final Entry<Key<?>, Binding<?>> entry : injector.getAllBindings().entrySet()) {
+            entry.getValue().getProvider().get();
+        }
+    }
+
+    private HeroicCoreInstance setupInstance(final AtomicReference<Injector> coreInjector) {
+        return new HeroicCoreInstance() {
+            private final Object $lock = new Object();
+
+            private volatile boolean stopped = false;
+
+            /**
+             * Inject fields to the provided injectee using the primary injector.
+             *
+             * @param injectee Object to inject fields on.
+             */
+            @Override
+            public <T> T inject(T injectee) {
+                coreInjector.get().injectMembers(injectee);
+                return injectee;
+            }
+
+            @Override
+            public <T> T injectInstance(Class<T> cls) {
+                return coreInjector.get().getInstance(cls);
+            }
+
+            @Override
+            public void shutdown() {
+                final Injector injector = coreInjector.get();
+
+                synchronized ($lock) {
+                    if (stopped) {
+                        return;
+                    }
+
+                    final HeroicInternalLifeCycle lifecycle = injector.getInstance(HeroicInternalLifeCycle.class);
+
+                    log.info("Shutting down Heroic");
+
+                    try {
+                        stopLifeCycles(injector);
+                    } catch (Exception e) {
+                        log.error("Failed to stop all lifecycles, continuing anyway...", e);
+                    }
+
+                    log.info("Stopping internal life cycle");
+                    lifecycle.stop();
+
+                    // perform a gc to try to cause any dangling references to be logged through their {@code Object#finalize()}
+                    // method.
+                    Runtime.getRuntime().gc();
+
+                    log.info("Done shutting down, bye bye!");
+                    stopped = true;
+                }
+            }
+
+            @Override
+            public void join() throws InterruptedException {
+                synchronized ($lock) {
+                    while (!stopped) {
+                        $lock.wait();
+                    }
+                }
+            }
+        };
     }
 
     /**
@@ -295,7 +361,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
      * @param bootstrappers Bootstrappers to run.
      * @throws Exception
      */
-    private void runBootsrappers(final Injector injector, final List<HeroicBootstrap> bootstrappers) throws Exception {
+    private void runBootstrappers(final Injector injector, final List<HeroicBootstrap> bootstrappers) throws Exception {
         for (final HeroicBootstrap bootstrap : bootstrappers) {
             try {
                 injector.injectMembers(bootstrap);
@@ -303,72 +369,6 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
             } catch (Exception e) {
                 throw new Exception("Failed to run bootstrapper " + bootstrap, e);
             }
-        }
-    }
-
-    /**
-     * Inject fields to the provided injectee using the primary injector.
-     *
-     * @param injectee Object to inject fields on.
-     */
-    @Override
-    public <T> T inject(T injectee) {
-        final Injector primary = this.primary.get();
-
-        if (primary == null) {
-            throw new IllegalStateException("primary injector not available");
-        }
-
-        primary.injectMembers(injectee);
-        return injectee;
-    }
-
-    @Override
-    public <T> T injectInstance(Class<T> cls) {
-        final Injector primary = this.primary.get();
-
-        if (primary == null) {
-            throw new IllegalStateException("primary injector not available");
-        }
-
-        return primary.getInstance(cls);
-    }
-
-    public void join() throws InterruptedException {
-        synchronized ($lock) {
-            while (primary.get() != null) {
-                $lock.wait();
-            }
-        }
-    }
-
-    public void shutdown() {
-        synchronized ($lock) {
-            final Injector primary = this.primary.getAndSet(null);
-
-            if (primary == null) {
-                return;
-            }
-
-            final HeroicInternalLifeCycle lifecycle = primary.getInstance(HeroicInternalLifeCycle.class);
-
-            log.info("Shutting down Heroic");
-
-            try {
-                stopLifeCycles(primary);
-            } catch (Exception e) {
-                log.error("Failed to stop all lifecycles, continuing anyway...", e);
-            }
-
-            log.info("Stopping internal life cycle");
-            lifecycle.stop();
-
-            // perform a gc to try to cause any dangling references to be logged through their {@code Object#finalize()}
-            // method.
-            Runtime.getRuntime().gc();
-
-            log.info("Done shutting down, bye bye!");
-            $lock.notifyAll();
         }
     }
 
@@ -431,7 +431,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
      *            components.
      * @return The primary guice injector.
      */
-    private Injector primaryInjector(final Injector early, final HeroicConfig config) {
+    private Injector primaryInjector(final Injector early, final HeroicConfig config, final HeroicCoreInstance instance) {
         log.info("Building Primary Injector");
 
         final List<Module> modules = new ArrayList<Module>();
@@ -451,7 +451,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         final HeroicReporter reporter = this.reporter.get();
 
         // register root components.
-        modules.add(new HeroicPrimaryModule(this, lifeCycles, bindAddress, setupServer, reporter, pinger));
+        modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress, setupServer, reporter, pinger));
 
         if (!disableBackends) {
             modules.add(new AbstractModule() {
@@ -467,7 +467,9 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
             modules.add(config.getIngestion());
         }
 
-        getShellServer(config).map(modules::add);
+        if (shellServer) {
+            modules.add(config.getShellServer().orElseGet(() -> ShellServerModule.builder().build()));
+        }
 
         modules.add(config.getCluster().make(this));
         modules.add(config.getCache());
@@ -482,22 +484,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         });
 
         // make new injector child of early injector so they can access everything in it.
-        final Injector injector = early.createChildInjector(modules);
-
-        // touch all bindings to make sure they are 'eagerly' initialized.
-        for (final Entry<Key<?>, Binding<?>> entry : injector.getAllBindings().entrySet()) {
-            entry.getValue().getProvider().get();
-        }
-
-        return injector;
-    }
-
-    private Optional<ShellServerModule> getShellServer(HeroicConfig config) {
-        if (!config.getShellServer().isPresent() && requireShellServer) {
-            return Optional.of(ShellServerModule.builder().build());
-        }
-
-        return config.getShellServer();
+        return early.createChildInjector(modules);
     }
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
@@ -545,7 +532,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         log.info("Stopped all life cycles");
     }
 
-    private boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds,
+    boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds,
             final Function<LifeCycle, AsyncFuture<Void>> fn) throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
 
@@ -675,7 +662,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         private Optional<Boolean> oneshot = empty();
         private Optional<Boolean> disableBackends = empty();
         private Optional<Boolean> skipLifecycles = empty();
-        private Optional<Boolean> requireShellServer = empty();
+        private Optional<Boolean> shellServer = empty();
 
         /* extensions */
         private final ImmutableList.Builder<Class<?>> modules = ImmutableList.builder();
@@ -683,8 +670,8 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
 
-        public Builder requireShellServer(boolean requireShellServer) {
-            this.requireShellServer = of(requireShellServer);
+        public Builder shellServer(boolean shellServer) {
+            this.shellServer = of(shellServer);
             return this;
         }
 
@@ -829,7 +816,7 @@ public class HeroicCore implements HeroicCoreInjector, HeroicOptions, HeroicRepo
                 oneshot.orElse(DEFAULT_ONESHOT),
                 disableBackends.orElse(DEFAULT_DISABLE_BACKENDS),
                 skipLifecycles.orElse(DEFAULT_SKIP_LIFECYCLES),
-                requireShellServer.orElse(DEFAULT_REQUIRE_SHELL_SERVER),
+                shellServer.orElse(DEFAULT_SHELL_SERVER),
 
                 modules.build(),
                 profiles.build(),

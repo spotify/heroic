@@ -90,10 +90,10 @@ public class HeroicService {
             throw e;
         }
 
-        final HeroicCore core = builder.build();
+        final HeroicCoreInstance instance;
 
         try {
-            core.start();
+            instance = builder.build().start();
         } catch (final Exception e) {
             log.error("Failed to start heroic", e);
             System.exit(1);
@@ -103,7 +103,7 @@ public class HeroicService {
         final Thread shutdown = new Thread() {
             @Override
             public void run() {
-                core.shutdown();
+                instance.shutdown();
             }
         };
 
@@ -113,7 +113,7 @@ public class HeroicService {
         Runtime.getRuntime().addShutdownHook(shutdown);
 
         /* block until core stops */
-        core.join();
+        instance.join();
         System.exit(0);
     }
 

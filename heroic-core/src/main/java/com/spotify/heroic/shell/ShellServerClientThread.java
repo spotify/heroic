@@ -2,11 +2,8 @@ package com.spotify.heroic.shell;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
-import com.spotify.heroic.shell.protocol.CommandDefinition;
+import com.spotify.heroic.HeroicShellTasks;
 import com.spotify.heroic.shell.protocol.CommandDone;
 import com.spotify.heroic.shell.protocol.CommandsRequest;
 import com.spotify.heroic.shell.protocol.CommandsResponse;
@@ -24,8 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 class ShellServerClientThread implements Runnable {
     final Socket socket;
-    final ShellTasks tasks;
-    final Collection<ShellTaskDefinition> available;
+    final HeroicShellTasks tasks;
     final SerializerFramework serializer;
     final AsyncFramework async;
 
@@ -49,13 +45,7 @@ class ShellServerClientThread implements Runnable {
             final SimpleMessageVisitor<AsyncFuture<Void>> visitor = new SimpleMessageVisitor<AsyncFuture<Void>>() {
                 @Override
                 public AsyncFuture<Void> visitCommandsRequest(CommandsRequest message) throws Exception {
-                    final List<CommandDefinition> commands = new ArrayList<>();
-
-                    for (final ShellTaskDefinition def : available) {
-                        commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
-                    }
-
-                    ch.send(new CommandsResponse(commands));
+                    ch.send(new CommandsResponse(tasks.commands()));
                     return async.resolved();
                 }
 

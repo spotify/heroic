@@ -1,8 +1,11 @@
 package com.spotify.heroic;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -39,13 +42,17 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.PointSerialization;
 import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.SpreadSerialization;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.ShellTaskDefinition;
+import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.statistics.HeroicReporter;
 
+import eu.toolchain.async.AsyncFramework;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class HeroicPrimaryModule extends AbstractModule {
-    private final HeroicCore core;
+    private final HeroicCoreInstance instance;
     private final Set<LifeCycle> lifeCycles;
     private final InetSocketAddress bindAddress;
 
@@ -55,8 +62,30 @@ public class HeroicPrimaryModule extends AbstractModule {
 
     @Provides
     @Singleton
-    public HeroicCore core() {
-        return core;
+    HeroicShellTasks tasks(AsyncFramework async, HeroicCoreInstance injector) throws Exception {
+        final List<ShellTaskDefinition> commands = Tasks.available();
+        return new HeroicShellTasks(commands, setupTasks(commands, injector), async);
+    }
+
+    private SortedMap<String, ShellTask> setupTasks(final List<ShellTaskDefinition> commands,
+            final HeroicCoreInstance injector) throws Exception {
+        final SortedMap<String, ShellTask> tasks = new TreeMap<>();
+
+        for (final ShellTaskDefinition def : commands) {
+            final ShellTask instance = def.setup(injector);
+
+            for (final String n : def.names()) {
+                tasks.put(n, instance);
+            }
+        }
+
+        return tasks;
+    }
+
+    @Provides
+    @Singleton
+    public HeroicCoreInstance instance() {
+        return instance;
     }
 
     @Provides

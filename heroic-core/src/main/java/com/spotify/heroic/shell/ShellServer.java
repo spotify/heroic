@@ -2,18 +2,15 @@ package com.spotify.heroic.shell;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicShellTasks;
 import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +34,9 @@ public class ShellServer implements LifeCycle {
     @Inject
     @Named("shell-protocol")
     SerializerFramework serializer;
+
+    @Inject
+    HeroicShellTasks tasks;
 
     @Override
     public boolean isReady() {
@@ -69,32 +69,6 @@ public class ShellServer implements LifeCycle {
         return state.stop();
     }
 
-    public List<CommandDefinition> commands() {
-        try (Borrowed<ShellServerState> state = this.state.borrow()) {
-            if (!state.isValid()) {
-                throw new IllegalStateException("Server is not ready");
-            }
-
-            final List<CommandDefinition> commands = new ArrayList<>();
-
-            for (final ShellTaskDefinition def : state.get().commands) {
-                commands.add(new CommandDefinition(def.name(), def.aliases(), def.usage()));
-            }
-
-            return commands;
-        }
-    }
-
-    public ShellTasks tasks() {
-        try (final Borrowed<ShellServerState> s = state.borrow()) {
-            if (!s.isValid()) {
-                throw new IllegalStateException("Failed to borrow state");
-            }
-
-            return s.get().tasks;
-        }
-    }
-
     void doRun(ShellServerState state) {
         log.info("Running shell server...");
 
@@ -108,8 +82,7 @@ public class ShellServer implements LifeCycle {
                 break;
             }
 
-            final ShellTasks tasks = tasks();
-            final Runnable runnable = new ShellServerClientThread(socket, tasks, state.commands, serializer, async);
+            final Runnable runnable = new ShellServerClientThread(socket, tasks, serializer, async);
             final Thread clientThread = new Thread(runnable);
             clientThread.setName(String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
             clientThread.start();
