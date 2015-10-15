@@ -43,6 +43,7 @@ public class HeroicModules {
         .put("cassandra", new CassandraProfile())
         .put("elasticsearch-metadata", new ElasticsearchMetadataProfile())
         .put("elasticsearch-suggest", new ElasticsearchSuggestProfile())
+        .put("kafka-consumer", new KafkaConsumerProfile())
     .build();
     // @formatter:on
 
