@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.filter.impl;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import com.spotify.heroic.filter.Filter;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "value" }, doNotUseGetters = true)
@@ -32,6 +33,11 @@ public class MatchKeyFilterImpl implements Filter.MatchKey {
     public static final String OPERATOR = "key";
 
     private final String value;
+
+    @Override
+    public boolean apply(Series series) {
+        return series.getKey().equals(value);
+    }
 
     @Override
     public String toString() {

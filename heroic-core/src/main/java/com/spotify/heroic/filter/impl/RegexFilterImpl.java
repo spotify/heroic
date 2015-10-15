@@ -21,10 +21,13 @@
 
 package com.spotify.heroic.filter.impl;
 
+import java.util.regex.Pattern;
+
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import com.spotify.heroic.filter.Filter;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "tag", "value" }, doNotUseGetters = true)
@@ -33,6 +36,12 @@ public class RegexFilterImpl implements Filter.Regex {
 
     private final String tag;
     private final String value;
+
+    @Override
+    public boolean apply(Series series) {
+        final String value;
+        return (value = series.getTags().get(tag)) != null && Pattern.compile(this.value).matcher(value).matches();
+    }
 
     @Override
     public String toString() {

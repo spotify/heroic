@@ -28,13 +28,14 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import org.apache.commons.lang3.StringUtils;
 
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MultiArgumentsFilterBuilder;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "statements" }, doNotUseGetters = true)
@@ -42,6 +43,11 @@ public class OrFilterImpl implements Filter.Or {
     public static final String OPERATOR = "or";
 
     private final List<Filter> statements;
+
+    @Override
+    public boolean apply(Series series) {
+        return statements.stream().anyMatch(s -> s.apply(series));
+    }
 
     final MultiArgumentsFilterBuilder<Filter.Or, Filter> BUILDER = new MultiArgumentsFilterBuilder<Filter.Or, Filter>() {
         @Override

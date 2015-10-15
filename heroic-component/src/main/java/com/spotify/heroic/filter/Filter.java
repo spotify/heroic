@@ -23,7 +23,17 @@ package com.spotify.heroic.filter;
 
 import java.util.List;
 
+import com.spotify.heroic.common.Series;
+
 public interface Filter extends Comparable<Filter> {
+    /**
+     * Apply the filter to the given series.
+     *
+     * @param series Series to apply to.
+     * @return {@code true} if filter matches the given series, {@code false} otherwise.
+     */
+    public boolean apply(Series series);
+
     public interface MultiArgs<A> extends Filter {
         public List<A> terms();
     }

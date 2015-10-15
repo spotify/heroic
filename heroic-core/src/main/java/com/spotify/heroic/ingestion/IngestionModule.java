@@ -32,7 +32,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
+import com.google.inject.Scopes;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 
@@ -50,6 +55,7 @@ public class IngestionModule extends PrivateModule {
     private final boolean updateMetrics;
     private final boolean updateMetadata;
     private final boolean updateSuggestions;
+    private final Optional<String> filter;
 
     @Provides
     @Singleton
@@ -57,10 +63,33 @@ public class IngestionModule extends PrivateModule {
         return reporter.newIngestionManager();
     }
 
+    @Provides
+    @Named("updateMetadata")
+    public boolean updateMetadata() {
+        return updateMetadata;
+    }
+
+    @Provides
+    @Named("updateMetrics")
+    public boolean updateMetrics() {
+        return updateMetrics;
+    }
+
+    @Provides
+    @Named("updateSuggestions")
+    public boolean updateSuggestions() {
+        return updateSuggestions;
+    }
+
+    @Provides
+    @Singleton
+    public Filter filter(final QueryParser parser, final FilterFactory filters) {
+        return filter.map(parser::parseFilter).orElseGet(filters::t);
+    }
+
     @Override
     protected void configure() {
-        bind(IngestionManager.class).toInstance(
-                new IngestionManagerImpl(updateMetrics, updateMetadata, updateSuggestions));
+        bind(IngestionManager.class).to(IngestionManagerImpl.class).in(Scopes.SINGLETON);
         expose(IngestionManager.class);
     }
 
@@ -74,14 +103,17 @@ public class IngestionModule extends PrivateModule {
         private Optional<Boolean> updateMetrics = empty();
         private Optional<Boolean> updateMetadata = empty();
         private Optional<Boolean> updateSuggestions = empty();
+        private Optional<String> filter = empty();
 
         @JsonCreator
         public Builder(@JsonProperty("updateMetrics") Boolean updateMetrics,
                 @JsonProperty("updateMetadata") Boolean updateMetadata,
-                @JsonProperty("updateSuggestions") Boolean updateSuggestions) {
+                @JsonProperty("updateSuggestions") Boolean updateSuggestions,
+                @JsonProperty("filter") String filter) {
             this.updateMetadata = ofNullable(updateMetadata);
             this.updateMetrics = ofNullable(updateMetrics);
             this.updateSuggestions = ofNullable(updateSuggestions);
+            this.filter = ofNullable(filter);
         }
 
         public Builder updateAll() {
@@ -111,7 +143,8 @@ public class IngestionModule extends PrivateModule {
             return new Builder(
                 pickOptional(updateMetrics, o.updateMetrics),
                 pickOptional(updateMetadata, o.updateMetadata),
-                pickOptional(updateSuggestions, o.updateSuggestions)
+                pickOptional(updateSuggestions, o.updateSuggestions),
+                pickOptional(filter, o.filter)
             );
             // @formatter:on
         }
@@ -121,7 +154,8 @@ public class IngestionModule extends PrivateModule {
             return new IngestionModule(
                 updateMetrics.orElse(DEFAULT_UPDATE_METRICS),
                 updateMetadata.orElse(DEFAULT_UPDATE_METADATA),
-                updateSuggestions.orElse(DEFAULT_UPDATE_SUGGESTIONS)
+                updateSuggestions.orElse(DEFAULT_UPDATE_SUGGESTIONS),
+                filter
             );
             // @formatter:on
         }

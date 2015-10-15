@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.filter.impl;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import com.spotify.heroic.filter.Filter;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "filter" }, doNotUseGetters = true)
@@ -32,6 +33,11 @@ public class RawFilterImpl implements Filter.Raw {
     public static final String OPERATOR = "q";
 
     private final String filter;
+
+    @Override
+    public boolean apply(Series series) {
+        throw new RuntimeException("Not supported");
+    }
 
     @Override
     public String toString() {

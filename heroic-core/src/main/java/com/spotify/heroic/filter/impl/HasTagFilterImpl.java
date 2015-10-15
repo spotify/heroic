@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.filter.impl;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import com.spotify.heroic.filter.Filter;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR", "tag" }, doNotUseGetters = true)
@@ -32,6 +33,11 @@ public class HasTagFilterImpl implements Filter.HasTag {
     public static final String OPERATOR = "+";
 
     private final String tag;
+
+    @Override
+    public boolean apply(Series series) {
+        return series.getTags().containsKey(tag);
+    }
 
     @Override
     public String toString() {

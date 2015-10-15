@@ -46,6 +46,7 @@ import com.spotify.heroic.shell.task.CountData;
 import com.spotify.heroic.shell.task.DeleteKeys;
 import com.spotify.heroic.shell.task.DeserializeKey;
 import com.spotify.heroic.shell.task.Fetch;
+import com.spotify.heroic.shell.task.IngestionFilter;
 import com.spotify.heroic.shell.task.Keys;
 import com.spotify.heroic.shell.task.ListBackends;
 import com.spotify.heroic.shell.task.MetadataCount;
@@ -105,6 +106,7 @@ public final class Tasks {
         available.add(shellTask(ReadWriteTest.class));
         available.add(shellTask(Pause.class));
         available.add(shellTask(Resume.class));
+        available.add(shellTask(IngestionFilter.class));
     }
 
     public static List<ShellTaskDefinition> available() {

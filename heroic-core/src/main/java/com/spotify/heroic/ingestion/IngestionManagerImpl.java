@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.ingestion;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -28,9 +30,11 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.inject.Inject;
 
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.Metric;
@@ -66,21 +70,23 @@ public class IngestionManagerImpl implements IngestionManager {
     private final boolean updateMetadata;
     private final boolean updateSuggestions;
 
+    private volatile Filter filter;
+
     private final LongAdder ingested = new LongAdder();
 
     /**
-     * @param updateMetrics
-     *            Ingested metrics will update metric backends.
-     * @param updateMetadata
-     *            Ingested metrics will update metadata backends.
-     * @param updateSuggestions
-     *            Ingested metrics will update suggest backends.
+     * @param updateMetrics Ingested metrics will update metric backends.
+     * @param updateMetadata Ingested metrics will update metadata backends.
+     * @param updateSuggestions Ingested metrics will update suggest backends.
      */
-    public IngestionManagerImpl(final boolean updateMetrics, final boolean updateMetadata,
-            final boolean updateSuggestions) {
+    @Inject
+    public IngestionManagerImpl(@Named("updateMetrics") final boolean updateMetrics,
+            @Named("updateMetadata") final boolean updateMetadata,
+            @Named("updateSuggestions") final boolean updateSuggestions, final Filter filter) {
         this.updateMetrics = updateMetrics;
         this.updateMetadata = updateMetadata;
         this.updateSuggestions = updateSuggestions;
+        this.filter = filter;
     }
 
     final Transform<WriteResult, Void> metricTransform = new Transform<WriteResult, Void>() {
@@ -106,6 +112,17 @@ public class IngestionManagerImpl implements IngestionManager {
     };
 
     @Override
+    public AsyncFuture<Void> setFilter(Filter filter) {
+        this.filter = checkNotNull(filter, "filter");
+        return async.resolved();
+    };
+
+    @Override
+    public AsyncFuture<Filter> getFilter() {
+        return async.resolved(filter);
+    }
+
+    @Override
     public AsyncFuture<WriteResult> write(final String group, final WriteMetric write) throws BackendGroupException {
         if (write.isEmpty())
             return async.resolved(WriteResult.of());
@@ -121,6 +138,11 @@ public class IngestionManagerImpl implements IngestionManager {
 
     protected AsyncFuture<WriteResult> doWrite(final String group, final WriteMetric write)
             throws BackendGroupException {
+        if (!filter.apply(write.getSeries())) {
+            // XXX: report dropped-by-filter
+            return async.resolved(WriteResult.of());
+        }
+
         final MetricBackend metric = updateMetrics ? this.metric.useGroup(group) : null;
         final MetadataBackend metadata = updateMetadata ? this.metadata.useGroup(group) : null;
         final SuggestBackend suggest = updateSuggestions ? this.suggest.useGroup(group) : null;

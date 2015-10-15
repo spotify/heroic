@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.filter.impl.TrueFilterImpl;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackendGroup;
@@ -66,7 +67,7 @@ public class IngestionManagerTest {
 
     private IngestionManagerImpl setupIngestionManager(final boolean updateMetrics, final boolean updateMetadata,
             final boolean updateSuggestions) {
-        final IngestionManagerImpl manager = new IngestionManagerImpl(updateMetrics, updateMetadata, updateSuggestions);
+        final IngestionManagerImpl manager = new IngestionManagerImpl(updateMetrics, updateMetadata, updateSuggestions, TrueFilterImpl.get());
         manager.async = async;
         manager.metadata = metadataManager;
         manager.metric = metricManager;

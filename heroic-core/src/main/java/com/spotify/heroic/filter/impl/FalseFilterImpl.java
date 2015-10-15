@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.filter.impl;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import com.spotify.heroic.filter.Filter;
 
 @Data
 @EqualsAndHashCode(of = { "OPERATOR" }, doNotUseGetters = true)
@@ -32,6 +33,11 @@ public class FalseFilterImpl implements Filter.False {
     public static final String OPERATOR = "false";
 
     private static final Filter.False instance = new FalseFilterImpl();
+
+    @Override
+    public boolean apply(Series series) {
+        return false;
+    }
 
     public static Filter.False get() {
         return instance;
