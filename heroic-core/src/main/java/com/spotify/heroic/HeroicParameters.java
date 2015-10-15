@@ -45,4 +45,8 @@ public class HeroicParameters {
 
         return new HeroicParameters(result.build());
     }
+
+    public String require(final String key) {
+        return get(key).orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
+    }
 }

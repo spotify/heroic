@@ -23,6 +23,7 @@ package com.spotify.heroic.profile;
 
 import java.util.List;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicConfig;
@@ -32,16 +33,20 @@ import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.kafka.KafkaConsumerModule;
 
 public class KafkaConsumerProfile extends HeroicProfileBase {
+    private final Splitter splitter = Splitter.on(",").trimResults();
+
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         final ImmutableMap.Builder<String, String> config = ImmutableMap.builder();
 
-        params.get("kafka.zookeeper").map(zookeeper -> config.put("zookeeper.connect", zookeeper));
-        params.get("kafka.group").map(group -> config.put("group.id", group));
+        config.put("zookeeper.connect", params.require("kafka.zookeeper"));
+        config.put("group.id", params.require("kafka.group"));
 
         final KafkaConsumerModule.Builder module = KafkaConsumerModule.builder().config(config.build());
 
-        params.get("kafka.schema").map(module::schema);
+        module.schema(params.require("kafka.schema"));
+
+        params.get("kafka.topics").map(splitter::split).map(topics -> module.topics(ImmutableList.copyOf(topics)));
 
         // @formatter:off
         return HeroicConfig.builder()
@@ -58,8 +63,9 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
     public List<Option> options() {
         // @formatter:off
         return ImmutableList.of(
-            HeroicProfile.option("kafka.zookeeper", "Connection string to Zookeeper", "<url>[,<url>][/prefix]"),
+            HeroicProfile.option("kafka.zookeeper", "Connection string to Zookeeper", "<url>[,..][/prefix]"),
             HeroicProfile.option("kafka.group", "Consumer Group", "<group>"),
+            HeroicProfile.option("kafka.topics", "Topics to consume from", "<topic>[,..]"),
             HeroicProfile.option("kafka.schema", "Schema Class to use", "<schema>")
         );
         // @formatter:on

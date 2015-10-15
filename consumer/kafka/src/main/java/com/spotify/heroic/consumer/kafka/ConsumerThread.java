@@ -25,10 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import kafka.consumer.KafkaStream;
-import kafka.message.MessageAndMetadata;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.atomic.LongAdder;
 
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
@@ -36,6 +33,9 @@ import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 import eu.toolchain.async.ResolvableFuture;
+import kafka.consumer.KafkaStream;
+import kafka.message.MessageAndMetadata;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public final class ConsumerThread extends Thread {
@@ -49,6 +49,7 @@ public final class ConsumerThread extends Thread {
     private final ConsumerSchema schema;
     private final AtomicInteger active;
     private final AtomicLong errors;
+    private final LongAdder consumed;
 
     // use a latch as a signal so that we can block on it (instead of Thread#sleep).
     private final CountDownLatch stopSignal;
@@ -56,7 +57,7 @@ public final class ConsumerThread extends Thread {
 
     public ConsumerThread(final String name, final ConsumerReporter reporter, final KafkaStream<byte[], byte[]> stream,
             final Consumer consumer, final ConsumerSchema schema, final AtomicInteger active, final AtomicLong errors,
-            final CountDownLatch stopSignal, final ResolvableFuture<Void> stopFuture) {
+            final LongAdder consumed, final CountDownLatch stopSignal, final ResolvableFuture<Void> stopFuture) {
         super(String.format("%s: %s", ConsumerThread.class.getCanonicalName(), name));
 
         this.name = name;
@@ -66,6 +67,7 @@ public final class ConsumerThread extends Thread {
         this.schema = schema;
         this.active = active;
         this.errors = errors;
+        this.consumed = consumed;
         this.stopSignal = stopSignal;
         this.stopFuture = stopFuture;
     }
@@ -121,6 +123,7 @@ public final class ConsumerThread extends Thread {
         try {
             schema.consume(consumer, body);
             reporter.reportMessageSize(body.length);
+            consumed.increment();
             return false;
         } catch (final ConsumerSchemaValidationException e) {
             /* these messages should be ignored */

@@ -33,6 +33,7 @@ import javax.ws.rs.core.Response;
 import com.google.inject.Inject;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -108,11 +109,17 @@ public class StatusResource {
         for (final Consumer consumer : consumers) {
             if (consumer.isReady()) {
                 ready += 1;
-                final Consumer.Statistics s = consumer.getStatistics();
-                errors += s.getErrors();
-                consumingThreads += s.getConsumingThreads();
-                totalThreads += s.getTotalThreads();
-                allOk = allOk && s.isOk();
+                final Statistics s = consumer.getStatistics();
+
+                final long consuming = s.get(Consumer.CONSUMING, 0);
+                final long total = s.get(Consumer.TOTAL, 0);
+
+                errors += s.get(Consumer.ERRORS, 0);
+                consumingThreads += consuming;
+                totalThreads += total;
+
+                // OK if all threads configured are actively consuming.
+                allOk = allOk && (consuming == total);
             }
         }
 

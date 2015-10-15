@@ -47,3 +47,13 @@ configuration.
 
 They are activated with the `-P <profile>` switch, available profiles are
 listed in `--help`.
+
+#### Examples
+
+Start a kafka consumer that writes data into memory:
+
+```bash
+tools/heroic-shell \
+    -P kafka-consumer -X kafka.zookeeper=<zookeeper> -X kafka.topics=<topic1>,<topic2> -X kafka.schema=com.spotify.heroic.consumer.schemas.Spotify100\
+    -P memory
+```

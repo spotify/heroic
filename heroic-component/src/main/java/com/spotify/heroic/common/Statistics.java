@@ -35,6 +35,10 @@ public class Statistics {
         return new Statistics(counters.build());
     }
 
+    public static Statistics of(Map<String, Long> samples) {
+        return new Statistics(ImmutableMap.copyOf(samples));
+    }
+
     public static Statistics of(String k1, long v1) {
         return new Statistics(ImmutableMap.of(k1, v1));
     }
@@ -45,5 +49,9 @@ public class Statistics {
 
     public static Statistics of(String k1, long v1, String k2, long v2, String k3, long v3) {
         return new Statistics(ImmutableMap.of(k1, v1, k2, v2, k3, v3));
+    }
+
+    public long get(final String key, final long defaultValue) {
+        return counters.getOrDefault(key, defaultValue);
     }
 }

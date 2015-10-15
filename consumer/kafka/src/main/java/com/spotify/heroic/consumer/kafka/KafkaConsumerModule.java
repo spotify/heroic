@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -78,6 +79,7 @@ public class KafkaConsumerModule implements ConsumerModule {
         final AtomicInteger consuming = new AtomicInteger();
         final AtomicInteger total = new AtomicInteger();
         final AtomicLong errors = new AtomicLong();
+        final LongAdder consumed = new LongAdder();
 
         return new PrivateModule() {
             @Provides
@@ -175,7 +177,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                                 final ResolvableFuture<Void> stopFuture = async.future();
 
                                 threads.add(new ConsumerThread(name, reporter, stream, consumer, schema, consuming,
-                                        errors, stopSignal, stopFuture));
+                                        errors, consumed, stopSignal, stopFuture));
                             }
                         }
 
@@ -187,7 +189,7 @@ public class KafkaConsumerModule implements ConsumerModule {
             @Override
             protected void configure() {
                 bind(ConsumerReporter.class).toInstance(reporter);
-                bind(Consumer.class).toInstance(new KafkaConsumer(consuming, total, errors));
+                bind(Consumer.class).toInstance(new KafkaConsumer(consuming, total, errors, consumed));
                 bind(key).to(Consumer.class).in(Scopes.SINGLETON);
                 expose(key);
             }

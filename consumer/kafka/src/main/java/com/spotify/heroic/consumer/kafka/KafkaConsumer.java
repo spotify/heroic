@@ -23,30 +23,28 @@ package com.spotify.heroic.consumer.kafka;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.ConsumerReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString
+@ToString(of={"connection"})
 public class KafkaConsumer implements Consumer {
     @Inject
     private IngestionManager ingestion;
-
-    @Inject
-    private ConsumerReporter reporter;
 
     @Inject
     private AsyncFramework async;
@@ -57,11 +55,13 @@ public class KafkaConsumer implements Consumer {
     private final AtomicInteger consuming;
     private final AtomicInteger total;
     private final AtomicLong errors;
+    private final LongAdder consumed;
 
-    public KafkaConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors) {
+    public KafkaConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors, LongAdder consumed) {
         this.consuming = consuming;
         this.total = total;
         this.errors = errors;
+        this.consumed = consumed;
     }
 
     @Override
@@ -92,9 +92,12 @@ public class KafkaConsumer implements Consumer {
 
     @Override
     public Statistics getStatistics() {
-        int consuming = this.consuming.get();
-        int total = this.total.get();
-        final boolean ok = consuming == total;
-        return new Statistics(ok, errors.get(), consuming, total);
+        final long consuming = this.consuming.get();
+        final long total = this.total.get();
+        final long errors = this.errors.get();
+        final long consumed = this.consumed.sum();
+
+        return Statistics.of(
+                ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total, ERRORS, errors, CONSUMED, consumed));
     }
 }
