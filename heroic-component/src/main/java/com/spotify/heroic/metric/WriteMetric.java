@@ -24,12 +24,12 @@ package com.spotify.heroic.metric;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.Series;
+
+import lombok.Data;
 
 @Data
 public class WriteMetric {
@@ -43,7 +43,7 @@ public class WriteMetric {
     }
 
     public boolean isEmpty() {
-        return groups.isEmpty();
+        return groups.stream().allMatch(MetricCollection::isEmpty);
     }
 
     public Iterable<Metric> all() {
