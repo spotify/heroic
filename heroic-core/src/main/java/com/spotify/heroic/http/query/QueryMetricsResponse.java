@@ -59,7 +59,7 @@ public class QueryMetricsResponse {
     private final List<ShardedResultGroup> result;
 
     @Getter
-    private final Statistics statistics = Statistics.EMPTY;
+    private final Statistics statistics = Statistics.empty();
 
     @Getter
     private final List<RequestError> errors;

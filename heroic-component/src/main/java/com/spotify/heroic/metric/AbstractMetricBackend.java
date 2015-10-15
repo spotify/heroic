@@ -3,6 +3,7 @@ package com.spotify.heroic.metric;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -11,6 +12,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
     private final AsyncFramework async;
+
+    @Override
+    public Statistics getStatistics() {
+        return Statistics.empty();
+    }
 
     @Override
     public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {

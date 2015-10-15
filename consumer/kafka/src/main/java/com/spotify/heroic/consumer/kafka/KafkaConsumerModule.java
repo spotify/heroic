@@ -162,7 +162,7 @@ public class KafkaConsumerModule implements ConsumerModule {
             @Override
             protected void configure() {
                 bind(ConsumerReporter.class).toInstance(reporter);
-                bind(Consumer.class).toInstance(new KafkaConsumer(consuming, total, errors, consumed));
+                bind(Consumer.class).toInstance(new KafkaConsumer(consuming, total, errors, consumed, topics, config));
                 bind(key).to(Consumer.class).in(Scopes.SINGLETON);
                 expose(key);
             }

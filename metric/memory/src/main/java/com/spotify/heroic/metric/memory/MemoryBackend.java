@@ -37,6 +37,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.FetchData;
@@ -59,6 +60,8 @@ import lombok.ToString;
  */
 @ToString(exclude = {"storage"})
 public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
+    public static final String MEMORY_KEYS = "memory-keys";
+
     public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(MemoryBackend.class, "fetch");
 
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
@@ -75,6 +78,11 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
         super(async);
         this.async = async;
         this.groups = groups;
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        return Statistics.of(MEMORY_KEYS, storage.size());
     }
 
     @Override

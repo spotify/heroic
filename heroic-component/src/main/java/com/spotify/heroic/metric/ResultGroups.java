@@ -62,7 +62,7 @@ public final class ResultGroups {
     }
 
     public static ResultGroups empty(final QueryTrace.Identifier what) {
-        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.EMPTY, new QueryTrace(what));
+        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.empty(), new QueryTrace(what));
     }
 
     public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
@@ -73,7 +73,7 @@ public final class ResultGroups {
             final ImmutableList.Builder<RequestError> errors = ImmutableList.builder();
             final ImmutableList.Builder<QueryTrace> traces = ImmutableList.builder();
 
-            Statistics statistics = Statistics.EMPTY;
+            Statistics statistics = Statistics.empty();
 
             for (final ResultGroups r : results) {
                 groups.addAll(r.groups);
@@ -101,7 +101,7 @@ public final class ResultGroups {
     public static ResultGroups seriesError(final QueryTrace.Identifier what, final List<TagValues> tags, final Throwable e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(SeriesError.fromThrowable(tags, e));
-        return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY, new QueryTrace(what));
+        return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
     }
 
     public static Transform<Throwable, ResultGroups> seriesError(final QueryTrace.Identifier what, final List<TagValues> tags) {
@@ -120,7 +120,7 @@ public final class ResultGroups {
             public ResultGroups transform(Throwable e) throws Exception {
                 final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
                         e));
-                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.EMPTY, new QueryTrace(what));
+                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
             }
         };
     }

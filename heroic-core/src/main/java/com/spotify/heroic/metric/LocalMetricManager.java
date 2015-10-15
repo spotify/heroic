@@ -33,6 +33,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 
@@ -273,6 +274,17 @@ public class LocalMetricManager implements MetricManager {
 
             return metadata.findSeries(rangeFilter).onDone(reporter.reportFindSeries()).lazyTransform(transform)
                     .onDone(reporter.reportQueryMetrics());
+        }
+
+        @Override
+        public Statistics getStatistics() {
+            final AtomicReference<Statistics> s = new AtomicReference<>(Statistics.empty());
+
+            run((int disabled, MetricBackend backend) -> {
+                s.set(s.get().merge(backend.getStatistics()));
+            });
+
+            return s.get();
         }
 
         @Override

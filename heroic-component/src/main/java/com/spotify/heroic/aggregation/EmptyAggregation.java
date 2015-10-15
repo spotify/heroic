@@ -106,7 +106,7 @@ public class EmptyAggregation implements Aggregation {
                 groups.add(collectGroup(this.spreads, MetricType.SPREAD.comparator(), MetricCollection::spreads));
             }
 
-            return new AggregationResult(groups.build(), Statistics.EMPTY);
+            return new AggregationResult(groups.build(), Statistics.empty());
         }
 
         private <T extends Metric> AggregationData collectGroup(final ConcurrentLinkedQueue<Collected<T>> collected,

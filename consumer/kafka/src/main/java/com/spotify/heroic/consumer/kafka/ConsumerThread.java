@@ -120,6 +120,10 @@ public final class ConsumerThread extends Thread {
         return async.resolved();
     }
 
+    public boolean isPaused() {
+        return this.paused.get() != null;
+    }
+
     public AsyncFuture<Void> shutdown() {
         stopSignal.countDown();
 
@@ -134,11 +138,7 @@ public final class ConsumerThread extends Thread {
 
     private void guardedRun() throws Exception {
         for (final MessageAndMetadata<byte[], byte[]> m : stream) {
-            CountDownLatch p = paused.get();
-
-            if (p != null) {
-                parkPaused(p);
-            }
+            parkPaused();
 
             if (stopSignal.getCount() == 0) {
                 break;
@@ -149,10 +149,16 @@ public final class ConsumerThread extends Thread {
         }
     }
 
-    private void parkPaused(CountDownLatch p) throws InterruptedException {
+    private void parkPaused() throws InterruptedException {
+        CountDownLatch p = paused.get();
+
+        if (p == null) {
+            return;
+        }
+
         log.info("Pausing");
 
-        /* block on stop signal while paused, re-check since multiple calls to pause might swap it */
+        /* block on stop signal while paused, re-check since multiple calls to {#link #pause()} might swap it */
         while (p != null && stopSignal.getCount() > 0) {
             p.await();
             p = paused.get();

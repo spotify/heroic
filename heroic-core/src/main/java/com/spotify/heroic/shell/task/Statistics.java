@@ -27,6 +27,8 @@ import java.util.Set;
 import com.google.inject.Inject;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -49,6 +51,9 @@ public class Statistics implements ShellTask {
 
     @Inject
     private IngestionManager ingestion;
+
+    @Inject
+    private MetricManager metrics;
 
     @Override
     public TaskParameters params() {
@@ -73,6 +78,16 @@ public class Statistics implements ShellTask {
 
         for (final Entry<String, Long> e : ingestion.getStatistics().getCounters().entrySet()) {
             io.out().println("  " + e.getKey() + "=" + e.getValue());
+        }
+
+        io.out().println("Metrics:");
+
+        for (final MetricBackend m : metrics.allMembers()) {
+            io.out().println("  " + m.toString());
+
+            for (final Entry<String, Long> e : m.getStatistics().getCounters().entrySet()) {
+                io.out().println("    " + e.getKey() + "=" + e.getValue());
+            }
         }
 
         io.out().flush();

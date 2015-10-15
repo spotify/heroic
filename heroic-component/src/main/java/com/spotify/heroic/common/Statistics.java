@@ -14,7 +14,7 @@ import lombok.Data;
 
 @Data
 public class Statistics {
-    public static final Statistics EMPTY = new Statistics(ImmutableMap.of());
+    static final Statistics EMPTY = new Statistics(ImmutableMap.of());
 
     private final Map<String, Long> counters;
 
@@ -53,5 +53,9 @@ public class Statistics {
 
     public long get(final String key, final long defaultValue) {
         return counters.getOrDefault(key, defaultValue);
+    }
+
+    public static Statistics empty() {
+        return EMPTY;
     }
 }

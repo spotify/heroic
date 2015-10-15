@@ -131,7 +131,7 @@ public class QueryResource {
 
         httpAsync.bind(response, callback,
                 (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
-                        new ShardTrace("api", localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.EMPTY,
+                        new ShardTrace("api", localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.empty(),
                                 java.util.Optional.empty(), r.getTraces())));
     }
 

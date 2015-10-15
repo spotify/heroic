@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.consumer.kafka;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -37,12 +39,11 @@ import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString(of={"connection"})
 public class KafkaConsumer implements Consumer {
     @Inject
     private IngestionManager ingestion;
@@ -57,12 +58,16 @@ public class KafkaConsumer implements Consumer {
     private final AtomicInteger total;
     private final AtomicLong errors;
     private final LongAdder consumed;
+    private final List<String> topics;
+    private final Map<String, String> config;
 
-    public KafkaConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors, LongAdder consumed) {
+    public KafkaConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors, LongAdder consumed, List<String> topics, Map<String, String> config) {
         this.consuming = consuming;
         this.total = total;
         this.errors = errors;
         this.consumed = consumed;
+        this.topics = topics;
+        this.config = config;
     }
 
     @Override
@@ -114,5 +119,23 @@ public class KafkaConsumer implements Consumer {
         // resume all threads
         return connection.doto(c -> async.collectAndDiscard(
                 ImmutableList.copyOf(c.getThreads().stream().map(ConsumerThread::resumeConsumption).iterator())));
+    }
+
+    @Override
+    public String toString() {
+        final Borrowed<Connection> b = connection.borrow();
+
+        if (!b.isValid()) {
+            return String.format("KafkaConsumer(non-configured, topics=%s, config=%s)", topics, config);
+        }
+
+        try {
+            final Connection c = b.get();
+            final int threads = c.getThreads().size();
+            final int paused = c.getThreads().stream().mapToInt(t -> t.isPaused() ? 1 : 0).sum();
+            return String.format("KafkaConsumer(configured, topics=%s, config=%s, threads=%d, paused=%d)", topics, config, threads, paused);
+        } finally {
+            b.release();
+        }
     }
 }

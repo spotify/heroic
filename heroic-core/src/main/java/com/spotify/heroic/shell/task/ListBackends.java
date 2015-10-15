@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Set;
 
 import org.kohsuke.args4j.Option;
 
@@ -30,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -57,6 +59,9 @@ public class ListBackends implements ShellTask {
     private SuggestManager suggest;
 
     @Inject
+    private Set<Consumer> consumers;
+
+    @Inject
     @Named("application/json")
     private ObjectMapper mapper;
 
@@ -75,8 +80,22 @@ public class ListBackends implements ShellTask {
         printBackends(io.out(), "metric", metrics.use(params.group));
         printBackends(io.out(), "metadata", metadata.use(params.group));
         printBackends(io.out(), "suggest", suggest.use(params.group));
+        printConsumers(io.out(), "consumers", consumers);
 
         return async.resolved(null);
+    }
+
+    private void printConsumers(PrintWriter out, String title, Set<Consumer> consumers) {
+        if (consumers.isEmpty()) {
+            out.println(String.format("%s: (empty)", title));
+            return;
+        }
+
+        out.println(String.format("%s:", title));
+
+        for (final Consumer c : consumers) {
+            out.println(String.format("  %s", c));
+        }
     }
 
     private void printBackends(PrintWriter out, String title, List<? extends Grouped> group) {

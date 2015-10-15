@@ -28,10 +28,13 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.AsyncFuture;
 
 public interface MetricBackend extends Initializing, Grouped {
+    public Statistics getStatistics();
+
     /**
      * Configure the metric backend.
      *
