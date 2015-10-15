@@ -57,7 +57,7 @@ import lombok.ToString;
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString
+@ToString(exclude = {"storage"})
 public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(MemoryBackend.class, "fetch");
 
