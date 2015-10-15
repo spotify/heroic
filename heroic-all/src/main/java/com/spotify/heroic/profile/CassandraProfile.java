@@ -23,9 +23,10 @@ package com.spotify.heroic.profile;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -53,7 +54,6 @@ public class CassandraProfile implements HeroicProfile {
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         final boolean configure = params.contains("cassandra.configure");
-        final Optional<String> seeds = params.get("cassandra.seeds");
         final Optional<String> type = params.get("cassandra.type");
 
         final SchemaModule schema;
@@ -70,13 +70,16 @@ public class CassandraProfile implements HeroicProfile {
             schema = LegacySchemaModule.builder().build();
         }
 
+        final Set<String> seeds = params.get("cassandra.seeds").map(s -> ImmutableSet.copyOf(splitter.split(s)))
+                .orElseGet(() -> ImmutableSet.of("localhost"));
+
         // @formatter:off
         return HeroicConfig.builder()
             .metric(
                 MetricManagerModule.builder()
                     .backends(ImmutableList.<MetricModule>of(
                         DatastaxMetricModule.builder()
-                        .seeds(seeds.transform(s -> ImmutableSet.copyOf(splitter.split(s))).or(ImmutableSet.of("localhost")))
+                        .seeds(seeds)
                         .configure(configure)
                         .schema(schema)
                         .build()

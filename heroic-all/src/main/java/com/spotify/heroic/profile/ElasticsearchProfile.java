@@ -41,12 +41,12 @@ public class ElasticsearchProfile implements HeroicProfile {
 
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
-        final String backendType = params.get("elasticsearch.type").orNull();
-        final String clusterName = params.get("elasticsearch.clusterName").orNull();
-        final String pattern = params.get("elasticsearch.pattern").orNull();
+        final String backendType = params.get("elasticsearch.type").orElse(null);
+        final String clusterName = params.get("elasticsearch.clusterName").orElse(null);
+        final String pattern = params.get("elasticsearch.pattern").orElse(null);
 
-        final List<String> seeds = params.get("elasticsearch.seeds")
-                .transform(s -> ImmutableList.copyOf(splitter.split(s))).or(ImmutableList.of("localhost"));
+        final List<String> seeds = params.get("elasticsearch.seeds").map(s -> ImmutableList.copyOf(splitter.split(s)))
+                .orElseGet(() -> ImmutableList.of("localhost"));
 
         final IndexMapping index = RotatingIndexMapping.builder().pattern(pattern).build();
 

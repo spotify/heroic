@@ -2,8 +2,8 @@ package com.spotify.heroic;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import lombok.Data;
@@ -16,7 +16,7 @@ public class HeroicParameters {
         final String value = parameters.get(key);
 
         if (value == null) {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         return Optional.of(value);
