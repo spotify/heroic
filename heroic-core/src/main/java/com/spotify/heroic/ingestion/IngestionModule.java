@@ -119,9 +119,9 @@ public class IngestionModule extends PrivateModule {
         public IngestionModule build() {
             // @formatter:off
             return new IngestionModule(
-                updateMetrics.orElse(false),
-                updateMetadata.orElse(false),
-                updateSuggestions.orElse(false)
+                updateMetrics.orElse(DEFAULT_UPDATE_METRICS),
+                updateMetadata.orElse(DEFAULT_UPDATE_METADATA),
+                updateSuggestions.orElse(DEFAULT_UPDATE_SUGGESTIONS)
             );
             // @formatter:on
         }
