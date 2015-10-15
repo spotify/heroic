@@ -22,12 +22,16 @@
 package com.spotify.heroic.ingestion;
 
 import com.spotify.heroic.common.BackendGroupException;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionManager {
+    public static final String INGESTED = "ingested";
 
     public AsyncFuture<WriteResult> write(String group, WriteMetric write) throws BackendGroupException;
+
+    public Statistics getStatistics();
 }

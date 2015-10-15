@@ -24,11 +24,13 @@ package com.spotify.heroic.ingestion;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.LongAdder;
 
 import javax.inject.Inject;
 
 import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.Metric;
@@ -63,6 +65,8 @@ public class IngestionManagerImpl implements IngestionManager {
     private final boolean updateMetrics;
     private final boolean updateMetadata;
     private final boolean updateSuggestions;
+
+    private final LongAdder ingested = new LongAdder();
 
     /**
      * @param updateMetrics
@@ -106,7 +110,13 @@ public class IngestionManagerImpl implements IngestionManager {
         if (write.isEmpty())
             return async.resolved(WriteResult.of());
 
+        ingested.increment();
         return doWrite(group, write);
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        return Statistics.of(INGESTED, ingested.sum());
     }
 
     protected AsyncFuture<WriteResult> doWrite(final String group, final WriteMetric write)
