@@ -36,25 +36,15 @@ import org.kohsuke.args4j.Option;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.HeroicCore.Builder;
-import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
-import com.spotify.heroic.elasticsearch.TransportClientSetup;
-import com.spotify.heroic.elasticsearch.index.SingleIndexMapping;
-import com.spotify.heroic.metadata.MetadataManagerModule;
-import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellProtocol;
 import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
-import com.spotify.heroic.suggest.SuggestManagerModule;
-import com.spotify.heroic.suggest.SuggestModule;
-import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -237,15 +227,6 @@ public class HeroicShell {
             return;
         }
 
-        if (params instanceof TaskElasticsearchParameters) {
-            final TaskElasticsearchParameters elasticsearch = (TaskElasticsearchParameters) params;
-
-            if (elasticsearch.getSeeds() != null) {
-                log.info("Setting up standalone elasticsearch configuration");
-                standaloneElasticsearchConfig(builder, elasticsearch);
-            }
-        }
-
         final HeroicCore core = builder.build();
 
         log.info("Starting Heroic...");
@@ -278,64 +259,6 @@ public class HeroicShell {
         }
 
         return (Class<ShellTask>) taskType;
-    }
-
-    static void standaloneElasticsearchConfig(HeroicCore.Builder builder, TaskElasticsearchParameters params) {
-        final List<String> seeds = Arrays.asList(StringUtils.split(params.getSeeds(), ','));
-
-        final String clusterName = params.getClusterName();
-        final String backendType = params.getBackendType();
-
-        builder.profile(new HeroicProfile() {
-            @Override
-            public HeroicConfig.Builder build(HeroicParameters params) throws Exception {
-                // @formatter:off
-                final TransportClientSetup clientSetup = TransportClientSetup.builder()
-                    .clusterName(clusterName)
-                    .seeds(seeds)
-                .build();
-
-                return HeroicConfig.builder()
-                        .metadata(
-                            MetadataManagerModule.builder()
-                            .backends(
-                                ImmutableList.<MetadataModule>of(
-                                    ElasticsearchMetadataModule.builder()
-                                    .connection(setupConnection(clientSetup, "metadata"))
-                                    .writesPerSecond(0d)
-                                    .build()
-                                )
-                            )
-                        )
-                        .suggest(
-                            SuggestManagerModule.builder()
-                            .backends(
-                                ImmutableList.<SuggestModule>of(
-                                    ElasticsearchSuggestModule.builder()
-                                    .connection(setupConnection(clientSetup, "suggest"))
-                                    .writesPerSecond(0d)
-                                    .backendType(backendType)
-                                    .build()
-                                )
-                            )
-                        );
-                // @formatter:on
-            }
-
-            private ManagedConnectionFactory setupConnection(TransportClientSetup clientSetup, final String index) {
-                // @formatter:off
-                return ManagedConnectionFactory.builder()
-                    .clientSetup(clientSetup)
-                    .index(SingleIndexMapping.builder().index(index).build())
-                    .build();
-                // @formatter:on
-            }
-
-            @Override
-            public String description() {
-                return "load metadata from a file";
-            }
-        });
     }
 
     static PrintWriter standaloneOutput(final TaskParameters params, final PrintStream original) throws IOException {

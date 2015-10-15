@@ -21,8 +21,30 @@
 
 package com.spotify.heroic;
 
+import java.util.List;
+import java.util.Optional;
+
+import lombok.Data;
+
 public interface HeroicProfile {
     HeroicConfig.Builder build(final HeroicParameters params) throws Exception;
 
     String description();
+
+    List<Option> options();
+
+    public static Option option(String name, String description) {
+        return new Option(name, description, Optional.empty());
+    }
+
+    public static Option option(String name, String description, String metavar) {
+        return new Option(name, description, Optional.of(metavar));
+    }
+
+    @Data
+    public static class Option {
+        private final String name;
+        private final String description;
+        private final Optional<String> metavar;
+    }
 }

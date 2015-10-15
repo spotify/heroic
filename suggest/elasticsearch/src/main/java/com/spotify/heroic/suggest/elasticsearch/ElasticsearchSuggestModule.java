@@ -23,6 +23,7 @@ package com.spotify.heroic.suggest.elasticsearch;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +38,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -85,6 +87,10 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     static {
         backendTypes.put("kv", defaultSetup);
         backendTypes.put("v1", SuggestBackendV1.factory());
+    }
+
+    public static final List<String> types() {
+        return ImmutableList.copyOf(backendTypes.keySet());
     }
 
     @JsonIgnore

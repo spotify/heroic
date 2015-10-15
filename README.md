@@ -39,3 +39,11 @@ options (like redirecting output) through the following.
 ```bash
 $ tools/heroic-shell <heroic-options> -- com.spotify.heroic.shell.task.<task-name> <task-options>
 ```
+
+## Profiles
+
+Profiles are small configuration units which can be merged into the overall
+configuration.
+
+They are activated with the `-P <profile>` switch, available profiles are
+listed in `--help`.

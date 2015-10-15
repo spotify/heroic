@@ -43,7 +43,7 @@ import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
-public class MemoryProfile implements HeroicProfile {
+public class MemoryProfile extends HeroicProfileBase {
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         // @formatter:off
@@ -108,6 +108,6 @@ public class MemoryProfile implements HeroicProfile {
 
     @Override
     public String description() {
-        return "Store Data In-Memory";
+        return "Configures in-memory backends for everything (useful for integration/performance testing)";
     }
 }

@@ -8,8 +8,10 @@ import java.util.Map;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.CassandraProfile;
-import com.spotify.heroic.profile.ElasticsearchProfile;
+import com.spotify.heroic.profile.ElasticsearchMetadataProfile;
+import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.GeneratedProfile;
+import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryProfile;
 
 public class HeroicModules {
@@ -39,7 +41,8 @@ public class HeroicModules {
         .put("generated", new GeneratedProfile())
         .put("memory", new MemoryProfile())
         .put("cassandra", new CassandraProfile())
-        .put("elasticsearch", new ElasticsearchProfile())
+        .put("elasticsearch-metadata", new ElasticsearchMetadataProfile())
+        .put("elasticsearch-suggest", new ElasticsearchSuggestProfile())
     .build();
     // @formatter:on
 
@@ -48,7 +51,17 @@ public class HeroicModules {
 
         for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
             out.println("  " + entry.getKey() + " - " + entry.getValue().description());
+
+            for (final HeroicProfile.Option o : entry.getValue().options()) {
+                if (o.getMetavar().isPresent()) {
+                    out.println("    " + o.getName() + "=" + o.getMetavar().get() + " - " + o.getDescription());
+                } else {
+                    out.println("    " + o.getName() + " - " + o.getDescription());
+                }
+            }
         }
+
+        out.flush();
     }
 
     public static void printProfileUsage(final PrintStream out, final String option) {

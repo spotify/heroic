@@ -41,7 +41,6 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
@@ -166,7 +165,7 @@ public class MetadataLoad implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams implements TaskElasticsearchParameters {
+    private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to", metaVar = "<metadata-group>")
         private String target;
 
@@ -177,17 +176,5 @@ public class MetadataLoad implements ShellTask {
         @Option(name = "-r", usage = "Rate-limit for writing to ES. 0 means disabled")
         @Getter
         private int rate = 0;
-
-        @Option(name = "--seeds", usage = "Elasticsearch Seeds (standalone only)")
-        @Getter
-        private String seeds = "localhost";
-
-        @Option(name = "--cluster-name", usage = "Elasticsearch Cluster Name (standalone only)")
-        @Getter
-        private String clusterName = "elasticsearch";
-
-        @Option(name = "--backend-type", usage = "Elasticsearch Backend Type (standalone only)")
-        @Getter
-        private String backendType = "default";
     }
 }

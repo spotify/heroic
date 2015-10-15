@@ -35,7 +35,6 @@ import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.TaskElasticsearchParameters;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
@@ -227,7 +226,7 @@ public class SuggestPerformance implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends AbstractShellTaskParams implements TaskElasticsearchParameters {
+    private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
         private String group;
 
@@ -238,18 +237,6 @@ public class SuggestPerformance implements ShellTask {
         @Option(name = "-l", usage = "Limit the number of results", metaVar = "<int>")
         @Getter
         private int limit = 10;
-
-        @Option(name = "--seeds", usage = "Elasticsearch Seeds (standalone only)")
-        @Getter
-        private String seeds = "localhost";
-
-        @Option(name = "--cluster-name", usage = "Elasticsearch ClusterName (standalone only)")
-        @Getter
-        private String clusterName = "elasticsearch";
-
-        @Option(name = "--backend-type", usage = "Elasticsearch Backend Type (standalone only)")
-        @Getter
-        private String backendType = "default";
     }
 
     @Data
