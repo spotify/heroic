@@ -29,13 +29,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -53,7 +53,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
-import eu.toolchain.async.ResolvableFuture;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
@@ -85,11 +84,6 @@ public class KafkaConsumerModule implements ConsumerModule {
             @Provides
             public Managed<Connection> connection(final AsyncFramework async, final Consumer consumer) {
                 return async.managed(new ManagedSetup<Connection>() {
-                    /**
-                     * Latch that will be set when we want to shut down.
-                     */
-                    private final CountDownLatch stopSignal = new CountDownLatch(1);
-
                     @Override
                     public AsyncFuture<Connection> construct() {
                         return async.call(new Callable<Connection>() {
@@ -121,34 +115,14 @@ public class KafkaConsumerModule implements ConsumerModule {
 
                     @Override
                     public AsyncFuture<Void> destruct(final Connection value) {
-                        return async.call(shutdownConnector(value)).lazyTransform(new LazyTransform<Void, Void>() {
-                            @Override
-                            public AsyncFuture<Void> transform(Void arg0) throws Exception {
-                                final List<AsyncFuture<Void>> shutdown = new ArrayList<>();
+                        value.getConnector().shutdown();
 
-                                for (final ConsumerThread t : value.getThreads())
-                                    shutdown.add(t.stopFuture);
+                        total.set(0);
 
-                                total.set(0);
-                                return async.collectAndDiscard(shutdown);
-                            }
-                        });
-                    }
+                        final List<AsyncFuture<Void>> shutdown = ImmutableList
+                                .copyOf(value.getThreads().stream().map(ConsumerThread::shutdown).iterator());
 
-                    private Callable<Void> shutdownConnector(final Connection value) {
-                        stopSignal.countDown();
-
-                        return new Callable<Void>() {
-                            @Override
-                            public Void call() throws Exception {
-                                // tell threads to shut down.
-
-                                value.getConnector().shutdown();
-                                log.info("Waiting for all threads to shut down");
-
-                                return null;
-                            }
-                        };
+                        return async.collectAndDiscard(shutdown);
                     }
 
                     /* private */
@@ -174,10 +148,9 @@ public class KafkaConsumerModule implements ConsumerModule {
 
                             for (final KafkaStream<byte[], byte[]> stream : list) {
                                 final String name = String.format("%s:%d", topic, count++);
-                                final ResolvableFuture<Void> stopFuture = async.future();
 
-                                threads.add(new ConsumerThread(name, reporter, stream, consumer, schema, consuming,
-                                        errors, consumed, stopSignal, stopFuture));
+                                threads.add(new ConsumerThread(async, name, reporter, stream, consumer, schema,
+                                        consuming, errors, consumed));
                             }
                         }
 

@@ -37,4 +37,8 @@ public interface Consumer extends LifeCycle {
     public AsyncFuture<WriteResult> write(WriteMetric entry);
 
     public Statistics getStatistics();
+
+    public AsyncFuture<Void> pause();
+
+    public AsyncFuture<Void> resume();
 }

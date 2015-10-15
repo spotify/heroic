@@ -47,7 +47,6 @@ public class MemoryProfile extends HeroicProfileBase {
     @Override
     public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
         // @formatter:off
-        // final SuggestManagerModule suggest = SuggestManagerModule.create(suggestModules, null);
         return HeroicConfig.builder()
             .cluster(
                 ClusterManagerModule.builder()

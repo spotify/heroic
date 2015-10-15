@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.spotify.heroic.common.BackendGroupException;
@@ -99,5 +100,19 @@ public class KafkaConsumer implements Consumer {
 
         return Statistics.of(
                 ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total, ERRORS, errors, CONSUMED, consumed));
+    }
+
+    @Override
+    public AsyncFuture<Void> pause() {
+        // pause all threads
+        return connection.doto(c -> async.collectAndDiscard(
+                ImmutableList.copyOf(c.getThreads().stream().map(ConsumerThread::pauseConsumption).iterator())));
+    }
+
+    @Override
+    public AsyncFuture<Void> resume() {
+        // resume all threads
+        return connection.doto(c -> async.collectAndDiscard(
+                ImmutableList.copyOf(c.getThreads().stream().map(ConsumerThread::resumeConsumption).iterator())));
     }
 }
