@@ -193,11 +193,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
             final BigtableClient client = c.client();
 
-            for (final MetricCollection g : w.getGroups()) {
-                if (g.getType() == MetricType.POINT) {
-                    for (final Point d : g.getDataAs(Point.class)) {
-                        results.add(writePoint(series, client, d));
-                    }
+            final MetricCollection g = w.getData();
+
+            if (g.getType() == MetricType.POINT) {
+                for (final Point d : g.getDataAs(Point.class)) {
+                    results.add(writePoint(series, client, d));
                 }
             }
 
@@ -219,11 +219,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
                     final BigtableClient client = c.client();
 
-                    for (final MetricCollection g : w.getGroups()) {
-                        if (g.getType() == MetricType.POINT) {
-                            for (final Point d : g.getDataAs(Point.class)) {
-                                results.add(writePoint(series, client, d));
-                            }
+                    final MetricCollection g = w.getData();
+
+                    if (g.getType() == MetricType.POINT) {
+                        for (final Point d : g.getDataAs(Point.class)) {
+                            results.add(writePoint(series, client, d));
                         }
                     }
 

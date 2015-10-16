@@ -105,10 +105,9 @@ public class Spotify100 implements ConsumerSchema {
 
         final Series series = Series.of(metric.getKey(), tags);
         final List<Point> points = ImmutableList.of(new Point(metric.getTime(), metric.getValue()));
-        final List<MetricCollection> data = ImmutableList.of(MetricCollection.points(points));
 
         try {
-            consumer.write(new WriteMetric(series, data)).get();
+            consumer.write(new WriteMetric(series, MetricCollection.points(points))).get();
         } catch (final Exception e) {
             throw new FatalSchemaException("Write failed", e);
         }

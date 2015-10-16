@@ -21,23 +21,20 @@
 
 package com.spotify.heroic.http.write;
 
-import java.util.List;
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+
+import com.google.inject.Inject;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.ingestion.IngestionManager;
 
 import lombok.Data;
-
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.spotify.heroic.ingestion.IngestionManager;
-import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.WriteMetric;
 
 @Path("/write")
 @Produces(MediaType.APPLICATION_JSON)
@@ -46,17 +43,16 @@ public class WriteResource {
     @Inject
     private IngestionManager ingestion;
 
+    @Inject
+    private JavaxRestFramework httpAsync;
+
     @Data
     public static final class Message {
         private final String message;
     }
 
     @POST
-    @Path("/metrics")
-    public Response metrics(@QueryParam("backend") String backendGroup, WriteMetrics write) throws Exception {
-        // XXX: perform write
-        final List<MetricCollection> data = ImmutableList.of();
-        ingestion.write(backendGroup, new WriteMetric(write.getSeries(), data));
-        return Response.status(Response.Status.OK).entity(new WriteMetricsResponse(true)).build();
+    public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup, WriteMetricRequest write) throws Exception {
+        httpAsync.bind(response, ingestion.write(backendGroup, write.toWriteMetric()), r -> r);
     }
 }

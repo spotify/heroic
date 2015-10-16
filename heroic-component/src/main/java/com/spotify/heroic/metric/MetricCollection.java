@@ -84,8 +84,18 @@ public abstract class MetricCollection {
      */
     public abstract void updateBucket(final Bucket bucket, final Map<String, String> tags);
 
+    public int size() {
+        return data.size();
+    }
+
     public boolean isEmpty() {
         return data.isEmpty();
+    }
+
+    private static final MetricCollection empty = new EmptyMetricCollection();
+
+    public static MetricCollection empty() {
+        return empty;
     }
 
     // @formatter:off

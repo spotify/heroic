@@ -143,24 +143,24 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                 final Map<MetricsRowKey, ColumnListMutation<Integer>> batches = new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
                 for (final WriteMetric write : writes) {
-                    for (final MetricCollection g : write.getGroups()) {
-                        if (g.getType() != MetricType.POINT)
-                            continue;
+                    final MetricCollection g = write.getData();
 
-                        for (final Metric t : g.getData()) {
-                            final Point d = (Point) t;
-                            final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
-                            final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
+                    if (g.getType() != MetricType.POINT)
+                        continue;
 
-                            ColumnListMutation<Integer> m = batches.get(rowKey);
+                    for (final Metric t : g.getData()) {
+                        final Point d = (Point) t;
+                        final long base = MetricsRowKeySerializer.getBaseTimestamp(d.getTimestamp());
+                        final MetricsRowKey rowKey = new MetricsRowKey(write.getSeries(), base);
 
-                            if (m == null) {
-                                m = mutation.withRow(METRICS_CF, rowKey);
-                                batches.put(rowKey, m);
-                            }
+                        ColumnListMutation<Integer> m = batches.get(rowKey);
 
-                            m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()), d.getValue());
+                        if (m == null) {
+                            m = mutation.withRow(METRICS_CF, rowKey);
+                            batches.put(rowKey, m);
                         }
+
+                        m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()), d.getValue());
                     }
                 }
 

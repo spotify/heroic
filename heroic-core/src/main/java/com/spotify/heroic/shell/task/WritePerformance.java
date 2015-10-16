@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -93,11 +94,19 @@ public class WritePerformance implements ShellTask {
         final MetricBackendGroup readGroup = metrics.useGroup(params.from);
         final List<MetricBackend> targets = resolveTargets(params.targets);
 
-        final List<AsyncFuture<WriteMetric>> reads = new ArrayList<>();
+        final List<AsyncFuture<List<WriteMetric>>> reads = new ArrayList<>();
 
         for (final Series s : series) {
             reads.add(readGroup.fetch(MetricType.POINT, s, range, QueryOptions.defaults())
-                    .directTransform(result -> new WriteMetric(s, result.getGroups())));
+                    .directTransform(result -> {
+                        final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+
+                        for (final MetricCollection group : result.getGroups()) {
+                            writes.add(new WriteMetric(s, group));
+                        }
+
+                        return writes.build();
+                    }));
         }
 
         return async.collect(reads).directTransform(input -> {
@@ -105,9 +114,9 @@ public class WritePerformance implements ShellTask {
 
             int totalWrites = 0;
 
-            for (final WriteMetric w : input) {
-                for (MetricCollection g : w.getGroups()) {
-                    totalWrites += (g.getData().size() * params.writes);
+            for (final List<WriteMetric> writes : input) {
+                for (final WriteMetric w : writes) {
+                    totalWrites += (w.getData().size() * params.writes);
                 }
             }
 
@@ -174,7 +183,7 @@ public class WritePerformance implements ShellTask {
         out.println(String.format("  99th: %d ms", TimeUnit.MILLISECONDS.convert(q99, unit)));
     }
 
-    private List<AsyncFuture<Times>> buildWrites(List<MetricBackend> targets, Collection<WriteMetric> input,
+    private List<AsyncFuture<Times>> buildWrites(List<MetricBackend> targets, Collection<List<WriteMetric>> input,
             final Parameters params, final long start) {
         final List<AsyncFuture<Times>> writes = new ArrayList<>();
 
@@ -184,23 +193,27 @@ public class WritePerformance implements ShellTask {
             for (int i = 0; i < params.writes; i++) {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
-                writes.add(target.write(input).directTransform(result -> {
-                    final long runtime = System.currentTimeMillis() - start;
-                    return new Times(result.getTimes(), runtime);
-                }));
+                for (final List<WriteMetric> groups : input) {
+                    writes.add(target.write(groups).directTransform(result -> {
+                        final long runtime = System.currentTimeMillis() - start;
+                        return new Times(result.getTimes(), runtime);
+                    }));
+                }
             }
 
             return writes;
         }
 
         for (int i = 0; i < params.writes; i++) {
-            for (final WriteMetric w : input) {
-                final MetricBackend target = targets.get(request++ % targets.size());
+            for (final List<WriteMetric> groups : input) {
+                for (final WriteMetric w : groups) {
+                    final MetricBackend target = targets.get(request++ % targets.size());
 
-                writes.add(target.write(w).directTransform(result -> {
-                    final long runtime = System.currentTimeMillis() - start;
-                    return new Times(result.getTimes(), runtime);
-                }));
+                    writes.add(target.write(w).directTransform(result -> {
+                        final long runtime = System.currentTimeMillis() - start;
+                        return new Times(result.getTimes(), runtime);
+                    }));
+                }
             }
         }
 

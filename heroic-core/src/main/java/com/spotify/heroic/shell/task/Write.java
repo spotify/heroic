@@ -151,7 +151,9 @@ public class Write implements ShellTask {
             writes.add(s.write(series, range).directTransform(reportResult("suggest", io.out())));
         }
 
-        writes.add(g.write(new WriteMetric(series, groups.build())).directTransform(reportResult("metrics", io.out())));
+        for (final MetricCollection group : groups.build()) {
+            writes.add(g.write(new WriteMetric(series, group)).directTransform(reportResult("metrics", io.out())));
+        }
 
         return async.collectAndDiscard(writes);
     }

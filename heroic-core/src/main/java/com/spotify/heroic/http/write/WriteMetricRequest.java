@@ -21,22 +21,37 @@
 
 package com.spotify.heroic.http.write;
 
-import java.util.List;
-
-import lombok.Data;
+import static java.util.Optional.ofNullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.WriteMetric;
+
+import lombok.Data;
 
 @Data
-public class WriteMetrics {
-    private final Series series;
-    private final List<Point> data;
+public class WriteMetricRequest {
+    final Series series;
+    final MetricCollection data;
 
     @JsonCreator
-    public static WriteMetrics create(@JsonProperty("series") Series series, @JsonProperty("data") List<Point> data) {
-        return new WriteMetrics(series, data);
+    public WriteMetricRequest(@JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data) {
+        this.series = ofNullable(series).orElseGet(Series::empty);
+        this.data = ofNullable(data).orElseGet(MetricCollection::empty);
+    }
+
+    public boolean isEmpty() {
+        return data.isEmpty();
+    }
+
+    public Iterable<Metric> all() {
+        return data.getDataAs(Metric.class);
+    }
+
+    public WriteMetric toWriteMetric() {
+        return new WriteMetric(series, data);
     }
 }

@@ -21,12 +21,10 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.List;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.Series;
 
 import lombok.Data;
@@ -34,25 +32,19 @@ import lombok.Data;
 @Data
 public class WriteMetric {
     final Series series;
-    final List<MetricCollection> groups;
+    final MetricCollection data;
 
     @JsonCreator
-    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("groups") List<MetricCollection> groups) {
-        this.series = series;
-        this.groups = groups;
+    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data) {
+        this.series = checkNotNull(series, "series");
+        this.data = checkNotNull(data, "data");
     }
 
     public boolean isEmpty() {
-        return groups.stream().allMatch(MetricCollection::isEmpty);
+        return data.isEmpty();
     }
 
     public Iterable<Metric> all() {
-        final List<Iterable<? extends Metric>> iterables = new ArrayList<>(groups.size());
-
-        for (final MetricCollection g : groups) {
-            iterables.add(g.getData());
-        }
-
-        return Iterables.concat(iterables);
+        return data.getDataAs(Metric.class);
     }
 }

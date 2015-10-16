@@ -153,14 +153,14 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     }
 
     private void writeOne(final List<Long> times, final WriteMetric write, final long start) {
-        for (final MetricCollection g : write.getGroups()) {
-            final MemoryKey key = new MemoryKey(g.getType(), write.getSeries());
-            final NavigableMap<Long, Metric> tree = getOrCreate(key);
+        final MetricCollection g = write.getData();
 
-            synchronized (tree) {
-                for (final Metric d : g.getData()) {
-                    tree.put(d.getTimestamp(), d);
-                }
+        final MemoryKey key = new MemoryKey(g.getType(), write.getSeries());
+        final NavigableMap<Long, Metric> tree = getOrCreate(key);
+
+        synchronized (tree) {
+            for (final Metric d : g.getData()) {
+                tree.put(d.getTimestamp(), d);
             }
         }
 

@@ -242,16 +242,17 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     private AsyncFuture<WriteResult> doWrite(final Connection c, final SchemaInstance.WriteSession session, final WriteMetric w) throws IOException {
         final List<Callable<AsyncFuture<Long>>> callables = new ArrayList<>();
 
-        for (final MetricCollection g : w.getGroups()) {
-            if (g.getType() == MetricType.POINT) {
-                for (final Point d : g.getDataAs(Point.class)) {
-                    final BoundStatement stmt = session.writePoint(w.getSeries(), d);
+        final MetricCollection g = w.getData();
 
-                    callables.add(() -> {
-                        final long start = System.nanoTime();
-                        return Async.bind(async, c.session.executeAsync(stmt)).directTransform((r) -> System.nanoTime() - start);
-                    });
-                }
+        if (g.getType() == MetricType.POINT) {
+            for (final Point d : g.getDataAs(Point.class)) {
+                final BoundStatement stmt = session.writePoint(w.getSeries(), d);
+
+                callables.add(() -> {
+                    final long start = System.nanoTime();
+                    return Async.bind(async, c.session.executeAsync(stmt))
+                            .directTransform((r) -> System.nanoTime() - start);
+                });
             }
         }
 
