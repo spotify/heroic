@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.Aggregation;
@@ -99,10 +99,10 @@ public class CoreQueryManager implements QueryManager {
         final Optional<Filter> filter = q.getWhere();
 
         /* get aggregation that is part of statement, if any */
-        final Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = select.getAggregation().transform(customAggregation(select));
+        final Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = select.getAggregation().map(customAggregation(select));
 
         /* incorporate legacy group by */
-        final Optional<List<String>> groupBy = q.getGroupBy().transform((g) -> g.getGroupBy());
+        final Optional<List<String>> groupBy = q.getGroupBy().map((g) -> g.getGroupBy());
 
         return newQuery().source(source).range(from.getRange()).aggregationBuilder(aggregationBuilder).filter(filter)
                 .groupBy(groupBy);

@@ -2,13 +2,13 @@ package com.spotify.heroic.grammar;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
@@ -39,7 +39,7 @@ public class QueryParserTest {
         final AggregationValue chain = new AggregationValue("chain", ImmutableList.<Value> of(group, sum),
                 ImmutableMap.<String, Value> of());
 
-        assertEquals(Optional.absent(), parser.parse(CoreQueryParser.SELECT, "*").getAggregation());
+        assertEquals(Optional.empty(), parser.parse(CoreQueryParser.SELECT, "*").getAggregation());
         assertEquals(Optional.of(chain),
                 parser.parse(CoreQueryParser.SELECT, "chain(group([host], average(30H)), sum(30H))")
                 .getAggregation());
@@ -67,8 +67,8 @@ public class QueryParserTest {
 
     @Test
     public void testFrom() {
-        checkFrom("series", Optional.absent(), parser.parse(CoreQueryParser.FROM, "series"));
-        checkFrom("events", Optional.absent(), parser.parse(CoreQueryParser.FROM, "events"));
+        checkFrom("series", Optional.empty(), parser.parse(CoreQueryParser.FROM, "series"));
+        checkFrom("events", Optional.empty(), parser.parse(CoreQueryParser.FROM, "events"));
         // absolute
         checkFrom("series", Optional.of(new DateRange(0, 1234 + 4321)),
                 parser.parse(CoreQueryParser.FROM, "series(0, 1234 + 4321)"));

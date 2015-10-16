@@ -35,6 +35,8 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicParameters;
+import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -48,6 +50,8 @@ import lombok.NoArgsConstructor;
 
 @Data
 public class IngestionModule extends PrivateModule {
+    private static final String INGESTION_FILTER_PARAM = "ingestion.filter";
+
     public static final boolean DEFAULT_UPDATE_METRICS = true;
     public static final boolean DEFAULT_UPDATE_METADATA = true;
     public static final boolean DEFAULT_UPDATE_SUGGESTIONS = true;
@@ -83,8 +87,9 @@ public class IngestionModule extends PrivateModule {
 
     @Provides
     @Singleton
-    public Filter filter(final QueryParser parser, final FilterFactory filters) {
-        return filter.map(parser::parseFilter).orElseGet(filters::t);
+    public Filter filter(final QueryParser parser, final FilterFactory filters, final HeroicParameters params) {
+        return Optionals.pickOptional(filter.map(parser::parseFilter), params.getFilter(INGESTION_FILTER_PARAM, parser))
+                .orElseGet(filters::t);
     }
 
     @Override

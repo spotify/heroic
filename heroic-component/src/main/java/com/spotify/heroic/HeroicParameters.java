@@ -5,12 +5,38 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.grammar.QueryParser;
 
 import lombok.Data;
 
 @Data
 public class HeroicParameters {
     private final Map<String, String> parameters;
+
+    public Optional<Filter> getFilter(String key, QueryParser parser) {
+        final String value = parameters.get(key);
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(parser.parseFilter(value));
+    }
+
+    public Optional<Integer> getInteger(String key) {
+        final String value = parameters.get(key);
+
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Integer.parseInt(value));
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Key " + key + " exists, but does not contain a valid numeric value");
+        }
+    }
 
     public Optional<String> get(String key) {
         final String value = parameters.get(key);

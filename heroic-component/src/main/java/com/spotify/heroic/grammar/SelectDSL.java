@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.grammar;
 
-import lombok.Data;
+import java.util.Optional;
 
-import com.google.common.base.Optional;
+import lombok.Data;
 
 @Data
 public class SelectDSL {

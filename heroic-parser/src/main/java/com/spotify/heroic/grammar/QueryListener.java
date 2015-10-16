@@ -26,18 +26,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
-
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
@@ -46,6 +42,7 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AbsoluteContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationArgsContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationContext;
+import com.spotify.heroic.grammar.HeroicQueryParser.BooleanExprContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.DiffContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.EqExprContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.FilterContext;
@@ -73,6 +70,10 @@ import com.spotify.heroic.grammar.HeroicQueryParser.RelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.SelectContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ValueExprContext;
+
+import lombok.Data;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 @SuppressWarnings("unchecked")
 @RequiredArgsConstructor
@@ -165,7 +166,7 @@ public class QueryListener extends HeroicQueryBaseListener {
             throw c.error("No source clause available");
         }
 
-        push(new QueryDSL(select, source, Optional.fromNullable(where), Optional.fromNullable(groupBy)));
+        push(new QueryDSL(select, source, Optional.ofNullable(where), Optional.ofNullable(groupBy)));
     }
 
     @Override
@@ -246,7 +247,7 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     Optional<AggregationValue> buildAggregation(final Context c, final ParseTree child) {
         if (!(child.getPayload() instanceof ValueExprContext)) {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         final Value value = pop(c, Value.class);
@@ -387,7 +388,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         if (ctx.getChildCount() > 1) {
             range = Optional.of(pop(context, DateRange.class));
         } else {
-            range = Optional.absent();
+            range = Optional.empty();
         }
 
         push(new FromDSL(context, source.getText(), range));
@@ -534,6 +535,24 @@ public class QueryListener extends HeroicQueryBaseListener {
         }
 
         throw c.error("unsupported expression: " + type);
+    }
+
+    @Override
+    public void enterBooleanExpr(BooleanExprContext ctx) {
+        final Context c = new ContextImpl(ctx);
+        final String literal = ctx.getText();
+
+        if ("true".equals(literal)) {
+            push(filters.t());
+            return;
+        }
+
+        if ("false".equals(literal)) {
+            push(filters.f());
+            return;
+        }
+
+        throw c.error("unsupported boolean literal: " + literal);
     }
 
     private TimeUnit extractUnit(Context ctx, String text) {

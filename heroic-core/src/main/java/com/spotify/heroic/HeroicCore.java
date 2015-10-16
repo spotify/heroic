@@ -381,7 +381,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
         final ExecutorService executor = buildCoreExecutor(Runtime.getRuntime().availableProcessors() * 2);
         final HeroicInternalLifeCycle lifeCycle = new HeroicInernalLifeCycleImpl();
 
-        return Guice.createInjector(new HeroicLoadingModule(executor, lifeCycle, this, this));
+        return Guice.createInjector(new HeroicLoadingModule(executor, lifeCycle, this, this, params));
     }
 
     private Injector earlyInjector(final Injector loading, final HeroicConfig config) {

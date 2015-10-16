@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.grammar;
 
-import lombok.Data;
+import java.util.Optional;
 
-import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
+
+import lombok.Data;
 
 @Data
 public class FromDSL {

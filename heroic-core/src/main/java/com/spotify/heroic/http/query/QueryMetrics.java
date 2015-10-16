@@ -21,19 +21,21 @@
 
 package com.spotify.heroic.http.query;
 
-import static com.google.common.base.Optional.fromNullable;
+import static java.util.Optional.ofNullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.ChainAggregationQuery;
+import com.spotify.heroic.aggregation.EmptyAggregationQuery;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 
@@ -64,14 +66,16 @@ public class QueryMetrics {
             @JsonProperty("noCache") Boolean noCache,
             @JsonProperty("aggregators") List<AggregationQuery> aggregators,
             @JsonProperty("source") String sourceName) {
-        this.query = fromNullable(query);
-        this.key = fromNullable(key);
-        this.tags = fromNullable(tags).or(DEFAULT_TAGS);
-        this.filter = fromNullable(filter);
-        this.groupBy = fromNullable(groupBy);
-        this.range = fromNullable(range).or(DEFAULT_DATE_RANGE);
-        this.noCache = fromNullable(noCache).or(DEFAULT_NO_CACHE);
-        this.aggregators = new ChainAggregationQuery(fromNullable(aggregators).or(EMPTY_AGGREGATIONS));
+        this.query = ofNullable(query);
+        this.key = ofNullable(key);
+        this.tags = ofNullable(tags).orElse(DEFAULT_TAGS);
+        this.filter = ofNullable(filter);
+        this.groupBy = ofNullable(groupBy);
+        this.range = ofNullable(range).orElse(DEFAULT_DATE_RANGE);
+        this.noCache = ofNullable(noCache).orElse(DEFAULT_NO_CACHE);
+        this.aggregators = ofNullable(aggregators).filter(c -> !c.isEmpty())
+                .<AggregationQuery> map(chain -> new ChainAggregationQuery(chain))
+                .orElseGet(EmptyAggregationQuery::new);
         this.source = convertSource(sourceName);
     }
 

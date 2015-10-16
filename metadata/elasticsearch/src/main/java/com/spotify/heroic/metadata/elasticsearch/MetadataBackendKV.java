@@ -62,6 +62,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
@@ -114,27 +115,24 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
     private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final boolean configure;
 
     @Inject
-    public MetadataBackendKV(Groups groups, LocalMetadataBackendReporter reporter,
-            AsyncFramework async, Managed<Connection> connection,
-            RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache) {
+    public MetadataBackendKV(Groups groups, LocalMetadataBackendReporter reporter, AsyncFramework async,
+            Managed<Connection> connection, RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
+            @Named("configure") boolean configure) {
         super(async);
         this.groups = groups;
         this.reporter = reporter;
         this.async = async;
         this.connection = connection;
         this.writeCache = writeCache;
+        this.configure = configure;
     }
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(new ManagedAction<Connection, Void>() {
-            @Override
-            public AsyncFuture<Void> action(Connection reference) throws Exception {
-                return reference.configure();
-            }
-        });
+        return doto(c -> c.configure());
     }
 
     @Override
@@ -144,7 +142,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend impl
 
     @Override
     public AsyncFuture<Void> start() {
-        return connection.start();
+        AsyncFuture<Void> future = connection.start();
+
+        if (!configure) {
+            return future;
+        }
+
+        return future.lazyTransform(v -> configure());
     }
 
     @Override

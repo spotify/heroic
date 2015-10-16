@@ -27,9 +27,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -49,16 +49,16 @@ import lombok.RequiredArgsConstructor;
 public class QueryBuilder {
     private final FilterFactory filters;
 
-    private Optional<String> key = Optional.absent();
+    private Optional<String> key = Optional.empty();
     private Map<String, String> tags = ImmutableMap.of();
-    private Optional<Filter> filter = Optional.absent();
-    private Optional<List<String>> groupBy = Optional.absent();
-    private Optional<DateRange> range = Optional.absent();
+    private Optional<Filter> filter = Optional.empty();
+    private Optional<List<String>> groupBy = Optional.empty();
+    private Optional<DateRange> range = Optional.empty();
     private MetricType source = MetricType.POINT;
     private AggregationQuery aggregationQuery = EmptyAggregationQuery.INSTANCE;
-    private Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = Optional.absent();
+    private Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = Optional.empty();
     private AggregationContext context = new DefaultAggregationContext();
-    private Optional<QueryOptions> options = Optional.absent();
+    private Optional<QueryOptions> options = Optional.empty();
 
     /**
      * Specify a set of tags that has to match.
@@ -147,7 +147,7 @@ public class QueryBuilder {
         final Filter filter = legacyFilter();
 
         final Aggregation aggregation = legacyGroupBy(
-                aggregationBuilder.transform(b -> b.apply(context)).or(() -> aggregationQuery.build(context)));
+                aggregationBuilder.map(b -> b.apply(context)).orElseGet(() -> aggregationQuery.build(context)));
 
         final Optional<DateRange> range = roundedRange(aggregation);
 
@@ -160,13 +160,13 @@ public class QueryBuilder {
             throw new IllegalStateException("Range is not specified");
         }
 
-        final QueryOptions options = this.options.or(QueryOptions::defaults);
+        final QueryOptions options = this.options.orElseGet(QueryOptions::defaults);
 
         return new Query(filter, range.get(), aggregation, source, options);
     }
 
     Aggregation legacyGroupBy(final Aggregation aggregation) {
-        return groupBy.<Aggregation> transform(g -> new GroupAggregation(g, aggregation)).or(aggregation);
+        return groupBy.<Aggregation> map(g -> new GroupAggregation(g, aggregation)).orElse(aggregation);
     }
 
     /**
@@ -204,7 +204,7 @@ public class QueryBuilder {
     }
 
     Optional<DateRange> roundedRange(Aggregation aggregation) {
-        return range.transform(r -> {
+        return range.map(r -> {
             final long extent = aggregation.extent();
 
             if (extent == 0) {

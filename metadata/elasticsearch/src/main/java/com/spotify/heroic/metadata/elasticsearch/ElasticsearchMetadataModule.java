@@ -46,6 +46,8 @@ import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -67,6 +69,8 @@ import lombok.Data;
 
 @Data
 public final class ElasticsearchMetadataModule implements MetadataModule {
+    public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
+
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
     public static final String DEFAULT_GROUP = "elasticsearch";
@@ -133,6 +137,13 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Inject
             public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
                 return builder.construct(templateName, backendType.mappings());
+            }
+
+            @Provides
+            @Singleton
+            @Named("configure")
+            public boolean configure(HeroicParameters params) {
+                return params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
             }
 
             @Provides

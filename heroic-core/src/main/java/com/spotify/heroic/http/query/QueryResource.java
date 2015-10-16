@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -40,7 +42,6 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -137,11 +138,13 @@ public class QueryResource {
 
     @SuppressWarnings("deprecation")
     private QueryBuilder setupBuilder(final QueryMetrics q) {
-        return q.getQuery().transform(query::newQueryFromString).or(() -> {
+        Supplier<? extends QueryBuilder> supplier = () -> {
             return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
                     .range(Optional.of(q.getRange().buildDateRange())).aggregationQuery(q.getAggregators())
                     .source(q.getSource());
-        });
+        };
+
+        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier);
     }
 
     @Data

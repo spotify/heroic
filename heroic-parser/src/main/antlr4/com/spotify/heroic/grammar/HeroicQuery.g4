@@ -47,6 +47,11 @@ notInExpr
     : valueExpr Not In valueExpr
     ;
 
+booleanExpr
+    : True
+    | False
+    ;
+
 inExpr
     : valueExpr In valueExpr
     ;
@@ -71,6 +76,7 @@ filterExpr
     | notRegexExpr
     | inExpr
     | notInExpr
+    | booleanExpr
     ;
 
 groupExpr
@@ -175,6 +181,10 @@ from : Identifier sourceRange? ;
 
 // keywords (must come before SimpleString!)
 All : '*' ;
+
+True : 'true' ;
+
+False : 'false' ;
 
 Where : 'where' ;
 

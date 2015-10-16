@@ -27,9 +27,18 @@ public interface QueryParser {
     /**
      * Parse the given filter using the Heroic Query DSL.
      *
+     * @param filter String to parse.
      * @return A filter implementation.
+     * @throws ParseException if unable to parse string.
      */
     Filter parseFilter(String filter);
 
+    /**
+     * Parse the given query.
+     *
+     * @param query String to parse.
+     * @return The parse query.
+     * @throws ParseException if unable to parse string.
+     */
     QueryDSL parseQuery(String query);
 }
