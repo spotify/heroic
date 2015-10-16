@@ -12,6 +12,8 @@ import lombok.Data;
 
 @Data
 public class HeroicParameters {
+    public static final String CONFIGURE = "configure";
+
     private final Map<String, String> parameters;
 
     public Optional<Filter> getFilter(String key, QueryParser parser) {

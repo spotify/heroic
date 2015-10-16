@@ -75,6 +75,7 @@ import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -142,31 +143,35 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
      */
     private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
     private final Groups groups;
+    private final boolean configure;
 
     @Inject
     public SuggestBackendKV(final AsyncFramework async, final Managed<Connection> connection,
             final LocalMetadataBackendReporter reporter,
-            final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, final Groups groups) {
+            final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache, final Groups groups,
+            @Named("configure") boolean configure) {
         this.async = async;
         this.connection = connection;
         this.reporter = reporter;
         this.writeCache = writeCache;
         this.groups = groups;
+        this.configure = configure;
     }
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(new ManagedAction<Connection, Void>() {
-            @Override
-            public AsyncFuture<Void> action(Connection reference) throws Exception {
-                return reference.configure();
-            }
-        });
+        return doto(c -> c.configure());
     }
 
     @Override
     public AsyncFuture<Void> start() {
-        return connection.start();
+        final AsyncFuture<Void> future = connection.start();
+
+        if (!configure) {
+            return future;
+        }
+
+        return future.lazyTransform(v -> configure());
     }
 
     @Override

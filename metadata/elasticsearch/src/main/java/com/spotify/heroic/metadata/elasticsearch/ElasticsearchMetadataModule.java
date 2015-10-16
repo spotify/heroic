@@ -143,7 +143,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Singleton
             @Named("configure")
             public boolean configure(HeroicParameters params) {
-                return params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+                return params.contains(HeroicParameters.CONFIGURE) || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
             }
 
             @Provides

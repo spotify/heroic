@@ -116,7 +116,7 @@ public final class BigtableMetricModule implements MetricModule {
             @Singleton
             @Named("configure")
             public boolean configure(final HeroicParameters params) {
-                return params.contains(BIGTABLE_CONFIGURE_PARAM);
+                return params.contains(HeroicParameters.CONFIGURE) || params.contains(BIGTABLE_CONFIGURE_PARAM);
             }
 
             @Provides
