@@ -38,7 +38,7 @@ import lombok.ToString;
 
 @AutoSerialize
 @ToString(of = { "key", "tags" })
-public class Series {
+public class Series implements Comparable<Series> {
     static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String> of();
     static final String EMPTY_STRING = "";
 
@@ -178,5 +178,44 @@ public class Series {
         }
 
         return new Series(key, tags);
+    }
+
+    @Override
+    public int compareTo(Series o) {
+        final int k = key.compareTo(o.getKey());
+
+        if (k != 0) {
+            return k;
+        }
+
+        final Iterator<Map.Entry<String, String>> a = tags.entrySet().iterator();
+        final Iterator<Map.Entry<String, String>> b = o.tags.entrySet().iterator();
+
+        while (a.hasNext() && b.hasNext()) {
+            final Map.Entry<String, String> ae = a.next();
+            final Map.Entry<String, String> be = b.next();
+
+            int kc = ae.getKey().compareTo(be.getKey());
+
+            if (kc != 0) {
+                return kc;
+            }
+
+            int kv = ae.getValue().compareTo(be.getValue());
+
+            if (kv != 0) {
+                return kv;
+            }
+        }
+
+        if (a.hasNext()) {
+            return 1;
+        }
+
+        if (b.hasNext()) {
+            return -1;
+        }
+
+        return 0;
     }
 }

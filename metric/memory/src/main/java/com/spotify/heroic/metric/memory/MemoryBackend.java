@@ -23,11 +23,13 @@ package com.spotify.heroic.metric.memory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Stopwatch;
@@ -40,6 +42,8 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
@@ -66,7 +70,20 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
 
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    private final ConcurrentMap<MemoryKey, NavigableMap<Long, Metric>> storage = new ConcurrentHashMap<>();
+    private static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
+        @Override
+        public int compare(final MemoryKey a, final MemoryKey b) {
+            final int t = a.getSource().compareTo(b.getSource());
+
+            if (t != 0) {
+                return t;
+            }
+
+            return a.getSeries().compareTo(b.getSeries());
+        }
+    };
+
+    private final ConcurrentSkipListMap<MemoryKey, NavigableMap<Long, Metric>> storage = new ConcurrentSkipListMap<>(COMPARATOR);
 
     private final Object $create = new Object();
 
@@ -144,6 +161,45 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     @Override
     public Iterable<BackendEntry> listEntries() {
         return EMPTY_ENTRIES;
+    }
+
+    @Override
+    public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit, final QueryOptions options) {
+        final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
+
+        int index = 0;
+
+        for (final Map.Entry<MemoryKey, ?> e : tail(start).entrySet()) {
+            final MemoryKey m = e.getKey();
+            final BackendKey k = new BackendKey(m.getSeries(), 0, e.getKey().getSource());
+
+            // skip first if defined to make initial range exclusive.
+            if (start != null && k.equals(start)) {
+                continue;
+            }
+
+            if (index++ >= limit) {
+                break;
+            }
+
+            keys.add(k);
+        }
+
+        return async.resolved(new BackendKeySet(keys.build()));
+    }
+
+    private ConcurrentNavigableMap<MemoryKey, NavigableMap<Long, Metric>> tail(BackendKey start) {
+        if (start == null) {
+            return storage;
+        }
+
+        return storage.tailMap(new MemoryKey(start.getType(), start.getSeries()));
+    }
+
+    @Override
+    public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
+        storage.remove(new MemoryKey(key.getType(), key.getSeries()));
+        return async.resolved();
     }
 
     @Data

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.shell.task;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -36,14 +34,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Option;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
@@ -60,7 +55,6 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
-import lombok.Data;
 import lombok.ToString;
 
 @TaskUsage("Delete all data for a set of keys")
@@ -251,22 +245,6 @@ public class DeleteKeys implements ShellTask {
             final QueryOptions options) {
         return group.countKey(k, options)
                 .lazyTransform(count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count)));
-    }
-
-    @Data
-    public static class BackendKeyArgument {
-        private final Series series;
-        private final long base;
-
-        @JsonCreator
-        public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base) {
-            this.series = checkNotNull(series, "series");
-            this.base = checkNotNull(base, "base");
-        }
-
-        public BackendKey toBackendKey() {
-            return new BackendKey(series, base);
-        }
     }
 
     @ToString

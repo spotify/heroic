@@ -31,4 +31,9 @@ import lombok.RequiredArgsConstructor;
 public class BackendKey {
     private final Series series;
     private final long base;
+    private final MetricType type;
+
+    public BackendKey(final Series series, final long base) {
+        this(series, base, MetricType.POINT);
+    }
 }

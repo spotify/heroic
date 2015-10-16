@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -43,6 +44,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryOptions;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -163,15 +165,17 @@ public class CountData implements ShellTask {
     public static class BackendKeyArgument {
         private final Series series;
         private final long base;
+        private final MetricType type;
 
         @JsonCreator
-        public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base) {
+        public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base, @JsonProperty("type") MetricType type) {
             this.series = checkNotNull(series, "series");
             this.base = checkNotNull(base, "base");
+            this.type = Optional.ofNullable(type).orElse(MetricType.POINT);
         }
 
         public BackendKey toBackendKey() {
-            return new BackendKey(series, base);
+            return new BackendKey(series, base, type);
         }
     }
 
