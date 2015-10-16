@@ -36,6 +36,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
@@ -54,6 +55,8 @@ import lombok.Data;
 
 @Data
 public final class BigtableMetricModule implements MetricModule {
+    public static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
+
     public static final String DEFAULT_GROUP = "bigtable";
     public static final String DEFAULT_CLUSTER = "heroic";
     public static final CredentialsBuilder DEFAULT_CREDENTIALS = new ComputeEngineCredentialsBuilder();
@@ -107,6 +110,13 @@ public final class BigtableMetricModule implements MetricModule {
                         });
                     }
                 });
+            }
+
+            @Provides
+            @Singleton
+            @Named("configure")
+            public boolean configure(final HeroicParameters params) {
+                return params.contains(BIGTABLE_CONFIGURE_PARAM);
             }
 
             @Provides

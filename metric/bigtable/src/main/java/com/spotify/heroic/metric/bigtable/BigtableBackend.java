@@ -53,7 +53,7 @@ import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.serializer.SerialWriter;
+import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
@@ -75,22 +75,30 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     private final Serializer<RowKey> rowKeySerializer;
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
+    private final boolean configure;
 
     @Inject
-    public BigtableBackend(final AsyncFramework async, final SerializerFramework serializer,
-            @Named("common") final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
-            final Groups groups) {
+    public BigtableBackend(final AsyncFramework async, @Named("common") final SerializerFramework serializer,
+            final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
+            final Groups groups, @Named("configure") final boolean configure) {
         super(async);
         this.async = async;
         this.serializer = serializer;
         this.rowKeySerializer = rowKeySerializer;
         this.connection = connection;
         this.groups = groups;
+        this.configure = configure;
     }
 
     @Override
     public AsyncFuture<Void> start() {
-        return connection.start();
+        final AsyncFuture<Void> future = connection.start();
+
+        if (!configure) {
+            return future;
+        }
+
+        return future.lazyTransform(v -> configure());
     }
 
     @Override
@@ -366,13 +374,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
-        final ByteArrayOutputStream byteArray = new ByteArrayOutputStream();
-
-        try (final SerialWriter writer = this.serializer.writeBytes()) {
+        try (final BytesSerialWriter writer = this.serializer.writeBytes()) {
             serializer.serialize(writer, rowKey);
+            return ByteString.copyFrom(writer.toByteArray());
         }
-
-        return ByteString.copyFrom(byteArray.toByteArray());
     }
 
     static long base(long timestamp) {

@@ -70,6 +70,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final CredentialOptions credentials = this.credentials.build();
         final BigtableOptions options = new BigtableOptions.Builder().setProjectId(project).setZoneId(zone)
                 .setClusterId(cluster).setUserAgent(USER_AGENT)
+                .setDataChannelCount(64)
                 .setCredentialOptions(credentials).build();
 
         final BigtableSession session = new BigtableSession(options, executorService);

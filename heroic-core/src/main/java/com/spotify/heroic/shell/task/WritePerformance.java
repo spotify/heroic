@@ -227,6 +227,7 @@ public class WritePerformance implements ShellTask {
 
             @Override
             public void failed(Throwable cause) throws Exception {
+                cause.printStackTrace(out);
                 errors.incrementAndGet();
                 check();
             }

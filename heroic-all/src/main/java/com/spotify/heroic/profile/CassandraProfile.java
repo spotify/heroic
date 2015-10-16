@@ -86,8 +86,7 @@ public class CassandraProfile extends HeroicProfileBase {
                         .schema(schema)
                         .build()
                     ))
-            )
-            .shellServer(ShellServerModule.builder());
+            );
         // @formatter:on
     }
 
