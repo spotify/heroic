@@ -1,0 +1,152 @@
+<h2>Metric Configuration</h2>
+
+<p>
+  The metric backend is the one responsible for storing and fetching metrics to, and from various backends.
+</p>
+
+<p>
+  The following is an example configuration showcasing all options.
+</p>
+
+<codeblock language="yaml">
+metrics:
+  backends:
+    - type: cassandra
+      groups: a
+      seeds:
+        - localhost
+    - type: cassandra
+      groups: b
+      seeds:
+        - localhost
+  defaultBackends:
+    - a
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>backends</code></td>
+    <td>A list of metric backend configurations</td>
+  </tr>
+  <tr>
+    <td><code>defaultBackends</code></td>
+    <td>
+      A list of backend group names that are part of the default group.
+      The default group is the group of backends that are used for operations unless a specified group is used.
+      The default behaviour is to include <em>all configured backends</em> in the default group.
+    </td>
+  </tr>
+  <tr>
+    <td><code>groupLimit</code></td>
+    <td>
+      A number indicating the maximum number of distinct groups a single result group may contains.
+      The default limit is 500.
+    </td>
+  </tr>
+  <tr>
+    <td><code>seriesLimit</code></td>
+    <td>
+      A number indicating the maximum amount of time series a single request is allowed to fetch.
+      The default limit is 10000.
+    </td>
+  </tr>
+  <tr>
+    <td><code>aggregationLimit</code></td>
+    <td>
+      A number indicating the maximum number of data points a single aggregation is allowed to output.
+      The default limit is 10000.
+    </td>
+  </tr>
+  <tr>
+    <td><code>dataLimit</code></td>
+    <td>
+      A number indicating the maximum number of samples a single request may fetch from the backends.
+      The default limit is 20000000 (20 million).
+    </td>
+  </tr>
+  <tr>
+    <td><code>fetchParallelism</code></td>
+    <td>
+      A number indicating how many fetches are allowed to be performed <em>in parallel</em> for each request.
+      The default value is 100.
+    </td>
+  </tr>
+</table>
+
+<h3>Metric Backends</h3>
+
+<p>
+  Heroic is capable of storing metrics in multiple different ways.
+  The following is a list of all available metric backends, and their configuration options.
+</p>
+
+<h4>Datastax Cassandra</h4>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code>"datastax"</code></td>
+  </tr>
+  <tr>
+    <td><code>id</code></td>
+    <td>
+      Specify which id this backend has that is used to uniquely identify this backend.
+      If not specified, the id will be generated.
+    </td>
+  </tr>
+  <tr>
+    <td><code>groups</code></td>
+    <td>
+      Specify which group, or list groups, this backend should be part of.
+    </td>
+  </tr>
+  <tr>
+    <td><code>seeds</code></td>
+    <td>
+      A list of seed hosts to use when connecting to a C* cluster.
+      Defaults to <code language="json">["localhost"]</code>
+    </td>
+  </tr>
+  <tr>
+    <td><code>schema</code></td>
+    <td>
+      Configures which data schema to use.
+      Defaults to <a ui-sref="{'#': 'schema-ng'}">Next Generation</a>.
+    </td>
+  </tr>
+</table>
+
+<h5 id="schema-ng">Next Generation Schema</h5>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code language="json">"ng"</code></td>
+  </tr>
+  <tr>
+    <td><code>keyspace</code></td>
+    <td>Name of the keyspace to use.</td>
+  </tr>
+</table>
+
+<p>
+  The next version of the schema, built with no strings attached to previous implementations.
+</p>
+
+<h5 id="schema-legacy">Legacy Schema</h5>
+
+<table class="table">
+  <tr>
+    <td><code>type</code></td>
+    <td><code language="json">"legacy"</code></td>
+  </tr>
+  <tr>
+    <td><code>keyspace</code></td>
+    <td>Name of the keyspace to use.</td>
+  </tr>
+</table>
+
+<p>
+  The initial schema that was used since the dawn of time.
+  It was inherited, in part, from some of the key composition utilities made available by <em>datastax</em>, making it a bit awkward to work with for other utilities.
+</p>

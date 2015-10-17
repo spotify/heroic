@@ -5,17 +5,125 @@
 </p>
 
 <p>
-  An heroic instance can be configured to listen for shell connections, which will allow an operator to connect and run tasks.
+  An heroic instance can be configured to listen for shell connections.
+  This will allow an administrator to connect and run <em>tasks</em> on the server.
+</p>
+
+<p>
+  Tasks are small actions indended to help an administrator manage the heroic instances.
 </p>
 
 <p>
   You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a ui-sref="docs.config">heroic.yml</a>.
+  For more details, see <a ui-sref="^.config.shell_server">Shell Server Configuration</a>.
 </p>
 
 <codeblock language="yaml">
 shellServer: {}
 </codeblock>
 
+<p>
+  The shell can be run in two different modes; <a ui-sref="{'#': 'remote-shell'}"><em>remote</em></a>, and <a ui-sref="{'#': 'standalone-shell'}"><em>standalone</em></a>.
+  It is also possible to activate <a ui-sref="{'#': 'profiles'}"><em>profiles</em></a>, which effects the configuration of the service.
+</p>
+
+<p>
+  In <em>remote</em> mode, you connect to an already running heroic instance which is <a ui-sref="^.config.shell_server">configured to accept shell connection</a>.
+</p>
+
+<p>
+  In <em>standalone</em> mode, you can setup a new heroic instance on-the-fly with a given configuration.
+  The shell will then be connected to that instance, as-if you were running in remote mode.
+</p>
+
+<p>
+  The shell can be started using the <code>com.spotify.heroic.HeroicShell</code> class.
+  Assuming you have heroic in your class path, the following is an example of how to do that.
+</p>
+
 <codeblock language="bash">
-$ java com.spotify.heroic.HeroicShell --connect &lt;host&gt;
+$ java com.spotify.heroic.HeroicShell --help
 </codeblock>
+
+<p>
+  From now on we will be referring to starting the shell from the heroic project directory, which includes the helper script <code language="bash">tools/heroic-shell</code>.
+</p>
+
+<h3 id="remote-shell">Remote Shell</h3>
+
+<p>
+  Assuming you are in the heroic project directory, you can invoke the shell like the following.
+</p>
+
+<codeblock language="bash">
+$ tools/heroic-shell --connect &lt;host&gt;[:port]
+</codeblock>
+
+<p>
+  At this point you should be connected to the heroic instance, and can invoke any tasks available in it.
+</p>
+
+<h3 id="standalone-shell">Standalone Shell</h3>
+
+<p>
+  Standalone shells includes the heroic service running in the background and the shell is directly connected to this instance.
+  This is typically useful when trying out specific heroic features, specifically in combination with the <a ui-sref="{'#': 'memory-profile'}">memory profile</a>
+</p>
+
+<h3 id="profiles">Profiles</h3>
+
+<p>
+  Profiles are small pieces of configuration which can be activated with the <code language="bash">-P &lt;name&gt;</code> switch.<br />
+  Extra options can be passed into profiles using the <code language="bash">-X &lt;option&gt;[=&lt;value&gt;]</code> switch.
+</p>
+
+<p>
+  All available set of profiles and options can be found by at the end of the help command (<code language="bash">--help</code>).
+</p>
+
+<codeblock language="bash">
+$ tools/heroic-shell --help
+... skip documentation about switches
+
+Available Extra Parameters:
+  configure
+      Automatically configure all backends.
+  datastax.configure
+      Automatically configure the datastax backend
+  elasticsearch.configure
+      Automatically configure the Elasticsearch backend
+  elasticsearch.configure
+      Automatically configure the Elasticsearch backend
+
+Available Profiles (activate with: -P &lt;profile&gt;):
+  generated - Configures a metric backend containing generated data (does 
+  not support writes)
+
+  memory - Configures in-memory backends for everything (useful for 
+  integration/performance testing)
+
+  cassandra - Configures a metric backend for Cassandra
+    cassandra.configure
+        If set, will cause the cluster to be automatically configured
+    cassandra.type=&lt;type&gt;
+        Type of backend to use, valid values are: legacy, ng
+    cassandra.seeds=&lt;host&gt;[:&lt;port&gt;][,..]
+        Seeds to use when configuring backend
+</codeblock>
+
+<h4 id="memory-profile">Memory Profile</h4>
+
+<p>
+  The <em>memory</em> profile is special, since it configures a complete service instance <em>in memory</em>.
+  It's a great way for testing out heroic.
+  You can start the memory profile with the following command.
+</p>
+
+<codeblock language="bash">
+$ tools/heroic-shell --server -P memory -X configure
+</codeblock>
+
+<p>
+  <code language="bash">--server</code> means that the shell will start heroic in server mode, which will accept http requests on port 8080.<br />
+  <code language="bash">-X configure</code> will cause all backends to be automatically configured, saving you the need to do it yourself with the <code>configure</code> task.
+</p>
