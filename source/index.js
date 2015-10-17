@@ -16,25 +16,63 @@
     'hdoc.api'
   ]);
 
+  var LINESEP = /[\n]/;
+
+  function stripText($element, removeIndent) {
+    removeIndent = removeIndent || false;
+
+    var text = $element.text();
+    var prefix = null;
+
+    if (removeIndent) {
+      var previous = $element[0].previousSibling;
+
+      // if previous node is text.
+      if (previous !== null && previous.nodeType === 3) {
+        var parts = previous.nodeValue.split(LINESEP);
+        prefix = parts[parts.length - 1];
+      }
+    }
+
+    var lines = text.split(LINESEP);
+
+    var result;
+
+    if (prefix === null) {
+      result = lines;
+    } else {
+      result = [];
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+
+        if (line.length < prefix.length) {
+          result.push(line);
+          continue;
+        }
+
+        result.push(line.substring(prefix.length, line.length));
+      }
+    }
+
+    var index = 0;
+
+    while (result[index] === "") {
+      index++;
+    }
+
+    return result.slice(index).join('\n');
+  }
+
   function HeroicDocumentationCtrl() {
   }
 
   m.controller('HeroicDocumentationCtrl', HeroicDocumentationCtrl);
 
-  m.config(function($stateProvider, $urlRouterProvider, $locationProvider, githubProvider) {
+  m.config(function($stateProvider, $urlRouterProvider, $locationProvider, githubProvider, $uiViewScrollProvider) {
     $locationProvider.html5Mode(false).hashPrefix('!');
     $urlRouterProvider.otherwise("/index");
     githubProvider.setUrl('https://github.com/spotify/heroic');
-  });
-
-  m.run(function($rootScope) {
-    $rootScope.$on('$stateChangeStart', function() {
-      console.log('start', arguments);
-    });
-
-    $rootScope.$on('$stateChangeError', function() {
-      console.log('error', arguments);
-    });
   });
 
   m.provider('github', function() {
@@ -69,6 +107,7 @@
         if (!$attr.language)
           return;
 
+        $element.text(stripText($element));
         $element.addClass('language-' + $attr.language);
         Prism.highlightElement($element[0]);
       }
@@ -108,6 +147,26 @@
     };
   });
 
+  m.directive('id', function($state) {
+    return {
+      restrict: 'A',
+      link: function($scope, $element, $attr) {
+        var $glyph = angular.element('<span class="glyphicon glyphicon-link">');
+
+        var $ln = angular.element('<a class="link-to">');
+        $ln.append($glyph);
+
+        $element.append($ln);
+
+        $scope.$watch(function() {
+          return $attr.id;
+        }, function(newId) {
+          $ln.attr('href', $state.href('.', {'#': newId}));
+        });
+      }
+    };
+  });
+
   /**
    * Helper directive for creating indented code blocks.
    *
@@ -117,40 +176,6 @@
    * @param language Specify the language of the code block.
    */
   m.directive('codeblock', function($compile) {
-    var LINESEP = /[\n\r]+/;
-
-    function stripText($element) {
-      var text = $element.text();
-      var previous = $element[0].previousSibling;
-      var prefix = null;
-
-      // if previous node is text.
-      if (previous.nodeType === 3) {
-        var parts = previous.nodeValue.split(LINESEP);
-        prefix = parts[parts.length - 1];
-      }
-
-      if (prefix !== null) {
-        var lines = text.split(LINESEP);
-        var result = [];
-
-        for (var i = 0; i < lines.length; i++) {
-          var line = lines[i];
-
-          if (line.length < prefix.length) {
-            result.push(line);
-            continue;
-          }
-
-          result.push(line.substring(prefix.length, line.length));
-        }
-
-        text = result.join('\n');
-      }
-
-      return text;
-    }
-
     return {
       link: function($scope, $element, $attr) {
         var children = $element.children();
@@ -174,7 +199,7 @@
           return;
         }
 
-        var text = stripText($element);
+        var text = stripText($element, true);
 
         $element.replaceWith(pre);
         code.text(text);

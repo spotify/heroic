@@ -13,6 +13,6 @@
     "gulp-autoprefixer": "2.2.0",
     "gulp-html2js": "0.0.1",
     "gulp-ng-annotate": "^0.5.2",
-    "lingon": "2.2.3"
+    "lingon": "2.2.x"
   }
 }

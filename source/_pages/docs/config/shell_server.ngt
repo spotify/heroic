@@ -1,0 +1,5 @@
+<h2>Shell Server Configuration</h2>
+
+<p>
+  Heroic supports that <a ui-sref="^.^.shell">remote shells</a> establish connections to perform administration.
+</p>

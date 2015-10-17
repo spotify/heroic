@@ -24,6 +24,32 @@
       </li>
 
       <li ui-sref-active="active">
+        <a ui-sref="docs.config.index">Configuring Heroic</a>
+
+        <ul class="nav">
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.cluster">Cluster</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.metrics">Metrics</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.metadata">Metadata</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.suggest">Suggestions</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.shell_server">Shell Server</a>
+          </li>
+        </ul>
+      </li>
+
+      <li ui-sref-active="active">
         <a ui-sref="docs.data_model">Data Model</a>
       </li>
 
@@ -33,6 +59,10 @@
 
       <li ui-sref-active="active">
         <a ui-sref="docs.api">API</a>
+      </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.shell">Shell</a>
       </li>
     </ul>
   </div>

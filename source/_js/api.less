@@ -1,6 +1,30 @@
 .api-endpoint {
   margin: 10px 0;
 
+  p {
+    margin: 14px 0;
+  }
+
+  .heading {
+    padding: 10px;
+
+    &.get {
+      background-color: #B9D7B7;
+    }
+
+    &.post {
+      background-color: #AAA5BE;
+    }
+
+    &.delete {
+      background-color: #FDD7D8;
+    }
+
+    .path {
+      font-family: @font-family-monospace;
+    }
+  }
+
   .status {
     font-family: @font-family-monospace;
   }

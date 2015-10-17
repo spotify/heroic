@@ -70,7 +70,7 @@
           $scope.structural = $attr.kind === 'structural';
           $scope.name = $attr.name || null;
           $scope.id = $scope.name !== null ? nameToAnchor($scope.name) : null;
-          $scope.showStructureDoc = $scope.name === null;
+          $scope.showStructureDoc = true;
         };
       },
       controller: function ApiTypeCtrl($scope) {
@@ -205,7 +205,7 @@
           curl += " http://localhost:8080" + endpoint.path;
 
           if (!isEmpty)
-            curl += " -d '" + $scope.curlData + "'";
+            curl += " \\\n  -d '" + $scope.curlData + "'";
 
           return $sce.trustAsHtml(curl);
         };

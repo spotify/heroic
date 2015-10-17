@@ -1,0 +1,21 @@
+<h2>Heroic Shell</h2>
+
+<p>
+  Heroic Shell is the administration tool of heroic.
+</p>
+
+<p>
+  An heroic instance can be configured to listen for shell connections, which will allow an operator to connect and run tasks.
+</p>
+
+<p>
+  You can configure an heroic instance to enable <em>local</em> shell connections by adding the following snippet to your <a ui-sref="docs.config">heroic.yml</a>.
+</p>
+
+<codeblock language="yaml">
+shellServer: {}
+</codeblock>
+
+<codeblock language="bash">
+$ java com.spotify.heroic.HeroicShell --connect &lt;host&gt;
+</codeblock>

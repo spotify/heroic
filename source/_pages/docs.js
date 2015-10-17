@@ -9,7 +9,14 @@
     '_pages/docs/getting_started/compile.ngt',
     '_pages/docs/data_model.ngt',
     '_pages/docs/filter_dsl.ngt',
-    '_pages/docs/api.ngt'
+    '_pages/docs/api.ngt',
+    '_pages/docs/shell.ngt',
+    '_pages/docs/config.ngt',
+    '_pages/docs/config/cluster.ngt',
+    '_pages/docs/config/metadata.ngt',
+    '_pages/docs/config/metrics.ngt',
+    '_pages/docs/config/suggest.ngt',
+    '_pages/docs/config/shell_server.ngt'
   ]);
 
   function DocumentationCtrl() {
@@ -67,6 +74,39 @@
       .state('docs.api', {
         url: '/api',
         templateUrl: '_pages/docs/api.ngt'
+      })
+      .state('docs.shell', {
+        url: '/shell',
+        templateUrl: '_pages/docs/shell.ngt'
+      })
+      .state('docs.config.index', {
+        url: '',
+        templateUrl: '_pages/docs/config.ngt'
+      })
+      .state('docs.config', {
+        abstract: true,
+        url: '/config',
+        template: '<ui-view></ui-view>'
+      })
+      .state('docs.config.cluster', {
+        url: '/cluster',
+        templateUrl: '_pages/docs/config/cluster.ngt'
+      })
+      .state('docs.config.metrics', {
+        url: '/metrics',
+        templateUrl: '_pages/docs/config/metrics.ngt'
+      })
+      .state('docs.config.metadata', {
+        url: '/metadata',
+        templateUrl: '_pages/docs/config/metadata.ngt'
+      })
+      .state('docs.config.suggest', {
+        url: '/suggest',
+        templateUrl: '_pages/docs/config/suggest.ngt'
+      })
+      .state('docs.config.shell_server', {
+        url: '/shell_server',
+        templateUrl: '_pages/docs/config/shell_server.ngt'
       });
   });
 })();

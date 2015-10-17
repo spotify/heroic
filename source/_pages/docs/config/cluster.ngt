@@ -1,0 +1,131 @@
+<h2>Cluster Configuration</h2>
+
+<p>
+  Cluster configuration is located in the <code>cluster</code> section of the configuration.
+</p>
+
+<p>
+  A typical configuration looks something like this.
+</p>
+
+<codeblock language="yaml">
+cluster:
+  tags:
+    site: london
+  protocols:
+    - type: nativerpc
+  capabilities:
+    - QUERY
+  discovery:
+    type: static
+    nodes:
+      - "nativerpc://heroic-stockholm-a"
+      - "nativerpc://heroic-stockholm-b"
+      - "nativerpc://heroic-london-a"
+      - "nativerpc://heroic-london-b"
+</codeblock>
+
+<h3><code>tags</code></h3>
+
+<p>
+  Defines a set of tags that identifies which part of the cluster this node belongs to.
+  It is an object like <code language="json">{"site": "london"}</code>, and any other nodes in the cluster which have the exact same set of tags are assumed to have access to the same data set.
+</p>
+
+<h3><code>protocols</code></h3>
+
+<p>
+  Contains a list of protocols that this node can speak.
+</p>
+
+<h4>nativerpc</h4>
+
+<codeblock language="yaml">
+host: &lt;host&gt;
+port: &lt;port&gt;
+</codeblock>
+
+<table class="table">
+  <tr>
+    <td><code>host</code></td>
+    <td>the address of the interface that this node will bind to.</td>
+  </tr>
+  <tr>
+    <td><code>port</code></td>
+    <td>the port number that this node will bind to.</td>
+  </tr>
+</table>
+
+<p>
+  nativerpc is a protocol specifically designed to combat timeout and keep-alive issues that exists in HTTP.
+  A TCP connection might decide to stall for arbitrary periods of time, and most HTTP clients have a hard time detecting if this happens <em>after</em> a request has been received by the server.
+</p>
+
+<p>
+  A typical HTTP client supports two times of timeouts, <em>connection</em> and <em>read</em>.
+</p>
+
+<ul>
+  <li>The <em>connection</em> timeout is typically the time it takes to establish an open TCP connection.</li>
+  <li>The <em>read</em> timeout is typically the time it takes to send and receive a response from the remote server.</li>
+</ul>
+
+<p>
+  A common error scenario arises when a client cannot predict how long a request will be running for.
+  Given that we are dealing with cross-site traffic this is very bad, because a broken flow will leave the client hanging until it triggers its <em>read</em> timeout.
+</p>
+
+<p>
+  <b>nativerpc</b> solves this by using <em>heartbeats</em>.
+  The client communicates at which interval it expects to receive heartbeats, and as long as the server is actively processing the request it is expected to keep sending them.
+</p>
+
+<p>
+  This simple mechanism allows the client to detect broken flows, regardless of cause.
+  And allows the request to fail faster than what is permitted by HTTP.
+</p>
+
+<h3><code>capabilities</code></h3>
+
+<p>
+  This is a list of capabilities that is supported by this node.
+  Capabilities restrict what other nodes perceive this node to be capable of doing.
+  The current set of capabilities available right now are.
+</p>
+
+<ul>
+  <li><code>QUERY</code> - the node is capable of receiving queries, this needs to be set if you intend for this node to receive queries over the cluster.</li>
+  <li><code>WRITE</code> - the node is capable of receiving writes, this needs to be set if you intend for this node to receive writes over the cluster.</li>
+</ul>
+
+<h3><code>discovery</code></h3>
+
+<p>
+  The mechanism used to discover nodes in the cluster.
+</p>
+
+<h4>static</h4>
+
+<codeblock language="yaml">
+nodes:
+  - &lt;url&gt;
+  - ..
+</codeblock>
+
+<table class="table">
+  <tr>
+    <th>nodes</th>
+    <td>
+      Is the list of nodes that this node will attempt to add to its cluster registry.
+      A valid url has the form <code>protocol://host[:port]</code>.
+    </td>
+  </tr>
+</table>
+
+<p>
+  Static is the simplest possible form of discovery.
+
+  It takes a list of nodes that may, or may not be reachable at the moment.
+
+  This list will be queried at a given interval, and any that responds to a metadata request will be added to the local list of known members.
+</p>

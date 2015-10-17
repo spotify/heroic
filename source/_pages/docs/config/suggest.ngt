@@ -1,0 +1,14 @@
+<h2>Configuring Suggestions</h2>
+
+<p>
+  The ability to perform suggestions is an important usability feature.
+  It makes the difference for your system to be a complete black box, to giving your developers the ability to find and make use of time series on their own.
+</p>
+
+<p>
+  Suggestions is an optional feature of heroic.
+</p>
+
+<p>
+  This section will document how suggestions are configured in heroic.
+</p>

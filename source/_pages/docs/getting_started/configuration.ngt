@@ -155,15 +155,13 @@ cluster:
   metrics from Cassandra, and uses Elasticsearch for metadata and suggestions.
 </p>
 
-<pre><code language="yaml">
+<codeblock language="yaml">
 # heroic.yaml
 port: 8080
 
 cluster:
   protocols:
     - type: nativerpc
-  capabilities:
-    - QUERY
   discovery:
     type: static
     nodes:
@@ -179,9 +177,6 @@ metadata:
   backends:
     - type: elasticsearch
       connection:
-        index:
-          type: rotating
-          pattern: heroic-metadata-v1-%s
         seeds:
           - localhost
 
@@ -189,12 +184,9 @@ suggest:
   backends:
     - type: elasticsearch
       connection:
-        index:
-          type: rotating
-          pattern: heroic-suggest-v1-%s
         seeds:
           - localhost
-</pre></code>
+</codeblock>
 
 <h4 id="heroic-data-node">Consumer Node</h4>
 

@@ -1,0 +1,18 @@
+<h2>Configuration</h2>
+
+<p>
+  This section will go through the available configuration options in detail.
+</p>
+
+<p>
+  Heroic is divided up into a few components, each whose configuration will effect the service in different ways.
+  These components each have their own documentation sub-section, and they are the following.
+</p>
+
+<ul>
+  <li><a ui-sref="^.cluster">cluster - responsible for federating requests across clusters</a></li>
+</ul>
+
+<p class="next">
+  In the next section we will talk about the <a ui-sref="^.^.data_model">data model of Heroic</a>.
+</p>

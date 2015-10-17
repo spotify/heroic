@@ -75,7 +75,7 @@
   </api-response>
 </api-endpoint>
 
-<api-endpoint path="/query/metrics" method="POST">
+<api-endpoint path="/query" method="POST">
   <p>
     Query and aggregate metrics.
   </p>
@@ -128,8 +128,6 @@
   </api-accept>
 
   <api-response>
-    <h4>Example Response</h4>
-
     <api-type>
       <api-field name="range" type-json="{start: <number>, end: <number}">
         The range in time for which to query
@@ -152,6 +150,8 @@
         to be inconsistent.
       </api-field>
     </api-type>
+
+    <h4>Example Response</h4>
 
     <codeblock language="json">
     {
@@ -191,7 +191,7 @@
 </api-endpoint>
 
 
-<api-endpoint path="/write/metrics" method="POST">
+<api-endpoint path="/write" method="POST">
   <p>
     Used for writing data into heroic directly.
   </p>
