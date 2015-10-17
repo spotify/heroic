@@ -47,7 +47,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicParameters;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -142,8 +142,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Provides
             @Singleton
             @Named("configure")
-            public boolean configure(HeroicParameters params) {
-                return params.contains(HeroicParameters.CONFIGURE) || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+            public boolean configure(ExtraParameters params) {
+                return params.contains(ExtraParameters.CONFIGURE) || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
             }
 
             @Provides

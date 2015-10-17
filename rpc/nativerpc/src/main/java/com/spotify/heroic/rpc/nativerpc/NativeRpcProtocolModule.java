@@ -33,7 +33,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicOptions;
+import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 
@@ -75,7 +75,7 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     }
 
     @Override
-    public Module module(final Key<RpcProtocol> key, final HeroicOptions options) {
+    public Module module(final Key<RpcProtocol> key, final HeroicConfiguration options) {
         return new PrivateModule() {
             @Provides
             @Singleton

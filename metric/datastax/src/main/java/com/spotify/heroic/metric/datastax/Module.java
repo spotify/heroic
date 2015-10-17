@@ -19,19 +19,38 @@
  * under the License.
  */
 
-package com.spotify.heroic.cluster.discovery.simple;
+package com.spotify.heroic.metric.datastax;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
+import java.util.List;
 
 import javax.inject.Inject;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.ParameterSpecification;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext context;
+public class Module implements HeroicModule {
+    @Override
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
+
+            public void setup() {
+                config.registerType("datastax", DatastaxMetricModule.class);
+            };
+        };
+    }
 
     @Override
-    public void setup() {
-        context.registerType("static", StaticListDiscoveryModule.class);
+    public List<ParameterSpecification> parameters() {
+        // @formatter:off
+        return ImmutableList.of(
+            parameter(DatastaxMetricModule.DATASTAX_CONFIGURE, "Automatically configure the datastax backend")
+        );
+        // @formatter:on
     }
 }

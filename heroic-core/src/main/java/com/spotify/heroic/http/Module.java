@@ -35,27 +35,32 @@ import com.spotify.heroic.http.status.StatusResource;
 import com.spotify.heroic.http.utils.UtilsResource;
 import com.spotify.heroic.http.write.WriteResource;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext config;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        config.resource(HeroicResource.class);
-        config.resource(WriteResource.class);
-        config.resource(UtilsResource.class);
-        config.resource(StatusResource.class);
-        config.resource(RenderResource.class);
-        config.resource(QueryResource.class);
-        config.resource(MetadataResource.class);
-        config.module(new MetadataResourceModule());
-        config.resource(ClusterResource.class);
-        config.resource(MetricsResource.class);
-        config.resource(ParserResource.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
 
-        config.resource(ErrorMapper.class);
-        config.resource(ParseExceptionMapper.class);
-        config.resource(CustomExceptionMapper.class);
-        config.resource(UnrecognizedPropertyExceptionMapper.class);
+            @Override
+            public void setup() {
+                config.resource(HeroicResource.class);
+                config.resource(WriteResource.class);
+                config.resource(UtilsResource.class);
+                config.resource(StatusResource.class);
+                config.resource(RenderResource.class);
+                config.resource(QueryResource.class);
+                config.resource(MetadataResource.class);
+                config.module(new MetadataResourceModule());
+                config.resource(ClusterResource.class);
+                config.resource(MetricsResource.class);
+                config.resource(ParserResource.class);
+
+                config.resource(ErrorMapper.class);
+                config.resource(ParseExceptionMapper.class);
+                config.resource(CustomExceptionMapper.class);
+                config.resource(UnrecognizedPropertyExceptionMapper.class);
+            }
+        };
     }
 }

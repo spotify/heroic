@@ -38,7 +38,7 @@ public class CoalesceService {
 
         if (params.help) {
             parser.printUsage(System.err);
-            HeroicModules.printProfileUsage(new PrintWriter(System.err), "-P");
+            HeroicModules.printAllUsage(new PrintWriter(System.err), "-P");
             System.exit(0);
             return;
         }

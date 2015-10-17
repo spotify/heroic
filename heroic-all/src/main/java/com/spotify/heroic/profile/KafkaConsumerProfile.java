@@ -21,14 +21,16 @@
 
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import java.util.List;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicParameters;
-import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.kafka.KafkaConsumerModule;
 
@@ -36,7 +38,7 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
     private final Splitter splitter = Splitter.on(",").trimResults();
 
     @Override
-    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
+    public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final ImmutableMap.Builder<String, String> config = ImmutableMap.builder();
 
         config.put("zookeeper.connect", params.require("kafka.zookeeper"));
@@ -60,13 +62,13 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
     }
 
     @Override
-    public List<Option> options() {
+    public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            HeroicProfile.option("kafka.zookeeper", "Connection string to Zookeeper", "<url>[,..][/prefix]"),
-            HeroicProfile.option("kafka.group", "Consumer Group", "<group>"),
-            HeroicProfile.option("kafka.topics", "Topics to consume from", "<topic>[,..]"),
-            HeroicProfile.option("kafka.schema", "Schema Class to use", "<schema>")
+            parameter("kafka.zookeeper", "Connection string to Zookeeper", "<url>[,..][/prefix]"),
+            parameter("kafka.group", "Consumer Group", "<group>"),
+            parameter("kafka.topics", "Topics to consume from", "<topic>[,..]"),
+            parameter("kafka.schema", "Schema Class to use", "<schema>")
         );
         // @formatter:on
     }

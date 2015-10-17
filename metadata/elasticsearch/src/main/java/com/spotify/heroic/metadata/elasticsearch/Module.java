@@ -19,19 +19,39 @@
  * under the License.
  */
 
-package com.spotify.heroic.consumer.kafka;
+package com.spotify.heroic.metadata.elasticsearch;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
+import java.util.List;
 
 import javax.inject.Inject;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.ParameterSpecification;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext configurationContext;
+public class Module implements HeroicModule {
+    @Override
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext context;
+
+            @Override
+            public void setup() {
+                context.registerType("elasticsearch", ElasticsearchMetadataModule.class);
+            }
+        };
+    }
 
     @Override
-    public void setup() {
-        configurationContext.registerType("kafka", KafkaConsumerModule.Builder.class);
+    public List<ParameterSpecification> parameters() {
+        // @formatter:off
+        return ImmutableList.of(
+            parameter("elasticsearch.configure", "Automatically configure the Elasticsearch backend")
+        );
+        // @formatter:on
     }
 }

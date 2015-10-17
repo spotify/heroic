@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,15 +35,14 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicParameters;
-import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.legacy.LegacySchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
-import com.spotify.heroic.shell.ShellServerModule;
 
 public class CassandraProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
@@ -54,7 +55,7 @@ public class CassandraProfile extends HeroicProfileBase {
     }
 
     @Override
-    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
+    public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final boolean configure = params.contains("cassandra.configure");
         final Optional<String> type = params.get("cassandra.type");
 
@@ -98,12 +99,12 @@ public class CassandraProfile extends HeroicProfileBase {
     private static final Joiner parameters = Joiner.on(", ");
 
     @Override
-    public List<Option> options() {
+    public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            HeroicProfile.option("cassandra.configure", "If set, will cause the cluster to be automatically configured"),
-            HeroicProfile.option("cassandra.type", "Type of backend to use, valid values are: " + parameters.join(types.keySet()), "<type>"),
-            HeroicProfile.option("cassandra.seeds", "Seeds to use when configuring backend", "<host>[:<port>][,..]")
+            parameter("cassandra.configure", "If set, will cause the cluster to be automatically configured"),
+            parameter("cassandra.type", "Type of backend to use, valid values are: " + parameters.join(types.keySet()), "<type>"),
+            parameter("cassandra.seeds", "Seeds to use when configuring backend", "<host>[:<port>][,..]")
         );
         // @formatter:on
     }

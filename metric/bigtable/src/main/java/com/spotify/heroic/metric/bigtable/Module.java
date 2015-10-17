@@ -19,19 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.astyanax;
+package com.spotify.heroic.metric.bigtable;
 
 import javax.inject.Inject;
 
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext config;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        config.registerType("astyanax", AstyanaxMetricModule.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
+
+            @Override
+            public void setup() {
+                config.registerType("bigtable", BigtableMetricModule.class);
+            }
+        };
     }
 }

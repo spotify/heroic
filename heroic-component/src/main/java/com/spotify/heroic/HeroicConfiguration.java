@@ -1,6 +1,6 @@
 package com.spotify.heroic;
 
-public interface HeroicOptions {
+public interface HeroicConfiguration {
     /**
      * Local metric backends are disabled.
      */

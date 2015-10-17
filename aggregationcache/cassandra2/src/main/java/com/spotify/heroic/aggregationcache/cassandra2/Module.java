@@ -19,19 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.memory;
+package com.spotify.heroic.aggregationcache.cassandra2;
 
 import javax.inject.Inject;
 
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext config;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        config.registerType("generated", MemoryMetricModule.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext configurationContext;
+
+            @Override
+            public void setup() {
+                configurationContext.registerType("cassandra2", Cassandra2AggregationCacheBackendModule.class);
+            }
+        };
     }
 }

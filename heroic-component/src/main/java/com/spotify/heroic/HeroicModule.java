@@ -21,6 +21,18 @@
 
 package com.spotify.heroic;
 
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
+
 public interface HeroicModule {
-    void setup();
+    public Entry setup();
+
+    public interface Entry {
+        public void setup();
+    }
+
+    default public List<ParameterSpecification> parameters() {
+        return ImmutableList.of();
+    }
 }

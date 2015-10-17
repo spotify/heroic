@@ -19,19 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.datastax;
+package com.spotify.heroic.consumer.kafka;
 
 import javax.inject.Inject;
 
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext config;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        config.registerType("datastax", DatastaxMetricModule.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext configurationContext;
+
+            @Override
+            public void setup() {
+                configurationContext.registerType("kafka", KafkaConsumerModule.Builder.class);
+            }
+        };
     }
 }

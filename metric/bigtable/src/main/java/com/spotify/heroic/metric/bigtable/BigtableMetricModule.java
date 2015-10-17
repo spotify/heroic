@@ -36,7 +36,7 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicParameters;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
@@ -115,8 +115,8 @@ public final class BigtableMetricModule implements MetricModule {
             @Provides
             @Singleton
             @Named("configure")
-            public boolean configure(final HeroicParameters params) {
-                return params.contains(HeroicParameters.CONFIGURE) || params.contains(BIGTABLE_CONFIGURE_PARAM);
+            public boolean configure(final ExtraParameters params) {
+                return params.contains(ExtraParameters.CONFIGURE) || params.contains(BIGTABLE_CONFIGURE_PARAM);
             }
 
             @Provides

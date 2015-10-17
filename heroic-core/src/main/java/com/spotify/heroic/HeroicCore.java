@@ -98,7 +98,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RequiredArgsConstructor(access=AccessLevel.PRIVATE)
-public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
+public class HeroicCore implements HeroicConfiguration, HeroicReporterConfiguration {
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
 
@@ -128,10 +128,10 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
      * Built-in modules that should always be loaded.
      */
     // @formatter:off
-    private static final Class<?>[] BUILTIN_MODULES = new Class<?>[] {
-        com.spotify.heroic.aggregation.Entry.class,
-        com.spotify.heroic.filter.Entry.class,
-        com.spotify.heroic.http.Entry.class
+    private static final HeroicModule[] BUILTIN_MODULES = new HeroicModule[] {
+        new com.spotify.heroic.aggregation.Module(),
+        new com.spotify.heroic.filter.Module(),
+        new com.spotify.heroic.http.Module()
     };
     // @formatter:on
 
@@ -150,7 +150,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
      * Additional dynamic parameters to pass into the configuration of a profile.
      * These are typically extracted from the commandline, or a properties file.
      */
-    private final HeroicParameters params;
+    private final ExtraParameters params;
 
     /**
      * Root entry for the metric reporter.
@@ -165,7 +165,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
     private final boolean shellServer;
 
     /* extensions */
-    private final List<Class<?>> modules;
+    private final List<HeroicModule> modules;
     private final List<HeroicProfile> profiles;
     private final List<HeroicBootstrap> early;
     private final List<HeroicBootstrap> late;
@@ -611,17 +611,16 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
     private void loadModules(final Injector injector) throws Exception {
         final List<HeroicModule> modules = new ArrayList<>();
 
-        for (Class<?> builtIn : BUILTIN_MODULES) {
-            modules.add(ModuleUtils.loadModule(builtIn));
+        for (final HeroicModule builtin : BUILTIN_MODULES) {
+            modules.add(builtin);
         }
 
-        for (Class<?> module : this.modules) {
-            modules.add(ModuleUtils.loadModule(module));
-        }
+        modules.addAll(this.modules);
 
-        for (final HeroicModule entry : modules) {
-            log.info("Loading Module: {}", entry.getClass().getPackage().getName());
+        for (final HeroicModule module : modules) {
+            log.info("Loading Module: {}", module.getClass().getPackage().getName());
             // inject members of an entry point and run them.
+            final HeroicModule.Entry entry = module.setup();
             injector.injectMembers(entry);
             entry.setup();
         }
@@ -652,7 +651,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
         private Optional<Path> configPath = empty();
-        private Optional<HeroicParameters> params = empty();
+        private Optional<ExtraParameters> params = empty();
         private Optional<HeroicReporter> reporter = empty();
         private Optional<URI> startupPing = empty();
         private Optional<String> startupId = empty();
@@ -665,7 +664,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
         private Optional<Boolean> shellServer = empty();
 
         /* extensions */
-        private final ImmutableList.Builder<Class<?>> modules = ImmutableList.builder();
+        private final ImmutableList.Builder<HeroicModule> modules = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicProfile> profiles = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
@@ -714,7 +713,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
             return this;
         }
 
-        public Builder parameters(final HeroicParameters params) {
+        public Builder parameters(final ExtraParameters params) {
             checkNotNull(params, "params");
             this.params = of(params);
             return this;
@@ -758,13 +757,13 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
             return this;
         }
 
-        public Builder modules(final List<Class<?>> modules) {
+        public Builder modules(final List<HeroicModule> modules) {
             checkNotNull(modules, "modules");
             this.modules.addAll(modules);
             return this;
         }
 
-        public Builder module(final Class<?> module) {
+        public Builder module(final HeroicModule module) {
             checkNotNull(module, "module");
             this.modules.add(module);
             return this;
@@ -809,7 +808,7 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
                 startupPing,
                 startupId,
 
-                params.orElseGet(HeroicParameters::empty),
+                params.orElseGet(ExtraParameters::empty),
                 new AtomicReference<>(reporter.orElseGet(NoopHeroicReporter::get)),
 
                 setupServer.orElse(DEFAULT_SETUP_SERVER),
@@ -825,5 +824,9 @@ public class HeroicCore implements HeroicOptions, HeroicReporterConfiguration {
             );
             // @formatter:on
         }
+    }
+
+    public static HeroicModule[] builtinModules() {
+        return BUILTIN_MODULES;
     }
 }

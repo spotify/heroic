@@ -19,18 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.nativerpc;
+package com.spotify.heroic.metric.astyanax;
 
-import com.google.inject.Inject;
+import javax.inject.Inject;
+
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext config;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        config.registerType("nativerpc", NativeRpcProtocolModule.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
+
+            @Override
+            public void setup() {
+                config.registerType("astyanax", AstyanaxMetricModule.class);
+            }
+        };
     }
 }

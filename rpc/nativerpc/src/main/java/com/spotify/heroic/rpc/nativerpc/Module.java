@@ -19,19 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.metadata.elasticsearch;
+package com.spotify.heroic.rpc.nativerpc;
 
-import javax.inject.Inject;
-
+import com.google.inject.Inject;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicConfigurationContext context;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        context.registerType("elasticsearch", ElasticsearchMetadataModule.class);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
+
+            public void setup() {
+                config.registerType("nativerpc", NativeRpcProtocolModule.class);
+            };
+        };
     }
 }

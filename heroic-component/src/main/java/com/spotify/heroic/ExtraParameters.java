@@ -1,5 +1,6 @@
 package com.spotify.heroic;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,10 +12,14 @@ import com.spotify.heroic.grammar.QueryParser;
 import lombok.Data;
 
 @Data
-public class HeroicParameters {
-    public static final String CONFIGURE = "configure";
+public class ExtraParameters {
+    public static final ParameterSpecification CONFIGURE = ParameterSpecification.parameter("configure", "Automatically configure all backends.");
 
     private final Map<String, String> parameters;
+
+    public boolean containsAny(String... keys) {
+        return Arrays.stream(keys).anyMatch(parameters::containsKey);
+    }
 
     public Optional<Filter> getFilter(String key, QueryParser parser) {
         final String value = parameters.get(key);
@@ -54,11 +59,11 @@ public class HeroicParameters {
         return parameters.containsKey(key);
     }
 
-    public static HeroicParameters empty() {
-        return new HeroicParameters(ImmutableMap.of());
+    public static ExtraParameters empty() {
+        return new ExtraParameters(ImmutableMap.of());
     }
 
-    public static HeroicParameters ofList(final List<String> input) {
+    public static ExtraParameters ofList(final List<String> input) {
         final ImmutableMap.Builder<String, String> result = ImmutableMap.builder();
 
         for (final String entry : input) {
@@ -71,10 +76,14 @@ public class HeroicParameters {
             }
         }
 
-        return new HeroicParameters(result.build());
+        return new ExtraParameters(result.build());
     }
 
     public String require(final String key) {
         return get(key).orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
+    }
+
+    public boolean contains(ParameterSpecification parameter) {
+        return contains(parameter.getName());
     }
 }

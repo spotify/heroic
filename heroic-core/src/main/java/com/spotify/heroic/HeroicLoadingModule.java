@@ -59,9 +59,9 @@ import lombok.RequiredArgsConstructor;
 public class HeroicLoadingModule extends AbstractModule {
     private final ExecutorService executor;
     private final HeroicInternalLifeCycle lifeCycle;
-    private final HeroicOptions options;
+    private final HeroicConfiguration options;
     private final HeroicReporterConfiguration reporterConfig;
-    private final HeroicParameters parameters;
+    private final ExtraParameters parameters;
 
     @Provides
     @Singleton
@@ -71,13 +71,13 @@ public class HeroicLoadingModule extends AbstractModule {
 
     @Provides
     @Singleton
-    HeroicParameters parameters() {
+    ExtraParameters parameters() {
         return parameters;
     }
 
     @Provides
     @Singleton
-    HeroicOptions options() {
+    HeroicConfiguration options() {
         return options;
     }
 

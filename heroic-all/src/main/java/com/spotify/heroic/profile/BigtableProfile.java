@@ -21,12 +21,14 @@
 
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicParameters;
-import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
@@ -34,7 +36,7 @@ import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsB
 
 public class BigtableProfile extends HeroicProfileBase {
     @Override
-    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
+    public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final BigtableMetricModule.Builder module = BigtableMetricModule.builder();
 
         params.get("bigtable.project").map(module::project);
@@ -63,15 +65,15 @@ public class BigtableProfile extends HeroicProfileBase {
     }
 
     @Override
-    public List<Option> options() {
+    public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            HeroicProfile.option("bigtable.configure", "If set, will cause the cluster to be automatically configured"),
-            HeroicProfile.option("bigtable.project", "Bigtable project to use", "<project>"),
-            HeroicProfile.option("bigtable.zone", "Bigtable zone to use", "<zone>"),
-            HeroicProfile.option("bigtable.cluster", "Bigtable cluster to use", "<cluster>"),
-            HeroicProfile.option("bigtable.serviceAccount", "Bigtable cluster to use", "<cluster>"),
-            HeroicProfile.option("bigtable.keyFile", "Bigtable cluster to use", "<cluster>")
+            parameter("bigtable.configure", "If set, will cause the cluster to be automatically configured"),
+            parameter("bigtable.project", "Bigtable project to use", "<project>"),
+            parameter("bigtable.zone", "Bigtable zone to use", "<zone>"),
+            parameter("bigtable.cluster", "Bigtable cluster to use", "<cluster>"),
+            parameter("bigtable.serviceAccount", "Bigtable cluster to use", "<cluster>"),
+            parameter("bigtable.keyFile", "Bigtable cluster to use", "<cluster>")
         );
         // @formatter:on
     }

@@ -38,6 +38,8 @@ import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.name.Named;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
@@ -53,6 +55,8 @@ import lombok.Data;
 
 @Data
 public final class DatastaxMetricModule implements MetricModule {
+    public static final String DATASTAX_CONFIGURE = "datastax.configure";
+
     public static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
     public static final String DEFAULT_GROUP = "heroic";
     public static final int DEFAULT_PORT = 9042;
@@ -122,13 +126,21 @@ public final class DatastaxMetricModule implements MetricModule {
 
             @Provides
             @Singleton
+            @Named("configure")
+            public boolean configure(final ExtraParameters params) {
+                return params.containsAny(ExtraParameters.CONFIGURE.getName(), DATASTAX_CONFIGURE) || configure;
+            }
+
+            @Provides
+            @Singleton
             public Groups groups() {
                 return groups;
             }
 
             @Provides
             @Singleton
-            public Managed<Connection> connection(final AsyncFramework async, final Schema schema) {
+            public Managed<Connection> connection(final AsyncFramework async,
+                    @Named("configure") final boolean configure, final Schema schema) {
                 return async.managed(new ManagedSetupConnection(async, seeds, configure, schema));
             }
 

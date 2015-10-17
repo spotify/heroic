@@ -86,8 +86,9 @@ public class HeroicShell {
         }
 
         if (params.help()) {
-            parser.printUsage(System.err);
-            HeroicModules.printProfileUsage(new PrintWriter(System.err), "-P");
+            parser.printUsage(System.out);
+            System.out.println();
+            HeroicModules.printAllUsage(System.out, "-P");
             System.exit(0);
             return;
         }
@@ -222,7 +223,7 @@ public class HeroicShell {
 
         if (params.help()) {
             parser.printUsage(System.err);
-            HeroicModules.printProfileUsage(System.err, "-P");
+            HeroicModules.printAllUsage(System.err, "-P");
             System.exit(0);
             return;
         }
@@ -309,7 +310,7 @@ public class HeroicShell {
             builder.configPath(parseConfigPath(params.config()));
         }
 
-        builder.parameters(HeroicParameters.ofList(params.parameters));
+        builder.parameters(ExtraParameters.ofList(params.parameters));
 
         for (final String profile : params.profiles()) {
             final HeroicProfile p = HeroicModules.PROFILES.get(profile);

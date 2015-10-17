@@ -17,25 +17,24 @@ import com.spotify.heroic.profile.MemoryProfile;
 
 public class HeroicModules {
     // @formatter:off
-    public static final List<Class<?>> ALL_MODULES = ImmutableList.<Class<?>>of(
-        com.spotify.heroic.metric.astyanax.Entry.class,
-        com.spotify.heroic.metric.datastax.Entry.class,
-        com.spotify.heroic.metric.generated.Entry.class,
-        com.spotify.heroic.metric.bigtable.Entry.class,
+    public static final List<HeroicModule> ALL_MODULES = ImmutableList.<HeroicModule>of(
+        new com.spotify.heroic.metric.astyanax.Module(),
+        new com.spotify.heroic.metric.datastax.Module(),
+        new com.spotify.heroic.metric.generated.Module(),
+        new com.spotify.heroic.metric.bigtable.Module(),
 
-        com.spotify.heroic.metadata.elasticsearch.Entry.class,
-        com.spotify.heroic.suggest.elasticsearch.Entry.class,
-        // com.spotify.heroic.suggest.lucene.Entry.class,
+        new com.spotify.heroic.metadata.elasticsearch.Module(),
+        new com.spotify.heroic.suggest.elasticsearch.Module(),
 
-        com.spotify.heroic.cluster.discovery.simple.Entry.class,
+        new com.spotify.heroic.cluster.discovery.simple.Module(),
 
-        com.spotify.heroic.aggregation.simple.Entry.class,
+        new com.spotify.heroic.aggregation.simple.Module(),
 
-        com.spotify.heroic.consumer.kafka.Entry.class,
+        new com.spotify.heroic.consumer.kafka.Module(),
 
-        com.spotify.heroic.aggregationcache.cassandra2.Entry.class,
+        new com.spotify.heroic.aggregationcache.cassandra2.Module(),
 
-        com.spotify.heroic.rpc.nativerpc.Entry.class
+        new com.spotify.heroic.rpc.nativerpc.Module()
     );
 
     public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String, HeroicProfile>builder()
@@ -49,29 +48,45 @@ public class HeroicModules {
     .build();
     // @formatter:on
 
-    public static void printProfileUsage(final PrintWriter out, final String option) {
+    public static void printAllUsage(final PrintWriter out, final String option) {
+        out.println(String.format("Available Extra Parameters:"));
+
+        ExtraParameters.CONFIGURE.printHelp(out, "  ", 80);
+
+        for (final HeroicModule m : HeroicCore.builtinModules()) {
+            for (final ParameterSpecification p : m.parameters()) {
+                p.printHelp(out, "  ", 80);
+            }
+        }
+
+        for (final HeroicModule m : ALL_MODULES) {
+            for (final ParameterSpecification p : m.parameters()) {
+                p.printHelp(out, "  ", 80);
+            }
+        }
+
+        out.println();
+
         out.println(String.format("Available Profiles (activate with: %s <profile>):", option));
 
         for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
-            out.println("  " + entry.getKey() + " - " + entry.getValue().description());
+            ParameterSpecification.printWrapped(out, "  ", 80, entry.getKey() + " - " + entry.getValue().description());
 
-            for (final HeroicProfile.Option o : entry.getValue().options()) {
-                if (o.getMetavar().isPresent()) {
-                    out.println("    " + o.getName() + "=" + o.getMetavar().get() + " - " + o.getDescription());
-                } else {
-                    out.println("    " + o.getName() + " - " + o.getDescription());
-                }
+            for (final ParameterSpecification o : entry.getValue().options()) {
+                o.printHelp(out, "    ", 80);
             }
+
+            out.println();
         }
 
         out.flush();
     }
 
-    public static void printProfileUsage(final PrintStream out, final String option) {
+    public static void printAllUsage(final PrintStream out, final String option) {
         final PrintWriter o = new PrintWriter(out);
 
         try {
-            printProfileUsage(o, option);
+            printAllUsage(o, option);
         } finally {
             o.flush();
         }

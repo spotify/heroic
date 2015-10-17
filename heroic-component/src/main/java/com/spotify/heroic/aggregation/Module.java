@@ -43,27 +43,30 @@ import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 
-public class Entry implements HeroicModule {
-    @Inject
-    private HeroicContext ctx;
-
-    @Inject
-    private AggregationSerializer aggregation;
-
-    @Inject
-    private AggregationFactory factory;
-
-    @Inject
-    @Named("common")
-    private SerializerFramework s;
-
+public class Module implements HeroicModule {
     @Override
-    public void setup() {
-        final Serializer<List<String>> list = s.list(s.string());
-        final Serializer<List<Aggregation>> aggregations = s.list(aggregation);
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicContext ctx;
 
-        ctx.aggregation(EmptyAggregation.NAME, EmptyAggregation.class, EmptyAggregationQuery.class,
-                new Serializer<EmptyAggregation>() {
+            @Inject
+            private AggregationSerializer aggregation;
+
+            @Inject
+            private AggregationFactory factory;
+
+            @Inject
+            @Named("common")
+            private SerializerFramework s;
+
+            @Override
+            public void setup() {
+                final Serializer<List<String>> list = s.list(s.string());
+                final Serializer<List<Aggregation>> aggregations = s.list(aggregation);
+
+                ctx.aggregation(EmptyAggregation.NAME, EmptyAggregation.class, EmptyAggregationQuery.class,
+                        new Serializer<EmptyAggregation>() {
                     @Override
                     public void serialize(SerialWriter buffer, EmptyAggregation value) throws IOException {
                     }
@@ -74,13 +77,14 @@ public class Entry implements HeroicModule {
                     }
                 }, new AggregationBuilder<EmptyAggregation>() {
                     @Override
-                    public EmptyAggregation build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
+                    public EmptyAggregation build(AggregationContext context, List<Value> args,
+                            Map<String, Value> keywords) {
                         return EmptyAggregation.INSTANCE;
                     }
                 });
 
-        ctx.aggregation(GroupAggregation.NAME, GroupAggregation.class, GroupAggregationQuery.class,
-                new GroupingAggregationSerializer<GroupAggregation>(list, aggregation) {
+                ctx.aggregation(GroupAggregation.NAME, GroupAggregation.class, GroupAggregationQuery.class,
+                        new GroupingAggregationSerializer<GroupAggregation>(list, aggregation) {
                     @Override
                     protected GroupAggregation build(List<String> of, Aggregation each) {
                         return new GroupAggregation(of, each);
@@ -92,8 +96,8 @@ public class Entry implements HeroicModule {
                     }
                 });
 
-        ctx.aggregation(CollapseAggregation.NAME, CollapseAggregation.class, CollapseAggregationQuery.class,
-                new GroupingAggregationSerializer<CollapseAggregation>(list, aggregation) {
+                ctx.aggregation(CollapseAggregation.NAME, CollapseAggregation.class, CollapseAggregationQuery.class,
+                        new GroupingAggregationSerializer<CollapseAggregation>(list, aggregation) {
                     @Override
                     protected CollapseAggregation build(List<String> of, Aggregation each) {
                         return new CollapseAggregation(of, each);
@@ -105,8 +109,8 @@ public class Entry implements HeroicModule {
                     }
                 });
 
-        ctx.aggregation(ChainAggregation.NAME, ChainAggregation.class, ChainAggregationQuery.class,
-                new Serializer<ChainAggregation>() {
+                ctx.aggregation(ChainAggregation.NAME, ChainAggregation.class, ChainAggregationQuery.class,
+                        new Serializer<ChainAggregation>() {
                     @Override
                     public void serialize(SerialWriter buffer, ChainAggregation value) throws IOException {
                         aggregations.serialize(buffer, value.getChain());
@@ -119,7 +123,8 @@ public class Entry implements HeroicModule {
                     }
                 }, new AbstractAggregationBuilder<ChainAggregation>(factory) {
                     @Override
-                    public ChainAggregation build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
+                    public ChainAggregation build(AggregationContext context, List<Value> args,
+                            Map<String, Value> keywords) {
                         final List<Aggregation> aggregations = new ArrayList<>();
 
                         for (final Value v : args) {
@@ -130,8 +135,8 @@ public class Entry implements HeroicModule {
                     }
                 });
 
-        ctx.aggregation(PartitionAggregation.NAME, PartitionAggregation.class, PartitionAggregationQuery.class,
-                new Serializer<PartitionAggregation>() {
+                ctx.aggregation(PartitionAggregation.NAME, PartitionAggregation.class, PartitionAggregationQuery.class,
+                        new Serializer<PartitionAggregation>() {
                     @Override
                     public void serialize(SerialWriter buffer, PartitionAggregation value) throws IOException {
                         aggregations.serialize(buffer, value.getChildren());
@@ -144,7 +149,8 @@ public class Entry implements HeroicModule {
                     }
                 }, new AbstractAggregationBuilder<PartitionAggregation>(factory) {
                     @Override
-                    public PartitionAggregation build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
+                    public PartitionAggregation build(AggregationContext context, List<Value> args,
+                            Map<String, Value> keywords) {
                         final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
 
                         for (final Value v : args) {
@@ -155,11 +161,11 @@ public class Entry implements HeroicModule {
                     }
                 });
 
-
-        ctx.aggregation("opts", Aggregation.class, OptionsAggregationQuery.class,
-                aggregation, new AbstractAggregationBuilder<Aggregation>(factory) {
+                ctx.aggregation("opts", Aggregation.class, OptionsAggregationQuery.class, aggregation,
+                        new AbstractAggregationBuilder<Aggregation>(factory) {
                     @Override
-                    public Aggregation build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
+                    public Aggregation build(AggregationContext context, List<Value> args,
+                            Map<String, Value> keywords) {
                         final Deque<Value> a = new LinkedList<>(args);
                         final Optional<Long> size = parseDiffMillis(a, keywords, "size");
                         final Optional<Long> extent = parseDiffMillis(a, keywords, "extent");
@@ -181,8 +187,11 @@ public class Entry implements HeroicModule {
                             aggregation = keywords.get("aggregation").cast(AggregationValue.class);
                         }
 
-                        return factory.build(c, aggregation.getName(), aggregation.getArguments(), aggregation.getKeywordArguments());
+                        return factory.build(c, aggregation.getName(), aggregation.getArguments(),
+                                aggregation.getKeywordArguments());
                     }
                 });
+            }
+        };
     }
 }

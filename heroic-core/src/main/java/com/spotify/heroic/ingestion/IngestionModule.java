@@ -35,7 +35,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicParameters;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -87,7 +87,7 @@ public class IngestionModule extends PrivateModule {
 
     @Provides
     @Singleton
-    public Filter filter(final QueryParser parser, final FilterFactory filters, final HeroicParameters params) {
+    public Filter filter(final QueryParser parser, final FilterFactory filters, final ExtraParameters params) {
         return Optionals.pickOptional(filter.map(parser::parseFilter), params.getFilter(INGESTION_FILTER_PARAM, parser))
                 .orElseGet(filters::t);
     }

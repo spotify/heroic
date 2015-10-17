@@ -1,13 +1,15 @@
 package com.spotify.heroic.profile;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.HeroicParameters;
-import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestManagerModule;
@@ -18,7 +20,7 @@ public class ElasticsearchSuggestProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
 
     @Override
-    public HeroicConfig.Builder build(final HeroicParameters params) throws Exception {
+    public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final RotatingIndexMapping.Builder index = RotatingIndexMapping.builder();
 
         params.get("elasticsearch.pattern").map(index::pattern);
@@ -45,13 +47,13 @@ public class ElasticsearchSuggestProfile extends HeroicProfileBase {
     static final Joiner arguments = Joiner.on(", ");
 
     @Override
-    public List<Option> options() {
+    public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            HeroicProfile.option("elasticsearch.pattern", "Index pattern to use (example: heroic-%s)", "<pattern>"),
-            HeroicProfile.option("elasticsearch.clusterName", "Cluster name to connect to", "<string>"),
-            HeroicProfile.option("elasticsearch.seeds", "Seeds to connect to", "<host>[:<port][,..]"),
-            HeroicProfile.option("elasticsearch.type", "Backend type to use, available types are: " + arguments.join(ElasticsearchSuggestModule.types()), "<type>")
+            parameter("elasticsearch.pattern", "Index pattern to use (example: heroic-%s)", "<pattern>"),
+            parameter("elasticsearch.clusterName", "Cluster name to connect to", "<string>"),
+            parameter("elasticsearch.seeds", "Seeds to connect to", "<host>[:<port][,..]"),
+            parameter("elasticsearch.type", "Backend type to use, available types are: " + arguments.join(ElasticsearchSuggestModule.types()), "<type>")
         );
         // @formatter:on
     }

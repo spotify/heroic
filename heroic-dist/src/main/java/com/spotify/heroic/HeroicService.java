@@ -160,7 +160,7 @@ public class HeroicService {
             builder.profile(setupProfile(profile));
         }
 
-        builder.parameters(HeroicParameters.ofList(params.parameters));
+        builder.parameters(ExtraParameters.ofList(params.parameters));
         builder.modules(HeroicModules.ALL_MODULES);
     }
 
@@ -198,7 +198,8 @@ public class HeroicService {
 
         if (params.help) {
             parser.printUsage(System.out);
-            HeroicModules.printProfileUsage(System.out, "-p");
+            System.out.println();
+            HeroicModules.printAllUsage(System.out, "-p");
             return null;
         }
 

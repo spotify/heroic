@@ -49,7 +49,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
-import com.spotify.heroic.HeroicOptions;
+import com.spotify.heroic.HeroicConfiguration;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -75,7 +75,7 @@ public class ClusterManagerModule {
     private final List<RpcProtocolModule> protocols;
     private final Set<Map<String, String>> topology;
 
-    public Module make(final HeroicOptions options) {
+    public Module make(final HeroicConfiguration options) {
         return new PrivateModule() {
             @Provides
             @Singleton

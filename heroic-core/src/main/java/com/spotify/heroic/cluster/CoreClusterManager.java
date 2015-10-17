@@ -38,7 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicOptions;
+import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.async.MaybeError;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.scheduler.Scheduler;
@@ -73,7 +73,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
     private final Boolean useLocal;
     private final Set<Map<String, String>> topology;
     private final HeroicReporter reporter;
-    private final HeroicOptions options;
+    private final HeroicConfiguration options;
     private final Optional<LocalClusterNode> local;
     private final HeroicContext context;
 
@@ -86,7 +86,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
     @Inject
     public CoreClusterManager(AsyncFramework async, ClusterDiscovery discovery, NodeMetadata localMetadata,
             Map<String, RpcProtocol> protocols, Scheduler scheduler, @Named("useLocal") Boolean useLocal,
-            @Named("topology") Set<Map<String, String>> topology, HeroicReporter reporter, HeroicOptions options,
+            @Named("topology") Set<Map<String, String>> topology, HeroicReporter reporter, HeroicConfiguration options,
             LocalClusterNode local, HeroicContext context) {
         this.async = async;
         this.discovery = discovery;
