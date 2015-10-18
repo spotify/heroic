@@ -10,6 +10,9 @@
     '_pages/docs/data_model.ngt',
     '_pages/docs/filter_dsl.ngt',
     '_pages/docs/api.ngt',
+    '_pages/docs/api/accept-metadata-query-body.ngt',
+    '_pages/docs/api/accept-series.ngt',
+    '_pages/docs/aggregations.ngt',
     '_pages/docs/shell.ngt',
     '_pages/docs/config.ngt',
     '_pages/docs/config/cluster.ngt',
@@ -74,6 +77,10 @@
       .state('docs.api', {
         url: '/api',
         templateUrl: '_pages/docs/api.ngt'
+      })
+      .state('docs.aggregations', {
+        url: '/aggregations',
+        templateUrl: '_pages/docs/aggregations.ngt'
       })
       .state('docs.shell', {
         url: '/shell',

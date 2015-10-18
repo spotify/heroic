@@ -6,6 +6,18 @@
     '_js/api-type.ngt'
   ]);
 
+  function pathToId(method, path) {
+    var parts = path.split('/');
+
+    var id = [method.toLowerCase()];
+
+    for (var i = 1, l = parts.length; i < l; i++) {
+      id.push(parts[i]);
+    }
+
+    return id.join('-');
+  }
+
   m.directive('apiEndpoint', function() {
     return {
       scope: {},
@@ -17,6 +29,7 @@
       link: function($scope, $element, $attr, ctrl) {
         ctrl.path = $attr.path || '/';
         ctrl.method = $attr.method || 'GET';
+        $scope.id = pathToId(ctrl.method, ctrl.path);
         $scope.path = ctrl.path;
         $scope.method = ctrl.method;
       },

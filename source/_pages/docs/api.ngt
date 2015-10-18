@@ -4,7 +4,7 @@
 
 <api-endpoint path="/status" method="GET">
   <p>
-    Query for the status of a heroic instance.
+    Query for the status of an instance.
   </p>
 
   <p>
@@ -232,19 +232,8 @@
     Query for available tag combinations.
   </p>
 
-  <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
-    <api-type>
-      <api-field required="true" name="filter" type-href="Filter">
-        A filter to use when quering for tags.
-      </api-field>
-    </api-type>
+  <div ng-include="'_pages/docs/api/accept-metadata-query-body.ngt'"></div>
 
-    <h4>Example Request</h4>
-
-    <codeblock language="json">
-    {"filter": ["and", ["key", "system"], ["=", "role", "database"]]}
-    </codeblock>
-  </api-accept>
   <api-response status="200">
     <h4>Example <span class="status">200</span> Response</h4>
     <codeblock language="json">
@@ -264,10 +253,90 @@
     Use to query for keys.
   </p>
 
+  <div ng-include="'_pages/docs/api/accept-metadata-query-body.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    {
+      "result": ["foo", "bar"],
+      "sampleSize": 5
+    }
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/series" method="POST">
+  <p>
+    Get all series metadata matching the given filter.
+  </p>
+
+  <div ng-include="'_pages/docs/api/accept-metadata-query-body.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    [
+      {"key": "foo", "tags": {"site": "lon"}},
+      {"key": "foo", "tags": {"site": "sto"}}
+    ]
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/series" method="PUT">
+  <p>
+    Write the given series metadata.
+  </p>
+
+  <div ng-include="'_pages/docs/api/accept-series.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    [
+      {"key": "foo", "tags": {"site": "lon"}},
+      {"key": "foo", "tags": {"site": "sto"}}
+    ]
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/series" method="DELETE">
+  <p>
+    Delete all series metadata matching the given filter.
+  </p>
+
+  <div ng-include="'_pages/docs/api/accept-metadata-query-body.ngt'"></div>
+
+  <api-response status="200">
+    <h4>Example <span class="status">200</span> Response</h4>
+
+    <codeblock language="json">
+    [
+      {"key": "foo", "tags": {"site": "lon"}},
+      {"key": "foo", "tags": {"site": "sto"}}
+    ]
+    </codeblock>
+  </api-response>
+</api-endpoint>
+
+<api-endpoint path="/metadata/series-count" method="POST">
+  <p>
+    Count the number of time series matching a given filter.
+  </p>
+
   <api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
     <api-type>
-      <api-field required="true" name="filter" type-href="Filter">
-        A filter to use when quering for tags.
+      <api-field required="false" name="filter" type-href="Filter">
+        A filter to use when counting series.
+      </api-field>
+
+      <api-field required="false" name="range" type-href="QueryDateRange">
+        Range for which to count series.
       </api-field>
     </api-type>
 
@@ -279,11 +348,11 @@
   </api-accept>
   <api-response status="200">
     <h4>Example <span class="status">200</span> Response</h4>
-
     <codeblock language="json">
     {
-      "result": ["foo", "bar"],
-      "sampleSize": 5
+      "errors": [],
+      "limited": false,
+      "count": 10001
     }
     </codeblock>
   </api-response>
@@ -316,7 +385,7 @@
   </p>
 
   <p>
-    See the <a ui-sref="^.data_model({'#': 'data-points'})">Data Points section in Data Model</a>
+    See the <a ui-sref="^.data_model({'#': 'data-points'})">Points section in Data Model</a>
     for more details about <em>what</em> a point is.
   </p>
 
@@ -458,8 +527,8 @@
   </p>
 
   <p>
-    Relative date ranges range from <em>the current</em> time, to a specific
-    point in the past.
+    An aggregation is responsible for analysing and sampling a larger dataset into a smaller, more manageable one.
+    For details on all available aggregations, see the <a ui-sref="^.aggregations">Aggregations Section</a>.
   </p>
 
   <p>

@@ -1,0 +1,178 @@
+<h2>Aggregations</h2>
+
+<p>
+  An aggregation is responsible for providing analysis of a larger dataset, to make it more manageable.
+  While it would be possible to plot millions of samples in a single graph, it is simply not practical.
+  Aggregations give the mean to further aggregate the samples stored in the database.
+</p>
+
+<p>
+  An aggregation can be defined either in JSON, or HQL.
+  For each aggregation, both forms will be displayed below.
+</p>
+
+<ul>
+  <li><a ui-sref="{'#': 'min'}">Minimum Aggregation</a></li>
+  <li><a ui-sref="{'#': 'max'}">Maximum Aggregation</a></li>
+  <li><a ui-sref="{'#': 'average'}">Average Aggregation</a></li>
+  <li><a ui-sref="{'#': 'sum'}">Sum Aggregation</a></li>
+  <li><a ui-sref="{'#': 'group'}">Group Aggregation</a></li>
+</ul>
+
+<h3>Size and Extent</h3>
+
+<p>
+  The <em>size</em> of an aggregation determines the frequency that data occurs in the resulting aggregation.
+  So a size of <em>two minutes</em> would cause an aggregation to output a series that has a sample, every two minutes.
+</p>
+
+<p>
+  The <em>extent</em> of an aggregation determines how wide a single sample will load data in time.
+  So an extent of <em>one hour</em> would cause each sample to be the result of aggregating the last hour of data.
+</p>
+
+<p>
+  Combining <em>size</em> and <em>extent</em>, we now have a flexible system for describing how to build a dataset suitable for plotting.
+</p>
+
+<p>
+The following graphics represents what data will be sampled to generate the sample at point <code>2</code>.
+  <span style="color: #648cff">The blue bar</span> is the <em>extent</em>, and <span style="color: #ff8282;">the red bar</span> is the <em>size</em>.
+</p>
+
+<img style="width: 100%;" src="images/size_extent.svg"></img>
+
+<p>
+  The next point we'll sample for is <code>3</code>.
+  This applies the same principle as above.
+</p>
+
+<img style="width: 100%;" src="images/size_extent_3.svg"></img>
+
+<h3 id="min">Min Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "min", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+min(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</codeblock>
+
+<h5>Description</h5>
+
+<p>
+  The min aggregation picks the <em>smallest</em> numerical value seen in the given extent.
+</p>
+
+<img style="width: 100%;" src="images/aggregation_min.svg"></img>
+
+<h3 id="max">Max Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "max", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+max(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</codeblock>
+
+<h5>Description</h5>
+
+<p>
+  The max aggregation picks the <em>largest</em> numerical value seen in the given extent.
+</p>
+
+<img style="width: 100%;" src="images/aggregation_max.svg"></img>
+
+<h3 id="average">Average Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "average", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+average(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</codeblock>
+
+<h5>Description</h5>
+
+<p>
+  The average aggregation takes all samples in a given extent, and calculates the average value over them.
+</p>
+
+<img style="width: 100%;" src="images/aggregation_average.svg"></img>
+
+<h3 id="sum">Sum Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "sum", "sampling": {"unit": &lt;unit&gt;, "size": &lt;number&gt;, "extent": &lt;number&gt;}}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
+</codeblock>
+
+<h5>Description</h5>
+
+<p>
+  The sum aggregation sums the values of all points in a given extent.
+</p>
+
+<img style="width: 100%;" src="images/aggregation_sum.svg"></img>
+
+<h3 id="group">Group Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "group", "of": [&lt;string&gt;, ..], "each": &lt;aggregation&gt;}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+group(of=[&lt;string&gt;, ..], each=&lt;aggregation&gt;)
+</codeblock>
+
+<h5>Description</h5>
+
+<p>
+  Takes a set of tags, and groups the sources which have the same values for those tags.
+</p>
+
+<p>
+  The result below is what would happen when grouping the data on the <b>host</b> tag.<br />
+  Assume that the red points come from the host <span style="color: #ff0000;"><b>database1</b></span>,
+  the green points come from the host <span style="color: #00ff00;"><b>api1</b></span>,
+  and that the blue points come from the host <span style="color: #0000ff;"><b>load-balancer3</b></span>
+</p>
+
+<img style="width: 100%;" src="images/aggregation_group.svg"></img>
+
+<p>
+  Group aggregations are special, they don't have a <em>size</em> or <em>extent</em>.
+  Instead they can accept a child aggregation, which will be applied to every matching sub-group.
+</p>
+
+<p>
+  The below example is the <a ui-sref="{'#': 'average'}">average</a> aggregation applied to each group.
+</p>
+
+<img style="width: 100%;" src="images/aggregation_group_average.svg"></img>

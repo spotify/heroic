@@ -62,6 +62,10 @@
       </li>
 
       <li ui-sref-active="active">
+        <a ui-sref="docs.aggregations">Aggregations</a>
+      </li>
+
+      <li ui-sref-active="active">
         <a ui-sref="docs.shell">Shell</a>
       </li>
     </ul>

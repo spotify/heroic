@@ -34,4 +34,9 @@
     <h4><a ui-sref="docs.api">API Documentation</a></h4>
     <p>Learn how to interact with Heroic's Restful API</p>
   </div>
+
+  <div class="col-md-3">
+    <h4><a ui-sref="docs.aggregations">Aggregations</a></h4>
+    <p>Learn how to perform powerful aggregations on your data</p>
+  </div>
 </div>

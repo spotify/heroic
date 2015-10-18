@@ -1,0 +1,13 @@
+<api-accept curl-data='{"filter": ["and", ["key", "system"], ["=", "role", "database"]]}'>
+  <api-type>
+    <api-field required="true" name="filter" type-href="Filter">
+      A filter to use when quering for tags.
+    </api-field>
+  </api-type>
+
+  <h4>Example Request</h4>
+
+  <codeblock language="json">
+  {"filter": ["and", ["key", "system"], ["=", "role", "database"]]}
+  </codeblock>
+</api-accept>
