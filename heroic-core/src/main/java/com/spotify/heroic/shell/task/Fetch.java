@@ -89,7 +89,7 @@ public class Fetch implements ShellTask {
         final DateFormat point = new SimpleDateFormat("HH:mm:ss.SSS");
 
         final MetricBackendGroup readGroup = metrics.useGroup(params.group);
-        final MetricType source = MetricType.fromIdentifier(params.source);
+        final MetricType source = MetricType.fromIdentifier(params.source).orElse(MetricType.POINT);
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 

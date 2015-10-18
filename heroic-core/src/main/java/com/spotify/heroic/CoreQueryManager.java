@@ -144,13 +144,8 @@ public class CoreQueryManager implements QueryManager {
     }
 
     MetricType convertSource(final FromDSL s) {
-        final MetricType type = MetricType.fromIdentifier(s.getSource());
-
-        if (type == null) {
-            throw s.getContext().error("Invalid source: " + s.getSource());
-        }
-
-        return type;
+        return MetricType.fromIdentifier(s.getSource())
+                .orElseThrow(() -> s.getContext().error("Invalid source: " + s.getSource()));
     }
 
     Function<AggregationValue, Function<AggregationContext, Aggregation>> customAggregation(final SelectDSL select) {

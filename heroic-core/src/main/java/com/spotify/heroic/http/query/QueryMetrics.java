@@ -23,8 +23,6 @@ package com.spotify.heroic.http.query;
 
 import static java.util.Optional.ofNullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,10 +42,8 @@ import lombok.Data;
 @Data
 public class QueryMetrics {
     private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(TimeUnit.DAYS, 7);
-    private static final List<AggregationQuery> EMPTY_AGGREGATIONS = new ArrayList<>();
     private static final Map<String, String> DEFAULT_TAGS = new HashMap<String, String>();
     private static final boolean DEFAULT_NO_CACHE = false;
-    private static final MetricType DEFAULT_SOURCE = MetricType.POINT;
 
     private final Optional<String> query;
     private final Optional<String> key;
@@ -65,7 +61,7 @@ public class QueryMetrics {
             @JsonProperty("groupBy") List<String> groupBy, @JsonProperty("range") QueryDateRange range,
             @JsonProperty("noCache") Boolean noCache,
             @JsonProperty("aggregators") List<AggregationQuery> aggregators,
-            @JsonProperty("source") String sourceName) {
+            @JsonProperty("source") String source) {
         this.query = ofNullable(query);
         this.key = ofNullable(key);
         this.tags = ofNullable(tags).orElse(DEFAULT_TAGS);
@@ -76,22 +72,7 @@ public class QueryMetrics {
         this.aggregators = ofNullable(aggregators).filter(c -> !c.isEmpty())
                 .<AggregationQuery> map(chain -> new ChainAggregationQuery(chain))
                 .orElseGet(EmptyAggregationQuery::new);
-        this.source = convertSource(sourceName);
-    }
-
-    private static MetricType convertSource(String sourceName) {
-        if (sourceName == null) {
-            return DEFAULT_SOURCE;
-        }
-
-        if ("series".equals(sourceName)) {
-            return MetricType.POINT;
-        }
-
-        if ("events".equals(sourceName)) {
-            return MetricType.EVENT;
-        }
-
-        throw new IllegalArgumentException("invalid source: " + sourceName);
+        this.source = MetricType.fromIdentifier(source)
+                .orElseThrow(() -> new IllegalArgumentException("Not a valid source: " + source));
     }
 }

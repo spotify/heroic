@@ -24,6 +24,7 @@ package com.spotify.heroic.metric;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
@@ -63,8 +64,8 @@ public enum MetricType {
     static final Map<String, MetricType> mapping = ImmutableMap.copyOf(
             Arrays.stream(MetricType.values()).collect(Collectors.toMap((MetricType m) -> m.identifier(), (m) -> m)));
 
-    public static MetricType fromIdentifier(String identifier) {
-        return mapping.get(identifier);
+    public static Optional<MetricType> fromIdentifier(String identifier) {
+        return Optional.ofNullable(mapping.get(identifier));
     }
 
     public boolean isAssignableFrom(MetricType other) {

@@ -47,13 +47,8 @@ public class MetricTypeSerialization {
                 throw c.mappingException("No identifier specified");
             }
 
-            final MetricType type = MetricType.fromIdentifier(identifier);
-
-            if (type == null) {
-                throw c.mappingException("Not a valid metric source: " + identifier);
-            }
-
-            return type;
+            return MetricType.fromIdentifier(identifier)
+                    .orElseThrow(() -> c.mappingException("Not a valid metric source: " + identifier));
         }
     }
 
