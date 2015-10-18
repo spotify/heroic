@@ -11,6 +11,10 @@
 
 <ul>
   <li><a ui-sref="^.cluster">cluster - responsible for federating requests across clusters</a></li>
+  <li><a ui-sref="^.metrics">metrics - responsible for the persistent storage and loading of metrics</a></li>
+  <li><a ui-sref="^.metadata">metadata - responsible for indexing time series, and making them searchable</a></li>
+  <li><a ui-sref="^.suggest">suggest - responsible for indexing time series, and making them suggestable</a></li>
+  <li><a ui-sref="^.elasticsearch_connection">Elasticsearch Connection - describes how all elasticsearch connection are managed.</a></li>
 </ul>
 
 <p class="next">

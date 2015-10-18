@@ -44,6 +44,10 @@
           </li>
 
           <li ui-sref-active="active">
+            <a ui-sref="docs.config.elasticsearch_connection">Elasticsearch Connection</a>
+          </li>
+
+          <li ui-sref-active="active">
             <a ui-sref="docs.config.shell_server">Shell Server</a>
           </li>
         </ul>

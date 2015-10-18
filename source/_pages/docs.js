@@ -16,9 +16,10 @@
     '_pages/docs/shell.ngt',
     '_pages/docs/config.ngt',
     '_pages/docs/config/cluster.ngt',
-    '_pages/docs/config/metadata.ngt',
     '_pages/docs/config/metrics.ngt',
+    '_pages/docs/config/metadata.ngt',
     '_pages/docs/config/suggest.ngt',
+    '_pages/docs/config/elasticsearch_connection.ngt',
     '_pages/docs/config/shell_server.ngt'
   ]);
 
@@ -110,6 +111,10 @@
       .state('docs.config.suggest', {
         url: '/suggest',
         templateUrl: '_pages/docs/config/suggest.ngt'
+      })
+      .state('docs.config.elasticsearch_connection', {
+        url: '/elasticsearch_connection',
+        templateUrl: '_pages/docs/config/elasticsearch_connection.ngt'
       })
       .state('docs.config.shell_server', {
         url: '/shell_server',
