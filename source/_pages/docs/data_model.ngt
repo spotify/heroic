@@ -18,7 +18,7 @@
 
 <p>
   Java Class:
-  <a git-href-java="heroic-component">com.spotify.heroic.model.DataPoint</a>
+  <a git-href-java="heroic-component">com.spotify.heroic.metric.DataPoint</a>
 </p>
 
 <p>
@@ -46,7 +46,7 @@
 <h3 id="events">Events</h3>
 
 <p>
-  Java Class: <a git-href-java="heroic-component">com.spotify.heroic.model.Event</a>
+  Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.Event</a>
 </p>
 
 <div class="callout callout-danger">

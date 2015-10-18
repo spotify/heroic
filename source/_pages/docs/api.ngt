@@ -129,7 +129,7 @@
 
   <api-response>
     <api-type>
-      <api-field name="range" type-json="{start: <number>, end: <number}">
+      <api-field name="range" type-json="{start: <number>, end: <number>}">
         The range in time for which to query
       </api-field>
 
@@ -140,11 +140,11 @@
         decide if the response is reliable enough.
       </api-field>
 
-      <api-field name="result" type-array-href="MetricGroup">
+      <api-field name="result" type-array-href="ShardedResultGroup">
         An array of result groups.
       </api-field>
 
-      <api-field name="statistics" type-href="MetricsQueryStatistics">
+      <api-field name="statistics" type-href="Statistics">
         Statistics about the current query.
         This field should be inspected for errors which will have caused the result
         to be inconsistent.
@@ -472,5 +472,60 @@
 
   <api-field name="sampling" type-href='Sampling'>
     Sampling to use with aggregation.
+  </api-field>
+</api-type>
+
+<api-type name="ShardedResultGroup">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.ShardedResultGroup</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"series"|"events"|"spreads"|"groups"'>
+    Type of the result group.
+  </api-field>
+
+  <api-field required="true" name="hash" type-json='<string>'>
+    A string uniquely identifying this result group.
+  </api-field>
+
+  <api-field required="true" name="shard" type-json='{<string>: <string>}'>
+    The shard that the result group came from.
+  </api-field>
+
+  <api-field required="true" name="cadence" type-json='<number>'>
+    The cadence at which a client can expect samples in this group to adhere to.
+  </api-field>
+
+  <api-field required="true" name="values" type-json='[[<timestamp>, <sample>], ..]'>
+    A list of values of the given <code>type</code>.
+
+    <ul>
+      <li>
+        <code language="json">"series"</code> indicates that the
+        <code language="json">&lt;sample&gt;</code> is a <code language="json">&lt;number&gt;</code>.
+      </li>
+      <li>
+        <code language="json">"events"</code> indicates that the
+        <code language="json">&lt;sample&gt;</code> is an <code language="json">{&lt;string&gt;: &lt;any&gt;}</code> object.
+      </li>
+    </ul>
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='{<string>: <string>}'>
+    The set of tags that have a single value.
+  </api-field>
+
+  <api-field required="true" name="tagCounts" type-json='{<string>: <number>}'>
+    The set of tags that have more than a single value, the number is the number of distinct tags.
+  </api-field>
+</api-type>
+
+<api-type name="Statistics">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.common.Statistics</a>
+  </p>
+
+  <api-field name="counters" type-json='{<string>: <number>}'>
+    Counters containing statistics.
   </api-field>
 </api-type>
