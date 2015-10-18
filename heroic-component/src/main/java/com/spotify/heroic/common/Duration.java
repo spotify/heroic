@@ -2,9 +2,9 @@ package com.spotify.heroic.common;
 
 import java.util.concurrent.TimeUnit;
 
-import lombok.Data;
-
 import com.google.common.base.Optional;
+
+import lombok.Data;
 
 /**
  * A helper type that represents a duration as the canonical duration/unit.
@@ -28,6 +28,10 @@ public class Duration {
     public Duration(long duration, TimeUnit unit) {
         this.duration = duration;
         this.unit = Optional.fromNullable(unit).or(TimeUnit.SECONDS);
+    }
+
+    public long convert(final TimeUnit unit) {
+        return unit.convert(this.duration, this.unit);
     }
 
     public static Duration of(long duration, TimeUnit unit) {

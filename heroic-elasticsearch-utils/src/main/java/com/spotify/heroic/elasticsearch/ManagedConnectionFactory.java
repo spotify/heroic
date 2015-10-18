@@ -22,6 +22,7 @@
 package com.spotify.heroic.elasticsearch;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.ofNullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +40,6 @@ import org.elasticsearch.common.unit.TimeValue;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -87,44 +86,30 @@ public class ManagedConnectionFactory {
             @JsonProperty("flushInterval") Integer flushInterval, @JsonProperty("bulkActions") Integer bulkActions,
             @JsonProperty("index") IndexMapping index, @JsonProperty("templateName") String templateName,
             @JsonProperty("client") ClientSetup clientSetup) {
-        this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
-        this.seeds = Optional.fromNullable(seeds).or(DEFAULT_SEEDS);
-        this.nodeClient = Optional.fromNullable(nodeClient).or(false);
-        this.concurrentBulkRequests = Optional.fromNullable(concurrentBulkRequests)
-                .or(DEFAULT_CONCURRENT_BULK_REQUESTS);
-        this.flushInterval = Optional.fromNullable(flushInterval).or(DEFAULT_FLUSH_INTERVAL);
-        this.bulkActions = Optional.fromNullable(bulkActions).or(DEFAULT_BULK_ACTIONS);
-        this.index = Optional.fromNullable(index).or(RotatingIndexMapping.defaultSupplier());
+        this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
+        this.seeds = ofNullable(seeds).orElse(DEFAULT_SEEDS);
+        this.nodeClient = ofNullable(nodeClient).orElse(false);
+        this.concurrentBulkRequests = ofNullable(concurrentBulkRequests)
+                .orElse(DEFAULT_CONCURRENT_BULK_REQUESTS);
+        this.flushInterval = ofNullable(flushInterval).orElse(DEFAULT_FLUSH_INTERVAL);
+        this.bulkActions = ofNullable(bulkActions).orElse(DEFAULT_BULK_ACTIONS);
+        this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
         this.templateName = templateName;
-        this.clientSetup = Optional.fromNullable(clientSetup).or(defaultClientSetup());
+        this.clientSetup = ofNullable(clientSetup).orElseGet(this::defaultClientSetup);
     }
 
     /**
      * Setup the defualt client setup to be backwards compatible.
      */
-    private Supplier<ClientSetup> defaultClientSetup() {
-        return new Supplier<ClientSetup>() {
-            @Override
-            public ClientSetup get() {
-                if (nodeClient)
-                    return new NodeClientSetup(clusterName, seeds);
+    private ClientSetup defaultClientSetup() {
+        if (nodeClient)
+            return new NodeClientSetup(clusterName, seeds);
 
-                return new TransportClientSetup(clusterName, seeds);
-            }
-        };
+        return new TransportClientSetup(clusterName, seeds);
     }
 
     public static ManagedConnectionFactory buildDefault() {
         return new ManagedConnectionFactory(null, null, null, null, null, null, null, null, null);
-    }
-
-    public static Supplier<ManagedConnectionFactory> provideDefault() {
-        return new Supplier<ManagedConnectionFactory>() {
-            @Override
-            public ManagedConnectionFactory get() {
-                return buildDefault();
-            }
-        };
     }
 
     public Managed<Connection> construct(final String defaultTemplateName,
@@ -134,7 +119,7 @@ public class ManagedConnectionFactory {
 
     public Managed<Connection> construct(final String defaultTemplateName,
             final Map<String, Map<String, Object>> suggestedMappings, final Map<String, Object> settings) {
-        final String templateName = Optional.fromNullable(this.templateName).or(defaultTemplateName);
+        final String templateName = ofNullable(this.templateName).orElse(defaultTemplateName);
         final Map<String, Map<String, Object>> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
 
         return async.managed(new ManagedSetup<Connection>() {

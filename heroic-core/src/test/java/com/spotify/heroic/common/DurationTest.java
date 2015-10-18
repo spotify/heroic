@@ -29,6 +29,9 @@ public class DurationTest {
         assertEquals(Duration.of(1, TimeUnit.SECONDS), mapper.readValue("\"1s\"", Duration.class));
         assertEquals(Duration.of(1, TimeUnit.MINUTES), mapper.readValue("\"1m\"", Duration.class));
         assertEquals(Duration.of(1, TimeUnit.HOURS), mapper.readValue("\"1H\"", Duration.class));
+        assertEquals(Duration.of(14, TimeUnit.DAYS), mapper.readValue("\"2w\"", Duration.class));
+        assertEquals(Duration.of(3600, TimeUnit.MILLISECONDS), mapper.readValue("3600", Duration.class));
+        assertEquals(Duration.of(3600, TimeUnit.MILLISECONDS), mapper.readValue("\"3600\"", Duration.class));
     }
 
     @Test

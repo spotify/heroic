@@ -21,13 +21,14 @@
 
 package com.spotify.heroic.http.metadata;
 
+import static java.util.Optional.ofNullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -35,9 +36,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.filter.impl.MatchKeyFilterImpl;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
 import com.spotify.heroic.http.query.QueryDateRange;
+
+import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -48,22 +49,22 @@ public class MetadataQueryBody {
     /**
      * Only include time series which match the exact key.
      */
-    private final String matchKey;
+    private final Optional<String> matchKey;
 
     /**
      * Only include time series which matches the exact key/value combination.
      */
-    private final Map<String, String> matchTags;
+    private final Optional<Map<String, String>> matchTags;
 
     /**
      * Only include time series which has the following tags.
      */
-    private final Set<String> hasTags;
+    private final Optional<Set<String>> hasTags;
 
     /**
      * A general set of filters. If this is combined with the other mechanisms, all the filters will be AND:ed together.
      */
-    private final Filter filter;
+    private final Optional<Filter> filter;
 
     /**
      * The date range to query for.
@@ -75,49 +76,47 @@ public class MetadataQueryBody {
     public Filter makeFilter(FilterFactory filters) {
         final List<Filter> statements = new ArrayList<>();
 
-        if (filter != null) {
-            statements.add(filter);
+        if (filter.isPresent()) {
+            statements.add(filter.get());
         }
 
-        if (matchTags != null && !matchTags.isEmpty()) {
-            for (final Map.Entry<String, String> entry : matchTags.entrySet()) {
-                statements.add(filters.matchTag(entry.getKey(), entry.getValue()));
-            }
+        if (matchTags.isPresent()) {
+            matchTags.get().entrySet().forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
         }
 
-        if (hasTags != null && !hasTags.isEmpty()) {
-            for (final String tag : hasTags) {
-                statements.add(filters.hasTag(tag));
-            }
+        if (hasTags.isPresent()) {
+            hasTags.get().forEach(t -> statements.add(filters.hasTag(t)));
         }
 
-        if (matchKey != null)
-            statements.add(new MatchKeyFilterImpl(matchKey));
+        if (matchKey.isPresent()) {
+            statements.add(filters.matchKey(matchKey.get()));
+        }
 
-        if (statements.size() == 0)
-            return TrueFilterImpl.get();
+        if (statements.size() == 0) {
+            return filters.t();
+        }
 
-        if (statements.size() == 1)
+        if (statements.size() == 1) {
             return statements.get(0).optimize();
+        }
 
         return filters.and(statements).optimize();
     }
 
     @JsonCreator
-    public static MetadataQueryBody create(@JsonProperty("matchKey") String matchKey,
+    public MetadataQueryBody(@JsonProperty("matchKey") String matchKey,
             @JsonProperty("matchTags") Map<String, String> matchTags, @JsonProperty("hasTags") Set<String> hasTags,
             @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
             @JsonProperty("limit") Integer limit) {
-        if (range == null)
-            range = DEFAULT_DATE_RANGE;
-
-        if (limit == null)
-            limit = DEFAULT_LIMIT;
-
-        return new MetadataQueryBody(matchKey, matchTags, hasTags, filter, range.buildDateRange(), limit);
+        this.matchKey = ofNullable(matchKey);
+        this.matchTags = ofNullable(matchTags);
+        this.hasTags = ofNullable(hasTags);
+        this.filter = ofNullable(filter);
+        this.range = ofNullable(range).orElse(DEFAULT_DATE_RANGE).buildDateRange();
+        this.limit = ofNullable(limit).orElse(DEFAULT_LIMIT);
     }
 
-    public static MetadataQueryBody create() {
-        return create(null, null, null, null, null, null);
+    public static MetadataQueryBody createDefault() {
+        return new MetadataQueryBody(null, null, null, null, null, null);
     }
 }

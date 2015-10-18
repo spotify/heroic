@@ -21,10 +21,11 @@
 
 package com.spotify.heroic.elasticsearch.index;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.ToString;
+import java.util.concurrent.TimeUnit;
 
 import org.elasticsearch.action.count.CountRequestBuilder;
 import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
@@ -37,10 +38,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Duration;
+
+import lombok.ToString;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {
-    public static final long DEFAULT_INTERVAL = 3600 * 24 * 7 * 1000;
+    public static final Duration DEFAULT_INTERVAL = Duration.of(7, TimeUnit.DAYS);
     public static final int DEFAULT_MAX_READ_INDICES = 2;
     public static final int DEFAULT_MAX_WRITE_INDICES = 1;
     public static final String DEFAULT_PATTERN = "heroic-%s";
@@ -51,10 +55,10 @@ public class RotatingIndexMapping implements IndexMapping {
     private final String pattern;
 
     @JsonCreator
-    public RotatingIndexMapping(@JsonProperty("interval") Long interval,
+    public RotatingIndexMapping(@JsonProperty("interval") Duration interval,
             @JsonProperty("maxReadIndices") Integer maxReadIndices,
             @JsonProperty("maxWriteIndices") Integer maxWriteIndices, @JsonProperty("pattern") String pattern) {
-        this.interval = Optional.fromNullable(interval).or(DEFAULT_INTERVAL);
+        this.interval = Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
         this.maxReadIndices = verifyPositiveInt(Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
                 "maxReadIndices");
         this.maxWriteIndices = verifyPositiveInt(Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
@@ -63,8 +67,9 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     private String verifyPattern(String pattern) {
-        if (!pattern.contains("%s"))
+        if (!pattern.contains("%s")) {
             throw new IllegalArgumentException("pattern '" + pattern + "' does not contain a string substitude '%s'");
+        }
 
         return pattern;
     }
@@ -159,13 +164,13 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     public static final class Builder {
-        private Long interval;
+        private Duration interval;
         private Integer maxReadIndices;
         private Integer maxWriteIndices;
         private String pattern;
 
-        public Builder interval(Long interval) {
-            this.interval = interval;
+        public Builder interval(Duration interval) {
+            this.interval = checkNotNull(interval, "interval");
             return this;
         }
 
