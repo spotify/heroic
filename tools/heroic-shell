@@ -5,6 +5,13 @@ dist="$root/heroic-dist"
 
 CLASSPATH=
 
+JVM_OPTS=${JVM_OPTS:-""}
+
+if [[ $1 == '-debug' ]]; then
+    JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
+    shift
+fi
+
 if [[ -d $dist ]]; then
     jar="$dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
 
@@ -20,4 +27,4 @@ if [[ -d $dist ]]; then
     CLASSPATH="$root/heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar"
 fi
 
-exec env CLASSPATH="$CLASSPATH" java com.spotify.heroic.HeroicShell "$@"
+exec env CLASSPATH="$CLASSPATH" java $JVM_OPTS com.spotify.heroic.HeroicShell "$@"
