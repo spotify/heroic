@@ -30,6 +30,7 @@
     <module>rpc/nativerpc</module>
     <module>heroic-coalesce</module>
     <module>heroic-dist</module>
+    <module>repackaged/bigtable</module>
   </modules>
 
   <licenses>
