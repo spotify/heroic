@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -80,6 +81,8 @@ public class WritePerformance implements ShellTask {
         return new Parameters();
     }
 
+    final Joiner joiner = Joiner.on(" ");
+
     @Override
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
@@ -111,7 +114,19 @@ public class WritePerformance implements ShellTask {
         }
 
         return async.collect(reads).directTransform(input -> {
-            final long start = System.currentTimeMillis();
+            final long warmupStart = System.currentTimeMillis();
+
+            final List<CollectedTimes> warmup = new ArrayList<>();
+
+            for (int i = 0; i < params.warmup; i++) {
+                io.out().println(String.format("Warmup step %d/%d", (i + 1), params.warmup));
+
+                final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, warmupStart);
+
+                warmup.add(collectWrites(io.out(), writes, params.parallelism).get());
+                // try to trick the JVM not to optimize out any steps
+                warmup.clear();
+            }
 
             int totalWrites = 0;
 
@@ -121,29 +136,57 @@ public class WritePerformance implements ShellTask {
                 }
             }
 
-            final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, start);
+            final List<CollectedTimes> all = new ArrayList<>();
+            final List<Double> writesPerSecond = new ArrayList<>();
+            final List<Double> runtimes = new ArrayList<>();
 
-            io.out().println(String.format("Read data, waiting for %d write batches...", writes.size()));
-            io.out().flush();
+            for (int i = 0; i < params.loop; i++) {
+                io.out().println(String.format("Running step %d/%d", (i + 1), params.loop));
 
-            final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes, params.parallelism);
+                final long start = System.currentTimeMillis();
 
-            final CollectedTimes times = results.get();
-            final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
+                final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, start);
+                all.add(collectWrites(io.out(), writes, params.parallelism).get());
+
+                final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
+
+                writesPerSecond.add(totalWrites / totalRuntime);
+                runtimes.add(totalRuntime);
+            }
+
+            final CollectedTimes times = merge(all);
 
             io.out().println(String.format("Failed: %d write(s)", times.errors));
-            io.out().println(String.format("Time: %.2fs", totalRuntime));
-            io.out().println(String.format("Write/s: %.2f", totalWrites / totalRuntime));
+            io.out().println(String.format("Times: " + convertList(runtimes)));
+            io.out().println(String.format("Write/s: " + convertList(writesPerSecond)));
             io.out().println();
 
-            printHistogram("Overall", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
+            printHistogram("Batch Times", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
             io.out().println();
 
-            printHistogram("Execution Time", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
-
+            printHistogram("Individual Times", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
             io.out().flush();
+
             return null;
         });
+    }
+
+    private String convertList(final List<Double> values) {
+        return joiner.join(values.stream().map(v -> String.format("%.2f", v)).iterator());
+    }
+
+    private CollectedTimes merge(List<CollectedTimes> all) {
+        final List<Long> runTimes = new ArrayList<>();
+        final List<Long> executionTimes = new ArrayList<>();
+        int errors = 0;
+
+        for (final CollectedTimes time : all) {
+            runTimes.addAll(time.runTimes);
+            executionTimes.addAll(time.executionTimes);
+            errors += time.errors;
+        }
+
+        return new CollectedTimes(runTimes, executionTimes, errors);
     }
 
     private List<MetricBackend> resolveTargets(List<String> targets) throws BackendGroupException {
@@ -324,6 +367,12 @@ public class WritePerformance implements ShellTask {
 
         @Option(name = "--parallelism", usage = "The number of requests to send in parallel (default: 100)", metaVar = "<number>")
         private int parallelism = 100;
+
+        @Option(name = "--warmup", usage = "Loop the test several times to warm up", metaVar = "<number>")
+        private int warmup = 4;
+
+        @Option(name = "--loop", usage = "Loop the test several times", metaVar = "<number>")
+        private int loop = 8;
     }
 
     @Data
