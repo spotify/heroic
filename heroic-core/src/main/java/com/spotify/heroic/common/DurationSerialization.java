@@ -46,7 +46,6 @@ public class DurationSerialization {
 
         private Duration deserializeLong(JsonParser p) throws IOException, JsonParseException {
             final long value = p.getLongValue();
-            p.nextToken();
             return new Duration(value, TimeUnit.MILLISECONDS);
         }
 
@@ -88,8 +87,6 @@ public class DurationSerialization {
 
             final long duration = Long.valueOf(m.group(1));
             final String unitString = m.group(2);
-
-            p.nextToken();
 
             if (unitString.isEmpty()) {
                 return new Duration(duration, DEFAULT_UNIT);
