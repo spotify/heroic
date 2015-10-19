@@ -161,24 +161,6 @@ public class CountData implements ShellTask {
         }, params.parallelism);
     }
 
-    @Data
-    public static class BackendKeyArgument {
-        private final Series series;
-        private final long base;
-        private final MetricType type;
-
-        @JsonCreator
-        public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base, @JsonProperty("type") MetricType type) {
-            this.series = checkNotNull(series, "series");
-            this.base = checkNotNull(base, "base");
-            this.type = Optional.ofNullable(type).orElse(MetricType.POINT);
-        }
-
-        public BackendKey toBackendKey() {
-            return new BackendKey(series, base, type);
-        }
-    }
-
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = { "--file" }, usage = "File to read keys from", metaVar = "<file>")
