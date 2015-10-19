@@ -2,13 +2,17 @@ package com.spotify.heroic.elasticsearch.index;
 
 import static org.junit.Assert.assertArrayEquals;
 
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Before;
 import org.junit.Test;
+
+import com.spotify.heroic.common.Duration;
 
 public class RotatingIndexMappingTest {
     private RotatingIndexMapping rotating;
 
-    private long interval = 1000;
+    private Duration interval = new Duration(1000, TimeUnit.MILLISECONDS);
     private String pattern = "index-%s";
     private int maxReadIndices = 2;
     private int maxWriteIndices = 1;
