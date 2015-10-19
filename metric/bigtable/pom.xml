@@ -39,7 +39,7 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.cloud.bigtable</groupId>
+      <groupId>com.spotify.heroic.repackaged</groupId>
       <artifactId>bigtable-client-core</artifactId>
       <version>${bigtable.version}</version>
     </dependency>
