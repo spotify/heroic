@@ -86,6 +86,7 @@ public class HeroicConfig {
 
         @JsonCreator
         public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
+                @JsonProperty("disableMetrics") Boolean disableMetrics,
                 @JsonProperty("cluster") ClusterManagerModule.Builder cluster,
                 @JsonProperty("metrics") MetricManagerModule.Builder metrics,
                 @JsonProperty("metadata") MetadataManagerModule.Builder metadata,
@@ -96,6 +97,7 @@ public class HeroicConfig {
                 @JsonProperty("shellServer") ShellServerModule.Builder shellServer) {
             this.host = ofNullable(host);
             this.port = ofNullable(port);
+            this.disableMetrics = ofNullable(disableMetrics);
             this.cluster = ofNullable(cluster);
             this.metric = ofNullable(metrics);
             this.metadata = ofNullable(metadata);

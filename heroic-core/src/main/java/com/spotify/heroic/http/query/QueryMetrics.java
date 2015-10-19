@@ -59,8 +59,7 @@ public class QueryMetrics {
     public QueryMetrics(@JsonProperty("query") String query, @JsonProperty("key") String key,
             @JsonProperty("tags") Map<String, String> tags, @JsonProperty("filter") Filter filter,
             @JsonProperty("groupBy") List<String> groupBy, @JsonProperty("range") QueryDateRange range,
-            @JsonProperty("noCache") Boolean noCache,
-            @JsonProperty("aggregators") List<AggregationQuery> aggregators,
+            @JsonProperty("noCache") Boolean noCache, @JsonProperty("aggregators") List<AggregationQuery> aggregators,
             @JsonProperty("source") String source) {
         this.query = ofNullable(query);
         this.key = ofNullable(key);
@@ -72,7 +71,6 @@ public class QueryMetrics {
         this.aggregators = ofNullable(aggregators).filter(c -> !c.isEmpty())
                 .<AggregationQuery> map(chain -> new ChainAggregationQuery(chain))
                 .orElseGet(EmptyAggregationQuery::new);
-        this.source = MetricType.fromIdentifier(source)
-                .orElseThrow(() -> new IllegalArgumentException("Not a valid source: " + source));
+        this.source = MetricType.fromIdentifier(source).orElse(MetricType.POINT);
     }
 }
