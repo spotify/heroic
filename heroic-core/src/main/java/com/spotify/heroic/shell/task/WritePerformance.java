@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -120,12 +121,12 @@ public class WritePerformance implements ShellTask {
                 }
             }
 
-            final List<AsyncFuture<Times>> writes = buildWrites(targets, input, params, start);
+            final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, start);
 
             io.out().println(String.format("Read data, waiting for %d write batches...", writes.size()));
             io.out().flush();
 
-            final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes);
+            final AsyncFuture<CollectedTimes> results = collectWrites(io.out(), writes, params.parallelism);
 
             final CollectedTimes times = results.get();
             final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
@@ -183,9 +184,9 @@ public class WritePerformance implements ShellTask {
         out.println(String.format("  99th: %d ms", TimeUnit.MILLISECONDS.convert(q99, unit)));
     }
 
-    private List<AsyncFuture<Times>> buildWrites(List<MetricBackend> targets, Collection<List<WriteMetric>> input,
+    private List<Callable<AsyncFuture<Times>>> buildWrites(List<MetricBackend> targets, Collection<List<WriteMetric>> input,
             final Parameters params, final long start) {
-        final List<AsyncFuture<Times>> writes = new ArrayList<>();
+        final List<Callable<AsyncFuture<Times>>> writes = new ArrayList<>();
 
         int request = 0;
 
@@ -194,7 +195,7 @@ public class WritePerformance implements ShellTask {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
                 for (final List<WriteMetric> groups : input) {
-                    writes.add(target.write(groups).directTransform(result -> {
+                    writes.add(() -> target.write(groups).directTransform(result -> {
                         final long runtime = System.currentTimeMillis() - start;
                         return new Times(result.getTimes(), runtime);
                     }));
@@ -209,7 +210,7 @@ public class WritePerformance implements ShellTask {
                 for (final WriteMetric w : groups) {
                     final MetricBackend target = targets.get(request++ % targets.size());
 
-                    writes.add(target.write(w).directTransform(result -> {
+                    writes.add(() -> target.write(w).directTransform(result -> {
                         final long runtime = System.currentTimeMillis() - start;
                         return new Times(result.getTimes(), runtime);
                     }));
@@ -220,14 +221,14 @@ public class WritePerformance implements ShellTask {
         return writes;
     }
 
-    private AsyncFuture<CollectedTimes> collectWrites(final PrintWriter out, Collection<AsyncFuture<Times>> writes) {
+    private AsyncFuture<CollectedTimes> collectWrites(final PrintWriter out, Collection<Callable<AsyncFuture<Times>>> writes, int parallelism) {
         final int div = Math.max(writes.size() / 40, 1);
         final boolean mod = writes.size() % div == 0;
 
         final AtomicInteger errors = new AtomicInteger();
         final AtomicInteger count = new AtomicInteger();
 
-        final AsyncFuture<CollectedTimes> results = async.collect(writes, new StreamCollector<Times, CollectedTimes>() {
+        final AsyncFuture<CollectedTimes> results = async.eventuallyCollect(writes, new StreamCollector<Times, CollectedTimes>() {
             final ConcurrentLinkedQueue<Long> runtimes = new ConcurrentLinkedQueue<>();
             final ConcurrentLinkedQueue<Long> executionTimes = new ConcurrentLinkedQueue<>();
 
@@ -273,7 +274,7 @@ public class WritePerformance implements ShellTask {
                 final List<Long> executionTimes = new ArrayList<>(this.executionTimes);
                 return new CollectedTimes(runtimes, executionTimes, errors.get());
             }
-        });
+        }, parallelism);
 
         return results;
     }
@@ -320,6 +321,9 @@ public class WritePerformance implements ShellTask {
 
         @Option(name = "-B", aliases = { "--batch" }, usage = "Write using batch API")
         private boolean batch = false;
+
+        @Option(name = "--parallelism", usage = "The number of requests to send in parallel (default: 100)", metaVar = "<number>")
+        private int parallelism = 100;
     }
 
     @Data
