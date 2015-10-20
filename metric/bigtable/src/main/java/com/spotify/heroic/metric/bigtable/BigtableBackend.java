@@ -11,9 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
@@ -48,6 +46,7 @@ import com.spotify.heroic.metric.bigtable.api.BigtableLatestRow;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutations;
 import com.spotify.heroic.metric.bigtable.api.BigtableTable;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
+import com.spotify.heroic.metrics.Meter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -80,9 +79,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     private final Groups groups;
     private final boolean configure;
 
-    private final LongAdder written = new LongAdder();
-    private final AtomicLong lastWritten = new AtomicLong();
-    private final AtomicLong lastPoll = new AtomicLong();
+    private final Meter written = new Meter();
 
     @Inject
     public BigtableBackend(final AsyncFramework async, @Named("common") final SerializerFramework serializer,
@@ -307,7 +304,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
     private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final Point d)
             throws IOException {
-        written.increment();
+        written.mark();
 
         final long timestamp = d.getTimestamp();
         final long base = base(timestamp);
@@ -384,24 +381,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
 
     @Override
     public Statistics getStatistics() {
-        final long w = written.sum();
-
-        final long now = System.currentTimeMillis();
-
-        final long lastPoll = this.lastPoll.getAndSet(now);
-        final long lastWritten = this.lastWritten.getAndSet(w);
-
-        final long writeRate;
-
-        final double seconds = (double) (now - lastPoll) / 1000.0d;
-
-        if (seconds > 0d) {
-            writeRate = (long) ((double) (w - lastWritten) / seconds);
-        } else {
-            writeRate = -1;
-        }
-
-        return Statistics.of("written", w, "writeRate", writeRate);
+        final long written = this.written.getCount();
+        final double writeRate = this.written.getFiveMinuteRate();
+        return Statistics.of("written", written, "writeRate", (long)writeRate);
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {
