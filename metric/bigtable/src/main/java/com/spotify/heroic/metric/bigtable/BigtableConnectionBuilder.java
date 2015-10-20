@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.google.bigtable.admin.table.v1.ColumnFamily;
 import com.google.bigtable.admin.table.v1.CreateColumnFamilyRequest;
@@ -62,12 +61,12 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     private final CredentialsBuilder credentials;
 
     private final AsyncFramework async;
+    private final ExecutorService executorService;
 
     @Override
     public BigtableConnection call() throws Exception {
-        final ExecutorService executorService = Executors.newFixedThreadPool(32);
-
         final CredentialOptions credentials = this.credentials.build();
+
         final BigtableOptions options = new BigtableOptions.Builder().setProjectId(project).setZoneId(zone)
                 .setClusterId(cluster).setUserAgent(USER_AGENT)
                 .setDataChannelCount(64)

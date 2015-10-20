@@ -25,6 +25,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 
 import javax.inject.Singleton;
 
@@ -92,11 +93,11 @@ public final class BigtableMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public Managed<BigtableConnection> connection(final AsyncFramework async) {
+            public Managed<BigtableConnection> connection(final AsyncFramework async, final ExecutorService executorService) {
                 return async.managed(new ManagedSetup<BigtableConnection>() {
                     @Override
                     public AsyncFuture<BigtableConnection> construct() throws Exception {
-                        return async.call(new BigtableConnectionBuilder(project, zone, cluster, credentials, async));
+                        return async.call(new BigtableConnectionBuilder(project, zone, cluster, credentials, async, executorService));
                     }
 
                     @Override
