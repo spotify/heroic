@@ -102,11 +102,11 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
 
-    static final boolean DEFAULT_SETUP_SERVER = true;
+    static final boolean DEFAULT_SETUP_SERVICE = true;
     static final boolean DEFAULT_ONESHOT = false;
     static final boolean DEFAULT_DISABLE_BACKENDS = false;
     static final boolean DEFAULT_SKIP_LIFECYCLES = false;
-    static final boolean DEFAULT_SHELL_SERVER = true;
+    static final boolean DEFAULT_SETUP_SHELL_SERVER = true;
 
     static final String APPLICATION_JSON_INTERNAL = "application/json+internal";
     static final String APPLICATION_JSON = "application/json";
@@ -158,11 +158,11 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private final AtomicReference<HeroicReporter> reporter;
 
     /* flags */
-    private final boolean setupServer;
+    private final boolean setupService;
     private final boolean oneshot;
     private final boolean disableBackends;
     private final boolean skipLifecycles;
-    private final boolean shellServer;
+    private final boolean setupShellServer;
 
     /* extensions */
     private final List<HeroicModule> modules;
@@ -451,7 +451,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         final HeroicReporter reporter = this.reporter.get();
 
         // register root components.
-        modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress, setupServer, reporter, pinger));
+        modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress, setupService, reporter, pinger));
 
         if (!disableBackends) {
             modules.add(new AbstractModule() {
@@ -467,8 +467,10 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             modules.add(config.getIngestion());
         }
 
-        if (shellServer) {
-            modules.add(config.getShellServer().orElseGet(() -> ShellServerModule.builder().build()));
+        Optional<ShellServerModule> shellServer = buildShellServer(config);
+
+        if (shellServer.isPresent()) {
+            modules.add(shellServer.get());
         }
 
         modules.add(config.getCluster().make(this));
@@ -485,6 +487,22 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         // make new injector child of early injector so they can access everything in it.
         return early.createChildInjector(modules);
+    }
+
+    private Optional<ShellServerModule> buildShellServer(final HeroicConfig config) {
+        final Optional<ShellServerModule> shellServer = config.getShellServer();
+
+        // a shell server is configured.
+        if (shellServer.isPresent()) {
+            return shellServer;
+        }
+
+        // must have a shell server
+        if (setupShellServer) {
+            return of(ShellServerModule.builder().build());
+        }
+
+        return empty();
     }
 
     private InetSocketAddress setupBindAddress(HeroicConfig config) {
@@ -657,11 +675,11 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         private Optional<String> startupId = empty();
 
         /* flags */
-        private Optional<Boolean> setupServer = empty();
+        private Optional<Boolean> setupService = empty();
         private Optional<Boolean> oneshot = empty();
         private Optional<Boolean> disableBackends = empty();
         private Optional<Boolean> skipLifecycles = empty();
-        private Optional<Boolean> shellServer = empty();
+        private Optional<Boolean> setupShellServer = empty();
 
         /* extensions */
         private final ImmutableList.Builder<HeroicModule> modules = ImmutableList.builder();
@@ -669,16 +687,25 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
 
-        public Builder shellServer(boolean shellServer) {
-            this.shellServer = of(shellServer);
+        /**
+         * If a shell server is not configured, setup the default shell server.
+         */
+        public Builder setupShellServer(boolean setupShellServer) {
+            this.setupShellServer = of(setupShellServer);
             return this;
         }
 
+        /**
+         * Port to bind service to.
+         */
         public Builder port(final int port) {
             this.port = of(port);
             return this;
         }
 
+        /**
+         * Host to bind service to.
+         */
         public Builder host(final String host) {
             checkNotNull(host, "host");
             this.host = of(host);
@@ -728,8 +755,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         /**
          * Configure setup of the server component of heroic or not.
          */
-        public Builder setupServer(final boolean setupServer) {
-            this.setupServer = of(setupServer);
+        public Builder setupService(final boolean setupService) {
+            this.setupService = of(setupService);
             return this;
         }
 
@@ -811,11 +838,11 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                 params.orElseGet(ExtraParameters::empty),
                 new AtomicReference<>(reporter.orElseGet(NoopHeroicReporter::get)),
 
-                setupServer.orElse(DEFAULT_SETUP_SERVER),
+                setupService.orElse(DEFAULT_SETUP_SERVICE),
                 oneshot.orElse(DEFAULT_ONESHOT),
                 disableBackends.orElse(DEFAULT_DISABLE_BACKENDS),
                 skipLifecycles.orElse(DEFAULT_SKIP_LIFECYCLES),
-                shellServer.orElse(DEFAULT_SHELL_SERVER),
+                setupShellServer.orElse(DEFAULT_SETUP_SHELL_SERVER),
 
                 modules.build(),
                 profiles.build(),

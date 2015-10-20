@@ -139,7 +139,11 @@ public class HeroicService {
     private static void configureBuilder(final HeroicCore.Builder builder, final Parameters params) {
         final Path config = getConfigPath(params.extra);
 
-        builder.setupServer(true);
+        // setup as a service accepting http requests.
+        builder.setupService(true);
+
+        // do not require a shell server by default.
+        builder.setupShellServer(false);
 
         if (config != null)
             builder.configPath(config);

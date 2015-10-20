@@ -303,7 +303,7 @@ public class HeroicShell {
     }
 
     static HeroicCore.Builder setupBuilder(Parameters params) {
-        HeroicCore.Builder builder = HeroicCore.builder().setupServer(params.server).disableBackends(params.disableBackends)
+        HeroicCore.Builder builder = HeroicCore.builder().setupService(params.server).disableBackends(params.disableBackends)
                 .skipLifecycles(params.skipLifecycles).modules(HeroicModules.ALL_MODULES).oneshot(true);
 
         if (params.config() != null) {
@@ -322,7 +322,7 @@ public class HeroicShell {
             builder.profile(p);
         }
 
-        builder.shellServer(params.shellServer);
+        builder.setupShellServer(params.shellServer);
 
         return builder;
     }

@@ -56,7 +56,7 @@ public class HeroicPrimaryModule extends AbstractModule {
     private final Set<LifeCycle> lifeCycles;
     private final InetSocketAddress bindAddress;
 
-    private final boolean server;
+    private final boolean setupService;
     private final HeroicReporter reporter;
     private final Optional<HeroicStartupPinger> pinger;
 
@@ -148,7 +148,7 @@ public class HeroicPrimaryModule extends AbstractModule {
     protected void configure() {
         bind(QueryManager.class).to(CoreQueryManager.class).in(Scopes.SINGLETON);
 
-        if (server) {
+        if (setupService) {
             bind(HeroicServer.class).in(Scopes.SINGLETON);
         }
 
