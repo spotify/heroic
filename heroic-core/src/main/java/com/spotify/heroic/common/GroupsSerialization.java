@@ -24,9 +24,7 @@ public class GroupsSerialization {
             }
 
             if (p.getCurrentToken() == JsonToken.VALUE_STRING) {
-                final Groups g = new Groups(ImmutableSet.of(p.getText()));
-                p.nextToken();
-                return g;
+                return new Groups(ImmutableSet.of(p.getText()));
             }
 
             throw c.wrongTokenException(p, JsonToken.START_ARRAY, null);
