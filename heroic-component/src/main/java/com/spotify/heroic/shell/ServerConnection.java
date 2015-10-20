@@ -2,19 +2,15 @@ package com.spotify.heroic.shell;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.Writer;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 import com.spotify.heroic.shell.protocol.Acknowledge;
-import com.spotify.heroic.shell.protocol.CommandOutput;
 import com.spotify.heroic.shell.protocol.FileClose;
 import com.spotify.heroic.shell.protocol.FileFlush;
 import com.spotify.heroic.shell.protocol.FileNewInputStream;
@@ -26,35 +22,13 @@ import com.spotify.heroic.shell.protocol.FileWrite;
 
 import eu.toolchain.serializer.SerializerFramework;
 
-final class ServerConnection extends ShellConnection implements ShellIO {
+final class ServerConnection extends ShellConnection {
     public static final int BUFFER_SIZE = (1 << 16);
-
-    final PrintWriter out;
 
     public ServerConnection(final SerializerFramework framework, final Socket socket) throws IOException {
         super(framework, socket);
-
-        this.out = new PrintWriter(new Writer() {
-            private CharArrayWriter out = new CharArrayWriter(BUFFER_SIZE);
-
-            @Override
-            public void close() throws IOException {
-            }
-
-            @Override
-            public void flush() throws IOException {
-                send(new CommandOutput(out.toCharArray()));
-                out.reset();
-            }
-
-            @Override
-            public void write(char[] b, int off, int len) throws IOException {
-                out.write(b, off, len);
-            }
-        });
     }
 
-    @Override
     public InputStream newInputStream(Path path, StandardOpenOption... options) throws IOException {
         final FileOpened result = request(new FileNewInputStream(path.toString(), Arrays.asList(options)),
                 FileOpened.class);
@@ -85,7 +59,6 @@ final class ServerConnection extends ShellConnection implements ShellIO {
 
     }
 
-    @Override
     public OutputStream newOutputStream(Path path, StandardOpenOption... options) throws IOException {
         final FileOpened result = request(new FileNewOutputStream(path.toString(), Arrays.asList(options)),
                 FileOpened.class);
@@ -115,10 +88,5 @@ final class ServerConnection extends ShellConnection implements ShellIO {
                 request(new FileClose(handle), Acknowledge.class);
             }
         }, BUFFER_SIZE);
-    }
-
-    @Override
-    public PrintWriter out() {
-        return out;
     }
 }
