@@ -26,6 +26,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.LongAdder;
 
 import javax.inject.Inject;
@@ -49,7 +50,9 @@ import com.spotify.heroic.suggest.SuggestManager;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class IngestionManagerImpl implements IngestionManager {
     @Inject
     protected AsyncFramework async;
@@ -72,21 +75,29 @@ public class IngestionManagerImpl implements IngestionManager {
 
     private volatile Filter filter;
 
+    private final Semaphore semaphore;
+
     private final LongAdder ingested = new LongAdder();
 
     /**
      * @param updateMetrics Ingested metrics will update metric backends.
      * @param updateMetadata Ingested metrics will update metadata backends.
      * @param updateSuggestions Ingested metrics will update suggest backends.
+     * @param maxConcurrentWrites Limit the number of concurrent writes, 0 means no limit at all
      */
     @Inject
     public IngestionManagerImpl(@Named("updateMetrics") final boolean updateMetrics,
             @Named("updateMetadata") final boolean updateMetadata,
-            @Named("updateSuggestions") final boolean updateSuggestions, final Filter filter) {
+            @Named("updateSuggestions") final boolean updateSuggestions,
+            @Named("maxConcurrentWrites") final int maxConcurrentWrites,
+            final Filter filter) {
         this.updateMetrics = updateMetrics;
         this.updateMetadata = updateMetadata;
         this.updateSuggestions = updateSuggestions;
         this.filter = filter;
+
+        semaphore = new Semaphore(maxConcurrentWrites);
+
     }
 
     final Transform<WriteResult, Void> metricTransform = new Transform<WriteResult, Void>() {
@@ -128,7 +139,7 @@ public class IngestionManagerImpl implements IngestionManager {
             return async.resolved(WriteResult.of());
 
         ingested.increment();
-        return doWrite(group, write);
+        return syncWrite(group, write);
     }
 
     @Override
@@ -136,13 +147,31 @@ public class IngestionManagerImpl implements IngestionManager {
         return Statistics.of(INGESTED, ingested.sum());
     }
 
-    protected AsyncFuture<WriteResult> doWrite(final String group, final WriteMetric write)
+    protected AsyncFuture<WriteResult> syncWrite(final String group, final WriteMetric write)
             throws BackendGroupException {
         if (!filter.apply(write.getSeries())) {
             // XXX: report dropped-by-filter
             return async.resolved(WriteResult.of());
         }
 
+        try {
+            semaphore.acquire();
+        } catch (InterruptedException e) {
+            log.warn("Failed to acquire semaphore for bounded write", e);
+            return async.resolved(WriteResult.of());
+        }
+
+        reporter.incrementConcurrentWrites();
+
+        return doWrite(group, write).onFinished(
+            () ->
+                {
+                    semaphore.release();
+                    reporter.decrementConcurrentWrites();
+                });
+    }
+
+    private AsyncFuture<WriteResult> doWrite(String group, WriteMetric write) throws BackendGroupException {
         final MetricBackend metric = updateMetrics ? this.metric.useGroup(group) : null;
         final MetadataBackend metadata = updateMetadata ? this.metadata.useGroup(group) : null;
         final SuggestBackend suggest = updateSuggestions ? this.suggest.useGroup(group) : null;

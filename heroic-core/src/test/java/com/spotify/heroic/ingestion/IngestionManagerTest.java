@@ -34,6 +34,7 @@ import eu.toolchain.async.Collector;
 @RunWith(MockitoJUnitRunner.class)
 public class IngestionManagerTest {
     private static final String group = "group";
+    private static final int MAX_CONCURRENT_WRITES = 10000;
 
     @Mock
     private AsyncFuture<WriteResult> writeResult;
@@ -63,11 +64,12 @@ public class IngestionManagerTest {
         doReturn(metric).when(metricManager).useGroup(group);
         doReturn(metadata).when(metadataManager).useGroup(group);
         doReturn(suggest).when(suggestManager).useGroup(group);
+        doReturn(future).when(future).onFinished(any());
     }
 
     private IngestionManagerImpl setupIngestionManager(final boolean updateMetrics, final boolean updateMetadata,
             final boolean updateSuggestions) {
-        final IngestionManagerImpl manager = new IngestionManagerImpl(updateMetrics, updateMetadata, updateSuggestions, TrueFilterImpl.get());
+        final IngestionManagerImpl manager = new IngestionManagerImpl(updateMetrics, updateMetadata, updateSuggestions, MAX_CONCURRENT_WRITES, TrueFilterImpl.get());
         manager.async = async;
         manager.metadata = metadataManager;
         manager.metric = metricManager;
@@ -87,7 +89,7 @@ public class IngestionManagerTest {
 
         verify(async).resolved(any(WriteResult.class));
         verify(write).isEmpty();
-        verify(manager, never()).doWrite(group, write);
+        verify(manager, never()).syncWrite(group, write);
     }
 
     @Test
@@ -95,13 +97,13 @@ public class IngestionManagerTest {
         final IngestionManagerImpl manager = setupIngestionManager(true, true, true);
 
         doReturn(false).when(write).isEmpty();
-        doReturn(future).when(manager).doWrite(group, write);
+        doReturn(future).when(manager).syncWrite(group, write);
 
         assertEquals(future, manager.write(group, write));
 
         verify(async, never()).resolved(any(WriteResult.class));
         verify(write).isEmpty();
-        verify(manager).doWrite(group, write);
+        verify(manager).syncWrite(group, write);
     }
 
     @SuppressWarnings("unchecked")
@@ -111,10 +113,12 @@ public class IngestionManagerTest {
 
         doReturn(future).when(manager).doMetricWrite(write, metric);
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
-        doReturn(future).when(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));
+        doReturn(future).when(async).collect(anyCollection(), Matchers.<Collector>any(Collector.class));
 
-        assertEquals(future, manager.doWrite(group, write));
+        assertEquals(future, manager.syncWrite(group, write));
 
+        verify(future).onFinished(any());
+        verify(reporter).incrementConcurrentWrites();
         verify(manager).doMetricWrite(write, metric);
         verify(manager).doMetadataWrite(write, metadata, suggest);
         verify(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));
@@ -129,8 +133,10 @@ public class IngestionManagerTest {
         doReturn(future).when(manager).doMetadataWrite(write, metadata, suggest);
         doReturn(future).when(async).collect(anyCollection(), Matchers.<Collector>any(Collector.class));
 
-        assertEquals(future, manager.doWrite(group, write));
+        assertEquals(future, manager.syncWrite(group, write));
 
+        verify(future).onFinished(any());
+        verify(reporter).incrementConcurrentWrites();
         verify(manager, never()).doMetricWrite(write, metric);
         verify(manager, never()).doMetadataWrite(write, metadata, suggest);
         verify(async).collect(anyCollection(), Matchers.<Collector> any(Collector.class));

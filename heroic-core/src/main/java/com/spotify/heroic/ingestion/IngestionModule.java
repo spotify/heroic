@@ -55,10 +55,12 @@ public class IngestionModule extends PrivateModule {
     public static final boolean DEFAULT_UPDATE_METRICS = true;
     public static final boolean DEFAULT_UPDATE_METADATA = true;
     public static final boolean DEFAULT_UPDATE_SUGGESTIONS = true;
+    public static final int DEFAULT_MAX_CONCURRENT_WRITES = 10000;
 
     private final boolean updateMetrics;
     private final boolean updateMetadata;
     private final boolean updateSuggestions;
+    private final int maxConcurrentWrites;
     private final Optional<String> filter;
 
     @Provides
@@ -86,6 +88,12 @@ public class IngestionModule extends PrivateModule {
     }
 
     @Provides
+    @Named("maxConcurrentWrites")
+    public int maxConcurrentWrites() {
+        return maxConcurrentWrites;
+    }
+
+    @Provides
     @Singleton
     public Filter filter(final QueryParser parser, final FilterFactory filters, final ExtraParameters params) {
         return Optionals.pickOptional(filter.map(parser::parseFilter), params.getFilter(INGESTION_FILTER_PARAM, parser))
@@ -108,16 +116,19 @@ public class IngestionModule extends PrivateModule {
         private Optional<Boolean> updateMetrics = empty();
         private Optional<Boolean> updateMetadata = empty();
         private Optional<Boolean> updateSuggestions = empty();
+        private Optional<Integer> maxConcurrentWrites = empty();
         private Optional<String> filter = empty();
 
         @JsonCreator
         public Builder(@JsonProperty("updateMetrics") Boolean updateMetrics,
                 @JsonProperty("updateMetadata") Boolean updateMetadata,
                 @JsonProperty("updateSuggestions") Boolean updateSuggestions,
+                @JsonProperty("maxConcurrentWrites") Integer maxConcurrentWrites,
                 @JsonProperty("filter") String filter) {
             this.updateMetadata = ofNullable(updateMetadata);
             this.updateMetrics = ofNullable(updateMetrics);
             this.updateSuggestions = ofNullable(updateSuggestions);
+            this.maxConcurrentWrites = ofNullable(maxConcurrentWrites);
             this.filter = ofNullable(filter);
         }
 
@@ -143,12 +154,19 @@ public class IngestionModule extends PrivateModule {
             return this;
         }
 
+
+        public Builder maxConcurrentWrites(int maxConcurrentWrites) {
+            this.maxConcurrentWrites = of(maxConcurrentWrites);
+            return this;
+        }
+
         public Builder merge(final Builder o) {
          // @formatter:off
             return new Builder(
                 pickOptional(updateMetrics, o.updateMetrics),
                 pickOptional(updateMetadata, o.updateMetadata),
                 pickOptional(updateSuggestions, o.updateSuggestions),
+                pickOptional(maxConcurrentWrites, o.maxConcurrentWrites),
                 pickOptional(filter, o.filter)
             );
             // @formatter:on
@@ -160,6 +178,7 @@ public class IngestionModule extends PrivateModule {
                 updateMetrics.orElse(DEFAULT_UPDATE_METRICS),
                 updateMetadata.orElse(DEFAULT_UPDATE_METADATA),
                 updateSuggestions.orElse(DEFAULT_UPDATE_SUGGESTIONS),
+                maxConcurrentWrites.orElse(DEFAULT_MAX_CONCURRENT_WRITES),
                 filter
             );
             // @formatter:on

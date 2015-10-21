@@ -33,6 +33,16 @@ public class NoopIngestionManagerReporter implements IngestionManagerReporter {
         return NoopFutureReporterContext.get();
     }
 
+    @Override
+    public void incrementConcurrentWrites() {
+
+    }
+
+    @Override
+    public void decrementConcurrentWrites() {
+
+    }
+
     private static final NoopIngestionManagerReporter instance = new NoopIngestionManagerReporter();
 
     public static NoopIngestionManagerReporter get() {
