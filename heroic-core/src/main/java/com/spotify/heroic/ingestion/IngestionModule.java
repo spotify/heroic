@@ -55,7 +55,7 @@ public class IngestionModule extends PrivateModule {
     public static final boolean DEFAULT_UPDATE_METRICS = true;
     public static final boolean DEFAULT_UPDATE_METADATA = true;
     public static final boolean DEFAULT_UPDATE_SUGGESTIONS = true;
-    public static final int DEFAULT_MAX_CONCURRENT_WRITES = 10000;
+    public static final int DEFAULT_MAX_CONCURRENT_WRITES = 50000;
 
     private final boolean updateMetrics;
     private final boolean updateMetadata;
