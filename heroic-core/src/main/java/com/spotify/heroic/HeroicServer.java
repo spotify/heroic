@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -34,9 +35,6 @@ import javax.inject.Named;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
-
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
@@ -59,13 +57,18 @@ import com.fasterxml.jackson.jaxrs.base.JsonParseExceptionMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.Injector;
 import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.http.CorsResponseFilter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ToString(of = { "address" })
 public class HeroicServer implements LifeCycle {
+    public static final String DEFAULT_CORS_ALLOW_ORIGIN = "*";
+
     @Inject
     @Named("bindAddress")
     private InetSocketAddress address;
@@ -82,6 +85,14 @@ public class HeroicServer implements LifeCycle {
 
     @Inject
     private AsyncFramework async;
+
+    @Inject
+    @Named("enableCors")
+    private boolean enableCors;
+
+    @Inject
+    @Named("corsAllowOrigin")
+    private Optional<String> corsAllowOrigin;
 
     private volatile Server server;
 
@@ -243,6 +254,10 @@ public class HeroicServer implements LifeCycle {
         }
 
         // Resources.
+        if (enableCors) {
+            c.register(new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
+        }
+
         c.register(JsonParseExceptionMapper.class);
         c.register(JsonMappingExceptionMapper.class);
         c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class, MessageBodyWriter.class);

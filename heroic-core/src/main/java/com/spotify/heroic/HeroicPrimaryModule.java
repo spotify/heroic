@@ -55,6 +55,8 @@ public class HeroicPrimaryModule extends AbstractModule {
     private final HeroicCoreInstance instance;
     private final Set<LifeCycle> lifeCycles;
     private final InetSocketAddress bindAddress;
+    private final boolean enableCors;
+    private final Optional<String> corsAllowOrigin;
 
     private final boolean setupService;
     private final HeroicReporter reporter;
@@ -105,6 +107,20 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Named("bindAddress")
     public InetSocketAddress bindAddress() {
         return bindAddress;
+    }
+
+    @Provides
+    @Singleton
+    @Named("enableCors")
+    public boolean enableCors() {
+        return enableCors;
+    }
+
+    @Provides
+    @Singleton
+    @Named("corsAllowOrigin")
+    public Optional<String> corsAllowOrigin() {
+        return corsAllowOrigin;
     }
 
     @Provides

@@ -451,7 +451,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         final HeroicReporter reporter = this.reporter.get();
 
         // register root components.
-        modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress, setupService, reporter, pinger));
+        modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress, config.isEnableCors(),
+                config.getCorsAllowOrigin(), setupService, reporter, pinger));
 
         if (!disableBackends) {
             modules.add(new AbstractModule() {

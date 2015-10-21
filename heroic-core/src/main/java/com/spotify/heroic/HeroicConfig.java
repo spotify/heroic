@@ -52,10 +52,13 @@ import lombok.RequiredArgsConstructor;
 @Data
 public class HeroicConfig {
     public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
+    public static final boolean DEFAULT_ENABLE_CORS = true;
 
     private final Optional<String> host;
     private final Optional<Integer> port;
     private final Optional<Boolean> disableMetrics;
+    private final boolean enableCors;
+    private final Optional<String> corsAllowOrigin;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
@@ -75,6 +78,8 @@ public class HeroicConfig {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
         private Optional<Boolean> disableMetrics = empty();
+        private Optional<Boolean> enableCors = empty();
+        private Optional<String> corsAllowOrigin = empty();
         private Optional<ClusterManagerModule.Builder> cluster = empty();
         private Optional<MetricManagerModule.Builder> metric = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
@@ -87,6 +92,8 @@ public class HeroicConfig {
         @JsonCreator
         public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
                 @JsonProperty("disableMetrics") Boolean disableMetrics,
+                @JsonProperty("enableCors") Boolean enableCors,
+                @JsonProperty("corsAllowOrigin") String corsAllowOrigin,
                 @JsonProperty("cluster") ClusterManagerModule.Builder cluster,
                 @JsonProperty("metrics") MetricManagerModule.Builder metrics,
                 @JsonProperty("metadata") MetadataManagerModule.Builder metadata,
@@ -98,6 +105,8 @@ public class HeroicConfig {
             this.host = ofNullable(host);
             this.port = ofNullable(port);
             this.disableMetrics = ofNullable(disableMetrics);
+            this.enableCors = ofNullable(enableCors);
+            this.corsAllowOrigin = ofNullable(corsAllowOrigin);
             this.cluster = ofNullable(cluster);
             this.metric = ofNullable(metrics);
             this.metadata = ofNullable(metadata);
@@ -169,6 +178,8 @@ public class HeroicConfig {
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
                 pickOptional(disableMetrics, o.disableMetrics),
+                pickOptional(enableCors, o.enableCors),
+                pickOptional(corsAllowOrigin, o.corsAllowOrigin),
                 mergeOptional(cluster, o.cluster, (a, b) -> a.merge(b)),
                 mergeOptional(metric, o.metric, (a, b) -> a.merge(b)),
                 mergeOptional(metadata, o.metadata, (a, b) -> a.merge(b)),
@@ -187,6 +198,8 @@ public class HeroicConfig {
                 host,
                 port,
                 disableMetrics,
+                enableCors.orElse(DEFAULT_ENABLE_CORS),
+                corsAllowOrigin,
                 cluster.orElseGet(ClusterManagerModule::builder).build(),
                 metric.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),
