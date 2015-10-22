@@ -31,6 +31,7 @@ import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionManager {
     public static final String INGESTED = "ingested";
+    public static final String AVAILABLE_WRITE_PERMITS = "available-write-permits";
 
     public AsyncFuture<WriteResult> write(String group, WriteMetric write) throws BackendGroupException;
 

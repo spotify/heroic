@@ -75,7 +75,7 @@ public class IngestionManagerImpl implements IngestionManager {
 
     private volatile Filter filter;
 
-    private final Semaphore semaphore;
+    private final Semaphore writePermits;
 
     private final LongAdder ingested = new LongAdder();
 
@@ -96,7 +96,7 @@ public class IngestionManagerImpl implements IngestionManager {
         this.updateSuggestions = updateSuggestions;
         this.filter = filter;
 
-        semaphore = new Semaphore(maxConcurrentWrites);
+        writePermits = new Semaphore(maxConcurrentWrites);
 
     }
 
@@ -144,7 +144,9 @@ public class IngestionManagerImpl implements IngestionManager {
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(INGESTED, ingested.sum());
+        return Statistics.of(
+                INGESTED, ingested.sum(),
+                AVAILABLE_WRITE_PERMITS, writePermits.availablePermits());
     }
 
     protected AsyncFuture<WriteResult> syncWrite(final String group, final WriteMetric write)
@@ -155,7 +157,7 @@ public class IngestionManagerImpl implements IngestionManager {
         }
 
         try {
-            semaphore.acquire();
+            writePermits.acquire();
         } catch (InterruptedException e) {
             log.warn("Failed to acquire semaphore for bounded write", e);
             return async.resolved(WriteResult.of());
@@ -166,7 +168,7 @@ public class IngestionManagerImpl implements IngestionManager {
         return doWrite(group, write).onFinished(
             () ->
                 {
-                    semaphore.release();
+                    writePermits.release();
                     reporter.decrementConcurrentWrites();
                 });
     }
