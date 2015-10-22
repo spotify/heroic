@@ -2,7 +2,6 @@ package com.spotify.heroic.metric.bigtable.credentials;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -24,9 +23,10 @@ public class JsonCredentialsBuilder implements CredentialsBuilder {
 
     @Override
     public CredentialOptions build() throws Exception {
-        try (final InputStream in = Files.newInputStream(path)) {
-            return CredentialOptions.jsonCredentials(in);
-        }
+        // XXX: You have to leave the input stream open for BigtableSession to use it.
+        //      This does 'leak' an input stream, but it's only once, so we'll live with it for now.
+        //      Reported here: https://github.com/GoogleCloudPlatform/cloud-bigtable-client/issues/534
+        return CredentialOptions.jsonCredentials(Files.newInputStream(path));
     }
 
     public static Builder builder() {
@@ -36,7 +36,7 @@ public class JsonCredentialsBuilder implements CredentialsBuilder {
     public static class Builder {
         private Path path;
 
-        public Builder json(Path path) {
+        public Builder path(Path path) {
             checkNotNull(path, "path");
 
             if (!Files.isReadable(path)) {

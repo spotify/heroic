@@ -23,18 +23,23 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
+import java.nio.file.Paths;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
+import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
+import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsBuilder;
 
 public class BigtableProfile extends HeroicProfileBase {
+    public static final String DEFAULT_CREDENTIALS = "json";
+
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final BigtableMetricModule.Builder module = BigtableMetricModule.builder();
@@ -43,12 +48,26 @@ public class BigtableProfile extends HeroicProfileBase {
         params.get("bigtable.zone").map(module::zone);
         params.get("bigtable.cluster").map(module::cluster);
 
-        final ServiceAccountCredentialsBuilder.Builder credentials = ServiceAccountCredentialsBuilder.builder();
+        final String credentials = params.get("bigtable.credential").orElse(DEFAULT_CREDENTIALS);
 
-        params.get("bigtable.serviceAccount").map(credentials::serviceAccount);
-        params.get("bigtable.keyFile").map(credentials::keyFile);
-
-        module.credentials(credentials.build());
+        switch (credentials) {
+        case "json":
+            final JsonCredentialsBuilder.Builder j = JsonCredentialsBuilder.builder();
+            params.get("bigtable.json").map(Paths::get).ifPresent(j::path);
+            module.credentials(j.build());
+            break;
+        case "service-account":
+            final ServiceAccountCredentialsBuilder.Builder sa = ServiceAccountCredentialsBuilder.builder();
+            params.get("bigtable.serviceAccount").ifPresent(sa::serviceAccount);
+            params.get("bigtable.keyFile").ifPresent(sa::keyFile);
+            module.credentials(sa.build());
+            break;
+        case "compute-engine":
+            module.credentials(new ComputeEngineCredentialsBuilder());
+            break;
+        default:
+            throw new IllegalArgumentException("bigtable.credentials: invalid value: " + credentials);
+        }
 
         // @formatter:off
         return HeroicConfig.builder()
@@ -72,8 +91,10 @@ public class BigtableProfile extends HeroicProfileBase {
             parameter("bigtable.project", "Bigtable project to use", "<project>"),
             parameter("bigtable.zone", "Bigtable zone to use", "<zone>"),
             parameter("bigtable.cluster", "Bigtable cluster to use", "<cluster>"),
-            parameter("bigtable.serviceAccount", "Bigtable cluster to use", "<cluster>"),
-            parameter("bigtable.keyFile", "Bigtable cluster to use", "<cluster>")
+            parameter("bigtable.credentials", "Credentials implementation to use, must be one of: compute-engine (default), json, service-account", "<credentials>"),
+            parameter("bigtable.json", "Json file to use when using json credentials", "<file>"),
+            parameter("bigtable.serviceAccount", "Service account to use when using service-account credentials", "<account>"),
+            parameter("bigtable.keyFile", "Key file to use when using service-account credentials", "<file>")
         );
         // @formatter:on
     }
