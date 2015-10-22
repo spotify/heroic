@@ -30,6 +30,11 @@ public class NoopMetricBackendReporter implements MetricBackendReporter {
     }
 
     @Override
+    public FutureReporter.Context reportWrite() {
+        return NoopFutureReporterContext.get();
+    }
+
+    @Override
     public FutureReporter.Context reportWriteBatch() {
         return NoopFutureReporterContext.get();
     }

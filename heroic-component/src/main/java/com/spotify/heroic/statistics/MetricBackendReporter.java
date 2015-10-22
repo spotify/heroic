@@ -24,6 +24,8 @@ package com.spotify.heroic.statistics;
 public interface MetricBackendReporter {
     FutureReporter.Context reportWriteBatch();
 
+    FutureReporter.Context reportWrite();
+
     FutureReporter.Context reportFetch();
 
     ThreadPoolReporter newThreadPool();

@@ -47,6 +47,7 @@ import com.spotify.heroic.metric.bigtable.api.BigtableMutations;
 import com.spotify.heroic.metric.bigtable.api.BigtableTable;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metrics.Meter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -78,13 +79,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     private final Managed<BigtableConnection> connection;
     private final Groups groups;
     private final boolean configure;
+    private final MetricBackendReporter reporter;
 
     private final Meter written = new Meter();
 
     @Inject
     public BigtableBackend(final AsyncFramework async, @Named("common") final SerializerFramework serializer,
             final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
-            final Groups groups, @Named("configure") final boolean configure) {
+            final Groups groups, @Named("configure") final boolean configure, MetricBackendReporter reporter) {
         super(async);
         this.async = async;
         this.serializer = serializer;
@@ -92,6 +94,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         this.connection = connection;
         this.groups = groups;
         this.configure = configure;
+        this.reporter = reporter;
     }
 
     @Override
@@ -205,7 +208,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                 }
             }
 
-            return async.collect(results, WriteResult.merger());
+            return async.collect(results, WriteResult.merger()).onDone(reporter.reportWrite());
         });
     }
 
@@ -275,7 +278,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                     });
                 }
 
-                return future;
+                return future.onDone(reporter.reportWriteBatch());
             }
         });
     }
@@ -366,7 +369,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
             }));
         }
 
-        return async.collect(queries, FetchData.collect(FETCH, series));
+        return async.collect(queries, FetchData.collect(FETCH, series)).onDone(reporter.reportFetch());
     }
 
     @Override
