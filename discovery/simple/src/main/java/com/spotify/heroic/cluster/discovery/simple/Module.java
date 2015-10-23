@@ -36,6 +36,7 @@ public class Module implements HeroicModule {
             @Override
             public void setup() {
                 context.registerType("static", StaticListDiscoveryModule.class);
+                context.registerType("srv", SrvRecordDiscoveryModule.class);
             }
         };
     }

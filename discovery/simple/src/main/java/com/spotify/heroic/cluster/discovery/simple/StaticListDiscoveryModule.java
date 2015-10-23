@@ -22,15 +22,14 @@
 package com.spotify.heroic.cluster.discovery.simple;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import javax.inject.Named;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.PrivateModule;
@@ -38,22 +37,15 @@ import com.google.inject.Provides;
 import com.spotify.heroic.cluster.ClusterDiscovery;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 
+import lombok.Data;
+
 @Data
 public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
-    private static final int DEFAULT_THREAD_POOL_SIZE = 100;
-
     private final List<URI> nodes;
 
     @JsonCreator
-    public static StaticListDiscoveryModule create(@JsonProperty("threadPoolSize") Integer threadPoolSize,
-            @JsonProperty("nodes") List<URI> nodes) {
-        if (threadPoolSize == null)
-            threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
-
-        if (nodes == null)
-            nodes = new ArrayList<>();
-
-        return new StaticListDiscoveryModule(nodes);
+    public StaticListDiscoveryModule(@JsonProperty("nodes") List<URI> nodes) {
+        this.nodes = Optional.ofNullable(nodes).orElseGet(ImmutableList::of);
     }
 
     @Override
@@ -74,6 +66,6 @@ public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
     }
 
     public static ClusterDiscoveryModule createDefault() {
-        return create(null, null);
+        return new StaticListDiscoveryModule(null);
     }
 }

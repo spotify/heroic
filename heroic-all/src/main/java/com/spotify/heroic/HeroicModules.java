@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.BigtableProfile;
 import com.spotify.heroic.profile.CassandraProfile;
+import com.spotify.heroic.profile.ClusterProfile;
 import com.spotify.heroic.profile.ElasticsearchMetadataProfile;
 import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.GeneratedProfile;
@@ -45,6 +46,7 @@ public class HeroicModules {
         .put("elasticsearch-suggest", new ElasticsearchSuggestProfile())
         .put("kafka-consumer", new KafkaConsumerProfile())
         .put("bigtable", new BigtableProfile())
+        .put("cluster", new ClusterProfile())
     .build();
     // @formatter:on
 
