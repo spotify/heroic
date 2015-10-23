@@ -118,4 +118,58 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     public String scheme() {
         return "nativerpc";
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String host = DEFAULT_HOST;
+        private int port = DEFAULT_PORT;
+        private int parentThreads = DEFAULT_PARENT_THREADS;
+        private int childThreads = DEFAULT_CHILD_THREADS;
+        private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+        private long sendTimeout = DEFAULT_SEND_TIMEOUT;
+        private long heartbeatInterval = DEFAULT_HEARTBEAT_INTERVAL;
+
+        public Builder host(final String host) {
+            this.host = host;
+            return this;
+        }
+
+        public Builder port(final int port) {
+            this.port = port;
+            return this;
+        }
+
+        public Builder parentThreads(final int parentThreads) {
+            this.parentThreads = parentThreads;
+            return this;
+        }
+
+        public Builder childThreads(final int childThreads) {
+            this.childThreads = childThreads;
+            return this;
+        }
+
+        public Builder maxFrameSize(final int maxFrameSize) {
+            this.maxFrameSize = maxFrameSize;
+            return this;
+        }
+
+        public Builder sendTimeout(final long sendtimeout) {
+            this.sendTimeout = sendtimeout;
+            return this;
+        }
+
+        public Builder heartbeatInterval(final int heartbeatInterval) {
+            this.heartbeatInterval = heartbeatInterval;
+            return this;
+        }
+
+        public NativeRpcProtocolModule build() {
+            return new NativeRpcProtocolModule(host, port, parentThreads, childThreads, maxFrameSize, sendTimeout,
+                    heartbeatInterval);
+        }
+    }
 }

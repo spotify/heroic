@@ -33,9 +33,9 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
-import com.spotify.heroic.metric.ShardTrace;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
 
@@ -65,7 +65,7 @@ public class QueryMetricsResponse {
     private final List<ShardLatency> latencies = ImmutableList.of();
 
     @Getter
-    private final ShardTrace trace;
+    private final QueryTrace trace;
 
     public static class ResultSerializer extends JsonSerializer<List<ShardedResultGroup>> {
         @Override

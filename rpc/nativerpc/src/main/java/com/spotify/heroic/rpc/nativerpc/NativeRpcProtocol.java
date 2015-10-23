@@ -37,6 +37,7 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
+import com.spotify.heroic.cluster.TracingClusterNodeGroup;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -111,11 +112,12 @@ public class NativeRpcProtocol implements RpcProtocol {
                 sendTimeout, heartbeatReadInterval);
 
         return client.request(METADATA, NodeMetadata.class)
-                .directTransform(m -> new NativeRpcClusterNode(client, m));
+                .directTransform(m -> new NativeRpcClusterNode(uri, client, m));
     }
 
     @RequiredArgsConstructor
     public class NativeRpcClusterNode implements ClusterNode {
+        private final URI uri;
         private final NativeRpcClient client;
         private final NodeMetadata metadata;
 
@@ -130,8 +132,8 @@ public class NativeRpcProtocol implements RpcProtocol {
         }
 
         @Override
-        public Group useGroup(String group) {
-            return new Group(group);
+        public ClusterNode.Group useGroup(String group) {
+            return new TracingClusterNodeGroup(uri.toString(), new Group(group));
         }
 
         @Override

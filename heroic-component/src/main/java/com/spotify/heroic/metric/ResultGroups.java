@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.QueryTrace.Identifier;
 
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
@@ -123,5 +124,12 @@ public final class ResultGroups {
                 return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
             }
         };
+    }
+
+    public static Transform<ResultGroups, ResultGroups> trace(final Identifier what) {
+        final Stopwatch w = Stopwatch.createStarted();
+
+        return r -> new ResultGroups(r.groups, r.errors, r.statistics,
+                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.of(r.trace)));
     }
 }

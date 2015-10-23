@@ -41,6 +41,7 @@ import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryOptions;
+import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultGroups;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -88,7 +89,7 @@ public class LocalClusterNode implements ClusterNode {
 
     @Override
     public Group useGroup(String group) {
-        return new LocalGroup(group);
+        return new TracingClusterNodeGroup(LocalClusterNode.class, new LocalGroup(group));
     }
 
     @RequiredArgsConstructor

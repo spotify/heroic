@@ -6,6 +6,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.metric.QueryTrace.Identifier;
 
 import lombok.Data;
 
@@ -41,6 +42,10 @@ public class QueryTrace {
         for (final QueryTrace child : children) {
             child.formatTrace(prefix + "  ", out);
         }
+    }
+
+    public static Identifier identifier(Class<?> where) {
+        return new Identifier(where.getName());
     }
 
     public static Identifier identifier(Class<?> where, String what) {

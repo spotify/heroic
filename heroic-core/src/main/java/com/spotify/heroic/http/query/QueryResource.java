@@ -128,12 +128,8 @@ public class QueryResource {
     private void bindMetricsResponse(final AsyncResponse response, final AsyncFuture<QueryResult> callback) {
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        final Stopwatch watch = Stopwatch.createStarted();
-
         httpAsync.bind(response, callback,
-                (r) -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
-                        new ShardTrace("api", localMetadata, watch.elapsed(TimeUnit.MILLISECONDS), Statistics.empty(),
-                                java.util.Optional.empty(), r.getTraces())));
+                r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace()));
     }
 
     @SuppressWarnings("deprecation")
