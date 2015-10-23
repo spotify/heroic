@@ -172,6 +172,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
     @Override
     public void registerReporter(final HeroicReporter reporter) {
+        this.reporter.set(reporter);
     }
 
     @Override
