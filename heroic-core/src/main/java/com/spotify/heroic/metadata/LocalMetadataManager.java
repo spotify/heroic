@@ -27,14 +27,12 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import lombok.NoArgsConstructor;
-
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import eu.toolchain.async.AsyncFramework;
+import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class LocalMetadataManager implements MetadataManager {
@@ -54,7 +52,7 @@ public class LocalMetadataManager implements MetadataManager {
     }
 
     @Override
-    public List<MetadataBackend> use(String group) throws BackendGroupException {
+    public List<MetadataBackend> use(String group) {
         return backends.use(group).getMembers();
     }
 
@@ -64,17 +62,17 @@ public class LocalMetadataManager implements MetadataManager {
     }
 
     @Override
-    public MetadataBackend useDefaultGroup() throws BackendGroupException {
+    public MetadataBackend useDefaultGroup() {
         return new MetadataBackendGroup(backends.useDefault(), async, reporter);
     }
 
     @Override
-    public MetadataBackend useGroup(String group) throws BackendGroupException {
+    public MetadataBackend useGroup(String group) {
         return new MetadataBackendGroup(backends.use(group), async, reporter);
     }
 
     @Override
-    public MetadataBackend useGroups(Set<String> groups) throws BackendGroupException {
+    public MetadataBackend useGroups(Set<String> groups) {
         return new MetadataBackendGroup(backends.use(groups), async, reporter);
     }
 }

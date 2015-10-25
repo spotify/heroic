@@ -43,6 +43,10 @@ public class SelectedGroup<T extends Grouped> implements Iterable<T> {
         return members.isEmpty();
     }
 
+    public int size() {
+        return members.size();
+    }
+
     public Groups groups() {
         final ImmutableSet.Builder<String> groups = ImmutableSet.builder();
 

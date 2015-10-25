@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.LongAdder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.ingestion.IngestionManager;
@@ -83,17 +82,6 @@ public class KafkaConsumer implements Consumer {
     @Override
     public boolean isReady() {
         return connection.isReady();
-    }
-
-    @Override
-    public AsyncFuture<WriteResult> write(WriteMetric write) {
-        try {
-            return ingestion.write(null, write);
-        } catch (BackendGroupException e) {
-            log.error("Unable to find group to write to", e);
-            // still counts as a valid write.
-            return async.resolved(null);
-        }
     }
 
     @Override

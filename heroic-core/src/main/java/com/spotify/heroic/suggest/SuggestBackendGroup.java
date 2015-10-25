@@ -162,6 +162,16 @@ public class SuggestBackendGroup implements SuggestBackend {
         return backends.groups();
     }
 
+    @Override
+    public boolean isEmpty() {
+        return backends.isEmpty();
+    }
+
+    @Override
+    public int size() {
+        return backends.size();
+    }
+
     private void run(InternalOperation op) {
         for (final SuggestBackend b : backends) {
             op.run(backends.getDisabled(), b);

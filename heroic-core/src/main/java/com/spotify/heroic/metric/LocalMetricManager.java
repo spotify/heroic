@@ -48,7 +48,6 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
@@ -140,7 +139,7 @@ public class LocalMetricManager implements MetricManager {
     }
 
     @Override
-    public List<MetricBackend> use(String group) throws BackendGroupException {
+    public List<MetricBackend> use(String group) {
         return backends.use(group).getMembers();
     }
 
@@ -150,17 +149,17 @@ public class LocalMetricManager implements MetricManager {
     }
 
     @Override
-    public MetricBackendGroup useDefaultGroup() throws BackendGroupException {
+    public MetricBackendGroup useDefaultGroup() {
         return new MetricBackendGroupImpl(backends.useDefault(), metadata.useDefaultGroup());
     }
 
     @Override
-    public MetricBackendGroup useGroup(final String group) throws BackendGroupException {
+    public MetricBackendGroup useGroup(final String group) {
         return new MetricBackendGroupImpl(backends.use(group), metadata.useDefaultGroup());
     }
 
     @Override
-    public MetricBackendGroup useGroups(Set<String> groups) throws BackendGroupException {
+    public MetricBackendGroup useGroups(Set<String> groups) {
         return new MetricBackendGroupImpl(backends.use(groups), metadata.useGroups(groups));
     }
 
@@ -172,6 +171,16 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public Groups getGroups() {
             return backends.groups();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return backends.isEmpty();
+        }
+
+        @Override
+        public int size() {
+            return backends.size();
         }
 
         @Override

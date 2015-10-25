@@ -46,11 +46,12 @@ import com.spotify.heroic.common.ReflectionUtils;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.ConsumerSchema;
+import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import kafka.consumer.ConsumerConfig;
@@ -82,10 +83,17 @@ public class KafkaConsumerModule implements ConsumerModule {
 
         return new PrivateModule() {
             @Provides
-            public Managed<Connection> connection(final AsyncFramework async, final Consumer consumer) {
+            public Managed<Connection> connection(final AsyncFramework async, final Consumer consumer, final IngestionManager ingestionManager) {
                 return async.managed(new ManagedSetup<Connection>() {
                     @Override
                     public AsyncFuture<Connection> construct() {
+                        // XXX: make target group configurable?
+                        final IngestionGroup ingestion = ingestionManager.useDefaultGroup();
+
+                        if (ingestion.isEmpty()) {
+                            throw new IllegalStateException("No backends are part of the selected ingestion group (default)");
+                        }
+
                         return async.call(new Callable<Connection>() {
                             @Override
                             public Connection call() throws Exception {
@@ -102,7 +110,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                                 final Map<String, List<KafkaStream<byte[], byte[]>>> streams = connector
                                         .createMessageStreams(streamsMap);
 
-                                final List<ConsumerThread> threads = buildThreads(reporter, consumer, streams);
+                                final List<ConsumerThread> threads = buildThreads(reporter, ingestion, streams);
 
                                 for (final ConsumerThread t : threads)
                                     t.start();
@@ -136,7 +144,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                         return streamsMap;
                     }
 
-                    private List<ConsumerThread> buildThreads(final ConsumerReporter reporter, final Consumer consumer,
+                    private List<ConsumerThread> buildThreads(final ConsumerReporter reporter, final IngestionGroup ingestion,
                             final Map<String, List<KafkaStream<byte[], byte[]>>> streams) {
                         final List<ConsumerThread> threads = new ArrayList<>();
 
@@ -149,7 +157,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                             for (final KafkaStream<byte[], byte[]> stream : list) {
                                 final String name = String.format("%s:%d", topic, count++);
 
-                                threads.add(new ConsumerThread(async, name, reporter, stream, consumer, schema,
+                                threads.add(new ConsumerThread(async, ingestion, name, reporter, stream, schema,
                                         consuming, errors, consumed));
                             }
                         }

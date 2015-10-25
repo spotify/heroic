@@ -21,19 +21,15 @@
 
 package com.spotify.heroic.ingestion;
 
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 
-public interface IngestionManager {
+public interface IngestionManager extends UsableGroupManager<IngestionGroup> {
     public static final String INGESTED = "ingested";
     public static final String AVAILABLE_WRITE_PERMITS = "available-write-permits";
-
-    public AsyncFuture<WriteResult> write(String group, WriteMetric write) throws BackendGroupException;
 
     public Statistics getStatistics();
 

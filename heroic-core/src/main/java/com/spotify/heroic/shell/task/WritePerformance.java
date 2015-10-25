@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
@@ -189,7 +188,7 @@ public class WritePerformance implements ShellTask {
         return new CollectedTimes(runTimes, executionTimes, errors);
     }
 
-    private List<MetricBackend> resolveTargets(List<String> targets) throws BackendGroupException {
+    private List<MetricBackend> resolveTargets(List<String> targets) {
         if (targets.isEmpty())
             throw new IllegalArgumentException("'targets' is empty, add some with --target");
 

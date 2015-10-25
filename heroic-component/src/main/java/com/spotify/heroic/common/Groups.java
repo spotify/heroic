@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.common;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -69,5 +70,11 @@ public final class Groups implements Iterable<String> {
 
     public boolean isEmpty() {
         return groups.isEmpty();
+    }
+
+    public static Groups combine(final Groups first, final Groups... other) {
+        final ImmutableSet.Builder<String> all = ImmutableSet.<String> builder().addAll(first.groups);
+        Arrays.stream(other).forEach(all::addAll);
+        return new Groups(all.build());
     }
 }

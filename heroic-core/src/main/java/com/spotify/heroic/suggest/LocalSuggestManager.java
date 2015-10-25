@@ -27,14 +27,12 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import lombok.NoArgsConstructor;
-
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import eu.toolchain.async.AsyncFramework;
+import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 public class LocalSuggestManager implements SuggestManager {
@@ -54,7 +52,7 @@ public class LocalSuggestManager implements SuggestManager {
     }
 
     @Override
-    public List<SuggestBackend> use(String group) throws BackendGroupException {
+    public List<SuggestBackend> use(String group) {
         return backends.use(group).getMembers();
     }
 
@@ -64,17 +62,17 @@ public class LocalSuggestManager implements SuggestManager {
     }
 
     @Override
-    public SuggestBackend useDefaultGroup() throws BackendGroupException {
+    public SuggestBackend useDefaultGroup() {
         return new SuggestBackendGroup(async, backends.useDefault(), reporter);
     }
 
     @Override
-    public SuggestBackend useGroup(String group) throws BackendGroupException {
+    public SuggestBackend useGroup(String group) {
         return new SuggestBackendGroup(async, backends.use(group), reporter);
     }
 
     @Override
-    public SuggestBackend useGroups(Set<String> groups) throws BackendGroupException {
+    public SuggestBackend useGroups(Set<String> groups) {
         return new SuggestBackendGroup(async, backends.use(groups), reporter);
     }
 }

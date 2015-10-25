@@ -23,8 +23,6 @@ package com.spotify.heroic.consumer;
 
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -33,8 +31,6 @@ public interface Consumer extends LifeCycle {
     public static final String TOTAL = "total";
     public static final String ERRORS = "errors";
     public static final String CONSUMED = "consumed";
-
-    public AsyncFuture<WriteResult> write(WriteMetric entry);
 
     public Statistics getStatistics();
 
