@@ -24,16 +24,10 @@ package com.spotify.heroic.common;
 import java.util.List;
 import java.util.Set;
 
-public interface GroupManager<T extends Grouped, G extends T> {
+public interface GroupManager<T extends Grouped, G extends T> extends UsableGroupManager<G> {
     public List<T> allMembers();
 
-    public List<T> use(String group) throws BackendGroupException;
+    public List<T> use(String group);
 
     public List<GroupMember<T>> getBackends();
-
-    public G useDefaultGroup() throws BackendGroupException;
-
-    public G useGroup(final String group) throws BackendGroupException;
-
-    public G useGroups(final Set<String> groups) throws BackendGroupException;
 }

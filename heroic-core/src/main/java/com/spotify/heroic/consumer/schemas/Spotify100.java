@@ -39,11 +39,11 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.FatalSchemaException;
+import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
@@ -115,7 +115,7 @@ public class Spotify100 implements ConsumerSchema {
     }
 
     @Override
-    public void consume(Consumer consumer, byte[] message) throws ConsumerSchemaException {
+    public void consume(final IngestionGroup ingestion, final byte[] message) throws ConsumerSchemaException {
         final JsonMetric metric;
 
         try {
@@ -145,7 +145,7 @@ public class Spotify100 implements ConsumerSchema {
         final List<Point> points = ImmutableList.of(new Point(metric.getTime(), metric.getValue()));
 
         try {
-            consumer.write(new WriteMetric(series, MetricCollection.points(points)));
+            ingestion.write(new WriteMetric(series, MetricCollection.points(points)));
         } catch (final Exception e) {
             throw new FatalSchemaException("Write failed", e);
         }

@@ -19,12 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.common;
+package com.spotify.heroic.ingestion;
 
-public class BackendGroupException extends Exception {
-    private static final long serialVersionUID = -843631350724606059L;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
 
-    public BackendGroupException(String message) {
-        super(message);
-    }
+import eu.toolchain.async.AsyncFuture;
+
+public interface IngestionGroup extends Grouped {
+    public AsyncFuture<WriteResult> write(WriteMetric write);
 }

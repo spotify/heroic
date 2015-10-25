@@ -53,21 +53,21 @@ public class BackendGroups<T extends Initializing & Grouped> {
     /**
      * Use default groups and guarantee that at least one is available.
      */
-    public SelectedGroup<T> useDefault() throws BackendGroupException {
+    public SelectedGroup<T> useDefault() {
         return filterAlive(defaults());
     }
 
     /**
      * Use the given group and guarantee that at least one is available.
      */
-    public SelectedGroup<T> use(final String group) throws BackendGroupException {
+    public SelectedGroup<T> use(final String group) {
         return filterAlive(group != null ? find(group) : defaults());
     }
 
     /**
      * Use the given groups and guarantee that at least one is available.
      */
-    public SelectedGroup<T> use(final Set<String> groups) throws BackendGroupException {
+    public SelectedGroup<T> use(final Set<String> groups) {
         return filterAlive(groups != null ? find(groups) : defaults());
     }
 
@@ -117,7 +117,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return ImmutableList.copyOf(result);
     }
 
-    private SelectedGroup<T> filterAlive(final List<T> backends) throws BackendGroupException {
+    private SelectedGroup<T> filterAlive(final List<T> backends) {
         final List<T> alive = new ArrayList<T>();
 
         // Keep track of groups which are not ready.
