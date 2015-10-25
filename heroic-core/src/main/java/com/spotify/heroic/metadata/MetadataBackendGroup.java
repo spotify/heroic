@@ -188,6 +188,16 @@ public class MetadataBackendGroup implements MetadataBackend {
         return backends.groups();
     }
 
+    @Override
+    public boolean isEmpty() {
+        return backends.isEmpty();
+    }
+
+    @Override
+    public int size() {
+        return backends.size();
+    }
+
     private void run(InternalOperation op) {
         for (final MetadataBackend b : backends) {
             try {

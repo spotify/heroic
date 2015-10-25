@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.common.BackendGroupException;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
