@@ -65,6 +65,7 @@ import com.spotify.heroic.statistics.MetricBackendGroupReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Collector;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.StreamCollector;
 import lombok.RequiredArgsConstructor;
@@ -435,6 +436,35 @@ public class LocalMetricManager implements MetricManager {
 
                 return count;
             });
+        }
+
+        @Override
+        public AsyncFuture<MetricCollection> fetchRow(final BackendKey key) {
+            final List<AsyncFuture<MetricCollection>> callbacks = new ArrayList<>();
+
+            runAll((disabled, backend) -> callbacks.add(backend.fetchRow(key)));
+
+            return async.collect(callbacks, new Collector<MetricCollection, MetricCollection>() {
+                @Override
+                public MetricCollection collect(Collection<MetricCollection> results) throws Exception {
+                    final List<List<? extends Metric>> collections = new ArrayList<>();
+
+                    for (final MetricCollection result : results) {
+                        collections.add(result.getData());
+                    }
+
+                    return MetricCollection.mergeSorted(key.getType(), collections);
+                }
+            });
+        }
+
+        @Override
+        public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection metrics) {
+            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
+
+            runAll((disabled, backend) -> callbacks.add(backend.writeRow(key, metrics)));
+
+            return async.collectAndDiscard(callbacks);
         }
 
         private void runAll(InternalOperation op) {

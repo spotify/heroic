@@ -128,4 +128,14 @@ public interface MetricBackend extends Initializing, Grouped {
      * Count the number of data points for the given key.
      */
     public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options);
+
+    /**
+     * Fetch a complete row from the backend.
+     */
+    public AsyncFuture<MetricCollection> fetchRow(BackendKey key);
+
+    /**
+     * Write a complete row to the backend.
+     */
+    public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection metrics);
 }

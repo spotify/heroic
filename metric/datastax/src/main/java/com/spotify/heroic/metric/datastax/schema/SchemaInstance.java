@@ -43,6 +43,8 @@ public interface SchemaInstance {
 
     public List<PreparedFetch> ranges(final Series series, final DateRange range) throws IOException;
 
+    public PreparedFetch row(final BackendKey key) throws IOException;
+
     public BoundStatement keysPaging(final Optional<ByteBuffer> first, final int limit);
 
     public BoundStatement deleteKey(ByteBuffer k);

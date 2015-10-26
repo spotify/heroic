@@ -326,6 +326,27 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         });
     }
 
+    @Override
+    public AsyncFuture<Void> writeRow(final BackendKey key, final MetricCollection collection) {
+        return connection.doto(c -> {
+            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
+            final BigtableClient client = c.client();
+
+            switch (collection.getType()) {
+            case POINT:
+                for (final Point p : collection.getDataAs(Point.class)) {
+                    futures.add(writePoint(key.getSeries(), client, p));
+                }
+
+                break;
+            default:
+                break;
+            }
+
+            return async.collectAndDiscard(futures);
+        });
+    }
+
     private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final Point d)
             throws IOException {
         written.mark();

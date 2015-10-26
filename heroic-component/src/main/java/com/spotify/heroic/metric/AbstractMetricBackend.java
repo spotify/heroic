@@ -63,4 +63,14 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options) {
         return async.resolved(0L);
     }
+
+    @Override
+    public AsyncFuture<MetricCollection> fetchRow(BackendKey key) {
+        return async.failed(new Exception("not supported"));
+    }
+
+    @Override
+    public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection collection) {
+        return async.failed(new Exception("not supported"));
+    }
 }
