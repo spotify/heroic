@@ -552,7 +552,10 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend impl
             for (final Map<String, String> entry : source) {
                 final String key = entry.get("key");
                 final String value = entry.get("value");
-                tags.put(key, value);
+
+                if (value != null && key != null) {
+                    tags.put(key, value);
+                }
             }
 
             return tags;
