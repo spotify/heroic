@@ -5,6 +5,15 @@ event databases.
 
 Go to https://spotify.github.io/heroic/ for documentation.
 
+**Alpha Disclaimer:**
+Heroic should in its current state be considered Alpha-grade software.
+
+Do not use in production unless you are willing to spend a lot of time with it, and you are OK with loosing your data to goblins.
+
+It is currently not on a release schedule and is not versioned.
+
+At Spotify we rely on *release branches* that we flip-flop between with Puppet to keep us sane.
+
 ## Building
 
 Heroic is built using maven, like the following example.
