@@ -1,6 +1,6 @@
 <div class="jumbotron">
   <h1>Heroic</h1>
-  <p>A Highly Scalable Time Series Database</p>
+  <p>A fairly scalable TSDB</p>
 </div>
 
 <div class="row">

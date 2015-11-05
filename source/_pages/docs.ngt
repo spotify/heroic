@@ -72,6 +72,10 @@
       <li ui-sref-active="active">
         <a ui-sref="docs.shell">Shell</a>
       </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.profiles">Profiles</a>
+      </li>
     </ul>
   </div>
 

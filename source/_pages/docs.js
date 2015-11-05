@@ -14,6 +14,7 @@
     '_pages/docs/api/accept-series.ngt',
     '_pages/docs/aggregations.ngt',
     '_pages/docs/shell.ngt',
+    '_pages/docs/profiles.ngt',
     '_pages/docs/config.ngt',
     '_pages/docs/config/cluster.ngt',
     '_pages/docs/config/metrics.ngt',
@@ -86,6 +87,10 @@
       .state('docs.shell', {
         url: '/shell',
         templateUrl: '_pages/docs/shell.ngt'
+      })
+      .state('docs.profiles', {
+        url: '/profiles',
+        templateUrl: '_pages/docs/profiles.ngt'
       })
       .state('docs.config.index', {
         url: '',
