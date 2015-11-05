@@ -25,6 +25,26 @@ $ mvn clean package
 This will cause the internal-dist to produce a shaded jar that contains all
 required dependencies to operate the service.
 
+### Building a Debian Package
+
+Building a debian package is straight forward, first run the `prepare-sources` script:
+
+```bash
+$ debian/bin/prepare-sources myrel 1
+```
+
+For the next step you'll need a Debian environment:
+
+```bash
+$ dpkg-buildpackage -uc -us
+```
+
+If you encounter problems, you can troubleshoot by enabling debugging:
+
+```bash
+$ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
+```
+
 ## HeroicShell
 
 Heroic comes with a shell that contains a set of useful tasks, these can either

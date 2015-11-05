@@ -4,13 +4,12 @@ Priority: extra
 Maintainer: Heroic Maintainers <heroic@spotify.com>
 Build-Depends:
  debhelper,
- default-jdk,
- maven
+ default-jdk (>= 1.8),
+ maven3 | maven (>= 3)
 Standards-Version: 3.9.1
 
 Package: heroic-RELEASE
 Architecture: all
 Depends: java-runtime
-Description: Heroic time series database (release: RELEASE)
- Heroic is a time series database that stores numeric values along
- with key/value tags to Cassandra data store.
+Description: Heroic TSDB (release: RELEASE)
+ This is Heroic, the fairly scalable time series database.

@@ -1,0 +1,3 @@
+tar-ignore = .git/*
+tar-ignore = debian/*.in
+tar-ignore = debian/bin/prepare-sources

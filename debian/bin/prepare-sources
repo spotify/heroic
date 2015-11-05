@@ -12,11 +12,14 @@ if [[ -z $release || -z $version ]]; then
     exit 1
 fi
 
-sedexpr="-e s/\\bRELEASE\\b/$release/g"
-sedexpr="$sedexpr -e s/\\bVERSION\\b/$version/g"
-sedexpr="$sedexpr -e s/\\bDIST\\b/$dist/g"
+now=$(date --rfc-2822)
 
 for input in debian/*.in; do
-    output=$(sed $sedexpr <<< ${input%%.in})
-    sed $sedexpr < $input > $output
+    output=$(m4 -DRELEASE="$release" <<< ${input%%.in})
+
+    echo "Writing: $output (from: $input)"
+
+    m4 -DRELEASE="$release" -DVERSION="$version" -DDIST="$dist" -DNOW="$now" \
+        < $input \
+        > $output
 done
