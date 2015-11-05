@@ -1,7 +1,6 @@
 # Heroic Metrics API
 
-Heroic is a service to make a simplified and safe API on top of metrics and
-event databases.
+Heroic a massively scalable TSDB based on Cassandra and Elasticsearch.
 
 Go to https://spotify.github.io/heroic/ for documentation.
 
@@ -16,22 +15,33 @@ At Spotify we rely on *release branches* that we flip-flop between with Puppet t
 
 ## Building
 
-Heroic is built using maven, like the following example.
+Heroic is built using maven, like the following example:
 
 ```bash
 $ mvn clean package
 ```
 
 This will cause the internal-dist to produce a shaded jar that contains all
-required dependencies to operate the service.
+required dependencies.
 
 ### Building a Debian Package
 
-Building a debian package is straight forward, first run the `prepare-sources` script:
+This project does not provide a single debian package, this is primarily
+because the current nature of the service (alpha state) does not mesh well with
+stable releases.
+
+Instead, you are encouraged to build your own using the provided scripts in
+this project.
+
+First run the `prepare-sources` script:
 
 ```bash
 $ debian/bin/prepare-sources myrel 1
 ```
+
+`myrel` will be the name of your release, it will be part of your package name
+`debian-myrel`, it will also be suffixed to all helper tools (e.g.
+`heroic-myrel`).
 
 For the next step you'll need a Debian environment:
 
@@ -39,7 +49,7 @@ For the next step you'll need a Debian environment:
 $ dpkg-buildpackage -uc -us
 ```
 
-If you encounter problems, you can troubleshoot by enabling debugging:
+If you encounter problems, you can troubleshoot the build with `DH_VERBOSE`:
 
 ```bash
 $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
@@ -47,11 +57,12 @@ $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
 
 ## HeroicShell
 
-Heroic comes with a shell that contains a set of useful tasks, these can either
+Heroic comes with a shell that contains many useful tasks, these can either
 be run in a readline-based shell with some basic completions and history, or
 standalone.
 
-You can use the following helper script to run the shell.
+You can use the following helper script to run the shell directly from the
+project.
 
 ```bash
 $ tools/heroic-shell [opts]
@@ -69,20 +80,5 @@ options (like redirecting output) through the following.
 $ tools/heroic-shell <heroic-options> -- com.spotify.heroic.shell.task.<task-name> <task-options>
 ```
 
-## Profiles
-
-Profiles are small configuration units which can be merged into the overall
-configuration.
-
-They are activated with the `-P <profile>` switch, available profiles are
-listed in `--help`.
-
-#### Examples
-
-Start a kafka consumer that writes data into memory:
-
-```bash
-tools/heroic-shell \
-    -P kafka-consumer -X kafka.zookeeper=<zookeeper> -X kafka.topics=<topic1>,<topic2> -X kafka.schema=com.spotify.heroic.consumer.schemas.Spotify100\
-    -P memory
-```
+There are also profiles that can be activated with the `-P <profile>` switch,
+available profiles are listed in `--help`.
