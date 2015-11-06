@@ -125,7 +125,7 @@ public class CoreQueryManager implements QueryManager {
         /* incorporate legacy group by */
         final Optional<List<String>> groupBy = q.getGroupBy().map((g) -> g.getGroupBy());
 
-        return newQuery().source(source).range(from.getRange()).aggregationBuilder(aggregationBuilder).filter(filter)
+        return newQuery().source(source).range(from.getRange()).aggregation(aggregationBuilder).filter(filter)
                 .groupBy(groupBy);
     }
 

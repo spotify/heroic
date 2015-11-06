@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.kohsuke.args4j.Argument;
@@ -73,7 +74,7 @@ public class Query implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        return query.useGroup(params.group).query(query.newQueryFromString(queryString).options(options).build())
+        return query.useGroup(params.group).query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
                 .directTransform(result -> {
                     for (final RequestError e : result.getErrors()) {
                         io.out().println(String.format("ERR: %s", e.toString()));

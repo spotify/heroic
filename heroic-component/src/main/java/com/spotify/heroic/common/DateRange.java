@@ -25,9 +25,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.sql.Date;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import org.apache.commons.lang3.time.FastDateFormat;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -35,6 +32,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import eu.toolchain.serializer.AutoSerialize;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @AutoSerialize
 @Data
@@ -69,6 +68,11 @@ public class DateRange implements Comparable<DateRange> {
         return diff() == 0;
     }
 
+    @JsonIgnore
+    public boolean isNotEmpty() {
+        return !isEmpty();
+    }
+
     public long diff() {
         return end - start;
     }
@@ -83,7 +87,7 @@ public class DateRange implements Comparable<DateRange> {
         if (interval <= 0)
             return this;
 
-        return new DateRange(start - start % interval, end - end % interval);
+        return new DateRange(start - start % interval, end + (interval - end % interval));
     }
 
     public boolean overlap(DateRange other) {
@@ -136,17 +140,6 @@ public class DateRange implements Comparable<DateRange> {
 
     public DateRange end(long end) {
         return new DateRange(this.start, end);
-    }
-
-    public DateRange shiftStart(long extent) {
-        if (extent == 0)
-            return this;
-
-        return new DateRange(Math.max(start + extent, 0), end);
-    }
-
-    public DateRange shiftEnd(long extent) {
-        return new DateRange(start, Math.max(end + extent, 0));
     }
 
     public DateRange shift(long extent) {

@@ -224,8 +224,6 @@ public class LocalMetricManager implements MetricManager {
 
                 final List<Callable<AsyncFuture<FetchData>>> fetches = new ArrayList<>();
 
-                final DateRange modified = range.shiftStart(-aggregation.extent());
-
                 /* setup fetches */
 
                 for (final AggregationState state : traversal.getStates()) {
@@ -241,7 +239,7 @@ public class LocalMetricManager implements MetricManager {
                                 if (watcher.isQuotaViolated())
                                     throw new IllegalStateException("quota limit violated");
 
-                                return backend.fetch(source, serie, modified, watcher, options);
+                                return backend.fetch(source, serie, range, watcher, options);
                             });
                         }
                     });

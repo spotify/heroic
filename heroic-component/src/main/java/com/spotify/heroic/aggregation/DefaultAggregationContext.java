@@ -21,12 +21,14 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Optional;
 
 public class DefaultAggregationContext implements AggregationContext {
-    public static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);
+    final long defaultSize;
+
+    public DefaultAggregationContext(final long defaultSize) {
+        this.defaultSize = defaultSize;
+    }
 
     @Override
     public Optional<Long> size() {
@@ -40,7 +42,7 @@ public class DefaultAggregationContext implements AggregationContext {
 
     @Override
     public long defaultSize() {
-        return DEFAULT_SIZE;
+        return defaultSize;
     }
 
     @Override
