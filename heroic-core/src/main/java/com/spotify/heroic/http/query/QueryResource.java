@@ -42,18 +42,14 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryBuilder;
 import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.QueryResult;
-import com.spotify.heroic.metric.ShardTrace;
 
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -68,16 +64,13 @@ public class QueryResource {
     @Inject
     private QueryManager query;
 
-    @Inject
-    private NodeMetadata localMetadata;
-
     private final Cache<UUID, StreamQuery> streamQueries = CacheBuilder.newBuilder()
             .expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery> build();
 
     @POST
     @Path("/metrics/stream")
     public List<StreamId> metricsStream(@QueryParam("backend") String backendGroup, QueryMetrics query) {
-        final Query request = setupBuilder(query).build();
+        final Query request = setupQuery(query);
 
         final Collection<? extends QueryManager.Group> groups = this.query.useGroupPerNode(backendGroup);
         final List<StreamId> ids = new ArrayList<>();
@@ -117,7 +110,7 @@ public class QueryResource {
     @Path("/metrics")
     public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
             QueryMetrics query) {
-        final Query q = setupBuilder(query).build();
+        final Query q = setupQuery(query);
 
         final QueryManager.Group group = this.query.useGroup(backendGroup);
         final AsyncFuture<QueryResult> callback = group.query(q);
@@ -133,14 +126,15 @@ public class QueryResource {
     }
 
     @SuppressWarnings("deprecation")
-    private QueryBuilder setupBuilder(final QueryMetrics q) {
+    private Query setupQuery(final QueryMetrics q) {
         Supplier<? extends QueryBuilder> supplier = () -> {
             return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
-                    .range(Optional.of(q.getRange().buildDateRange())).aggregationQuery(q.getAggregators())
+                    .range(q.getRange()).aggregationQuery(q.getAggregators())
                     .source(q.getSource());
         };
 
-        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier);
+        return q.getQuery().map(query::newQueryFromString).map(b -> b.rangeIfAbsent(q.getRange()))
+                .orElseGet(supplier).build();
     }
 
     @Data

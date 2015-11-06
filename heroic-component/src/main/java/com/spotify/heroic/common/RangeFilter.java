@@ -22,11 +22,15 @@
 package com.spotify.heroic.common;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import lombok.Data;
+
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.filter.Filter;
+
+import lombok.Data;
 
 @Data
 public class RangeFilter {
@@ -42,11 +46,17 @@ public class RangeFilter {
         this.limit = checkNotNull(limit);
     }
 
-    public static RangeFilter filterFor(Filter filter, DateRange range) {
-        return new RangeFilter(filter, range, Integer.MAX_VALUE);
+    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range) {
+        return new RangeFilter(filter, range.orElseGet(RangeFilter::defaultDateRange), Integer.MAX_VALUE);
     }
 
-    public static RangeFilter filterFor(Filter filter, DateRange range, int limit) {
-        return new RangeFilter(filter, range, limit);
+    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, int limit) {
+        return new RangeFilter(filter, range.orElseGet(RangeFilter::defaultDateRange), limit);
+    }
+
+    public static DateRange defaultDateRange() {
+        final long now = System.currentTimeMillis();
+        final long start = now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS);
+        return new DateRange(start, now);
     }
 }

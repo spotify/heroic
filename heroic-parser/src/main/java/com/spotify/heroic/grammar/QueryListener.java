@@ -562,7 +562,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         if ("m".equals(text))
             return TimeUnit.MINUTES;
 
-        if ("H".equals(text))
+        if ("H".equals(text) || "h".equals(text))
             return TimeUnit.HOURS;
 
         if ("d".equals(text))

@@ -22,9 +22,8 @@
 package com.spotify.heroic.http.query;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,29 +32,30 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.TimeUtils;
 
+import lombok.Data;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = QueryDateRange.Absolute.class, name = "absolute"),
         @JsonSubTypes.Type(value = QueryDateRange.Relative.class, name = "relative") })
 public interface QueryDateRange {
     @Data
     public static class Absolute implements QueryDateRange {
-        private final long start;
-        private final long end;
+        private final Optional<Long> start;
+        private final Optional<Long> end;
 
         @JsonCreator
-        public static Absolute create(@JsonProperty("start") Long start, @JsonProperty("end") Long end) {
-            if (start == null)
-                throw new RuntimeException("'start' is required");
-
-            if (end == null)
-                throw new RuntimeException("'end' is required");
-
-            return new Absolute(start, end);
+        public Absolute(@JsonProperty("start") Long start, @JsonProperty("end") Long end) {
+            this.start = Optional.ofNullable(start);
+            this.end = Optional.ofNullable(end);
         }
 
         @Override
-        public DateRange buildDateRange() {
-            return new DateRange(start, end);
+        public Optional<DateRange> buildDateRange() {
+            if (start.isPresent() && end.isPresent()) {
+                return Optional.of(new DateRange(start.get(), end.get()));
+            }
+
+            return Optional.empty();
         }
     }
 
@@ -65,19 +65,15 @@ public interface QueryDateRange {
         public static final long DEFAULT_VALUE = 1;
 
         private final TimeUnit unit;
-        private final long value;
+        private final Optional<Long> value;
 
         @JsonCreator
-        public static Relative create(@JsonProperty("unit") String unitName, @JsonProperty("value") Long value) {
-            final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
-
-            if (value == null)
-                value = DEFAULT_VALUE;
-
-            return new Relative(unit, value);
+        public Relative(@JsonProperty("unit") String unitName, @JsonProperty("value") Long value) {
+            this.unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
+            this.value = Optional.ofNullable(value);
         }
 
-        private long start(final Date now) {
+        private long start(final Date now, final long value) {
             return now.getTime() - TimeUnit.MILLISECONDS.convert(value, unit);
         }
 
@@ -86,11 +82,11 @@ public interface QueryDateRange {
         }
 
         @Override
-        public DateRange buildDateRange() {
+        public Optional<DateRange> buildDateRange() {
             final Date now = new Date();
-            return new DateRange(start(now), end(now));
+            return value.map(v -> new DateRange(start(now, v), end(now)));
         }
     }
 
-    DateRange buildDateRange();
+    Optional<DateRange> buildDateRange();
 }

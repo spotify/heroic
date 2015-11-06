@@ -23,7 +23,7 @@ package com.spotify.heroic.http.metadata;
 
 import static java.util.Optional.ofNullable;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -37,16 +37,15 @@ import lombok.Data;
 @Data
 public class MetadataCount {
     private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
-    private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(TimeUnit.DAYS, 7);
 
     private final Filter filter;
-    private final DateRange range;
+    private final Optional<DateRange> range;
 
     @JsonCreator
     public MetadataCount(@JsonProperty("filter") Filter filter,
             @JsonProperty("range") QueryDateRange range) {
         this.filter = ofNullable(filter).orElse(DEFAULT_FILTER);
-        this.range = ofNullable(range).orElse(DEFAULT_DATE_RANGE).buildDateRange();
+        this.range = ofNullable(range).flatMap(QueryDateRange::buildDateRange);
     }
 
     public static MetadataCount createDefault() {

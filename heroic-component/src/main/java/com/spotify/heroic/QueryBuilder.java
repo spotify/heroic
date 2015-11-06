@@ -143,6 +143,14 @@ public class QueryBuilder {
         return this;
     }
 
+    public QueryBuilder rangeIfAbsent(final Optional<DateRange> range) {
+        if (!this.range.isPresent()) {
+            return range(range);
+        }
+
+        return this;
+    }
+
     public Query build() {
         final Filter filter = legacyFilter();
 

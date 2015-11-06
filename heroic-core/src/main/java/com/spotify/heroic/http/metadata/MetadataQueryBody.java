@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -43,7 +42,6 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MetadataQueryBody {
-    private static final QueryDateRange DEFAULT_DATE_RANGE = new QueryDateRange.Relative(TimeUnit.DAYS, 7);
     private static final int DEFAULT_LIMIT = 50;
 
     /**
@@ -69,7 +67,7 @@ public class MetadataQueryBody {
     /**
      * The date range to query for.
      */
-    private final DateRange range;
+    private final Optional<DateRange> range;
 
     private final int limit;
 
@@ -112,7 +110,7 @@ public class MetadataQueryBody {
         this.matchTags = ofNullable(matchTags);
         this.hasTags = ofNullable(hasTags);
         this.filter = ofNullable(filter);
-        this.range = ofNullable(range).orElse(DEFAULT_DATE_RANGE).buildDateRange();
+        this.range = ofNullable(range).flatMap(QueryDateRange::buildDateRange);
         this.limit = ofNullable(limit).orElse(DEFAULT_LIMIT);
     }
 
