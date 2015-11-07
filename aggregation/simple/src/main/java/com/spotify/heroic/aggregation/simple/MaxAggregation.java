@@ -24,7 +24,6 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.aggregation.BucketAggregation;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -34,7 +33,7 @@ import lombok.ToString;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class MaxAggregation extends BucketAggregation<StripedMaxBucket> {
+public class MaxAggregation extends DistributedBucketAggregation<StripedMaxBucket> {
     public static final String NAME = "max";
 
     @JsonCreator

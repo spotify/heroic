@@ -23,7 +23,7 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.BucketAggregation;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -32,7 +32,7 @@ import lombok.ToString;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class CountAggregation extends BucketAggregation<StripedCountBucket> {
+public class CountAggregation extends DistributedBucketAggregation<StripedCountBucket> {
     public static final String NAME = "count";
 
     @JsonCreator
@@ -48,5 +48,10 @@ public class CountAggregation extends BucketAggregation<StripedCountBucket> {
     @Override
     protected Point build(StripedCountBucket bucket) {
         return new Point(bucket.timestamp(), bucket.count());
+    }
+
+    @Override
+    public Aggregation distributed() {
+        return this;
     }
 }

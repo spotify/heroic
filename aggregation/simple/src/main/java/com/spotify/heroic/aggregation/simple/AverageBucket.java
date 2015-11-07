@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
 
@@ -45,6 +46,12 @@ public class AverageBucket extends AbstractBucket implements DoubleBucket {
     public void updatePoint(Map<String, String> tags, Point d) {
         value.addAndGet(d.getValue());
         count.incrementAndGet();
+    }
+
+    @Override
+    public void updateSpread(Map<String, String> tags, Spread sample) {
+        value.addAndGet(sample.getSum());
+        count.addAndGet(sample.getCount());
     }
 
     @Override

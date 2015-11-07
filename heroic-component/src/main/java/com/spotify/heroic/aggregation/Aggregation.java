@@ -59,4 +59,20 @@ public interface Aggregation {
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
     public AggregationTraversal session(List<AggregationState> states, DateRange range);
+
+    /**
+     * Transform the given aggregation, into a distributed aggregation.
+     * @return A distributed aggregation.
+     */
+    default Aggregation distributed() {
+        return this;
+    }
+
+    /**
+     * Get an aggregation combiner for the given aggregation.
+     * @return An aggregation combiner.
+     */
+    default AggregationCombiner combiner(final DateRange range) {
+        return AggregationCombiner.DEFAULT;
+    }
 }

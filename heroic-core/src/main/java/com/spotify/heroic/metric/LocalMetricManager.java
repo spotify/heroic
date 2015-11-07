@@ -23,14 +23,9 @@ package com.spotify.heroic.metric;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +38,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationResult;
@@ -505,47 +501,6 @@ public class LocalMetricManager implements MetricManager {
         return states;
     }
 
-    private static final Comparator<String> COMPARATOR = new Comparator<String>() {
-        @Override
-        public int compare(String a, String b) {
-            if (a == null) {
-                if (b == null)
-                    return 0;
-
-                return -1;
-            }
-
-            if (b == null)
-                return 1;
-
-            return a.compareTo(b);
-        }
-    };
-
-    private static List<TagValues> group(Set<Series> series) {
-        final Map<String, SortedSet<String>> key = new HashMap<>();
-
-        for (final Series s : series) {
-            for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                SortedSet<String> values = key.get(e.getKey());
-
-                if (values == null) {
-                    values = new TreeSet<String>(COMPARATOR);
-                    key.put(e.getKey(), values);
-                }
-
-                values.add(e.getValue());
-            }
-        }
-
-        final List<TagValues> group = new ArrayList<>(key.size());
-
-        for (final Map.Entry<String, SortedSet<String>> e : key.entrySet())
-            group.add(new TagValues(e.getKey(), new ArrayList<>(e.getValue())));
-
-        return group;
-    }
-
     @RequiredArgsConstructor
     private static abstract class ResultCollector implements StreamCollector<FetchData, ResultGroups> {
         final FetchQuotaWatcher watcher;
@@ -597,7 +552,9 @@ public class LocalMetricManager implements MetricManager {
                     continue;
                 }
 
-                final List<TagValues> g = group(group.getSeries());
+                final List<TagValues> g = TagValues.fromEntries(Iterators.concat(
+                        Iterators.transform(group.getSeries().iterator(), s -> s.getTags().entrySet().iterator())));
+
                 groups.add(new ResultGroup(g, group.getMetrics(), aggregation.cadence()));
             }
 

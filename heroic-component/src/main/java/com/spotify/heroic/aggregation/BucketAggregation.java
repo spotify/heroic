@@ -206,8 +206,7 @@ public abstract class BucketAggregation<B extends Bucket> implements
 
         final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
 
-        final List<B> buckets = buildBuckets(range, size);
-        return new AggregationTraversal(out, new Session(series, buckets, range.start()));
+        return new AggregationTraversal(out, session(range, series));
     }
 
     @Override
@@ -218,6 +217,11 @@ public abstract class BucketAggregation<B extends Bucket> implements
     @Override
     public long cadence() {
         return size;
+    }
+
+    protected Session session(final DateRange range, final Set<Series> series) {
+        final List<B> buckets = buildBuckets(range, size);
+        return new Session(series, buckets, range.start());
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {

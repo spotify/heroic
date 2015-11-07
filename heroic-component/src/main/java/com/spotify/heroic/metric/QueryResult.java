@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
 
 import eu.toolchain.async.Collector;
@@ -67,11 +68,11 @@ public class QueryResult {
      * @param range The range which the result represents.
      * @return A complete QueryResult.
      */
-    public static Collector<QueryResultPart, QueryResult> collectParts(final QueryTrace.Identifier what, final DateRange range) {
+    public static Collector<QueryResultPart, QueryResult> collectParts(final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return parts -> {
-            final List<ShardedResultGroup> groups = new ArrayList<>();
+            final List<List<ShardedResultGroup>> all = new ArrayList<>();
             final List<RequestError> errors = new ArrayList<>();
             final List<ShardTrace> traces = new ArrayList<>();
             final ImmutableList.Builder<QueryTrace> queryTraces = ImmutableList.builder();
@@ -85,9 +86,10 @@ public class QueryResult {
                     continue;
                 }
 
-                groups.addAll(part.getGroups());
+                all.add(part.getGroups());
             }
 
+            final List<ShardedResultGroup> groups = combiner.combine(all);
             return new QueryResult(range, groups, errors, traces, new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
         };
     }

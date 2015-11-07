@@ -37,8 +37,6 @@ import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolModule;
 
 public class ClusterProfile extends HeroicProfileBase {
-    public static final String DEFAULT_CREDENTIALS = "json";
-
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final ClusterManagerModule.Builder module = ClusterManagerModule.builder();

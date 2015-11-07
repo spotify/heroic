@@ -31,6 +31,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cluster.ClusterManager;
@@ -142,15 +143,19 @@ public class CoreQueryManager implements QueryManager {
         public AsyncFuture<QueryResult> query(Query q) {
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
+            final Aggregation root = q.getAggregation();
+            final Aggregation aggregation = root.distributed();
+            final AggregationCombiner combiner = root.combiner(q.getRange());
+
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
                 futures.add(
-                        group.query(q.getSource(), q.getFilter(), q.getRange(), q.getAggregation(), q.getOptions())
+                        group.query(q.getSource(), q.getFilter(), q.getRange(), aggregation, q.getOptions())
                                 .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
                                 .directTransform(QueryResultPart.fromResultGroup(q.getRange(), c)));
             }
 
-            return async.collect(futures, QueryResult.collectParts(QUERY, q.getRange()));
+            return async.collect(futures, QueryResult.collectParts(QUERY, q.getRange(), combiner));
         }
 
         @Override

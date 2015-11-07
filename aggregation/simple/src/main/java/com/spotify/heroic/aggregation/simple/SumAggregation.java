@@ -24,7 +24,7 @@ package com.spotify.heroic.aggregation.simple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.aggregation.BucketAggregation;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
@@ -33,7 +33,7 @@ import lombok.ToString;
 
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true, of = { "NAME" })
-public class SumAggregation extends BucketAggregation<StripedSumBucket> {
+public class SumAggregation extends DistributedBucketAggregation<StripedSumBucket> {
     public static final String NAME = "sum";
 
     @JsonCreator
@@ -49,5 +49,10 @@ public class SumAggregation extends BucketAggregation<StripedSumBucket> {
     @Override
     protected Point build(StripedSumBucket bucket) {
         return new Point(bucket.timestamp(), bucket.value());
+    }
+
+    @Override
+    public Aggregation distributed() {
+        return this;
     }
 }
