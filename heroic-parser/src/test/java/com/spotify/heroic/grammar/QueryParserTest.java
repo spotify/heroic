@@ -2,12 +2,16 @@ package com.spotify.heroic.grammar;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -15,13 +19,30 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 
+@RunWith(MockitoJUnitRunner.class)
 public class QueryParserTest {
     private CoreQueryParser parser;
     private FilterFactory filters;
 
+    @Mock
+    Filter.MatchTag matchTag;
+    @Mock
+    Filter.And and;
+    @Mock
+    Filter.Or or;
+    @Mock
+    Filter optimized;
+
     @Before
     public void setupFilters() {
         filters = Mockito.mock(FilterFactory.class);
+
+        Mockito.when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class))).thenReturn(matchTag);
+        Mockito.when(filters.and(anyFilter(), anyFilter())).thenReturn(and);
+        Mockito.when(filters.or(Mockito.any(List.class))).thenReturn(or);
+        Mockito.when(or.optimize()).thenReturn(optimized);
+        Mockito.when(and.optimize()).thenReturn(optimized);
+
         parser = new CoreQueryParser(filters);
     }
 
@@ -93,19 +114,24 @@ public class QueryParserTest {
     }
 
     @Test
-    public void testFilter() {
-        final Filter.MatchTag matchTag = Mockito.mock(Filter.MatchTag.class);
-        final Filter.And and = Mockito.mock(Filter.And.class);
-        final Filter optimized = Mockito.mock(Filter.class);
+    public void testFilter1() {
+        assertEquals(optimized, parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in {foo, bar}"));
 
-        Mockito.when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class))).thenReturn(matchTag);
-        Mockito.when(filters.and(matchTag, matchTag)).thenReturn(and);
-        Mockito.when(and.optimize()).thenReturn(optimized);
-
-        assertEquals(optimized, parser.parse(CoreQueryParser.FILTER, "a=b and c=d"));
-
-        Mockito.verify(filters, Mockito.times(2)).matchTag(Mockito.any(String.class), Mockito.any(String.class));
-        Mockito.verify(filters).and(matchTag, matchTag);
+        Mockito.verify(filters, Mockito.times(4)).matchTag(Mockito.any(String.class), Mockito.any(String.class));
+        Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
         Mockito.verify(and).optimize();
+    }
+
+    @Test
+    public void testFilter2() {
+        assertEquals(optimized, parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in [foo, bar]"));
+
+        Mockito.verify(filters, Mockito.times(4)).matchTag(Mockito.any(String.class), Mockito.any(String.class));
+        Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
+        Mockito.verify(and).optimize();
+    }
+
+    private Filter anyFilter() {
+        return Mockito.any(Filter.class);
     }
 }

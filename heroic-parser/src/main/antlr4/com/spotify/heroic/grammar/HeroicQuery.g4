@@ -105,6 +105,7 @@ groupBy
 
 list
     : LBracket listValues? RBracket
+    | LCurly listValues? RCurly
     ;
 
 keyValue
@@ -126,14 +127,9 @@ aggregation
     : string LParen aggregationArgs? RParen
     ;
 
-placeholder
-    : Placeholder
-    ;
-
 value
     : now
     | diff
-    | placeholder
     | aggregation
     | list
     | integer
@@ -226,15 +222,13 @@ LParen : '(' ;
 
 RParen : ')' ;
 
-LCurly : '}' ;
+LCurly : '{' ;
 
 RCurly : '}' ;
 
 LBracket : '[' ;
 
 RBracket : ']' ;
-
-Placeholder : LCurly Identifier RCurly ;
 
 QuotedString : '"' StringCharacters? '"' ;
 
@@ -290,4 +284,6 @@ WS : [ \t\n]+ -> skip ;
 UnterminatedQutoedString : '"' StringCharacters? ;
 
 // match everything else so that we can handle errors in the parser.
-ErrorChar : . ;
+ErrorChar
+    : .
+    ;

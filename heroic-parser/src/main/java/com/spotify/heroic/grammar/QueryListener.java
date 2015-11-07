@@ -210,31 +210,19 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitInExpr(InExprContext ctx) {
         final ContextImpl c = new ContextImpl(ctx);
-
-        final ListValue list = pop(c, ListValue.class);
+        final Value match = pop(c, Value.class);
         final StringValue key = pop(c, StringValue.class);
 
-        final List<Filter> values = new ArrayList<>();
-
-        for (final Value v : list.getList())
-            values.add(filters.matchTag(key.getString(), v.cast(String.class)));
-
-        push(filters.or(values));
+        push(filters.or(buildIn(c, key, match)));
     }
 
     @Override
     public void exitNotInExpr(NotInExprContext ctx) {
         final ContextImpl c = new ContextImpl(ctx);
-
-        final ListValue list = pop(c, ListValue.class);
+        final ListValue match = pop(c, ListValue.class);
         final StringValue key = pop(c, StringValue.class);
 
-        final List<Filter> values = new ArrayList<>();
-
-        for (final Value v : list.getList())
-            values.add(filters.matchTag(key.getString(), v.cast(String.class)));
-
-        push(filters.not(filters.or(values)));
+        push(filters.not(filters.or(buildIn(c, key, match))));
     }
 
     @Override
@@ -281,15 +269,11 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitGroupBy(GroupByContext ctx) {
         final List<String> list = new ArrayList<>();
 
-        while (true) {
-            if (stack.peek() == GROUPBY_MARK) {
-                stack.pop();
-                break;
-            }
-
+        while (stack.peek() != GROUPBY_MARK) {
             list.add(pop(new ContextImpl(ctx), StringValue.class).getString());
         }
 
+        stack.pop();
         Collections.reverse(list);
         push(new GroupByDSL(list));
     }
@@ -305,17 +289,12 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final Context c = new ContextImpl(ctx);
 
-        while (true) {
-            if (stack.peek() == LIST_MARK) {
-                stack.pop();
-                break;
-            }
-
+        while (stack.peek() != LIST_MARK) {
             list.add(pop(c, Value.class));
         }
 
+        stack.pop();
         Collections.reverse(list);
-
         stack.push(new ListValue(list));
     }
 
@@ -555,6 +534,24 @@ public class QueryListener extends HeroicQueryBaseListener {
         throw c.error("unsupported boolean literal: " + literal);
     }
 
+    private List<Filter> buildIn(final ContextImpl c, final StringValue key, final Value match) {
+        if (match instanceof StringValue) {
+            return ImmutableList.of(filters.matchTag(key.getString(), match.cast(String.class)));
+        }
+
+        if (!(match instanceof ListValue)) {
+            throw c.error("Cannot use type " + match + " in expression");
+        }
+
+        final List<Filter> values = new ArrayList<>();
+
+        for (final Value v : ((ListValue) match).getList()) {
+            values.add(filters.matchTag(key.getString(), v.cast(String.class)));
+        }
+
+        return values;
+    }
+
     private TimeUnit extractUnit(Context ctx, String text) {
         if ("s".equals(text))
             return TimeUnit.SECONDS;
@@ -629,6 +626,10 @@ public class QueryListener extends HeroicQueryBaseListener {
     /* internals */
 
     private void push(Object value) {
+        if (value == null) {
+            throw new NullPointerException("cannot push null values");
+        }
+
         stack.push(value);
     }
 
