@@ -70,4 +70,9 @@ public class GroupAggregation extends GroupingAggregation {
 
         return key;
     }
+
+    @Override
+    protected Aggregation newInstance(final List<String> of, final Aggregation each) {
+        return new GroupAggregation(of, each);
+    }
 }

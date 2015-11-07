@@ -62,9 +62,15 @@ public interface Aggregation {
 
     /**
      * Transform the given aggregation, into a distributed aggregation.
-     * @return A distributed aggregation.
      */
     default Aggregation distributed() {
+        return this;
+    }
+
+    /**
+     * Get the reducer for the given aggregation.
+     */
+    default public Aggregation reducer() {
         return this;
     }
 

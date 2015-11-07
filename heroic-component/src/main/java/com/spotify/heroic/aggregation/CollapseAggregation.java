@@ -25,11 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.EqualsAndHashCode;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+
+import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(of = { "NAME" }, callSuper = true)
 public class CollapseAggregation extends GroupingAggregation {
@@ -61,5 +61,10 @@ public class CollapseAggregation extends GroupingAggregation {
         }
 
         return key;
+    }
+
+    @Override
+    protected Aggregation newInstance(final List<String> of, final Aggregation each) {
+        return new CollapseAggregation(of, each);
     }
 }

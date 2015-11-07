@@ -57,6 +57,11 @@ public class GroupingAggregationTest {
             protected Map<String, String> key(Map<String, String> input) {
                 return null;
             }
+
+            @Override
+            protected Aggregation newInstance(final List<String> of, final Aggregation each) {
+                return this;
+            }
         });
 
         doReturn(key1).when(a).key(key1);

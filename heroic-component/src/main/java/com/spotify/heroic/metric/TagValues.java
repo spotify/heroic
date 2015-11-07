@@ -34,6 +34,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import lombok.Data;
 
@@ -103,5 +104,17 @@ public class TagValues {
             group.add(new TagValues(e.getKey(), new ArrayList<>(e.getValue())));
 
         return group;
+    }
+
+    public static Map<String, String> mapOfSingles(final List<TagValues> tags) {
+        final ImmutableMap.Builder<String, String> map = ImmutableMap.builder();
+
+        for (final TagValues tv : tags) {
+            if (tv.getValues().size() == 1) {
+                map.put(tv.getKey(), tv.getValues().iterator().next());
+            }
+        }
+
+        return map.build();
     }
 }

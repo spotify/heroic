@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -90,6 +91,36 @@ public class ChainAggregation implements Aggregation {
     @Override
     public long cadence() {
         return chain.get(chain.size() - 1).cadence();
+    }
+
+    @Override
+    public Aggregation distributed() {
+        final Iterator<Aggregation> item = chain.iterator();
+
+        final ImmutableList.Builder<Aggregation> newChain = ImmutableList.builder();
+
+        while (true) {
+            final Aggregation a = item.next();
+
+            if (!item.hasNext()) {
+                newChain.add(a.distributed());
+                break;
+            }
+
+            newChain.add(a);
+        }
+
+        return new ChainAggregation(newChain.build());
+    }
+
+    @Override
+    public AggregationCombiner combiner(DateRange range) {
+        return chain.get(chain.size() - 1).combiner(range);
+    }
+
+    @Override
+    public Aggregation reducer() {
+        return chain.get(chain.size() - 1).reducer();
     }
 
     @Override

@@ -26,11 +26,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -40,7 +43,9 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
+import com.spotify.heroic.metric.TagValues;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -64,7 +69,12 @@ public abstract class GroupingAggregation implements Aggregation {
      * @param input The input tags for the group.
      * @return The keys for a specific group.
      */
-    protected abstract Map<String, String> key(Map<String, String> input);
+    protected abstract Map<String, String> key(final Map<String, String> input);
+
+    /**
+     * Create a new instance of this aggregation.
+     */
+    protected abstract Aggregation newInstance(final List<String> of, final Aggregation each);
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
@@ -138,6 +148,68 @@ public abstract class GroupingAggregation implements Aggregation {
     @Override
     public long cadence() {
         return each.cadence();
+    }
+
+    @Override
+    public Aggregation distributed() {
+        return newInstance(of, each.distributed());
+    }
+
+    @Override
+    public Aggregation reducer() {
+        return each.reducer();
+    }
+
+    @Override
+    public AggregationCombiner combiner(final DateRange range) {
+        return new AggregationCombiner() {
+            @Override
+            public List<ShardedResultGroup> combine(final List<List<ShardedResultGroup>> all) {
+                final Aggregation reducer = each.reducer();
+
+                final List<AggregationState> states = ImmutableList.of();
+                final Set<Series> series = ImmutableSet.of();
+                final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
+
+                // combine all the tags.
+                final Iterator<ShardedResultGroup> step1 = Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
+
+                while (step1.hasNext()) {
+                    final ShardedResultGroup g = step1.next();
+                    final Map<String, String> key = key(TagValues.mapOfSingles(g.getTags()));
+
+                    Reduction red = sessions.get(key);
+
+                    if (red == null) {
+                        red = new Reduction(reducer.session(states, range).getSession());
+                        sessions.put(key, red);
+                    }
+
+                    g.getGroup().updateAggregation(red.session, key, series);
+                    red.tagValues.add(g.getTags().iterator());
+                }
+
+                final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
+
+                for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
+                    final Reduction red = e.getValue();
+                    final AggregationSession session = red.session;
+                    final List<TagValues> tagValues = TagValues.fromEntries(Iterators.concat(Iterators.transform(Iterators.concat(red.tagValues.iterator()), TagValues::iterator)));
+
+                    for (final AggregationData data : session.result().getResult()) {
+                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, data.getMetrics(), each.cadence()));
+                    }
+                }
+
+                return groups.build();
+            }
+        };
+    }
+
+    @Data
+    private final class Reduction {
+        private final AggregationSession session;
+        private final List<Iterator<TagValues>> tagValues = new ArrayList<>();
     }
 
     @ToString
