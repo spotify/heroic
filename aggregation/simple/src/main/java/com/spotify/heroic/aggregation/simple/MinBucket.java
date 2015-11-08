@@ -29,16 +29,17 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A bucket implementation that retains the smallest (min) value seen.
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class MinBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
+
     private final AtomicDouble value = new AtomicDouble(Double.POSITIVE_INFINITY);
 
     public long timestamp() {

@@ -29,11 +29,6 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME" })
 public class StdDevInstance extends BucketAggregationInstance<StripedStdDevBucket> {
     @JsonCreator
     public StdDevInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {

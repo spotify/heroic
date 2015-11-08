@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
+import static com.spotify.heroic.common.Optionals.firstPresent;
 
 import java.util.Optional;
 
@@ -37,12 +37,12 @@ class OptionsContext implements AggregationContext {
 
     @Override
     public Optional<Duration> size() {
-        return pickOptional(parent.size(), size);
+        return firstPresent(size, parent.size());
     }
 
     @Override
     public Optional<Duration> extent() {
-        return pickOptional(parent.extent(), extent);
+        return firstPresent(extent, parent.extent());
     }
 
     @Override

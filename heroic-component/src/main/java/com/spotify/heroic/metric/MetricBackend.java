@@ -24,6 +24,7 @@ package com.spotify.heroic.metric;
 import java.util.Collection;
 import java.util.List;
 
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;

@@ -44,4 +44,9 @@ public class Sum extends SamplingAggregation {
     public SumInstance apply(AggregationContext context, final long size, final long extent) {
         return new SumInstance(size, extent);
     }
+
+    @Override
+    public String toDSL() {
+        return samplingDSL(NAME);
+    }
 }

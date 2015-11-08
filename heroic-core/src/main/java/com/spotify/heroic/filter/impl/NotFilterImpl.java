@@ -69,4 +69,9 @@ public class NotFilterImpl implements Filter.Not {
 
         return filter.compareTo(o);
     }
+
+    @Override
+    public String toDSL() {
+        return "!(" + filter.toDSL() + ")";
+    }
 }

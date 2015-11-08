@@ -23,13 +23,15 @@ package com.spotify.heroic.grammar;
 
 import java.util.concurrent.TimeUnit;
 
+import com.spotify.heroic.common.Duration;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-@ValueName("diff")
+@ValueName("duration")
 @Data
 @EqualsAndHashCode(of = { "unit", "value" })
-public class DiffValue implements Value {
+public class DurationValue implements Value {
     private static final BinaryOperation ADD = new BinaryOperation() {
         @Override
         public long calculate(long a, long b) {
@@ -58,30 +60,32 @@ public class DiffValue implements Value {
     }
 
     private Value operate(BinaryOperation op, Value other) {
-        final DiffValue o = other.cast(this);
+        final DurationValue o = other.cast(this);
 
         if (unit == o.unit)
-            return new DiffValue(unit, op.calculate(value, o.value));
+            return new DurationValue(unit, op.calculate(value, o.value));
 
         // decide which unit to convert to depending on which has the greatest magnitude in milliseconds.
         if (unit.toMillis(1) < o.unit.toMillis(1))
-            return new DiffValue(unit, op.calculate(value, unit.convert(o.value, o.unit)));
+            return new DurationValue(unit, op.calculate(value, unit.convert(o.value, o.unit)));
 
-        return new DiffValue(o.unit, op.calculate(o.unit.convert(value, unit), o.value));
+        return new DurationValue(o.unit, op.calculate(o.unit.convert(value, unit), o.value));
     }
 
     public String toString() {
-        return String.format("<diff:%s:%d>", unit, value);
+        return String.format("<%d%s>", value, Duration.unitSuffix(unit));
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(T to) {
-        if (to instanceof DiffValue)
+        if (to instanceof DurationValue) {
             return (T) this;
+        }
 
-        if (to instanceof IntValue)
+        if (to instanceof IntValue) {
             return (T) new IntValue(TimeUnit.MILLISECONDS.convert(value, unit));
+        }
 
         throw new ValueCastException(this, to);
     }
@@ -89,10 +93,19 @@ public class DiffValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(DiffValue.class))
+        if (to.isAssignableFrom(DurationValue.class)) {
             return (T) this;
+        }
+
+        if (to.isAssignableFrom(Duration.class)) {
+            return (T) this.toDuration();
+        }
 
         throw new ValueTypeCastException(this, to);
+    }
+
+    public Duration toDuration() {
+        return new Duration(value, unit);
     }
 
     public long toMilliseconds() {

@@ -46,16 +46,15 @@ public class RangeFilter {
         this.limit = checkNotNull(limit);
     }
 
-    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range) {
-        return new RangeFilter(filter, range.orElseGet(RangeFilter::defaultDateRange), Integer.MAX_VALUE);
+    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, final long now) {
+        return new RangeFilter(filter, range.orElseGet(() -> defaultDateRange(now)), Integer.MAX_VALUE);
     }
 
-    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, int limit) {
-        return new RangeFilter(filter, range.orElseGet(RangeFilter::defaultDateRange), limit);
+    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, final long now, int limit) {
+        return new RangeFilter(filter, range.orElseGet(() -> defaultDateRange(now)), limit);
     }
 
-    public static DateRange defaultDateRange() {
-        final long now = System.currentTimeMillis();
+    public static DateRange defaultDateRange(final long now) {
         final long start = now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS);
         return new DateRange(start, now);
     }

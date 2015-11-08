@@ -55,11 +55,40 @@ public class Duration {
         return unit.convert(this.duration, this.unit);
     }
 
+    public long toMilliseconds() {
+        return convert(TimeUnit.MILLISECONDS);
+    }
+
     public static Duration of(long duration, TimeUnit unit) {
         return new Duration(duration, unit);
     }
 
+    public static Duration ofMilliseconds(long duration) {
+        return of(duration, TimeUnit.MILLISECONDS);
+    }
+
     public Duration withUnit(final TimeUnit other) {
         return new Duration(duration, other);
+    }
+
+    public String toDSL() {
+        return Long.toString(duration) + unitSuffix(unit);
+    }
+
+    public static String unitSuffix(TimeUnit unit) {
+        switch (unit) {
+        case MILLISECONDS:
+            return "ms";
+        case SECONDS:
+            return "s";
+        case MINUTES:
+            return "m";
+        case HOURS:
+            return "h";
+        case DAYS:
+            return "d";
+        default:
+            throw new IllegalStateException("Unit not supported for serialization: " + unit);
+        }
     }
 }

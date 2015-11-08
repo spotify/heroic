@@ -21,19 +21,47 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.common.DateRange;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.List;
+import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.QueryOptions;
 
 import lombok.Data;
 
 @Data
 public class Query {
-    private final Filter filter;
-    private final DateRange range;
-    private final AggregationInstance aggregation;
+    private final Optional<Filter> filter;
+    private final Optional<QueryDateRange> range;
+    private final Optional<Aggregation> aggregation;
     private final MetricType source;
-    private final QueryOptions options;
+    private final Optional<QueryOptions> options;
+    private final Optional<List<String>> groupBy;
+
+    @JsonCreator
+    public Query(@JsonProperty("filter") final Optional<Filter> filter,
+            @JsonProperty("range") final Optional<QueryDateRange> range,
+            @JsonProperty("aggregation") final Optional<Aggregation> aggregation,
+            @JsonProperty("source") final MetricType source,
+            @JsonProperty("options") final Optional<QueryOptions> options,
+            @JsonProperty("groupBy") final Optional<List<String>> groupBy) {
+        this.filter = filter;
+        this.range = range;
+        this.aggregation = aggregation;
+        this.source = checkNotNull(source, "source");
+        this.options = options;
+        this.groupBy = groupBy;
+    }
+
+    public Optional<Aggregation> aggregation() {
+        return aggregation.map(aggregation -> {
+            return groupBy.<Aggregation> map(g -> new Group(Optional.of(g), aggregation)).orElse(aggregation);
+        });
+    }
 }

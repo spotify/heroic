@@ -48,4 +48,8 @@ public final class Optionals {
     public static <T> Optional<T> pickOptional(Optional<T> a, Optional<T> b) {
         return b.isPresent() ? b : a;
     }
+
+    public static <T> Optional<T> firstPresent(Optional<T> a, Optional<T> b) {
+        return a.isPresent() ? a : b;
+    }
 }

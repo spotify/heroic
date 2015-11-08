@@ -46,7 +46,7 @@ public final class IntValue implements Value {
     }
 
     public String toString() {
-        return String.format("<int:%d>", value);
+        return String.format("<%d>", value);
     }
 
     @SuppressWarnings("unchecked")
@@ -55,9 +55,9 @@ public final class IntValue implements Value {
         if (to instanceof IntValue)
             return (T) this;
 
-        if (to instanceof DiffValue) {
-            final DiffValue o = (DiffValue) to;
-            return (T) new DiffValue(o.getUnit(), o.getUnit().convert(value, TimeUnit.MILLISECONDS));
+        if (to instanceof DurationValue) {
+            final DurationValue o = (DurationValue) to;
+            return (T) new DurationValue(o.getUnit(), o.getUnit().convert(value, TimeUnit.MILLISECONDS));
         }
 
         throw new ValueCastException(this, to);

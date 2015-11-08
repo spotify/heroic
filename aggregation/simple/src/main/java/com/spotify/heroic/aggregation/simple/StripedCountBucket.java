@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.LongAdder;
 import com.spotify.heroic.aggregation.AbstractAnyBucket;
 import com.spotify.heroic.metric.Metric;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that counts the number of seen samples.
@@ -36,9 +36,10 @@ import lombok.Data;
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class StripedCountBucket extends AbstractAnyBucket {
     private final long timestamp;
+
     private final LongAdder count = new LongAdder();
 
     public long timestamp() {

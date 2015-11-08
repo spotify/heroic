@@ -19,14 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import static java.util.Optional.ofNullable;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(value = CoreQueryOptions.class, name = "core") })
-public interface QueryOptions {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.metric.QueryTrace;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public class QueryOptions {
+    public static final boolean DEFAULT_TRACING = false;
+
+    public static final QueryOptions DEFAULTS = new QueryOptions(DEFAULT_TRACING);
+
+    // XXX: remove ones deployed everywhere.
+    @Getter
+    private final String type = "core";
+
     /**
      * Indicates if tracing is enabled.
      *
@@ -34,13 +47,22 @@ public interface QueryOptions {
      *
      * @return {@code true} if tracing is enabled.
      */
-    public boolean isTracing();
+    private final boolean tracing;
 
-    public static QueryOptions defaults() {
-        return CoreQueryOptions.DEFAULTS;
+    @JsonCreator
+    public QueryOptions(@JsonProperty("tracing") Boolean tracing) {
+        this.tracing = ofNullable(tracing).orElse(DEFAULT_TRACING);
     }
 
-    static Builder builder() {
+    public boolean isTracing() {
+        return tracing;
+    }
+
+    public static QueryOptions defaults() {
+        return DEFAULTS;
+    }
+
+    public static Builder builder() {
         return new Builder();
     }
 
@@ -53,7 +75,7 @@ public interface QueryOptions {
         }
 
         public QueryOptions build() {
-            return new CoreQueryOptions(tracing);
+            return new QueryOptions(tracing);
         }
     }
 }

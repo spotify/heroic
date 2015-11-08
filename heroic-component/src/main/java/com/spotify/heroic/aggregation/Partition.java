@@ -22,10 +22,13 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 import lombok.Data;
@@ -33,6 +36,7 @@ import lombok.Data;
 @Data
 public class Partition implements Aggregation {
     public static final String NAME = "partition";
+    public static final Joiner params = Joiner.on(", ");
 
     private static final List<Aggregation> DEFAULT_CHILDREN = ImmutableList.of();
 
@@ -40,12 +44,48 @@ public class Partition implements Aggregation {
 
     @JsonCreator
     public Partition(@JsonProperty("children") List<Aggregation> children) {
-        this.children = Optional.fromNullable(children).or(DEFAULT_CHILDREN);
+        this.children = Optional.ofNullable(children).orElse(DEFAULT_CHILDREN);
+    }
+
+    @Override
+    public Optional<Long> size() {
+        return pickFrom(Math::max, Aggregation::size);
+    }
+
+    @Override
+    public Optional<Long> extent() {
+        return pickFrom(Math::max, Aggregation::extent);
+    }
+
+    private <T> Optional<T> pickFrom(final BiFunction<T, T, T> reducer, final Function<Aggregation, Optional<T>> value) {
+        Optional<T> result = Optional.empty();
+
+        for (final Aggregation a : children) {
+            final Optional<T> candidate = value.apply(a);
+
+            if (!result.isPresent()) {
+                result = candidate;
+                continue;
+            }
+
+            if (!candidate.isPresent()) {
+                continue;
+            }
+
+            result = Optional.of(reducer.apply(result.get(), candidate.get()));
+        }
+
+        return result;
     }
 
     @Override
     public PartitionInstance apply(final AggregationContext context) {
         final List<AggregationInstance> children = ImmutableList.copyOf(this.children.stream().map((c) -> c.apply(context)).iterator());
         return new PartitionInstance(children);
+    }
+
+    @Override
+    public String toDSL() {
+        return String.format("%s(%s)", NAME, params.join(children.stream().map(Aggregation::toDSL).iterator()));
     }
 }

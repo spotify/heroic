@@ -30,6 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.base.Joiner;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MultiArgumentsFilterBuilder;
@@ -235,5 +236,12 @@ public class AndFilterImpl implements Filter.And {
 
         final Filter.And other = (Filter.And) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());
+    }
+
+    private final Joiner and = Joiner.on(" and ");
+
+    @Override
+    public String toDSL() {
+        return "(" + and.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
     }
 }

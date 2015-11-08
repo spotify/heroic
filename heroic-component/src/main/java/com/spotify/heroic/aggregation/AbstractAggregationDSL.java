@@ -21,15 +21,10 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Deque;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.grammar.AggregationValue;
-import com.spotify.heroic.grammar.DiffValue;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
@@ -39,11 +34,13 @@ import lombok.RequiredArgsConstructor;
 public abstract class AbstractAggregationDSL implements AggregationDSL {
     private final AggregationFactory factory;
 
-    protected List<Aggregation> flatten(final Value value) {
-        if (value == null) {
-            return ImmutableList.of();
-        }
+    protected List<Aggregation> flatten(final AggregationArguments args) {
+        final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
+        args.takeArguments(Value.class).stream().map(this::flatten).forEach(aggregations::addAll);
+        return aggregations.build();
+    }
 
+    protected List<Aggregation> flatten(final Value value) {
         if (value instanceof ListValue) {
             final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
 
@@ -54,35 +51,10 @@ public abstract class AbstractAggregationDSL implements AggregationDSL {
             return aggregations.build();
         }
 
-        final AggregationValue a = value.cast(AggregationValue.class);
-        return ImmutableList.of(a.build(factory));
+        return ImmutableList.of(asAggregation(value.cast(AggregationValue.class)));
     }
 
-    protected Optional<Duration> parseDuration(Map<String, Value> keywords, String key) {
-        return getDiffValue(keywords, key).map(d -> new Duration(d.getValue(), d.getUnit()));
-    }
-
-    private Optional<DiffValue> getDiffValue(Map<String, Value> keywords, String key) {
-        if (keywords.containsKey(key)) {
-            return Optional.of(keywords.get(key).cast(DiffValue.class));
-        }
-
-        return Optional.empty();
-    }
-
-    protected Aggregation parseAggregation(Map<String, Value> keywords, final Deque<Value> a) {
-        final AggregationValue aggregation;
-
-        if (!a.isEmpty()) {
-            aggregation = a.removeFirst().cast(AggregationValue.class);
-        } else {
-            if (!keywords.containsKey("aggregation")) {
-                throw new IllegalArgumentException("Missing aggregation argument");
-            }
-
-            aggregation = keywords.get("aggregation").cast(AggregationValue.class);
-        }
-
-        return aggregation.build(factory);
+    protected Aggregation asAggregation(final AggregationValue value) {
+        return value.build(factory);
     }
 }

@@ -8,7 +8,24 @@ queries
     ;
 
 query
-    : select From from (Where filter)? (GroupBy groupBy)?
+    : select from where? groupBy?
+    ;
+
+select
+    : All
+    | valueExpr
+    ;
+
+from
+    : From Identifier sourceRange?
+    ;
+
+where
+    : Where filter
+    ;
+
+groupBy
+    : GroupBy listValues
     ;
 
 eqExpr
@@ -99,10 +116,6 @@ listValues
     : valueExpr (Colon valueExpr)*
     ;
 
-groupBy
-    : listValues
-    ;
-
 list
     : LBracket listValues? RBracket
     | LCurly listValues? RCurly
@@ -156,11 +169,6 @@ valueExpr
     |<assoc=right> valueExpr Minus valueExpr
     ;
 
-select
-    : All
-    | valueExpr
-    ;
-
 relative
     : LParen valueExpr RParen
     ;
@@ -172,8 +180,6 @@ sourceRange
     : relative
     | absolute
     ;
-
-from : Identifier sourceRange? ;
 
 // keywords (must come before SimpleString!)
 All : '*' ;

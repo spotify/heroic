@@ -31,10 +31,10 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.metric.QueryOptions;
 
 import eu.toolchain.async.AsyncFuture;
 

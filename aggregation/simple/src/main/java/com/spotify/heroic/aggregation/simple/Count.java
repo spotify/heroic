@@ -27,9 +27,6 @@ import com.google.common.base.Optional;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.SamplingQuery;
 
-import lombok.Data;
-
-@Data
 public class Count extends SamplingAggregation {
     public static final String NAME = "count";
 
@@ -41,5 +38,10 @@ public class Count extends SamplingAggregation {
     @Override
     public CountInstance apply(final AggregationContext context, final long size, final long extent) {
         return new CountInstance(size, extent);
+    }
+
+    @Override
+    public String toDSL() {
+        return samplingDSL(NAME);
     }
 }

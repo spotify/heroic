@@ -32,7 +32,7 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
@@ -42,7 +42,7 @@ import lombok.Data;
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class SpreadBucket extends AbstractBucket {
     static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
     static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);

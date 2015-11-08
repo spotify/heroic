@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
@@ -55,10 +56,10 @@ import lombok.ToString;
 @Data
 @EqualsAndHashCode(of = { "of", "each" })
 public abstract class GroupingAggregation implements AggregationInstance {
-    private final List<String> of;
+    private final Optional<List<String>> of;
     private final AggregationInstance each;
 
-    public GroupingAggregation(final List<String> of, final AggregationInstance each) {
+    public GroupingAggregation(final Optional<List<String>> of, final AggregationInstance each) {
         this.of = of;
         this.each = checkNotNull(each, "each");
     }
@@ -74,7 +75,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     /**
      * Create a new instance of this aggregation.
      */
-    protected abstract AggregationInstance newInstance(final List<String> of, final AggregationInstance each);
+    protected abstract AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each);
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
@@ -141,11 +142,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public long extent() {
-        return each.extent();
-    }
-
-    @Override
     public long cadence() {
         return each.cadence();
     }
@@ -156,8 +152,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationInstance reducer() {
-        return each.reducer();
+    public AggregationSession reducer(final DateRange range) {
+        return each.reducer(range);
     }
 
     @Override
@@ -165,9 +161,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
         return new AggregationCombiner() {
             @Override
             public List<ShardedResultGroup> combine(final List<List<ShardedResultGroup>> all) {
-                final AggregationInstance reducer = each.reducer();
-
-                final List<AggregationState> states = ImmutableList.of();
                 final Set<Series> series = ImmutableSet.of();
                 final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
 
@@ -181,7 +174,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
                     Reduction red = sessions.get(key);
 
                     if (red == null) {
-                        red = new Reduction(reducer.session(states, range).getSession());
+                        red = new Reduction(each.reducer(range));
                         sessions.put(key, red);
                     }
 
@@ -204,6 +197,11 @@ public abstract class GroupingAggregation implements AggregationInstance {
                 return groups.build();
             }
         };
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s(of=%s, each=%s)", getClass().getSimpleName(), of, each);
     }
 
     @Data

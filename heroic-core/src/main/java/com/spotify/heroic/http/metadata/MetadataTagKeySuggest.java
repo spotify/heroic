@@ -25,28 +25,25 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
-import com.spotify.heroic.http.query.QueryDateRange;
 
 import lombok.Data;
 
 @Data
 public class MetadataTagKeySuggest {
-    private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
     private static final int DEFAULT_LIMIT = 10;
 
-    private final Filter filter;
+    private final Optional<Filter> filter;
+    private final Optional<QueryDateRange> range;
     private final int limit;
-    private final Optional<DateRange> range;
 
     @JsonCreator
-    public MetadataTagKeySuggest(@JsonProperty("filter") Filter filter,
-            @JsonProperty("limit") Integer limit, @JsonProperty("range") QueryDateRange range) {
-        this.filter = Optional.ofNullable(filter).orElse(DEFAULT_FILTER);
+    public MetadataTagKeySuggest(@JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
+            @JsonProperty("limit") Integer limit) {
+        this.filter = Optional.ofNullable(filter);
+        this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-        this.range = Optional.ofNullable(range).flatMap(QueryDateRange::buildDateRange);
     }
 
     public static MetadataTagKeySuggest createDefault() {

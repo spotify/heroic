@@ -93,4 +93,6 @@ public interface Filter extends Comparable<Filter> {
     public Filter optimize();
 
     public String operator();
+
+    public String toDSL();
 }

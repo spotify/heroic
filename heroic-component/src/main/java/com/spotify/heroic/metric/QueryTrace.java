@@ -27,7 +27,6 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.metric.QueryTrace.Identifier;
 
 import lombok.Data;
 

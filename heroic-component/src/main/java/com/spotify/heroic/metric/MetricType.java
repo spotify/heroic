@@ -75,4 +75,9 @@ public enum MetricType {
     public Comparator<Metric> comparator() {
         return comparator;
     }
+
+    @Override
+    public String toString() {
+        return identifier;
+    }
 }

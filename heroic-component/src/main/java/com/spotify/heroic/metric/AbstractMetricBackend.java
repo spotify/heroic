@@ -24,6 +24,7 @@ package com.spotify.heroic.metric;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.AsyncFramework;

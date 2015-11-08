@@ -30,16 +30,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.spotify.heroic.aggregation.AbstractAnyBucket;
 import com.spotify.heroic.metric.Metric;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that counts the number of seen events.
  * 
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class CountUniqueBucket extends AbstractAnyBucket {
     private final long timestamp;
+
     private final AtomicInteger count = new AtomicInteger(0);
     private final Set<Integer> seen = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 

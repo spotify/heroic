@@ -53,4 +53,13 @@ public class Quantile extends SamplingAggregation {
     public QuantileInstance apply(AggregationContext context, final long size, final long extent) {
         return new QuantileInstance(size, extent, q, error);
     }
+
+    @Override
+    public String toDSL() {
+        return samplingDSL(NAME, "q", percentage(q), "error", percentage(error));
+    }
+
+    private String percentage(double v) {
+        return Integer.toString((int)Math.min(100, Math.max(0, Math.round(v * 100))));
+    }
 }

@@ -49,9 +49,8 @@ public class SamplingQuery {
             this.extent = Optional.ofNullable(extent).map(d -> d.withUnit(u.get()));
         } else {
             this.size = Optional.ofNullable(size);
-            this.extent = Optionals.pickOptional(this.size, Optional.ofNullable(extent));
+            this.extent = Optionals.firstPresent(Optional.ofNullable(extent), this.size);
         }
-
     }
 
     public static SamplingQuery empty() {

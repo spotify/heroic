@@ -36,7 +36,9 @@ import org.antlr.v4.runtime.tree.ParseTree;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AbsoluteContext;
@@ -70,6 +72,8 @@ import com.spotify.heroic.grammar.HeroicQueryParser.RelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.SelectContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ValueExprContext;
+import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
+import com.spotify.heroic.metric.MetricType;
 
 import lombok.Data;
 import lombok.Getter;
@@ -79,13 +83,22 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class QueryListener extends HeroicQueryBaseListener {
     private final FilterFactory filters;
+    private final AggregationFactory aggregations;
     private final long now;
 
     private static final Object QUERIES_MARK = new Object();
     private static final Object GROUPBY_MARK = new Object();
     private static final Object LIST_MARK = new Object();
     private static final Object AGGREGATION_ARGUMENTS_MARK = new Object();
-    private static final Object QUERY_MARK = new Object();
+
+    public static final Object EMPTY = new Object();
+    public static final Object NOT_EMPTY = new Object();
+
+    public static final Object QUERY_MARK = new Object();
+    public static final Object GROUP_BY_MARK = new Object();
+    public static final Object SELECT_MARK = new Object();
+    public static final Object WHERE_MARK = new Object();
+    public static final Object FROM_MARK = new Object();
 
     @Getter
     private final List<QueryDSL> queries = new ArrayList<>();
@@ -121,10 +134,11 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     @Override
     public void exitQuery(QueryContext ctx) {
-        SelectDSL select = null;
-        FromDSL source = null;
-        Filter where = null;
-        GroupByDSL groupBy = null;
+        MetricType source = null;
+        Optional<Aggregation> aggregation = Optional.empty();
+        Optional<QueryDateRange> range = Optional.empty();
+        Optional<Filter> where = Optional.empty();
+        Optional<List<String>> groupBy = Optional.empty();
 
         final Context c = new ContextImpl(ctx);
 
@@ -135,38 +149,35 @@ public class QueryListener extends HeroicQueryBaseListener {
                 break;
             }
 
-            if (mark instanceof SelectDSL) {
-                select = (SelectDSL) mark;
+            if (mark == GROUP_BY_MARK) {
+                groupBy = Optional.of(popList(String.class));
                 continue;
             }
 
-            if (mark instanceof FromDSL) {
-                source = (FromDSL) mark;
+            if (mark == SELECT_MARK) {
+                aggregation = popOptional(Aggregation.class);
                 continue;
             }
 
-            if (mark instanceof Filter) {
-                where = (Filter) mark;
+            if (mark == WHERE_MARK) {
+                where = Optional.of(pop(Filter.class));
                 continue;
             }
 
-            if (mark instanceof GroupByDSL) {
-                groupBy = (GroupByDSL) mark;
+            if (mark == FROM_MARK) {
+                source = pop(MetricType.class);
+                range = popOptional(QueryDateRange.class);
                 continue;
             }
 
             throw c.error(String.format("expected part of query, but got %s", mark));
         }
 
-        if (select == null) {
-            throw c.error("No select clause available");
-        }
-
         if (source == null) {
             throw c.error("No source clause available");
         }
 
-        push(new QueryDSL(select, source, Optional.ofNullable(where), Optional.ofNullable(groupBy)));
+        push(new QueryDSL(aggregation, source, range, where, groupBy));
     }
 
     @Override
@@ -229,26 +240,26 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitSelect(SelectContext ctx) {
         final ParseTree child = ctx.getChild(0);
         final Context c = new ContextImpl(ctx);
-        final Optional<AggregationValue> aggregation = buildAggregation(c, child);
-        push(new SelectDSL(c, aggregation));
+        pushOptional(buildAggregation(c, child));
+        push(SELECT_MARK);
     }
 
-    Optional<AggregationValue> buildAggregation(final Context c, final ParseTree child) {
+    Optional<Aggregation> buildAggregation(final Context c, final ParseTree child) {
         if (!(child.getPayload() instanceof ValueExprContext)) {
             return Optional.empty();
         }
 
-        final Value value = pop(c, Value.class);
+        final Object value = pop(c, Object.class);
 
         if (value instanceof AggregationValue) {
-            return Optional.of(AggregationValue.class.cast(value));
+            return Optional.of(AggregationValue.class.cast(value).build(aggregations));
         }
 
         if (value instanceof StringValue) {
             final StringValue name = (StringValue) value;
             final List<Value> arguments = new ArrayList<>();
             final Map<String, Value> keywordArguments = new HashMap<>();
-            return Optional.of(new AggregationValue(name.getString(), arguments, keywordArguments));
+            return Optional.of(aggregations.build(name.getString(), arguments, keywordArguments));
         }
 
         throw c.error(String.format("expected %s, but was %s", name(AggregationValue.class), value.toString()));
@@ -258,6 +269,11 @@ public class QueryListener extends HeroicQueryBaseListener {
     public void exitFilter(FilterContext ctx) {
         final Context c = new ContextImpl(ctx);
         push(pop(c, Filter.class).optimize());
+    }
+
+    @Override
+    public void exitWhere(WhereContext ctx) {
+        push(WHERE_MARK);
     }
 
     @Override
@@ -275,7 +291,9 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         stack.pop();
         Collections.reverse(list);
-        push(new GroupByDSL(list));
+
+        pushList(list, String.class);
+        push(GROUP_BY_MARK);
     }
 
     @Override
@@ -359,33 +377,37 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     @Override
     public void exitFrom(FromContext ctx) {
-        final ParseTree source = ctx.getChild(0);
-
         final Context context = new ContextImpl(ctx);
 
-        final Optional<DateRange> range;
+        final String sourceText = ctx.getChild(1).getText();
 
-        if (ctx.getChildCount() > 1) {
-            range = Optional.of(pop(context, DateRange.class));
+        final MetricType source = MetricType.fromIdentifier(sourceText).orElseThrow(
+                () -> context.error("Invalid source (" + sourceText + "), must be one of " + MetricType.values()));
+
+        final Optional<QueryDateRange> range;
+
+        if (ctx.getChildCount() > 2) {
+            range = Optional.of(pop(context, QueryDateRange.class));
         } else {
             range = Optional.empty();
         }
 
-        push(new FromDSL(context, source.getText(), range));
+        pushOptional(range);
+        push(source);
+        push(FROM_MARK);
     }
 
     @Override
     public void exitAbsolute(AbsoluteContext ctx) {
         final IntValue end = pop(new ContextImpl(ctx), IntValue.class);
         final IntValue start = pop(new ContextImpl(ctx), IntValue.class);
-        push(new DateRange(start.getValue(), end.getValue()));
+        push(new QueryDateRange.Absolute(start.getValue(), end.getValue()));
     }
 
     @Override
     public void exitRelative(RelativeContext ctx) {
-        final DiffValue diff = pop(new ContextImpl(ctx), DiffValue.class);
-        final long ms = TimeUnit.MILLISECONDS.convert(diff.getValue(), diff.getUnit());
-        push(new DateRange(now - ms, now));
+        final DurationValue diff = pop(new ContextImpl(ctx), DurationValue.class);
+        push(new QueryDateRange.Relative(diff.getUnit(), diff.getValue()));
     }
 
     @Override
@@ -423,7 +445,7 @@ public class QueryListener extends HeroicQueryBaseListener {
             value = Integer.valueOf(text.substring(0, text.length() - 1));
         }
 
-        push(new DiffValue(unit, value));
+        push(new DurationValue(unit, value));
     }
 
     @Override
@@ -611,20 +633,70 @@ public class QueryListener extends HeroicQueryBaseListener {
         return builder.toString();
     }
 
+    public void popMark(Object mark) {
+        final Object actual = pop(Object.class);
+
+        if (actual != mark) {
+            throw new IllegalStateException("Expected mark " + mark + ", but got " + actual);
+        }
+    }
+
+    public <T> List<T> popList(Class<T> type) {
+        final Class<?> typeOn = pop(Class.class);
+        checkType(type, typeOn);
+        return (List<T>) pop(List.class);
+    }
+
+    public <T> Optional<T> popOptional(Class<T> type) {
+        final Object mark = stack.pop();
+
+        if (mark == EMPTY) {
+            return Optional.empty();
+        }
+
+        if (mark == NOT_EMPTY) {
+            return Optional.of(pop(type));
+        }
+
+        throw new IllegalStateException("stack does not contain a legal optional mark");
+    }
+
     public <T> T pop(Class<T> type) {
         if (stack.isEmpty())
             throw new IllegalStateException("stack is empty (did you parse something?)");
 
         final Object popped = stack.pop();
 
-        if (!type.isAssignableFrom(popped.getClass()))
-            throw new IllegalStateException(String.format("expected %s, but was %s", name(type),
-                    name(popped.getClass())));
+        checkType(type, popped.getClass());
 
         return (T) popped;
     }
 
+    private <T> void checkType(Class<T> expected, Class<?> actual) {
+        if (!expected.isAssignableFrom(actual)) {
+            throw new IllegalStateException(String.format("expected %s, but was %s", name(expected), name(actual)));
+        }
+    }
+
     /* internals */
+    private <T> void pushOptional(final Optional<T> value) {
+        if (!value.isPresent()) {
+            push(EMPTY);
+            return;
+        }
+
+        push(value.get());
+        push(NOT_EMPTY);
+    }
+
+    private <T> void pushList(List<T> value, Class<T> type) {
+        if (value == null) {
+            throw new NullPointerException("cannot push null values");
+        }
+
+        stack.push(type);
+        stack.push(value);
+    }
 
     private void push(Object value) {
         if (value == null) {
@@ -635,15 +707,12 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     private <T> T pop(Context ctx, Class<T> type) {
-        final Object popped = stack.pop();
-
-        if (popped == null)
+        if (stack.isEmpty()) {
             throw ctx.error(String.format("expected %s, but was empty", name(type)));
-
-        if (!type.isAssignableFrom(popped.getClass())) {
-            throw ctx.error(String.format("expected %s, but was %s", name(type), popped.toString()));
         }
 
+        final Object popped = stack.pop();
+        checkType(type, popped.getClass());
         return (T) popped;
     }
 

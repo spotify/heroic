@@ -27,11 +27,6 @@ import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME" })
 public class CountUniqueInstance extends BucketAggregationInstance<CountUniqueBucket> {
     @JsonCreator
     public CountUniqueInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {

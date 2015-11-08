@@ -37,16 +37,6 @@ public interface AggregationInstance {
     public long estimate(DateRange range);
 
     /**
-     * Get a hint of the extent this aggregation uses.
-     *
-     * This value is used to determine at what range the provided range should be rounded to, otherwise it might cause
-     * incomplete sampling periods.
-     *
-     * @return The relevant extent.
-     */
-    public long extent();
-
-    /**
      * Get the cadence of the current aggregation.
      *
      * The cadence indicates the interval in milliseconds that samples can be expected.
@@ -70,9 +60,7 @@ public interface AggregationInstance {
     /**
      * Get the reducer for the given aggregation.
      */
-    default public AggregationInstance reducer() {
-        return this;
-    }
+    public AggregationSession reducer(final DateRange range);
 
     /**
      * Get an aggregation combiner for the given aggregation.

@@ -46,6 +46,7 @@ import com.spotify.heroic.metric.Spread;
 
 import lombok.AccessLevel;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 /**
@@ -61,6 +62,7 @@ import lombok.Getter;
  * @author udoprog
  */
 @Data
+@EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements
         AggregationInstance {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
@@ -210,13 +212,18 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements
     }
 
     @Override
-    public long extent() {
-        return extent;
+    public AggregationSession reducer(final DateRange range) {
+        return session(range, ImmutableSet.of());
     }
 
     @Override
     public long cadence() {
         return size;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
     protected Session session(final DateRange range, final Set<Series> series) {

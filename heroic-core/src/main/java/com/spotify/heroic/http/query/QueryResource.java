@@ -164,12 +164,13 @@ public class QueryResource {
     private QueryBuilder setupQuery(final QueryMetrics q) {
         Supplier<? extends QueryBuilder> supplier = () -> {
             return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
-                    .range(q.getRange()).aggregation(q.getAggregation().map(a -> a::apply))
-                    .source(q.getSource());
+                    .range(q.getRange()).aggregation(q.getAggregation())
+                    .source(q.getSource())
+                    .options(q.getOptions());
         };
 
-        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier)
-                .rangeIfAbsent(q.getRange());
+        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier).rangeIfAbsent(q.getRange())
+                .optionsIfAbsent(q.getOptions());
     }
 
     @Data

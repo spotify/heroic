@@ -21,16 +21,14 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import com.spotify.heroic.aggregation.AbstractAggregationDSL;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.grammar.Value;
 
 public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
     public SamplingAggregationDSL(AggregationFactory factory) {
@@ -38,12 +36,11 @@ public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
     }
 
     @Override
-    public Aggregation build(final List<Value> args, final Map<String, Value> keywords) {
-        final Optional<Duration> size = parseDuration(keywords, "size");
-        final Optional<Duration> extent = parseDuration(keywords, "extent");
-        final SamplingQuery sampling = new SamplingQuery(size, extent);
-        return buildWith(args, keywords, sampling);
+    public Aggregation build(final AggregationArguments args) {
+        final Optional<Duration> size = args.getNext("size", Duration.class);
+        final Optional<Duration> extent = args.getNext("extent", Duration.class);
+        return buildWith(args, new SamplingQuery(size, extent));
     }
 
-    protected abstract Aggregation buildWith(List<Value> args, Map<String, Value> keywords, final SamplingQuery sampling);
+    protected abstract Aggregation buildWith(final AggregationArguments args, final SamplingQuery sampling);
 }

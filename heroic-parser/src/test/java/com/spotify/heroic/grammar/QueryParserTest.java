@@ -7,7 +7,9 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -15,13 +17,17 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.metric.MetricType;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryParserTest {
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
+
     private CoreQueryParser parser;
     private FilterFactory filters;
     private AggregationFactory aggregations;
@@ -50,11 +56,11 @@ public class QueryParserTest {
     }
 
     @Test
-    public void testSelect() {
-        final AggregationValue average = new AggregationValue("average", ImmutableList.<Value> of(new DiffValue(
+    public void testAggregation() {
+        final AggregationValue average = new AggregationValue("average", ImmutableList.<Value> of(new DurationValue(
                 TimeUnit.HOURS, 30)), ImmutableMap.<String, Value> of());
 
-        final AggregationValue sum = new AggregationValue("sum", ImmutableList.<Value> of(new DiffValue(TimeUnit.HOURS,
+        final AggregationValue sum = new AggregationValue("sum", ImmutableList.<Value> of(new DurationValue(TimeUnit.HOURS,
                 30)), ImmutableMap.<String, Value> of());
 
         final AggregationValue group = new AggregationValue("group", ImmutableList.<Value> of(new ListValue(
@@ -63,57 +69,41 @@ public class QueryParserTest {
         final AggregationValue chain = new AggregationValue("chain", ImmutableList.<Value> of(group, sum),
                 ImmutableMap.<String, Value> of());
 
-        assertEquals(Optional.empty(), parser.parse(CoreQueryParser.SELECT, "*").getAggregation());
-        assertEquals(Optional.of(chain),
-                parser.parse(CoreQueryParser.SELECT, "chain(group([host], average(30H)), sum(30H))")
-                .getAggregation());
-    }
-
-    @Test(expected = ParseException.class)
-    public void testInvalidSelect() {
-        parser.parse(CoreQueryParser.SELECT, "1");
+        assertEquals(chain, parser.parse(CoreQueryParser.AGGREGATION, "chain(group([host], average(30H)), sum(30H))"));
     }
 
     @Test
     public void testValueExpr() {
         assertEquals("foobar", parser.parse(CoreQueryParser.VALUE_EXPR, "foo + bar").cast(String.class));
-        assertEquals(new DiffValue(TimeUnit.HOURS, 7),
-                parser.parse(CoreQueryParser.VALUE_EXPR, "3H + 4H").cast(DiffValue.class));
-        assertEquals(new DiffValue(TimeUnit.MINUTES, 59),
+        assertEquals(new DurationValue(TimeUnit.HOURS, 7),
+                parser.parse(CoreQueryParser.VALUE_EXPR, "3H + 4H").cast(DurationValue.class));
+        assertEquals(new DurationValue(TimeUnit.MINUTES, 59),
                 parser.parse(CoreQueryParser.VALUE_EXPR, "1H - 1m")
-                .cast(DiffValue.class));
-        assertEquals(new DiffValue(TimeUnit.MINUTES, 59),
+                .cast(DurationValue.class));
+        assertEquals(new DurationValue(TimeUnit.MINUTES, 59),
                 parser.parse(CoreQueryParser.VALUE_EXPR, "119m - 1H")
-                .cast(DiffValue.class));
+                .cast(DurationValue.class));
         assertEquals(new ListValue(ImmutableList.<Value> of(new IntValue(1l), new IntValue(2l))),
                 parser.parse(CoreQueryParser.VALUE_EXPR, "[1] + [2]").cast(ListValue.class));
     }
 
     @Test
     public void testFrom() {
-        checkFrom("series", Optional.empty(), parser.parse(CoreQueryParser.FROM, "series"));
-        checkFrom("events", Optional.empty(), parser.parse(CoreQueryParser.FROM, "events"));
+        checkFrom(MetricType.POINT, Optional.empty(), parser.parse(CoreQueryParser.FROM, "from points"));
+        checkFrom(MetricType.EVENT, Optional.empty(), parser.parse(CoreQueryParser.FROM, "from events"));
+
         // absolute
-        checkFrom("series", Optional.of(new DateRange(0, 1234 + 4321)),
-                parser.parse(CoreQueryParser.FROM, "series(0, 1234 + 4321)"));
+        checkFrom(MetricType.POINT, Optional.of(new QueryDateRange.Absolute(0, 1234 + 4321)),
+                parser.parse(CoreQueryParser.FROM, "from points(0, 1234 + 4321)"));
+
         // relative
-        checkFrom("series", Optional.of(new DateRange(0, 1000)),
-                parser.parse(CoreQueryParser.FROM, "series(1000ms)", 1000));
+        checkFrom(MetricType.POINT, Optional.of(new QueryDateRange.Relative(TimeUnit.MILLISECONDS, 1000)),
+                parser.parse(CoreQueryParser.FROM, "from points(1000ms)", 1000));
     }
 
-    void checkFrom(String source, Optional<DateRange> range, FromDSL result) {
+    void checkFrom(MetricType source, Optional<QueryDateRange> range, CoreQueryParser.FromDSL result) {
         assertEquals(source, result.getSource());
         assertEquals(range, result.getRange());
-    }
-
-    @Test(expected = ParseException.class)
-    public void testInvalidGrammar() {
-        parser.parse(CoreQueryParser.QUERY, "select ~ from series");
-    }
-
-    @Test(expected = ParseException.class)
-    public void testInvalidSyntax() {
-        parser.parse(CoreQueryParser.QUERY, "select 12 from series");
     }
 
     @Test
@@ -132,6 +122,34 @@ public class QueryParserTest {
         Mockito.verify(filters, Mockito.times(4)).matchTag(Mockito.any(String.class), Mockito.any(String.class));
         Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
         Mockito.verify(and).optimize();
+    }
+
+    @Test
+    public void testUnterminatedString() {
+        exception.expect(ParseException.class);
+        exception.expectMessage("unterminated string");
+        parser.parse(CoreQueryParser.VALUE_EXPR, "\"open");
+    }
+
+    @Test
+    public void testErrorChar() {
+        exception.expect(ParseException.class);
+        exception.expectMessage("garbage");
+        parser.parse(CoreQueryParser.SELECT, "* 1");
+    }
+
+    @Test
+    public void testInvalidSelect() {
+        exception.expect(ParseException.class);
+        exception.expectMessage("expected <aggregation>, but was <1>");
+        parser.parse(CoreQueryParser.SELECT, "1");
+    }
+
+    @Test
+    public void testInvalidGrammar() {
+        exception.expect(ParseException.class);
+        exception.expectMessage("unexpected token: ~");
+        parser.parse(CoreQueryParser.QUERY, "~ from points");
     }
 
     private Filter anyFilter() {

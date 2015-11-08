@@ -24,54 +24,46 @@ package com.spotify.heroic.aggregation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
-@EqualsAndHashCode(of = { "NAME" }, callSuper = true)
-@Data
 public class GroupInstance extends GroupingAggregation {
     public static final Map<String, String> ALL_GROUP = ImmutableMap.of();
 
     @JsonCreator
-    public GroupInstance(@JsonProperty("of") List<String> of, @JsonProperty("each") AggregationInstance each) {
+    public GroupInstance(@JsonProperty("of") Optional<List<String>> of, @JsonProperty("each") AggregationInstance each) {
         super(of, each);
     }
 
     @Override
     protected Map<String, String> key(final Map<String, String> tags) {
-        final List<String> of = getOf();
-
-        if (of == null) {
-            return tags;
-        }
-
-        // group by 'everything'
-        if (of.isEmpty()) {
-            return ALL_GROUP;
-        }
-
-        final Map<String, String> key = new HashMap<>();
-
-        for (final String o : of) {
-            String value = tags.get(o);
-
-            if (value == null) {
-                continue;
+        return getOf().map(of -> {
+            // group by 'everything'
+            if (of.isEmpty()) {
+                return ALL_GROUP;
             }
 
-            key.put(o, value);
-        }
+            final Map<String, String> key = new HashMap<>();
 
-        return key;
+            for (final String o : of) {
+                String value = tags.get(o);
+
+                if (value == null) {
+                    continue;
+                }
+
+                key.put(o, value);
+            }
+
+            return key;
+        }).orElse(tags);
     }
 
     @Override
-    protected AggregationInstance newInstance(final List<String> of, final AggregationInstance each) {
+    protected AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each) {
         return new GroupInstance(of, each);
     }
 }

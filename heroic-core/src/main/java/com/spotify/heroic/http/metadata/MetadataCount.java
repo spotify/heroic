@@ -27,25 +27,21 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
-import com.spotify.heroic.http.query.QueryDateRange;
 
 import lombok.Data;
 
 @Data
 public class MetadataCount {
-    private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
-
-    private final Filter filter;
-    private final Optional<DateRange> range;
+    private final Optional<Filter> filter;
+    private final Optional<QueryDateRange> range;
 
     @JsonCreator
     public MetadataCount(@JsonProperty("filter") Filter filter,
             @JsonProperty("range") QueryDateRange range) {
-        this.filter = ofNullable(filter).orElse(DEFAULT_FILTER);
-        this.range = ofNullable(range).flatMap(QueryDateRange::buildDateRange);
+        this.filter = ofNullable(filter);
+        this.range = ofNullable(range);
     }
 
     public static MetadataCount createDefault() {

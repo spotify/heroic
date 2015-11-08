@@ -8,6 +8,7 @@ import static org.mockito.Mockito.spy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,14 +53,14 @@ public class GroupingAggregationTest {
     public void testSession() {
         final AggregationInstance each = mock(AggregationInstance.class);
 
-        final GroupingAggregation a = spy(new GroupingAggregation(ImmutableList.of("group"), each) {
+        final GroupingAggregation a = spy(new GroupingAggregation(Optional.of(ImmutableList.of("group")), each) {
             @Override
             protected Map<String, String> key(Map<String, String> input) {
                 return null;
             }
 
             @Override
-            protected AggregationInstance newInstance(final List<String> of, final AggregationInstance each) {
+            protected AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each) {
                 return this;
             }
         });
@@ -72,8 +73,8 @@ public class GroupingAggregationTest {
 
     @Test
     public void testChainedSessions() {
-        final GroupingAggregation g1 = new GroupInstance(ImmutableList.of("site", "host"), EmptyInstance.INSTANCE);
-        final GroupingAggregation g2 = new GroupInstance(ImmutableList.of("site"), EmptyInstance.INSTANCE);
+        final GroupingAggregation g1 = new GroupInstance(Optional.of(ImmutableList.of("site", "host")), EmptyInstance.INSTANCE);
+        final GroupingAggregation g2 = new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
 
         final ChainInstance chain = new ChainInstance(ImmutableList.of(g1, g2));
 

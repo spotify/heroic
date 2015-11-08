@@ -28,24 +28,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedSet;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.DefaultAggregationContext;
-import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.aggregation.GroupInstance;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.QueryOptions;
 
 import lombok.RequiredArgsConstructor;
 
@@ -53,15 +42,14 @@ import lombok.RequiredArgsConstructor;
 public class QueryBuilder {
     private final FilterFactory filters;
 
-    private Map<String, String> tags = ImmutableMap.of();
     private MetricType source = MetricType.POINT;
 
+    private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<String> key = Optional.empty();
     private Optional<Filter> filter = Optional.empty();
     private Optional<List<String>> groupBy = Optional.empty();
-    private Optional<DateRange> range = Optional.empty();
+    private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
-    private Optional<AggregationContext> context = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
 
     /**
@@ -81,9 +69,9 @@ public class QueryBuilder {
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be built using
      *             {@link FilterFactory#matchTag(String, String)}.
      */
-    public QueryBuilder tags(Map<String, String> tags) {
+    public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
-        this.tags = tags;
+        this.tags = pickOptional(this.tags, tags);
         return this;
     }
 
@@ -103,9 +91,9 @@ public class QueryBuilder {
      * 
      * Note: This range might be rounded to accommodate the sampling period of a given aggregation.
      */
-    public QueryBuilder range(Optional<DateRange> range) {
+    public QueryBuilder range(Optional<QueryDateRange> range) {
         checkNotNull(range, "range");
-        this.range = pickOptional(this.range, range).filter(DateRange::isNotEmpty);
+        this.range = pickOptional(this.range, range).filter(r -> !r.isEmpty());
         return this;
     }
 
@@ -138,7 +126,7 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder rangeIfAbsent(final Optional<DateRange> range) {
+    public QueryBuilder rangeIfAbsent(final Optional<QueryDateRange> range) {
         if (!this.range.isPresent()) {
             return range(range);
         }
@@ -146,77 +134,16 @@ public class QueryBuilder {
         return this;
     }
 
-    public Query build() {
-        final Filter filter = legacyFilter();
-
-        if (!range.isPresent()) {
-            throw new IllegalStateException("Range is not specified");
+    public QueryBuilder optionsIfAbsent(final Optional<QueryOptions> options) {
+        if (!this.options.isPresent()) {
+            return options(options);
         }
 
-        final DateRange range = this.range.get();
-
-        final AggregationInstance aggregation = buildAggregation(range);
-
-        final DateRange roundedRange = roundedRange(range, aggregation);
-
-        final QueryOptions options = this.options.orElseGet(QueryOptions::defaults);
-
-        return new Query(filter, roundedRange, aggregation, source, options);
+        return this;
     }
 
-    private AggregationInstance buildAggregation(final DateRange range) {
-        final AggregationContext ctx = context.orElseGet(calculateFromRange(range));
-        return legacyGroupBy(this.aggregation.orElse(Empty.INSTANCE::apply).apply(ctx));
-    }
-
-    private static final SortedSet<Long> INTERVAL_FACTORS = ImmutableSortedSet.of(
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(50, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(250, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(500, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(3, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(6, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(12, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(2, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(3, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(14, TimeUnit.DAYS)
-    );
-
-    public static final long INTERVAL_GOAL = 240;
-
-    private Supplier<AggregationContext> calculateFromRange(final DateRange range) {
-        return () -> {
-            final long diff = range.diff();
-            final long nominal = diff / INTERVAL_GOAL;
-
-            final SortedSet<Long> results = INTERVAL_FACTORS.headSet(nominal);
-
-            if (results.isEmpty()) {
-                return new DefaultAggregationContext(Duration.of(nominal, TimeUnit.MILLISECONDS));
-            }
-
-            return new DefaultAggregationContext(Duration.of(results.last(), TimeUnit.MILLISECONDS));
-        };
-    }
-
-    AggregationInstance legacyGroupBy(final AggregationInstance aggregation) {
-        return groupBy.<AggregationInstance> map(g -> new GroupInstance(g, aggregation)).orElse(aggregation);
+    public Query build() {
+        return new Query(legacyFilter(), range, aggregation, source, options, groupBy);
     }
 
     /**
@@ -225,11 +152,15 @@ public class QueryBuilder {
      * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be expressed as filter
      * objects.
      */
-    Filter legacyFilter() {
+    Optional<Filter> legacyFilter() {
         final List<Filter> statements = new ArrayList<>();
 
-        if (!tags.isEmpty()) {
-            for (final Map.Entry<String, String> entry : tags.entrySet()) {
+        if (filter.isPresent()) {
+            statements.add(filter.get());
+        }
+
+        if (tags.isPresent()) {
+            for (final Map.Entry<String, String> entry : tags.get().entrySet()) {
                 statements.add(filters.matchTag(entry.getKey(), entry.getValue()));
             }
         }
@@ -238,28 +169,14 @@ public class QueryBuilder {
             statements.add(filters.matchKey(key.get()));
         }
 
-        if (filter.isPresent()) {
-            statements.add(filter.get());
-        }
-
         if (statements.isEmpty()) {
-            return filters.t();
+            return Optional.empty();
         }
 
         if (statements.size() == 1) {
-            return statements.get(0).optimize();
+            return Optional.of(statements.get(0).optimize());
         }
 
-        return filters.and(statements).optimize();
-    }
-
-    DateRange roundedRange(final DateRange range, final AggregationInstance aggregation) {
-        final long extent = aggregation.extent();
-
-        if (extent == 0) {
-            return range;
-        }
-
-        return range.rounded(extent);
+        return Optional.of(filters.and(statements).optimize());
     }
 }

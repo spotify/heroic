@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation;
 
+import java.util.Optional;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 import lombok.Data;
@@ -36,7 +38,22 @@ public class Empty implements Aggregation {
     }
 
     @Override
+    public Optional<Long> size() {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<Long> extent() {
+        return Optional.empty();
+    }
+
+    @Override
     public EmptyInstance apply(AggregationContext context) {
         return EmptyInstance.INSTANCE;
+    }
+
+    @Override
+    public String toDSL() {
+        return String.format("%s()", NAME);
     }
 }

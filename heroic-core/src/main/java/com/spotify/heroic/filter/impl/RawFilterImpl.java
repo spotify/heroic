@@ -67,4 +67,9 @@ public class RawFilterImpl implements Filter.Raw {
         final Filter.Raw other = (Filter.Raw) o;
         return filter.compareTo(other.first());
     }
+
+    @Override
+    public String toDSL() {
+        throw new RuntimeException("raw filter cannot be converted to DSL");
+    }
 }

@@ -22,11 +22,10 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -36,20 +35,33 @@ import lombok.Data;
 public class Collapse implements Aggregation {
     public static final String NAME = "collapse";
 
-    private static final List<Aggregation> DEFAULT_EACH = ImmutableList.of();
-
-    private final List<String> of;
+    private final Optional<List<String>> of;
     private final Aggregation each;
 
     @JsonCreator
     public Collapse(@JsonProperty("of") List<String> of,
             @JsonProperty("each") List<Aggregation> each) {
-        this.of = of;
-        this.each = Aggregations.chain(Optional.fromNullable(each).or(DEFAULT_EACH));
+        this.of = Optional.ofNullable(of);
+        this.each = Aggregations.chain(Optional.ofNullable(each));
+    }
+
+    @Override
+    public Optional<Long> size() {
+        return each.size();
+    }
+
+    @Override
+    public Optional<Long> extent() {
+        return each.extent();
     }
 
     @Override
     public CollapseInstance apply(final AggregationContext context) {
         return new CollapseInstance(of, each.apply(context));
+    }
+
+    @Override
+    public String toDSL() {
+        return String.format("%s()", NAME);
     }
 }

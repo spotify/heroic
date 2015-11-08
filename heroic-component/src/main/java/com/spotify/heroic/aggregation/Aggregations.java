@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 public abstract class Aggregations {
     /**
@@ -36,27 +37,23 @@ public abstract class Aggregations {
      * @param input The input chain.
      * @return A new aggregation for the given chain.
      */
-    public static Aggregation chain(Iterable<Aggregation> input) {
-        final Iterator<Aggregation> it = input.iterator();
+    public static Aggregation chain(final Optional<Iterable<Aggregation>> input) {
+        return input.map(Iterable::iterator).filter(Iterator::hasNext).map(it -> {
+            final Aggregation first = it.next();
 
-        if (!it.hasNext()) {
-            return Empty.INSTANCE;
-        }
+            if (!it.hasNext()) {
+                return first;
+            }
 
-        final Aggregation first = it.next();
+            final List<Aggregation> chain = new ArrayList<>();
+            chain.add(first);
 
-        if (!it.hasNext()) {
-            return first;
-        }
+            while (it.hasNext()) {
+                chain.add(it.next());
+            }
 
-        final List<Aggregation> chain = new ArrayList<>();
-        chain.add(first);
-
-        while (it.hasNext()) {
-            chain.add(it.next());
-        }
-
-        return new Chain(chain);
+            return new Chain(chain);
+        }).orElse(Empty.INSTANCE);
     }
 
     /**

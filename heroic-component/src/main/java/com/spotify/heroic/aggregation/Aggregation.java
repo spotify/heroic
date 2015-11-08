@@ -21,7 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 public interface Aggregation extends Function<AggregationContext, AggregationInstance> {
+    public Optional<Long> size();
+
+    public Optional<Long> extent();
+
+    public String toDSL();
 }

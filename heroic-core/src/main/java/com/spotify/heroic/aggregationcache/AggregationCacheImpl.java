@@ -27,9 +27,6 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
@@ -38,6 +35,8 @@ import com.spotify.heroic.statistics.AggregationCacheReporter;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @NoArgsConstructor
 public class AggregationCacheImpl implements AggregationCache {
@@ -56,7 +55,7 @@ public class AggregationCacheImpl implements AggregationCache {
         public CacheQueryResult transform(CacheBackendGetResult result) throws Exception {
             final CacheBackendKey key = result.getKey();
 
-            final long width = key.getAggregation().extent();
+            final long width = key.getAggregation().cadence();
 
             final List<DateRange> misses = new ArrayList<DateRange>();
 

@@ -30,16 +30,17 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that calculates the average of all samples seen.
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class StripedAverageBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
+
     private final DoubleAdder value = new DoubleAdder();
     private final LongAdder count = new LongAdder();
 

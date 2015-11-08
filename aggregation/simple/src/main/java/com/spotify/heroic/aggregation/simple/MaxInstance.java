@@ -28,11 +28,6 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME" })
 public class MaxInstance extends DistributedBucketInstance<StripedMaxBucket> {
     @JsonCreator
     public MaxInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {

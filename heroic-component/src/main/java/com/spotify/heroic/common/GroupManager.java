@@ -22,7 +22,6 @@
 package com.spotify.heroic.common;
 
 import java.util.List;
-import java.util.Set;
 
 public interface GroupManager<T extends Grouped, G extends T> extends UsableGroupManager<G> {
     public List<T> allMembers();

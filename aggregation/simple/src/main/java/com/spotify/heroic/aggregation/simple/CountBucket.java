@@ -27,16 +27,17 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.spotify.heroic.aggregation.AbstractAnyBucket;
 import com.spotify.heroic.metric.Metric;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that counts the number of seen samples.
  * 
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class CountBucket extends AbstractAnyBucket {
     private final long timestamp;
+
     private final AtomicLong count = new AtomicLong();
 
     public long timestamp() {

@@ -45,12 +45,9 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@RequiredArgsConstructor
-@EqualsAndHashCode(of = { "NAME" })
+@Data
 public class EmptyInstance implements AggregationInstance {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final EmptyInstance INSTANCE = new EmptyInstance();
@@ -61,18 +58,18 @@ public class EmptyInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> states, DateRange range) {
+    public AggregationTraversal session(final List<AggregationState> states, final DateRange range) {
         return new AggregationTraversal(states, new CollectorSession());
-    }
-
-    @Override
-    public long extent() {
-        return 0;
     }
 
     @Override
     public long cadence() {
         return 0;
+    }
+
+    @Override
+    public AggregationSession reducer(final DateRange range) {
+        return new CollectorSession();
     }
 
     /**

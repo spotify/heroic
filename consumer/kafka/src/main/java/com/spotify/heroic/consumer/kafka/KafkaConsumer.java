@@ -33,8 +33,6 @@ import com.google.inject.Inject;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.ingestion.IngestionManager;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;

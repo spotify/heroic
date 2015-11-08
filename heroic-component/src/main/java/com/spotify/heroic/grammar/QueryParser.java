@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.grammar;
 
+import java.util.Optional;
+
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 
@@ -39,7 +41,7 @@ public interface QueryParser {
      * @param aggregation String to parse. 
      * @return ParseException if unable to parse string.
      */
-    Aggregation parseAggregation(String aggregation);
+    Optional<Aggregation> parseAggregation(String aggregation);
 
     /**
      * Parse the given query.
@@ -49,4 +51,59 @@ public interface QueryParser {
      * @throws ParseException if unable to parse string.
      */
     QueryDSL parseQuery(String query);
+
+    String stringifyQuery(QueryDSL queryDSL);
+
+    public static String escapeString(String input) {
+        boolean quoted = false;
+
+        final StringBuilder builder = new StringBuilder();
+
+        for (int i = 0; i < input.length(); i++) {
+            final char c = input.charAt(i);
+
+            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') || c == '-' || c == ':' || c == '/') {
+                builder.append(c);
+                continue;
+            }
+
+            quoted = true;
+
+            switch (c) {
+            case '\b':
+                builder.append("\\b");
+                break;
+            case '\t':
+                builder.append("\\t");
+                break;
+            case '\n':
+                builder.append("\\n");
+                break;
+            case '\f':
+                builder.append("\\f");
+                break;
+            case '\r':
+                builder.append("\\r");
+                break;
+            case '"':
+                builder.append("\\\"");
+                break;
+            case '\\':
+                builder.append("\\\\");
+                break;
+            case '\'':
+                builder.append("\\'");
+                break;
+            default:
+                builder.append(c);
+                break;
+            }
+        }
+
+        if (quoted) {
+            return "\"" + builder.toString() + "\"";
+        }
+
+        return builder.toString();
+    }
 }

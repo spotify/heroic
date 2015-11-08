@@ -44,4 +44,9 @@ public class Average extends SamplingAggregation {
     public AverageInstance apply(final AggregationContext context, final long size, final long extent) {
         return new AverageInstance(size, extent);
     }
+
+    @Override
+    public String toDSL() {
+        return samplingDSL(NAME);
+    }
 }

@@ -44,12 +44,12 @@ import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Data
+@RequiredArgsConstructor
 public class ShellServerModule extends PrivateModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;

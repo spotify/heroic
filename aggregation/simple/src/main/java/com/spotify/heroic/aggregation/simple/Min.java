@@ -44,4 +44,9 @@ public class Min extends SamplingAggregation {
     public MinInstance apply(AggregationContext context, final long size, final long extent) {
         return new MinInstance(size, extent);
     }
+
+    @Override
+    public String toDSL() {
+        return samplingDSL(NAME);
+    }
 }

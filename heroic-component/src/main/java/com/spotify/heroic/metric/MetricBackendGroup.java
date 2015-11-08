@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.metric;
 
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;

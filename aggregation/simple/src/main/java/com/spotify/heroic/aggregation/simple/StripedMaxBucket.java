@@ -30,7 +30,7 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A bucket implementation that retains the largest (max) value seen.
@@ -39,12 +39,13 @@ import lombok.Data;
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class StripedMaxBucket extends AbstractBucket implements DoubleBucket {
     private static final DoubleBinaryOperator maxFn = (left, right) -> Math.max(left, right);
 
-    private final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
     private final long timestamp;
+
+    private final DoubleAccumulator max = new DoubleAccumulator(maxFn, Double.NEGATIVE_INFINITY);
 
     public long timestamp() {
         return timestamp;

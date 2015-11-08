@@ -26,22 +26,19 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
-import com.spotify.heroic.http.query.QueryDateRange;
 
 import lombok.Data;
 
 @Data
 public class MetadataTagValueSuggest {
-    private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
     private static final int DEFAULT_LIMIT = 10;
 
     /**
      * Filter the suggestions being returned.
      */
-    private final Filter filter;
+    private final Optional<Filter> filter;
 
     /**
      * Limit the number of suggestions being returned.
@@ -51,7 +48,7 @@ public class MetadataTagValueSuggest {
     /**
      * Query for tags within the given range.
      */
-    private final Optional<DateRange> range;
+    private final Optional<QueryDateRange> range;
 
     /**
      * Exclude the given tags from the result.
@@ -59,11 +56,11 @@ public class MetadataTagValueSuggest {
     private final String key;
 
     @JsonCreator
-    public MetadataTagValueSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("limit") Integer limit,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("key") String key) {
-        this.filter = Optional.ofNullable(filter).orElse(DEFAULT_FILTER);
+    public MetadataTagValueSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
+            @JsonProperty("limit") Integer limit, @JsonProperty("key") String key) {
+        this.filter = Optional.ofNullable(filter);
+        this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-        this.range = Optional.ofNullable(range).flatMap(QueryDateRange::buildDateRange);
         this.key = Preconditions.checkNotNull(key, "key must not be null");
     }
 

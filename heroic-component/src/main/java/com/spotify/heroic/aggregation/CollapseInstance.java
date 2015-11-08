@@ -24,46 +24,40 @@ package com.spotify.heroic.aggregation;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
-import lombok.EqualsAndHashCode;
-
-@EqualsAndHashCode(of = { "NAME" }, callSuper = true)
 public class CollapseInstance extends GroupingAggregation {
     public static final Map<String, String> NO_GROUP = ImmutableMap.of();
 
     @JsonCreator
-    public CollapseInstance(@JsonProperty("of") List<String> of, @JsonProperty("each") AggregationInstance each) {
+    public CollapseInstance(@JsonProperty("of") Optional<List<String>> of, @JsonProperty("each") AggregationInstance each) {
         super(of, each);
     }
 
     @Override
     protected Map<String, String> key(final Map<String, String> tags) {
-        final List<String> of = getOf();
+        return getOf().map(of -> {
+            // group by 'everything'
+            if (of.isEmpty()) {
+                return tags;
+            }
 
-        if (of == null) {
-            return NO_GROUP;
-        }
+            final Map<String, String> key = new HashMap<>(tags);
 
-        // group by 'everything'
-        if (of.isEmpty()) {
-            return tags;
-        }
+            for (final String o : of) {
+                key.remove(o);
+            }
 
-        final Map<String, String> key = new HashMap<>(tags);
-
-        for (final String o : of) {
-            key.remove(o);
-        }
-
-        return key;
+            return key;
+        }).orElse(NO_GROUP);
     }
 
     @Override
-    protected AggregationInstance newInstance(final List<String> of, final AggregationInstance each) {
+    protected AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each) {
         return new CollapseInstance(of, each);
     }
 }

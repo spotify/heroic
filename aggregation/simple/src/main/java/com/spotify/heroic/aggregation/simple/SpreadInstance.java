@@ -28,11 +28,6 @@ import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME" })
 public class SpreadInstance extends DistributedBucketInstance<SpreadBucket> {
     @JsonCreator
     public SpreadInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {

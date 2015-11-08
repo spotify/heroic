@@ -40,6 +40,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;

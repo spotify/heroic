@@ -22,9 +22,11 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 import lombok.Data;
@@ -32,6 +34,7 @@ import lombok.Data;
 @Data
 public class Chain implements Aggregation {
     public static final String NAME = "chain";
+    public static final Joiner params = Joiner.on(", ");
 
     private final List<Aggregation> chain;
 
@@ -44,9 +47,27 @@ public class Chain implements Aggregation {
     }
 
     @Override
+    public Optional<Long> size() {
+        return chain.get(chain.size() - 1).size();
+    }
+
+    /**
+     * The first aggregation in the chain determines the extent.
+     */
+    @Override
+    public Optional<Long> extent() {
+        return chain.iterator().next().extent();
+    }
+
+    @Override
     public ChainInstance apply(final AggregationContext context) {
         final ImmutableList<AggregationInstance> chain = ImmutableList
                 .copyOf(this.chain.stream().map(c -> c.apply(context)).iterator());
         return new ChainInstance(chain);
+    }
+
+    @Override
+    public String toDSL() {
+        return String.format("%s(%s)", NAME, params.join(chain.stream().map(Aggregation::toDSL).iterator()));
     }
 }

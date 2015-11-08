@@ -46,7 +46,7 @@ public final class ListValue implements Value {
     }
 
     public String toString() {
-        return "<list:" + list + ">";
+        return "[" + list + "]";
     }
 
     @SuppressWarnings("unchecked")

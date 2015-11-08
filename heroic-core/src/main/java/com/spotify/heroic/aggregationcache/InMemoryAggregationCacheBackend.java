@@ -60,21 +60,21 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
 
         final AggregationInstance aggregation = key.getAggregation();
 
-        final long extent = aggregation.extent();
+        final long cadence = aggregation.cadence();
 
-        if (extent == 0)
+        if (cadence == 0)
             throw new CacheOperationException("provided aggregation is not cacheable");
 
         final List<Point> datapoints = new ArrayList<Point>();
 
-        if (extent == 0) {
+        if (cadence == 0) {
             return async.resolved(new CacheBackendGetResult(key, datapoints));
         }
 
-        final long start = range.getStart() - range.getStart() % extent;
-        final long end = range.getEnd() - range.getEnd() % extent;
+        final long start = range.getStart() - range.getStart() % cadence;
+        final long end = range.getEnd() - range.getEnd() % cadence;
 
-        for (long i = start; i < end; i += extent) {
+        for (long i = start; i < end; i += cadence) {
             final Point d = entry.get(i);
 
             if (d == null)
@@ -97,9 +97,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         final AggregationInstance aggregation = key.getAggregation();
-        final long extent = aggregation.extent();
+        final long cadence = aggregation.cadence();
 
-        if (extent == 0)
+        if (cadence == 0)
             return async.resolved(new CacheBackendPutResult());
 
         for (final Point d : datapoints) {
@@ -109,7 +109,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             if (Double.isNaN(value))
                 continue;
 
-            if (timestamp % extent != 0)
+            if (timestamp % cadence != 0)
                 continue;
 
             entry.put(timestamp, d);

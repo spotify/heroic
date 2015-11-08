@@ -29,17 +29,15 @@ import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
+import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.ToString;
 
+@Data
 @ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME", "q", "error" })
+@EqualsAndHashCode(callSuper = true)
 public class QuantileInstance extends BucketAggregationInstance<QuantileBucket> {
-    @Getter
     private final double q;
-
-    @Getter
     private final double error;
 
     @JsonCreator

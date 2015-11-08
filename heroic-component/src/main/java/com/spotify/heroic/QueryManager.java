@@ -41,6 +41,8 @@ public interface QueryManager {
 
     public QueryBuilder newQueryFromString(String query);
 
+    public String queryToString(final Query query);
+
     public AsyncFuture<Void> initialized();
 
     public interface Group extends Iterable<ClusterNode.Group> {

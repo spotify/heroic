@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.grammar.QueryParser;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -80,5 +81,10 @@ public class RegexFilterImpl implements Filter.Regex {
             return first;
 
         return FilterComparatorUtils.stringCompare(second(), other.second());
+    }
+
+    @Override
+    public String toDSL() {
+        return QueryParser.escapeString(tag) + " ~ " + QueryParser.escapeString(value);
     }
 }

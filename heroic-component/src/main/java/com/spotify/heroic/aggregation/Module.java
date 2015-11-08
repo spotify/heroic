@@ -22,20 +22,16 @@
 package com.spotify.heroic.aggregation;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.grammar.AggregationValue;
-import com.spotify.heroic.grammar.Value;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -61,7 +57,7 @@ public class Module implements HeroicModule {
 
             @Override
             public void setup() {
-                final Serializer<List<String>> list = s.list(s.string());
+                final Serializer<Optional<List<String>>> list = s.optional(s.list(s.string()));
                 final Serializer<List<AggregationInstance>> aggregations = s.list(aggregation);
 
                 ctx.aggregation(Empty.NAME, EmptyInstance.class, Empty.class,
@@ -74,17 +70,17 @@ public class Module implements HeroicModule {
                     public EmptyInstance deserialize(SerialReader buffer) throws IOException {
                         return EmptyInstance.INSTANCE;
                     }
-                }, (args, keywords) -> Empty.INSTANCE);
+                }, args -> Empty.INSTANCE);
 
                 ctx.aggregation(Group.NAME, GroupInstance.class, Group.class,
                         new GroupingAggregationSerializer<GroupInstance>(list, aggregation) {
                     @Override
-                    protected GroupInstance build(List<String> of, AggregationInstance each) {
+                    protected GroupInstance build(Optional<List<String>> of, AggregationInstance each) {
                         return new GroupInstance(of, each);
                     }
                 }, new GroupingAggregationBuilder(factory) {
                     @Override
-                    protected Aggregation build(List<String> over, Aggregation each) {
+                    protected Aggregation build(Optional<List<String>> over, Aggregation each) {
                         return new Group(over, each);
                     }
                 });
@@ -92,12 +88,12 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Collapse.NAME, CollapseInstance.class, Collapse.class,
                         new GroupingAggregationSerializer<CollapseInstance>(list, aggregation) {
                     @Override
-                    protected CollapseInstance build(List<String> of, AggregationInstance each) {
+                    protected CollapseInstance build(Optional<List<String>> of, AggregationInstance each) {
                         return new CollapseInstance(of, each);
                     }
                 }, new GroupingAggregationBuilder(factory) {
                     @Override
-                    protected Aggregation build(List<String> over, Aggregation each) {
+                    protected Aggregation build(Optional<List<String>> over, Aggregation each) {
                         return new Collapse(over, each);
                     }
                 });
@@ -116,14 +112,8 @@ public class Module implements HeroicModule {
                     }
                 }, new AbstractAggregationDSL(factory) {
                     @Override
-                    public Aggregation build(List<Value> args, Map<String, Value> keywords) {
-                        final List<Aggregation> aggregations = new ArrayList<>();
-
-                        for (final Value v : args) {
-                            aggregations.addAll(flatten(v));
-                        }
-
-                        return new Chain(aggregations);
+                    public Aggregation build(final AggregationArguments args) {
+                        return new Chain(flatten(args));
                     }
                 });
 
@@ -141,40 +131,24 @@ public class Module implements HeroicModule {
                     }
                 }, new AbstractAggregationDSL(factory) {
                     @Override
-                    public Aggregation build(List<Value> args, Map<String, Value> keywords) {
-                        final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
-
-                        for (final Value v : args) {
-                            aggregations.addAll(flatten(v));
-                        }
-
-                        return new Partition(aggregations.build());
+                    public Aggregation build(final AggregationArguments args) {
+                        return new Partition(flatten(args));
                     }
                 });
 
                 ctx.aggregation(Options.NAME, AggregationInstance.class, Options.class, aggregation,
                         new AbstractAggregationDSL(factory) {
                     @Override
-                    public Aggregation build(List<Value> args,
-                            Map<String, Value> keywords) {
-                        final Optional<Duration> size = parseDuration(keywords, "size");
-                        final Optional<Duration> extent = parseDuration(keywords, "extent");
+                    public Aggregation build(final AggregationArguments args) {
+                        final Aggregation child = args.getNext("aggregation", AggregationValue.class)
+                                .map(this::asAggregation).orElseThrow(
+                                        () -> new IllegalArgumentException("missing required arguments 'aggregation'"));
+
+                        final Optional<Duration> size = args.keyword("size", Duration.class);
+                        final Optional<Duration> extent = args.keyword("extent", Duration.class);
                         final SamplingQuery sampling = new SamplingQuery(size, extent);
 
-                        final Aggregation child = extractAggregation(args, keywords);
                         return new Options(sampling, child);
-                    }
-
-                    private Aggregation extractAggregation(final List<Value> args, final Map<String, Value> keywords) {
-                        if (!args.isEmpty()) {
-                            return args.iterator().next().cast(AggregationValue.class).build(factory);
-                        }
-
-                        if (!keywords.containsKey("aggregation")) {
-                            throw new IllegalArgumentException("Missing aggregation argument");
-                        }
-
-                        return keywords.get("aggregation").cast(AggregationValue.class).build(factory);
                     }
                 });
             }

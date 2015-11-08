@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-import java.util.Map;
-
-import com.spotify.heroic.grammar.Value;
-
 public interface AggregationDSL {
-    public Aggregation build(List<Value> args, Map<String, Value> keywords);
+    public Aggregation build(final AggregationArguments arguments);
 }

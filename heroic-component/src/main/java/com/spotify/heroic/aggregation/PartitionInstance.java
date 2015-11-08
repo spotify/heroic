@@ -39,12 +39,10 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @Data
-@EqualsAndHashCode(of = { "NAME", "children" })
 public class PartitionInstance implements AggregationInstance {
     private final List<AggregationInstance> children;
 
@@ -80,17 +78,6 @@ public class PartitionInstance implements AggregationInstance {
     }
 
     @Override
-    public long extent() {
-        long extent = 0;
-
-        for (final AggregationInstance a : children) {
-            extent = Math.max(extent, a.extent());
-        }
-
-        return extent;
-    }
-
-    @Override
     public long cadence() {
         long cadence = 0;
 
@@ -99,6 +86,17 @@ public class PartitionInstance implements AggregationInstance {
         }
 
         return cadence;
+    }
+
+    @Override
+    public AggregationSession reducer(DateRange range) {
+        final ImmutableList.Builder<AggregationSession> sessions = ImmutableList.builder();
+
+        for (final AggregationInstance a : children) {
+            sessions.add(a.reducer(range));
+        }
+
+        return new PartitionSession(sessions.build());
     }
 
     @ToString

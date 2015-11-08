@@ -50,10 +50,10 @@ import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@Data
+@RequiredArgsConstructor
 public class MetadataManagerModule extends PrivateModule {
     private final List<MetadataModule> backends;
     private final Optional<List<String>> defaultBackends;

@@ -33,9 +33,19 @@ public class ValueTypeCastException extends RuntimeException {
     private final Class<?> to;
 
     public ValueTypeCastException(Object from, Class<?> to) {
-        super(String.format("%s cannot be cast to %s", from, to));
+        super(String.format("%s cannot be cast to %s", from, name(to)));
 
         this.from = from;
         this.to = to;
+    }
+
+    private static String name(Class<?> type) {
+        final ValueName name = type.getAnnotation(ValueName.class);
+
+        if (name != null) {
+            return name.value();
+        }
+
+        return type.getSimpleName();
     }
 }

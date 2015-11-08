@@ -31,6 +31,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -127,6 +128,7 @@ public class FindSeries {
         };
     }
 
+    @JsonIgnore
     public boolean isEmpty() {
         return series.isEmpty();
     }

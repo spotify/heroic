@@ -21,16 +21,21 @@
 
 package com.spotify.heroic.grammar;
 
+import java.util.List;
 import java.util.Optional;
 
+import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metric.MetricType;
 
 import lombok.Data;
 
 @Data
 public final class QueryDSL {
-    private final SelectDSL select;
-    private final FromDSL source;
+    private final Optional<Aggregation> aggregation;
+    private final MetricType source;
+    private final Optional<QueryDateRange> range;
     private final Optional<Filter> where;
-    private final Optional<GroupByDSL> groupBy;
+    private final Optional<List<String>> groupBy;
 }

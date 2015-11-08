@@ -27,15 +27,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.Metric;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.MetricCollection;
 
-import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true, of = { "NAME" })
 public class GroupUniqueInstance extends BucketAggregationInstance<GroupUniqueBucket> {
     @JsonCreator
     public GroupUniqueInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {

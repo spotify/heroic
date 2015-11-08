@@ -30,7 +30,7 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * A min-bucket implementation intended to reduce cross-thread contention.
@@ -39,12 +39,13 @@ import lombok.Data;
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class StripedMinBucket extends AbstractBucket implements DoubleBucket {
     private static final DoubleBinaryOperator minFn = (left, right) -> Math.min(left, right);
 
-    private final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
     private final long timestamp;
+
+    private final DoubleAccumulator min = new DoubleAccumulator(minFn, Double.POSITIVE_INFINITY);
 
     public long timestamp() {
         return timestamp;

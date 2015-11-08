@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.AbstractBucket;
@@ -30,7 +29,7 @@ import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
@@ -40,13 +39,14 @@ import lombok.Data;
  *
  * @author udoprog
  */
-@Data
+@RequiredArgsConstructor
 public class SumBucket extends AbstractBucket implements DoubleBucket {
     private final long timestamp;
+
     /* the sum of seen values */
     private final AtomicDouble sum = new AtomicDouble();
     /* if the sum is valid (e.g. has at least one value) */
-    private final AtomicBoolean valid = new AtomicBoolean();
+    private volatile boolean valid = false;
 
     public long timestamp() {
         return timestamp;
@@ -54,20 +54,21 @@ public class SumBucket extends AbstractBucket implements DoubleBucket {
 
     @Override
     public void updatePoint(Map<String, String> tags, Point d) {
+        valid = true;
         sum.addAndGet(d.getValue());
-        valid.set(true);
     }
 
     @Override
     public void updateSpread(Map<String, String> tags, Spread d) {
+        valid = true;
         sum.addAndGet(d.getSum());
-        valid.set(true);
     }
 
     @Override
     public double value() {
-        if (!valid.get())
+        if (!valid) {
             return Double.NaN;
+        }
 
         return sum.get();
     }

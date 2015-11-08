@@ -39,8 +39,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.common.CollectingTypeListener;
@@ -168,6 +168,7 @@ public class HeroicPrimaryModule extends AbstractModule {
         mapper.registerModule(module);
         mapper.registerModule(serializerModule());
         mapper.registerModule(new Jdk8Module());
+        mapper.registerModule(HeroicLoadingModule.serialization());
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         return mapper;

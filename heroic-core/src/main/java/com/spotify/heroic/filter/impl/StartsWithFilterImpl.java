@@ -23,6 +23,7 @@ package com.spotify.heroic.filter.impl;
 
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.grammar.QueryParser;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -78,5 +79,10 @@ public class StartsWithFilterImpl implements Filter.StartsWith {
             return first;
 
         return FilterComparatorUtils.stringCompare(second(), other.second());
+    }
+
+    @Override
+    public String toDSL() {
+        return QueryParser.escapeString(tag) + " ^ " + QueryParser.escapeString(value);
     }
 }

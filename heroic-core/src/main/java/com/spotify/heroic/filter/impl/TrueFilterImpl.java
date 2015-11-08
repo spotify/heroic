@@ -70,4 +70,9 @@ public class TrueFilterImpl implements Filter.True {
 
         return 0;
     }
+
+    @Override
+    public String toDSL() {
+        return "false";
+    }
 }

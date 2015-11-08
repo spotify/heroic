@@ -51,10 +51,10 @@ import com.spotify.heroic.statistics.MetricBackendGroupReporter;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@Data
+@RequiredArgsConstructor
 public class MetricManagerModule extends PrivateModule {
     public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;

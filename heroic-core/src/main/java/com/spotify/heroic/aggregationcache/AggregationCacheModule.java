@@ -40,9 +40,11 @@ import com.spotify.heroic.statistics.HeroicReporter;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 public class AggregationCacheModule extends PrivateModule {
     private final AggregationCacheBackendModule backend;
 

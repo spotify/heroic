@@ -40,7 +40,7 @@ public final class StringValue implements Value {
     }
 
     public String toString() {
-        return String.format("<string:%s>", string);
+        return QueryParser.escapeString(string);
     }
 
     @SuppressWarnings("unchecked")

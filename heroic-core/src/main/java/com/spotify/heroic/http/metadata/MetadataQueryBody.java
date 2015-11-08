@@ -32,10 +32,9 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.http.query.QueryDateRange;
 
 import lombok.Data;
 
@@ -67,7 +66,7 @@ public class MetadataQueryBody {
     /**
      * The date range to query for.
      */
-    private final Optional<DateRange> range;
+    private final Optional<QueryDateRange> range;
 
     private final int limit;
 
@@ -110,7 +109,7 @@ public class MetadataQueryBody {
         this.matchTags = ofNullable(matchTags);
         this.hasTags = ofNullable(hasTags);
         this.filter = ofNullable(filter);
-        this.range = ofNullable(range).flatMap(QueryDateRange::buildDateRange);
+        this.range = ofNullable(range);
         this.limit = ofNullable(limit).orElse(DEFAULT_LIMIT);
     }
 

@@ -30,6 +30,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.base.Joiner;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MultiArgumentsFilterBuilder;
@@ -186,5 +187,12 @@ public class OrFilterImpl implements Filter.Or {
 
         final Filter.Or other = (Filter.Or) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());
+    }
+
+    private final Joiner or = Joiner.on(" or ");
+
+    @Override
+    public String toDSL() {
+        return "(" + or.join(statements.stream().map(Filter::toDSL).iterator()) + ")";
     }
 }

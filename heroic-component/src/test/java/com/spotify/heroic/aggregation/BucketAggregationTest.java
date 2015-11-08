@@ -17,6 +17,7 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 public class BucketAggregationTest {
     public final class IterableBuilder {
@@ -37,6 +38,7 @@ public class BucketAggregationTest {
     }
 
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class TestBucket extends AbstractBucket {
         private final long timestamp;
         private double sum;

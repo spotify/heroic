@@ -22,8 +22,6 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -33,10 +31,10 @@ import javax.inject.Named;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.aggregation.SamplingQuery;
-import com.spotify.heroic.grammar.Value;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -113,19 +111,9 @@ public class Module implements HeroicModule {
                             }
                         }, new SamplingAggregationDSL<Quantile>(factory) {
                             @Override
-                            protected Quantile buildWith(List<Value> args, Map<String, Value> keywords,
-                                    final SamplingQuery sampling) {
-                                double q = Quantile.DEFAULT_QUANTILE;
-                                double error = Quantile.DEFAULT_ERROR;
-
-                                if (keywords.containsKey("q")) {
-                                    q = ((double) keywords.get("q").cast(Long.class)) / 100;
-                                }
-
-                                if (keywords.containsKey("error")) {
-                                    error = ((double) keywords.get("error").cast(Long.class)) / 100;
-                                }
-
+                            protected Quantile buildWith(final AggregationArguments args, final SamplingQuery sampling) {
+                                double q = args.getNext("q", Long.class).map(v -> ((double)v) / 100.0).orElse(Quantile.DEFAULT_QUANTILE);
+                                double error = args.getNext("error", Long.class).map(v -> ((double)v) / 100.0).orElse(Quantile.DEFAULT_ERROR);
                                 return new Quantile(sampling, q, error);
                             }
                         });
@@ -153,7 +141,7 @@ public class Module implements HeroicModule {
             private <T extends Aggregation> SamplingAggregationDSL<T> samplingBuilder(Function<SamplingQuery, T> builder) {
                 return new SamplingAggregationDSL<T>(factory) {
                     @Override
-                    protected T buildWith(List<Value> args, Map<String, Value> keywords, final SamplingQuery sampling) {
+                    protected T buildWith(final AggregationArguments args, final SamplingQuery sampling) {
                         return builder.apply(sampling);
                     }
                 };

@@ -112,11 +112,19 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
             throw new IllegalArgumentException(String.format("no aggregation named %s", name));
         }
 
+        final AggregationArguments a = new AggregationArguments(args, keywords);
+
+        final Aggregation aggregation;
+
         try {
-            return builder.build(args, keywords);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("failed to build aggregation", e);
+            aggregation = builder.build(a);
+        } catch (final Exception e) {
+            throw new IllegalArgumentException(name + ": " + e.getMessage(), e);
         }
+
+        // throw an exception unless all provided arguments have been consumed.
+        a.throwUnlessEmpty(name);
+        return aggregation;
     }
 
     public void configure(SimpleModule module) {

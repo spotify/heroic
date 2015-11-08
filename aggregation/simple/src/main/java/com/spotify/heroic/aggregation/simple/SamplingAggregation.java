@@ -21,10 +21,14 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
+import static com.spotify.heroic.common.Optionals.firstPresent;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Joiner;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -35,13 +39,37 @@ import lombok.Data;
 
 @Data
 public abstract class SamplingAggregation implements Aggregation {
+    public static final Joiner params = Joiner.on(", ");
+
     private final SamplingQuery sampling;
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
-        final Duration s = pickOptional(context.size(), sampling.getSize()).orElseGet(context::defaultSize);
-        final Duration e = pickOptional(context.extent(), sampling.getExtent()).orElseGet(context::defaultExtent);
+        final Duration s = firstPresent(sampling.getSize(), context.size()).orElseGet(context::defaultSize);
+        final Duration e = firstPresent(sampling.getExtent(), context.extent()).orElseGet(context::defaultExtent);
         return apply(context, s.convert(TimeUnit.MILLISECONDS), e.convert(TimeUnit.MILLISECONDS));
+    }
+
+    @Override
+    public Optional<Long> size() {
+        return sampling.getSize().map(Duration::toMilliseconds);
+    }
+
+    @Override
+    public Optional<Long> extent() {
+        return sampling.getExtent().map(Duration::toMilliseconds);
+    }
+
+    protected String samplingDSL(final String name, final String... extra) {
+        final List<String> arguments = new ArrayList<>();
+        sampling.getSize().map(Duration::toDSL).ifPresent(arguments::add);
+        sampling.getExtent().map(Duration::toDSL).ifPresent(arguments::add);
+
+        for (int i = 0; i < extra.length / 2; i++) {
+            arguments.add(extra[i * 2] + "=" + extra[i * 2 + 1]);
+        }
+
+        return String.format("%s(%s)", name, params.join(arguments));
     }
 
     protected abstract AggregationInstance apply(AggregationContext context, long size, long extent);

@@ -41,7 +41,6 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -50,7 +49,6 @@ import lombok.RequiredArgsConstructor;
  * @author udoprog
  */
 @Data
-@EqualsAndHashCode(of = { "NAME", "chain" })
 public class ChainInstance implements AggregationInstance {
     private static final ArrayList<AggregationInstance> EMPTY_AGGREGATORS = new ArrayList<>();
 
@@ -77,14 +75,6 @@ public class ChainInstance implements AggregationInstance {
     }
 
     /**
-     * The first aggregation in the chain determines the extent.
-     */
-    @Override
-    public long extent() {
-        return chain.iterator().next().extent();
-    }
-
-    /**
      * The last aggregation in the chain determines the cadence.
      */
     @Override
@@ -94,40 +84,34 @@ public class ChainInstance implements AggregationInstance {
 
     @Override
     public AggregationInstance distributed() {
-        final Iterator<AggregationInstance> item = chain.iterator();
+        final Iterator<AggregationInstance> it = chain.iterator();
 
-        final ImmutableList.Builder<AggregationInstance> newChain = ImmutableList.builder();
+        final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
 
-        while (true) {
-            final AggregationInstance a = item.next();
+        do {
+            final AggregationInstance a = it.next();
+            chain.add(it.hasNext() ? a : a.distributed());
+        } while(it.hasNext());
 
-            if (!item.hasNext()) {
-                newChain.add(a.distributed());
-                break;
-            }
-
-            newChain.add(a);
-        }
-
-        return new ChainInstance(newChain.build());
+        return new ChainInstance(chain.build());
     }
 
     @Override
-    public AggregationCombiner combiner(DateRange range) {
+    public AggregationCombiner combiner(final DateRange range) {
         return chain.get(chain.size() - 1).combiner(range);
     }
 
     @Override
-    public AggregationInstance reducer() {
-        return chain.get(chain.size() - 1).reducer();
+    public AggregationSession reducer(final DateRange range) {
+        return chain.get(chain.size() - 1).reducer(range);
     }
 
     @Override
-    public AggregationTraversal session(List<AggregationState> groups, DateRange range) {
+    public AggregationTraversal session(final List<AggregationState> input, final DateRange range) {
         final Iterator<AggregationInstance> iter = chain.iterator();
 
         final AggregationInstance first = iter.next();
-        final AggregationTraversal head = first.session(groups, range);
+        final AggregationTraversal head = first.session(input, range);
 
         AggregationTraversal prev = head;
 
@@ -140,6 +124,13 @@ public class ChainInstance implements AggregationInstance {
         }
 
         return new AggregationTraversal(prev.getStates(), new Session(head.getSession(), tail));
+    }
+
+    private static final Joiner chainJoiner = Joiner.on(" -> ");
+
+    @Override
+    public String toString() {
+        return "[" + chainJoiner.join(chain.stream().map(Object::toString).iterator()) + "]";
     }
 
     @RequiredArgsConstructor

@@ -70,4 +70,9 @@ public class FalseFilterImpl implements Filter.False {
 
         return 0;
     }
+
+    @Override
+    public String toDSL() {
+        return "false";
+    }
 }

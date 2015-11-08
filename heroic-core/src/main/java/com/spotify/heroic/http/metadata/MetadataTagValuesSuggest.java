@@ -27,16 +27,13 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.impl.TrueFilterImpl;
-import com.spotify.heroic.http.query.QueryDateRange;
 
 import lombok.Data;
 
 @Data
 public class MetadataTagValuesSuggest {
-    private static final Filter DEFAULT_FILTER = TrueFilterImpl.get();
     private static final int DEFAULT_LIMIT = 10;
     private static final List<String> DEFAULT_EXCLUDE = ImmutableList.of();
     private static final int DEFAULT_GROUP_LIMIT = 10;
@@ -44,7 +41,7 @@ public class MetadataTagValuesSuggest {
     /**
      * Filter the suggestions being returned.
      */
-    private final Filter filter;
+    private final Optional<Filter> filter;
 
     /**
      * Limit the number of suggestions being returned.
@@ -54,7 +51,7 @@ public class MetadataTagValuesSuggest {
     /**
      * Query for tags within the given range.
      */
-    private final Optional<DateRange> range;
+    private final Optional<QueryDateRange> range;
 
     /**
      * Exclude the given tags from the result.
@@ -67,12 +64,12 @@ public class MetadataTagValuesSuggest {
     private final int groupLimit;
 
     @JsonCreator
-    public MetadataTagValuesSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("limit") Integer limit,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("exclude") List<String> exclude,
+    public MetadataTagValuesSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
+            @JsonProperty("limit") Integer limit, @JsonProperty("exclude") List<String> exclude,
             @JsonProperty("groupLimimt") Integer groupLimit) {
-        this.filter = Optional.ofNullable(filter).orElse(DEFAULT_FILTER);
+        this.filter = Optional.ofNullable(filter);
+        this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-        this.range = Optional.ofNullable(range).flatMap(QueryDateRange::buildDateRange);
         this.exclude = Optional.ofNullable(exclude).orElse(DEFAULT_EXCLUDE);
         this.groupLimit = Optional.ofNullable(groupLimit).orElse(DEFAULT_GROUP_LIMIT);
     }
