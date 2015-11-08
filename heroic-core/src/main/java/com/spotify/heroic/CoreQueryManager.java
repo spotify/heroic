@@ -26,19 +26,17 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
-import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.FromDSL;
 import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
@@ -121,7 +119,8 @@ public class CoreQueryManager implements QueryManager {
         final Optional<Filter> filter = q.getWhere();
 
         /* get aggregation that is part of statement, if any */
-        final Optional<Function<AggregationContext, Aggregation>> aggregationBuilder = select.getAggregation().map(customAggregation(select));
+        final Optional<Aggregation> aggregationBuilder = select.getAggregation()
+                .map(a -> a.build(aggregations));
 
         /* incorporate legacy group by */
         final Optional<List<String>> groupBy = q.getGroupBy().map((g) -> g.getGroupBy());
@@ -143,8 +142,8 @@ public class CoreQueryManager implements QueryManager {
         public AsyncFuture<QueryResult> query(Query q) {
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
 
-            final Aggregation root = q.getAggregation();
-            final Aggregation aggregation = root.distributed();
+            final AggregationInstance root = q.getAggregation();
+            final AggregationInstance aggregation = root.distributed();
             final AggregationCombiner combiner = root.combiner(q.getRange());
 
             for (ClusterNode.Group group : groups) {
@@ -172,18 +171,5 @@ public class CoreQueryManager implements QueryManager {
     MetricType convertSource(final FromDSL s) {
         return MetricType.fromIdentifier(s.getSource())
                 .orElseThrow(() -> s.getContext().error("Invalid source: " + s.getSource()));
-    }
-
-    Function<AggregationValue, Function<AggregationContext, Aggregation>> customAggregation(final SelectDSL select) {
-        return (a) -> {
-            return (context) -> {
-                try {
-                    return aggregations.build(context, a.getName(), a.getArguments(), a.getKeywordArguments());
-                } catch (final Exception e) {
-                    log.error("Failed to build aggregation", e);
-                    throw select.getContext().error(e);
-                }
-            };
-        };
     }
 }

@@ -21,32 +21,34 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
+
+import com.spotify.heroic.common.Duration;
 
 public class DefaultAggregationContext implements AggregationContext {
-    final long defaultSize;
+    final Duration defaultSize;
 
-    public DefaultAggregationContext(final long defaultSize) {
+    public DefaultAggregationContext(final Duration defaultSize) {
         this.defaultSize = defaultSize;
     }
 
     @Override
-    public Optional<Long> size() {
-        return Optional.absent();
+    public Optional<Duration> size() {
+        return Optional.empty();
     }
 
     @Override
-    public Optional<Long> extent() {
-        return Optional.absent();
+    public Optional<Duration> extent() {
+        return Optional.empty();
     }
 
     @Override
-    public long defaultSize() {
+    public Duration defaultSize() {
         return defaultSize;
     }
 
     @Override
-    public long defaultExtent() {
+    public Duration defaultExtent() {
         return defaultSize();
     }
 }

@@ -24,6 +24,9 @@ package com.spotify.heroic.grammar;
 import java.util.List;
 import java.util.Map;
 
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationFactory;
+
 import lombok.Data;
 
 @ValueName("aggregation")
@@ -63,5 +66,9 @@ public class AggregationValue implements Value {
             return (T) this;
 
         throw new ValueTypeCastException(this, to);
+    }
+
+    public Aggregation build(final AggregationFactory aggregations) {
+        return aggregations.build(name, arguments, keywordArguments);
     }
 }

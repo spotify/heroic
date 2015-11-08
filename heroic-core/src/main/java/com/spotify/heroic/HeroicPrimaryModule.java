@@ -39,8 +39,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationQuery;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.common.CollectingTypeListener;
@@ -162,8 +162,8 @@ public class HeroicPrimaryModule extends AbstractModule {
 
         final ObjectMapper mapper = new ObjectMapper();
 
+        mapper.addMixIn(AggregationInstance.class, TypeNameMixin.class);
         mapper.addMixIn(Aggregation.class, TypeNameMixin.class);
-        mapper.addMixIn(AggregationQuery.class, TypeNameMixin.class);
 
         mapper.registerModule(module);
         mapper.registerModule(serializerModule());

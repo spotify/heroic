@@ -24,7 +24,7 @@ package com.spotify.heroic.aggregationcache;
 import java.util.List;
 import java.util.Map;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.Point;
@@ -34,9 +34,9 @@ import eu.toolchain.async.AsyncFuture;
 public interface AggregationCache {
     public boolean isConfigured();
 
-    public AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group, Aggregation aggregation,
+    public AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group, AggregationInstance aggregation,
             DateRange range) throws CacheOperationException;
 
-    public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, Aggregation aggregation,
+    public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, AggregationInstance aggregation,
             List<Point> datapoints) throws CacheOperationException;
 }

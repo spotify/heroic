@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.grammar;
 
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 
 public interface QueryParser {
@@ -32,6 +33,13 @@ public interface QueryParser {
      * @throws ParseException if unable to parse string.
      */
     Filter parseFilter(String filter);
+
+    /**
+     * Parse the given aggregation using the Heroic Query DSL.
+     * @param aggregation String to parse. 
+     * @return ParseException if unable to parse string.
+     */
+    Aggregation parseAggregation(String aggregation);
 
     /**
      * Parse the given query.

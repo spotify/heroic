@@ -28,13 +28,15 @@ import java.util.Map;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
-public abstract class GroupingAggregationBuilder<T> extends AbstractAggregationBuilder<T> {
+public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL {
     public GroupingAggregationBuilder(AggregationFactory factory) {
         super(factory);
     }
 
+    protected abstract Aggregation build(List<String> over, Aggregation each);
+
     @Override
-    public T build(AggregationContext context, List<Value> args, Map<String, Value> keywords) {
+    public Aggregation build(List<Value> args, Map<String, Value> keywords) {
         final List<String> over;
         final Aggregation each;
 
@@ -45,15 +47,13 @@ public abstract class GroupingAggregationBuilder<T> extends AbstractAggregationB
         }
 
         if (args.size() > 1) {
-            each = convertEach(context, args.subList(1, args.size()));
+            each = convertEach(args.subList(1, args.size()));
         } else {
-            each = Aggregations.chain(flatten(context, keywords.get("each")));
+            each = Aggregations.chain(flatten(keywords.get("each")));
         }
 
         return build(over, each);
     }
-
-    protected abstract T build(List<String> over, Aggregation each);
 
     private List<String> convertOver(Value value) {
         if (value == null) {
@@ -71,13 +71,13 @@ public abstract class GroupingAggregationBuilder<T> extends AbstractAggregationB
         return over;
     }
 
-    private Aggregation convertEach(AggregationContext context, List<Value> values) {
+    private Aggregation convertEach(List<Value> values) {
         final List<Aggregation> aggregations = new ArrayList<>();
 
         for (final Value v : values) {
-            aggregations.addAll(flatten(context, v));
+            aggregations.addAll(flatten(v));
         }
 
-        return new ChainAggregation(aggregations);
+        return new Chain(aggregations);
     }
 }

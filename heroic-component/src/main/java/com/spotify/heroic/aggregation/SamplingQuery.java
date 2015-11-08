@@ -21,34 +21,40 @@
 
 package com.spotify.heroic.aggregation;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.common.TimeUtils;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor
 public class SamplingQuery {
-    private static final TimeUnit DEFAULT_UNIT = TimeUnit.MINUTES;
-
-    private final Optional<Long> size;
-    private final Optional<Long> extent;
+    private final Optional<Duration> size;
+    private final Optional<Duration> extent;
 
     @JsonCreator
-    public SamplingQuery(@JsonProperty("unit") String unitName, @JsonProperty("value") Long size,
-            @JsonProperty("extent") Long extent) {
-        final TimeUnit unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
-        this.size = Optional.fromNullable(size).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit));
-        this.extent = Optional.fromNullable(extent).transform((s) -> TimeUnit.MILLISECONDS.convert(s, unit)).or(this.size);
+    public SamplingQuery(@JsonProperty("unit") String unit, @JsonProperty("value") Duration size,
+            @JsonProperty("extent") Duration extent) {
+        final Optional<TimeUnit> u = TimeUtils.parseTimeUnit(unit);
+
+        if (u.isPresent()) {
+            this.size = Optional.ofNullable(size).map(d -> d.withUnit(u.get()));
+            this.extent = Optional.ofNullable(extent).map(d -> d.withUnit(u.get()));
+        } else {
+            this.size = Optional.ofNullable(size);
+            this.extent = Optionals.pickOptional(this.size, Optional.ofNullable(extent));
+        }
+
     }
 
     public static SamplingQuery empty() {
-        return new SamplingQuery(Optional.absent(), Optional.absent());
+        return new SamplingQuery(Optional.empty(), Optional.empty());
     }
 }

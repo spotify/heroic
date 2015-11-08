@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterNode.Group;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
@@ -74,7 +74,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
 
     @Override
     public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-            DateRange range, Aggregation aggregation, QueryOptions options) {
+            DateRange range, AggregationInstance aggregation, QueryOptions options) {
         final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {

@@ -30,7 +30,7 @@ public abstract class Aggregations {
     /**
      * Creates an aggregation chain.
      *
-     * An empty chain is the same as an instance of {@link EmptyAggregation}. A chain with a single entry will return
+     * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single entry will return
      * that single item. More than one entry will construct a new instance of {@link AggregationChain}.
      *
      * @param input The input chain.
@@ -40,7 +40,7 @@ public abstract class Aggregations {
         final Iterator<Aggregation> it = input.iterator();
 
         if (!it.hasNext()) {
-            return EmptyAggregation.INSTANCE;
+            return Empty.INSTANCE;
         }
 
         final Aggregation first = it.next();
@@ -56,7 +56,7 @@ public abstract class Aggregations {
             chain.add(it.next());
         }
 
-        return new ChainAggregation(chain);
+        return new Chain(chain);
     }
 
     /**
@@ -65,17 +65,17 @@ public abstract class Aggregations {
      * @param aggregations The input chain.
      * @return A new aggregation for the given chain.
      */
-    public static Aggregation chain(Aggregation... aggregations) {
+    public static AggregationInstance chain(AggregationInstance... aggregations) {
         if (aggregations.length == 0)
-            return EmptyAggregation.INSTANCE;
+            return EmptyInstance.INSTANCE;
 
         if (aggregations.length == 1)
             return aggregations[0];
 
-        return new ChainAggregation(Arrays.asList(aggregations));
+        return new ChainInstance(Arrays.asList(aggregations));
     }
 
-    public static Aggregation empty() {
-        return EmptyAggregation.INSTANCE;
+    public static AggregationInstance empty() {
+        return EmptyInstance.INSTANCE;
     }
 }

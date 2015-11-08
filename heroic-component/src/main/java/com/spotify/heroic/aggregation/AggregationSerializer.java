@@ -30,9 +30,9 @@ import eu.toolchain.serializer.Serializer;
  *
  * @author udoprog
  */
-public interface AggregationSerializer extends Serializer<Aggregation> {
-    public <T extends AggregationQuery> void registerQuery(String id, Class<T> queryType);
+public interface AggregationSerializer extends Serializer<AggregationInstance> {
+    public <T extends Aggregation> void registerQuery(String id, Class<T> queryType);
 
-    public <T extends Aggregation> void register(String id, Class<T> clazz, Serializer<T> serializer,
-            AggregationBuilder<T> builder);
+    public <T extends AggregationInstance> void register(String id, Class<T> clazz, Serializer<T> serializer,
+            AggregationDSL builder);
 }

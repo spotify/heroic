@@ -24,7 +24,7 @@ package com.spotify.heroic.cluster;
 import java.util.List;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -101,7 +101,7 @@ public class LocalClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-                DateRange range, Aggregation aggregation, QueryOptions options) {
+                DateRange range, AggregationInstance aggregation, QueryOptions options) {
             return metrics().query(source, filter, range, aggregation, options);
         }
 

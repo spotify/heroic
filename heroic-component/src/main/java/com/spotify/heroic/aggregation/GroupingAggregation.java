@@ -54,11 +54,11 @@ import lombok.ToString;
 
 @Data
 @EqualsAndHashCode(of = { "of", "each" })
-public abstract class GroupingAggregation implements Aggregation {
+public abstract class GroupingAggregation implements AggregationInstance {
     private final List<String> of;
-    private final Aggregation each;
+    private final AggregationInstance each;
 
-    public GroupingAggregation(final List<String> of, final Aggregation each) {
+    public GroupingAggregation(final List<String> of, final AggregationInstance each) {
         this.of = of;
         this.each = checkNotNull(each, "each");
     }
@@ -74,7 +74,7 @@ public abstract class GroupingAggregation implements Aggregation {
     /**
      * Create a new instance of this aggregation.
      */
-    protected abstract Aggregation newInstance(final List<String> of, final Aggregation each);
+    protected abstract AggregationInstance newInstance(final List<String> of, final AggregationInstance each);
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
@@ -151,12 +151,12 @@ public abstract class GroupingAggregation implements Aggregation {
     }
 
     @Override
-    public Aggregation distributed() {
+    public AggregationInstance distributed() {
         return newInstance(of, each.distributed());
     }
 
     @Override
-    public Aggregation reducer() {
+    public AggregationInstance reducer() {
         return each.reducer();
     }
 
@@ -165,7 +165,7 @@ public abstract class GroupingAggregation implements Aggregation {
         return new AggregationCombiner() {
             @Override
             public List<ShardedResultGroup> combine(final List<List<ShardedResultGroup>> all) {
-                final Aggregation reducer = each.reducer();
+                final AggregationInstance reducer = each.reducer();
 
                 final List<AggregationState> states = ImmutableList.of();
                 final Set<Series> series = ImmutableSet.of();

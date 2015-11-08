@@ -23,7 +23,7 @@ package com.spotify.heroic.cluster;
 
 import java.util.List;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
@@ -67,7 +67,7 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range, Aggregation aggregation,
+    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
             QueryOptions options) {
         return delegate.query(source, filter, range, aggregation, options).directTransform(ResultGroups.trace(query));
     }

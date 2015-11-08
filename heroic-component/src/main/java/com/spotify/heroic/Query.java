@@ -21,7 +21,7 @@
 
 package com.spotify.heroic;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
@@ -33,7 +33,7 @@ import lombok.Data;
 public class Query {
     private final Filter filter;
     private final DateRange range;
-    private final Aggregation aggregation;
+    private final AggregationInstance aggregation;
     private final MetricType source;
     private final QueryOptions options;
 }

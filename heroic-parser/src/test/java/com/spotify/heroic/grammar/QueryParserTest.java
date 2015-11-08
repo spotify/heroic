@@ -15,6 +15,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -23,6 +24,7 @@ import com.spotify.heroic.filter.FilterFactory;
 public class QueryParserTest {
     private CoreQueryParser parser;
     private FilterFactory filters;
+    private AggregationFactory aggregations;
 
     @Mock
     Filter.MatchTag matchTag;
@@ -36,6 +38,7 @@ public class QueryParserTest {
     @Before
     public void setupFilters() {
         filters = Mockito.mock(FilterFactory.class);
+        aggregations = Mockito.mock(AggregationFactory.class);
 
         Mockito.when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class))).thenReturn(matchTag);
         Mockito.when(filters.and(anyFilter(), anyFilter())).thenReturn(and);
@@ -43,7 +46,7 @@ public class QueryParserTest {
         Mockito.when(or.optimize()).thenReturn(optimized);
         Mockito.when(and.optimize()).thenReturn(optimized);
 
-        parser = new CoreQueryParser(filters);
+        parser = new CoreQueryParser(filters, aggregations);
     }
 
     @Test

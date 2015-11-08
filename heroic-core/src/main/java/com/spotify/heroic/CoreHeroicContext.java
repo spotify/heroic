@@ -23,9 +23,9 @@ package com.spotify.heroic;
 
 import javax.inject.Inject;
 
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationBuilder;
-import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.AggregationDSL;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.Filter.MultiArgs;
@@ -66,8 +66,8 @@ public class CoreHeroicContext implements HeroicContext {
     private volatile ResolvableFuture<Void> startedFuture;
 
     @Override
-    public <T extends Aggregation, R extends AggregationQuery> void aggregation(String id, Class<T> type,
-            Class<R> queryType, Serializer<T> serializer, AggregationBuilder<T> builder) {
+    public <T extends AggregationInstance, R extends Aggregation> void aggregation(String id, Class<T> type,
+            Class<R> queryType, Serializer<T> serializer, AggregationDSL builder) {
         aggregationSerializer.register(id, type, serializer, builder);
         aggregationSerializer.registerQuery(id, queryType);
     }

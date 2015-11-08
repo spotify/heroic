@@ -33,7 +33,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.name.Named;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.RpcProtocol;
@@ -152,7 +152,7 @@ public class NativeRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
-                    Aggregation aggregation, QueryOptions options) {
+                    AggregationInstance aggregation, QueryOptions options) {
                 return request(METRICS_QUERY, new RpcQuery(source, filter, range, aggregation, options),
                         ResultGroups.class);
             }
@@ -243,13 +243,13 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final MetricType source;
         private final Filter filter;
         private final DateRange range;
-        private final Aggregation aggregation;
+        private final AggregationInstance aggregation;
         private final QueryOptions options;
 
         @JsonCreator
         public RpcQuery(@JsonProperty("source") final MetricType source, @JsonProperty("filter") final Filter filter,
                 @JsonProperty("range") final DateRange range,
-                @JsonProperty("aggregation") final Aggregation aggregation,
+                @JsonProperty("aggregation") final AggregationInstance aggregation,
                 @JsonProperty("options") final QueryOptions options) {
             this.source = checkNotNull(source, "source");
             this.filter = checkNotNull(filter, "filter");

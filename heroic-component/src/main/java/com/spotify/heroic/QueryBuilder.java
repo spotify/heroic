@@ -30,17 +30,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.DefaultAggregationContext;
-import com.spotify.heroic.aggregation.EmptyAggregationQuery;
-import com.spotify.heroic.aggregation.GroupAggregation;
+import com.spotify.heroic.aggregation.Empty;
+import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
@@ -59,7 +60,7 @@ public class QueryBuilder {
     private Optional<Filter> filter = Optional.empty();
     private Optional<List<String>> groupBy = Optional.empty();
     private Optional<DateRange> range = Optional.empty();
-    private Optional<Function<AggregationContext, Aggregation>> aggregation = Optional.empty();
+    private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<AggregationContext> context = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
 
@@ -89,7 +90,7 @@ public class QueryBuilder {
     /**
      * Specify a group by to use.
      * 
-     * @deprecated Use {@link #aggregation(Aggregation)} with the appropriate {@link GroupAggregation} instead.
+     * @deprecated Use {@link #aggregation(AggregationInstance)} with the appropriate {@link GroupInstance} instead.
      */
     public QueryBuilder groupBy(final Optional<List<String>> groupBy) {
         checkNotNull(groupBy, "groupBy must not be null");
@@ -120,7 +121,7 @@ public class QueryBuilder {
     /**
      * Specify an aggregation to use.
      */
-    public QueryBuilder aggregation(final Optional<Function<AggregationContext, Aggregation>> aggregation) {
+    public QueryBuilder aggregation(final Optional<Aggregation> aggregation) {
         checkNotNull(aggregation, "aggregation must not be null");
         this.aggregation = pickOptional(this.aggregation, aggregation);
         return this;
@@ -154,7 +155,7 @@ public class QueryBuilder {
 
         final DateRange range = this.range.get();
 
-        final Aggregation aggregation = buildAggregation(range);
+        final AggregationInstance aggregation = buildAggregation(range);
 
         final DateRange roundedRange = roundedRange(range, aggregation);
 
@@ -163,9 +164,9 @@ public class QueryBuilder {
         return new Query(filter, roundedRange, aggregation, source, options);
     }
 
-    private Aggregation buildAggregation(final DateRange range) {
+    private AggregationInstance buildAggregation(final DateRange range) {
         final AggregationContext ctx = context.orElseGet(calculateFromRange(range));
-        return legacyGroupBy(this.aggregation.orElse(EmptyAggregationQuery.INSTANCE::build).apply(ctx));
+        return legacyGroupBy(this.aggregation.orElse(Empty.INSTANCE::apply).apply(ctx));
     }
 
     private static final SortedSet<Long> INTERVAL_FACTORS = ImmutableSortedSet.of(
@@ -207,15 +208,15 @@ public class QueryBuilder {
             final SortedSet<Long> results = INTERVAL_FACTORS.headSet(nominal);
 
             if (results.isEmpty()) {
-                return new DefaultAggregationContext(nominal);
+                return new DefaultAggregationContext(Duration.of(nominal, TimeUnit.MILLISECONDS));
             }
 
-            return new DefaultAggregationContext(results.last());
+            return new DefaultAggregationContext(Duration.of(results.last(), TimeUnit.MILLISECONDS));
         };
     }
 
-    Aggregation legacyGroupBy(final Aggregation aggregation) {
-        return groupBy.<Aggregation> map(g -> new GroupAggregation(g, aggregation)).orElse(aggregation);
+    AggregationInstance legacyGroupBy(final AggregationInstance aggregation) {
+        return groupBy.<AggregationInstance> map(g -> new GroupInstance(g, aggregation)).orElse(aggregation);
     }
 
     /**
@@ -252,7 +253,7 @@ public class QueryBuilder {
         return filters.and(statements).optimize();
     }
 
-    DateRange roundedRange(final DateRange range, final Aggregation aggregation) {
+    DateRange roundedRange(final DateRange range, final AggregationInstance aggregation) {
         final long extent = aggregation.extent();
 
         if (extent == 0) {

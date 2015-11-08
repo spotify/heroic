@@ -36,7 +36,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.CqlResult;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregationcache.CacheBackendGetResult;
 import com.spotify.heroic.aggregationcache.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.CacheKey;
@@ -60,7 +60,7 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
 
     private List<Point> doGetRow() throws ConnectionException {
         final Keyspace keyspace = ctx.getClient();
-        final Aggregation aggregation = key.getAggregation();
+        final AggregationInstance aggregation = key.getAggregation();
         final long columnSize = aggregation.extent();
 
         final List<Long> bases = calculateBases(columnSize);

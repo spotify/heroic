@@ -21,9 +21,9 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationBuilder;
-import com.spotify.heroic.aggregation.AggregationQuery;
+import com.spotify.heroic.aggregation.AggregationDSL;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.MultiArgumentsFilter;
 import com.spotify.heroic.filter.NoArgumentFilter;
@@ -34,8 +34,8 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.Serializer;
 
 public interface HeroicContext {
-    <T extends Aggregation, R extends AggregationQuery> void aggregation(String id, Class<T> type,
-            Class<R> queryType, Serializer<T> serializer, AggregationBuilder<T> builder);
+    <T extends AggregationInstance, R extends Aggregation> void aggregation(String id, Class<T> type,
+            Class<R> queryType, Serializer<T> serializer, AggregationDSL builder);
 
     public <T extends Filter.OneArg<A>, I extends T, A> void filter(String typeId, Class<T> type, Class<I> impl,
             OneArgumentFilter<T, A> builder, Serializer<A> first);

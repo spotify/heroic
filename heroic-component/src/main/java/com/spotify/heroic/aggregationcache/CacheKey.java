@@ -27,7 +27,7 @@ import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.filter.Filter;
 
 import eu.toolchain.serializer.AutoSerialize;
@@ -54,7 +54,7 @@ public class CacheKey {
      * Always includes sampling.
      */
     @AutoSerialize.Field(provided = true)
-    final Aggregation aggregation;
+    final AggregationInstance aggregation;
 
     /**
      * long base.
@@ -63,7 +63,7 @@ public class CacheKey {
 
     @JsonCreator
     public CacheKey(@JsonProperty("version") int version, @JsonProperty("filter") Filter filter,
-            @JsonProperty("group") Map<String, String> group, @JsonProperty("aggregation") Aggregation aggregation,
+            @JsonProperty("group") Map<String, String> group, @JsonProperty("aggregation") AggregationInstance aggregation,
             @JsonProperty("base") long base) {
         this.version = version;
         this.filter = filter;

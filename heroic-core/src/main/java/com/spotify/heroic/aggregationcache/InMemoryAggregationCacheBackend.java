@@ -29,7 +29,7 @@ import java.util.Map;
 import lombok.ToString;
 
 import com.google.inject.Inject;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metric.Point;
 
@@ -58,7 +58,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             cache.put(key, entry);
         }
 
-        final Aggregation aggregation = key.getAggregation();
+        final AggregationInstance aggregation = key.getAggregation();
 
         final long extent = aggregation.extent();
 
@@ -96,7 +96,7 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
             cache.put(key, entry);
         }
 
-        final Aggregation aggregation = key.getAggregation();
+        final AggregationInstance aggregation = key.getAggregation();
         final long extent = aggregation.extent();
 
         if (extent == 0)

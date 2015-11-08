@@ -21,22 +21,24 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
+
+import com.spotify.heroic.common.Duration;
 
 public interface AggregationContext {
     /**
      * Get the size that is currently configured in the context.
      * @return The currently configured size.
      */
-    public Optional<Long> size();
+    public Optional<Duration> size();
 
     /**
      * Get extent that is currently configured in the context.
      * @return The currently configured extent.
      */
-    public Optional<Long> extent();
+    public Optional<Duration> extent();
 
-    public long defaultSize();
+    public Duration defaultSize();
 
-    public long defaultExtent();
+    public Duration defaultExtent();
 }

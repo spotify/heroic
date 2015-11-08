@@ -21,33 +21,37 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.google.common.base.Optional;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+
+import java.util.Optional;
+
+import com.spotify.heroic.common.Duration;
 
 import lombok.Data;
 
 @Data
 class OptionsContext implements AggregationContext {
     private final AggregationContext parent;
-    private final Optional<Long> size;
-    private final Optional<Long> extent;
+    private final Optional<Duration> size;
+    private final Optional<Duration> extent;
 
     @Override
-    public Optional<Long> size() {
-        return size.or(parent.size());
+    public Optional<Duration> size() {
+        return pickOptional(parent.size(), size);
     }
 
     @Override
-    public Optional<Long> extent() {
-        return extent.or(parent.extent());
+    public Optional<Duration> extent() {
+        return pickOptional(parent.extent(), extent);
     }
 
     @Override
-    public long defaultSize() {
+    public Duration defaultSize() {
         return parent.defaultSize();
     }
 
     @Override
-    public long defaultExtent() {
+    public Duration defaultExtent() {
         return parent.defaultExtent();
     }
 }

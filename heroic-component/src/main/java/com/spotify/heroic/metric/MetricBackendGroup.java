@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.metric;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
@@ -41,7 +41,7 @@ public interface MetricBackendGroup extends MetricBackend {
      * @return The result in the form of MetricGroups.
      * @throws BackendGroupException
      */
-    public AsyncFuture<ResultGroups> query(MetricType type, Filter filter, DateRange range, Aggregation aggregation,
+    public AsyncFuture<ResultGroups> query(MetricType type, Filter filter, DateRange range, AggregationInstance aggregation,
             QueryOptions options);
 
     /**

@@ -21,20 +21,11 @@
 
 package com.spotify.heroic.common;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class TimeUtils {
-    public static TimeUnit parseUnitName(String unitName, TimeUnit defaultUnit) {
-        if (unitName == null) {
-            return defaultUnit;
-        }
-
-        final TimeUnit first = TimeUnit.valueOf(unitName.toUpperCase());
-
-        if (first != null) {
-            return first;
-        }
-
-        return defaultUnit;
+    public static Optional<TimeUnit> parseTimeUnit(final String unit) {
+        return Optional.ofNullable(unit).map(String::toUpperCase).map(TimeUnit::valueOf);
     }
 }

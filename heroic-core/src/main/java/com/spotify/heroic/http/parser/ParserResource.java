@@ -30,6 +30,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 
@@ -45,5 +46,12 @@ public class ParserResource {
     public Response parseQuery(@QueryParam("filter") String filter) {
         final Filter f = parser.parseFilter(filter);
         return Response.ok(f).build();
+    }
+
+    @GET
+    @Path("/parse-aggregation")
+    public Response parseAggregation(@QueryParam("aggregation") String aggregation) {
+        final Aggregation a = parser.parseAggregation(aggregation);
+        return Response.ok(a).build();
     }
 }

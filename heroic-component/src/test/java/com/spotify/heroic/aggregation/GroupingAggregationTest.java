@@ -50,7 +50,7 @@ public class GroupingAggregationTest {
 
     @Test
     public void testSession() {
-        final Aggregation each = mock(Aggregation.class);
+        final AggregationInstance each = mock(AggregationInstance.class);
 
         final GroupingAggregation a = spy(new GroupingAggregation(ImmutableList.of("group"), each) {
             @Override
@@ -59,7 +59,7 @@ public class GroupingAggregationTest {
             }
 
             @Override
-            protected Aggregation newInstance(final List<String> of, final Aggregation each) {
+            protected AggregationInstance newInstance(final List<String> of, final AggregationInstance each) {
                 return this;
             }
         });
@@ -72,10 +72,10 @@ public class GroupingAggregationTest {
 
     @Test
     public void testChainedSessions() {
-        final GroupingAggregation g1 = new GroupAggregation(ImmutableList.of("site", "host"), EmptyAggregation.INSTANCE);
-        final GroupingAggregation g2 = new GroupAggregation(ImmutableList.of("site"), EmptyAggregation.INSTANCE);
+        final GroupingAggregation g1 = new GroupInstance(ImmutableList.of("site", "host"), EmptyInstance.INSTANCE);
+        final GroupingAggregation g2 = new GroupInstance(ImmutableList.of("site"), EmptyInstance.INSTANCE);
 
-        final ChainAggregation chain = new ChainAggregation(ImmutableList.of(g1, g2));
+        final ChainInstance chain = new ChainInstance(ImmutableList.of(g1, g2));
 
         final List<AggregationState> states = new ArrayList<>();
 

@@ -30,8 +30,8 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.aggregation.AggregationQuery;
-import com.spotify.heroic.aggregation.ChainAggregationQuery;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.Chain;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
@@ -50,14 +50,14 @@ public class QueryMetrics {
     private final Optional<List<String>> groupBy;
     private final Optional<DateRange> range;
     private final boolean noCache;
-    private final Optional<AggregationQuery> aggregation;
+    private final Optional<Aggregation> aggregation;
     private final MetricType source;
 
     @JsonCreator
     public QueryMetrics(@JsonProperty("query") String query, @JsonProperty("key") String key,
             @JsonProperty("tags") Map<String, String> tags, @JsonProperty("filter") Filter filter,
             @JsonProperty("groupBy") List<String> groupBy, @JsonProperty("range") QueryDateRange range,
-            @JsonProperty("noCache") Boolean noCache, @JsonProperty("aggregators") List<AggregationQuery> aggregators,
+            @JsonProperty("noCache") Boolean noCache, @JsonProperty("aggregators") List<Aggregation> aggregators,
             @JsonProperty("source") String source) {
         this.query = ofNullable(query);
         this.key = ofNullable(key);
@@ -67,7 +67,7 @@ public class QueryMetrics {
         this.range = ofNullable(range).flatMap(QueryDateRange::buildDateRange);
         this.noCache = ofNullable(noCache).orElse(DEFAULT_NO_CACHE);
         this.aggregation = ofNullable(aggregators).filter(c -> !c.isEmpty())
-                .<AggregationQuery> map(chain -> new ChainAggregationQuery(chain));
+                .<Aggregation> map(chain -> new Chain(chain));
         this.source = MetricType.fromIdentifier(source).orElse(MetricType.POINT);
     }
 }

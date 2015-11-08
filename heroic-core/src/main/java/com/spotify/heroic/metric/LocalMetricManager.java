@@ -39,7 +39,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
@@ -183,7 +183,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter, final DateRange range,
-                final Aggregation aggregation, final QueryOptions options) {
+                final AggregationInstance aggregation, final QueryOptions options) {
             final FetchQuotaWatcher watcher = new LimitedFetchQuotaWatcher(dataLimit);
 
             /* groupLoadLimit + 1, so that we return one too many results when more than groupLoadLimit series are
@@ -504,7 +504,7 @@ public class LocalMetricManager implements MetricManager {
     @RequiredArgsConstructor
     private static abstract class ResultCollector implements StreamCollector<FetchData, ResultGroups> {
         final FetchQuotaWatcher watcher;
-        final Aggregation aggregation;
+        final AggregationInstance aggregation;
         final AggregationSession session;
 
         @Override

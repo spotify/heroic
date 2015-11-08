@@ -32,7 +32,7 @@ import eu.toolchain.serializer.Serializer;
 @RequiredArgsConstructor
 public abstract class GroupingAggregationSerializer<T extends GroupingAggregation> implements Serializer<T> {
     private final Serializer<List<String>> list;
-    private final Serializer<Aggregation> aggregation;
+    private final Serializer<AggregationInstance> aggregation;
 
     @Override
     public void serialize(SerialWriter buffer, T value) throws IOException {
@@ -43,9 +43,9 @@ public abstract class GroupingAggregationSerializer<T extends GroupingAggregatio
     @Override
     public T deserialize(SerialReader buffer) throws IOException {
         final List<String> of = list.deserialize(buffer);
-        final Aggregation each = aggregation.deserialize(buffer);
+        final AggregationInstance each = aggregation.deserialize(buffer);
         return build(of, each);
     }
 
-    protected abstract T build(List<String> of, Aggregation each);
+    protected abstract T build(List<String> of, AggregationInstance each);
 }

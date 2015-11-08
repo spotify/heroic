@@ -30,7 +30,7 @@ import javax.inject.Inject;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.Point;
@@ -101,7 +101,7 @@ public class AggregationCacheImpl implements AggregationCache {
     }
 
     @Override
-    public AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group, final Aggregation aggregation,
+    public AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group, final AggregationInstance aggregation,
             DateRange range) throws CacheOperationException {
         if (!isConfigured())
             throw new CacheOperationException("Cache backend is not configured");
@@ -112,7 +112,7 @@ public class AggregationCacheImpl implements AggregationCache {
     }
 
     @Override
-    public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, Aggregation aggregation,
+    public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, AggregationInstance aggregation,
             List<Point> datapoints) throws CacheOperationException {
         final CacheBackendKey key = new CacheBackendKey(filter, group, aggregation);
 

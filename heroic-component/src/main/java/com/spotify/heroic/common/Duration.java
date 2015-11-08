@@ -58,4 +58,8 @@ public class Duration {
     public static Duration of(long duration, TimeUnit unit) {
         return new Duration(duration, unit);
     }
+
+    public Duration withUnit(final TimeUnit other) {
+        return new Duration(duration, other);
+    }
 }

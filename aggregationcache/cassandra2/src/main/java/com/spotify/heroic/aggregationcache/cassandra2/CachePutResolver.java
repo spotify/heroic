@@ -30,7 +30,7 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregationcache.CacheBackendKey;
 import com.spotify.heroic.aggregationcache.CacheBackendPutResult;
 import com.spotify.heroic.aggregationcache.CacheKey;
@@ -49,7 +49,7 @@ final class CachePutResolver implements Callable<CacheBackendPutResult> {
     @Override
     public CacheBackendPutResult call() throws Exception {
         final Keyspace keyspace = ctx.getClient();
-        final Aggregation aggregation = key.getAggregation();
+        final AggregationInstance aggregation = key.getAggregation();
         final long size = aggregation.extent();
         final long columnWidth = size * Cassandra2AggregationCacheBackend.WIDTH;
 

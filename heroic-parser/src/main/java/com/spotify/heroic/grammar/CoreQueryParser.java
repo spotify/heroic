@@ -31,6 +31,8 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import com.google.inject.Inject;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 
@@ -71,6 +73,18 @@ public class CoreQueryParser implements QueryParser {
         }
     };
 
+    public static final Operation<AggregationValue> AGGREGATION = new Operation<AggregationValue>() {
+        @Override
+        public ParserRuleContext context(HeroicQueryParser parser) {
+            return parser.aggregation();
+        }
+
+        @Override
+        public Class<AggregationValue> type() {
+            return AggregationValue.class;
+        }
+    };
+
     public static final Operation<Queries> QUERIES = new Operation<Queries>() {
         @Override
         public ParserRuleContext context(HeroicQueryParser parser) {
@@ -108,10 +122,12 @@ public class CoreQueryParser implements QueryParser {
     };
 
     private final FilterFactory filters;
+    private final AggregationFactory aggregations;
 
     @Inject
-    public CoreQueryParser(FilterFactory filters) {
+    public CoreQueryParser(FilterFactory filters, AggregationFactory aggregations) {
         this.filters = filters;
+        this.aggregations = aggregations;
     }
 
     @Override
@@ -122,6 +138,11 @@ public class CoreQueryParser implements QueryParser {
     @Override
     public Filter parseFilter(String filter) {
         return parse(FILTER, filter);
+    }
+
+    @Override
+    public Aggregation parseAggregation(String aggregation) {
+        return parse(AGGREGATION, aggregation).build(aggregations);
     }
 
     public <T> T parse(Operation<T> op, String input) {

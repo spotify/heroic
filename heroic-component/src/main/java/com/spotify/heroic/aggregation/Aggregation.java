@@ -21,64 +21,7 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
+import java.util.function.Function;
 
-import com.spotify.heroic.common.DateRange;
-
-public interface Aggregation {
-    public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
-
-    /**
-     * Estimate number of points this aggregation will produce.
-     *
-     * @param range Range to perform aggregation over.
-     * @return Number of datapoints required for aggregation, or {@code -1} if not known.
-     */
-    public long estimate(DateRange range);
-
-    /**
-     * Get a hint of the extent this aggregation uses.
-     *
-     * This value is used to determine at what range the provided range should be rounded to, otherwise it might cause
-     * incomplete sampling periods.
-     *
-     * @return The relevant extent.
-     */
-    public long extent();
-
-    /**
-     * Get the cadence of the current aggregation.
-     *
-     * The cadence indicates the interval in milliseconds that samples can be expected.
-     *
-     * @return The cadence of the resulting aggregation, or {@code 0} if this is unknown.
-     */
-    public long cadence();
-
-    /**
-     * Traverse the possible aggregations and build the necessary graph out of them.
-     */
-    public AggregationTraversal session(List<AggregationState> states, DateRange range);
-
-    /**
-     * Transform the given aggregation, into a distributed aggregation.
-     */
-    default Aggregation distributed() {
-        return this;
-    }
-
-    /**
-     * Get the reducer for the given aggregation.
-     */
-    default public Aggregation reducer() {
-        return this;
-    }
-
-    /**
-     * Get an aggregation combiner for the given aggregation.
-     * @return An aggregation combiner.
-     */
-    default AggregationCombiner combiner(final DateRange range) {
-        return AggregationCombiner.DEFAULT;
-    }
+public interface Aggregation extends Function<AggregationContext, AggregationInstance> {
 }

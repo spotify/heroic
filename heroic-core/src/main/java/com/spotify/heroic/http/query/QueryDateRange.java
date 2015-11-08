@@ -68,8 +68,8 @@ public interface QueryDateRange {
         private final Optional<Long> value;
 
         @JsonCreator
-        public Relative(@JsonProperty("unit") String unitName, @JsonProperty("value") Long value) {
-            this.unit = TimeUtils.parseUnitName(unitName, DEFAULT_UNIT);
+        public Relative(@JsonProperty("unit") String unit, @JsonProperty("value") Long value) {
+            this.unit = TimeUtils.parseTimeUnit(unit).orElse(DEFAULT_UNIT);
             this.value = Optional.ofNullable(value);
         }
 

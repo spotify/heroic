@@ -241,7 +241,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         final Value value = pop(c, Value.class);
 
         if (value instanceof AggregationValue) {
-            return Optional.of((AggregationValue) value);
+            return Optional.of(AggregationValue.class.cast(value));
         }
 
         if (value instanceof StringValue) {
@@ -251,7 +251,7 @@ public class QueryListener extends HeroicQueryBaseListener {
             return Optional.of(new AggregationValue(name.getString(), arguments, keywordArguments));
         }
 
-        throw c.error(String.format("expected aggregation, but was %s", name(AggregationValue.class), value.toString()));
+        throw c.error(String.format("expected %s, but was %s", name(AggregationValue.class), value.toString()));
     }
 
     @Override
@@ -347,6 +347,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         }
 
         final StringValue name = pop(c, StringValue.class);
+
         push(new AggregationValue(name.getString(), arguments.getPositional(), arguments.getKeywords()));
     }
 
