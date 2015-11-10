@@ -86,5 +86,11 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>io.thekraken</groupId>
+      <artifactId>grok</artifactId>
+      <version>0.1.1</version>
+    </dependency>
   </dependencies>
 </project>
