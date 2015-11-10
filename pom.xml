@@ -26,6 +26,7 @@
     <module>discovery/simple</module>
     <module>aggregation/simple</module>
     <module>consumer/kafka</module>
+    <module>consumer/collectd</module>
     <module>aggregationcache/cassandra2</module>
     <module>rpc/nativerpc</module>
     <module>heroic-coalesce</module>
@@ -150,6 +151,11 @@
       <dependency>
         <groupId>com.spotify.heroic.consumer</groupId>
         <artifactId>heroic-consumer-kafka</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.consumer</groupId>
+        <artifactId>heroic-consumer-collectd</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

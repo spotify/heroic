@@ -76,6 +76,11 @@
       <artifactId>heroic-consumer-kafka</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.spotify.heroic.consumer</groupId>
+      <artifactId>heroic-consumer-collectd</artifactId>
+    </dependency>
+
     <!-- aggregation caching -->
     <dependency>
       <groupId>com.spotify.heroic.aggregationcache</groupId>

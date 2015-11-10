@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.BigtableProfile;
 import com.spotify.heroic.profile.CassandraProfile;
 import com.spotify.heroic.profile.ClusterProfile;
+import com.spotify.heroic.profile.CollectdConsumerProfile;
 import com.spotify.heroic.profile.ElasticsearchMetadataProfile;
 import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.GeneratedProfile;
@@ -54,6 +55,8 @@ public class HeroicModules {
 
         new com.spotify.heroic.consumer.kafka.Module(),
 
+        new com.spotify.heroic.consumer.collectd.Module(),
+
         new com.spotify.heroic.aggregationcache.cassandra2.Module(),
 
         new com.spotify.heroic.rpc.nativerpc.Module()
@@ -68,6 +71,7 @@ public class HeroicModules {
         .put("kafka-consumer", new KafkaConsumerProfile())
         .put("bigtable", new BigtableProfile())
         .put("cluster", new ClusterProfile())
+        .put("collectd", new CollectdConsumerProfile())
     .build();
     // @formatter:on
 
