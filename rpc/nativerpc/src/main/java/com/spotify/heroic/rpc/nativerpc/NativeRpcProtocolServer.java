@@ -106,7 +106,6 @@ public class NativeRpcProtocolServer implements LifeCycle {
     private EventLoopGroup workerGroup;
 
     private final SocketAddress address;
-    private final long heartbeatInterval;
     private final int maxFrameSize;
 
     private final AtomicReference<Channel> serverChannel = new AtomicReference<>();

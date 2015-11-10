@@ -99,14 +99,12 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
 
             @Override
             protected void configure() {
-                final long heartbeatReadInterval = heartbeatInterval * 2;
-
                 bind(key).toInstance(
-                        new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout, heartbeatReadInterval));
+                        new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout, heartbeatInterval));
 
                 if (!options.isDisableLocal()) {
                     bind(NativeRpcProtocolServer.class)
-                            .toInstance(new NativeRpcProtocolServer(address, heartbeatReadInterval, maxFrameSize));
+                            .toInstance(new NativeRpcProtocolServer(address, maxFrameSize));
                 }
 
                 expose(key);
