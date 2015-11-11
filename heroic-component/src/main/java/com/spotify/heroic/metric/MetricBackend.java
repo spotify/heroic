@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
@@ -136,7 +137,9 @@ public interface MetricBackend extends Initializing, Grouped {
     public AsyncFuture<MetricCollection> fetchRow(BackendKey key);
 
     /**
-     * Write a complete row to the backend.
+     * Stream an entire row, chunk-by-chunk.
+     *
+     * This reduces max memory utilization required in comparison to {#link fetchRow(BackendKey)}.
      */
-    public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection metrics);
+    public AsyncObservable<MetricCollection> streamRow(BackendKey key);
 }

@@ -34,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -65,6 +67,7 @@ import com.spotify.heroic.metric.bigtable.api.BigtableColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.BigtableLatestColumnFamily;
 import com.spotify.heroic.metric.bigtable.api.BigtableLatestRow;
 import com.spotify.heroic.metric.bigtable.api.BigtableMutations;
+import com.spotify.heroic.metric.bigtable.api.BigtableMutationsBuilder;
 import com.spotify.heroic.metric.bigtable.api.BigtableTable;
 import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
 import com.spotify.heroic.metrics.Meter;
@@ -86,6 +89,9 @@ import lombok.extern.slf4j.Slf4j;
 @ToString(of = { "connection" })
 @Slf4j
 public class BigtableBackend extends AbstractMetricBackend implements LifeCycle {
+    /* maxmimum number of cells supported for each batch mutation */
+    public static final int MAX_BATCH_SIZE = 10000;
+
     public static final QueryTrace.Identifier FETCH_SEGMENT = QueryTrace.identifier(BigtableBackend.class,
             "fetch_segment");
     public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(BigtableBackend.class, "fetch");
@@ -224,9 +230,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
             final MetricCollection g = w.getData();
 
             if (g.getType() == MetricType.POINT) {
-                for (final Point d : g.getDataAs(Point.class)) {
-                    results.add(writePoint(series, client, d));
-                }
+                results.add(writePoints(series, client, g.getDataAs(Point.class)));
             }
 
             return async.collect(results, WriteResult.merger()).onDone(reporter.reportWrite());
@@ -250,9 +254,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
                     final MetricCollection g = w.getData();
 
                     if (g.getType() == MetricType.POINT) {
-                        for (final Point d : g.getDataAs(Point.class)) {
-                            results.add(writePoint(series, client, d));
-                        }
+                        results.add(writePoints(series, client, g.getDataAs(Point.class)));
                     }
 
                     async.collect(results, WriteResult.merger()).onDone(new FutureDone<WriteResult>() {
@@ -327,45 +329,93 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<Void> writeRow(final BackendKey key, final MetricCollection collection) {
-        return connection.doto(c -> {
-            final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
-            final BigtableClient client = c.client();
-
-            switch (collection.getType()) {
-            case POINT:
-                for (final Point p : collection.getDataAs(Point.class)) {
-                    futures.add(writePoint(key.getSeries(), client, p));
-                }
-
-                break;
-            default:
-                break;
-            }
-
-            return async.collectAndDiscard(futures);
-        });
+    public Iterable<BackendEntry> listEntries() {
+        return ImmutableList.of();
     }
 
-    private AsyncFuture<WriteResult> writePoint(final Series series, final BigtableClient client, final Point d)
-            throws IOException {
-        written.mark();
+    @Override
+    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, final QueryOptions options) {
+        return async.resolved(new BackendKeySet());
+    }
 
-        final long timestamp = d.getTimestamp();
+    @Override
+    public Statistics getStatistics() {
+        final long written = this.written.getCount();
+        final double writeRate = this.written.getFiveMinuteRate();
+        return Statistics.of("written", written, "writeRate", (long)writeRate);
+    }
+
+    private AsyncFuture<WriteResult> writePoints(final Series series, final BigtableClient client, final List<Point> points)
+            throws IOException {
+        // common case for consumers
+        if (points.size() == 1) {
+            return writeOnePoint(series, client, points.get(0)).onFinished(written::mark);
+        }
+
+        final List<Pair<RowKey, BigtableMutations>> saved = new ArrayList<>();
+        final Map<RowKey, BigtableMutationsBuilder> building = new HashMap<>();
+
+        for (final Point p : points) {
+            final long timestamp = p.getTimestamp();
+            final long base = base(timestamp);
+            final long offset = offset(timestamp);
+
+            final RowKey rowKey = new RowKey(series, base);
+
+            BigtableMutationsBuilder builder = building.get(rowKey);
+
+            final ByteString offsetBytes = serializeOffset(offset);
+            final ByteString valueBytes = serializeValue(p.getValue());
+
+            if (builder == null) {
+                builder = client.mutations();
+                building.put(rowKey, builder);
+            }
+
+            builder.setCell(POINTS, offsetBytes, valueBytes);
+
+            if (builder.size() >= MAX_BATCH_SIZE) {
+                saved.add(Pair.of(rowKey, builder.build()));
+                building.put(rowKey, client.mutations());
+            }
+        }
+
+        final ImmutableList.Builder<AsyncFuture<WriteResult>> writes = ImmutableList.builder();
+
+        for (final Pair<RowKey, BigtableMutations> e : saved) {
+            final long start = System.nanoTime();
+            final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
+            writes.add(client.mutateRow(METRICS, rowKeyBytes, e.getValue())
+                    .directTransform(result -> WriteResult.of(System.nanoTime() - start)));
+        }
+
+        for (final Map.Entry<RowKey, BigtableMutationsBuilder> e : building.entrySet()) {
+            final long start = System.nanoTime();
+            final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
+            writes.add(client.mutateRow(METRICS, rowKeyBytes, e.getValue().build())
+                    .directTransform(result -> WriteResult.of(System.nanoTime() - start)));
+        }
+
+        return async.collect(writes.build(), WriteResult.merger());
+    }
+
+    private AsyncFuture<WriteResult> writeOnePoint(Series series, BigtableClient client, Point p) throws IOException {
+        final long timestamp = p.getTimestamp();
         final long base = base(timestamp);
         final long offset = offset(timestamp);
 
         final RowKey rowKey = new RowKey(series, base);
 
-        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
+        final BigtableMutationsBuilder builder = client.mutations();
+
         final ByteString offsetBytes = serializeOffset(offset);
-        final ByteString valueBytes = serializeValue(d.getValue());
+        final ByteString valueBytes = serializeValue(p.getValue());
+
+        builder.setCell(POINTS, offsetBytes, valueBytes);
 
         final long start = System.nanoTime();
-
-        final BigtableMutations mutations = client.mutations().setCell(POINTS, offsetBytes, valueBytes).build();
-
-        return client.mutateRow(METRICS, rowKeyBytes, mutations)
+        final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
+        return client.mutateRow(METRICS, rowKeyBytes, builder.build())
                 .directTransform(result -> WriteResult.of(System.nanoTime() - start));
     }
 
@@ -412,23 +462,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
         }
 
         return async.collect(queries, FetchData.collect(FETCH, series)).onDone(reporter.reportFetch());
-    }
-
-    @Override
-    public Iterable<BackendEntry> listEntries() {
-        return ImmutableList.of();
-    }
-
-    @Override
-    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit, final QueryOptions options) {
-        return async.resolved(new BackendKeySet());
-    }
-
-    @Override
-    public Statistics getStatistics() {
-        final long written = this.written.getCount();
-        final double writeRate = this.written.getFiveMinuteRate();
-        return Statistics.of("written", written, "writeRate", (long)writeRate);
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {

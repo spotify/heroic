@@ -45,6 +45,7 @@ import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.GroupMember;
@@ -414,8 +415,8 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection metrics) {
-            return async.collectAndDiscard(run(b -> b.writeRow(key, metrics)));
+        public AsyncObservable<MetricCollection> streamRow(final BackendKey key) {
+            return AsyncObservable.chain(run(b -> b.streamRow(key)));
         }
 
         private void runVoid(InternalOperation<Void> op) {

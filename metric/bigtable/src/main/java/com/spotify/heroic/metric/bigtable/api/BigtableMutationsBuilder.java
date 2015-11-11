@@ -24,11 +24,11 @@ package com.spotify.heroic.metric.bigtable.api;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Data;
-
 import com.google.bigtable.v1.Mutation;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+
+import lombok.Data;
 
 @Data
 public class BigtableMutationsBuilder {
@@ -44,5 +44,9 @@ public class BigtableMutationsBuilder {
 
     public BigtableMutations build() {
         return new BigtableMutations(ImmutableList.copyOf(mutations));
+    }
+
+    public int size() {
+        return mutations.size();
     }
 }

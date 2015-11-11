@@ -45,6 +45,8 @@ import com.datastax.driver.core.utils.Bytes;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
@@ -68,6 +70,7 @@ import com.spotify.heroic.statistics.MetricBackendReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
@@ -252,6 +255,60 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
             return future;
         });
+    }
+
+    @Override
+    public AsyncObservable<MetricCollection> streamRow(final BackendKey key) {
+        return observer -> {
+            final Borrowed<Connection> b = connection.borrow();
+
+            if (!b.isValid()) {
+                observer.fail(new RuntimeException("failed to borrow connection"));
+                return;
+            }
+
+            final Connection c = b.get();
+
+            final Schema.PreparedFetch f = c.schema.row(key);
+
+            final AsyncObserver<List<Point>> helperObserver = new AsyncObserver<List<Point>>() {
+                @Override
+                public AsyncFuture<Void> observe(List<Point> value) throws Exception {
+                    return observer.observe(MetricCollection.points(value));
+                }
+
+                @Override
+                public void cancel() throws Exception {
+                    try {
+                        observer.cancel();
+                    } finally {
+                        b.release();
+                    }
+                }
+
+                @Override
+                public void fail(Throwable cause) throws Exception {
+                    try {
+                        observer.fail(cause);
+                    } finally {
+                        b.release();
+                    }
+                }
+
+                @Override
+                public void end() throws Exception {
+                    try {
+                        observer.end();
+                    } finally {
+                        b.release();
+                    }
+                }
+            };
+
+            final RowStreamHelper<Point> helper = new RowStreamHelper<Point>(helperObserver, f.converter());
+
+            Async.bind(async, c.session.executeAsync(f.fetch(Integer.MAX_VALUE))).onDone(helper);
+        };
     }
 
     private AsyncFuture<WriteResult> doWrite(final Connection c, final SchemaInstance.WriteSession session, final WriteMetric w) throws IOException {
@@ -469,6 +526,71 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 public void cancelled() throws Exception {
                     future.cancel();
                 }
+            });
+        }
+    }
+
+    @RequiredArgsConstructor
+    private final class RowStreamHelper<R> implements FutureDone<ResultSet> {
+        private final AsyncObserver<List<R>> observer;
+        private final Transform<Row, R> rowConverter;
+
+        @Override
+        public void failed(Throwable cause) throws Exception {
+            observer.fail(cause);
+        }
+
+        @Override
+        public void cancelled() throws Exception {
+            observer.cancel();
+        }
+
+        @Override
+        public void resolved(final ResultSet rows) throws Exception {
+            int count = rows.getAvailableWithoutFetching();
+
+            final Optional<AsyncFuture<Void>> nextFetch = rows.isFullyFetched() ? Optional.empty()
+                    : Optional.of(Async.bind(async, rows.fetchMoreResults()));
+
+            final List<R> batch = new ArrayList<>();
+
+            while (count-- > 0) {
+                final R part;
+
+                try {
+                    part = rowConverter.transform(rows.one());
+                } catch (Exception e) {
+                    observer.fail(e);
+                    return;
+                }
+
+                batch.add(part);
+            }
+
+            observer.observe(batch).directTransform(r -> {
+                if (nextFetch.isPresent()) {
+                    nextFetch.get().onDone(new FutureDone<Void>() {
+                        @Override
+                        public void failed(Throwable cause) throws Exception {
+                            RowStreamHelper.this.failed(cause);
+                        }
+
+                        @Override
+                        public void cancelled() throws Exception {
+                            RowStreamHelper.this.cancelled();
+                        }
+
+                        @Override
+                        public void resolved(Void result) throws Exception {
+                            RowStreamHelper.this.resolved(rows);
+                        }
+                    });
+
+                    return null;
+                }
+
+                observer.end();
+                return null;
             });
         }
     }

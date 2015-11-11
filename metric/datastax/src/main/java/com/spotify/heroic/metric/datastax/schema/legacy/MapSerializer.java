@@ -77,6 +77,11 @@ public class MapSerializer<A, B> implements TypeSerializer<Map<A, B>> {
         for (short i = 0; i < len; i++) {
             final A key = next(buffer, a);
             final B value = next(buffer, b);
+
+            if (value == null) {
+                continue;
+            }
+
             map.put(key, value);
         }
 

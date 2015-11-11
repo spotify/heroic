@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Statistics;
 
 import eu.toolchain.async.AsyncFramework;
@@ -71,7 +72,9 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection collection) {
-        return async.failed(new Exception("not supported"));
+    public AsyncObservable<MetricCollection> streamRow(BackendKey key) {
+        return observer -> {
+            observer.end();
+        };
     }
 }

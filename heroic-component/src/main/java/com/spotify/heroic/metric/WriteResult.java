@@ -72,6 +72,10 @@ public class WriteResult {
             return WriteResult.EMPTY;
         }
 
+        if (results.size() == 1) {
+            return results.iterator().next();
+        }
+
         final List<RequestError> errors = new ArrayList<>();
         final List<Long> times = new ArrayList<>();
 
