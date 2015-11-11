@@ -25,6 +25,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,6 +37,8 @@ import lombok.ToString;
 
 @ToString(of = { "path" })
 public class JsonCredentialsBuilder implements CredentialsBuilder {
+    public static final String DEFAULT_PATH = "./credentials.json";
+
     private final Path path;
 
     @JsonCreator
@@ -55,21 +59,22 @@ public class JsonCredentialsBuilder implements CredentialsBuilder {
     }
 
     public static class Builder {
-        private Path path;
+        private Optional<Path> path = Optional.empty();
 
         public Builder path(Path path) {
             checkNotNull(path, "path");
-
-            if (!Files.isReadable(path)) {
-                throw new IllegalArgumentException("Path must be readable: " + path.toAbsolutePath());
-            }
-
-            this.path = path;
+            this.path = Optional.of(path);
             return this;
         }
 
         public JsonCredentialsBuilder build() {
-            return new JsonCredentialsBuilder(path);
+            final Path p = path.orElse(Paths.get(DEFAULT_PATH));
+
+            if (!Files.isReadable(p)) {
+                throw new IllegalArgumentException("Path must be readable: " + p.toAbsolutePath());
+            }
+
+            return new JsonCredentialsBuilder(p);
         }
     }
 }
