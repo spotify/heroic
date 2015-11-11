@@ -24,6 +24,7 @@ package com.spotify.heroic.metadata;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
@@ -49,126 +50,55 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public AsyncFuture<Void> configure() {
         final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.configure());
-            }
-        });
-
+        run(backend -> backend.configure());
         return async.collectAndDiscard(callbacks);
     }
 
     @Override
     public AsyncFuture<FindTags> findTags(final RangeFilter filter) {
-        final List<AsyncFuture<FindTags>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.findTags(filter));
-            }
-        });
-
+        final List<AsyncFuture<FindTags>> callbacks = run(b -> b.findTags(filter));
         return async.collect(callbacks, FindTags.reduce()).onDone(reporter.reportFindTags());
     }
 
     @Override
     public AsyncFuture<CountSeries> countSeries(final RangeFilter filter) {
-        final List<AsyncFuture<CountSeries>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.countSeries(filter));
-            }
-        });
-
+        final List<AsyncFuture<CountSeries>> callbacks = run(b -> b.countSeries(filter));
         return async.collect(callbacks, CountSeries.reduce()).onDone(reporter.reportCountSeries());
     }
 
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
-        final List<AsyncFuture<FindSeries>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.findSeries(filter));
-            }
-        });
-
+        final List<AsyncFuture<FindSeries>> callbacks = run(v -> v.findSeries(filter));
         return async.collect(callbacks, FindSeries.reduce(filter.getLimit())).onDone(reporter.reportFindTimeSeries());
     }
 
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(final RangeFilter filter) {
-        final List<AsyncFuture<DeleteSeries>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.deleteSeries(filter));
-            }
-        });
-
+        final List<AsyncFuture<DeleteSeries>> callbacks = run(b -> b.deleteSeries(filter));
         return async.collect(callbacks, DeleteSeries.reduce());
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(final RangeFilter filter) {
-        final List<AsyncFuture<FindKeys>> callbacks = new ArrayList<AsyncFuture<FindKeys>>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.findKeys(filter));
-            }
-        });
-
+        final List<AsyncFuture<FindKeys>> callbacks = run(b -> b.findKeys(filter));
         return async.collect(callbacks, FindKeys.reduce()).onDone(reporter.reportFindKeys());
     }
 
     @Override
     public AsyncFuture<Void> refresh() {
-        final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.refresh());
-            }
-        });
-
+        final List<AsyncFuture<Void>> callbacks = run(b -> b.refresh());
         return async.collectAndDiscard(callbacks).onDone(reporter.reportRefresh());
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        final List<AsyncFuture<WriteResult>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                callbacks.add(backend.write(series, range));
-            }
-        });
-
+        final List<AsyncFuture<WriteResult>> callbacks = run(b -> b.write(series, range));
         return async.collect(callbacks, WriteResult.merger());
     }
 
     @Override
     public Iterable<MetadataEntry> entries(final Filter filter, final DateRange range) {
-        final List<Iterable<MetadataEntry>> entries = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, MetadataBackend backend) throws Exception {
-                entries.add(backend.entries(filter, range));
-            }
-        });
-
+        final List<Iterable<MetadataEntry>> entries = run(b -> b.entries(filter, range));
         return Iterables.concat(entries);
     }
 
@@ -198,17 +128,21 @@ public class MetadataBackendGroup implements MetadataBackend {
         return backends.size();
     }
 
-    private void run(InternalOperation op) {
+    private <T> List<T> run(InternalOperation<T> op) {
+        final ImmutableList.Builder<T> results = ImmutableList.builder();
+
         for (final MetadataBackend b : backends) {
             try {
-                op.run(backends.getDisabled(), b);
+                results.add(op.run(b));
             } catch (final Exception e) {
                 throw new RuntimeException("setting up backend operation failed", e);
             }
         }
+
+        return results.build();
     }
 
-    public static interface InternalOperation {
-        void run(int disabled, MetadataBackend backend) throws Exception;
+    public static interface InternalOperation<T> {
+        T run(MetadataBackend backend) throws Exception;
     }
 }

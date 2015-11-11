@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
@@ -46,104 +46,46 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<Void> configure() {
-        final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.configure());
-            }
-        });
-
-        return async.collectAndDiscard(callbacks);
+        return async.collectAndDiscard(run(b -> b.configure()));
     }
 
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter, final List<String> exclude,
             final int groupLimit) {
-        final List<AsyncFuture<TagValuesSuggest>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.tagValuesSuggest(filter, exclude, groupLimit));
-            }
-        });
-
-        return async.collect(callbacks, TagValuesSuggest.reduce(filter.getLimit(), groupLimit)).onDone(
-                reporter.reportTagValuesSuggest());
+        return async
+                .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
+                        TagValuesSuggest.reduce(filter.getLimit(), groupLimit))
+                .onDone(reporter.reportTagValuesSuggest());
     }
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(final RangeFilter filter, final String key) {
-        final List<AsyncFuture<TagValueSuggest>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.tagValueSuggest(filter, key));
-            }
-        });
-
-        return async.collect(callbacks, TagValueSuggest.reduce(filter.getLimit())).onDone(
-                reporter.reportTagValueSuggest());
+        return async.collect(run(b -> b.tagValueSuggest(filter, key)), TagValueSuggest.reduce(filter.getLimit()))
+                .onDone(reporter.reportTagValueSuggest());
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-        final List<AsyncFuture<TagKeyCount>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.tagKeyCount(filter));
-            }
-        });
-
-        return async.collect(callbacks, TagKeyCount.reduce(filter.getLimit())).onDone(reporter.reportTagKeySuggest());
+        return async.collect(run(b -> b.tagKeyCount(filter)), TagKeyCount.reduce(filter.getLimit()))
+                .onDone(reporter.reportTagKeySuggest());
     }
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(final RangeFilter filter, final MatchOptions options, final String key,
             final String value) {
-        final List<AsyncFuture<TagSuggest>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.tagSuggest(filter, options, key, value));
-            }
-        });
-
-        return async.collect(callbacks, TagSuggest.reduce(filter.getLimit())).onDone(reporter.reportTagSuggest());
+        return async.collect(run(b -> b.tagSuggest(filter, options, key, value)), TagSuggest.reduce(filter.getLimit()))
+                .onDone(reporter.reportTagSuggest());
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(final RangeFilter filter, final MatchOptions options, final String key) {
-        final List<AsyncFuture<KeySuggest>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.keySuggest(filter, options, key));
-            }
-        });
-
-        return async.collect(callbacks, KeySuggest.reduce(filter.getLimit())).onDone(reporter.reportKeySuggest());
+        return async.collect(run(b -> b.keySuggest(filter, options, key)), KeySuggest.reduce(filter.getLimit()))
+                .onDone(reporter.reportKeySuggest());
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        final List<AsyncFuture<WriteResult>> callbacks = new ArrayList<>();
-
-        run(new InternalOperation() {
-            @Override
-            public void run(int disabled, SuggestBackend backend) {
-                callbacks.add(backend.write(series, range));
-            }
-        });
-
-        return async.collect(callbacks, WriteResult.merger());
+        return async.collect(run(b -> b.write(series, range)), WriteResult.merger());
     }
 
     @Override
@@ -172,13 +114,17 @@ public class SuggestBackendGroup implements SuggestBackend {
         return backends.size();
     }
 
-    private void run(InternalOperation op) {
+    private <T> List<T> run(InternalOperation<T> op) {
+        final ImmutableList.Builder<T> result = ImmutableList.builder();
+
         for (final SuggestBackend b : backends) {
-            op.run(backends.getDisabled(), b);
+            result.add(op.run(b));
         }
+
+        return result.build();
     }
 
-    public static interface InternalOperation {
-        void run(int disabled, SuggestBackend backend);
+    public static interface InternalOperation<T> {
+        T run(SuggestBackend backend);
     }
 }

@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
 
@@ -39,9 +38,9 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationData;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationResult;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
@@ -230,15 +229,17 @@ public class LocalMetricManager implements MetricManager {
                         continue;
                     }
 
-                    run((int disabled, MetricBackend backend) -> {
+                    runVoid(b -> {
                         for (final Series serie : series) {
                             fetches.add(() -> {
                                 if (watcher.isQuotaViolated())
                                     throw new IllegalStateException("quota limit violated");
 
-                                return backend.fetch(source, serie, range, watcher, options);
+                                return b.fetch(source, serie, range, watcher, options);
                             });
                         }
+
+                        return null;
                     });
                 }
 
@@ -284,24 +285,19 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public Statistics getStatistics() {
-            final AtomicReference<Statistics> s = new AtomicReference<>(Statistics.empty());
+            Statistics result = Statistics.empty();
 
-            run((int disabled, MetricBackend backend) -> {
-                s.set(s.get().merge(backend.getStatistics()));
-            });
+            for (final Statistics s : run(b -> b.getStatistics())) {
+                result = result.merge(s);
+            }
 
-            return s.get();
+            return result;
         }
 
         @Override
         public AsyncFuture<FetchData> fetch(final MetricType source, final Series series,
                 final DateRange range, final FetchQuotaWatcher watcher, final QueryOptions options) {
-            final List<AsyncFuture<FetchData>> callbacks = new ArrayList<>();
-
-            run((int disabled, MetricBackend backend) -> {
-                callbacks.add(backend.fetch(source, series, range, watcher, options));
-            });
-
+            final List<AsyncFuture<FetchData>> callbacks = run(b -> b.fetch(source, series, range, watcher, options));
             return async.collect(callbacks, FetchData.collect(FETCH, series));
         }
 
@@ -313,13 +309,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<WriteResult> write(final WriteMetric write) {
-            final List<AsyncFuture<WriteResult>> callbacks = new ArrayList<>();
-
-            run((int disabled, MetricBackend backend) -> {
-                callbacks.add(backend.write(write));
-            });
-
-            return async.collect(callbacks, WriteResult.merger()).onDone(reporter.reportWrite());
+            return async.collect(run(b -> b.write(write)), WriteResult.merger()).onDone(reporter.reportWrite());
         }
 
         /**
@@ -333,24 +323,12 @@ public class LocalMetricManager implements MetricManager {
          */
         @Override
         public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-            final List<AsyncFuture<WriteResult>> callbacks = new ArrayList<>();
-
-            run((int disabled, MetricBackend backend) -> {
-                callbacks.add(backend.write(writes));
-            });
-
-            return async.collect(callbacks, WriteResult.merger()).onDone(reporter.reportWriteBatch());
+            return async.collect(run(b -> b.write(writes)), WriteResult.merger()).onDone(reporter.reportWriteBatch());
         }
 
         @Override
         public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit, final QueryOptions options) {
-            final List<AsyncFuture<BackendKeySet>> callbacks = new ArrayList<>();
-
-            run((int disabled, MetricBackend backend) -> {
-                callbacks.add(backend.keys(start, limit, options));
-            });
-
-            return async.collect(callbacks, BackendKeySet.collect(KEYS));
+            return async.collect(run(b -> b.keys(start, limit, options)), BackendKeySet.collect(KEYS));
         }
 
         @Override
@@ -370,25 +348,12 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<Void> configure() {
-            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-            run(new InternalOperation() {
-                @Override
-                public void run(int disabled, MetricBackend backend) throws Exception {
-                    callbacks.add(backend.configure());
-                }
-            });
-
-            return async.collectAndDiscard(callbacks);
+            return async.collectAndDiscard(run(b -> b.configure()));
         }
 
         @Override
         public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
-            final List<AsyncFuture<List<String>>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.serializeKeyToHex(key)));
-
-            return async.collect(callbacks).directTransform(result -> {
+            return async.collect(run(b -> b.serializeKeyToHex(key))).directTransform(result -> {
                 final ImmutableList.Builder<String> builder = ImmutableList.builder();
 
                 for (final List<String> k : result) {
@@ -399,14 +364,9 @@ public class LocalMetricManager implements MetricManager {
             });
         }
 
-
         @Override
         public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
-            final List<AsyncFuture<List<BackendKey>>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.deserializeKeyFromHex(key)));
-
-            return async.collect(callbacks).directTransform(result -> {
+            return async.collect(run(b -> b.deserializeKeyFromHex(key))).directTransform(result -> {
                 final ImmutableList.Builder<BackendKey> builder = ImmutableList.builder();
 
                 for (final List<BackendKey> k : result) {
@@ -419,20 +379,12 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<Void> deleteKey(BackendKey key, QueryOptions options) {
-            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.deleteKey(key, options)));
-
-            return async.collectAndDiscard(callbacks);
+            return async.collectAndDiscard(run(b -> b.deleteKey(key, options)));
         }
 
         @Override
         public AsyncFuture<Long> countKey(BackendKey key, QueryOptions options) {
-            final List<AsyncFuture<Long>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.countKey(key, options)));
-
-            return async.collect(callbacks).directTransform(result -> {
+            return async.collect(run(b -> b.countKey(key, options))).directTransform(result -> {
                 long count = 0;
 
                 for (final long c : result) {
@@ -445,9 +397,7 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<MetricCollection> fetchRow(final BackendKey key) {
-            final List<AsyncFuture<MetricCollection>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.fetchRow(key)));
+            final List<AsyncFuture<MetricCollection>> callbacks = run(b -> b.fetchRow(key));
 
             return async.collect(callbacks, new Collector<MetricCollection, MetricCollection>() {
                 @Override
@@ -465,31 +415,31 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<Void> writeRow(BackendKey key, MetricCollection metrics) {
-            final List<AsyncFuture<Void>> callbacks = new ArrayList<>();
-
-            runAll((disabled, backend) -> callbacks.add(backend.writeRow(key, metrics)));
-
-            return async.collectAndDiscard(callbacks);
+            return async.collectAndDiscard(run(b -> b.writeRow(key, metrics)));
         }
 
-        private void runAll(InternalOperation op) {
-            for (final MetricBackend b : backends.getAll()) {
+        private void runVoid(InternalOperation<Void> op) {
+            for (final MetricBackend b : backends.getMembers()) {
                 try {
-                    op.run(backends.getDisabled(), b);
+                    op.run(b);
                 } catch (final Exception e) {
                     throw new RuntimeException("setting up backend operation failed", e);
                 }
             }
         }
 
-        private void run(InternalOperation op) {
+        private <T> List<T> run(InternalOperation<T> op) {
+            final ImmutableList.Builder<T> result = ImmutableList.builder();
+
             for (final MetricBackend b : backends) {
                 try {
-                    op.run(backends.getDisabled(), b);
+                    result.add(op.run(b));
                 } catch (final Exception e) {
                     throw new RuntimeException("setting up backend operation failed", e);
                 }
             }
+
+            return result.build();
         }
     }
 
@@ -566,7 +516,7 @@ public class LocalMetricManager implements MetricManager {
         }
     }
 
-    private static interface InternalOperation {
-        void run(int disabled, MetricBackend backend) throws Exception;
+    private static interface InternalOperation<T> {
+        T run(MetricBackend backend) throws Exception;
     }
 }
