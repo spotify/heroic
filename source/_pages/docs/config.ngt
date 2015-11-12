@@ -5,17 +5,47 @@
 </p>
 
 <p>
-  Heroic is divided up into a few components, each whose configuration will effect the service in different ways.
-  These components each have their own documentation sub-section, and they are the following.
+  Heroic is divided up into a few components, each whose configuration will
+  affect the service in different ways.
+  Each component has its own sub-section, which are the following.
 </p>
 
-<ul>
-  <li><a ui-sref="^.cluster">cluster - responsible for federating requests across clusters</a></li>
-  <li><a ui-sref="^.metrics">metrics - responsible for the persistent storage and loading of metrics</a></li>
-  <li><a ui-sref="^.metadata">metadata - responsible for indexing time series, and making them searchable</a></li>
-  <li><a ui-sref="^.suggest">suggest - responsible for indexing time series, and making them suggestable</a></li>
-  <li><a ui-sref="^.elasticsearch_connection">Elasticsearch Connection - describes how all elasticsearch connection are managed.</a></li>
-</ul>
+<h4><a ui-sref="^.cluster">Cluster</a></h4>
+
+<p>
+  This section documenta how to configure clustering and federation to support
+  global interfaces.
+</p>
+
+<h4><a ui-sref="^.metrics">Metrics</a></h4>
+
+<p>
+  This section describes how to configure persistent storage of metrics.
+</p>
+
+<h4><a ui-sref="^.metadata">Metadata</a></h4>
+
+<p>
+  This section documents how metadata backends are configured.
+  Metadata backends are responsible for indexing the <em>active</em> time
+  series to support filtering.
+</p>
+
+<h4><a ui-sref="^.suggest">Suggest</a></h4>
+
+<p>
+  This section documents how suggestion backends are configured.
+  Suggestions is a feature that provides the user with feedback on which tags
+  and time series are available.
+</p>
+
+<h4><a ui-sref="^.elasticsearch_connection">Elasticsearch Connections</a></h4>
+
+<p>
+  This section documents how common Elasticsearch connections are configured.
+  They are typically used in metadata and suggestion backends that uses
+  Elasticsearch.
+</p>
 
 <p class="next">
   In the next section we will talk about the <a ui-sref="^.^.data_model">data model of Heroic</a>.

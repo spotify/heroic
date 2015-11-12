@@ -27,9 +27,15 @@ cluster:
 
 <h3><code>tags</code></h3>
 
+<codeblock language="yaml">
+site: london
+</codeblock>
+
 <p>
   Defines a set of tags that identifies which part of the cluster this node belongs to.
-  It is an object like <code language="json">{"site": "london"}</code>, and any other nodes in the cluster which have the exact same set of tags are assumed to have access to the same data set.
+  It's defined as an object like <code language="json">{"site": "london"}</code>.
+  Nodes that have an identical set of tags are said to be part of the same <em>shard</em>.
+  See the <a ui-sref="^.^.federation">federation</a> section for more details.
 </p>
 
 <h3><code>protocols</code></h3>

@@ -24,7 +24,7 @@
       </li>
 
       <li ui-sref-active="active">
-        <a ui-sref="docs.config.index">Configuring Heroic</a>
+        <a ui-sref="docs.config.index">Configuration</a>
 
         <ul class="nav">
           <li ui-sref-active="active">
@@ -41,6 +41,10 @@
 
           <li ui-sref-active="active">
             <a ui-sref="docs.config.suggest">Suggestions</a>
+          </li>
+
+          <li ui-sref-active="active">
+            <a ui-sref="docs.config.consumer">Consumers</a>
           </li>
 
           <li ui-sref-active="active">
@@ -75,6 +79,10 @@
 
       <li ui-sref-active="active">
         <a ui-sref="docs.profiles">Profiles</a>
+      </li>
+
+      <li ui-sref-active="active">
+        <a ui-sref="docs.federation">Federation</a>
       </li>
     </ul>
   </div>

@@ -1,0 +1,43 @@
+<h2>Federated Clusters</h2>
+
+<p>
+  Heroic has support for federating requests, which allows multiple independant
+  clusters to serve clients through a single, global interface.
+</p>
+
+<p>
+  In a federated cluster, requestes are routed to <em>shards</em>, and each
+  shard is responsible for a distinct chunk of the available data.
+  If all nodes in a single shard become unavailable, the data for that shard is
+  unavailable.
+  Shards are identified by a set of tags, two nodes are said to belong to the
+  same shard if their cluster tags are identical. You can see more about this
+  in the <a ui-sref="^.config.cluster">cluster documentation</a>.
+</p>
+
+<p>
+  This can be used to reduce the amount of geographical traffic by allowing one
+  cluster to operate completely within one datacenter.
+</p>
+
+<p>
+  A client querying any heroic node in a federation will cause it to fan out to
+  all <em>shards</em> that it knows about, process the request, and finally
+  merge the result for the client.
+</p>
+
+<img style="width: 100%;" src="images/sharding.svg"></img>
+
+<p>
+  The system tries to be as transparent as possible in the face of problems,
+  and for each request that fans out to a shard there is the potential that an
+  error prevents the result from being computed.
+</p>
+
+<p>
+  In the case of an unrecoverable error, the shards which were successfully queried will still return an result.
+  The fact some shard is failing will be clearly communicated in the result.
+  It will then be up to the client to decide how to manage that circumstance.
+</p>
+
+<img style="width: 100%;" src="images/errors.svg"></img>

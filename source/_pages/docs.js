@@ -16,12 +16,14 @@
     '_pages/docs/shell.ngt',
     '_pages/docs/profiles.ngt',
     '_pages/docs/config.ngt',
+    '_pages/docs/federation.ngt',
     '_pages/docs/config/cluster.ngt',
     '_pages/docs/config/metrics.ngt',
     '_pages/docs/config/metadata.ngt',
     '_pages/docs/config/suggest.ngt',
     '_pages/docs/config/elasticsearch_connection.ngt',
-    '_pages/docs/config/shell_server.ngt'
+    '_pages/docs/config/shell_server.ngt',
+    '_pages/docs/config/consumer.ngt'
   ]);
 
   function DocumentationCtrl() {
@@ -88,6 +90,10 @@
         url: '/shell',
         templateUrl: '_pages/docs/shell.ngt'
       })
+      .state('docs.federation', {
+        url: '/federation',
+        templateUrl: '_pages/docs/federation.ngt'
+      })
       .state('docs.profiles', {
         url: '/profiles',
         templateUrl: '_pages/docs/profiles.ngt'
@@ -124,6 +130,10 @@
       .state('docs.config.shell_server', {
         url: '/shell_server',
         templateUrl: '_pages/docs/config/shell_server.ngt'
+      })
+      .state('docs.config.consumer', {
+        url: '/consumer',
+        templateUrl: '_pages/docs/config/consumer.ngt'
       });
   });
 })();

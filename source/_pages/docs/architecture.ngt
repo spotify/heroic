@@ -36,7 +36,10 @@
 <h3>Storage: Cassandra</h3>
 
 <p>
-  Metrics are stored in Cassandra clusters, in a manner which avoids huge rows.
+  Metrics are stored in Cassandra, or other typical column-based databases in a
+  manner which avoids huge rows.
+  The technique used is described in <a href="http://www.datastax.com/dev/blog/advanced-time-series-with-cassandra">Advanced Time Series with Cassandra</a>, and was inspired by how it's implemented in
+  <a href="http://kairosdb.github.io/">KairosDB</a>.
 </p>
 
 <h3>Metadata: Elasticsearch</h3>
@@ -56,27 +59,26 @@
   We also use Elasticsearch to drive <a ui-sref="docs.suggestions">suggestions</a>.
 </p>
 
-<h3>Global Sharding</h3>
+<h3>Federation</h3>
 
 <p>
-  Heroic has rudimentary support for sharding that allows multiple independant
-  clusters serve a single client.
+  Main article: <a ui-sref="^.federation">Federated Clusters</a>
 </p>
 
 <p>
-  We use this to reduce the amount of inter-geographical traffic by allowing
-  one cluster to operate completely within one datacenter.
+  Heroic has support for federating requests, which allows multiple independant
+  clusters to serve clients through a single, global interface.
+  This can be used to reduce the amount of geographical traffic by allowing one
+  cluster to operate completely within one datacenter.
 </p>
 
 <p>
-  A client querying a single heroic node will cause it to fan out to all
-  clusters that it knows about, process the request (locally), and then finally
-  merge the request for the client.
+  A client querying any heroic node in a federation will cause it to fan out to
+  all <em>shards</em> that it knows about, process the request, and finally
+  merge the result for the client.
 </p>
 
 <img style="width: 100%;" src="images/sharding.svg"></img>
-
-<h3>Failure Tolerance</h3>
 
 <p>
   The system tries to be as transparent as possible in the face of problems,
@@ -85,10 +87,9 @@
 </p>
 
 <p>
-  In the case of an unrecoverable error, the shards which were successfully
-  queried will still return an result, but the fact that a shard is failing
-  will be clearly communicated in the result. It will then be up to the client
-  to decide how to manage that circumstance.
+  In the case of an unrecoverable error, the shards which were successfully queried will still return an result.
+  The fact some shard is failing will be clearly communicated in the result.
+  It will then be up to the client to decide how to manage that circumstance.
 </p>
 
 <img style="width: 100%;" src="images/errors.svg"></img>
