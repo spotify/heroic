@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
+import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.Series;
 
 import lombok.AccessLevel;
@@ -105,6 +106,11 @@ public abstract class MetricCollection {
      */
     public abstract void updateBucket(final Bucket bucket, final Map<String, String> tags);
 
+    /**
+     * Update the given reducer session.
+     */
+    public abstract void updateReducer(final ReducerSession session, final Map<String, String> tags);
+
     public int size() {
         return data.size();
     }
@@ -167,6 +173,11 @@ public abstract class MetricCollection {
         }
 
         @Override
+        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
+            session.updatePoints(tags, adapt());
+        }
+
+        @Override
         public void updateBucket(Bucket bucket, Map<String, String> tags) {
             adapt().forEach((m) -> bucket.updatePoint(tags, m));
         }
@@ -185,6 +196,11 @@ public abstract class MetricCollection {
         @Override
         public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
             session.updateEvents(tags, series, adapt());
+        }
+
+        @Override
+        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
+            session.updateEvents(tags, adapt());
         }
 
         @Override
@@ -209,6 +225,11 @@ public abstract class MetricCollection {
         }
 
         @Override
+        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
+            session.updateSpreads(tags, adapt());
+        }
+
+        @Override
         public void updateBucket(Bucket bucket, Map<String, String> tags) {
             adapt().forEach((m) -> bucket.updateSpread(tags, m));
         }
@@ -230,6 +251,11 @@ public abstract class MetricCollection {
         }
 
         @Override
+        public void updateReducer(ReducerSession session, final Map<String, String> tags) {
+            session.updateGroup(tags, adapt());
+        }
+
+        @Override
         public void updateBucket(Bucket bucket, Map<String, String> tags) {
             adapt().forEach((m) -> bucket.updateGroup(tags, m));
         }
@@ -237,5 +263,5 @@ public abstract class MetricCollection {
         private List<MetricGroup> adapt() {
             return (List<MetricGroup>) data;
         }
-    };
+    }
 }

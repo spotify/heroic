@@ -30,14 +30,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationCombiner;
-import com.spotify.heroic.aggregation.AggregationData;
-import com.spotify.heroic.aggregation.AggregationSession;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
+import com.spotify.heroic.aggregation.BucketReducerSession;
+import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
@@ -58,14 +59,13 @@ public abstract class DistributedBucketInstance<B extends Bucket> extends Bucket
             @Override
             public List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all) {
                 final Map<String, String> tags = ImmutableMap.of();
-                final Set<Series> series = ImmutableSet.of();
-                final AggregationSession session = session(range, ImmutableSet.of());
+                final ReducerSession session = reducer(range);
 
                 // combine all the tags.
                 final Iterator<ShardedResultGroup> step1 = Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
 
                 final Iterator<TagValues> step2 = Iterators.concat(Iterators.transform(step1, g -> {
-                    g.getGroup().updateAggregation(session, tags, series);
+                    g.getGroup().updateReducer(session, tags);
                     return g.getTags().iterator();
                 }));
 
@@ -73,12 +73,17 @@ public abstract class DistributedBucketInstance<B extends Bucket> extends Bucket
 
                 final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
 
-                for (final AggregationData data : session.result().getResult()) {
-                    groups.add(new ShardedResultGroup(tags, tagValues, data.getMetrics(), getSize()));
+                for (final MetricCollection metrics : session.result().getResult()) {
+                    groups.add(new ShardedResultGroup(tags, tagValues, metrics, getSize()));
                 }
 
                 return groups.build();
             }
         };
+    }
+
+    @Override
+    public ReducerSession reducer(DateRange range) {
+        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build, range);
     }
 }

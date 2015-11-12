@@ -102,7 +102,7 @@ public class ChainInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession reducer(final DateRange range) {
+    public ReducerSession reducer(final DateRange range) {
         return chain.get(chain.size() - 1).reducer(range);
     }
 

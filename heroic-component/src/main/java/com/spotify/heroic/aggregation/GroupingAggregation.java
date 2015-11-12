@@ -152,7 +152,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession reducer(final DateRange range) {
+    public ReducerSession reducer(final DateRange range) {
         return each.reducer(range);
     }
 
@@ -161,7 +161,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
         return new AggregationCombiner() {
             @Override
             public List<ShardedResultGroup> combine(final List<List<ShardedResultGroup>> all) {
-                final Set<Series> series = ImmutableSet.of();
                 final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
 
                 // combine all the tags.
@@ -178,7 +177,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
                         sessions.put(key, red);
                     }
 
-                    g.getGroup().updateAggregation(red.session, key, series);
+                    g.getGroup().updateReducer(red.session, key);
                     red.tagValues.add(g.getTags().iterator());
                 }
 
@@ -186,11 +185,11 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
                 for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
                     final Reduction red = e.getValue();
-                    final AggregationSession session = red.session;
+                    final ReducerSession session = red.session;
                     final List<TagValues> tagValues = TagValues.fromEntries(Iterators.concat(Iterators.transform(Iterators.concat(red.tagValues.iterator()), TagValues::iterator)));
 
-                    for (final AggregationData data : session.result().getResult()) {
-                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, data.getMetrics(), each.cadence()));
+                    for (final MetricCollection metrics : session.result().getResult()) {
+                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, metrics, each.cadence()));
                     }
                 }
 
@@ -206,7 +205,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
     @Data
     private final class Reduction {
-        private final AggregationSession session;
+        private final ReducerSession session;
         private final List<Iterator<TagValues>> tagValues = new ArrayList<>();
     }
 

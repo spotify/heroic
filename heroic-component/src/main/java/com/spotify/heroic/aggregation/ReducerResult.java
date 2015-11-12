@@ -19,31 +19,17 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.aggregation;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.aggregation.AggregationSession;
-import com.spotify.heroic.aggregation.Bucket;
-import com.spotify.heroic.aggregation.ReducerSession;
-import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.MetricCollection;
 
-public class EmptyMetricCollection extends MetricCollection {
-    public EmptyMetricCollection() {
-        super(MetricType.POINT, ImmutableList.of());
-    }
+import lombok.Data;
 
-    @Override
-    public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
-    }
-
-    @Override
-    public void updateBucket(Bucket bucket, Map<String, String> tags) {
-    }
-
-    @Override
-    public void updateReducer(ReducerSession session, Map<String, String> tags) {
-    }
+@Data
+public class ReducerResult {
+    private final List<MetricCollection> result;
+    private final Statistics statistics;
 }

@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -63,6 +64,11 @@ public class BucketAggregationTest {
             @Override
             protected Point build(TestBucket bucket) {
                 return new Point(bucket.timestamp, bucket.sum);
+            }
+
+            @Override
+            public ReducerSession reducer(final DateRange range) {
+                return Mockito.mock(ReducerSession.class);
             }
         };
     }

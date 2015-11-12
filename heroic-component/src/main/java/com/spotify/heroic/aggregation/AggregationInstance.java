@@ -51,19 +51,40 @@ public interface AggregationInstance {
     public AggregationTraversal session(List<AggregationState> states, DateRange range);
 
     /**
-     * Transform the given aggregation, into a distributed aggregation.
+     * Get the distributed aggregation that is relevant for this aggregation.
+     *
+     * A distributed aggregation instance is suitable for performing a sub-aggregation in order to allow non-destructive
+     * recombination of the results.
+     *
+     * Consider distributing an average aggregation, if done naively this would cause a large loss in precision because
+     * the following does not hold true {@code avg(A, B) != avg(avg(A), avg(B))}
+     *
+     * Instead the average aggregation can designate another type of aggregation as its intermediate, which preserves
+     * the information from each sub-aggregation in a non-destructive form. This can be accomplished by using an
+     * aggregation that outputs the sum and the count of all seen values.
+     *
+     * @return The distributed aggregation for the current aggregation.
      */
     default AggregationInstance distributed() {
         return this;
     }
 
     /**
-     * Get the reducer for the given aggregation.
+     * Build a reducer for the given aggregation.
+     *
+     * A reducer is responsible for taking a set of distributed sub-aggregations, and non-destructively combine them
+     * into a complete result.
+     *
+     * @return A reducer for the current aggregation.
      */
-    public AggregationSession reducer(final DateRange range);
+    public ReducerSession reducer(final DateRange range);
 
     /**
-     * Get an aggregation combiner for the given aggregation.
+     * Build a combiner for the given aggregation.
+     *
+     * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations have different
+     * methods of recombining results that are more or less efficient.
+     *
      * @return An aggregation combiner.
      */
     default AggregationCombiner combiner(final DateRange range) {

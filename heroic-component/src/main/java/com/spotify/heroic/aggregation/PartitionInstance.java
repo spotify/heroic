@@ -34,6 +34,7 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
+import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
@@ -89,14 +90,14 @@ public class PartitionInstance implements AggregationInstance {
     }
 
     @Override
-    public AggregationSession reducer(DateRange range) {
-        final ImmutableList.Builder<AggregationSession> sessions = ImmutableList.builder();
+    public ReducerSession reducer(DateRange range) {
+        final ImmutableList.Builder<ReducerSession> sessions = ImmutableList.builder();
 
         for (final AggregationInstance a : children) {
             sessions.add(a.reducer(range));
         }
 
-        return new PartitionSession(sessions.build());
+        return new PartitionReducerSession(sessions.build());
     }
 
     @ToString
@@ -144,6 +145,54 @@ public class PartitionInstance implements AggregationInstance {
             }
 
             return new AggregationResult(data.build(), statistics);
+        }
+    }
+
+    @ToString
+    @RequiredArgsConstructor
+    private final class PartitionReducerSession implements ReducerSession {
+        private final List<ReducerSession> sessions;
+
+        @Override
+        public void updatePoints(Map<String, String> group, List<Point> values) {
+            for (final ReducerSession s : sessions) {
+                s.updatePoints(group, values);
+            }
+        }
+
+        @Override
+        public void updateEvents(Map<String, String> group, List<Event> values) {
+            for (final ReducerSession s : sessions) {
+                s.updateEvents(group, values);
+            }
+        }
+
+        @Override
+        public void updateSpreads(Map<String, String> group, List<Spread> values) {
+            for (final ReducerSession s : sessions) {
+                s.updateSpreads(group, values);
+            }
+        }
+
+        @Override
+        public void updateGroup(Map<String, String> group, List<MetricGroup> values) {
+            for (final ReducerSession s : sessions) {
+                s.updateGroup(group, values);
+            }
+        }
+
+        @Override
+        public ReducerResult result() {
+            final ImmutableList.Builder<MetricCollection> data = ImmutableList.builder();
+            Statistics statistics = Statistics.empty();
+
+            for (final ReducerSession s : sessions) {
+                final ReducerResult r = s.result();
+                data.addAll(r.getResult());
+                statistics = statistics.merge(r.getStatistics());
+            }
+
+            return new ReducerResult(data.build(), statistics);
         }
     }
 }

@@ -73,14 +73,14 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements
     public static final Set<MetricType> ALL_TYPES = ImmutableSet.of(MetricType.POINT, MetricType.EVENT,
             MetricType.SPREAD, MetricType.GROUP);
 
-    private final long size;
-    private final long extent;
+    protected final long size;
+    protected final long extent;
 
     @Getter(AccessLevel.NONE)
     private final Set<MetricType> input;
 
     @Getter(AccessLevel.NONE)
-    private final MetricType out;
+    protected final MetricType out;
 
     @Data
     private final class Session implements AggregationSession {
@@ -212,13 +212,13 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements
     }
 
     @Override
-    public AggregationSession reducer(final DateRange range) {
-        return session(range, ImmutableSet.of());
+    public long cadence() {
+        return size;
     }
 
     @Override
-    public long cadence() {
-        return size;
+    public ReducerSession reducer(DateRange range) {
+        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build, range);
     }
 
     @Override
@@ -226,7 +226,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    protected Session session(final DateRange range, final Set<Series> series) {
+    public Session session(final DateRange range, final Set<Series> series) {
         final List<B> buckets = buildBuckets(range, size);
         return new Session(series, buckets, range.start());
     }
