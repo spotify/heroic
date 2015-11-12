@@ -81,16 +81,19 @@ public class ManagedConnectionFactory {
 
     @JsonCreator
     public ManagedConnectionFactory(@JsonProperty("clusterName") String clusterName,
-            @JsonProperty("seeds") List<String> seeds, @JsonProperty("nodeClient") Boolean nodeClient,
+            @JsonProperty("seeds") List<String> seeds,
+            @JsonProperty("nodeClient") Boolean nodeClient,
             @JsonProperty("concurrentBulkRequests") Integer concurrentBulkRequests,
-            @JsonProperty("flushInterval") Integer flushInterval, @JsonProperty("bulkActions") Integer bulkActions,
-            @JsonProperty("index") IndexMapping index, @JsonProperty("templateName") String templateName,
+            @JsonProperty("flushInterval") Integer flushInterval,
+            @JsonProperty("bulkActions") Integer bulkActions,
+            @JsonProperty("index") IndexMapping index,
+            @JsonProperty("templateName") String templateName,
             @JsonProperty("client") ClientSetup clientSetup) {
         this.clusterName = ofNullable(clusterName).orElse(DEFAULT_CLUSTER_NAME);
         this.seeds = ofNullable(seeds).orElse(DEFAULT_SEEDS);
         this.nodeClient = ofNullable(nodeClient).orElse(false);
-        this.concurrentBulkRequests = ofNullable(concurrentBulkRequests)
-                .orElse(DEFAULT_CONCURRENT_BULK_REQUESTS);
+        this.concurrentBulkRequests =
+                ofNullable(concurrentBulkRequests).orElse(DEFAULT_CONCURRENT_BULK_REQUESTS);
         this.flushInterval = ofNullable(flushInterval).orElse(DEFAULT_FLUSH_INTERVAL);
         this.bulkActions = ofNullable(bulkActions).orElse(DEFAULT_BULK_ACTIONS);
         this.index = ofNullable(index).orElseGet(RotatingIndexMapping.builder()::build);
@@ -102,8 +105,9 @@ public class ManagedConnectionFactory {
      * Setup the defualt client setup to be backwards compatible.
      */
     private ClientSetup defaultClientSetup() {
-        if (nodeClient)
+        if (nodeClient) {
             return new NodeClientSetup(clusterName, seeds);
+        }
 
         return new TransportClientSetup(clusterName, seeds);
     }
@@ -118,9 +122,11 @@ public class ManagedConnectionFactory {
     }
 
     public Managed<Connection> construct(final String defaultTemplateName,
-            final Map<String, Map<String, Object>> suggestedMappings, final Map<String, Object> settings) {
+            final Map<String, Map<String, Object>> suggestedMappings,
+            final Map<String, Object> settings) {
         final String templateName = ofNullable(this.templateName).orElse(defaultTemplateName);
-        final Map<String, Map<String, Object>> mappings = checkNotNull(suggestedMappings, "mappings must be configured");
+        final Map<String, Map<String, Object>> mappings =
+                checkNotNull(suggestedMappings, "mappings must be configured");
 
         return async.managed(new ManagedSetup<Connection>() {
             @Override
@@ -132,7 +138,8 @@ public class ManagedConnectionFactory {
 
                         final BulkProcessor bulk = configureBulkProcessor(client);
 
-                        return new Connection(async, index, client, bulk, templateName, mappings, settings);
+                        return new Connection(async, index, client, bulk, templateName, mappings,
+                                settings);
                     }
                 });
             }
@@ -264,8 +271,9 @@ public class ManagedConnectionFactory {
         }
 
         public ManagedConnectionFactory build() {
-            return new ManagedConnectionFactory(clusterName, seeds, nodeClient, concurrentBulkRequests, flushInterval,
-                    bulkActions, index, templateName, clientSetup);
+            return new ManagedConnectionFactory(clusterName, seeds, nodeClient,
+                    concurrentBulkRequests, flushInterval, bulkActions, index, templateName,
+                    clientSetup);
         }
     }
 };

@@ -17,7 +17,7 @@ public class SumBucketTest {
     private static final Map<String, String> tags = ImmutableMap.of();
 
     public Collection<? extends DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new SumBucket(0l), new StripedSumBucket(0l));
+        return ImmutableList.<DoubleBucket> of(new SumBucket(0L), new StripedSumBucket(0L));
     }
 
     @Test

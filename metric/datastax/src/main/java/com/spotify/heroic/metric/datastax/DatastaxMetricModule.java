@@ -74,8 +74,9 @@ public final class DatastaxMetricModule implements MetricModule {
     private final boolean configure;
 
     @JsonCreator
-    public DatastaxMetricModule(@JsonProperty("id") String id, @JsonProperty("groups") Groups groups,
-            @JsonProperty("seeds") Set<String> seeds, @JsonProperty("schema") SchemaModule schema,
+    public DatastaxMetricModule(@JsonProperty("id") String id,
+            @JsonProperty("groups") Groups groups, @JsonProperty("seeds") Set<String> seeds,
+            @JsonProperty("schema") SchemaModule schema,
             @JsonProperty("configure") Boolean configure) {
         this.id = id;
         this.groups = Optional.fromNullable(groups).or(Groups::empty).or("heroic");
@@ -91,8 +92,9 @@ public final class DatastaxMetricModule implements MetricModule {
             seeds.add(convert(s));
         }
 
-        if (seeds.isEmpty())
+        if (seeds.isEmpty()) {
             throw new IllegalArgumentException("No seeds specified");
+        }
 
         return seeds;
     }
@@ -109,8 +111,10 @@ public final class DatastaxMetricModule implements MetricModule {
         final String host = u.getHost();
         final int port = u.getPort() != -1 ? u.getPort() : DEFAULT_PORT;
 
-        if (host == null)
-            throw new IllegalArgumentException("invalid seed address '" + s + "', no host specified");
+        if (host == null) {
+            throw new IllegalArgumentException(
+                    "invalid seed address '" + s + "', no host specified");
+        }
 
         return new InetSocketAddress(host, port);
     }
@@ -128,7 +132,8 @@ public final class DatastaxMetricModule implements MetricModule {
             @Singleton
             @Named("configure")
             public boolean configure(final ExtraParameters params) {
-                return params.containsAny(ExtraParameters.CONFIGURE.getName(), DATASTAX_CONFIGURE) || configure;
+                return params.containsAny(ExtraParameters.CONFIGURE.getName(), DATASTAX_CONFIGURE)
+                        || configure;
             }
 
             @Provides

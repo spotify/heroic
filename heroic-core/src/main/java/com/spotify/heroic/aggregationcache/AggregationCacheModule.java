@@ -65,8 +65,8 @@ public class AggregationCacheModule extends PrivateModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<AggregationCacheBackendModule> backend = Optional.empty();
 
@@ -85,7 +85,8 @@ public class AggregationCacheModule extends PrivateModule {
         }
 
         public AggregationCacheModule build() {
-            return new AggregationCacheModule(backend.orElseGet(InMemoryAggregationCacheBackendConfig.builder()::build));
+            return new AggregationCacheModule(
+                    backend.orElseGet(InMemoryAggregationCacheBackendConfig.builder()::build));
         }
     }
 }

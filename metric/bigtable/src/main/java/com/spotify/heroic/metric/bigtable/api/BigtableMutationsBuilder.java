@@ -34,7 +34,8 @@ import lombok.Data;
 public class BigtableMutationsBuilder {
     final List<Mutation> mutations = new ArrayList<>();
 
-    public BigtableMutationsBuilder setCell(String family, ByteString columnQualifier, ByteString value) {
+    public BigtableMutationsBuilder setCell(String family, ByteString columnQualifier,
+            ByteString value) {
         Mutation.SetCell.Builder setCell = Mutation.SetCell.newBuilder().setFamilyName(family)
                 .setColumnQualifier(columnQualifier).setValue(value);
 

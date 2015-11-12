@@ -97,7 +97,8 @@ public class HeroicModules {
         out.println(String.format("Available Profiles (activate with: %s <profile>):", option));
 
         for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
-            ParameterSpecification.printWrapped(out, "  ", 80, entry.getKey() + " - " + entry.getValue().description());
+            ParameterSpecification.printWrapped(out, "  ", 80,
+                    entry.getKey() + " - " + entry.getValue().description());
 
             for (final ParameterSpecification o : entry.getValue().options()) {
                 o.printHelp(out, "    ", 80);

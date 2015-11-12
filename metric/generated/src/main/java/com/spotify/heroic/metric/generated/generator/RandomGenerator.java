@@ -38,10 +38,11 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
 
 /**
- * A generator that generates pseudo random numbers depending on which serie and time range is required.
+ * A generator that generates pseudo random numbers depending on which serie and time range is
+ * required.
  *
- * The same serie and time range should always return the same values, making this usable across restarts for
- * troubleshooting.
+ * The same series and time range should always return the same values, making this usable across
+ * restarts for troubleshooting.
  *
  * @author udoprog
  */
@@ -76,8 +77,9 @@ public class RandomGenerator implements Generator {
 
         final long start = calculateStart(range.getStart());
 
-        if (!watcher.readData(range.diff() / step))
+        if (!watcher.readData(range.diff() / step)) {
             throw new IllegalArgumentException("data limit reached");
+        }
 
         for (long i = start; i < range.getEnd(); i += step) {
             final Double value = localMin + (positionRand(seriesHash, i) - 0.5) * this.range;
@@ -93,8 +95,9 @@ public class RandomGenerator implements Generator {
 
         final DateRange rounded = range.rounded(1000);
 
-        if (!watcher.readData(rounded.diff() / step))
+        if (!watcher.readData(rounded.diff() / step)) {
             throw new IllegalArgumentException("data limit reached");
+        }
 
         for (long time = rounded.getStart(); time < rounded.getEnd(); time += step) {
             data.add(new Event(time, PAYLOAD));

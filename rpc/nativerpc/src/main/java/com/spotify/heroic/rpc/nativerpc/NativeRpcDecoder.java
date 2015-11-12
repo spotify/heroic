@@ -41,7 +41,8 @@ public class NativeRpcDecoder extends ByteToMessageDecoder {
     private final MessagePack messagePack = new MessagePack();
 
     @Override
-    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) throws Exception {
+    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out)
+            throws Exception {
         final int length = in.readableBytes();
 
         if (length == 0) {

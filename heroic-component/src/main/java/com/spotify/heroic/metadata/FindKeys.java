@@ -86,8 +86,9 @@ public class FindKeys {
     }
 
     @JsonCreator
-    public FindKeys(@JsonProperty("errors") List<RequestError> errors, @JsonProperty("keys") Set<String> keys,
-            @JsonProperty("size") int size, @JsonProperty("duplicates") int duplicates) {
+    public FindKeys(@JsonProperty("errors") List<RequestError> errors,
+            @JsonProperty("keys") Set<String> keys, @JsonProperty("size") int size,
+            @JsonProperty("duplicates") int duplicates) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.keys = keys;
         this.size = size;
@@ -104,18 +105,21 @@ public class FindKeys {
             public FindKeys transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new FindKeys(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_KEYS, 0, 0);
+                return new FindKeys(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_KEYS, 0, 0);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends FindKeys> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends FindKeys> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, FindKeys>() {
             @Override
             public FindKeys transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new FindKeys(errors, EMPTY_KEYS, 0, 0);
             }
         };

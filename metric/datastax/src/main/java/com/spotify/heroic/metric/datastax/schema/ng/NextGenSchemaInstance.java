@@ -88,7 +88,8 @@ public class NextGenSchemaInstance implements SchemaInstance {
 
     @Override
     public BoundStatement keysPaging(Optional<ByteBuffer> first, int limit) {
-        return first.map(f ->  keysPagingLeftLimit.bind(f, limit)).orElseGet(() -> keysPagingLimit.bind(limit));
+        return first.map(f -> keysPagingLeftLimit.bind(f, limit))
+                .orElseGet(() -> keysPagingLimit.bind(limit));
     }
 
     @Override
@@ -122,7 +123,8 @@ public class NextGenSchemaInstance implements SchemaInstance {
     }
 
     @Override
-    public List<PreparedFetch> ranges(final Series series, final DateRange range) throws IOException {
+    public List<PreparedFetch> ranges(final Series series, final DateRange range)
+            throws IOException {
         final List<PreparedFetch> bases = new ArrayList<>();
 
         final long start = calculateBaseTimestamp(range.getStart());
@@ -208,10 +210,10 @@ public class NextGenSchemaInstance implements SchemaInstance {
     }
 
     private int calculateColumnKey(long timestamp) {
-        return (int)(timestamp % MAX_WIDTH);
+        return (int) (timestamp % MAX_WIDTH);
     }
 
     private long calculateAbsoluteTimestamp(long base, int key) {
-        return base + (long)key;
+        return base + (long) key;
     }
 }

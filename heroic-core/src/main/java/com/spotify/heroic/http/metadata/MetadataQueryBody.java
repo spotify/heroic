@@ -59,7 +59,8 @@ public class MetadataQueryBody {
     private final Optional<Set<String>> hasTags;
 
     /**
-     * A general set of filters. If this is combined with the other mechanisms, all the filters will be AND:ed together.
+     * A general set of filters. If this is combined with the other mechanisms, all the filters will
+     * be AND:ed together.
      */
     private final Optional<Filter> filter;
 
@@ -78,7 +79,8 @@ public class MetadataQueryBody {
         }
 
         if (matchTags.isPresent()) {
-            matchTags.get().entrySet().forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
+            matchTags.get().entrySet()
+                    .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
         }
 
         if (hasTags.isPresent()) {
@@ -102,9 +104,9 @@ public class MetadataQueryBody {
 
     @JsonCreator
     public MetadataQueryBody(@JsonProperty("matchKey") String matchKey,
-            @JsonProperty("matchTags") Map<String, String> matchTags, @JsonProperty("hasTags") Set<String> hasTags,
-            @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
-            @JsonProperty("limit") Integer limit) {
+            @JsonProperty("matchTags") Map<String, String> matchTags,
+            @JsonProperty("hasTags") Set<String> hasTags, @JsonProperty("filter") Filter filter,
+            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit) {
         this.matchKey = ofNullable(matchKey);
         this.matchTags = ofNullable(matchTags);
         this.hasTags = ofNullable(hasTags);

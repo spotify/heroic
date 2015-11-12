@@ -62,7 +62,7 @@ public class IngestionFilter implements ShellTask {
         final Parameters params = (Parameters) base;
 
         if (params.filter.isEmpty()) {
-            return  ingestion.getFilter().directTransform(f -> {
+            return ingestion.getFilter().directTransform(f -> {
                 io.out().println("Current ingestion filter: " + f);
                 return null;
             });

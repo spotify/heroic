@@ -63,7 +63,8 @@ public class CacheKey {
 
     @JsonCreator
     public CacheKey(@JsonProperty("version") int version, @JsonProperty("filter") Filter filter,
-            @JsonProperty("group") Map<String, String> group, @JsonProperty("aggregation") AggregationInstance aggregation,
+            @JsonProperty("group") Map<String, String> group,
+            @JsonProperty("aggregation") AggregationInstance aggregation,
             @JsonProperty("base") long base) {
         this.version = version;
         this.filter = filter;

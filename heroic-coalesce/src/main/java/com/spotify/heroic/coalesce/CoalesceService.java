@@ -44,7 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CoalesceService {
-    public static void main(String argv[]) {
+    public static void main(String[] argv) {
         final Parameters params = new Parameters();
 
         final CmdLineParser parser = new CmdLineParser(params);
@@ -77,8 +77,9 @@ public class CoalesceService {
         };
 
         /* create a core which does not attempt to use local backends */
-        final HeroicCore core = HeroicCore.builder().disableBackends(true).setupService(false).modules(HeroicModules.ALL_MODULES)
-                .configPath(params.heroicConfig).bootstrap(bootstrap).build();
+        final HeroicCore core = HeroicCore.builder().disableBackends(true).setupService(false)
+                .modules(HeroicModules.ALL_MODULES).configPath(params.heroicConfig)
+                .bootstrap(bootstrap).build();
 
         final HeroicCoreInstance instance;
 
@@ -141,7 +142,7 @@ public class CoalesceService {
         @Option(name = "--heroic-config", required = true, usage = "Use heroic configuration path")
         private String heroicConfig = null;
 
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help")
+        @Option(name = "-h", aliases = {"--help"}, help = true, usage = "Display help")
         private boolean help = false;
     }
 }

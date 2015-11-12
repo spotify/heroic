@@ -42,14 +42,15 @@ public interface MetricBackendGroup extends MetricBackend {
      * @return The result in the form of MetricGroups.
      * @throws BackendGroupException
      */
-    public AsyncFuture<ResultGroups> query(MetricType type, Filter filter, DateRange range, AggregationInstance aggregation,
-            QueryOptions options);
+    AsyncFuture<ResultGroups> query(MetricType type, Filter filter, DateRange range,
+            AggregationInstance aggregation, QueryOptions options);
 
     /**
-     * Fetch metrics with a default (no-op) quota watcher. This method allows for the fetching of an indefinite amount
-     * of metrics.
+     * Fetch metrics with a default (no-op) quota watcher. This method allows for the fetching of an
+     * indefinite amount of metrics.
      *
      * @see #MetricBackend#fetch(Class, Series, DateRange, QuotaWatcher)
      */
-    public AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range, QueryOptions options);
+    AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range,
+            QueryOptions options);
 }

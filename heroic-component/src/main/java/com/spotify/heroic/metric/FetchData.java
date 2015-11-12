@@ -42,7 +42,8 @@ public class FetchData {
     private final List<MetricCollection> groups;
     private final QueryTrace trace;
 
-    public static Collector<FetchData, FetchData> collect(final QueryTrace.Identifier what, final Series series) {
+    public static Collector<FetchData, FetchData> collect(final QueryTrace.Identifier what,
+            final Series series) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return results -> {
@@ -68,7 +69,8 @@ public class FetchData {
 
             final List<MetricCollection> groups = fetchGroups.entrySet().stream()
                     .map((e) -> MetricCollection.build(e.getKey(),
-                            Ordering.from(e.getKey().comparator()).immutableSortedCopy(e.getValue().build())))
+                            Ordering.from(e.getKey().comparator())
+                                    .immutableSortedCopy(e.getValue().build())))
                     .collect(Collectors.toList());
 
             return new FetchData(series, times.build(), groups,

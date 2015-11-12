@@ -27,6 +27,6 @@ import com.google.bigtable.v1.RowFilter;
 
 @Data
 public class BigtableRowFilter {
-    
-    final RowFilter filter; 
+
+    final RowFilter filter;
 }

@@ -16,7 +16,7 @@ import com.spotify.heroic.metric.Point;
 
 public class StdDevBucketTest {
     public Collection<? extends DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new StdDevBucket(0l), new StripedStdDevBucket(0l));
+        return ImmutableList.<DoubleBucket> of(new StdDevBucket(0L), new StripedStdDevBucket(0L));
     }
 
     @Test
@@ -27,7 +27,7 @@ public class StdDevBucketTest {
 
         for (final DoubleBucket bucket : buckets()) {
             for (int i = 0; i < 1000; i++) {
-                bucket.updatePoint(tags, new Point(0l, rnd.nextDouble()));
+                bucket.updatePoint(tags, new Point(0L, rnd.nextDouble()));
             }
 
             final double value = bucket.value();
@@ -44,8 +44,8 @@ public class StdDevBucketTest {
         }
 
         for (final DoubleBucket bucket : buckets()) {
-            bucket.updatePoint(tags, new Point(0l, 0.0d));
-            bucket.updatePoint(tags, new Point(0l, 0.0d));
+            bucket.updatePoint(tags, new Point(0L, 0.0d));
+            bucket.updatePoint(tags, new Point(0L, 0.0d));
             assertFalse(bucket.getClass().getSimpleName(), Double.isNaN(bucket.value()));
         }
     }

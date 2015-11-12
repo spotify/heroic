@@ -33,7 +33,8 @@ public class ScoredSeries {
     private final Series series;
 
     @JsonCreator
-    public static ScoredSeries create(@JsonProperty("score") Float score, @JsonProperty("series") Series series) {
+    public static ScoredSeries create(@JsonProperty("score") Float score,
+            @JsonProperty("series") Series series) {
         return new ScoredSeries(score, series);
     }
 }

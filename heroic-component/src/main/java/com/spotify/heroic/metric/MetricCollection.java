@@ -43,15 +43,15 @@ import lombok.RequiredArgsConstructor;
 /**
  * A collection of metrics.
  *
- * Metrics are constrained to the implemented types below, so far these are {@link Point}, {@link Event}, {@link Spread}
- * , and {@link MetricGroup}.
+ * Metrics are constrained to the implemented types below, so far these are {@link Point},
+ * {@link Event}, {@link Spread} , and {@link MetricGroup}.
  *
- * There is a JSON serialization available in {@link MetricCollectionSerialization} which correctly preserves the type
- * information of these collections.
+ * There is a JSON serialization available in {@link MetricCollectionSerialization} which correctly
+ * preserves the type information of these collections.
  *
- * This class is a carrier for _any_ of these metrics, the canonical way for accessing the underlying data is to first
- * check it's type using {@link #getType()}, and then access the data with the appropriate cast using
- * {@link #getDataAs(Class)}.
+ * This class is a carrier for _any_ of these metrics, the canonical way for accessing the
+ * underlying data is to first check it's type using {@link #getType()}, and then access the data
+ * with the appropriate cast using {@link #getDataAs(Class)}.
  *
  * The following is an example for how you may access data from the collection.
  *
@@ -95,8 +95,8 @@ public abstract class MetricCollection {
     /**
      * Update the given aggregation with the content of this collection.
      */
-    public abstract void updateAggregation(final AggregationSession session, final Map<String, String> tags,
-            final Set<Series> series);
+    public abstract void updateAggregation(final AggregationSession session,
+            final Map<String, String> tags, final Set<Series> series);
 
     /**
      * Update the given bucket with the content of this collection.
@@ -109,7 +109,8 @@ public abstract class MetricCollection {
     /**
      * Update the given reducer session.
      */
-    public abstract void updateReducer(final ReducerSession session, final Map<String, String> tags);
+    public abstract void updateReducer(final ReducerSession session,
+            final Map<String, String> tags);
 
     public int size() {
         return data.size();
@@ -126,7 +127,8 @@ public abstract class MetricCollection {
     }
 
     // @formatter:off
-    private static final Map<MetricType, Function<List<? extends Metric>, MetricCollection>> adapters = ImmutableMap.<MetricType, Function<List<? extends Metric>, MetricCollection>>of(
+    private static final Map<MetricType, Function<List<? extends Metric>, MetricCollection>>
+            adapters = ImmutableMap.of(
         MetricType.GROUP, GroupCollection::new,
         MetricType.POINT, PointCollection::new,
         MetricType.EVENT, EventCollection::new,
@@ -150,14 +152,18 @@ public abstract class MetricCollection {
         return new SpreadCollection(metrics);
     }
 
-    public static MetricCollection build(final MetricType key, final List<? extends Metric> metrics) {
-        final Function<List<? extends Metric>, MetricCollection> adapter = checkNotNull(adapters.get(key), "applier does not exist for type");
+    public static MetricCollection build(final MetricType key,
+            final List<? extends Metric> metrics) {
+        final Function<List<? extends Metric>, MetricCollection> adapter =
+                checkNotNull(adapters.get(key), "applier does not exist for type");
         return adapter.apply(metrics);
     }
 
-    public static MetricCollection mergeSorted(final MetricType type, final List<List<? extends Metric>> values) {
+    public static MetricCollection mergeSorted(final MetricType type,
+            final List<List<? extends Metric>> values) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
-                ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()), type.comparator()));
+                ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
+                type.comparator()));
         return build(type, data);
     }
 
@@ -168,7 +174,8 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
+        public void updateAggregation(AggregationSession session, Map<String, String> tags,
+                Set<Series> series) {
             session.updatePoints(tags, series, adapt());
         }
 
@@ -194,7 +201,8 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
+        public void updateAggregation(AggregationSession session, Map<String, String> tags,
+                Set<Series> series) {
             session.updateEvents(tags, series, adapt());
         }
 
@@ -220,7 +228,8 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
+        public void updateAggregation(AggregationSession session, Map<String, String> tags,
+                Set<Series> series) {
             session.updateSpreads(tags, series, adapt());
         }
 
@@ -246,7 +255,8 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
+        public void updateAggregation(AggregationSession session, Map<String, String> tags,
+                Set<Series> series) {
             session.updateGroup(tags, series, adapt());
         }
 

@@ -40,8 +40,9 @@ public class Chain implements Aggregation {
 
     @JsonCreator
     public Chain(@JsonProperty("chain") List<Aggregation> chain) {
-        if (chain == null || chain.isEmpty())
+        if (chain == null || chain.isEmpty()) {
             throw new IllegalArgumentException("chain must be specified and non-empty");
+        }
 
         this.chain = chain;
     }
@@ -61,13 +62,14 @@ public class Chain implements Aggregation {
 
     @Override
     public ChainInstance apply(final AggregationContext context) {
-        final ImmutableList<AggregationInstance> chain = ImmutableList
-                .copyOf(this.chain.stream().map(c -> c.apply(context)).iterator());
+        final ImmutableList<AggregationInstance> chain =
+                ImmutableList.copyOf(this.chain.stream().map(c -> c.apply(context)).iterator());
         return new ChainInstance(chain);
     }
 
     @Override
     public String toDSL() {
-        return String.format("%s(%s)", NAME, params.join(chain.stream().map(Aggregation::toDSL).iterator()));
+        return String.format("%s(%s)", NAME,
+                params.join(chain.stream().map(Aggregation::toDSL).iterator()));
     }
 }

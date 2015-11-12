@@ -49,7 +49,8 @@ public class HeroicService {
         void configure(HeroicCore.Builder builder, Parameters parameters);
     }
 
-    public static final String CONFIGURATION_RESOURCE = "com.spotify.heroic.HeroicService.Configuration";
+    public static final String CONFIGURATION_RESOURCE =
+            "com.spotify.heroic.HeroicService.Configuration";
 
     /**
      * Default configuration path.
@@ -60,7 +61,8 @@ public class HeroicService {
         main(args, null);
     }
 
-    public static void main(final String[] args, final Configuration configuration) throws Exception {
+    public static void main(final String[] args, final Configuration configuration)
+            throws Exception {
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread t, Throwable e) {
@@ -121,9 +123,8 @@ public class HeroicService {
             throws ResourceException {
         final ClassLoader loader = Configuration.class.getClassLoader();
 
-        final List<ResourceInstance<Configuration>> configs = ResourceFileLoader.loadInstances(
-                CONFIGURATION_RESOURCE, loader,
-                Configuration.class);
+        final List<ResourceInstance<Configuration>> configs = ResourceFileLoader
+                .loadInstances(CONFIGURATION_RESOURCE, loader, Configuration.class);
 
         for (final ResourceInstance<Configuration> config : configs) {
             config.invoke(new Transform<Configuration, Void>() {
@@ -136,7 +137,8 @@ public class HeroicService {
         }
     }
 
-    private static void configureBuilder(final HeroicCore.Builder builder, final Parameters params) {
+    private static void configureBuilder(final HeroicCore.Builder builder,
+            final Parameters params) {
         final Path config = getConfigPath(params.extra);
 
         // setup as a service accepting http requests.
@@ -145,20 +147,25 @@ public class HeroicService {
         // do not require a shell server by default.
         builder.setupShellServer(false);
 
-        if (config != null)
+        if (config != null) {
             builder.configPath(config);
+        }
 
-        if (params.port != null)
+        if (params.port != null) {
             builder.port(params.port);
+        }
 
-        if (params.host != null)
+        if (params.host != null) {
             builder.host(params.host);
+        }
 
-        if (params.startupPing != null)
+        if (params.startupPing != null) {
             builder.startupPing(params.startupPing);
+        }
 
-        if (params.startupId != null)
+        if (params.startupId != null) {
             builder.startupId(params.startupId);
+        }
 
         for (final String profile : params.profiles) {
             builder.profile(setupProfile(profile));
@@ -171,19 +178,22 @@ public class HeroicService {
     private static HeroicProfile setupProfile(final String profile) {
         final HeroicProfile p = HeroicModules.PROFILES.get(profile);
 
-        if (p == null)
+        if (p == null) {
             throw new IllegalArgumentException("No such profile: " + profile);
+        }
 
         log.info("Enabling Profile: {}", profile);
         return p;
     }
 
     private static Path getConfigPath(final List<String> extra) {
-        if (extra.size() > 0)
+        if (extra.size() > 0) {
             return Paths.get(extra.get(0));
+        }
 
-        if (Files.isRegularFile(DEFAULT_CONFIG))
+        if (Files.isRegularFile(DEFAULT_CONFIG)) {
             return DEFAULT_CONFIG;
+        }
 
         return null;
     }
@@ -210,10 +220,12 @@ public class HeroicService {
         return params;
     }
 
+    // @formatter:off
     @ToString
     @Data
     public static class Parameters {
-        @Option(name = "-P", aliases = { "--profile" }, usage = "Activate a pre-defined profile instead of a configuration file. Profiles are pre-defined configurations, useful for messing around with the system.")
+        @Option(name = "-P", aliases = {"--profile"},
+                usage = "Activate a pre-defined profile instead of a configuration file. Profiles are pre-defined configurations, useful for messing around with the system.")
         private List<String> profiles = new ArrayList<>();
 
         @Option(name = "--port", usage = "Port number to bind to")
@@ -225,19 +237,21 @@ public class HeroicService {
         @Option(name = "--id", usage = "Heroic identifier")
         private final String id = null;
 
-        @Option(name = "-h", aliases = { "--help" }, help = true, usage = "Display help.")
+        @Option(name = "-h", aliases = {"--help"}, help = true, usage = "Display help.")
         private boolean help;
 
-        @Option(name = "--startup-ping", usage = "Send a JSON frame to the given URI containing information about this host after it has started.")
+        @Option(name = "--startup-ping",
+                usage = "Send a JSON frame to the given URI containing information about this host after it has started.")
         private String startupPing;
 
         @Option(name = "--startup-id", usage = "Explicit id of a specific startup instance.")
         private String startupId;
 
-        @Option(name = "-X", usage="Define an extra parameter", metaVar="<key>=<value>")
+        @Option(name = "-X", usage = "Define an extra parameter", metaVar = "<key>=<value>")
         private final List<String> parameters = new ArrayList<>();
 
         @Argument
         private final List<String> extra = new ArrayList<>();
     }
+    // @formatter:on
 }

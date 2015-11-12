@@ -37,15 +37,18 @@ import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.aggregation.BucketReducerSession;
 import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
 
-public abstract class DistributedBucketInstance<B extends Bucket> extends BucketAggregationInstance<B> {
-    public DistributedBucketInstance(final long size, final long extent, final Set<MetricType> input, final MetricType out) {
-        super(size, extent, ImmutableSet.<MetricType>builder().addAll(input).add(MetricType.SPREAD).build(), out);
+public abstract class DistributedBucketInstance<B extends Bucket>
+        extends BucketAggregationInstance<B> {
+    public DistributedBucketInstance(final long size, final long extent,
+            final Set<MetricType> input, final MetricType out) {
+        super(size, extent,
+                ImmutableSet.<MetricType> builder().addAll(input).add(MetricType.SPREAD).build(),
+                out);
     }
 
     @Override
@@ -62,14 +65,16 @@ public abstract class DistributedBucketInstance<B extends Bucket> extends Bucket
                 final ReducerSession session = reducer(range);
 
                 // combine all the tags.
-                final Iterator<ShardedResultGroup> step1 = Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
+                final Iterator<ShardedResultGroup> step1 =
+                        Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
 
                 final Iterator<TagValues> step2 = Iterators.concat(Iterators.transform(step1, g -> {
                     g.getGroup().updateReducer(session, tags);
                     return g.getTags().iterator();
                 }));
 
-                final List<TagValues> tagValues = TagValues.fromEntries(Iterators.concat(Iterators.transform(step2, TagValues::iterator)));
+                final List<TagValues> tagValues = TagValues.fromEntries(
+                        Iterators.concat(Iterators.transform(step2, TagValues::iterator)));
 
                 final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
 
@@ -84,6 +89,7 @@ public abstract class DistributedBucketInstance<B extends Bucket> extends Bucket
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build, range);
+        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build,
+                range);
     }
 }

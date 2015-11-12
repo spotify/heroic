@@ -50,7 +50,7 @@ public class Series implements Comparable<Series> {
 
     /**
      * Package-private constructor to avoid invalid inputs.
-     * 
+     *
      * @param key The key of the time series.
      * @param tags The tags of the time series.
      */

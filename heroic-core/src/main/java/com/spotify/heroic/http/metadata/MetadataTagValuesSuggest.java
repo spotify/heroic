@@ -64,8 +64,9 @@ public class MetadataTagValuesSuggest {
     private final int groupLimit;
 
     @JsonCreator
-    public MetadataTagValuesSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
-            @JsonProperty("limit") Integer limit, @JsonProperty("exclude") List<String> exclude,
+    public MetadataTagValuesSuggest(@JsonProperty("filter") Filter filter,
+            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit,
+            @JsonProperty("exclude") List<String> exclude,
             @JsonProperty("groupLimimt") Integer groupLimit) {
         this.filter = Optional.ofNullable(filter);
         this.range = Optional.ofNullable(range);

@@ -26,7 +26,8 @@ import lombok.ToString;
 
 @AutoSerialize
 @ToString
-public class CommandDone implements Message {@Override
+public class CommandDone implements Message {
+    @Override
     public <R> R visit(Visitor<R> visitor) throws Exception {
         return visitor.visitCommandDone(this);
     }

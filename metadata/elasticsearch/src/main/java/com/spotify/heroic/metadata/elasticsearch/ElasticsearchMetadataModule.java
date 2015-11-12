@@ -73,7 +73,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
 
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
-    private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240l;
+    private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240L;
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
@@ -85,9 +85,10 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
 
-    private static BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend> defaultSetup = MetadataBackendKV.factory();
+    private static BackendTypeFactory<MetadataBackend> defaultSetup = MetadataBackendKV.factory();
 
-    private static final Map<String, BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend>> backendTypes = new HashMap<>();
+    private static final Map<String, BackendTypeFactory<MetadataBackend>> backendTypes =
+            new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
@@ -99,27 +100,29 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     }
 
     @JsonIgnore
-    private final BackendTypeFactory<ElasticsearchMetadataModule, MetadataBackend> backendTypeBuilder;
+    private final BackendTypeFactory<MetadataBackend> backendTypeBuilder;
 
     @JsonCreator
-    public ElasticsearchMetadataModule(@JsonProperty("id") String id, @JsonProperty("groups") Groups groups,
+    public ElasticsearchMetadataModule(@JsonProperty("id") String id,
+            @JsonProperty("groups") Groups groups,
             @JsonProperty("connection") ManagedConnectionFactory connection,
             @JsonProperty("writesPerSecond") Double writesPerSecond,
             @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
-            @JsonProperty("templateName") String templateName, @JsonProperty("backendType") String backendType) {
+            @JsonProperty("templateName") String templateName,
+            @JsonProperty("backendType") String backendType) {
         this.id = id;
         this.groups = ofNullable(groups).orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.connection = ofNullable(connection).orElseGet(ManagedConnectionFactory::buildDefault);
         this.writesPerSecond = ofNullable(writesPerSecond).orElse(DEFAULT_WRITES_PER_SECOND);
-        this.writeCacheDurationMinutes = ofNullable(writeCacheDurationMinutes)
-                .orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.writeCacheDurationMinutes =
+                ofNullable(writeCacheDurationMinutes).orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
         this.templateName = ofNullable(templateName).orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder = ofNullable(backendTypes.get(backendType)).orElse(defaultSetup);
     }
 
     @Override
     public Module module(final Key<MetadataBackend> key, final String id) {
-        final BackendType<MetadataBackend> backendType = backendTypeBuilder.setup(this);
+        final BackendType<MetadataBackend> backendType = backendTypeBuilder.setup();
 
         return new PrivateModule() {
             @Provides
@@ -136,7 +139,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
 
             @Provides
             @Inject
-            public Managed<Connection> connection(ManagedConnectionFactory builder) throws IOException {
+            public Managed<Connection> connection(ManagedConnectionFactory builder)
+                    throws IOException {
                 return builder.construct(templateName, backendType.mappings());
             }
 
@@ -144,22 +148,25 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
             @Singleton
             @Named("configure")
             public boolean configure(ExtraParameters params) {
-                return params.contains(ExtraParameters.CONFIGURE) || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+                return params.contains(ExtraParameters.CONFIGURE)
+                        || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
             }
 
             @Provides
             @Singleton
-            public RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache() throws IOException {
-                final Cache<Pair<String, Series>, AsyncFuture<WriteResult>> cache = CacheBuilder.newBuilder()
-                        .concurrencyLevel(4)
+            public RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache()
+                    throws IOException {
+                final Cache<Pair<String, Series>, AsyncFuture<WriteResult>> cache = CacheBuilder
+                        .newBuilder().concurrencyLevel(4)
                         .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
 
                 if (writesPerSecond <= 0d) {
-                    return new DisabledRateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>>(cache);
+                    return new DisabledRateLimitedCache<>(cache);
                 }
 
                 return new DefaultRateLimitedCache<>(cache, RateLimiter.create(writesPerSecond));
             }
+
             @Override
             protected void configure() {
                 bind(ManagedConnectionFactory.class).toInstance(connection);
@@ -228,8 +235,8 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         }
 
         public ElasticsearchMetadataModule build() {
-            return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond, writeCacheDurationMinutes,
-                    templateName, backendType);
+            return new ElasticsearchMetadataModule(id, groups, connection, writesPerSecond,
+                    writeCacheDurationMinutes, templateName, backendType);
         }
     }
 }

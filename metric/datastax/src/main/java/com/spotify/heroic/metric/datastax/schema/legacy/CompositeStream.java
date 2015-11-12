@@ -43,8 +43,9 @@ public class CompositeStream {
 
         buffer.position(buffer.position() + segment);
 
-        if (buffer.get() != EQ)
+        if (buffer.get() != EQ) {
             throw new IllegalStateException("Illegal state in ComponentReader, expected EQ (0)");
+        }
 
         return result;
     }

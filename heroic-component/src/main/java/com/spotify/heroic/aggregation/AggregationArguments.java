@@ -33,8 +33,8 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.grammar.Value;
 
 /**
- * Utility class to contain a set of arguments and keywords in order to match the to aggregation parameters and
- * guarantee that all are consumed.
+ * Utility class to contain a set of arguments and keywords in order to match the to aggregation
+ * parameters and guarantee that all are consumed.
  */
 public class AggregationArguments {
     private final LinkedList<Value> args;
@@ -49,7 +49,8 @@ public class AggregationArguments {
      * Take all arguments as a list with the given type.
      */
     public <T> List<T> takeArguments(final Class<T> expected) {
-        final List<T> result = ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
+        final List<T> result =
+                ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
         args.clear();
         return result;
     }
@@ -80,7 +81,8 @@ public class AggregationArguments {
             final Joiner on = Joiner.on(" and ");
 
             if (!args.isEmpty()) {
-                parts.add(args.size() == 1 ? "argument " + args.iterator().next() : "arguments " + args);
+                parts.add(args.size() == 1 ? "argument " + args.iterator().next()
+                        : "arguments " + args);
             }
 
             if (!kw.isEmpty()) {

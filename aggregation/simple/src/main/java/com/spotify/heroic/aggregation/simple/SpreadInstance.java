@@ -30,8 +30,10 @@ import com.spotify.heroic.metric.MetricType;
 
 public class SpreadInstance extends DistributedBucketInstance<SpreadBucket> {
     @JsonCreator
-    public SpreadInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
-        super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.SPREAD);
+    public SpreadInstance(@JsonProperty("size") final long size,
+            @JsonProperty("extent") final long extent) {
+        super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD),
+                MetricType.SPREAD);
     }
 
     @Override

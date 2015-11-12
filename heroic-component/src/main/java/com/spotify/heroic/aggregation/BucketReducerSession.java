@@ -45,7 +45,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class BucketReducerSession<B extends Bucket> implements ReducerSession {
-    public static final long MAX_BUCKET_COUNT = 100000l;
+    public static final long MAX_BUCKET_COUNT = 100000L;
 
     private final MetricType out;
     private final long offset;
@@ -56,7 +56,8 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
 
     private final LongAdder sampleSize = new LongAdder();
 
-    public BucketReducerSession(MetricType out, long size, long extent, Function<Long, B> bucketBuilder, Function<B, Metric> bucketConverter, DateRange range) {
+    public BucketReducerSession(MetricType out, long size, long extent,
+            Function<Long, B> bucketBuilder, Function<B, Metric> bucketConverter, DateRange range) {
         this.out = out;
         this.offset = range.start();
         this.size = size;
@@ -116,7 +117,8 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
             return Collections.emptyIterator();
         }
 
-        // iterator that iterates from the largest to the smallest matching bucket for _this_ metric.
+        // iterator that iterates from the largest to the smallest matching bucket for _this_
+        // metric.
         return new Iterator<B>() {
             long current = te;
 
@@ -132,7 +134,7 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
 
             @Override
             public B next() {
-                final int index = (int)(current / size);
+                final int index = (int) (current / size);
                 current -= size;
                 return buckets.get(index);
             }
@@ -146,14 +148,16 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
         for (final B bucket : buckets) {
             final Metric d = bucketConverter.apply(bucket);
 
-            if (!d.valid())
+            if (!d.valid()) {
                 continue;
+            }
 
             result.add(d);
         }
 
         final MetricCollection metrics = MetricCollection.build(out, result);
-        final Statistics statistics = new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
+        final Statistics statistics =
+                new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
         return new ReducerResult(ImmutableList.of(metrics), statistics);
     }
 

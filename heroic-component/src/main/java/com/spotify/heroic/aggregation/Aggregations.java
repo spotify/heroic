@@ -31,8 +31,9 @@ public abstract class Aggregations {
     /**
      * Creates an aggregation chain.
      *
-     * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single entry will return
-     * that single item. More than one entry will construct a new instance of {@link AggregationChain}.
+     * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single
+     * entry will return that single item. More than one entry will construct a new instance of
+     * {@link AggregationChain}.
      *
      * @param input The input chain.
      * @return A new aggregation for the given chain.
@@ -63,11 +64,13 @@ public abstract class Aggregations {
      * @return A new aggregation for the given chain.
      */
     public static AggregationInstance chain(AggregationInstance... aggregations) {
-        if (aggregations.length == 0)
+        if (aggregations.length == 0) {
             return EmptyInstance.INSTANCE;
+        }
 
-        if (aggregations.length == 1)
+        if (aggregations.length == 1) {
             return aggregations[0];
+        }
 
         return new ChainInstance(Arrays.asList(aggregations));
     }

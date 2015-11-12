@@ -23,7 +23,6 @@ package com.spotify.heroic.reflection;
 
 import lombok.RequiredArgsConstructor;
 
-
 @RequiredArgsConstructor
 class ResourceLineContext {
     private final ResourcePathContext parent;

@@ -22,45 +22,43 @@
 package com.spotify.heroic.statistics;
 
 public interface LocalMetadataBackendReporter {
-    public FutureReporter.Context reportRefresh();
+    FutureReporter.Context reportRefresh();
 
-    public FutureReporter.Context reportFindTags();
+    FutureReporter.Context reportFindTags();
 
-    public FutureReporter.Context reportFindTagKeys();
+    FutureReporter.Context reportFindTagKeys();
 
-    public FutureReporter.Context reportFindTimeSeries();
+    FutureReporter.Context reportFindTimeSeries();
 
-    public FutureReporter.Context reportCountSeries();
+    FutureReporter.Context reportCountSeries();
 
-    public FutureReporter.Context reportFindKeys();
+    FutureReporter.Context reportFindKeys();
 
-    public FutureReporter.Context reportWrite();
+    FutureReporter.Context reportWrite();
 
-    public void reportWriteCacheHit();
+    void reportWriteCacheHit();
 
-    public void reportWriteCacheMiss();
+    void reportWriteCacheMiss();
 
-    public void reportWriteDroppedByRateLimit();
+    void reportWriteDroppedByRateLimit();
 
     /**
      * report number of successful operations in a batch
      *
-     * @param n
-     *            number of successes
+     * @param n number of successes
      */
-    public void reportWriteSuccess(long n);
+    void reportWriteSuccess(long n);
 
     /**
      * report number of failed operations in a batch
      *
-     * @param n
-     *            number of failures
+     * @param n number of failures
      */
-    public void reportWriteFailure(long n);
+    void reportWriteFailure(long n);
 
-    public void reportWriteBatchDuration(long millis);
+    void reportWriteBatchDuration(long millis);
 
-    public void newWriteThreadPool(ThreadPoolProvider provider);
+    void newWriteThreadPool(ThreadPoolProvider provider);
 
-    public ThreadPoolReporter newThreadPool();
+    ThreadPoolReporter newThreadPool();
 }

@@ -40,7 +40,8 @@ public class NativeRpcEncoder extends MessageToByteEncoder<Object> {
     private final MessagePack messagePack = new MessagePack();
 
     @Override
-    protected void encode(final ChannelHandlerContext ctx, final Object in, final ByteBuf out) throws Exception {
+    protected void encode(final ChannelHandlerContext ctx, final Object in, final ByteBuf out)
+            throws Exception {
         try (final ByteBufOutputStream stream = new ByteBufOutputStream(out)) {
             try (final Packer packer = messagePack.createPacker(stream)) {
                 if (in instanceof NativeRpcHeartBeat) {

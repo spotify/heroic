@@ -44,7 +44,8 @@ public class MetricGroup implements Metric {
     private final int valueHash;
 
     @JsonCreator
-    public MetricGroup(@JsonProperty("timestamp") long timestamp, @JsonProperty("groups") List<MetricCollection> groups) {
+    public MetricGroup(@JsonProperty("timestamp") long timestamp,
+            @JsonProperty("groups") List<MetricCollection> groups) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
         this.valueHash = calculateValueHash(this.groups);

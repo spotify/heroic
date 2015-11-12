@@ -32,17 +32,19 @@ import com.spotify.heroic.metric.datastax.TypeSerializer;
 
 public class SeriesSerializer implements TypeSerializer<Series> {
     private final TypeSerializer<String> key = new StringSerializer();
-    private final TypeSerializer<Map<String, String>> tags = new MapSerializer<>(new StringSerializer(),
-            new StringSerializer());
+    private final TypeSerializer<Map<String, String>> tags =
+            new MapSerializer<>(new StringSerializer(), new StringSerializer());
 
     private static final Comparator<String> COMPARATOR = new Comparator<String>() {
         public int compare(String a, String b) {
             if (a == null || b == null) {
-                if (a == null)
+                if (a == null) {
                     return -1;
+                }
 
-                if (b == null)
+                if (b == null) {
                     return 1;
+                }
 
                 return 0;
             }

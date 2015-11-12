@@ -64,11 +64,13 @@ public class QueryResult {
 
     /**
      * Collect result parts into a complete result.
-     * 
+     *
      * @param range The range which the result represents.
      * @return A complete QueryResult.
      */
-    public static Collector<QueryResultPart, QueryResult> collectParts(final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner) {
+    public static Collector<QueryResultPart, QueryResult> collectParts(
+            final QueryTrace.Identifier what, final DateRange range,
+            final AggregationCombiner combiner) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return parts -> {
@@ -90,7 +92,8 @@ public class QueryResult {
             }
 
             final List<ShardedResultGroup> groups = combiner.combine(all);
-            return new QueryResult(range, groups, errors, traces, new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
+            return new QueryResult(range, groups, errors, traces,
+                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
         };
     }
 }

@@ -43,7 +43,7 @@ public class SingleIndexMapping implements IndexMapping {
     @JsonCreator
     public SingleIndexMapping(@JsonProperty("index") String index) {
         this.index = Optional.fromNullable(index).or(DEFAULT_INDEX);
-        this.indices = new String[] { index };
+        this.indices = new String[] {index};
     }
 
     public static SingleIndexMapping createDefault() {
@@ -76,7 +76,8 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, DateRange range, final String type) {
+    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, DateRange range,
+            final String type) {
         return client.prepareDeleteByQuery(index).setTypes(type);
     }
 

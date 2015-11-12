@@ -4,7 +4,7 @@
     <Console name="primary" target="SYSTEM_OUT">
       <PatternLayout alwaysWriteExceptions="false" pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=white, DEBUG=green bold, TRACE=blue}"/>
     </Console>
-  </Appenders> 
+  </Appenders>
   <Loggers>
     <Logger name="com.spotify.heroic.mrpc" level="WARN" additivity="false">
       <AppenderRef ref="primary" />

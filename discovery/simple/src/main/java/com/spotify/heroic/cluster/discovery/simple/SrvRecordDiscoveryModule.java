@@ -45,7 +45,8 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
     private final Optional<Integer> port;
 
     @JsonCreator
-    public SrvRecordDiscoveryModule(@JsonProperty("records") List<String> records, @JsonProperty("protocol") String protocol, @JsonProperty("port") Integer port) {
+    public SrvRecordDiscoveryModule(@JsonProperty("records") List<String> records,
+            @JsonProperty("protocol") String protocol, @JsonProperty("port") Integer port) {
         this.records = Optional.ofNullable(records).orElseGet(ImmutableList::of);
         this.protocol = Optional.ofNullable(protocol);
         this.port = Optional.ofNullable(port);
@@ -90,7 +91,7 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
         private Integer port;
 
         public Builder records(final List<String> records) {
-            this.records = ImmutableList.<String>builder().addAll(records);
+            this.records = ImmutableList.<String> builder().addAll(records);
             return this;
         }
 

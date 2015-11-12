@@ -27,14 +27,14 @@ import com.spotify.heroic.common.Statistics;
 import eu.toolchain.async.AsyncFuture;
 
 public interface Consumer extends LifeCycle {
-    public static final String CONSUMING = "consuming";
-    public static final String TOTAL = "total";
-    public static final String ERRORS = "errors";
-    public static final String CONSUMED = "consumed";
+    String CONSUMING = "consuming";
+    String TOTAL = "total";
+    String ERRORS = "errors";
+    String CONSUMED = "consumed";
 
-    public Statistics getStatistics();
+    Statistics getStatistics();
 
-    public AsyncFuture<Void> pause();
+    AsyncFuture<Void> pause();
 
-    public AsyncFuture<Void> resume();
+    AsyncFuture<Void> resume();
 }

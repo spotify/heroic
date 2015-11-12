@@ -40,7 +40,7 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     private final AtomicBoolean started = new AtomicBoolean(false);
     private final AtomicBoolean stopped = new AtomicBoolean(false);
-    private final Object $lock = new Object();
+    private final Object lock = new Object();
 
     private volatile Injector injector;
 
@@ -50,12 +50,14 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     @Override
     public void registerShutdown(final String name, final ShutdownHook hook) {
-        if (stopped.get())
+        if (stopped.get()) {
             throw new IllegalStateException("lifecycle already stopped");
+        }
 
-        synchronized ($lock) {
-            if (stopped.get())
+        synchronized (lock) {
+            if (stopped.get()) {
                 throw new IllegalStateException("lifecycle already stopped");
+            }
 
             shutdownHooks.add(new Runnable() {
                 @Override
@@ -69,12 +71,14 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     @Override
     public void register(final String name, final StartupHook hook) {
-        if (started.get())
+        if (started.get()) {
             throw new IllegalStateException("lifecycle already started");
+        }
 
-        synchronized ($lock) {
-            if (started.get())
+        synchronized (lock) {
+            if (started.get()) {
                 throw new IllegalStateException("lifecycle already started");
+            }
 
             startupHooks.add(new StartupHookRunnable() {
                 @Override
@@ -88,12 +92,13 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     @Override
     public void start() {
-        if (!started.compareAndSet(false, true))
+        if (!started.compareAndSet(false, true)) {
             return;
+        }
 
         final Collection<StartupHookRunnable> hooks;
 
-        synchronized ($lock) {
+        synchronized (lock) {
             hooks = new ArrayList<>(this.startupHooks);
             startupHooks.clear();
         }
@@ -105,12 +110,13 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     @Override
     public void stop() {
-        if (!stopped.compareAndSet(false, true))
+        if (!stopped.compareAndSet(false, true)) {
             return;
+        }
 
         final Collection<Runnable> hooks;
 
-        synchronized ($lock) {
+        synchronized (lock) {
             hooks = new ArrayList<>(this.shutdownHooks);
             startupHooks.clear();
         }

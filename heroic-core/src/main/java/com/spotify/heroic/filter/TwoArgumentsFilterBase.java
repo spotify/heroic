@@ -26,8 +26,8 @@ import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class TwoArgumentsFilterBase<T extends Filter.TwoArgs<A, B>, A, B> implements
-        TwoArgumentsFilter<T, A, B>, FilterJsonSerialization<T> {
+public abstract class TwoArgumentsFilterBase<T extends Filter.TwoArgs<A, B>, A, B>
+        implements TwoArgumentsFilter<T, A, B>, FilterJsonSerialization<T> {
     private final FilterJsonSerialization<A> first;
     private final FilterJsonSerialization<B> second;
 
@@ -39,7 +39,8 @@ public abstract class TwoArgumentsFilterBase<T extends Filter.TwoArgs<A, B>, A, 
     }
 
     @Override
-    public void serialize(FilterJsonSerialization.Serializer serializer, T filter) throws IOException {
+    public void serialize(FilterJsonSerialization.Serializer serializer, T filter)
+            throws IOException {
         first.serialize(serializer, filter.first());
         second.serialize(serializer, filter.second());
     }

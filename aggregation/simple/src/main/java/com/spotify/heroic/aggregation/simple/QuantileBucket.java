@@ -20,16 +20,18 @@
  */
 
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file to you under the Apache
+ * License, Version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
  */
 
 /**
@@ -49,15 +51,16 @@ import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm for streaming calculation of targeted
- * high-percentile epsilon-approximate quantiles.
- * 
- * This is a generalization of the earlier work by Greenwald and Khanna (GK), which essentially allows different error
- * bounds on the targeted quantiles, which allows for far more efficient calculation of high-percentiles.
- * 
- * See: Cormode, Korn, Muthukrishnan, and Srivastava "Effective Computation of Biased Quantiles over Data Streams" in
- * ICDE 2005
- * 
+ * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm for streaming
+ * calculation of targeted high-percentile epsilon-approximate quantiles.
+ *
+ * This is a generalization of the earlier work by Greenwald and Khanna (GK), which essentially
+ * allows different error bounds on the targeted quantiles, which allows for far more efficient
+ * calculation of high-percentiles.
+ *
+ * See: Cormode, Korn, Muthukrishnan, and Srivastava
+ * "Effective Computation of Biased Quantiles over Data Streams" in ICDE 2005
+ *
  * Greenwald and Khanna, "Space-efficient online computation of quantile summaries" in SIGMOD 2001
  */
 @RequiredArgsConstructor
@@ -84,9 +87,8 @@ public class QuantileBucket extends AbstractBucket {
 
     /**
      * Add a new data point from the stream.
-     * 
-     * @param d
-     *            data point to add.
+     *
+     * @param d data point to add.
      */
     @Override
     public synchronized void updatePoint(Map<String, String> tags, Point d) {
@@ -122,12 +124,13 @@ public class QuantileBucket extends AbstractBucket {
     }
 
     /**
-     * Merges items from buffer into the samples array in one pass. This is more efficient than doing an insert on every
-     * item.
+     * Merges items from buffer into the samples array in one pass. This is more efficient than
+     * doing an insert on every item.
      */
     private void insertBatch() {
-        if (index == 0)
+        if (index == 0) {
             return;
+        }
 
         Arrays.sort(batch, 0, index);
 
@@ -146,12 +149,14 @@ public class QuantileBucket extends AbstractBucket {
         for (int i = start; i < index; i++) {
             final double value = batch[i];
 
-            while (it.nextIndex() < samples.size() && prev.value < value)
+            while (it.nextIndex() < samples.size() && prev.value < value) {
                 prev = it.next();
+            }
 
             // If we found that bigger item, back up so we insert ourselves before it
-            if (prev.value > value)
+            if (prev.value > value) {
                 it.previous();
+            }
 
             // We use different indexes for the edge comparisons, because of the above
             // if statement that adjusts the iterator
@@ -166,12 +171,13 @@ public class QuantileBucket extends AbstractBucket {
     }
 
     /**
-     * Try to remove extraneous items from the set of sampled items. This checks if an item is unnecessary based on the
-     * desired error bounds, and merges it with the adjacent item if it is.
+     * Try to remove extraneous items from the set of sampled items. This checks if an item is
+     * unnecessary based on the desired error bounds, and merges it with the adjacent item if it is.
      */
     private void compressSamples() {
-        if (samples.size() < 2)
+        if (samples.size() < 2) {
             return;
+        }
 
         final ListIterator<SampleItem> it = samples.listIterator();
 
@@ -182,8 +188,9 @@ public class QuantileBucket extends AbstractBucket {
 
             next = it.next();
 
-            if (prev.g + next.g + next.delta > allowableError(it.previousIndex()))
+            if (prev.g + next.g + next.delta > allowableError(it.previousIndex())) {
                 continue;
+            }
 
             next.g += prev.g;
 
@@ -199,11 +206,11 @@ public class QuantileBucket extends AbstractBucket {
 
     /**
      * Specifies the allowable error for this rank, depending on which quantiles are being targeted.
-     * 
-     * This is the f(r_i, n) function from the CKMS paper. It's basically how wide the range of this rank can be.
-     * 
-     * @param rank
-     *            the index in the list of samples
+     *
+     * This is the f(r_i, n) function from the CKMS paper. It's basically how wide the range of this
+     * rank can be.
+     *
+     * @param rank the index in the list of samples
      */
     private double allowableError(int rank) {
         int size = samples.size();
@@ -211,36 +218,39 @@ public class QuantileBucket extends AbstractBucket {
         final double error = calculateError(rank, size);
         final double minError = size + 1;
 
-        if (error < minError)
+        if (error < minError) {
             return error;
+        }
 
         return minError;
     }
 
     private double calculateError(int rank, int size) {
-        if (rank <= quantile * size)
+        if (rank <= quantile * size) {
             return (2.0 * this.error * (size - rank)) / (1.0 - quantile);
+        }
 
         return (2.0 * this.error * rank) / quantile;
     }
 
     private int calculateDelta(int previousIndex, int nextIndex) {
-        if (previousIndex == 0 || nextIndex == samples.size())
+        if (previousIndex == 0 || nextIndex == samples.size()) {
             return 0;
+        }
 
         return ((int) Math.floor(allowableError(nextIndex))) - 1;
     }
 
     /**
      * Get the estimated value at the specified quantile.
-     * 
-     * @param quantile
-     *            Queried quantile, e.g. 0.50 or 0.99.
+     *
+     * @param quantile Queried quantile, e.g. 0.50 or 0.99.
      * @return Estimated value at that quantile.
      */
     private double query(double quantile) {
-        if (samples.isEmpty())
+        if (samples.isEmpty()) {
             throw new IllegalStateException("no data in estimator");
+        }
 
         int rankMin = 0;
         int desired = (int) (quantile * count);
@@ -256,8 +266,9 @@ public class QuantileBucket extends AbstractBucket {
 
             rankMin += prev.g;
 
-            if (rankMin + next.g + next.delta > desired + (allowableError(i) / 2))
+            if (rankMin + next.g + next.delta > desired + (allowableError(i) / 2)) {
                 return prev.value;
+            }
         }
 
         // edge case of wanting max value

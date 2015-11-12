@@ -76,8 +76,9 @@ public class FindSeries {
                         duplicates += 1;
                     }
 
-                    if (series.size() >= limit)
+                    if (series.size() >= limit) {
                         break outer;
+                    }
                 }
 
                 duplicates += result.duplicates;
@@ -93,8 +94,9 @@ public class FindSeries {
     }
 
     @JsonCreator
-    public FindSeries(@JsonProperty("errors") List<RequestError> errors, @JsonProperty("series") Set<Series> series,
-            @JsonProperty("size") int size, @JsonProperty("duplicates") int duplicates) {
+    public FindSeries(@JsonProperty("errors") List<RequestError> errors,
+            @JsonProperty("series") Set<Series> series, @JsonProperty("size") int size,
+            @JsonProperty("duplicates") int duplicates) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.series = series;
         this.size = size;
@@ -105,24 +107,28 @@ public class FindSeries {
         this(EMPTY_ERRORS, series, size, duplicates);
     }
 
-    public static Transform<Throwable, ? extends FindSeries> nodeError(final NodeRegistryEntry node) {
+    public static Transform<Throwable, ? extends FindSeries> nodeError(
+            final NodeRegistryEntry node) {
         return new Transform<Throwable, FindSeries>() {
             @Override
             public FindSeries transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new FindSeries(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_SERIES, 0, 0);
+                return new FindSeries(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_SERIES, 0, 0);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends FindSeries> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends FindSeries> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, FindSeries>() {
             @Override
             public FindSeries transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new FindSeries(errors, EMPTY_SERIES, 0, 0);
             }
         };

@@ -85,7 +85,8 @@ public class SuggestManagerModule extends PrivateModule {
     }
 
     private void bindBackends(final Collection<SuggestModule> configs) {
-        final Multibinder<SuggestBackend> bindings = Multibinder.newSetBinder(binder(), SuggestBackend.class);
+        final Multibinder<SuggestBackend> bindings =
+                Multibinder.newSetBinder(binder(), SuggestBackend.class);
 
         int i = 0;
 
@@ -104,8 +105,8 @@ public class SuggestManagerModule extends PrivateModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<List<SuggestModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();

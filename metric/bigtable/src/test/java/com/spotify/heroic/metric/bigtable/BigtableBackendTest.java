@@ -29,8 +29,8 @@ public class BigtableBackendTest {
         final ByteString a = BigtableBackend.serializeOffset(s);
         final ByteString b = BigtableBackend.serializeOffset(l);
 
-        assertTrue(String.format("%s < %s", HexUtils.toHex(a.toByteArray()), HexUtils.toHex(b.toByteArray())),
-                compare(a, b) < 0);
+        assertTrue(String.format("%s < %s", HexUtils.toHex(a.toByteArray()),
+                HexUtils.toHex(b.toByteArray())), compare(a, b) < 0);
         assertEquals(s, BigtableBackend.deserializeOffset(a));
         assertEquals(l, BigtableBackend.deserializeOffset(b));
     }
@@ -40,20 +40,23 @@ public class BigtableBackendTest {
         ByteIterator itB = b.iterator();
 
         while (itA.hasNext()) {
-            if (!itB.hasNext())
+            if (!itB.hasNext()) {
                 return -1;
+            }
 
             int bA = itA.nextByte() & 0xff;
             int bB = itB.nextByte() & 0xff;
 
             int c = Integer.compare(bA, bB);
 
-            if (c != 0)
+            if (c != 0) {
                 return c;
+            }
         }
 
-        if (itB.hasNext())
+        if (itB.hasNext()) {
             return 1;
+        }
 
         return 0;
     }

@@ -41,7 +41,8 @@ import eu.toolchain.async.Transform;
 public interface SchemaInstance {
     public TypeSerializer<MetricsRowKey> rowKey();
 
-    public List<PreparedFetch> ranges(final Series series, final DateRange range) throws IOException;
+    public List<PreparedFetch> ranges(final Series series, final DateRange range)
+            throws IOException;
 
     public PreparedFetch row(final BackendKey key) throws IOException;
 

@@ -22,16 +22,16 @@
 package com.spotify.heroic;
 
 public interface HeroicInternalLifeCycle {
-    public static interface Context {
-        public void registerShutdown(ShutdownHook hook);
+    interface Context {
+        void registerShutdown(ShutdownHook hook);
     }
 
-    public static interface ShutdownHook {
+    interface ShutdownHook {
         public void onShutdown() throws Exception;
     }
 
-    public static interface StartupHook {
-        public void onStartup(HeroicInternalLifeCycle.Context context) throws Exception;
+    interface StartupHook {
+        void onStartup(HeroicInternalLifeCycle.Context context) throws Exception;
     }
 
     /**
@@ -40,7 +40,7 @@ public interface HeroicInternalLifeCycle {
      * @param name
      * @param runnable
      */
-    public void registerShutdown(String name, ShutdownHook hook);
+    void registerShutdown(String name, ShutdownHook hook);
 
     /**
      * Register a hook to be run at startup.
@@ -48,9 +48,9 @@ public interface HeroicInternalLifeCycle {
      * @param name
      * @param startup
      */
-    public void register(String name, StartupHook hook);
+    void register(String name, StartupHook hook);
 
-    public void start();
+    void start();
 
-    public void stop();
+    void stop();
 }

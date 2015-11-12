@@ -206,7 +206,9 @@ public class HeroicConfig {
                 suggest.orElseGet(SuggestManagerModule::builder).build(),
                 cache.orElseGet(AggregationCacheModule::builder).build(),
                 ingestion.orElseGet(IngestionModule::builder).build(),
-                consumers.map(cl -> ImmutableList.copyOf(cl.stream().map(ConsumerModule.Builder::build).iterator())).orElseGet(ImmutableList::of),
+                consumers.map(cl -> {
+                    return ImmutableList.copyOf(cl.stream().map(c -> c.build()).iterator());
+                }).orElseGet(ImmutableList::of),
                 shellServer.map(ShellServerModule.Builder::build)
             );
             // @formatter:on

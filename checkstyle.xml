@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Puppy Crawl//DTD Check Configuration 1.2//EN"
+    "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
+<module name="Checker">
+    <module name="NewlineAtEndOfFile" />
+
+    <module name="FileLength" />
+
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true" />
+    </module>
+
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$" />
+        <property name="message" value="Line has trailing spaces." />
+    </module>
+
+    <!-- use eclipse-style supression comments -->
+    <module name="SuppressionCommentFilter">
+        <property name="offCommentFormat" value="@formatter:off"/>
+        <property name="onCommentFormat" value="@formatter:on"/>
+    </module>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${basedir}/suppressions.xml"/>
+    </module>
+
+    <module name="TreeWalker">
+        <property name="cacheFile" value="${basedir}/checkstyle-cache" />
+
+        <module name="LineLength">
+            <property name="max" value="100" />
+        </module>
+
+        <module name="FileContentsHolder" />
+        <module name="LocalFinalVariableName" />
+        <module name="LocalVariableName" />
+        <module name="MemberName" />
+        <module name="MethodName" />
+        <module name="PackageName" />
+        <module name="ParameterName" />
+        <module name="StaticVariableName" />
+        <module name="TypeName" />
+        <module name="AvoidStarImport" />
+        <module name="IllegalImport" />
+        <module name="RedundantImport" />
+        <module name="UnusedImports" />
+        <module name="MethodLength" />
+        <module name="EmptyForIteratorPad" />
+        <module name="MethodParamPad" />
+        <module name="NoWhitespaceAfter" />
+        <module name="NoWhitespaceBefore" />
+        <module name="ParenPad" />
+        <module name="TypecastParenPad" />
+        <module name="WhitespaceAfter" />
+        <module name="WhitespaceAround" />
+        <module name="ModifierOrder" />
+        <module name="LeftCurly" />
+        <module name="NeedBraces" />
+        <module name="RightCurly" />
+        <module name="EmptyStatement" />
+        <module name="EqualsHashCode" />
+        <module name="IllegalInstantiation" />
+        <module name="MissingSwitchDefault" />
+        <module name="SimplifyBooleanExpression" />
+        <module name="ArrayTypeStyle" />
+        <module name="UpperEll" />
+    </module>
+
+    <module name="Header">
+        <property name="headerFile" value="${basedir}/tools/java.header" />
+        <property name="ignoreLines" value="2" />
+        <property name="fileExtensions" value="java" />
+    </module>
+</module>

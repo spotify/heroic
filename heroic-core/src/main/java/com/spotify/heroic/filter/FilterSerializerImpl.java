@@ -28,16 +28,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-import lombok.RequiredArgsConstructor;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Serializes aggregation configurations.
  *
- * Each aggregation configuration is packed into a Composite which has the type of the aggregation as a prefixed short.
+ * Each aggregation configuration is packed into a Composite which has the type of the aggregation
+ * as a prefixed short.
  *
  * @author udoprog
  */
@@ -53,24 +54,27 @@ public class FilterSerializerImpl implements FilterSerializer {
     private final HashMap<Class<?>, String> typeMapping = new HashMap<>();
 
     // lock to prevent duplicate work when looking for an unknown type id.
-    private final Object $getTypeId = new Object();
+    private final Object typeIdLock = new Object();
 
     /**
-     * Caches concrete type implementations to their corresponding id depending on which filter interface they impement.
+     * Caches concrete type implementations to their corresponding id depending on which filter
+     * interface they impement.
      */
     private final ConcurrentHashMap<Class<?>, String> typeCache = new ConcurrentHashMap<>();
 
     private <T extends Filter> void register(String id, Class<T> type, Serializer<T> serializer) {
-        if (idMapping.put(id, serializer) != null)
+        if (idMapping.put(id, serializer) != null) {
             throw new IllegalStateException("Multiple mappings for single id: " + id);
+        }
 
-        if (typeMapping.put(type, id) != null)
+        if (typeMapping.put(type, id) != null) {
             throw new IllegalStateException("Multiple mappings for single type: " + type);
+        }
     }
 
     @Override
-    public <T extends Filter.OneArg<A>, A> void register(String id, Class<T> type, OneArgumentFilter<T, A> builder,
-            Serializer<A> first) {
+    public <T extends Filter.OneArg<A>, A> void register(String id, Class<T> type,
+            OneArgumentFilter<T, A> builder, Serializer<A> first) {
         register(id, type, new OneTermSerialization<>(builder, first));
     }
 
@@ -87,7 +91,8 @@ public class FilterSerializerImpl implements FilterSerializer {
     }
 
     @Override
-    public <T extends Filter.NoArg> void register(String id, Class<T> type, NoArgumentFilter<T> builder) {
+    public <T extends Filter.NoArg> void register(String id, Class<T> type,
+            NoArgumentFilter<T> builder) {
         register(id, type, new NoTermSerialization<>(builder));
     }
 
@@ -100,28 +105,33 @@ public class FilterSerializerImpl implements FilterSerializer {
     private String getTypeId(Class<? extends Filter> type) {
         final String id = typeCache.get(type);
 
-        if (id != null)
+        if (id != null) {
             return id;
+        }
 
-        synchronized ($getTypeId) {
+        synchronized (typeIdLock) {
             final String checkId = typeCache.get(type);
 
-            if (checkId != null)
+            if (checkId != null) {
                 return checkId;
+            }
 
-            final LinkedList<Class<?>> queue = new LinkedList<>(Arrays.asList(type.getInterfaces()));
+            final LinkedList<Class<?>> queue =
+                    new LinkedList<>(Arrays.asList(type.getInterfaces()));
 
             while (!queue.isEmpty()) {
                 final Class<?> candidateType = queue.pop();
                 queue.addAll(Arrays.asList(candidateType.getInterfaces()));
 
-                if (!Filter.class.isAssignableFrom(candidateType))
+                if (!Filter.class.isAssignableFrom(candidateType)) {
                     continue;
+                }
 
                 final String candidateId = typeMapping.get(candidateType);
 
-                if (candidateId == null)
+                if (candidateId == null) {
                     continue;
+                }
 
                 typeCache.put(type, candidateId);
                 return candidateId;
@@ -136,8 +146,9 @@ public class FilterSerializerImpl implements FilterSerializer {
         @SuppressWarnings("unchecked")
         final Serializer<Filter> serializer = (Serializer<Filter>) idMapping.get(id);
 
-        if (serializer == null)
+        if (serializer == null) {
             throw new RuntimeException("No serializer for type id " + id);
+        }
 
         return serializer;
     }
@@ -179,7 +190,8 @@ public class FilterSerializerImpl implements FilterSerializer {
     }
 
     @RequiredArgsConstructor
-    private static class ManyTermsSerialization<T extends Filter.MultiArgs<A>, A> implements Serializer<T> {
+    private static class ManyTermsSerialization<T extends Filter.MultiArgs<A>, A>
+            implements Serializer<T> {
         private final MultiArgumentsFilter<T, A> builder;
         private final Serializer<List<A>> list;
 
@@ -210,7 +222,8 @@ public class FilterSerializerImpl implements FilterSerializer {
     }
 
     @RequiredArgsConstructor
-    private static class OneTermSerialization<T extends Filter.OneArg<A>, A> implements Serializer<T> {
+    private static class OneTermSerialization<T extends Filter.OneArg<A>, A>
+            implements Serializer<T> {
         private final OneArgumentFilter<T, A> builder;
         private final Serializer<A> first;
 
@@ -227,7 +240,8 @@ public class FilterSerializerImpl implements FilterSerializer {
     }
 
     @RequiredArgsConstructor
-    private static final class TwoTermsSerialization<T extends Filter.TwoArgs<A, B>, A, B> implements Serializer<T> {
+    private static final class TwoTermsSerialization<T extends Filter.TwoArgs<A, B>, A, B>
+            implements Serializer<T> {
         private final TwoArgumentsFilter<T, A, B> builder;
         private final Serializer<A> first;
         private final Serializer<B> second;

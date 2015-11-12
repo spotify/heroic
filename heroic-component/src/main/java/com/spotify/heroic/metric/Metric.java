@@ -24,33 +24,33 @@ package com.spotify.heroic.metric;
 import java.util.Comparator;
 
 public interface Metric {
-    public long getTimestamp();
+    long getTimestamp();
 
     /**
      * A has implementation that should only take the sample value into account.
      *
      * @return The hash of the sample value.
      */
-    public int valueHash();
+    int valueHash();
 
     boolean valid();
 
-    public static Comparator<Metric> comparator() {
+    static Comparator<Metric> comparator() {
         return comparator;
     }
 
-    public static Metric invalid() {
+    static Metric invalid() {
         return invalid;
     }
 
-    static final Comparator<Metric> comparator = new Comparator<Metric>() {
+    Comparator<Metric> comparator = new Comparator<Metric>() {
         @Override
         public int compare(Metric a, Metric b) {
             return Long.compare(a.getTimestamp(), b.getTimestamp());
         }
     };
 
-    static final Metric invalid = new Metric() {
+    Metric invalid = new Metric() {
         @Override
         public long getTimestamp() {
             throw new IllegalStateException("invalid has not timestamp");

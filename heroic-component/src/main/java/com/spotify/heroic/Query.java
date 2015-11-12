@@ -61,7 +61,8 @@ public class Query {
 
     public Optional<Aggregation> aggregation() {
         return aggregation.map(aggregation -> {
-            return groupBy.<Aggregation> map(g -> new Group(Optional.of(g), aggregation)).orElse(aggregation);
+            return groupBy.<Aggregation> map(g -> new Group(Optional.of(g), aggregation))
+                    .orElse(aggregation);
         });
     }
 }

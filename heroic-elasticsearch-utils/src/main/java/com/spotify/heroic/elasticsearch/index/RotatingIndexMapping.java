@@ -57,18 +57,23 @@ public class RotatingIndexMapping implements IndexMapping {
     @JsonCreator
     public RotatingIndexMapping(@JsonProperty("interval") Duration interval,
             @JsonProperty("maxReadIndices") Integer maxReadIndices,
-            @JsonProperty("maxWriteIndices") Integer maxWriteIndices, @JsonProperty("pattern") String pattern) {
-        this.interval = Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
-        this.maxReadIndices = verifyPositiveInt(Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
+            @JsonProperty("maxWriteIndices") Integer maxWriteIndices,
+            @JsonProperty("pattern") String pattern) {
+        this.interval =
+                Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
+        this.maxReadIndices = verifyPositiveInt(
+                Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
                 "maxReadIndices");
-        this.maxWriteIndices = verifyPositiveInt(Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
+        this.maxWriteIndices = verifyPositiveInt(
+                Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
                 "maxWriteIndices");
         this.pattern = verifyPattern(Optional.fromNullable(pattern).or(DEFAULT_PATTERN));
     }
 
     private String verifyPattern(String pattern) {
         if (!pattern.contains("%s")) {
-            throw new IllegalArgumentException("pattern '" + pattern + "' does not contain a string substitude '%s'");
+            throw new IllegalArgumentException(
+                    "pattern '" + pattern + "' does not contain a string substitude '%s'");
         }
 
         return pattern;
@@ -129,14 +134,15 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, final DateRange range, final String type)
-            throws NoIndexSelectedException {
-        return client.prepareDeleteByQuery(readIndices(range)).setIndicesOptions(options()).setTypes(type);
+    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, final DateRange range,
+            final String type) throws NoIndexSelectedException {
+        return client.prepareDeleteByQuery(readIndices(range)).setIndicesOptions(options())
+                .setTypes(type);
     }
 
     @Override
-    public SearchRequestBuilder search(final Client client, final DateRange range, final String type)
-            throws NoIndexSelectedException {
+    public SearchRequestBuilder search(final Client client, final DateRange range,
+            final String type) throws NoIndexSelectedException {
         return client.prepareSearch(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 

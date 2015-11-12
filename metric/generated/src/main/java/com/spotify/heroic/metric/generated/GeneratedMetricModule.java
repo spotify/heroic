@@ -51,10 +51,12 @@ public final class GeneratedMetricModule implements MetricModule {
 
     @JsonCreator
     public GeneratedMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, @JsonProperty("generator") GeneratorModule generatorModule) {
+            @JsonProperty("groups") Set<String> groups,
+            @JsonProperty("generator") GeneratorModule generatorModule) {
         this.id = id;
         this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
-        this.generatorModule = Optional.fromNullable(generatorModule).or(SineGeneratorModule.defaultSupplier());
+        this.generatorModule = Optional.fromNullable(generatorModule)
+                .or(SineGeneratorModule.defaultSupplier());
     }
 
     @Override

@@ -61,16 +61,20 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     private final long heartbeatInterval;
 
     @JsonCreator
-    public NativeRpcProtocolModule(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
-            @JsonProperty("parentThreads") Integer parentThreads, @JsonProperty("childThreads") Integer childThreads,
+    public NativeRpcProtocolModule(@JsonProperty("host") String host,
+            @JsonProperty("port") Integer port,
+            @JsonProperty("parentThreads") Integer parentThreads,
+            @JsonProperty("childThreads") Integer childThreads,
             @JsonProperty("maxFrameSize") Integer maxFrameSize,
-            @JsonProperty("heartbeatInterval") Long heartbeatInterval, @JsonProperty("sendTimeout") Long sendTimeout) {
-        this.address = new InetSocketAddress(Optional.fromNullable(host).or(DEFAULT_HOST), Optional.fromNullable(port)
-                .or(DEFAULT_PORT));
+            @JsonProperty("heartbeatInterval") Long heartbeatInterval,
+            @JsonProperty("sendTimeout") Long sendTimeout) {
+        this.address = new InetSocketAddress(Optional.fromNullable(host).or(DEFAULT_HOST),
+                Optional.fromNullable(port).or(DEFAULT_PORT));
         this.parentThreads = Optional.fromNullable(parentThreads).or(DEFAULT_PARENT_THREADS);
         this.childThreads = Optional.fromNullable(childThreads).or(DEFAULT_CHILD_THREADS);
         this.maxFrameSize = Optional.fromNullable(maxFrameSize).or(DEFAULT_MAX_FRAME_SIZE);
-        this.heartbeatInterval = Optional.fromNullable(heartbeatInterval).or(DEFAULT_HEARTBEAT_INTERVAL);
+        this.heartbeatInterval = Optional.fromNullable(heartbeatInterval)
+                .or(DEFAULT_HEARTBEAT_INTERVAL);
         this.sendTimeout = Optional.fromNullable(sendTimeout).or(DEFAULT_SEND_TIMEOUT);
     }
 
@@ -94,13 +98,14 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
             @Provides
             @Singleton
             public Timer timer() {
-                return new HashedWheelTimer(new ThreadFactoryBuilder().setNameFormat("nativerpc-timer-%d").build());
+                return new HashedWheelTimer(
+                        new ThreadFactoryBuilder().setNameFormat("nativerpc-timer-%d").build());
             }
 
             @Override
             protected void configure() {
-                bind(key).toInstance(
-                        new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout, heartbeatInterval));
+                bind(key).toInstance(new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout,
+                        heartbeatInterval));
 
                 if (!options.isDisableLocal()) {
                     bind(NativeRpcProtocolServer.class)
@@ -166,8 +171,8 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
         }
 
         public NativeRpcProtocolModule build() {
-            return new NativeRpcProtocolModule(host, port, parentThreads, childThreads, maxFrameSize, sendTimeout,
-                    heartbeatInterval);
+            return new NativeRpcProtocolModule(host, port, parentThreads, childThreads,
+                    maxFrameSize, sendTimeout, heartbeatInterval);
         }
     }
 }

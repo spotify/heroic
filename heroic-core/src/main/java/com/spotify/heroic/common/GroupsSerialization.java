@@ -34,10 +34,13 @@ import com.google.common.collect.ImmutableSet;
 
 public class GroupsSerialization {
     public static class Deserializer extends JsonDeserializer<Groups> {
-        private static final TypeReference<List<String>> LIST_OF_STRINGS = new TypeReference<List<String>>() {};
+        private static final TypeReference<List<String>> LIST_OF_STRINGS =
+                new TypeReference<List<String>>() {
+                };
 
         @Override
-        public Groups deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
+        public Groups deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
             /* fallback to default parser if object */
             if (p.getCurrentToken() == JsonToken.START_ARRAY) {
                 final List<String> groups = p.readValueAs(LIST_OF_STRINGS);

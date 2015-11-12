@@ -59,11 +59,13 @@ public class ReadWriteTest implements ShellTask {
 
         final Path p = Paths.get(params.file);
 
-        try (final BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(io.newOutputStream(p)))) {
+        try (final BufferedWriter writer =
+                new BufferedWriter(new OutputStreamWriter(io.newOutputStream(p)))) {
             writer.write("Hello World\n");
         }
 
-        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(io.newInputStream(p)))) {
+        try (final BufferedReader reader =
+                new BufferedReader(new InputStreamReader(io.newInputStream(p)))) {
             io.out().println(reader.readLine());
         }
 
@@ -73,7 +75,8 @@ public class ReadWriteTest implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-f", aliases = {"--file"}, usage = "File to perform test against", metaVar = "<file>")
+        @Option(name = "-f", aliases = { "--file" }, usage = "File to perform test against",
+                metaVar = "<file>")
         private String file = null;
     }
 }

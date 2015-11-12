@@ -44,7 +44,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 public class CollectdChannelHandler extends SimpleChannelInboundHandler<DatagramPacket> {
@@ -54,21 +53,23 @@ public class CollectdChannelHandler extends SimpleChannelInboundHandler<Datagram
     private final CollectdTypes types;
 
     @Override
-    protected void channelRead0(final ChannelHandlerContext ctx, final DatagramPacket msg) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final DatagramPacket msg)
+            throws Exception {
         final Iterator<CollectdSample> samples = CollectdParser.parse(msg.content());
 
         while (samples.hasNext()) {
             final CollectdSample s = samples.next();
 
-            final Set<Map.Entry<String, String>> base = ImmutableMap.of("host", s.getHost()).entrySet();
+            final Set<Map.Entry<String, String>> base = ImmutableMap.of("host", s.getHost())
+                    .entrySet();
 
             final List<WriteMetric> writes;
 
             if (hostProcessor.isPresent()) {
                 final Map<String, Object> parts = hostProcessor.get().parse(s.getHost());
 
-                final Set<Map.Entry<String, String>> tags = ImmutableSet
-                        .copyOf(Iterables.transform(parts.entrySet(), e -> Pair.of(e.getKey(), e.getValue().toString())));
+                final Set<Map.Entry<String, String>> tags = ImmutableSet.copyOf(Iterables.transform(
+                        parts.entrySet(), e -> Pair.of(e.getKey(), e.getValue().toString())));
 
                 writes = types.convert(s, Iterables.concat(base, tags));
             } else {

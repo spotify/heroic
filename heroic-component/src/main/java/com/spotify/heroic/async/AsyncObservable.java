@@ -27,9 +27,9 @@ import java.util.List;
 import eu.toolchain.async.AsyncFuture;
 
 public interface AsyncObservable<T> {
-    public void observe(AsyncObserver<T> observer) throws Exception;
+    void observe(AsyncObserver<T> observer) throws Exception;
 
-    public static <T> AsyncObservable<T> chain(final List<AsyncObservable<T>> observables) {
+    static <T> AsyncObservable<T> chain(final List<AsyncObservable<T>> observables) {
         return new AsyncObservable<T>() {
             @Override
             public void observe(final AsyncObserver<T> observer) throws Exception {

@@ -103,8 +103,8 @@ public class ShellServerModule extends PrivateModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();

@@ -37,17 +37,20 @@ import com.google.common.collect.ImmutableMap;
 public class EventSerialization {
     public static class Deserializer extends JsonDeserializer<Event> {
         @Override
-        public Event deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
+        public Event deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
-                throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
+                throw c.mappingException(
+                        String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
             final Long timestamp;
 
             {
                 if (!p.nextToken().isNumeric()) {
-                    throw c.mappingException(String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
+                    throw c.mappingException(String.format("Expected timestamp (number), not %s",
+                            p.getCurrentToken()));
                 }
 
                 timestamp = p.getLongValue();
@@ -78,12 +81,14 @@ public class EventSerialization {
                     builder.put(key, p.getValueAsBoolean());
                     break;
                 default:
-                    throw c.mappingException(String.format("Unexpected token %s", p.getCurrentToken()));
+                    throw c.mappingException(
+                            String.format("Unexpected token %s", p.getCurrentToken()));
                 }
             }
 
             if (p.getCurrentToken() != JsonToken.END_OBJECT) {
-                throw c.mappingException(String.format("Expected end of object, not %s", p.getCurrentToken()));
+                throw c.mappingException(
+                        String.format("Expected end of object, not %s", p.getCurrentToken()));
             }
 
             return new Event(timestamp, builder.build());
@@ -92,8 +97,8 @@ public class EventSerialization {
 
     public static class Serializer extends JsonSerializer<Event> {
         @Override
-        public void serialize(Event d, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(Event d, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

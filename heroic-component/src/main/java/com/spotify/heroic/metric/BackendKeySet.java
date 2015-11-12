@@ -61,7 +61,8 @@ public class BackendKeySet implements Iterable<BackendKey> {
         return keys.iterator();
     }
 
-    public static Collector<BackendKeySet, BackendKeySet> collect(final QueryTrace.Identifier what) {
+    public static Collector<BackendKeySet, BackendKeySet> collect(
+            final QueryTrace.Identifier what) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return results -> {
@@ -76,7 +77,8 @@ public class BackendKeySet implements Iterable<BackendKey> {
             final Optional<QueryTrace> trace;
 
             if (!children.isEmpty()) {
-                trace = Optional.of(new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.copyOf(children)));
+                trace = Optional.of(new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS),
+                        ImmutableList.copyOf(children)));
             } else {
                 trace = Optional.empty();
             }

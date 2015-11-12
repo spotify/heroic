@@ -42,5 +42,6 @@ public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
         return buildWith(args, new SamplingQuery(size, extent));
     }
 
-    protected abstract Aggregation buildWith(final AggregationArguments args, final SamplingQuery sampling);
+    protected abstract Aggregation buildWith(final AggregationArguments args,
+            final SamplingQuery sampling);
 }

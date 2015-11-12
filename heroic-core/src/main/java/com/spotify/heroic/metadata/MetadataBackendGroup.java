@@ -69,7 +69,8 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
         final List<AsyncFuture<FindSeries>> callbacks = run(v -> v.findSeries(filter));
-        return async.collect(callbacks, FindSeries.reduce(filter.getLimit())).onDone(reporter.reportFindTimeSeries());
+        return async.collect(callbacks, FindSeries.reduce(filter.getLimit()))
+                .onDone(reporter.reportFindTimeSeries());
     }
 
     @Override

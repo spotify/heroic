@@ -49,7 +49,8 @@ public class CollectdConsumer implements Consumer {
     private final AtomicLong errors;
     private final LongAdder consumed;
 
-    public CollectdConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors, LongAdder consumed) {
+    public CollectdConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors,
+            LongAdder consumed) {
         this.consuming = consuming;
         this.total = total;
         this.errors = errors;
@@ -78,8 +79,8 @@ public class CollectdConsumer implements Consumer {
         final long errors = this.errors.get();
         final long consumed = this.consumed.sum();
 
-        return Statistics.of(
-                ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total, ERRORS, errors, CONSUMED, consumed));
+        return Statistics.of(ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total,
+                ERRORS, errors, CONSUMED, consumed));
     }
 
     @Override

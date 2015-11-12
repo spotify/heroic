@@ -46,11 +46,13 @@ public class LimitedFetchQuotaWatcher implements FetchQuotaWatcher {
     public int getReadDataQuota() {
         final long left = dataLimit - read.get();
 
-        if (left < 0)
+        if (left < 0) {
             return 0;
+        }
 
-        if (left > Integer.MAX_VALUE)
+        if (left > Integer.MAX_VALUE) {
             throw new IllegalStateException("quota too large");
+        }
 
         return (int) left;
     }

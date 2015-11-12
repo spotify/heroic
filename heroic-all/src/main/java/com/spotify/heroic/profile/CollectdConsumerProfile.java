@@ -41,7 +41,8 @@ public class CollectdConsumerProfile extends HeroicProfileBase {
 
         params.get("collectd.host").ifPresent(module::host);
         params.getInteger("collectd.port").ifPresent(module::port);
-        params.get("collectd.pattern").map(p -> new GrokProcessor(ImmutableMap.of(), p)).ifPresent(module::hostProcessor);
+        params.get("collectd.pattern").map(p -> new GrokProcessor(ImmutableMap.of(), p))
+                .ifPresent(module::hostProcessor);
 
         // @formatter:off
         return HeroicConfig.builder()

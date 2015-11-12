@@ -50,8 +50,8 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter, final List<String> exclude,
-            final int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter,
+            final List<String> exclude, final int groupLimit) {
         return async
                 .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
                         TagValuesSuggest.reduce(filter.getLimit(), groupLimit))
@@ -59,8 +59,11 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(final RangeFilter filter, final String key) {
-        return async.collect(run(b -> b.tagValueSuggest(filter, key)), TagValueSuggest.reduce(filter.getLimit()))
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(final RangeFilter filter,
+            final String key) {
+        return async
+                .collect(run(b -> b.tagValueSuggest(filter, key)),
+                        TagValueSuggest.reduce(filter.getLimit()))
                 .onDone(reporter.reportTagValueSuggest());
     }
 
@@ -71,16 +74,17 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(final RangeFilter filter, final MatchOptions options, final String key,
-            final String value) {
-        return async.collect(run(b -> b.tagSuggest(filter, options, key, value)), TagSuggest.reduce(filter.getLimit()))
-                .onDone(reporter.reportTagSuggest());
+    public AsyncFuture<TagSuggest> tagSuggest(final RangeFilter filter, final MatchOptions options,
+            final String key, final String value) {
+        return async.collect(run(b -> b.tagSuggest(filter, options, key, value)),
+                TagSuggest.reduce(filter.getLimit())).onDone(reporter.reportTagSuggest());
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(final RangeFilter filter, final MatchOptions options, final String key) {
-        return async.collect(run(b -> b.keySuggest(filter, options, key)), KeySuggest.reduce(filter.getLimit()))
-                .onDone(reporter.reportKeySuggest());
+    public AsyncFuture<KeySuggest> keySuggest(final RangeFilter filter, final MatchOptions options,
+            final String key) {
+        return async.collect(run(b -> b.keySuggest(filter, options, key)),
+                KeySuggest.reduce(filter.getLimit())).onDone(reporter.reportKeySuggest());
     }
 
     @Override

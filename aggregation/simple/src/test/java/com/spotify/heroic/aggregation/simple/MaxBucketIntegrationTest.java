@@ -18,6 +18,6 @@ public class MaxBucketIntegrationTest extends ValueBucketIntegrationTest {
 
     @Override
     public Collection<DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new MaxBucket(0l), new StripedMaxBucket(0l));
+        return ImmutableList.<DoubleBucket> of(new MaxBucket(0L), new StripedMaxBucket(0L));
     }
 }

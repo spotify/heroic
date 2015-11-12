@@ -30,8 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
@@ -55,8 +53,8 @@ public class QueryBuilder {
     /**
      * Specify a set of tags that has to match.
      *
-     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be built using
-     *             {@link FilterFactory#matchKey(String)}.
+     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
+     *             built using {@link FilterFactory#matchKey(String)}.
      */
     public QueryBuilder key(Optional<String> key) {
         this.key = key;
@@ -66,8 +64,8 @@ public class QueryBuilder {
     /**
      * Specify a set of tags that has to match.
      *
-     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be built using
-     *             {@link FilterFactory#matchTag(String, String)}.
+     * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
+     *             built using {@link FilterFactory#matchTag(String, String)}.
      */
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
@@ -77,8 +75,9 @@ public class QueryBuilder {
 
     /**
      * Specify a group by to use.
-     * 
-     * @deprecated Use {@link #aggregation(AggregationInstance)} with the appropriate {@link GroupInstance} instead.
+     *
+     * @deprecated Use {@link #aggregation(AggregationInstance)} with the appropriate
+     *             {@link GroupInstance} instead.
      */
     public QueryBuilder groupBy(final Optional<List<String>> groupBy) {
         checkNotNull(groupBy, "groupBy must not be null");
@@ -88,7 +87,7 @@ public class QueryBuilder {
 
     /**
      * Specify the date range for which data will be returned.
-     * 
+     *
      * Note: This range might be rounded to accommodate the sampling period of a given aggregation.
      */
     public QueryBuilder range(Optional<QueryDateRange> range) {
@@ -149,8 +148,8 @@ public class QueryBuilder {
     /**
      * Convert a MetricsRequest into a filter.
      *
-     * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be expressed as filter
-     * objects.
+     * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be
+     * expressed as filter objects.
      */
     Optional<Filter> legacyFilter() {
         final List<Filter> statements = new ArrayList<>();

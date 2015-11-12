@@ -32,11 +32,11 @@ import com.spotify.heroic.metric.Point;
 import eu.toolchain.async.AsyncFuture;
 
 public interface AggregationCache {
-    public boolean isConfigured();
+    boolean isConfigured();
 
-    public AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group, AggregationInstance aggregation,
-            DateRange range) throws CacheOperationException;
+    AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group,
+            AggregationInstance aggregation, DateRange range) throws CacheOperationException;
 
-    public AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group, AggregationInstance aggregation,
-            List<Point> datapoints) throws CacheOperationException;
+    AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group,
+            AggregationInstance aggregation, List<Point> datapoints) throws CacheOperationException;
 }

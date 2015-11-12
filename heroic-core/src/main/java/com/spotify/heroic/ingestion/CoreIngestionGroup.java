@@ -72,7 +72,8 @@ public class CoreIngestionGroup implements IngestionGroup {
 
     @Override
     public boolean isEmpty() {
-        return metric.map(Grouped::isEmpty).orElse(true) && metadata.map(Grouped::isEmpty).orElse(true)
+        return metric.map(Grouped::isEmpty).orElse(true)
+                && metadata.map(Grouped::isEmpty).orElse(true)
                 && suggest.map(Grouped::isEmpty).orElse(true);
     }
 
@@ -132,12 +133,14 @@ public class CoreIngestionGroup implements IngestionGroup {
                     return calculated;
                 }
 
-                return (calculated = rangeFrom(write));
+                calculated = rangeFrom(write);
+                return calculated;
             }
         };
     }
 
-    protected AsyncFuture<WriteResult> doMetricWrite(final MetricBackend metric, final WriteMetric write) {
+    protected AsyncFuture<WriteResult> doMetricWrite(final MetricBackend metric,
+            final WriteMetric write) {
         try {
             return metric.write(write);
         } catch (final Exception e) {
@@ -145,7 +148,8 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<WriteResult> doMetadataWrite(final MetadataBackend metadata, final WriteMetric write, final DateRange range) {
+    protected AsyncFuture<WriteResult> doMetadataWrite(final MetadataBackend metadata,
+            final WriteMetric write, final DateRange range) {
         try {
             return metadata.write(write.getSeries(), range);
         } catch (final Exception e) {
@@ -153,7 +157,8 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<WriteResult> doSuggestWrite(final SuggestBackend suggest, final WriteMetric write, final DateRange range) {
+    protected AsyncFuture<WriteResult> doSuggestWrite(final SuggestBackend suggest,
+            final WriteMetric write, final DateRange range) {
         try {
             return suggest.write(write.getSeries(), range);
         } catch (final Exception e) {
@@ -164,8 +169,9 @@ public class CoreIngestionGroup implements IngestionGroup {
     protected DateRange rangeFrom(final WriteMetric write) {
         final Iterator<Metric> iterator = write.all().iterator();
 
-        if (!iterator.hasNext())
+        if (!iterator.hasNext()) {
             throw new IllegalArgumentException("write batch must not be empty");
+        }
 
         final Metric first = iterator.next();
 

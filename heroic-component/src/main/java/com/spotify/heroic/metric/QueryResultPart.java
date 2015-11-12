@@ -60,15 +60,16 @@ public class QueryResultPart {
      */
     private final QueryTrace queryTrace;
 
-    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range, final ClusterNode c) {
+    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range,
+            final ClusterNode c) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return result -> {
-            final ImmutableList<ShardedResultGroup> groups = ImmutableList
-                    .copyOf(result.getGroups().stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
+            final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result.getGroups()
+                    .stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
 
-            final ShardTrace shardTrace = ShardTrace.of(c.toString(), c.metadata(), w.elapsed(TimeUnit.MILLISECONDS),
-                    result.getStatistics(), Optional.empty());
+            final ShardTrace shardTrace = ShardTrace.of(c.toString(), c.metadata(),
+                    w.elapsed(TimeUnit.MILLISECONDS), result.getStatistics(), Optional.empty());
 
             return new QueryResultPart(groups, result.getErrors(), shardTrace, result.getTrace());
         };

@@ -39,8 +39,8 @@ public class MetadataTagKeySuggest {
     private final int limit;
 
     @JsonCreator
-    public MetadataTagKeySuggest(@JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
-            @JsonProperty("limit") Integer limit) {
+    public MetadataTagKeySuggest(@JsonProperty("filter") Filter filter,
+            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit) {
         this.filter = Optional.ofNullable(filter);
         this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);

@@ -54,7 +54,8 @@ public class InMemoryAggregationCacheBackendConfig implements AggregationCacheBa
 
             @Override
             protected void configure() {
-                bind(AggregationCacheBackend.class).to(InMemoryAggregationCacheBackend.class).in(Scopes.SINGLETON);
+                bind(AggregationCacheBackend.class).to(InMemoryAggregationCacheBackend.class)
+                        .in(Scopes.SINGLETON);
                 expose(AggregationCacheBackend.class);
             }
         };

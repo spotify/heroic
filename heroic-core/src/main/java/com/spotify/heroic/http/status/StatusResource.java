@@ -32,12 +32,9 @@ import javax.ws.rs.core.Response;
 
 import com.google.inject.Inject;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 
 @Path("/status")
@@ -64,12 +61,15 @@ public class StatusResource {
 
         final StatusResponse.Cluster cluster = buildClusterStatus();
 
-        final boolean allOk = consumers.isOk() && backends.isOk() && metadataBackends.isOk() && cluster.isOk();
+        final boolean allOk =
+                consumers.isOk() && backends.isOk() && metadataBackends.isOk() && cluster.isOk();
 
-        final StatusResponse response = new StatusResponse(allOk, consumers, backends, metadataBackends, cluster);
+        final StatusResponse response =
+                new StatusResponse(allOk, consumers, backends, metadataBackends, cluster);
 
-        if (!response.isOk())
+        if (!response.isOk()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(response).build();
+        }
 
         return Response.status(Response.Status.OK).entity(response).build();
     }
@@ -77,8 +77,9 @@ public class StatusResource {
     private StatusResponse.Cluster buildClusterStatus() {
         final ClusterManager.Statistics s = cluster.getStatistics();
 
-        if (s == null)
+        if (s == null) {
             return new StatusResponse.Cluster(true, 0, 0);
+        }
 
         final boolean ok = s.getOfflineNodes() == 0 || s.getOnlineNodes() > 0;
         return new StatusResponse.Cluster(ok, s.getOnlineNodes(), s.getOfflineNodes());
@@ -86,14 +87,8 @@ public class StatusResource {
 
     private StatusResponse.Backend buildBackendStatus() {
         final int available = metric.getBackends().size();
-
-        int ready = 0;
-
-        for (final GroupMember<MetricBackend> backend : metric.getBackends()) {
-            if (backend.getMember().isReady())
-                ready += 1;
-        }
-
+        int ready =
+                (int) metric.getBackends().stream().filter(b -> b.getMember().isReady()).count();
         return new StatusResponse.Backend(available == ready, available, ready);
     }
 
@@ -123,20 +118,13 @@ public class StatusResource {
             }
         }
 
-        return new StatusResponse.Consumer((available == ready) && allOk, available, ready, errors, consumingThreads,
-                totalThreads);
+        return new StatusResponse.Consumer((available == ready) && allOk, available, ready, errors,
+                consumingThreads, totalThreads);
     }
 
     private StatusResponse.MetadataBackend buildMetadataBackendStatus() {
         final int available = metadata.getBackends().size();
-
-        int ready = 0;
-
-        for (final GroupMember<MetadataBackend> backend : metadata.getBackends()) {
-            if (backend.getMember().isReady())
-                ready += 1;
-        }
-
+        int ready = (int) metadata.getBackends().stream().map(b -> b.getMember().isReady()).count();
         return new StatusResponse.MetadataBackend(available == ready, available, ready);
     }
 }

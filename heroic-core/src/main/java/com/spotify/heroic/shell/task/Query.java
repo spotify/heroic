@@ -74,7 +74,8 @@ public class Query implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        return query.useGroup(params.group).query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
+        return query.useGroup(params.group)
+                .query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
                 .directTransform(result -> {
                     for (final RequestError e : result.getErrors()) {
                         io.out().println(String.format("ERR: %s", e.toString()));
@@ -83,8 +84,8 @@ public class Query implements ShellTask {
                     for (final ShardedResultGroup resultGroup : result.getGroups()) {
                         final MetricCollection group = resultGroup.getGroup();
 
-                        io.out().println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
-                                resultGroup.getTags()));
+                        io.out().println(String.format("%s: %s %s", group.getType(),
+                                resultGroup.getShard(), resultGroup.getTags()));
                         io.out().println(indent.writeValueAsString(group.getData()));
                         io.out().flush();
                     }
@@ -99,7 +100,8 @@ public class Query implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group = null;
 
         @Argument(metaVar = "<query>")

@@ -78,8 +78,8 @@ public class MetadataLoad implements ShellTask {
 
         final SuggestBackend target = suggest.useGroup(params.target);
 
-        final Optional<RateLimiter> rateLimiter = params.rate <= 0 ? Optional.<RateLimiter> absent() : Optional
-                .of(RateLimiter.create(params.rate));
+        final Optional<RateLimiter> rateLimiter = params.rate <= 0 ? Optional.<RateLimiter> absent()
+                : Optional.of(RateLimiter.create(params.rate));
 
         io.out().println("Loading suggest data:");
         io.out().println("  from (file): " + params.file);
@@ -134,7 +134,8 @@ public class MetadataLoad implements ShellTask {
                             rate = ((total - ratePosition) * 1000) / (rateNow - rateStart);
                         }
 
-                        io.out().println(String.format(" %d (%s/s)", total, rate == -1 ? "infinite" : rate));
+                        io.out().println(
+                                String.format(" %d (%s/s)", total, rate == -1 ? "infinite" : rate));
                         ratePosition = total;
                         rateStart = rateNow;
                     }
@@ -152,7 +153,6 @@ public class MetadataLoad implements ShellTask {
         return async.resolved();
     }
 
-
     private InputStreamReader open(ShellIO io, Path file) throws IOException {
         final InputStream input = io.newInputStream(file);
 
@@ -166,7 +166,8 @@ public class MetadataLoad implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to", metaVar = "<metadata-group>")
+        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to",
+                metaVar = "<metadata-group>")
         private String target;
 
         @Option(name = "-f", usage = "File to load from", required = true)

@@ -81,12 +81,14 @@ public class TagSuggest {
 
                         final Suggestion replaced = suggestions.put(key, s);
 
-                        if (replaced == null)
+                        if (replaced == null) {
                             continue;
+                        }
 
                         // prefer higher score if available.
-                        if (s.score < replaced.score)
+                        if (s.score < replaced.score) {
                             suggestions.put(key, replaced);
+                        }
                     }
                 }
 
@@ -98,14 +100,17 @@ public class TagSuggest {
         };
     }
 
-    public static Transform<Throwable, ? extends TagSuggest> nodeError(final NodeRegistryEntry node) {
+    public static Transform<Throwable, ? extends TagSuggest> nodeError(
+            final NodeRegistryEntry node) {
         return new Transform<Throwable, TagSuggest>() {
             @Override
             public TagSuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagSuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_SUGGESTIONS);
+                return new TagSuggest(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_SUGGESTIONS);
             }
         };
     }
@@ -131,33 +136,38 @@ public class TagSuggest {
             public int compare(Suggestion a, Suggestion b) {
                 final int s = Float.compare(b.score, a.score);
 
-                if (s != 0)
+                if (s != 0) {
                     return s;
+                }
 
                 return compareKey(a, b);
             }
 
             private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null)
+                if (a.key == null && b.key == null) {
                     return 0;
+                }
 
-                if (a.key == null)
+                if (a.key == null) {
                     return 1;
+                }
 
-                if (b.key == null)
+                if (b.key == null) {
                     return -1;
+                }
 
                 return a.key.compareTo(b.key);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends TagSuggest> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends TagSuggest> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, TagSuggest>() {
             @Override
             public TagSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new TagSuggest(errors, EMPTY_SUGGESTIONS);
             }
         };

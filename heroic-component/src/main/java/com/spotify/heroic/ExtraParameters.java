@@ -36,7 +36,8 @@ import lombok.Data;
 
 @Data
 public class ExtraParameters {
-    public static final ParameterSpecification CONFIGURE = ParameterSpecification.parameter("configure", "Automatically configure all backends.");
+    public static final ParameterSpecification CONFIGURE =
+            ParameterSpecification.parameter("configure", "Automatically configure all backends.");
 
     private final Multimap<String, String> parameters;
 
@@ -64,7 +65,8 @@ public class ExtraParameters {
         try {
             return Optional.of(Integer.parseInt(values.iterator().next()));
         } catch (NumberFormatException e) {
-            throw new IllegalStateException("Key " + key + " exists, but does not contain a valid numeric value");
+            throw new IllegalStateException(
+                    "Key " + key + " exists, but does not contain a valid numeric value");
         }
     }
 
@@ -103,7 +105,8 @@ public class ExtraParameters {
     }
 
     public String require(final String key) {
-        return get(key).orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
+        return get(key)
+                .orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
     }
 
     public boolean contains(ParameterSpecification parameter) {

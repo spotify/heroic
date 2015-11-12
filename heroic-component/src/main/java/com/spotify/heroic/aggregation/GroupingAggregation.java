@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -66,7 +65,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
     /**
      * Generate a key for the specific group.
-     * 
+     *
      * @param input The input tags for the group.
      * @return The keys for a specific group.
      */
@@ -75,7 +74,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
     /**
      * Create a new instance of this aggregation.
      */
-    protected abstract AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each);
+    protected abstract AggregationInstance newInstance(final Optional<List<String>> of,
+            final AggregationInstance each);
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
@@ -114,7 +114,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
      * @param range The range to setup child sessions using.
      * @return A new traversal instance.
      */
-    AggregationTraversal traversal(final Map<Map<String, String>, Set<Series>> mapping, final DateRange range) {
+    AggregationTraversal traversal(final Map<Map<String, String>, Set<Series>> mapping,
+            final DateRange range) {
         final Map<Map<String, String>, AggregationSession> sessions = new HashMap<>();
         final List<AggregationState> states = new ArrayList<>();
 
@@ -122,8 +123,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
             final Set<Series> series = new HashSet<>();
 
             final AggregationTraversal traversal = each.session(
-                    ImmutableList.of(new AggregationState(e.getKey(), e.getValue())),
-                    range);
+                    ImmutableList.of(new AggregationState(e.getKey(), e.getValue())), range);
 
             for (final AggregationState state : traversal.getStates()) {
                 series.addAll(state.getSeries());
@@ -164,7 +164,8 @@ public abstract class GroupingAggregation implements AggregationInstance {
                 final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
 
                 // combine all the tags.
-                final Iterator<ShardedResultGroup> step1 = Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
+                final Iterator<ShardedResultGroup> step1 =
+                        Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
 
                 while (step1.hasNext()) {
                     final ShardedResultGroup g = step1.next();
@@ -186,10 +187,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
                 for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
                     final Reduction red = e.getValue();
                     final ReducerSession session = red.session;
-                    final List<TagValues> tagValues = TagValues.fromEntries(Iterators.concat(Iterators.transform(Iterators.concat(red.tagValues.iterator()), TagValues::iterator)));
+                    final List<TagValues> tagValues = TagValues.fromEntries(Iterators
+                            .concat(Iterators.transform(Iterators.concat(red.tagValues.iterator()),
+                                    TagValues::iterator)));
 
                     for (final MetricCollection metrics : session.result().getResult()) {
-                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, metrics, each.cadence()));
+                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, metrics,
+                                each.cadence()));
                     }
                 }
 
@@ -215,22 +219,26 @@ public abstract class GroupingAggregation implements AggregationInstance {
         private final Map<Map<String, String>, AggregationSession> sessions;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+        public void updatePoints(Map<String, String> group, Set<Series> series,
+                List<Point> values) {
             session(group).updatePoints(group, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+        public void updateEvents(Map<String, String> group, Set<Series> series,
+                List<Event> values) {
             session(group).updateEvents(group, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+        public void updateSpreads(Map<String, String> group, Set<Series> series,
+                List<Spread> values) {
             session(group).updateSpreads(group, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+        public void updateGroup(Map<String, String> group, Set<Series> series,
+                List<MetricGroup> values) {
             session(group).updateGroup(group, series, values);
         }
 
@@ -239,8 +247,9 @@ public abstract class GroupingAggregation implements AggregationInstance {
             final AggregationSession session = sessions.get(key);
 
             if (session == null) {
-                throw new IllegalStateException(String.format("no session for key (%s) derived from %s, has (%s)", key,
-                        group, sessions.keySet()));
+                throw new IllegalStateException(
+                        String.format("no session for key (%s) derived from %s, has (%s)", key,
+                                group, sessions.keySet()));
             }
 
             return session;

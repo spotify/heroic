@@ -59,6 +59,7 @@ public class QueryMetricsResponse {
 
     /**
      * Shard latencies associated with the query.
+     *
      * @deprecated Use {@link #trace} instead.
      */
     @Getter
@@ -69,8 +70,8 @@ public class QueryMetricsResponse {
 
     public static class ResultSerializer extends JsonSerializer<List<ShardedResultGroup>> {
         @Override
-        public void serialize(List<ShardedResultGroup> result, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+        public void serialize(List<ShardedResultGroup> result, JsonGenerator g,
+                SerializerProvider provider) throws IOException, JsonProcessingException {
             g.writeStartArray();
 
             for (final ShardedResultGroup group : result) {
@@ -102,8 +103,9 @@ public class QueryMetricsResponse {
             for (final TagValues pair : tags) {
                 final List<String> values = pair.getValues();
 
-                if (values.size() != 1)
+                if (values.size() != 1) {
                     continue;
+                }
 
                 g.writeStringField(pair.getKey(), values.iterator().next());
             }
@@ -119,8 +121,9 @@ public class QueryMetricsResponse {
             for (final TagValues pair : tags) {
                 final List<String> values = pair.getValues();
 
-                if (values.size() <= 1)
+                if (values.size() <= 1) {
                     continue;
+                }
 
                 g.writeNumberField(pair.getKey(), values.size());
             }

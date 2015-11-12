@@ -42,10 +42,13 @@ public class MatchOptions {
     @JsonCreator
     public MatchOptions(@JsonProperty("fuzzy") boolean fuzzy,
             @JsonProperty("fuzzyPrefixLength") Integer fuzzyPrefixLength,
-            @JsonProperty("fuzzyMaxExpansions") Integer fuzzyMaxExpansions, @JsonProperty("tokenize") boolean tokenize) {
+            @JsonProperty("fuzzyMaxExpansions") Integer fuzzyMaxExpansions,
+            @JsonProperty("tokenize") boolean tokenize) {
         this.fuzzy = Optional.fromNullable(fuzzy).or(DEFAULT_FUZZY);
-        this.fuzzyPrefixLength = Optional.fromNullable(fuzzyPrefixLength).or(DEFAULT_FUZZY_PREFIX_LENGTH);
-        this.fuzzyMaxExpansions = Optional.fromNullable(fuzzyMaxExpansions).or(DEFAULT_FUZZY_MAX_EXPANSIONS);
+        this.fuzzyPrefixLength =
+                Optional.fromNullable(fuzzyPrefixLength).or(DEFAULT_FUZZY_PREFIX_LENGTH);
+        this.fuzzyMaxExpansions =
+                Optional.fromNullable(fuzzyMaxExpansions).or(DEFAULT_FUZZY_MAX_EXPANSIONS);
         this.tokenize = Optional.fromNullable(tokenize).or(DEFAULT_TOKENIZE);
     }
 

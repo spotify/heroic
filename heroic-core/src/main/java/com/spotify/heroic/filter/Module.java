@@ -83,17 +83,20 @@ public class Module implements HeroicModule {
                     }
                 }, filter);
 
-                ctx.filter(MatchKeyFilterImpl.OPERATOR, Filter.MatchKey.class, MatchKeyFilterImpl.class,
-                        new OneArgumentFilterBase<Filter.MatchKey, String>(SerializerCommon.STRING) {
+                ctx.filter(MatchKeyFilterImpl.OPERATOR, Filter.MatchKey.class,
+                        MatchKeyFilterImpl.class,
+                        new OneArgumentFilterBase<Filter.MatchKey, String>(
+                                SerializerCommon.STRING) {
                     @Override
                     public Filter.MatchKey build(String first) {
                         return new MatchKeyFilterImpl(first);
                     }
                 }, s.string());
 
-                ctx.filter(MatchTagFilterImpl.OPERATOR, Filter.MatchTag.class, MatchTagFilterImpl.class,
-                        new TwoArgumentsFilterBase<Filter.MatchTag, String, String>(SerializerCommon.STRING,
-                                SerializerCommon.STRING) {
+                ctx.filter(MatchTagFilterImpl.OPERATOR, Filter.MatchTag.class,
+                        MatchTagFilterImpl.class,
+                        new TwoArgumentsFilterBase<Filter.MatchTag, String, String>(
+                                SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
                     public Filter.MatchTag build(String first, String second) {
                         return new MatchTagFilterImpl(first, second);
@@ -108,9 +111,10 @@ public class Module implements HeroicModule {
                     }
                 }, s.string());
 
-                ctx.filter(StartsWithFilterImpl.OPERATOR, Filter.StartsWith.class, StartsWithFilterImpl.class,
-                        new TwoArgumentsFilterBase<Filter.StartsWith, String, String>(SerializerCommon.STRING,
-                                SerializerCommon.STRING) {
+                ctx.filter(StartsWithFilterImpl.OPERATOR, Filter.StartsWith.class,
+                        StartsWithFilterImpl.class,
+                        new TwoArgumentsFilterBase<Filter.StartsWith, String, String>(
+                                SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
                     public Filter.StartsWith build(String first, String second) {
                         return new StartsWithFilterImpl(first, second);
@@ -118,8 +122,8 @@ public class Module implements HeroicModule {
                 }, s.string(), s.string());
 
                 ctx.filter(RegexFilterImpl.OPERATOR, Filter.Regex.class, RegexFilterImpl.class,
-                        new TwoArgumentsFilterBase<Filter.Regex, String, String>(SerializerCommon.STRING,
-                                SerializerCommon.STRING) {
+                        new TwoArgumentsFilterBase<Filter.Regex, String, String>(
+                                SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
                     public Filter.Regex build(String first, String second) {
                         return new RegexFilterImpl(first, second);

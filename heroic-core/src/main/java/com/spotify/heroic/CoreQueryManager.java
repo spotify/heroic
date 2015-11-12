@@ -56,8 +56,10 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 
 public class CoreQueryManager implements QueryManager {
-    public static final QueryTrace.Identifier QUERY_NODE = QueryTrace.identifier(CoreQueryManager.class, "query_node");
-    public static final QueryTrace.Identifier QUERY = QueryTrace.identifier(CoreQueryManager.class, "query");
+    public static final QueryTrace.Identifier QUERY_NODE =
+            QueryTrace.identifier(CoreQueryManager.class, "query_node");
+    public static final QueryTrace.Identifier QUERY =
+            QueryTrace.identifier(CoreQueryManager.class, "query");
 
     @Inject
     private AsyncFramework async;
@@ -115,13 +117,14 @@ public class CoreQueryManager implements QueryManager {
         /* get aggregation that is part of statement, if any */
         final Optional<Aggregation> aggregation = q.getAggregation();
 
-        return newQuery().source(q.getSource()).range(q.getRange()).aggregation(aggregation).filter(q.getWhere())
-                .groupBy(q.getGroupBy());
+        return newQuery().source(q.getSource()).range(q.getRange()).aggregation(aggregation)
+                .filter(q.getWhere()).groupBy(q.getGroupBy());
     }
 
     @Override
     public String queryToString(final Query q) {
-        return parser.stringifyQuery(new QueryDSL(q.getAggregation(), q.getSource(), q.getRange(), q.getFilter(), q.getGroupBy()));
+        return parser.stringifyQuery(new QueryDSL(q.getAggregation(), q.getSource(), q.getRange(),
+                q.getFilter(), q.getGroupBy()));
     }
 
     @Override
@@ -154,10 +157,10 @@ public class CoreQueryManager implements QueryManager {
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();
 
-                final AsyncFuture<QueryResultPart> queryPart = group
-                        .query(q.getSource(), filter, range, aggregationInstance, options)
-                        .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
-                        .directTransform(QueryResultPart.fromResultGroup(range, c));
+                final AsyncFuture<QueryResultPart> queryPart =
+                        group.query(q.getSource(), filter, range, aggregationInstance, options)
+                                .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
+                                .directTransform(QueryResultPart.fromResultGroup(range, c));
 
                 futures.add(queryPart);
             }
@@ -166,7 +169,8 @@ public class CoreQueryManager implements QueryManager {
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {
-            return aggregation.size().map(Duration::ofMilliseconds).orElseGet(() -> cadenceFromRange(rawRange));
+            return aggregation.size().map(Duration::ofMilliseconds)
+                    .orElseGet(() -> cadenceFromRange(rawRange));
         }
 
         private DateRange buildRange(Query q) {
@@ -187,34 +191,33 @@ public class CoreQueryManager implements QueryManager {
         }
     }
 
-    private static final SortedSet<Long> INTERVAL_FACTORS = ImmutableSortedSet.of(
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(50, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(250, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(500, TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(3, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(6, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(12, TimeUnit.HOURS),
-        TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(2, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(3, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS),
-        TimeUnit.MILLISECONDS.convert(14, TimeUnit.DAYS)
-    );
+    private static final SortedSet<Long> INTERVAL_FACTORS =
+            ImmutableSortedSet.of(TimeUnit.MILLISECONDS.convert(1, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(50, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(250, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(500, TimeUnit.MILLISECONDS),
+                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS),
+                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS),
+                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS),
+                    TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS),
+                    TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
+                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES),
+                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES),
+                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES),
+                    TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES),
+                    TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES),
+                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS),
+                    TimeUnit.MILLISECONDS.convert(3, TimeUnit.HOURS),
+                    TimeUnit.MILLISECONDS.convert(6, TimeUnit.HOURS),
+                    TimeUnit.MILLISECONDS.convert(12, TimeUnit.HOURS),
+                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS),
+                    TimeUnit.MILLISECONDS.convert(2, TimeUnit.DAYS),
+                    TimeUnit.MILLISECONDS.convert(3, TimeUnit.DAYS),
+                    TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS),
+                    TimeUnit.MILLISECONDS.convert(14, TimeUnit.DAYS));
 
     public static final long INTERVAL_GOAL = 240;
 

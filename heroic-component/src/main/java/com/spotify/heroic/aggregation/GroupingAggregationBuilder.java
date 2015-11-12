@@ -37,12 +37,15 @@ public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL 
 
     @Override
     public Aggregation build(final AggregationArguments args) {
-        final Optional<List<String>> over = args.getNext("of", ListValue.class).map(this::convertOf);
-        final Aggregation each = Aggregations.chain(args.getNext("each", Value.class).map(this::flatten));
+        final Optional<List<String>> over =
+                args.getNext("of", ListValue.class).map(this::convertOf);
+        final Aggregation each =
+                Aggregations.chain(args.getNext("each", Value.class).map(this::flatten));
         return build(over, each);
     }
 
     private List<String> convertOf(final ListValue list) {
-        return ImmutableList.copyOf(list.getList().stream().map(v -> v.cast(String.class)).iterator());
+        return ImmutableList
+                .copyOf(list.getList().stream().map(v -> v.cast(String.class)).iterator());
     }
 }

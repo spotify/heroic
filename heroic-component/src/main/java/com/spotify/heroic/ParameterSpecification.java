@@ -38,7 +38,8 @@ public class ParameterSpecification {
         return new ParameterSpecification(name, description, Optional.empty());
     }
 
-    public static ParameterSpecification parameter(String name, String description, String metavar) {
+    public static ParameterSpecification parameter(String name, String description,
+            String metavar) {
         return new ParameterSpecification(name, description, Optional.of(metavar));
     }
 
@@ -52,7 +53,8 @@ public class ParameterSpecification {
         printWrapped(out, prefix + "    ", width, description);
     }
 
-    public static void printWrapped(final PrintWriter out, final String prefix, final int width, final String doc) {
+    public static void printWrapped(final PrintWriter out, final String prefix, final int width,
+            final String doc) {
         final BreakIterator boundary = BreakIterator.getLineInstance(Locale.US);
         boundary.setText(doc);
 
@@ -65,19 +67,19 @@ public class ParameterSpecification {
         out.print(prefix);
 
         while (end != BreakIterator.DONE) {
-           final String word = doc.substring(start,end);
+            final String word = doc.substring(start, end);
 
-           line = line + word.length();
+            line = line + word.length();
 
-           if (line >= maxWidth) {
-              out.println();
-              out.print(prefix);
-              line = word.length() + prefix.length();
-           }
+            if (line >= maxWidth) {
+                out.println();
+                out.print(prefix);
+                line = word.length() + prefix.length();
+            }
 
-           out.print(word);
-           start = end;
-           end = boundary.next();
+            out.print(word);
+            start = end;
+            end = boundary.next();
         }
 
         out.println();

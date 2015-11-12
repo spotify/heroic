@@ -81,8 +81,9 @@ public class CoreIngestionGroupTest {
 
         doAnswer(new Answer<AsyncFuture<WriteResult>>() {
             @Override
-            public AsyncFuture<WriteResult> answer(final InvocationOnMock invocation) throws Throwable {
-                ((FutureFinished)invocation.getArguments()[0]).finished();
+            public AsyncFuture<WriteResult> answer(final InvocationOnMock invocation)
+                    throws Throwable {
+                ((FutureFinished) invocation.getArguments()[0]).finished();
                 return expected;
             }
         }).when(expected).onFinished(any(FutureFinished.class));

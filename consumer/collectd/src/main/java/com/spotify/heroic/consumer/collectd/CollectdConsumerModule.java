@@ -70,7 +70,8 @@ public class CollectdConsumerModule implements ConsumerModule {
 
         return new PrivateModule() {
             @Provides
-            public Managed<Server> connection(final AsyncFramework async, final Consumer consumer, final IngestionManager ingestionManager) {
+            public Managed<Server> connection(final AsyncFramework async, final Consumer consumer,
+                    final IngestionManager ingestionManager) {
                 return async.managed(new ManagedSetup<Server>() {
                     @Override
                     public AsyncFuture<Server> construct() {
@@ -80,7 +81,8 @@ public class CollectdConsumerModule implements ConsumerModule {
                             log.warn("No backends are part of the selected ingestion group");
                         }
 
-                        final CollectdChannelHandler handler = new CollectdChannelHandler(async, ingestion, hostProcessor, types);
+                        final CollectdChannelHandler handler = new CollectdChannelHandler(async,
+                                ingestion, hostProcessor, types);
 
                         final InetAddress h = host.map(host -> {
                             try {
@@ -107,7 +109,8 @@ public class CollectdConsumerModule implements ConsumerModule {
             @Override
             protected void configure() {
                 bind(ConsumerReporter.class).toInstance(reporter);
-                bind(Consumer.class).toInstance(new CollectdConsumer(consuming, total, errors, consumed));
+                bind(Consumer.class)
+                        .toInstance(new CollectdConsumer(consuming, total, errors, consumed));
                 bind(key).to(Consumer.class).in(Scopes.SINGLETON);
                 expose(key);
             }
@@ -128,7 +131,7 @@ public class CollectdConsumerModule implements ConsumerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
         private Optional<String> host = Optional.empty();
@@ -137,7 +140,8 @@ public class CollectdConsumerModule implements ConsumerModule {
         private Optional<CollectdTypes> types = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("id") Optional<String> id, @JsonProperty("host") Optional<String> host,
+        public Builder(@JsonProperty("id") Optional<String> id,
+                @JsonProperty("host") Optional<String> host,
                 @JsonProperty("port") Optional<Integer> port,
                 @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern,
                 @JsonProperty("types") Optional<CollectdTypes> types) {

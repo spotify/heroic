@@ -64,17 +64,19 @@ public class SerializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final BackendKey backendKey = mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
+        final BackendKey backendKey =
+                mapper.readValue(params.key, BackendKeyArgument.class).toBackendKey();
 
-        return metrics.useGroup(params.group).serializeKeyToHex(backendKey).directTransform(result -> {
-            int i = 0;
+        return metrics.useGroup(params.group).serializeKeyToHex(backendKey)
+                .directTransform(result -> {
+                    int i = 0;
 
-            for (final String key : result) {
-                io.out().println(String.format("%d: %s", i++, key));
-            }
+                    for (final String key : result) {
+                        io.out().println(String.format("%d: %s", i++, key));
+                    }
 
-            return null;
-        });
+                    return null;
+                });
     }
 
     @Data
@@ -83,7 +85,8 @@ public class SerializeKey implements ShellTask {
         private final long base;
 
         @JsonCreator
-        public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base) {
+        public BackendKeyArgument(@JsonProperty("series") Series series,
+                @JsonProperty("base") Long base) {
             this.series = checkNotNull(series, "series");
             this.base = checkNotNull(base, "base");
         }

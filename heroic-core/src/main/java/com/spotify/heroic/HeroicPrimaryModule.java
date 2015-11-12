@@ -148,13 +148,15 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Singleton
     @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
     @Inject
-    public ObjectMapper internalMapper(FilterJsonSerializer serializer, FilterJsonDeserializer deserializer,
-            AggregationSerializer aggregationSerializer) {
+    public ObjectMapper internalMapper(FilterJsonSerializer serializer,
+            FilterJsonDeserializer deserializer, AggregationSerializer aggregationSerializer) {
         final SimpleModule module = new SimpleModule("custom");
 
         final FilterJsonSerializerImpl serializerImpl = (FilterJsonSerializerImpl) serializer;
-        final FilterJsonDeserializerImpl deserializerImpl = (FilterJsonDeserializerImpl) deserializer;
-        final CoreAggregationRegistry aggregationRegistry = (CoreAggregationRegistry) aggregationSerializer;
+        final FilterJsonDeserializerImpl deserializerImpl =
+                (FilterJsonDeserializerImpl) deserializer;
+        final CoreAggregationRegistry aggregationRegistry =
+                (CoreAggregationRegistry) aggregationSerializer;
 
         deserializerImpl.configure(module);
         serializerImpl.configure(module);
@@ -178,7 +180,8 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Singleton
     @Named(HeroicCore.APPLICATION_JSON)
     @Inject
-    public ObjectMapper jsonMapper(@Named(HeroicCore.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
+    public ObjectMapper jsonMapper(
+            @Named(HeroicCore.APPLICATION_JSON_INTERNAL) ObjectMapper mapper) {
         return mapper;
     }
 
@@ -194,7 +197,8 @@ public class HeroicPrimaryModule extends AbstractModule {
             bind(HeroicStartupPinger.class).toInstance(pinger.get());
         }
 
-        bindListener(new IsSubclassOf(LifeCycle.class), new CollectingTypeListener<LifeCycle>(lifeCycles));
+        bindListener(new IsSubclassOf(LifeCycle.class),
+                new CollectingTypeListener<LifeCycle>(lifeCycles));
     }
 
     public static SimpleModule serializerModule() {
@@ -212,8 +216,10 @@ public class HeroicPrimaryModule extends AbstractModule {
         module.addSerializer(MetricGroup.class, new MetricGroupSerialization.Serializer());
         module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
 
-        module.addSerializer(MetricCollection.class, new MetricCollectionSerialization.Serializer());
-        module.addDeserializer(MetricCollection.class, new MetricCollectionSerialization.Deserializer());
+        module.addSerializer(MetricCollection.class,
+                new MetricCollectionSerialization.Serializer());
+        module.addDeserializer(MetricCollection.class,
+                new MetricCollectionSerialization.Deserializer());
 
         module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
         module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());

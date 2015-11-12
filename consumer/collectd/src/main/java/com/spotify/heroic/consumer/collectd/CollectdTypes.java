@@ -38,7 +38,6 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 
 import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
 
 public class CollectdTypes {
     private static final Map<String, Mapping> mappings = new HashMap<>();
@@ -62,7 +61,8 @@ public class CollectdTypes {
     private final String typeInstanceTag;
 
     @JsonCreator
-    public CollectdTypes(@JsonProperty("key") Optional<String> key, @JsonProperty("pluginTag") Optional<String> pluginTag,
+    public CollectdTypes(@JsonProperty("key") Optional<String> key,
+            @JsonProperty("pluginTag") Optional<String> pluginTag,
             @JsonProperty("pluginInstanceTag") Optional<String> pluginInstanceTag,
             @JsonProperty("typeTag") Optional<String> typeTag,
             @JsonProperty("typeInstanceTag") Optional<String> typeInstanceTag) {
@@ -74,10 +74,12 @@ public class CollectdTypes {
     }
 
     public static CollectdTypes supplyDefault() {
-        return new CollectdTypes(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+        return new CollectdTypes(Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty());
     }
 
-    public List<WriteMetric> convert(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
+    public List<WriteMetric> convert(final CollectdSample sample,
+            final Iterable<Map.Entry<String, String>> tags) {
         final Mapping mapping = mappings.get(sample.getPlugin());
 
         if (mapping == null) {
@@ -90,9 +92,10 @@ public class CollectdTypes {
     /**
      * Default conversion of collectd samples.
      *
-     * This 
+     * This
      */
-    private List<WriteMetric> convertDefault(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
+    private List<WriteMetric> convertDefault(final CollectdSample sample,
+            final Iterable<Map.Entry<String, String>> tags) {
         final long time = sample.getTime() * 1000;
 
         final Iterator<CollectdValue> values = sample.getValues().iterator();
@@ -105,8 +108,7 @@ public class CollectdTypes {
             final Series series = Series.of(key, Iterables.concat(tags, sampleTags).iterator());
             final Point point = new Point(time, value.toDouble());
 
-            final MetricCollection data = MetricCollection
-                    .points(ImmutableList.of(point));
+            final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
             writes.add(new WriteMetric(series, data));
         }
@@ -140,7 +142,8 @@ public class CollectdTypes {
     private class Mapping {
         private final List<Field> fields;
 
-        public List<WriteMetric> convert(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
+        public List<WriteMetric> convert(final CollectdSample sample,
+                final Iterable<Map.Entry<String, String>> tags) {
             final long time = sample.getTime() * 1000;
 
             final Iterator<Field> fields = this.fields.iterator();
@@ -160,8 +163,7 @@ public class CollectdTypes {
                         Iterables.concat(tags, field.tags(sample, value).entrySet()).iterator());
                 final Point point = new Point(time, value.convert(field));
 
-                final MetricCollection data = MetricCollection
-                        .points(ImmutableList.of(point));
+                final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
 
                 writes.add(new WriteMetric(series, data));
             }

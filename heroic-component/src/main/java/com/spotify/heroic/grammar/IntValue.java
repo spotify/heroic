@@ -52,12 +52,14 @@ public final class IntValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(T to) {
-        if (to instanceof IntValue)
+        if (to instanceof IntValue) {
             return (T) this;
+        }
 
         if (to instanceof DurationValue) {
             final DurationValue o = (DurationValue) to;
-            return (T) new DurationValue(o.getUnit(), o.getUnit().convert(value, TimeUnit.MILLISECONDS));
+            return (T) new DurationValue(o.getUnit(),
+                    o.getUnit().convert(value, TimeUnit.MILLISECONDS));
         }
 
         throw new ValueCastException(this, to);
@@ -66,11 +68,13 @@ public final class IntValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(IntValue.class))
+        if (to.isAssignableFrom(IntValue.class)) {
             return (T) this;
+        }
 
-        if (to.isAssignableFrom(Long.class))
+        if (to.isAssignableFrom(Long.class)) {
             return (T) value;
+        }
 
         throw new ValueTypeCastException(this, to);
     }

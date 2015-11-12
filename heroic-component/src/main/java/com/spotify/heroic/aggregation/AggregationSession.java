@@ -32,16 +32,16 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
 public interface AggregationSession {
-    public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values);
+    void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values);
 
-    public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values);
+    void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values);
 
-    public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values);
+    void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values);
 
-    public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values);
+    void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values);
 
     /**
      * Get the result of this aggregator.
      */
-    public AggregationResult result();
+    AggregationResult result();
 }

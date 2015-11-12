@@ -36,7 +36,8 @@ public class GroupFilter {
     private final RangeFilter filter;
 
     @JsonCreator
-    public GroupFilter(@JsonProperty("group") String group, @JsonProperty("filter") RangeFilter filter) {
+    public GroupFilter(@JsonProperty("group") String group,
+            @JsonProperty("filter") RangeFilter filter) {
         this.group = checkNotNull(group);
         this.filter = checkNotNull(filter);
     }

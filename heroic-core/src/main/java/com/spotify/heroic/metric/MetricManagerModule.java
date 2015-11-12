@@ -121,13 +121,14 @@ public class MetricManagerModule extends PrivateModule {
     @Override
     protected void configure() {
         bindBackends(backends);
-        bind(MetricManager.class).toInstance(
-                new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit, fetchParallelism));
+        bind(MetricManager.class).toInstance(new LocalMetricManager(groupLimit, seriesLimit,
+                aggregationLimit, dataLimit, fetchParallelism));
         expose(MetricManager.class);
     }
 
     private void bindBackends(final Collection<MetricModule> configs) {
-        final Multibinder<MetricBackend> bindings = Multibinder.newSetBinder(binder(), MetricBackend.class);
+        final Multibinder<MetricBackend> bindings =
+                Multibinder.newSetBinder(binder(), MetricBackend.class);
 
         int i = 0;
 
@@ -146,8 +147,8 @@ public class MetricManagerModule extends PrivateModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<List<MetricModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();
@@ -160,8 +161,10 @@ public class MetricManagerModule extends PrivateModule {
         @JsonCreator
         public Builder(@JsonProperty("backends") List<MetricModule> backends,
                 @JsonProperty("defaultBackends") List<String> defaultBackends,
-                @JsonProperty("groupLimit") Integer groupLimit, @JsonProperty("seriesLimit") Integer seriesLimit,
-                @JsonProperty("aggregationLimit") Long aggregationLimit, @JsonProperty("dataLimit") Long dataLimit,
+                @JsonProperty("groupLimit") Integer groupLimit,
+                @JsonProperty("seriesLimit") Integer seriesLimit,
+                @JsonProperty("aggregationLimit") Long aggregationLimit,
+                @JsonProperty("dataLimit") Long dataLimit,
                 @JsonProperty("fetchParallelism") Integer fetchParallelism) {
             this.backends = ofNullable(backends);
             this.defaultBackends = ofNullable(defaultBackends);

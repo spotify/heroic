@@ -69,14 +69,16 @@ public class TagValues {
         @Override
         public int compare(String a, String b) {
             if (a == null) {
-                if (b == null)
+                if (b == null) {
                     return 0;
+                }
 
                 return -1;
             }
 
-            if (b == null)
+            if (b == null) {
                 return 1;
+            }
 
             return a.compareTo(b);
         }
@@ -100,8 +102,9 @@ public class TagValues {
 
         final List<TagValues> group = new ArrayList<>(key.size());
 
-        for (final Map.Entry<String, SortedSet<String>> e : key.entrySet())
+        for (final Map.Entry<String, SortedSet<String>> e : key.entrySet()) {
             group.add(new TagValues(e.getKey(), new ArrayList<>(e.getValue())));
+        }
 
         return group;
     }
@@ -118,3 +121,4 @@ public class TagValues {
         return map.build();
     }
 }
+

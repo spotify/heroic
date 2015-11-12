@@ -45,8 +45,10 @@ public abstract class SamplingAggregation implements Aggregation {
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
-        final Duration s = firstPresent(sampling.getSize(), context.size()).orElseGet(context::defaultSize);
-        final Duration e = firstPresent(sampling.getExtent(), context.extent()).orElseGet(context::defaultExtent);
+        final Duration s =
+                firstPresent(sampling.getSize(), context.size()).orElseGet(context::defaultSize);
+        final Duration e = firstPresent(sampling.getExtent(), context.extent())
+                .orElseGet(context::defaultExtent);
         return apply(context, s.convert(TimeUnit.MILLISECONDS), e.convert(TimeUnit.MILLISECONDS));
     }
 
@@ -72,5 +74,6 @@ public abstract class SamplingAggregation implements Aggregation {
         return String.format("%s(%s)", name, params.join(arguments));
     }
 
-    protected abstract AggregationInstance apply(AggregationContext context, long size, long extent);
+    protected abstract AggregationInstance apply(AggregationContext context, long size,
+            long extent);
 }

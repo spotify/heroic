@@ -56,9 +56,11 @@ public class FindTags {
     private final int size;
 
     /**
-     * Handle that tags is a deeply nested structure and copy it up until the closest immutable type.
+     * Handle that tags is a deeply nested structure and copy it up until the closest immutable
+     * type.
      */
-    private static void updateTags(final Map<String, Set<String>> data, final Map<String, Set<String>> add) {
+    private static void updateTags(final Map<String, Set<String>> data,
+            final Map<String, Set<String>> add) {
         for (final Map.Entry<String, Set<String>> entry : add.entrySet()) {
             Set<String> entries = data.get(entry.getKey());
 
@@ -112,18 +114,21 @@ public class FindTags {
             public FindTags transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new FindTags(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_TAGS, 0);
+                return new FindTags(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_TAGS, 0);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends FindTags> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends FindTags> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, FindTags>() {
             @Override
             public FindTags transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new FindTags(errors, EMPTY_TAGS, 0);
             }
         };

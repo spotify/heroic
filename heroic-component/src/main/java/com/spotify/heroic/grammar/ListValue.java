@@ -52,8 +52,9 @@ public final class ListValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(T to) {
-        if (to instanceof ListValue)
+        if (to instanceof ListValue) {
             return (T) this;
+        }
 
         throw new ValueCastException(this, to);
     }
@@ -61,8 +62,9 @@ public final class ListValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(ListValue.class))
+        if (to.isAssignableFrom(ListValue.class)) {
             return (T) this;
+        }
 
         throw new ValueTypeCastException(this, to);
     }

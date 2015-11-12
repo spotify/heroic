@@ -24,7 +24,8 @@
  *
  * It is licensed under the Apache 2.0 license.
  *
- * The below link is a snapshot of the commit that this code was copied from, it includes licensing information.
+ * The below link is a snapshot of the commit that this code was copied from, it includes licensing
+ * information.
  * https://github.com/dropwizard/metrics/tree/e45597d00b972e530b0a79b95190615b4e031ec9
  */
 package com.spotify.heroic.metrics;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 /**
  * A meter metric which measures mean five-minute exponentially-weighted moving average throughputs.
+ *
  * @see EWMA
  */
 public class Meter {
@@ -57,7 +59,7 @@ public class Meter {
     /**
      * Creates a new {@link Meter}.
      *
-     * @param clock      the clock to use for the meter ticks
+     * @param clock the clock to use for the meter ticks
      */
     public Meter(Clock clock) {
         this.clock = clock;

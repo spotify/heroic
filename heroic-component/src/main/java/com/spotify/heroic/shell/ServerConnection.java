@@ -46,18 +46,20 @@ import eu.toolchain.serializer.SerializerFramework;
 final class ServerConnection extends ShellConnection {
     public static final int BUFFER_SIZE = (1 << 16);
 
-    public ServerConnection(final SerializerFramework framework, final Socket socket) throws IOException {
+    public ServerConnection(final SerializerFramework framework, final Socket socket)
+            throws IOException {
         super(framework, socket);
     }
 
     public InputStream newInputStream(Path path, StandardOpenOption... options) throws IOException {
-        final FileOpened result = request(new FileNewInputStream(path.toString(), Arrays.asList(options)),
-                FileOpened.class);
+        final FileOpened result = request(
+                new FileNewInputStream(path.toString(), Arrays.asList(options)), FileOpened.class);
 
         final int handle = result.getHandle();
 
-        /* BufferedInputStream should _never_ use {@link InputStream#read()}, making sure we don't have to implement
-         * that method. Reading one byte at-a-time over the network would be a folly */
+        /* BufferedInputStream should _never_ use {@link InputStream#read()}, making sure we don't
+         * have to implement that method. Reading one byte at-a-time over the network would be a
+         * folly */
         return new BufferedInputStream(new InputStream() {
             @Override
             public int read() throws IOException {
@@ -66,7 +68,8 @@ final class ServerConnection extends ShellConnection {
 
             @Override
             public int read(byte[] b, int off, int len) throws IOException {
-                final FileReadResult data = request(new FileRead(handle, len), FileReadResult.class);
+                final FileReadResult data =
+                        request(new FileRead(handle, len), FileReadResult.class);
                 final byte[] bytes = data.getData();
                 System.arraycopy(bytes, 0, b, off, bytes.length);
                 return bytes.length;
@@ -80,9 +83,10 @@ final class ServerConnection extends ShellConnection {
 
     }
 
-    public OutputStream newOutputStream(Path path, StandardOpenOption... options) throws IOException {
-        final FileOpened result = request(new FileNewOutputStream(path.toString(), Arrays.asList(options)),
-                FileOpened.class);
+    public OutputStream newOutputStream(Path path, StandardOpenOption... options)
+            throws IOException {
+        final FileOpened result = request(
+                new FileNewOutputStream(path.toString(), Arrays.asList(options)), FileOpened.class);
 
         final int handle = result.getHandle();
 

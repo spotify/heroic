@@ -128,20 +128,25 @@ public class QuoteParser {
             buffer.append(c);
         }
 
-        if (openSingle)
+        if (openSingle) {
             throw new QuoteParserException(pos + ": input ended with open single quote");
+        }
 
-        if (openDouble)
+        if (openDouble) {
             throw new QuoteParserException(pos + ": input ended with open double quote");
+        }
 
-        if (escapeNext)
+        if (escapeNext) {
             throw new QuoteParserException(pos + ": input ended with open escape");
+        }
 
-        if (unicodeChar > 0)
+        if (unicodeChar > 0) {
             throw new QuoteParserException(pos + ": input ended with open unicode escape sequence");
+        }
 
-        if (buffer.length() > 0)
+        if (buffer.length() > 0) {
             parts.add(buffer.toString());
+        }
 
         return ImmutableList.copyOf(parts);
     }
@@ -155,7 +160,8 @@ public class QuoteParser {
             final Integer v = hexmap.get(in);
 
             if (v == null) {
-                throw new QuoteParserException(pos + ": non-hex character in unicode escape sequence");
+                throw new QuoteParserException(
+                        pos + ": non-hex character in unicode escape sequence");
             }
 
             codepoint += v << ((unicode.length - i - 1) * 4);
@@ -164,7 +170,8 @@ public class QuoteParser {
         final char[] result = Character.toChars(codepoint);
 
         if (result.length != 1) {
-            throw new QuoteParserException(pos + ": codepoint does not correspond to a single unicode character");
+            throw new QuoteParserException(
+                    pos + ": codepoint does not correspond to a single unicode character");
         }
 
         return result[0];

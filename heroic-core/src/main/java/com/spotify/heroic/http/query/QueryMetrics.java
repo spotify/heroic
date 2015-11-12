@@ -53,12 +53,13 @@ public class QueryMetrics {
     private final Optional<Map<String, String>> tags;
     private final Optional<List<String>> groupBy;
 
-    public QueryMetrics(Optional<String> query, Optional<Aggregation> aggregation, MetricType source,
-            Optional<QueryDateRange> range, Optional<Filter> filter, Optional<QueryOptions> options) {
+    public QueryMetrics(Optional<String> query, Optional<Aggregation> aggregation,
+            MetricType source, Optional<QueryDateRange> range, Optional<Filter> filter,
+            Optional<QueryOptions> options) {
         this.query = query;
         this.aggregation = aggregation;
         this.source = source;
-        this.range  = range;
+        this.range = range;
         this.filter = filter;
         this.options = options;
 
@@ -68,10 +69,12 @@ public class QueryMetrics {
     }
 
     @JsonCreator
-    public QueryMetrics(@JsonProperty("query") String query, @JsonProperty("aggregation") Aggregation aggregation,
-            @JsonProperty("aggregators") List<Aggregation> aggregators, @JsonProperty("source") String source,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("filter") Filter filter,
-            @JsonProperty("key") String key, @JsonProperty("tags") Map<String, String> tags,
+    public QueryMetrics(@JsonProperty("query") String query,
+            @JsonProperty("aggregation") Aggregation aggregation,
+            @JsonProperty("aggregators") List<Aggregation> aggregators,
+            @JsonProperty("source") String source, @JsonProperty("range") QueryDateRange range,
+            @JsonProperty("filter") Filter filter, @JsonProperty("key") String key,
+            @JsonProperty("tags") Map<String, String> tags,
             @JsonProperty("groupBy") List<String> groupBy,
             @JsonProperty("options") QueryOptions options,
             /* ignored */ @JsonProperty("noCache") Boolean noCache) {

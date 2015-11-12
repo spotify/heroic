@@ -29,25 +29,25 @@ import com.spotify.heroic.metric.QueryResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface QueryManager {
-    public Group useGroup(String group);
+    Group useGroup(String group);
 
-    public Collection<? extends Group> useGroupPerNode(String group);
+    Collection<? extends Group> useGroupPerNode(String group);
 
-    public Group useDefaultGroup();
+    Group useDefaultGroup();
 
-    public Collection<? extends Group> useDefaultGroupPerNode();
+    Collection<? extends Group> useDefaultGroupPerNode();
 
-    public QueryBuilder newQuery();
+    QueryBuilder newQuery();
 
-    public QueryBuilder newQueryFromString(String query);
+    QueryBuilder newQueryFromString(String query);
 
-    public String queryToString(final Query query);
+    String queryToString(final Query query);
 
-    public AsyncFuture<Void> initialized();
+    AsyncFuture<Void> initialized();
 
     public interface Group extends Iterable<ClusterNode.Group> {
-        public AsyncFuture<QueryResult> query(Query query);
+        AsyncFuture<QueryResult> query(Query query);
 
-        public ClusterNode.Group first();
+        ClusterNode.Group first();
     }
 }

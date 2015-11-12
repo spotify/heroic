@@ -37,7 +37,8 @@ public class QueryBatch {
     final Optional<QueryDateRange> range;
 
     @JsonCreator
-    public QueryBatch(@JsonProperty("queries") Map<String, QueryMetrics> queries, @JsonProperty("range") QueryDateRange range) {
+    public QueryBatch(@JsonProperty("queries") Map<String, QueryMetrics> queries,
+            @JsonProperty("range") QueryDateRange range) {
         this.queries = Optional.ofNullable(queries).orElseGet(ImmutableMap::of);
         this.range = Optional.ofNullable(range);
     }

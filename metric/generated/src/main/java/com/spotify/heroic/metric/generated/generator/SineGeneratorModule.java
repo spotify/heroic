@@ -49,8 +49,8 @@ public class SineGeneratorModule implements GeneratorModule {
     private final long step;
 
     @JsonCreator
-    public SineGeneratorModule(@JsonProperty("magnitude") Double magnitude, @JsonProperty("period") Long period,
-            @JsonProperty("step") Long step) {
+    public SineGeneratorModule(@JsonProperty("magnitude") Double magnitude,
+            @JsonProperty("period") Long period, @JsonProperty("step") Long step) {
         this.magnitude = Optional.fromNullable(magnitude).or(DEFAULT_MAGNITUDE);
         this.period = Optional.fromNullable(period).or(DEFAULT_PERIOD);
         this.step = Optional.fromNullable(step).or(DEFAULT_STEP);

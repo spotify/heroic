@@ -49,8 +49,8 @@ public class JsonCredentialsBuilder implements CredentialsBuilder {
     @Override
     public CredentialOptions build() throws Exception {
         // XXX: You have to leave the input stream open for BigtableSession to use it.
-        //      This does 'leak' an input stream, but it's only once, so we'll live with it for now.
-        //      Reported here: https://github.com/GoogleCloudPlatform/cloud-bigtable-client/issues/534
+        // This does 'leak' an input stream, but it's only once, so we'll live with it for now.
+        // Reported here: https://github.com/GoogleCloudPlatform/cloud-bigtable-client/issues/534
         return CredentialOptions.jsonCredentials(Files.newInputStream(path));
     }
 

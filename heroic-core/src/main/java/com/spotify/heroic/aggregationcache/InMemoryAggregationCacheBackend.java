@@ -43,7 +43,8 @@ import eu.toolchain.async.AsyncFuture;
  */
 @ToString
 public class InMemoryAggregationCacheBackend implements AggregationCacheBackend {
-    private final Map<CacheBackendKey, Map<Long, Point>> cache = new HashMap<CacheBackendKey, Map<Long, Point>>();
+    private final Map<CacheBackendKey, Map<Long, Point>> cache =
+            new HashMap<CacheBackendKey, Map<Long, Point>>();
 
     @Inject
     private AsyncFramework async;
@@ -62,8 +63,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
 
         final long cadence = aggregation.cadence();
 
-        if (cadence == 0)
+        if (cadence == 0) {
             throw new CacheOperationException("provided aggregation is not cacheable");
+        }
 
         final List<Point> datapoints = new ArrayList<Point>();
 
@@ -77,8 +79,9 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         for (long i = start; i < end; i += cadence) {
             final Point d = entry.get(i);
 
-            if (d == null)
+            if (d == null) {
                 continue;
+            }
 
             datapoints.add(d);
         }
@@ -87,8 +90,8 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
     }
 
     @Override
-    public synchronized AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<Point> datapoints)
-            throws CacheOperationException {
+    public synchronized AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key,
+            List<Point> datapoints) throws CacheOperationException {
         Map<Long, Point> entry = cache.get(key);
 
         if (entry == null) {
@@ -99,18 +102,21 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         final AggregationInstance aggregation = key.getAggregation();
         final long cadence = aggregation.cadence();
 
-        if (cadence == 0)
+        if (cadence == 0) {
             return async.resolved(new CacheBackendPutResult());
+        }
 
         for (final Point d : datapoints) {
             final long timestamp = d.getTimestamp();
             final double value = d.getValue();
 
-            if (Double.isNaN(value))
+            if (Double.isNaN(value)) {
                 continue;
+            }
 
-            if (timestamp % cadence != 0)
+            if (timestamp % cadence != 0) {
                 continue;
+            }
 
             entry.put(timestamp, d);
         }

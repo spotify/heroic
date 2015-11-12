@@ -38,7 +38,8 @@ public class WriteMetricRequest {
     final MetricCollection data;
 
     @JsonCreator
-    public WriteMetricRequest(@JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data) {
+    public WriteMetricRequest(@JsonProperty("series") Series series,
+            @JsonProperty("data") MetricCollection data) {
         this.series = ofNullable(series).orElseGet(Series::empty);
         this.data = ofNullable(data).orElseGet(MetricCollection::empty);
     }

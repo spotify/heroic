@@ -53,8 +53,9 @@ public class AggregationValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(T to) {
-        if (to instanceof AggregationValue)
+        if (to instanceof AggregationValue) {
             return (T) this;
+        }
 
         throw new ValueCastException(this, to);
     }
@@ -62,8 +63,9 @@ public class AggregationValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(AggregationValue.class))
+        if (to.isAssignableFrom(AggregationValue.class)) {
             return (T) this;
+        }
 
         throw new ValueTypeCastException(this, to);
     }

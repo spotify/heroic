@@ -75,7 +75,8 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
         pipeline.addLast(new NativeRpcDecoder());
         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
             @Override
-            protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+            protected void channelRead0(final ChannelHandlerContext ctx, final Object msg)
+                    throws Exception {
                 if (msg instanceof NativeRpcError) {
                     final NativeRpcError error = (NativeRpcError) msg;
 
@@ -107,7 +108,8 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
 
                 if (msg instanceof NativeRpcHeartBeat) {
                     if (log.isTraceEnabled()) {
-                        log.trace("[{}] heartbeat: delaying timeout by {}ms", ctx.channel(), heartbeatInterval);
+                        log.trace("[{}] heartbeat: delaying timeout by {}ms", ctx.channel(),
+                                heartbeatInterval);
                     }
 
                     bumpTimeout(ctx);
@@ -124,7 +126,8 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
             }
 
             @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                    throws Exception {
                 future.fail(cause);
             }
         });
@@ -134,8 +137,8 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
     }
 
     private void bumpTimeout(final ChannelHandlerContext ctx) {
-        final Timeout timeout = timer.newTimeout(heartbeatTimeout(ctx.channel(), future), heartbeatInterval,
-                TimeUnit.MILLISECONDS);
+        final Timeout timeout = timer.newTimeout(heartbeatTimeout(ctx.channel(), future),
+                heartbeatInterval, TimeUnit.MILLISECONDS);
 
         final Timeout old = heartbeatTimeout.getAndSet(timeout);
 

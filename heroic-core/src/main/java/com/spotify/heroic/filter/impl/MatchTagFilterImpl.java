@@ -69,14 +69,16 @@ public class MatchTagFilterImpl implements Filter.MatchTag {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.MatchTag.class.isAssignableFrom(o.getClass()))
+        if (!Filter.MatchTag.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         final Filter.MatchTag other = (Filter.MatchTag) o;
         final int first = FilterComparatorUtils.stringCompare(first(), other.first());
 
-        if (first != 0)
+        if (first != 0) {
             return first;
+        }
 
         return FilterComparatorUtils.stringCompare(second(), other.second());
     }

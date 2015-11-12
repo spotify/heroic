@@ -62,9 +62,9 @@ import lombok.NoArgsConstructor;
  */
 @Data
 public class ClusterManagerModule {
-    private final static Key<ClusterDiscovery> DISCOVERY_KEY = Key.get(ClusterDiscovery.class);
-    public static final Set<NodeCapability> DEFAULT_CAPABILITIES = ImmutableSet.copyOf(Sets.newHashSet(
-            NodeCapability.QUERY, NodeCapability.WRITE));
+    private static final Key<ClusterDiscovery> DISCOVERY_KEY = Key.get(ClusterDiscovery.class);
+    public static final Set<NodeCapability> DEFAULT_CAPABILITIES =
+            ImmutableSet.copyOf(Sets.newHashSet(NodeCapability.QUERY, NodeCapability.WRITE));
     public static final boolean DEFAULT_USE_LOCAL = true;
 
     private final UUID id;
@@ -110,11 +110,12 @@ public class ClusterManagerModule {
             }
 
             private void installProtocols(final List<RpcProtocolModule> protocols) {
-                final MapBinder<String, RpcProtocol> protocolBindings = MapBinder.newMapBinder(binder(), String.class,
-                        RpcProtocol.class);
+                final MapBinder<String, RpcProtocol> protocolBindings =
+                        MapBinder.newMapBinder(binder(), String.class, RpcProtocol.class);
 
                 for (final RpcProtocolModule m : protocols) {
-                    final Key<RpcProtocol> key = Key.get(RpcProtocol.class, Names.named(m.scheme()));
+                    final Key<RpcProtocol> key =
+                            Key.get(RpcProtocol.class, Names.named(m.scheme()));
                     install(m.module(key, options));
                     protocolBindings.addBinding(m.scheme()).to(key);
                 }
@@ -126,8 +127,8 @@ public class ClusterManagerModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<UUID> id = empty();
         private Optional<Map<String, String>> tags = empty();
@@ -140,7 +141,8 @@ public class ClusterManagerModule {
         @JsonCreator
         public Builder(@JsonProperty("id") UUID id, @JsonProperty("tags") Map<String, String> tags,
                 @JsonProperty("topology") Set<Map<String, String>> topology,
-                @JsonProperty("capabilities") Set<NodeCapability> capabilities, @JsonProperty("useLocal") Boolean useLocal,
+                @JsonProperty("capabilities") Set<NodeCapability> capabilities,
+                @JsonProperty("useLocal") Boolean useLocal,
                 @JsonProperty("discovery") ClusterDiscoveryModule discovery,
                 @JsonProperty("protocols") List<RpcProtocolModule> protocols) {
             this.id = ofNullable(id);

@@ -29,8 +29,10 @@ import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsBuilder;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(value = ComputeEngineCredentialsBuilder.class, name = "compute-engine"),
-        @JsonSubTypes.Type(value = ServiceAccountCredentialsBuilder.class, name = "service-account"),
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = ComputeEngineCredentialsBuilder.class, name = "compute-engine"),
+        @JsonSubTypes.Type(value = ServiceAccountCredentialsBuilder.class,
+                name = "service-account"),
         @JsonSubTypes.Type(value = JsonCredentialsBuilder.class, name = "json")})
 public interface CredentialsBuilder {
     public CredentialOptions build() throws Exception;

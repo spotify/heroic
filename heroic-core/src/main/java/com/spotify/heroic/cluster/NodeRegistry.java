@@ -36,7 +36,6 @@ import com.google.common.collect.Multimap;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Collector;
 import lombok.Data;
 
 @Data
@@ -47,8 +46,8 @@ public class NodeRegistry {
     private final List<NodeRegistryEntry> entries;
     private final int totalNodes;
 
-    private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(List<NodeRegistryEntry> entries,
-            NodeCapability capability) {
+    private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(
+            List<NodeRegistryEntry> entries, NodeCapability capability) {
         final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap.create();
 
         for (final NodeRegistryEntry e : entries) {
@@ -76,15 +75,18 @@ public class NodeRegistry {
         final List<NodeRegistryEntry> matches = new ArrayList<>();
 
         for (final NodeRegistryEntry entry : entries) {
-            if (entry.getMetadata().matches(tags, capability))
+            if (entry.getMetadata().matches(tags, capability)) {
                 matches.add(entry);
+            }
         }
 
-        if (matches.isEmpty())
+        if (matches.isEmpty()) {
             return null;
+        }
 
-        if (matches.size() == 1)
+        if (matches.size() == 1) {
             return matches.get(0);
+        }
 
         return matches.get(random.nextInt(matches.size()));
     }
@@ -100,9 +102,11 @@ public class NodeRegistry {
     public Collection<NodeRegistryEntry> findAllShards(NodeCapability capability) {
         final List<NodeRegistryEntry> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards = buildShards(entries, capability);
+        final Multimap<Map<String, String>, NodeRegistryEntry> shards =
+                buildShards(entries, capability);
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap().entrySet()) {
+        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap()
+                .entrySet()) {
             final NodeRegistryEntry one = pickOne(e.getValue());
 
             if (one == null) {
@@ -122,12 +126,15 @@ public class NodeRegistry {
      * @param n Max number of entries to find.
      * @return An iterable of iterables, containing all found entries.
      */
-    public Collection<Collection<NodeRegistryEntry>> findMultipleFromAllShards(NodeCapability capability, int n) {
+    public Collection<Collection<NodeRegistryEntry>> findMultipleFromAllShards(
+            NodeCapability capability, int n) {
         final Collection<Collection<NodeRegistryEntry>> result = Lists.newArrayList();
 
-        final Multimap<Map<String, String>, NodeRegistryEntry> shards = buildShards(entries, capability);
+        final Multimap<Map<String, String>, NodeRegistryEntry> shards =
+                buildShards(entries, capability);
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap().entrySet()) {
+        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap()
+                .entrySet()) {
             final Collection<NodeRegistryEntry> many = pickN(e.getValue(), n);
 
             if (many.isEmpty()) {
@@ -141,8 +148,9 @@ public class NodeRegistry {
     }
 
     private NodeRegistryEntry pickOne(Collection<NodeRegistryEntry> options) {
-        if (options.isEmpty())
+        if (options.isEmpty()) {
             return null;
+        }
 
         final int selection = random.nextInt(options.size());
 
@@ -154,8 +162,9 @@ public class NodeRegistry {
         int i = 0;
 
         for (final NodeRegistryEntry e : options) {
-            if (i++ == selection)
+            if (i++ == selection) {
                 return e;
+            }
         }
 
         return null;
@@ -185,14 +194,10 @@ public class NodeRegistry {
     public AsyncFuture<Void> close() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
 
-        for (final NodeRegistryEntry entry : entries)
+        for (final NodeRegistryEntry entry : entries) {
             futures.add(entry.getClusterNode().close());
+        }
 
-        return async.collect(futures, new Collector<Void, Void>() {
-            @Override
-            public Void collect(Collection<Void> results) throws Exception {
-                return null;
-            }
-        });
+        return async.collectAndDiscard(futures);
     }
 }

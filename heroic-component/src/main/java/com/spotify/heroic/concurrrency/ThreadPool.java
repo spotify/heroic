@@ -40,8 +40,8 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
 /**
- * An abstraction for the concept of having separate thread pools dedicated towards reading vs. writing to separate
- * filling one up.
+ * An abstraction for the concept of having separate thread pools dedicated towards reading vs.
+ * writing to separate filling one up.
  *
  * @author udoprog
  */
@@ -49,11 +49,11 @@ import eu.toolchain.async.AsyncFuture;
 @Slf4j
 @ToString(exclude = { "executor", "context" })
 public class ThreadPool {
-    public static int DEFAULT_THREADS = 20;
-    public static int DEFAULT_QUEUE_SIZE = 10000;
+    public static final int DEFAULT_THREADS = 20;
+    public static final int DEFAULT_QUEUE_SIZE = 10000;
 
-    public static ThreadPool create(AsyncFramework async, String name, ThreadPoolReporter reporter, Integer threads,
-            Integer queueSize) {
+    public static ThreadPool create(AsyncFramework async, String name, ThreadPoolReporter reporter,
+            Integer threads, Integer queueSize) {
         if (threads == null) {
             threads = DEFAULT_THREADS;
         }
@@ -66,36 +66,36 @@ public class ThreadPool {
             size = queueSize;
         }
 
-        final ThreadPoolExecutor executor = new ThreadPoolExecutor(threads, threads, 5000, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<Runnable>(size, false));
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(threads, threads, 5000,
+                TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(size, false));
 
-        final ThreadPoolReporter.Context context = reporter.newThreadPoolContext(name,
-                new ThreadPoolReporterProvider() {
-            @Override
-            public long getQueueSize() {
-                return executor.getQueue().size();
-            }
+        final ThreadPoolReporter.Context context =
+                reporter.newThreadPoolContext(name, new ThreadPoolReporterProvider() {
+                    @Override
+                    public long getQueueSize() {
+                        return executor.getQueue().size();
+                    }
 
-            @Override
-            public long getQueueCapacity() {
-                return size - executor.getQueue().size();
-            }
+                    @Override
+                    public long getQueueCapacity() {
+                        return size - executor.getQueue().size();
+                    }
 
-            @Override
-            public long getActiveThreads() {
-                return executor.getActiveCount();
-            }
+                    @Override
+                    public long getActiveThreads() {
+                        return executor.getActiveCount();
+                    }
 
-            @Override
-            public long getPoolSize() {
-                return executor.getPoolSize();
-            }
+                    @Override
+                    public long getPoolSize() {
+                        return executor.getPoolSize();
+                    }
 
-            @Override
-            public long getCorePoolSize() {
-                return executor.getCorePoolSize();
-            }
-        });
+                    @Override
+                    public long getCorePoolSize() {
+                        return executor.getCorePoolSize();
+                    }
+                });
 
         return new ThreadPool(async, name, executor, context, threads);
     }
@@ -123,7 +123,8 @@ public class ThreadPool {
                     log.debug("Gracefully shut down executor");
                 } catch (final InterruptedException e) {
                     final List<?> tasks = executor.shutdownNow();
-                    throw new Exception(String.format("Failed to gracefully stop read executors (%d tasks(s) killed)",
+                    throw new Exception(String.format(
+                            "Failed to gracefully stop read executors (%d tasks(s) killed)",
                             tasks.size()), e);
                 } finally {
                     context.stop();

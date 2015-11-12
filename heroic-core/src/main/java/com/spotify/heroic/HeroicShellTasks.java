@@ -69,7 +69,7 @@ public class HeroicShellTasks {
 
         try {
             task = resolveTask(taskName);
-        } catch(final Exception e) {
+        } catch (final Exception e) {
             return async.failed(e);
         }
 
@@ -92,14 +92,14 @@ public class HeroicShellTasks {
 
         try {
             return task.run(io, params);
-        } catch(Exception e) {
+        } catch (Exception e) {
             return async.failed(e);
         }
     }
 
     ShellTask resolveTask(final String taskName) {
-        final SortedMap<String, ShellTask> selected = tasks.subMap(taskName, taskName
-                + Character.MAX_VALUE);
+        final SortedMap<String, ShellTask> selected =
+                tasks.subMap(taskName, taskName + Character.MAX_VALUE);
 
         final ShellTask exact;
 
@@ -114,8 +114,8 @@ public class HeroicShellTasks {
         }
 
         if (selected.size() > 1) {
-            throw new IllegalArgumentException(String.format("Too many (%d) matching tasks (%s)", selected.size(),
-                    joiner.join(selected.keySet())));
+            throw new IllegalArgumentException(String.format("Too many (%d) matching tasks (%s)",
+                    selected.size(), joiner.join(selected.keySet())));
         }
 
         return selected.values().iterator().next();

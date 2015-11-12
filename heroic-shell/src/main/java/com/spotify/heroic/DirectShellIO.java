@@ -42,7 +42,8 @@ public class DirectShellIO implements ShellIO {
     }
 
     @Override
-    public OutputStream newOutputStream(Path path, StandardOpenOption... options) throws IOException {
+    public OutputStream newOutputStream(Path path, StandardOpenOption... options)
+            throws IOException {
         return Files.newOutputStream(path, options);
     }
 

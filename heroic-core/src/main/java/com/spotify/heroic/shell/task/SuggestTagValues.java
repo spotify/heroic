@@ -73,7 +73,8 @@ public class SuggestTagValues implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return suggest.useGroup(params.group).tagValuesSuggest(filter, params.exclude, params.groupLimit)
+        return suggest.useGroup(params.group)
+                .tagValuesSuggest(filter, params.exclude, params.groupLimit)
                 .directTransform(result -> {
                     int i = 0;
 
@@ -87,7 +88,8 @@ public class SuggestTagValues implements ShellTask {
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group;
 
         @Option(name = "-e", aliases = { "--exclude" }, usage = "Exclude the given tags")
@@ -96,7 +98,8 @@ public class SuggestTagValues implements ShellTask {
         @Option(name = "--group-limit", usage = "Maximum cardinality to pull")
         private int groupLimit = 100;
 
-        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = { "--limit" },
+                usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 

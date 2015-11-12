@@ -24,7 +24,7 @@ package com.spotify.heroic.filter;
 import java.io.IOException;
 
 public interface FilterJsonSerialization<T> {
-    public interface Deserializer {
+    interface Deserializer {
         /**
          * read next item as a string.
          */
@@ -36,7 +36,7 @@ public interface FilterJsonSerialization<T> {
         Filter filter() throws IOException;
     }
 
-    public interface Serializer {
+    interface Serializer {
         /**
          * Serialize next item as a string.
          */
@@ -48,7 +48,7 @@ public interface FilterJsonSerialization<T> {
         void filter(Filter filter) throws IOException;
     }
 
-    public T deserialize(Deserializer deserializer) throws IOException;
+    T deserialize(Deserializer deserializer) throws IOException;
 
-    public void serialize(Serializer serializer, T filter) throws IOException;
+    void serialize(Serializer serializer, T filter) throws IOException;
 }

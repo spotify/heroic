@@ -66,8 +66,9 @@ public class SineGenerator implements Generator {
 
         final DateRange rounded = range.rounded(1000);
 
-        if (!watcher.readData(range.diff() / step))
+        if (!watcher.readData(range.diff() / step)) {
             throw new IllegalArgumentException("data limit reached");
+        }
 
         for (long time = rounded.getStart(); time < rounded.getEnd(); time += step) {
             double offset = ((double) (time % period)) / (double) period;
@@ -84,8 +85,9 @@ public class SineGenerator implements Generator {
 
         final DateRange rounded = range.rounded(1000);
 
-        if (!watcher.readData(range.diff() / step))
+        if (!watcher.readData(range.diff() / step)) {
             throw new IllegalArgumentException("data limit reached");
+        }
 
         for (long time = rounded.getStart(); time < rounded.getEnd(); time += step) {
             data.add(new Event(time, PAYLOAD));

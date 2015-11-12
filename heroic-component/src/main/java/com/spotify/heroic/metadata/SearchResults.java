@@ -37,13 +37,14 @@ import eu.toolchain.async.Collector;
 @Data
 public class SearchResults {
     public static final SearchResults EMPTY = new SearchResults(new ArrayList<ScoredSeries>());
-    private static final Comparator<ScoredSeries> SERIES_COMPARATOR = new Comparator<ScoredSeries>() {
-        @Override
-        public int compare(ScoredSeries a, ScoredSeries b) {
-            // reverse, since we want to sort in descending order.
-            return Float.compare(b.getScore(), a.getScore());
-        }
-    };
+    private static final Comparator<ScoredSeries> SERIES_COMPARATOR =
+            new Comparator<ScoredSeries>() {
+                @Override
+                public int compare(ScoredSeries a, ScoredSeries b) {
+                    // reverse, since we want to sort in descending order.
+                    return Float.compare(b.getScore(), a.getScore());
+                }
+            };
 
     private final List<ScoredSeries> series;
 
@@ -53,8 +54,9 @@ public class SearchResults {
             public SearchResults collect(Collection<SearchResults> results) throws Exception {
                 final List<ScoredSeries> series = new ArrayList<>();
 
-                for (final SearchResults r : results)
+                for (final SearchResults r : results) {
                     series.addAll(r.getSeries());
+                }
 
                 Collections.sort(series, SERIES_COMPARATOR);
 

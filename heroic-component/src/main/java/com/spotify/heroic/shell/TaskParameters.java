@@ -24,11 +24,11 @@ package com.spotify.heroic.shell;
 import java.util.List;
 
 public interface TaskParameters {
-    public String config();
+    String config();
 
-    public boolean help();
+    boolean help();
 
-    public String output();
+    String output();
 
-    public List<String> profiles();
+    List<String> profiles();
 }

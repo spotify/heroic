@@ -76,26 +76,29 @@ public class SuggestKey implements ShellTask {
 
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
-        return suggest.useGroup(params.group).keySuggest(filter, fuzzyOptions, params.key).directTransform(result -> {
-            int i = 0;
+        return suggest.useGroup(params.group).keySuggest(filter, fuzzyOptions, params.key)
+                .directTransform(result -> {
+                    int i = 0;
 
-            for (final KeySuggest.Suggestion suggestion : result.getSuggestions()) {
-                io.out().println(String.format("%s: %s", i++, suggestion));
-            }
+                    for (final KeySuggest.Suggestion suggestion : result.getSuggestions()) {
+                        io.out().println(String.format("%s: %s", i++, suggestion));
+                    }
 
-            return null;
-        });
+                    return null;
+                });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group;
 
         @Option(name = "-k", aliases = { "--key" }, usage = "Provide key context for suggestion")
         private String key = null;
 
-        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = { "--limit" },
+                usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 

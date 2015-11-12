@@ -56,7 +56,8 @@ import lombok.ToString;
  */
 @ToString
 public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle {
-    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(GeneratedBackend.class, "fetch");
+    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(GeneratedBackend.class,
+            "fetch");
 
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
@@ -65,7 +66,8 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     private final Groups groups;
 
     @Inject
-    public GeneratedBackend(final AsyncFramework async, final Generator generator, final Groups groups) {
+    public GeneratedBackend(final AsyncFramework async, final Generator generator,
+            final Groups groups) {
         super(async);
         this.async = async;
         this.generator = generator;

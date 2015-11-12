@@ -37,7 +37,8 @@ public class FindTagKeys {
     private final int size;
 
     @JsonCreator
-    public static FindTagKeys create(@JsonProperty("keys") Set<String> keys, @JsonProperty("size") int size) {
+    public static FindTagKeys create(@JsonProperty("keys") Set<String> keys,
+            @JsonProperty("size") int size) {
         return new FindTagKeys(keys, size);
     }
 }

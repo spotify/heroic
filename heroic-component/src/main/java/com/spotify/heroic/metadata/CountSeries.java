@@ -73,8 +73,8 @@ public class CountSeries {
     }
 
     @JsonCreator
-    public CountSeries(@JsonProperty("errors") List<RequestError> errors, @JsonProperty("count") long count,
-            @JsonProperty("limited") boolean limited) {
+    public CountSeries(@JsonProperty("errors") List<RequestError> errors,
+            @JsonProperty("count") long count, @JsonProperty("limited") boolean limited) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.count = count;
         this.limited = limited;
@@ -84,24 +84,28 @@ public class CountSeries {
         this(EMPTY_ERRORS, count, limited);
     }
 
-    public static Transform<Throwable, ? extends CountSeries> nodeError(final NodeRegistryEntry node) {
+    public static Transform<Throwable, ? extends CountSeries> nodeError(
+            final NodeRegistryEntry node) {
         return new Transform<Throwable, CountSeries>() {
             @Override
             public CountSeries transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new CountSeries(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), 0, false);
+                return new CountSeries(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        0, false);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends CountSeries> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends CountSeries> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, CountSeries>() {
             @Override
             public CountSeries transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new CountSeries(errors, 0, false);
             }
         };

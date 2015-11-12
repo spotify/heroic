@@ -81,30 +81,32 @@ public class CoreQueryParser implements QueryParser {
         };
     };
 
-    public static final Operation<AggregationValue> AGGREGATION = new Operation<AggregationValue>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.aggregation();
-        }
+    public static final Operation<AggregationValue> AGGREGATION =
+            new Operation<AggregationValue>() {
+                @Override
+                public ParserRuleContext context(HeroicQueryParser parser) {
+                    return parser.aggregation();
+                }
 
-        @Override
-        public AggregationValue convert(QueryListener listener) {
-            return listener.pop(AggregationValue.class);
-        };
-    };
+                @Override
+                public AggregationValue convert(QueryListener listener) {
+                    return listener.pop(AggregationValue.class);
+                };
+            };
 
-    public static final Operation<Optional<Aggregation>> SELECT = new Operation<Optional<Aggregation>>() {
-        @Override
-        public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.select();
-        }
+    public static final Operation<Optional<Aggregation>> SELECT =
+            new Operation<Optional<Aggregation>>() {
+                @Override
+                public ParserRuleContext context(HeroicQueryParser parser) {
+                    return parser.select();
+                }
 
-        @Override
-        public Optional<Aggregation> convert(QueryListener listener) {
-            listener.popMark(QueryListener.SELECT_MARK);
-            return listener.popOptional(Aggregation.class);
-        };
-    };
+                @Override
+                public Optional<Aggregation> convert(QueryListener listener) {
+                    listener.popMark(QueryListener.SELECT_MARK);
+                    return listener.popOptional(Aggregation.class);
+                };
+            };
 
     public static final Operation<FromDSL> FROM = new Operation<FromDSL>() {
         @Override
@@ -150,7 +152,8 @@ public class CoreQueryParser implements QueryParser {
         });
 
         q.getGroupBy().ifPresent(groupBy -> {
-            parts.add("group by " + groups.join(groupBy.stream().map(QueryParser::escapeString).iterator()));
+            parts.add("group by "
+                    + groups.join(groupBy.stream().map(QueryParser::escapeString).iterator()));
         });
 
         return joiner.join(parts);
@@ -198,8 +201,8 @@ public class CoreQueryParser implements QueryParser {
         final Token last = lexer.getToken();
 
         if (last.getType() != Token.EOF) {
-            throw new ParseException(String.format("garbage at end of string: %s", last.getText()), last.getLine(),
-                    last.getCharPositionInLine());
+            throw new ParseException(String.format("garbage at end of string: %s", last.getText()),
+                    last.getLine(), last.getCharPositionInLine());
         }
 
         return op.convert(listener);
@@ -215,8 +218,8 @@ public class CoreQueryParser implements QueryParser {
         final Token token = e.getOffendingToken();
 
         if (token.getType() == HeroicQueryLexer.UnterminatedQutoedString) {
-            return new ParseException(String.format("unterminated string: %s", token.getText()), token.getLine(),
-                    token.getCharPositionInLine());
+            return new ParseException(String.format("unterminated string: %s", token.getText()),
+                    token.getLine(), token.getCharPositionInLine());
         }
 
         return new ParseException("unexpected token: " + token.getText(), token.getLine(),

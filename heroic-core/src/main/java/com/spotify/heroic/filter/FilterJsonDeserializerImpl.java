@@ -37,7 +37,8 @@ import com.google.inject.Inject;
 import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
 
-public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter> implements FilterJsonDeserializer {
+public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
+        implements FilterJsonDeserializer {
     private final Map<String, FilterJsonSerialization<? extends Filter>> impl = new HashMap<>();
 
     @Inject
@@ -53,19 +54,23 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter> impleme
     }
 
     @Override
-    public Filter deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
-        if (p.getCurrentToken() != JsonToken.START_ARRAY)
+    public Filter deserialize(JsonParser p, DeserializationContext c)
+            throws IOException, JsonProcessingException {
+        if (p.getCurrentToken() != JsonToken.START_ARRAY) {
             throw c.mappingException("Expected start of array");
+        }
 
-        if (p.nextToken() != JsonToken.VALUE_STRING)
+        if (p.nextToken() != JsonToken.VALUE_STRING) {
             throw c.mappingException("Expected operator (string)");
+        }
 
         final String operator = p.readValueAs(String.class);
 
         final FilterJsonSerialization<? extends Filter> deserializer = impl.get(operator);
 
-        if (deserializer == null)
+        if (deserializer == null) {
             throw c.mappingException("No such operator: " + operator);
+        }
 
         p.nextToken();
 
@@ -73,11 +78,13 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter> impleme
 
         final Filter filter = deserializer.deserialize(d);
 
-        if (p.getCurrentToken() != JsonToken.END_ARRAY)
+        if (p.getCurrentToken() != JsonToken.END_ARRAY) {
             throw c.mappingException("Expected end of array from '" + deserializer + "'");
+        }
 
-        if (filter instanceof Filter.Raw)
+        if (filter instanceof Filter.Raw) {
             return parseRawFilter((Filter.Raw) filter);
+        }
 
         return filter.optimize();
     }
@@ -93,11 +100,13 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter> impleme
 
         @Override
         public String string() throws IOException {
-            if (parser.getCurrentToken() == JsonToken.END_ARRAY)
+            if (parser.getCurrentToken() == JsonToken.END_ARRAY) {
                 return null;
+            }
 
-            if (parser.getCurrentToken() != JsonToken.VALUE_STRING)
+            if (parser.getCurrentToken() != JsonToken.VALUE_STRING) {
                 throw c.mappingException("Expected string");
+            }
 
             final String string = parser.getValueAsString();
 
@@ -107,11 +116,13 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter> impleme
 
         @Override
         public Filter filter() throws IOException {
-            if (parser.getCurrentToken() == JsonToken.END_ARRAY)
+            if (parser.getCurrentToken() == JsonToken.END_ARRAY) {
                 return null;
+            }
 
-            if (parser.getCurrentToken() != JsonToken.START_ARRAY)
+            if (parser.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException("Expected start of new filter expression");
+            }
 
             final Filter filter = parser.readValueAs(Filter.class);
 

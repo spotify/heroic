@@ -42,7 +42,8 @@ public class Options implements Aggregation {
     private final Aggregation aggregation;
 
     @JsonCreator
-    public Options(@JsonProperty("sampling") SamplingQuery sampling, @JsonProperty("aggregation") Aggregation aggregation) {
+    public Options(@JsonProperty("sampling") SamplingQuery sampling,
+            @JsonProperty("aggregation") Aggregation aggregation) {
         this.sampling = Optional.ofNullable(sampling).orElseGet(SamplingQuery::empty);
         this.aggregation = Optional.ofNullable(aggregation).orElse(Empty.INSTANCE);
     }
@@ -54,12 +55,14 @@ public class Options implements Aggregation {
 
     @Override
     public Optional<Long> extent() {
-        return firstPresent(aggregation.extent(), sampling.getExtent().map(Duration::toMilliseconds));
+        return firstPresent(aggregation.extent(),
+                sampling.getExtent().map(Duration::toMilliseconds));
     }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
-        return aggregation.apply(new OptionsContext(context, sampling.getSize(), sampling.getExtent()));
+        return aggregation
+                .apply(new OptionsContext(context, sampling.getSize(), sampling.getExtent()));
     }
 
     @Override

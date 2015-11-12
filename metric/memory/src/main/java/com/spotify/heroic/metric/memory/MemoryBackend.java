@@ -66,7 +66,8 @@ import lombok.ToString;
 public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     public static final String MEMORY_KEYS = "memory-keys";
 
-    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(MemoryBackend.class, "fetch");
+    public static final QueryTrace.Identifier FETCH =
+            QueryTrace.identifier(MemoryBackend.class, "fetch");
 
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
@@ -83,9 +84,10 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
         }
     };
 
-    private final ConcurrentSkipListMap<MemoryKey, NavigableMap<Long, Metric>> storage = new ConcurrentSkipListMap<>(COMPARATOR);
+    private final ConcurrentSkipListMap<MemoryKey, NavigableMap<Long, Metric>> storage =
+            new ConcurrentSkipListMap<>(COMPARATOR);
 
-    private final Object $create = new Object();
+    private final Object createLock = new Object();
 
     private final AsyncFramework async;
     private final Groups groups;
@@ -164,7 +166,8 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit, final QueryOptions options) {
+    public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit,
+            final QueryOptions options) {
         final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
 
         int index = 0;
@@ -232,7 +235,8 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
 
         synchronized (tree) {
             final Iterable<Metric> data = tree.subMap(range.getStart(), range.getEnd()).values();
-            return ImmutableList.of(MetricCollection.build(key.getSource(), ImmutableList.copyOf(data)));
+            return ImmutableList
+                    .of(MetricCollection.build(key.getSource(), ImmutableList.copyOf(data)));
         }
     }
 
@@ -245,14 +249,16 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     private NavigableMap<Long, Metric> getOrCreate(final MemoryKey key) {
         final NavigableMap<Long, Metric> tree = storage.get(key);
 
-        if (tree != null)
+        if (tree != null) {
             return tree;
+        }
 
-        synchronized ($create) {
+        synchronized (createLock) {
             final NavigableMap<Long, Metric> checked = storage.get(key);
 
-            if (checked != null)
+            if (checked != null) {
                 return checked;
+            }
 
             final NavigableMap<Long, Metric> created = new TreeMap<>();
             storage.put(key, created);

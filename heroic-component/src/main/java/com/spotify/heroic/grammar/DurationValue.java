@@ -62,12 +62,15 @@ public class DurationValue implements Value {
     private Value operate(BinaryOperation op, Value other) {
         final DurationValue o = other.cast(this);
 
-        if (unit == o.unit)
+        if (unit == o.unit) {
             return new DurationValue(unit, op.calculate(value, o.value));
+        }
 
-        // decide which unit to convert to depending on which has the greatest magnitude in milliseconds.
-        if (unit.toMillis(1) < o.unit.toMillis(1))
+        // decide which unit to convert to depending on which has the greatest magnitude in
+        // milliseconds.
+        if (unit.toMillis(1) < o.unit.toMillis(1)) {
             return new DurationValue(unit, op.calculate(value, unit.convert(o.value, o.unit)));
+        }
 
         return new DurationValue(o.unit, op.calculate(o.unit.convert(value, unit), o.value));
     }

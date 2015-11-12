@@ -63,7 +63,8 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Empty.NAME, EmptyInstance.class, Empty.class,
                         new Serializer<EmptyInstance>() {
                     @Override
-                    public void serialize(SerialWriter buffer, EmptyInstance value) throws IOException {
+                    public void serialize(SerialWriter buffer, EmptyInstance value)
+                            throws IOException {
                     }
 
                     @Override
@@ -75,7 +76,8 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Group.NAME, GroupInstance.class, Group.class,
                         new GroupingAggregationSerializer<GroupInstance>(list, aggregation) {
                     @Override
-                    protected GroupInstance build(Optional<List<String>> of, AggregationInstance each) {
+                    protected GroupInstance build(Optional<List<String>> of,
+                            AggregationInstance each) {
                         return new GroupInstance(of, each);
                     }
                 }, new GroupingAggregationBuilder(factory) {
@@ -88,7 +90,8 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Collapse.NAME, CollapseInstance.class, Collapse.class,
                         new GroupingAggregationSerializer<CollapseInstance>(list, aggregation) {
                     @Override
-                    protected CollapseInstance build(Optional<List<String>> of, AggregationInstance each) {
+                    protected CollapseInstance build(Optional<List<String>> of,
+                            AggregationInstance each) {
                         return new CollapseInstance(of, each);
                     }
                 }, new GroupingAggregationBuilder(factory) {
@@ -101,7 +104,8 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Chain.NAME, ChainInstance.class, Chain.class,
                         new Serializer<ChainInstance>() {
                     @Override
-                    public void serialize(SerialWriter buffer, ChainInstance value) throws IOException {
+                    public void serialize(SerialWriter buffer, ChainInstance value)
+                            throws IOException {
                         aggregations.serialize(buffer, value.getChain());
                     }
 
@@ -120,7 +124,8 @@ public class Module implements HeroicModule {
                 ctx.aggregation(Partition.NAME, PartitionInstance.class, Partition.class,
                         new Serializer<PartitionInstance>() {
                     @Override
-                    public void serialize(SerialWriter buffer, PartitionInstance value) throws IOException {
+                    public void serialize(SerialWriter buffer, PartitionInstance value)
+                            throws IOException {
                         aggregations.serialize(buffer, value.getChildren());
                     }
 
@@ -140,9 +145,11 @@ public class Module implements HeroicModule {
                         new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
-                        final Aggregation child = args.getNext("aggregation", AggregationValue.class)
-                                .map(this::asAggregation).orElseThrow(
-                                        () -> new IllegalArgumentException("missing required arguments 'aggregation'"));
+                        final Aggregation child =
+                                args.getNext("aggregation", AggregationValue.class)
+                                        .map(this::asAggregation)
+                                        .orElseThrow(() -> new IllegalArgumentException(
+                                                "missing required arguments 'aggregation'"));
 
                         final Optional<Duration> size = args.keyword("size", Duration.class);
                         final Optional<Duration> extent = args.keyword("extent", Duration.class);

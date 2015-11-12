@@ -42,15 +42,17 @@ public class MetadataResourceCache {
     @Inject
     private ClusterManager cluster;
 
-    private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags = CacheBuilder.newBuilder().maximumSize(10000)
-            .expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
-                @Override
-                public AsyncFuture<FindTags> load(Entry e) {
-                    return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
-                }
-            });
+    private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags =
+            CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES)
+                    .build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
+                        @Override
+                        public AsyncFuture<FindTags> load(Entry e) {
+                            return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
+                        }
+                    });
 
-    public AsyncFuture<FindTags> findTags(final String group, final RangeFilter filter) throws ExecutionException {
+    public AsyncFuture<FindTags> findTags(final String group, final RangeFilter filter)
+            throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
         return findTags.get(e).onDone(new FutureDone<FindTags>() {
@@ -70,15 +72,17 @@ public class MetadataResourceCache {
         });
     }
 
-    private final LoadingCache<Entry, AsyncFuture<FindKeys>> findKeys = CacheBuilder.newBuilder().maximumSize(10000)
-            .expireAfterWrite(30, TimeUnit.MINUTES).build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
-                @Override
-                public AsyncFuture<FindKeys> load(Entry e) {
-                    return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
-                }
-            });
+    private final LoadingCache<Entry, AsyncFuture<FindKeys>> findKeys =
+            CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES)
+                    .build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
+                        @Override
+                        public AsyncFuture<FindKeys> load(Entry e) {
+                            return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
+                        }
+                    });
 
-    public AsyncFuture<FindKeys> findKeys(final String group, final RangeFilter filter) throws ExecutionException {
+    public AsyncFuture<FindKeys> findKeys(final String group, final RangeFilter filter)
+            throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
         return findKeys.get(e).onDone(new FutureDone<FindKeys>() {

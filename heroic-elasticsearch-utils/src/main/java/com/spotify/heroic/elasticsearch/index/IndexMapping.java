@@ -40,7 +40,8 @@ public interface IndexMapping {
 
     public String[] writeIndices(DateRange range) throws NoIndexSelectedException;
 
-    public SearchRequestBuilder search(Client client, DateRange range, String type) throws NoIndexSelectedException;
+    public SearchRequestBuilder search(Client client, DateRange range, String type)
+            throws NoIndexSelectedException;
 
     public DeleteByQueryRequestBuilder deleteByQuery(Client client, DateRange range, String type)
             throws NoIndexSelectedException;

@@ -32,24 +32,24 @@ public interface Filter extends Comparable<Filter> {
      * @param series Series to apply to.
      * @return {@code true} if filter matches the given series, {@code false} otherwise.
      */
-    public boolean apply(Series series);
+    boolean apply(Series series);
 
-    public interface MultiArgs<A> extends Filter {
-        public List<A> terms();
+    interface MultiArgs<A> extends Filter {
+        List<A> terms();
     }
 
-    public interface NoArg extends Filter {
+    interface NoArg extends Filter {
         Filter invert();
     }
 
-    public interface OneArg<A> extends Filter {
-        public A first();
+    interface OneArg<A> extends Filter {
+        A first();
     }
 
-    public interface TwoArgs<A, B> extends Filter {
-        public A first();
+    interface TwoArgs<A, B> extends Filter {
+        A first();
 
-        public B second();
+        B second();
     }
 
     /**
@@ -57,42 +57,42 @@ public interface Filter extends Comparable<Filter> {
      *
      * These are necessary when writing converters that typically check instance types.
      **/
-    public interface Or extends MultiArgs<Filter> {
+    interface Or extends MultiArgs<Filter> {
     }
 
-    public interface And extends MultiArgs<Filter> {
+    interface And extends MultiArgs<Filter> {
     }
 
-    public interface True extends NoArg {
+    interface True extends NoArg {
     }
 
-    public interface False extends NoArg {
+    interface False extends NoArg {
     }
 
-    public interface HasTag extends OneArg<String> {
+    interface HasTag extends OneArg<String> {
     }
 
-    public interface MatchKey extends OneArg<String> {
+    interface MatchKey extends OneArg<String> {
     }
 
-    public interface MatchTag extends TwoArgs<String, String> {
+    interface MatchTag extends TwoArgs<String, String> {
     }
 
-    public interface Not extends OneArg<Filter> {
+    interface Not extends OneArg<Filter> {
     }
 
-    public interface StartsWith extends TwoArgs<String, String> {
+    interface StartsWith extends TwoArgs<String, String> {
     }
 
-    public interface Regex extends TwoArgs<String, String> {
+    interface Regex extends TwoArgs<String, String> {
     }
 
-    public interface Raw extends OneArg<String> {
+    interface Raw extends OneArg<String> {
     }
 
-    public Filter optimize();
+    Filter optimize();
 
-    public String operator();
+    String operator();
 
-    public String toDSL();
+    String toDSL();
 }

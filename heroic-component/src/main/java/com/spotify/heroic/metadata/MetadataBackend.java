@@ -32,21 +32,18 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface MetadataBackend extends Grouped, Initializing {
-    public AsyncFuture<Void> configure();
+    AsyncFuture<Void> configure();
 
     /**
      * Buffer a write for the specified series.
      *
-     * @param id
-     *            Id of series to write.
-     * @param series
-     *            Series to write.
-     * @throws MetadataException
-     *             If write could not be buffered.
+     * @param id Id of series to write.
+     * @param series Series to write.
+     * @throws MetadataException If write could not be buffered.
      */
-    public AsyncFuture<WriteResult> write(Series series, DateRange range);
+    AsyncFuture<WriteResult> write(Series series, DateRange range);
 
-    public AsyncFuture<Void> refresh();
+    AsyncFuture<Void> refresh();
 
     /**
      * Iterate <em>all</em> available metadata.
@@ -55,15 +52,15 @@ public interface MetadataBackend extends Grouped, Initializing {
      *
      * @throws MetadataException
      */
-    public Iterable<MetadataEntry> entries(Filter filter, DateRange range);
+    Iterable<MetadataEntry> entries(Filter filter, DateRange range);
 
-    public AsyncFuture<FindTags> findTags(RangeFilter filter);
+    AsyncFuture<FindTags> findTags(RangeFilter filter);
 
-    public AsyncFuture<FindSeries> findSeries(RangeFilter filter);
+    AsyncFuture<FindSeries> findSeries(RangeFilter filter);
 
-    public AsyncFuture<CountSeries> countSeries(RangeFilter filter);
+    AsyncFuture<CountSeries> countSeries(RangeFilter filter);
 
-    public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
+    AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
 
-    public AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+    AsyncFuture<FindKeys> findKeys(RangeFilter filter);
 }

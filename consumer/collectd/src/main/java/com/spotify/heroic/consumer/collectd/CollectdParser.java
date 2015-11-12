@@ -81,7 +81,7 @@ public class CollectdParser {
                         decoded.time = frame.readLong();
                         break;
                     case TIME_HR:
-                        decoded.time = (long)(((double)frame.readLong()) / FACTOR_HR);
+                        decoded.time = (long) (((double) frame.readLong()) / FACTOR_HR);
                         break;
                     case PLUGIN:
                         decoded.plugin = parseString(frame, size);
@@ -99,7 +99,7 @@ public class CollectdParser {
                         decoded.interval = frame.readLong();
                         break;
                     case INTERVAL_HR:
-                        decoded.interval = (long)(((double)frame.readLong()) / FACTOR_HR);
+                        decoded.interval = (long) (((double) frame.readLong()) / FACTOR_HR);
                         break;
                     case MESSAGE:
                         decoded.message = parseString(frame, size);
@@ -186,8 +186,8 @@ public class CollectdParser {
         private long severity;
 
         public CollectdSample toSample(final List<CollectdValue> values) {
-            return new CollectdSample(host, time, plugin, pluginInstance, type, typeInstance, values, interval, message,
-                    severity);
+            return new CollectdSample(host, time, plugin, pluginInstance, type, typeInstance,
+                    values, interval, message, severity);
         }
     }
 }

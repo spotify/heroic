@@ -32,8 +32,8 @@ import com.google.common.collect.ImmutableMap;
 /**
  * Represents which type of metric to operate on.
  *
- * All metric types implement TimeData, but various sources (metadata, metrics, suggestions) can behave differently
- * depending on which source is being operated on.
+ * All metric types implement TimeData, but various sources (metadata, metrics, suggestions) can
+ * behave differently depending on which source is being operated on.
  */
 public enum MetricType {
     // @formatter:off
@@ -47,7 +47,8 @@ public enum MetricType {
     private final String identifier;
     private final Comparator<Metric> comparator;
 
-    private MetricType(Class<? extends Metric> type, String identifier, Comparator<Metric> comparator) {
+    private MetricType(Class<? extends Metric> type, String identifier,
+            Comparator<Metric> comparator) {
         this.type = type;
         this.identifier = identifier;
         this.comparator = comparator;
@@ -61,8 +62,9 @@ public enum MetricType {
         return identifier;
     }
 
-    static final Map<String, MetricType> mapping = ImmutableMap.copyOf(
-            Arrays.stream(MetricType.values()).collect(Collectors.toMap((MetricType m) -> m.identifier(), (m) -> m)));
+    static final Map<String, MetricType> mapping =
+            ImmutableMap.copyOf(Arrays.stream(MetricType.values())
+                    .collect(Collectors.toMap((MetricType m) -> m.identifier(), (m) -> m)));
 
     public static Optional<MetricType> fromIdentifier(String identifier) {
         return Optional.ofNullable(mapping.get(identifier));

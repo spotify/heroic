@@ -29,7 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
 public final class Optionals {
-    public static <T> Optional<List<T>> mergeOptionalList(final Optional<List<T>> a, Optional<List<T>> b) {
+    public static <T> Optional<List<T>> mergeOptionalList(final Optional<List<T>> a,
+            Optional<List<T>> b) {
         if (a.isPresent() && b.isPresent()) {
             return Optional.of(ImmutableList.copyOf(Iterables.concat(a.get(), b.get())));
         }
@@ -37,7 +38,8 @@ public final class Optionals {
         return pickOptional(a, b);
     }
 
-    public static <T> Optional<T> mergeOptional(Optional<T> a, Optional<T> b, BinaryOperator<T> merger) {
+    public static <T> Optional<T> mergeOptional(Optional<T> a, Optional<T> b,
+            BinaryOperator<T> merger) {
         if (a.isPresent() && b.isPresent()) {
             return Optional.of(merger.apply(a.get(), b.get()));
         }

@@ -70,15 +70,17 @@ public final class AstyanaxMetricModule implements MetricModule {
     private final ReadWriteThreadPools.Config pools;
 
     @JsonCreator
-    public AstyanaxMetricModule(@JsonProperty("id") String id, @JsonProperty("seeds") Set<String> seeds,
-            @JsonProperty("keyspace") String keyspace,
-            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
+    public AstyanaxMetricModule(@JsonProperty("id") String id,
+            @JsonProperty("seeds") Set<String> seeds, @JsonProperty("keyspace") String keyspace,
+            @JsonProperty("maxConnectionsPerHost") Integer maxConnectionsPerHost,
+            @JsonProperty("group") String group, @JsonProperty("groups") Set<String> groups,
+            @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.id = id;
         this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
         this.keyspace = Optional.fromNullable(keyspace).or(DEFAULT_KEYSPACE);
         this.seeds = Optional.fromNullable(seeds).or(DEFAULT_SEEDS);
-        this.maxConnectionsPerHost = Optional.fromNullable(maxConnectionsPerHost).or(DEFAULT_MAX_CONNECTIONS_PER_HOST);
+        this.maxConnectionsPerHost = Optional.fromNullable(maxConnectionsPerHost)
+                .or(DEFAULT_MAX_CONNECTIONS_PER_HOST);
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
     }
 
@@ -93,7 +95,8 @@ public final class AstyanaxMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(AsyncFramework async, MetricBackendReporter reporter) {
+            public ReadWriteThreadPools pools(AsyncFramework async,
+                    MetricBackendReporter reporter) {
                 return pools.construct(async, reporter.newThreadPool());
             }
 
@@ -111,17 +114,20 @@ public final class AstyanaxMetricModule implements MetricModule {
                     public AsyncFuture<Context> construct() {
                         return async.call(new Callable<Context>() {
                             public Context call() throws Exception {
-                                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl().setCqlVersion(
-                                        "3.0.0").setTargetCassandraVersion("2.0");
+                                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
+                                        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
 
                                 final String seeds = buildSeeds();
 
                                 final AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
                                         .withConnectionPoolConfiguration(
-                                                new ConnectionPoolConfigurationImpl("HeroicConnectionPool")
-                                                        .setPort(9160).setMaxConnsPerHost(maxConnectionsPerHost)
-                                                        .setSeeds(seeds)).forKeyspace(keyspace)
-                                        .withAstyanaxConfiguration(config)
+                                                new ConnectionPoolConfigurationImpl(
+                                                        "HeroicConnectionPool")
+                                                                .setPort(9160)
+                                                                .setMaxConnsPerHost(
+                                                                        maxConnectionsPerHost)
+                                                                .setSeeds(seeds))
+                                        .forKeyspace(keyspace).withAstyanaxConfiguration(config)
                                         .buildKeyspace(ThriftFamilyFactory.getInstance());
 
                                 ctx.start();

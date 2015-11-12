@@ -33,26 +33,30 @@ public class FilterComparatorUtils {
      * Return true of both a and b are non-null, and b is a prefix (but not equal to) a.
      */
     public static boolean prefixedWith(String a, String b) {
-        if (a == null || b == null)
+        if (a == null || b == null) {
             return false;
+        }
 
         // strictly prefixes only.
-        if (a.equals(b))
+        if (a.equals(b)) {
             return false;
+        }
 
         return a.startsWith(b);
     }
 
     public static int stringCompare(String a, String b) {
         if (a == null) {
-            if (b != null)
+            if (b != null) {
                 return 1;
+            }
 
             return 0;
         }
 
-        if (b == null)
+        if (b == null) {
             return -1;
+        }
 
         return a.compareTo(b);
     }
@@ -65,20 +69,23 @@ public class FilterComparatorUtils {
         final Iterator<T> right = b.iterator();
 
         if (left.hasNext()) {
-            if (!right.hasNext())
+            if (!right.hasNext()) {
                 return -1;
+            }
 
             final T l = left.next();
             final T r = right.next();
 
             final int c = l.compareTo(r);
 
-            if (c != 0)
+            if (c != 0) {
                 return c;
+            }
         }
 
-        if (right.hasNext())
+        if (right.hasNext()) {
             return 1;
+        }
 
         return 0;
     }

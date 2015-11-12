@@ -65,8 +65,9 @@ public class TrueFilterImpl implements Filter.True {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.True.class.isAssignableFrom(o.getClass()))
+        if (!Filter.True.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         return 0;
     }

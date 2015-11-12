@@ -37,8 +37,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class DefaultScheduler implements Scheduler {
     private static final String UNKNOWN = "unknown";
 
-    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(10, new ThreadFactoryBuilder()
-            .setNameFormat("heroic-scheduler#%d").build());
+    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(10,
+            new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
 
     @Override
     public void periodically(long value, final TimeUnit unit, final Task task) {
@@ -46,7 +46,8 @@ public class DefaultScheduler implements Scheduler {
     }
 
     @Override
-    public void periodically(final String name, final long value, final TimeUnit unit, final Task task) {
+    public void periodically(final String name, final long value, final TimeUnit unit,
+            final Task task) {
         final Runnable refreshCluster = new Runnable() {
             @Override
             public void run() {

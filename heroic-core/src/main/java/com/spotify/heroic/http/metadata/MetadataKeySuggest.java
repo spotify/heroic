@@ -43,8 +43,9 @@ public class MetadataKeySuggest {
     private final String key;
 
     @JsonCreator
-    public MetadataKeySuggest(@JsonProperty("filter") Filter filter, @JsonProperty("key") String key,
-            @JsonProperty("limit") Integer limit, @JsonProperty("range") QueryDateRange range,
+    public MetadataKeySuggest(@JsonProperty("filter") Filter filter,
+            @JsonProperty("key") String key, @JsonProperty("limit") Integer limit,
+            @JsonProperty("range") QueryDateRange range,
             @JsonProperty("match") MatchOptions fuzzy) {
         this.filter = Optional.ofNullable(filter);
         this.range = Optional.ofNullable(range);

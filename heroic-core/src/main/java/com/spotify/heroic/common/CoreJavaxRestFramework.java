@@ -61,10 +61,12 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
 
             @Override
             public void resolved(T result) throws Exception {
-                if (response.isDone())
+                if (response.isDone()) {
                     return;
+                }
 
-                response.resume(Response.status(Response.Status.OK).entity(resume.resume(result)).build());
+                response.resume(
+                        Response.status(Response.Status.OK).entity(resume.resume(result)).build());
             }
 
             @Override
@@ -104,12 +106,13 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
         });
     }
 
-    static final Resume<? extends Object, ? extends Object> PASSTHROUGH = new Resume<Object, Object>() {
-        @Override
-        public Object resume(Object value) throws Exception {
-            return value;
-        }
-    };
+    static final Resume<? extends Object, ? extends Object> PASSTHROUGH =
+            new Resume<Object, Object>() {
+                @Override
+                public Object resume(Object value) throws Exception {
+                    return value;
+                }
+            };
 
     @Override
     @SuppressWarnings("unchecked")

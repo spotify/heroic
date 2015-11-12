@@ -36,7 +36,8 @@ import lombok.ToString;
 @ToString(callSuper = true)
 public class GroupUniqueInstance extends BucketAggregationInstance<GroupUniqueBucket> {
     @JsonCreator
-    public GroupUniqueInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+    public GroupUniqueInstance(@JsonProperty("size") final long size,
+            @JsonProperty("extent") final long extent) {
         super(size, extent, BucketAggregationInstance.ALL_TYPES, MetricType.GROUP);
     }
 

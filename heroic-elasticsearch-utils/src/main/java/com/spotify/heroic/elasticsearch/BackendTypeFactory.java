@@ -21,6 +21,6 @@
 
 package com.spotify.heroic.elasticsearch;
 
-public interface BackendTypeFactory<T, R> {
-    BackendType<R> setup(T module);
+public interface BackendTypeFactory<R> {
+    BackendType<R> setup();
 }

@@ -38,7 +38,8 @@ public interface QueryParser {
 
     /**
      * Parse the given aggregation using the Heroic Query DSL.
-     * @param aggregation String to parse. 
+     *
+     * @param aggregation String to parse.
      * @return ParseException if unable to parse string.
      */
     Optional<Aggregation> parseAggregation(String aggregation);
@@ -54,7 +55,7 @@ public interface QueryParser {
 
     String stringifyQuery(QueryDSL queryDSL);
 
-    public static String escapeString(String input) {
+    static String escapeString(String input) {
         boolean quoted = false;
 
         final StringBuilder builder = new StringBuilder();
@@ -62,7 +63,8 @@ public interface QueryParser {
         for (int i = 0; i < input.length(); i++) {
             final char c = input.charAt(i);
 
-            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') || c == '-' || c == ':' || c == '/') {
+            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') || c == '-'
+                    || c == ':' || c == '/') {
                 builder.append(c);
                 continue;
             }

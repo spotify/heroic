@@ -41,7 +41,8 @@ public class CountUnique extends SamplingAggregation {
     }
 
     @Override
-    public CountUniqueInstance apply(final AggregationContext context, final long size, final long extent) {
+    public CountUniqueInstance apply(final AggregationContext context, final long size,
+            final long extent) {
         return new CountUniqueInstance(size, extent);
     }
 

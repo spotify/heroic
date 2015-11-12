@@ -23,12 +23,18 @@ package com.spotify.heroic.async;
 
 import eu.toolchain.async.AsyncFuture;
 
+/**
+ * XXX: consider replacing with RxJava at some point.
+ *
+ * @author udoprog
+ * @param <T>
+ */
 public interface AsyncObserver<T> {
-    public AsyncFuture<Void> observe(final T value) throws Exception;
+    AsyncFuture<Void> observe(final T value) throws Exception;
 
-    public void cancel() throws Exception;
+    void cancel() throws Exception;
 
-    public void fail(Throwable cause) throws Exception;
+    void fail(Throwable cause) throws Exception;
 
-    public void end() throws Exception;
+    void end() throws Exception;
 }

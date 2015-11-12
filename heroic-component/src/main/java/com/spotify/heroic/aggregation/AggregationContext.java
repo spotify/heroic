@@ -28,17 +28,19 @@ import com.spotify.heroic.common.Duration;
 public interface AggregationContext {
     /**
      * Get the size that is currently configured in the context.
+     *
      * @return The currently configured size.
      */
-    public Optional<Duration> size();
+    Optional<Duration> size();
 
     /**
      * Get extent that is currently configured in the context.
+     *
      * @return The currently configured extent.
      */
-    public Optional<Duration> extent();
+    Optional<Duration> extent();
 
-    public Duration defaultSize();
+    Duration defaultSize();
 
-    public Duration defaultExtent();
+    Duration defaultExtent();
 }

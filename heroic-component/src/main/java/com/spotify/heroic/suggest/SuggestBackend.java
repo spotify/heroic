@@ -33,23 +33,26 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface SuggestBackend extends Grouped, Initializing {
-    public AsyncFuture<Void> configure();
+    AsyncFuture<Void> configure();
 
     /**
-     * Return a set of suggestions for the most relevant tag values (given the number of tags available).
+     * Return a set of suggestions for the most relevant tag values (given the number of tags
+     * available).
      */
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude, int groupLimit);
+    AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
+            int groupLimit);
 
     /**
      * Return an estimated count of the given tags.
      */
-    public AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
+    AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
-    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key, String value);
+    AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
+            String value);
 
-    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
+    AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
 
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
+    AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
 
-    public AsyncFuture<WriteResult> write(Series series, DateRange range);
+    AsyncFuture<WriteResult> write(Series series, DateRange range);
 }

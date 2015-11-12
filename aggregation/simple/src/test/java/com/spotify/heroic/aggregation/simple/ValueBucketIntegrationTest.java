@@ -74,8 +74,8 @@ public abstract class ValueBucketIntegrationTest {
                     final double v1 = base + (rnd.nextDouble() * range);
                     final double v2 = -base + (rnd.nextDouble() * range);
 
-                    updates.add(new Point(0l, v1));
-                    updates.add(new Point(0l, v2));
+                    updates.add(new Point(0L, v1));
+                    updates.add(new Point(0L, v2));
 
                     expected = fn.applyAsDouble(expected, v1);
                     expected = fn.applyAsDouble(expected, v2);
@@ -96,13 +96,15 @@ public abstract class ValueBucketIntegrationTest {
                     }));
                 }
 
-                for (final Future<Void> f : futures)
+                for (final Future<Void> f : futures) {
                     f.get();
+                }
 
-                long diff = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+                long diff = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start,
+                        TimeUnit.NANOSECONDS);
 
-                System.out.println(String.format("%s:%s: %dms", getClass().getSimpleName(), bucket.getClass()
-                        .getSimpleName(), diff));
+                System.out.println(String.format("%s:%s: %dms", getClass().getSimpleName(),
+                        bucket.getClass().getSimpleName(), diff));
             }
 
             assertEquals(bucket.getClass().getSimpleName(), Double.doubleToLongBits(expected),

@@ -88,7 +88,8 @@ public class MetadataMigrate implements ShellTask {
                 return null;
             }
 
-            final Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+            final Iterable<MetadataEntry> entries =
+                    group.entries(filter.getFilter(), filter.getRange());
 
             int index = 1;
 
@@ -114,16 +115,19 @@ public class MetadataMigrate implements ShellTask {
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to migrate from", metaVar = "<metadata-group>", required = true)
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to migrate from",
+                metaVar = "<metadata-group>", required = true)
         private String group;
 
-        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to", metaVar = "<metadata-group>", required = true)
+        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to",
+                metaVar = "<metadata-group>", required = true)
         private String target;
 
         @Option(name = "--ok", usage = "Verify the migration")
         private boolean ok = false;
 
-        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = { "--limit" },
+                usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 

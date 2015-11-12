@@ -98,7 +98,8 @@ public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendRep
     public void reportWriteDroppedByRateLimit() {
     }
 
-    private static final NoopLocalMetadataBackendReporter instance = new NoopLocalMetadataBackendReporter();
+    private static final NoopLocalMetadataBackendReporter instance =
+            new NoopLocalMetadataBackendReporter();
 
     public static NoopLocalMetadataBackendReporter get() {
         return instance;

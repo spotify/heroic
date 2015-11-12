@@ -26,13 +26,13 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 
 public interface HeroicModule {
-    public Entry setup();
+    Entry setup();
 
-    public interface Entry {
+    interface Entry {
         public void setup();
     }
 
-    default public List<ParameterSpecification> parameters() {
+    default List<ParameterSpecification> parameters() {
         return ImmutableList.of();
     }
 }

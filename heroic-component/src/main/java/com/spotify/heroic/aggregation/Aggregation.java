@@ -25,9 +25,9 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public interface Aggregation extends Function<AggregationContext, AggregationInstance> {
-    public Optional<Long> size();
+    Optional<Long> size();
 
-    public Optional<Long> extent();
+    Optional<Long> extent();
 
-    public String toDSL();
+    String toDSL();
 }

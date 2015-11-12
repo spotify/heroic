@@ -29,18 +29,18 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
 public interface Bucket {
-    public void updatePoint(Map<String, String> tags, Point sample);
+    void updatePoint(Map<String, String> tags, Point sample);
 
-    public void updateEvent(Map<String, String> tags, Event sample);
+    void updateEvent(Map<String, String> tags, Event sample);
 
-    public void updateSpread(Map<String, String> tags, Spread sample);
+    void updateSpread(Map<String, String> tags, Spread sample);
 
-    public void updateGroup(Map<String, String> tags, MetricGroup sample);
+    void updateGroup(Map<String, String> tags, MetricGroup sample);
 
     /**
      * Get the timestamp for the bucket.
      *
      * @return The timestamp for the bucket.
      */
-    public long timestamp();
+    long timestamp();
 }

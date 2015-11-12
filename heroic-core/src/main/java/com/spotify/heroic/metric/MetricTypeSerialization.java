@@ -35,8 +35,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 public class MetricTypeSerialization {
     public static class Deserializer extends JsonDeserializer<MetricType> {
         @Override
-        public MetricType deserialize(JsonParser p, DeserializationContext c) throws IOException,
-                JsonProcessingException {
+        public MetricType deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
             if (p.getCurrentToken() != JsonToken.VALUE_STRING) {
                 throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
             }
@@ -47,15 +47,15 @@ public class MetricTypeSerialization {
                 throw c.mappingException("No identifier specified");
             }
 
-            return MetricType.fromIdentifier(identifier)
-                    .orElseThrow(() -> c.mappingException("Not a valid metric source: " + identifier));
+            return MetricType.fromIdentifier(identifier).orElseThrow(
+                    () -> c.mappingException("Not a valid metric source: " + identifier));
         }
     }
 
     public static class Serializer extends JsonSerializer<MetricType> {
         @Override
-        public void serialize(MetricType s, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(MetricType s, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeString(s.identifier());
         }
     }

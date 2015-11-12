@@ -41,7 +41,8 @@ public class ShellConnection implements Closeable {
     final StreamSerialWriter writer;
     final Serializer<Message> message;
 
-    public ShellConnection(final SerializerFramework framework, final Socket socket) throws IOException {
+    public ShellConnection(final SerializerFramework framework, final Socket socket)
+            throws IOException {
         this.socket = socket;
         this.reader = framework.readStream(socket.getInputStream());
         this.writer = framework.writeStream(socket.getOutputStream());
@@ -63,14 +64,15 @@ public class ShellConnection implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    public <T extends Message, R extends Message> R request(T request, Class<R> expected) throws IOException {
+    public <T extends Message, R extends Message> R request(T request, Class<R> expected)
+            throws IOException {
         send(request);
 
         final Message response = receive();
 
         if (!expected.isAssignableFrom(response.getClass())) {
-            throw new IOException(
-                    String.format("Got unexpected message (%s), expected (%s)", response.getClass(), expected));
+            throw new IOException(String.format("Got unexpected message (%s), expected (%s)",
+                    response.getClass(), expected));
         }
 
         return (R) response;

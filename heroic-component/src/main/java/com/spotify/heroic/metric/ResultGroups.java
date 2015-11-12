@@ -54,7 +54,8 @@ public final class ResultGroups {
 
     @JsonCreator
     public ResultGroups(@JsonProperty("groups") List<ResultGroup> groups,
-            @JsonProperty("errors") List<RequestError> errors, @JsonProperty("statistics") Statistics statistics,
+            @JsonProperty("errors") List<RequestError> errors,
+            @JsonProperty("statistics") Statistics statistics,
             @JsonProperty("trace") QueryTrace trace) {
         this.groups = groups;
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
@@ -63,7 +64,8 @@ public final class ResultGroups {
     }
 
     public static ResultGroups empty(final QueryTrace.Identifier what) {
-        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.empty(), new QueryTrace(what));
+        return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
+                new QueryTrace(what));
     }
 
     public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
@@ -88,24 +90,27 @@ public final class ResultGroups {
         };
     }
 
-    public static final Transform<ResultGroups, ResultGroups> identity = new Transform<ResultGroups, ResultGroups>() {
-        @Override
-        public ResultGroups transform(ResultGroups result) throws Exception {
-            return result;
-        }
-    };
+    public static final Transform<ResultGroups, ResultGroups> identity =
+            new Transform<ResultGroups, ResultGroups>() {
+                @Override
+                public ResultGroups transform(ResultGroups result) throws Exception {
+                    return result;
+                }
+            };
 
     public static Transform<ResultGroups, ResultGroups> identity() {
         return identity;
     }
 
-    public static ResultGroups seriesError(final QueryTrace.Identifier what, final List<TagValues> tags, final Throwable e) {
+    public static ResultGroups seriesError(final QueryTrace.Identifier what,
+            final List<TagValues> tags, final Throwable e) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(SeriesError.fromThrowable(tags, e));
         return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
     }
 
-    public static Transform<Throwable, ResultGroups> seriesError(final QueryTrace.Identifier what, final List<TagValues> tags) {
+    public static Transform<Throwable, ResultGroups> seriesError(final QueryTrace.Identifier what,
+            final List<TagValues> tags) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
@@ -115,13 +120,15 @@ public final class ResultGroups {
         };
     }
 
-    public static Transform<Throwable, ResultGroups> nodeError(final QueryTrace.Identifier what, final ClusterNode.Group group) {
+    public static Transform<Throwable, ResultGroups> nodeError(final QueryTrace.Identifier what,
+            final ClusterNode.Group group) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
-                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(),
+                        new QueryTrace(what));
             }
         };
     }

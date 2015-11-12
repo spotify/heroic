@@ -35,26 +35,30 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 public class PointSerialization {
     public static class Deserializer extends JsonDeserializer<Point> {
         @Override
-        public Point deserialize(JsonParser p, DeserializationContext c) throws IOException,
-                JsonProcessingException {
+        public Point deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
-                throw c.mappingException(String.format("Expected start of array, not %s", p.getCurrentToken()));
+                throw c.mappingException(
+                        String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
             if (!p.nextToken().isNumeric()) {
-                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_INT, "Expected timestamp (number)");
+                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_INT,
+                        "Expected timestamp (number)");
             }
 
             final long timestamp = p.getLongValue();
 
             if (!p.nextToken().isNumeric()) {
-                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_FLOAT, "Expected value (number)");
+                throw c.wrongTokenException(p, JsonToken.VALUE_NUMBER_FLOAT,
+                        "Expected value (number)");
             }
 
             final double value = p.getDoubleValue();
 
             if (p.nextToken() != JsonToken.END_ARRAY) {
-                throw c.mappingException(String.format("Expected end of array, not %s", p.getCurrentToken()));
+                throw c.mappingException(
+                        String.format("Expected end of array, not %s", p.getCurrentToken()));
             }
 
             return new Point(timestamp, value);
@@ -63,8 +67,8 @@ public class PointSerialization {
 
     public static class Serializer extends JsonSerializer<Point> {
         @Override
-        public void serialize(Point d, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(Point d, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

@@ -35,7 +35,8 @@ public class WriteMetric {
     final MetricCollection data;
 
     @JsonCreator
-    public WriteMetric(@JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data) {
+    public WriteMetric(@JsonProperty("series") Series series,
+            @JsonProperty("data") MetricCollection data) {
         this.series = checkNotNull(series, "series");
         this.data = checkNotNull(data, "data");
     }

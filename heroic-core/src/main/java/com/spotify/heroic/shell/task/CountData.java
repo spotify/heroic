@@ -80,12 +80,13 @@ public class CountData implements ShellTask {
         final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
 
         if (params.file != null) {
-            try (final BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(io.newInputStream(params.file)))) {
+            try (final BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(io.newInputStream(params.file)))) {
                 String line;
 
                 while ((line = reader.readLine()) != null) {
-                    keys.add(mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
+                    keys.add(
+                            mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
                 }
             }
         }
@@ -132,8 +133,8 @@ public class CountData implements ShellTask {
             @Override
             public Void end(int resolved, int failed, int cancelled) throws Exception {
                 io.out().println();
-                io.out().println(
-                        "Finished (resolved: " + resolved + ", failed: " + failed + ", cancelled: " + cancelled + ")");
+                io.out().println("Finished (resolved: " + resolved + ", failed: " + failed
+                        + ", cancelled: " + cancelled + ")");
                 io.out().println("Total Count: " + count.get());
                 io.out().flush();
                 return null;
@@ -142,8 +143,9 @@ public class CountData implements ShellTask {
             private void check() {
                 final long fin = finished.incrementAndGet();
 
-                if (dot <= 0)
+                if (dot <= 0) {
                     return;
+                }
 
                 if (fin % dot == 0) {
                     io.out().print(".");
@@ -155,19 +157,22 @@ public class CountData implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-f", aliases = { "--file" }, usage = "File to read keys from", metaVar = "<file>")
+        @Option(name = "-f", aliases = { "--file" }, usage = "File to read keys from",
+                metaVar = "<file>")
         private Path file;
 
         @Option(name = "-k", aliases = { "--key" }, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
 
-        @Option(name = "--parallelism", usage = "Configure how many deletes to perform in parallel", metaVar = "<number>")
+        @Option(name = "--parallelism", usage = "Configure how many deletes to perform in parallel",
+                metaVar = "<number>")
         private int parallelism = 20;
     }
 }

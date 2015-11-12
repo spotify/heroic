@@ -17,7 +17,7 @@ public class AverageBucketTest {
     private static final Map<String, String> tags = ImmutableMap.of();
 
     public Collection<? extends DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new AverageBucket(0l), new StripedAverageBucket(0l));
+        return ImmutableList.<DoubleBucket> of(new AverageBucket(0L), new StripedAverageBucket(0L));
     }
 
     @Test

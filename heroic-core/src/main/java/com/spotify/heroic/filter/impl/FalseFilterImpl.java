@@ -65,8 +65,9 @@ public class FalseFilterImpl implements Filter.False {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.False.class.isAssignableFrom(o.getClass()))
+        if (!Filter.False.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         return 0;
     }

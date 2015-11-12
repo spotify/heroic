@@ -24,9 +24,9 @@ package com.spotify.heroic.common;
 import java.util.List;
 
 public interface GroupManager<T extends Grouped, G extends T> extends UsableGroupManager<G> {
-    public List<T> allMembers();
+    List<T> allMembers();
 
-    public List<T> use(String group);
+    List<T> use(String group);
 
-    public List<GroupMember<T>> getBackends();
+    List<GroupMember<T>> getBackends();
 }

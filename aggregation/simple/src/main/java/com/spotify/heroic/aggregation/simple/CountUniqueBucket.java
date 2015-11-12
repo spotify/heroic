@@ -34,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that counts the number of seen events.
- * 
+ *
  * @author udoprog
  */
 @RequiredArgsConstructor
@@ -42,7 +42,8 @@ public class CountUniqueBucket extends AbstractAnyBucket {
     private final long timestamp;
 
     private final AtomicInteger count = new AtomicInteger(0);
-    private final Set<Integer> seen = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    private final Set<Integer> seen =
+            Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     public long timestamp() {
         return timestamp;

@@ -73,7 +73,8 @@ public class CassandraProfile extends HeroicProfileBase {
             schema = LegacySchemaModule.builder().build();
         }
 
-        final Set<String> seeds = params.get("cassandra.seeds").map(s -> ImmutableSet.copyOf(splitter.split(s)))
+        final Set<String> seeds = params.get("cassandra.seeds")
+                .map(s -> ImmutableSet.copyOf(splitter.split(s)))
                 .orElseGet(() -> ImmutableSet.of("localhost"));
 
         // @formatter:off

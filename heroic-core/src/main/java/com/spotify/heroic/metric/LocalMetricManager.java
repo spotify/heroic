@@ -37,6 +37,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationData;
@@ -72,11 +73,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ToString(of = {})
 public class LocalMetricManager implements MetricManager {
-    private static final QueryTrace.Identifier QUERY = QueryTrace.identifier(LocalMetricManager.class, "query");
-    private static final QueryTrace.Identifier FETCH = QueryTrace.identifier(LocalMetricManager.class, "fetch");
-    private static final QueryTrace.Identifier KEYS = QueryTrace.identifier(LocalMetricManager.class, "keys");
+    private static final QueryTrace.Identifier QUERY =
+            QueryTrace.identifier(LocalMetricManager.class, "query");
+    private static final QueryTrace.Identifier FETCH =
+            QueryTrace.identifier(LocalMetricManager.class, "fetch");
+    private static final QueryTrace.Identifier KEYS =
+            QueryTrace.identifier(LocalMetricManager.class, "keys");
 
-    public static FetchQuotaWatcher NO_QUOTA_WATCHER = new FetchQuotaWatcher() {
+    public static final FetchQuotaWatcher NO_QUOTA_WATCHER = new FetchQuotaWatcher() {
         @Override
         public boolean readData(long n) {
             return true;
@@ -107,12 +111,13 @@ public class LocalMetricManager implements MetricManager {
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
      * @param seriesLimit The maximum amount of series in total an entire query may use.
-     * @param aggregationLimit The maximum number of (estimated) data points a single aggregation may produce.
+     * @param aggregationLimit The maximum number of (estimated) data points a single aggregation
+     *            may produce.
      * @param dataLimit The maximum number of samples a single query is allowed to fetch.
      * @param fetchParallelism How many fetches that are allowed to be performed in parallel.
      */
-    public LocalMetricManager(final int groupLimit, final int seriesLimit, final long aggregationLimit,
-            final long dataLimit, final int fetchParallelism) {
+    public LocalMetricManager(final int groupLimit, final int seriesLimit,
+            final long aggregationLimit, final long dataLimit, final int fetchParallelism) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
         this.aggregationLimit = aggregationLimit;
@@ -183,13 +188,16 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter, final DateRange range,
-                final AggregationInstance aggregation, final QueryOptions options) {
+        public AsyncFuture<ResultGroups> query(MetricType source, final Filter filter,
+                final DateRange range, final AggregationInstance aggregation,
+                final QueryOptions options) {
             final FetchQuotaWatcher watcher = new LimitedFetchQuotaWatcher(dataLimit);
 
-            /* groupLoadLimit + 1, so that we return one too many results when more than groupLoadLimit series are
-             * available. This will cause the query engine to reject the request because of too large group. */
-            final RangeFilter rangeFilter = RangeFilter.filterFor(filter, Optional.ofNullable(range), seriesLimit + 1);
+            /* groupLoadLimit + 1, so that we return one too many results when more than
+             * groupLoadLimit series are available. This will cause the query engine to reject the
+             * request because of too large group. */
+            final RangeFilter rangeFilter =
+                    RangeFilter.filterFor(filter, Optional.ofNullable(range), seriesLimit + 1);
 
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
                 /* if empty, there are not time series on this shard */
@@ -198,23 +206,25 @@ public class LocalMetricManager implements MetricManager {
                 }
 
                 if (result.getSize() >= seriesLimit) {
-                    throw new IllegalArgumentException("The total number of series fetched " + result.getSize()
-                            + " would exceed the allowed limit of " + seriesLimit);
+                    throw new IllegalArgumentException(
+                            "The total number of series fetched " + result.getSize()
+                                    + " would exceed the allowed limit of " + seriesLimit);
                 }
 
                 final long estimate = aggregation.estimate(range);
 
                 if (estimate > aggregationLimit) {
                     throw new IllegalArgumentException(String.format(
-                            "aggregation is estimated more points [%d/%d] than what is allowed", estimate,
-                            aggregationLimit));
+                            "aggregation is estimated more points [%d/%d] than what is allowed",
+                            estimate, aggregationLimit));
                 }
 
-                final AggregationTraversal traversal = aggregation.session(states(result.getSeries()), range);
+                final AggregationTraversal traversal =
+                        aggregation.session(states(result.getSeries()), range);
 
                 if (traversal.getStates().size() > groupLimit) {
-                    throw new IllegalArgumentException("The current query is too heavy! (More than " + groupLimit
-                            + " timeseries would be sent to your client).");
+                    throw new IllegalArgumentException("The current query is too heavy! (More than "
+                            + groupLimit + " timeseries would be sent to your client).");
                 }
 
                 final AggregationSession session = traversal.getSession();
@@ -233,8 +243,9 @@ public class LocalMetricManager implements MetricManager {
                     runVoid(b -> {
                         for (final Series serie : series) {
                             fetches.add(() -> {
-                                if (watcher.isQuotaViolated())
+                                if (watcher.isQuotaViolated()) {
                                     throw new IllegalStateException("quota limit violated");
+                                }
 
                                 return b.fetch(source, serie, range, watcher, options);
                             });
@@ -253,7 +264,8 @@ public class LocalMetricManager implements MetricManager {
                 if (options.isTracing()) {
                     // tracing enabled, keeps track of each individual FetchData trace.
                     collector = new ResultCollector(watcher, aggregation, session) {
-                        final ConcurrentLinkedQueue<QueryTrace> traces = new ConcurrentLinkedQueue<>();
+                        final ConcurrentLinkedQueue<QueryTrace> traces =
+                                new ConcurrentLinkedQueue<>();
 
                         @Override
                         public void resolved(FetchData result) throws Exception {
@@ -276,12 +288,11 @@ public class LocalMetricManager implements MetricManager {
                     };
                 }
 
-                return async.eventuallyCollect(fetches, collector,
-                        fetchParallelism);
+                return async.eventuallyCollect(fetches, collector, fetchParallelism);
             };
 
-            return metadata.findSeries(rangeFilter).onDone(reporter.reportFindSeries()).lazyTransform(transform)
-                    .onDone(reporter.reportQueryMetrics());
+            return metadata.findSeries(rangeFilter).onDone(reporter.reportFindSeries())
+                    .lazyTransform(transform).onDone(reporter.reportQueryMetrics());
         }
 
         @Override
@@ -297,8 +308,10 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<FetchData> fetch(final MetricType source, final Series series,
-                final DateRange range, final FetchQuotaWatcher watcher, final QueryOptions options) {
-            final List<AsyncFuture<FetchData>> callbacks = run(b -> b.fetch(source, series, range, watcher, options));
+                final DateRange range, final FetchQuotaWatcher watcher,
+                final QueryOptions options) {
+            final List<AsyncFuture<FetchData>> callbacks =
+                    run(b -> b.fetch(source, series, range, watcher, options));
             return async.collect(callbacks, FetchData.collect(FETCH, series));
         }
 
@@ -310,33 +323,37 @@ public class LocalMetricManager implements MetricManager {
 
         @Override
         public AsyncFuture<WriteResult> write(final WriteMetric write) {
-            return async.collect(run(b -> b.write(write)), WriteResult.merger()).onDone(reporter.reportWrite());
+            return async.collect(run(b -> b.write(write)), WriteResult.merger())
+                    .onDone(reporter.reportWrite());
         }
 
         /**
          * Perform a direct write on available configured backends.
          *
-         * @param writes
-         *            Batch of writes to perform.
+         * @param writes Batch of writes to perform.
          * @return A callback indicating how the writes went.
          * @throws MetricBackendException
          * @throws BackendGroupException
          */
         @Override
         public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-            return async.collect(run(b -> b.write(writes)), WriteResult.merger()).onDone(reporter.reportWriteBatch());
+            return async.collect(run(b -> b.write(writes)), WriteResult.merger())
+                    .onDone(reporter.reportWriteBatch());
         }
 
         @Override
-        public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit, final QueryOptions options) {
-            return async.collect(run(b -> b.keys(start, limit, options)), BackendKeySet.collect(KEYS));
+        public AsyncFuture<BackendKeySet> keys(final BackendKey start, final int limit,
+                final QueryOptions options) {
+            return async.collect(run(b -> b.keys(start, limit, options)),
+                    BackendKeySet.collect(KEYS));
         }
 
         @Override
         public boolean isReady() {
             for (final MetricBackend backend : backends) {
-                if (!backend.isReady())
+                if (!backend.isReady()) {
                     return false;
+                }
             }
 
             return true;
@@ -355,26 +372,14 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public AsyncFuture<List<String>> serializeKeyToHex(BackendKey key) {
             return async.collect(run(b -> b.serializeKeyToHex(key))).directTransform(result -> {
-                final ImmutableList.Builder<String> builder = ImmutableList.builder();
-
-                for (final List<String> k : result) {
-                    builder.addAll(k);
-                }
-
-                return builder.build();
+                return ImmutableList.copyOf(Iterables.concat(result));
             });
         }
 
         @Override
         public AsyncFuture<List<BackendKey>> deserializeKeyFromHex(String key) {
             return async.collect(run(b -> b.deserializeKeyFromHex(key))).directTransform(result -> {
-                final ImmutableList.Builder<BackendKey> builder = ImmutableList.builder();
-
-                for (final List<BackendKey> k : result) {
-                    builder.addAll(k);
-                }
-
-                return builder.build();
+                return ImmutableList.copyOf(Iterables.concat(result));
             });
         }
 
@@ -402,7 +407,8 @@ public class LocalMetricManager implements MetricManager {
 
             return async.collect(callbacks, new Collector<MetricCollection, MetricCollection>() {
                 @Override
-                public MetricCollection collect(Collection<MetricCollection> results) throws Exception {
+                public MetricCollection collect(Collection<MetricCollection> results)
+                        throws Exception {
                     final List<List<? extends Metric>> collections = new ArrayList<>();
 
                     for (final MetricCollection result : results) {
@@ -445,16 +451,13 @@ public class LocalMetricManager implements MetricManager {
     }
 
     private static List<AggregationState> states(Set<Series> series) {
-        final List<AggregationState> states = new ArrayList<>(series.size());
-
-        for (final Series s : series)
-            states.add(new AggregationState(s.getTags(), ImmutableSet.of(s)));
-
-        return states;
+        return ImmutableList.copyOf(series.stream()
+                .map(s -> new AggregationState(s.getTags(), ImmutableSet.of(s))).iterator());
     }
 
     @RequiredArgsConstructor
-    private static abstract class ResultCollector implements StreamCollector<FetchData, ResultGroups> {
+    private abstract static class ResultCollector
+            implements StreamCollector<FetchData, ResultGroups> {
         final FetchQuotaWatcher watcher;
         final AggregationInstance aggregation;
         final AggregationSession session;
@@ -462,7 +465,8 @@ public class LocalMetricManager implements MetricManager {
         @Override
         public void resolved(FetchData result) throws Exception {
             for (final MetricCollection g : result.getGroups()) {
-                g.updateAggregation(session, result.getSeries().getTags(), ImmutableSet.of(result.getSeries()));
+                g.updateAggregation(session, result.getSeries().getTags(),
+                        ImmutableSet.of(result.getSeries()));
             }
         }
 
@@ -485,11 +489,12 @@ public class LocalMetricManager implements MetricManager {
         private ResultGroups collect(int resolved, int failed, int cancelled,
                 final QueryTrace trace) throws Exception {
             if (failed > 0 || cancelled > 0) {
-                final String message = String.format("Some result groups failed (%d) or were cancelled (%d)",
-                        failed, cancelled);
+                final String message = String.format(
+                        "Some result groups failed (%d) or were cancelled (%d)", failed, cancelled);
 
-                if (watcher.isQuotaViolated())
+                if (watcher.isQuotaViolated()) {
                     throw new Exception(message + " (fetch quota was reached)");
+                }
 
                 throw new Exception(message);
             }
@@ -504,14 +509,15 @@ public class LocalMetricManager implements MetricManager {
                     continue;
                 }
 
-                final List<TagValues> g = TagValues.fromEntries(Iterators.concat(
-                        Iterators.transform(group.getSeries().iterator(), s -> s.getTags().entrySet().iterator())));
+                final List<TagValues> g = TagValues.fromEntries(
+                        Iterators.concat(Iterators.transform(group.getSeries().iterator(),
+                                s -> s.getTags().entrySet().iterator())));
 
                 groups.add(new ResultGroup(g, group.getMetrics(), aggregation.cadence()));
             }
 
-            final Statistics stat = result.getStatistics()
-                    .merge(Statistics.of(MetricManager.RESOLVED, resolved, MetricManager.FAILED, failed));
+            final Statistics stat = result.getStatistics().merge(
+                    Statistics.of(MetricManager.RESOLVED, resolved, MetricManager.FAILED, failed));
 
             return new ResultGroups(groups, ImmutableList.of(), stat, trace);
         }

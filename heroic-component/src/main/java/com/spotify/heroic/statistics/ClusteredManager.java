@@ -30,8 +30,7 @@ public interface ClusteredManager {
      *
      * This method is used to 'prepare' the reporter for a specific set of shards.
      *
-     * @param shards
-     *            The shards that are known to exist.
+     * @param shards The shards that are known to exist.
      */
     void registerShards(Set<Map<String, String>> shards);
 }

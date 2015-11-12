@@ -55,7 +55,8 @@ public class BucketAggregationTest {
     }
 
     public BucketAggregationInstance<TestBucket> setup(long sampling, long extent) {
-        return new BucketAggregationInstance<TestBucket>(sampling, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
+        return new BucketAggregationInstance<TestBucket>(sampling, extent,
+                ImmutableSet.of(MetricType.POINT), MetricType.POINT) {
             @Override
             protected TestBucket buildBucket(long timestamp) {
                 return new TestBucket(timestamp);
@@ -86,21 +87,25 @@ public class BucketAggregationTest {
 
     @Test
     public void testLongerExtent() {
-        List<Point> input = build().add(0, 1.0).add(1000, 1.0).add(1000, 1.0).add(2000, 1.0).result();
+        List<Point> input =
+                build().add(0, 1.0).add(1000, 1.0).add(1000, 1.0).add(2000, 1.0).result();
         List<Point> expected = build().add(1000, 1.0).add(2000, 3.0).add(3000, 3.0).result();
         checkBucketAggregation(input, expected, 2000);
     }
 
     @Test
     public void testShorterExtent() {
-        final List<Point> input = build().add(1500, 1.0).add(1501, 1.0).add(2000, 1.0).add(2001, 1.0).result();
+        final List<Point> input =
+                build().add(1500, 1.0).add(1501, 1.0).add(2000, 1.0).add(2001, 1.0).result();
         final List<Point> expected = build().add(1000, 0.0).add(2000, 2.0).add(3000, 0.0).result();
         checkBucketAggregation(input, expected, 500);
     }
 
-    private void checkBucketAggregation(List<Point> input, List<Point> expected, final long extent) {
+    private void checkBucketAggregation(List<Point> input, List<Point> expected,
+            final long extent) {
         final BucketAggregationInstance<TestBucket> a = setup(1000, extent);
-        final AggregationSession session = a.session(states, new DateRange(1000, 3000)).getSession();
+        final AggregationSession session =
+                a.session(states, new DateRange(1000, 3000)).getSession();
         session.updatePoints(group, series, input);
 
         final AggregationResult result = session.result();
@@ -111,8 +116,10 @@ public class BucketAggregationTest {
     @Test
     public void testUnevenSampling() {
         final BucketAggregationInstance<TestBucket> a = setup(999, 499);
-        final AggregationSession session = a.session(states, new DateRange(1000, 2998)).getSession();
-        session.updatePoints(group, series, build().add(501, 1.0).add(502, 1.0).add(1000, 1.0).add(1001, 1.0).result());
+        final AggregationSession session =
+                a.session(states, new DateRange(1000, 2998)).getSession();
+        session.updatePoints(group, series,
+                build().add(501, 1.0).add(502, 1.0).add(1000, 1.0).add(1001, 1.0).result());
 
         final AggregationResult result = session.result();
 

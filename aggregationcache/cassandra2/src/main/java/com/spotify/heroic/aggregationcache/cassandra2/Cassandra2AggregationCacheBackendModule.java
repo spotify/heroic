@@ -28,8 +28,6 @@ import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import lombok.RequiredArgsConstructor;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -58,6 +56,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.serializer.SerializerFramework;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class Cassandra2AggregationCacheBackendModule implements AggregationCacheBackendModule {
@@ -77,7 +76,8 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
             @JsonProperty("pools") ReadWriteThreadPools.Config pools) {
         this.seeds = Preconditions.checkNotNull(seeds, "seeds must be defined");
         this.keyspace = Optional.fromNullable(DEFAULT_KEYSPACE).or(DEFAULT_KEYSPACE);
-        this.maxConnectionsPerHost = Optional.fromNullable(maxConnectionsPerHost).or(DEFAULT_MAX_CONNECTIONS_PER_HOST);
+        this.maxConnectionsPerHost =
+                Optional.fromNullable(maxConnectionsPerHost).or(DEFAULT_MAX_CONNECTIONS_PER_HOST);
         this.pools = Optional.fromNullable(pools).or(ReadWriteThreadPools.Config.provideDefault());
     }
 
@@ -92,7 +92,8 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
 
             @Provides
             @Singleton
-            public ReadWriteThreadPools pools(AsyncFramework async, AggregationCacheBackendReporter reporter) {
+            public ReadWriteThreadPools pools(AsyncFramework async,
+                    AggregationCacheBackendReporter reporter) {
                 return pools.construct(async, reporter.newThreadPool());
             }
 
@@ -105,15 +106,18 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
                         return async.call(new Callable<Context>() {
                             @Override
                             public Context call() throws Exception {
-                                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl().setCqlVersion(
-                                        "3.0.0").setTargetCassandraVersion("2.0");
+                                final AstyanaxConfiguration config = new AstyanaxConfigurationImpl()
+                                        .setCqlVersion("3.0.0").setTargetCassandraVersion("2.0");
 
                                 final AstyanaxContext<Keyspace> ctx = new AstyanaxContext.Builder()
                                         .withConnectionPoolConfiguration(
-                                                new ConnectionPoolConfigurationImpl("HeroicConnectionPool")
-                                                        .setPort(9160).setMaxConnsPerHost(maxConnectionsPerHost)
-                                                        .setSeeds(seeds)).forKeyspace(keyspace)
-                                        .withAstyanaxConfiguration(config)
+                                                new ConnectionPoolConfigurationImpl(
+                                                        "HeroicConnectionPool")
+                                                                .setPort(9160)
+                                                                .setMaxConnsPerHost(
+                                                                        maxConnectionsPerHost)
+                                                                .setSeeds(seeds))
+                                        .forKeyspace(keyspace).withAstyanaxConfiguration(config)
                                         .buildKeyspace(ThriftFamilyFactory.getInstance());
                                 ctx.start();
                                 final Keyspace client = ctx.getClient();
@@ -138,13 +142,14 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
             @Provides
             @Singleton
             @Inject
-            public Serializer<CacheKey> cacheKeySerializer(final eu.toolchain.serializer.Serializer<CacheKey> source,
+            public Serializer<CacheKey> cacheKeySerializer(
+                    final eu.toolchain.serializer.Serializer<CacheKey> source,
                     @Named("common") final SerializerFramework s) {
                 return new AbstractSerializer<CacheKey>() {
                     @Override
                     public ByteBuffer toByteBuffer(CacheKey obj) {
-                        // the serializer framework returns a read-only object, while Astyanax expects a mutable one to
-                        // access ByteBuffer#array().
+                        // the serialization framework returns a read-only object, while Astyanax
+                        // expects a mutable one to access ByteBuffer#array() :(.
                         final ByteBuffer readOnly;
 
                         try {
@@ -172,7 +177,8 @@ public class Cassandra2AggregationCacheBackendModule implements AggregationCache
 
             @Override
             protected void configure() {
-                bind(AggregationCacheBackend.class).toInstance(new Cassandra2AggregationCacheBackend());
+                bind(AggregationCacheBackend.class)
+                        .toInstance(new Cassandra2AggregationCacheBackend());
                 expose(AggregationCacheBackend.class);
             }
         };

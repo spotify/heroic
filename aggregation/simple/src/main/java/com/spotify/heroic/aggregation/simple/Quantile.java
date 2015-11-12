@@ -60,6 +60,6 @@ public class Quantile extends SamplingAggregation {
     }
 
     private String percentage(double v) {
-        return Integer.toString((int)Math.min(100, Math.max(0, Math.round(v * 100))));
+        return Integer.toString((int) Math.min(100, Math.max(0, Math.round(v * 100))));
     }
 }

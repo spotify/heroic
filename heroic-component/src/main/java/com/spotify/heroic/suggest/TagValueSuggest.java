@@ -79,29 +79,34 @@ public class TagValueSuggest {
 
                 Collections.sort(values);
                 limited = limited || values.size() >= limit;
-                return new TagValueSuggest(errors, values.subList(0, Math.min(values.size(), limit)), limited);
+                return new TagValueSuggest(errors,
+                        values.subList(0, Math.min(values.size(), limit)), limited);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends TagValueSuggest> nodeError(final NodeRegistryEntry node) {
+    public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
+            final NodeRegistryEntry node) {
         return new Transform<Throwable, TagValueSuggest>() {
             @Override
             public TagValueSuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagValueSuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(),
-                        c.toString(), m.getTags(), e)), EMPTY_VALUES, false);
+                return new TagValueSuggest(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_VALUES, false);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends TagValueSuggest> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, TagValueSuggest>() {
             @Override
             public TagValueSuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new TagValueSuggest(errors, EMPTY_VALUES, false);
             }
         };

@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
-final public class AddSeries {
+public final class AddSeries {
     private final String id;
 
     @JsonCreator

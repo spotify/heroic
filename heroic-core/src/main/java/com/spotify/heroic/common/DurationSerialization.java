@@ -40,15 +40,15 @@ import com.google.common.collect.ImmutableMap;
 
 public class DurationSerialization {
     public static class Deserializer extends JsonDeserializer<Duration> {
-        private static TimeUnit DEFAULT_UNIT = TimeUnit.MILLISECONDS;
+        private static final TimeUnit DEFAULT_UNIT = TimeUnit.MILLISECONDS;
+        private static final Pattern PATTERN = Pattern.compile("^(\\d+)([a-zA-Z]*)$");
 
-        private static Pattern pattern = Pattern.compile("^(\\d+)([a-zA-Z]*)$");
-
-        private static Map<String, TimeUnit> units = ImmutableMap.of("ms", TimeUnit.MILLISECONDS, "s",
-                TimeUnit.SECONDS, "m", TimeUnit.MINUTES, "H", TimeUnit.HOURS);
+        private static Map<String, TimeUnit> units = ImmutableMap.of("ms", TimeUnit.MILLISECONDS,
+                "s", TimeUnit.SECONDS, "m", TimeUnit.MINUTES, "H", TimeUnit.HOURS);
 
         @Override
-        public Duration deserialize(JsonParser p, DeserializationContext c) throws IOException, JsonProcessingException {
+        public Duration deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
             /* fallback to default parser if object */
             if (p.getCurrentToken() == JsonToken.START_OBJECT) {
                 return deserializeObject(p.readValueAsTree(), c);
@@ -70,7 +70,8 @@ public class DurationSerialization {
             return new Duration(value, TimeUnit.MILLISECONDS);
         }
 
-        private Duration deserializeObject(TreeNode tree, DeserializationContext c) throws JsonMappingException {
+        private Duration deserializeObject(TreeNode tree, DeserializationContext c)
+                throws JsonMappingException {
             if (tree == null) {
                 throw c.mappingException("expected object");
             }
@@ -98,9 +99,10 @@ public class DurationSerialization {
             return new Duration(duration, unit);
         }
 
-        private Duration deserializeString(JsonParser p, DeserializationContext c) throws IOException {
+        private Duration deserializeString(JsonParser p, DeserializationContext c)
+                throws IOException {
             final String s = p.getValueAsString();
-            final Matcher m = pattern.matcher(s);
+            final Matcher m = PATTERN.matcher(s);
 
             if (!m.matches()) {
                 throw c.mappingException("not a valid duration: " + s);

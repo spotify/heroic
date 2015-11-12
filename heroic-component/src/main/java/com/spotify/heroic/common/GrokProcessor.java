@@ -63,7 +63,7 @@ public class GrokProcessor {
             }
 
             grok.compile(pattern);
-        } catch(final Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException(e);
         }
 

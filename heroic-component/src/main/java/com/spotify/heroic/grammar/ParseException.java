@@ -42,7 +42,8 @@ public class ParseException extends RuntimeException {
         this(message, cause, line, col, line, col);
     }
 
-    public ParseException(String message, Throwable cause, int line, int col, int lineEnd, int colEnd) {
+    public ParseException(String message, Throwable cause, int line, int col, int lineEnd,
+            int colEnd) {
         super(String.format("%d:%d: %s", line, col, message), cause);
         this.line = line;
         this.col = col;

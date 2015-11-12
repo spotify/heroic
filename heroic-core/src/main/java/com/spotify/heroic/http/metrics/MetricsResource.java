@@ -42,13 +42,6 @@ import eu.toolchain.async.AsyncFuture;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetricsResource {
-    private final JavaxRestFramework.Resume<BackendKeySet, BackendKeySet> KEYS = new JavaxRestFramework.Resume<BackendKeySet, BackendKeySet>() {
-        @Override
-        public BackendKeySet resume(BackendKeySet result) throws Exception {
-            return result;
-        }
-    };
-
     @Inject
     private JavaxRestFramework httpAsync;
 
@@ -61,6 +54,6 @@ public class MetricsResource {
             @QueryParam("limit") Integer limit) throws Exception {
         final AsyncFuture<BackendKeySet> keys = metrics.useGroup(group).keys(null,
                 limit == null ? 1000 : limit, QueryOptions.defaults());
-        httpAsync.bind(response, keys, KEYS);
+        httpAsync.bind(response, keys);
     }
 }

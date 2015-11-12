@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.metric.generated.generator;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
-
-import lombok.Data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,6 +34,8 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.metric.generated.Generator;
 import com.spotify.heroic.metric.generated.GeneratorModule;
+
+import lombok.Data;
 
 @Data
 public class RandomGeneratorModule implements GeneratorModule {
@@ -49,21 +50,13 @@ public class RandomGeneratorModule implements GeneratorModule {
     private final double range;
 
     @JsonCreator
-    public static RandomGeneratorModule create(@JsonProperty("min") Double min, @JsonProperty("max") Double max,
-            @JsonProperty("step") Long step, @JsonProperty("range") Double range) {
-        if (min == null)
-            min = DEFAULT_MIN;
-
-        if (max == null)
-            max = DEFAULT_MAX;
-
-        if (step == null)
-            step = DEFAULT_STEP;
-
-        if (range == null)
-            range = DEFAULT_RANGE;
-
-        return new RandomGeneratorModule(min, max, step, range);
+    public RandomGeneratorModule(@JsonProperty("min") Optional<Double> min,
+            @JsonProperty("max") Optional<Double> max, @JsonProperty("step") Optional<Long> step,
+            @JsonProperty("range") Optional<Double> range) {
+        this.min = min.orElse(DEFAULT_MIN);
+        this.max = max.orElse(DEFAULT_MAX);
+        this.step = step.orElse(DEFAULT_STEP);
+        this.range = range.orElse(DEFAULT_RANGE);
     }
 
     @Override

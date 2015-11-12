@@ -24,9 +24,9 @@ package com.spotify.heroic.common;
 import java.util.Set;
 
 public interface UsableGroupManager<G extends Grouped> {
-    public G useDefaultGroup();
+    G useDefaultGroup();
 
-    public G useGroup(final String group);
+    G useGroup(final String group);
 
-    public G useGroups(final Set<String> groups);
+    G useGroups(final Set<String> groups);
 }

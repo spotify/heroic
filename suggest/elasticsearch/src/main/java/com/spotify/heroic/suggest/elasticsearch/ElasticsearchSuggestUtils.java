@@ -31,11 +31,14 @@ import com.google.common.collect.ImmutableMap;
 
 public class ElasticsearchSuggestUtils {
     public static Map<String, Object> loadJsonResource(String path) throws IOException {
-        final String fullPath = ElasticsearchSuggestModule.class.getPackage().getName() + "/" + path;
+        final String fullPath = ElasticsearchSuggestModule.class.getPackage().getName() + "/"
+                + path;
 
-        try (final InputStream input = ElasticsearchSuggestModule.class.getClassLoader().getResourceAsStream(fullPath)) {
-            if (input == null)
+        try (final InputStream input = ElasticsearchSuggestModule.class.getClassLoader()
+                .getResourceAsStream(fullPath)) {
+            if (input == null) {
                 return ImmutableMap.of();
+            }
 
             return JsonXContent.jsonXContent.createParser(input).map();
         }

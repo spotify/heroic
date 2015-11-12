@@ -80,7 +80,8 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
         for (final Map.Entry<String, List<T>> entry : groups.entrySet()) {
             for (final T e : entry.getValue()) {
-                result.add(new GroupMember<>(entry.getKey(), e, e.getGroups(), defaults.contains(e)));
+                result.add(
+                        new GroupMember<>(entry.getKey(), e, e.getGroups(), defaults.contains(e)));
             }
         }
 
@@ -90,8 +91,10 @@ public class BackendGroups<T extends Initializing & Grouped> {
     public T findOne(String group) {
         final List<T> results = group != null ? find(group) : defaults();
 
-        if (results.isEmpty())
-            throw new IllegalArgumentException("Could not find one member of group '" + group + "'");
+        if (results.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Could not find one member of group '" + group + "'");
+        }
 
         return results.iterator().next();
     }
@@ -99,20 +102,23 @@ public class BackendGroups<T extends Initializing & Grouped> {
     private List<T> find(Set<String> groups) {
         final List<T> result = new ArrayList<>();
 
-        for (final String group : groups)
+        for (final String group : groups) {
             result.addAll(find(group));
+        }
 
         return ImmutableList.copyOf(result);
     }
 
     private List<T> find(String group) {
-        if (group == null)
+        if (group == null) {
             throw new IllegalArgumentException("group");
+        }
 
         final List<T> result = groups.get(group);
 
-        if (result == null || result.isEmpty())
+        if (result == null || result.isEmpty()) {
             return ImmutableList.of();
+        }
 
         return ImmutableList.copyOf(result);
     }
@@ -126,7 +132,8 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
         for (final T backend : backends) {
             if (backend.getGroups().isEmpty()) {
-                throw new IllegalStateException("Backend " + backend + " does not belong to any groups");
+                throw new IllegalStateException(
+                        "Backend " + backend + " does not belong to any groups");
             }
 
             for (final String name : backend.getGroups()) {
@@ -160,8 +167,10 @@ public class BackendGroups<T extends Initializing & Grouped> {
         for (final String defaultBackend : defaultBackends.get()) {
             final List<T> someResult = backends.get(defaultBackend);
 
-            if (someResult == null)
-                throw new IllegalArgumentException("No backend(s) available with group: " + defaultBackend);
+            if (someResult == null) {
+                throw new IllegalArgumentException(
+                        "No backend(s) available with group: " + defaultBackend);
+            }
 
             defaults.addAll(someResult);
         }
@@ -169,10 +178,11 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return defaults;
     }
 
-    public static <T extends Grouped & Initializing> BackendGroups<T> build(Collection<T> configured,
-            Optional<List<String>> defaultBackends) {
+    public static <T extends Grouped & Initializing> BackendGroups<T> build(
+            Collection<T> configured, Optional<List<String>> defaultBackends) {
         final Map<String, List<T>> mappings = buildBackends(configured);
         final Set<T> defaults = buildDefaults(mappings, defaultBackends);
-        return new BackendGroups<T>(ImmutableList.copyOf(configured), mappings, ImmutableList.copyOf(defaults));
+        return new BackendGroups<T>(ImmutableList.copyOf(configured), mappings,
+                ImmutableList.copyOf(defaults));
     }
 }

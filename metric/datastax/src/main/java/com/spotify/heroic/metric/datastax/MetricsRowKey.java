@@ -36,7 +36,8 @@ public class MetricsRowKey {
     private final long base;
 
     @JsonCreator
-    public static MetricsRowKey create(@JsonProperty("series") Series series, @JsonProperty("base") Long base) {
+    public static MetricsRowKey create(@JsonProperty("series") Series series,
+            @JsonProperty("base") Long base) {
         return new MetricsRowKey(series, base);
     }
 }

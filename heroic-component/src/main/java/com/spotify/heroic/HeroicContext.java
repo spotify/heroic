@@ -34,23 +34,24 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.Serializer;
 
 public interface HeroicContext {
-    <T extends AggregationInstance, R extends Aggregation> void aggregation(String id, Class<T> type,
-            Class<R> queryType, Serializer<T> serializer, AggregationDSL builder);
+    <T extends AggregationInstance, R extends Aggregation> void aggregation(String id,
+            Class<T> type, Class<R> queryType, Serializer<T> serializer, AggregationDSL builder);
 
-    public <T extends Filter.OneArg<A>, I extends T, A> void filter(String typeId, Class<T> type, Class<I> impl,
-            OneArgumentFilter<T, A> builder, Serializer<A> first);
+    <T extends Filter.OneArg<A>, I extends T, A> void filter(String typeId, Class<T> type,
+            Class<I> impl, OneArgumentFilter<T, A> builder, Serializer<A> first);
 
-    public <T extends Filter.TwoArgs<A, B>, I extends T, A, B> void filter(String typeId, Class<T> type, Class<I> impl,
-            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second);
+    <T extends Filter.TwoArgs<A, B>, I extends T, A, B> void filter(String typeId, Class<T> type,
+            Class<I> impl, TwoArgumentsFilter<T, A, B> builder, Serializer<A> first,
+            Serializer<B> second);
 
-    public <T extends Filter.MultiArgs<A>, I extends T, A> void filter(String typeId, Class<T> type, Class<I> impl,
-            MultiArgumentsFilter<T, A> builder, Serializer<A> term);
+    <T extends Filter.MultiArgs<A>, I extends T, A> void filter(String typeId, Class<T> type,
+            Class<I> impl, MultiArgumentsFilter<T, A> builder, Serializer<A> term);
 
-    public <T extends Filter.NoArg, I extends T> void filter(String typeId, Class<T> type, Class<I> impl,
+    <T extends Filter.NoArg, I extends T> void filter(String typeId, Class<T> type, Class<I> impl,
             NoArgumentFilter<T> builder);
 
     /**
      * Future that will be resolved after all services have been started.
      */
-    public AsyncFuture<Void> startedFuture();
+    AsyncFuture<Void> startedFuture();
 }

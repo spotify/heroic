@@ -60,8 +60,9 @@ public class ChainInstance implements AggregationInstance {
     }
 
     static <T> List<T> checkNotEmpty(List<T> list, String what) {
-        if (list.isEmpty())
+        if (list.isEmpty()) {
             throw new IllegalArgumentException(what + " must not be empty");
+        }
 
         return list;
     }
@@ -91,7 +92,7 @@ public class ChainInstance implements AggregationInstance {
         do {
             final AggregationInstance a = it.next();
             chain.add(it.hasNext() ? a : a.distributed());
-        } while(it.hasNext());
+        } while (it.hasNext());
 
         return new ChainInstance(chain.build());
     }
@@ -139,22 +140,26 @@ public class ChainInstance implements AggregationInstance {
         private final Iterable<AggregationSession> rest;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+        public void updatePoints(Map<String, String> group, Set<Series> series,
+                List<Point> values) {
             first.updatePoints(group, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+        public void updateEvents(Map<String, String> group, Set<Series> series,
+                List<Event> values) {
             first.updateEvents(group, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+        public void updateSpreads(Map<String, String> group, Set<Series> series,
+                List<Spread> values) {
             first.updateSpreads(group, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+        public void updateGroup(Map<String, String> group, Set<Series> series,
+                List<MetricGroup> values) {
             first.updateGroup(group, series, values);
         }
 

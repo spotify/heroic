@@ -40,8 +40,8 @@ public class BackendKeyArgument {
     private final MetricType type;
 
     @JsonCreator
-    public BackendKeyArgument(@JsonProperty("series") Series series, @JsonProperty("base") Long base,
-            @JsonProperty("type") MetricType type) {
+    public BackendKeyArgument(@JsonProperty("series") Series series,
+            @JsonProperty("base") Long base, @JsonProperty("type") MetricType type) {
         this.series = checkNotNull(series, "series");
         this.base = checkNotNull(base, "base");
         this.type = Optional.ofNullable(type).orElse(MetricType.POINT);

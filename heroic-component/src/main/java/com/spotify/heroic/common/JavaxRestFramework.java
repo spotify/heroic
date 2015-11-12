@@ -26,11 +26,11 @@ import javax.ws.rs.container.AsyncResponse;
 import eu.toolchain.async.AsyncFuture;
 
 public interface JavaxRestFramework {
-    public interface Resume<T, R> {
-        public R resume(T value) throws Exception;
+    interface Resume<T, R> {
+        R resume(T value) throws Exception;
     }
 
-    public <T> void bind(final AsyncResponse response, final AsyncFuture<T> callback);
+    <T> void bind(final AsyncResponse response, final AsyncFuture<T> callback);
 
     /**
      * Helper function to correctly wire up async response management.
@@ -39,8 +39,8 @@ public interface JavaxRestFramework {
      * @param callback Callback for the pending request.
      * @param resume The resume implementation.
      */
-    public <T, R> void bind(final AsyncResponse response, final AsyncFuture<T> callback,
+    <T, R> void bind(final AsyncResponse response, final AsyncFuture<T> callback,
             final Resume<T, R> resume);
 
-    public <T> Resume<T, T> passthrough();
+    <T> Resume<T, T> passthrough();
 }

@@ -38,13 +38,16 @@ public class FilterJsonSerializerImpl implements FilterJsonSerializer {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends Filter> void register(Class<T> type, FilterJsonSerialization<? super T> serializer) {
-        final JsonSerializerImpl s = new JsonSerializerImpl((FilterJsonSerialization<? super Filter>) serializer);
+    public <T extends Filter> void register(Class<T> type,
+            FilterJsonSerialization<? super T> serializer) {
+        final JsonSerializerImpl s =
+                new JsonSerializerImpl((FilterJsonSerialization<? super Filter>) serializer);
         impl.put(type, s);
     }
 
     public void configure(SimpleModule module) {
-        for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this.impl.entrySet()) {
+        for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this.impl
+                .entrySet()) {
             module.addSerializer(e.getKey(), e.getValue());
         }
     }
@@ -69,8 +72,8 @@ public class FilterJsonSerializerImpl implements FilterJsonSerializer {
         private final FilterJsonSerialization<? super Filter> serializer;
 
         @Override
-        public void serialize(Filter value, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeString(value.operator());
 

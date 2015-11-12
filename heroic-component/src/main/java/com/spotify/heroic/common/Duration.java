@@ -30,9 +30,11 @@ import lombok.Data;
 /**
  * A helper type that represents a duration as the canonical duration/unit.
  *
- * This is provided so that we can implement a parser for it to simplify configurations that require durations.
+ * This is provided so that we can implement a parser for it to simplify configurations that require
+ * durations.
  *
- * This type is intended to be conveniently de-serialize from a short-hand string type, like the following examples.
+ * This type is intended to be conveniently de-serialize from a short-hand string type, like the
+ * following examples.
  *
  * <ul>
  * <li>1H - 1 Hour</li>

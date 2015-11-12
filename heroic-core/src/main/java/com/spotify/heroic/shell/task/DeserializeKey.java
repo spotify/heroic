@@ -58,15 +58,16 @@ public class DeserializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        return metrics.useGroup(params.group).deserializeKeyFromHex(params.key).directTransform(result -> {
-            int i = 0;
+        return metrics.useGroup(params.group).deserializeKeyFromHex(params.key)
+                .directTransform(result -> {
+                    int i = 0;
 
-            for (final BackendKey key : result) {
-                io.out().println(String.format("%d: %s", i++, key));
-            }
+                    for (final BackendKey key : result) {
+                        io.out().println(String.format("%d: %s", i++, key));
+                    }
 
-            return null;
-        });
+                    return null;
+                });
     }
 
     @ToString

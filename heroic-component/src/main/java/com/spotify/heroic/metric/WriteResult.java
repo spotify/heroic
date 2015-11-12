@@ -50,7 +50,8 @@ public class WriteResult {
     }
 
     @JsonCreator
-    public WriteResult(@JsonProperty("errors") List<RequestError> errors, @JsonProperty("times") List<Long> times) {
+    public WriteResult(@JsonProperty("errors") List<RequestError> errors,
+            @JsonProperty("times") List<Long> times) {
         this.errors = errors;
         this.times = times;
     }
@@ -95,8 +96,8 @@ public class WriteResult {
         return new Transform<Throwable, WriteResult>() {
             @Override
             public WriteResult transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new WriteResult(errors, EMPTY_TIMES);
             }
         };

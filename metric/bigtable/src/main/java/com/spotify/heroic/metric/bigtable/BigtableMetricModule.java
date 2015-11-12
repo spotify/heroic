@@ -60,7 +60,8 @@ public final class BigtableMetricModule implements MetricModule {
 
     public static final String DEFAULT_GROUP = "bigtable";
     public static final String DEFAULT_CLUSTER = "heroic";
-    public static final CredentialsBuilder DEFAULT_CREDENTIALS = new ComputeEngineCredentialsBuilder();
+    public static final CredentialsBuilder DEFAULT_CREDENTIALS =
+            new ComputeEngineCredentialsBuilder();
 
     private final String id;
     private final Groups groups;
@@ -93,15 +94,18 @@ public final class BigtableMetricModule implements MetricModule {
 
             @Provides
             @Singleton
-            public Managed<BigtableConnection> connection(final AsyncFramework async, final ExecutorService executorService) {
+            public Managed<BigtableConnection> connection(final AsyncFramework async,
+                    final ExecutorService executorService) {
                 return async.managed(new ManagedSetup<BigtableConnection>() {
                     @Override
                     public AsyncFuture<BigtableConnection> construct() throws Exception {
-                        return async.call(new BigtableConnectionBuilder(project, zone, cluster, credentials, async, executorService));
+                        return async.call(new BigtableConnectionBuilder(project, zone, cluster,
+                                credentials, async, executorService));
                     }
 
                     @Override
-                    public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
+                    public AsyncFuture<Void> destruct(final BigtableConnection value)
+                            throws Exception {
                         return async.call(new Callable<Void>() {
                             @Override
                             public Void call() throws Exception {
@@ -117,7 +121,8 @@ public final class BigtableMetricModule implements MetricModule {
             @Singleton
             @Named("configure")
             public boolean configure(final ExtraParameters params) {
-                return params.contains(ExtraParameters.CONFIGURE) || params.contains(BIGTABLE_CONFIGURE_PARAM);
+                return params.contains(ExtraParameters.CONFIGURE)
+                        || params.contains(BIGTABLE_CONFIGURE_PARAM);
             }
 
             @Provides

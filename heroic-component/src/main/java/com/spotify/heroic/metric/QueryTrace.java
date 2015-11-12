@@ -37,7 +37,8 @@ public class QueryTrace {
     private final List<QueryTrace> children;
 
     @JsonCreator
-    public QueryTrace(@JsonProperty("what") final QueryTrace.Identifier what, @JsonProperty("elapsed") final long elapsed,
+    public QueryTrace(@JsonProperty("what") final QueryTrace.Identifier what,
+            @JsonProperty("elapsed") final long elapsed,
             @JsonProperty("children") final List<QueryTrace> children) {
         this.what = what;
         this.elapsed = elapsed;

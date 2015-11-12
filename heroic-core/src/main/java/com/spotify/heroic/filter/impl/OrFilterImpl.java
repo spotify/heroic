@@ -31,9 +31,9 @@ import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.MultiArgumentsFilterBuilder;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -50,13 +50,6 @@ public class OrFilterImpl implements Filter.Or {
         return statements.stream().anyMatch(s -> s.apply(series));
     }
 
-    final MultiArgumentsFilterBuilder<Filter.Or, Filter> BUILDER = new MultiArgumentsFilterBuilder<Filter.Or, Filter>() {
-        @Override
-        public Filter.Or build(Collection<Filter> terms) {
-            return new OrFilterImpl(new ArrayList<>(terms));
-        }
-    };
-
     @Override
     public Filter optimize() {
         return optimize(flatten(this.statements));
@@ -68,8 +61,9 @@ public class OrFilterImpl implements Filter.Or {
         for (final Filter f : statements) {
             final Filter o = f.optimize();
 
-            if (o == null)
+            if (o == null) {
                 continue;
+            }
 
             if (o instanceof Filter.Or) {
                 result.addAll(((Filter.Or) o).terms());
@@ -92,12 +86,8 @@ public class OrFilterImpl implements Filter.Or {
     }
 
     private static List<Filter> collapseNotAnd(Filter.And first) {
-        final List<Filter> result = new ArrayList<>();
-
-        for (final Filter term : first.terms())
-            result.add(new NotFilterImpl(term).optimize());
-
-        return result;
+        return ImmutableList.copyOf(
+                first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
     }
 
     private static Filter optimize(SortedSet<Filter> statements) {
@@ -108,8 +98,9 @@ public class OrFilterImpl implements Filter.Or {
             if (f instanceof Filter.Not) {
                 final Filter.Not not = (Filter.Not) f;
 
-                if (statements.contains(not.first()))
+                if (statements.contains(not.first())) {
                     return TrueFilterImpl.get();
+                }
 
                 result.add(f);
                 continue;
@@ -119,17 +110,20 @@ public class OrFilterImpl implements Filter.Or {
                 final Filter.StartsWith outer = (Filter.StartsWith) f;
 
                 for (final Filter inner : statements) {
-                    if (inner.equals(outer))
+                    if (inner.equals(outer)) {
                         continue;
+                    }
 
                     if (inner instanceof Filter.StartsWith) {
                         final Filter.StartsWith starts = (Filter.StartsWith) inner;
 
-                        if (!outer.first().equals(starts.first()))
+                        if (!outer.first().equals(starts.first())) {
                             continue;
+                        }
 
-                        if (FilterComparatorUtils.prefixedWith(outer.second(), starts.second()))
+                        if (FilterComparatorUtils.prefixedWith(outer.second(), starts.second())) {
                             continue root;
+                        }
                     }
                 }
 
@@ -141,11 +135,13 @@ public class OrFilterImpl implements Filter.Or {
             result.add(f);
         }
 
-        if (result.isEmpty())
+        if (result.isEmpty()) {
             return TrueFilterImpl.get();
+        }
 
-        if (result.size() == 1)
+        if (result.size() == 1) {
             return result.iterator().next();
+        }
 
         return new OrFilterImpl(new ArrayList<>(result));
     }
@@ -182,8 +178,9 @@ public class OrFilterImpl implements Filter.Or {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Or.class.isAssignableFrom(o.getClass()))
+        if (!Filter.Or.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         final Filter.Or other = (Filter.Or) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());

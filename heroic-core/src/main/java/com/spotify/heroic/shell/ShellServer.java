@@ -66,23 +66,21 @@ public class ShellServer implements LifeCycle {
 
     @Override
     public AsyncFuture<Void> start() {
-        return state.start().lazyTransform(s ->
-            state.doto(state -> {
-                final Thread thread = new Thread(() -> {
-                    try {
-                        doRun(state);
-                    } catch (Exception e) {
-                        log.error("Error in server thread", e);
-                    }
+        return state.start().lazyTransform(s -> state.doto(state -> {
+            final Thread thread = new Thread(() -> {
+                try {
+                    doRun(state);
+                } catch (Exception e) {
+                    log.error("Error in server thread", e);
+                }
 
-                    log.info("Shutting down...");
-                });
+                log.info("Shutting down...");
+            });
 
-                thread.setName("remote-shell-server");
-                thread.start();
-                return async.resolved();
-            })
-        );
+            thread.setName("remote-shell-server");
+            thread.start();
+            return async.resolved();
+        }));
     }
 
     @Override
@@ -105,7 +103,8 @@ public class ShellServer implements LifeCycle {
 
             final Runnable runnable = new ShellServerClientThread(socket, tasks, serializer, async);
             final Thread clientThread = new Thread(runnable);
-            clientThread.setName(String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
+            clientThread.setName(
+                    String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
             clientThread.start();
         }
     }

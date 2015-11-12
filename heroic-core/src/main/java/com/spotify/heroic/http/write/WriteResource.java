@@ -52,7 +52,9 @@ public class WriteResource {
     }
 
     @POST
-    public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup, WriteMetricRequest write) throws Exception {
-        httpAsync.bind(response, ingestion.useGroup(backendGroup).write(write.toWriteMetric()), r -> r);
+    public void metrics(@Suspended final AsyncResponse response,
+            @QueryParam("backend") String backendGroup, WriteMetricRequest write) throws Exception {
+        httpAsync.bind(response, ingestion.useGroup(backendGroup).write(write.toWriteMetric()),
+                r -> r);
     }
 }

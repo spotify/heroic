@@ -50,7 +50,7 @@ public class Statistics {
                 .addAll(other.counters.keySet()).build();
 
         for (final String k : keys) {
-            counters.put(k, this.counters.getOrDefault(k, 0l) + other.counters.getOrDefault(k, 0l));
+            counters.put(k, this.counters.getOrDefault(k, 0L) + other.counters.getOrDefault(k, 0L));
         }
 
         return new Statistics(counters.build());

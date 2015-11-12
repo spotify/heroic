@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.elasticsearch.client.Client;
@@ -52,7 +51,8 @@ public class TransportClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        final Settings settings = ImmutableSettings.builder().put("cluster.name", clusterName).build();
+        final Settings settings =
+                ImmutableSettings.builder().put("cluster.name", clusterName).build();
 
         final TransportClient client = new TransportClient(settings);
 
@@ -68,17 +68,13 @@ public class TransportClientSetup implements ClientSetup {
     }
 
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
-        final List<InetSocketTransportAddress> seeds = new ArrayList<>();
-
-        for (final String seed : rawSeeds)
-            seeds.add(parseInetSocketTransportAddress(seed));
-
-        return seeds;
+        return ImmutableList.copyOf(rawSeeds.stream()
+                .map(TransportClientSetup::parseInetSocketTransportAddress).iterator());
     }
 
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
-            final String parts[] = seed.split(":");
+            final String[] parts = seed.split(":");
             return new InetSocketTransportAddress(parts[0], Integer.valueOf(parts[1]));
         }
 

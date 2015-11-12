@@ -23,9 +23,9 @@ package com.spotify.heroic;
 
 import javax.inject.Inject;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationDSL;
+import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.Filter.MultiArgs;
@@ -62,33 +62,34 @@ public class CoreHeroicContext implements HeroicContext {
     @Inject
     private AsyncFramework async;
 
-    private final Object $lock = new Object();
+    private final Object lock = new Object();
     private volatile ResolvableFuture<Void> startedFuture;
 
     @Override
-    public <T extends AggregationInstance, R extends Aggregation> void aggregation(String id, Class<T> type,
-            Class<R> queryType, Serializer<T> serializer, AggregationDSL builder) {
+    public <T extends AggregationInstance, R extends Aggregation> void aggregation(String id,
+            Class<T> type, Class<R> queryType, Serializer<T> serializer, AggregationDSL builder) {
         aggregationSerializer.register(id, type, serializer, builder);
         aggregationSerializer.registerQuery(id, queryType);
     }
 
     @Override
-    public <T extends OneArg<A>, I extends T, A> void filter(String id, Class<T> type, Class<I> impl,
-            OneArgumentFilter<T, A> builder, Serializer<A> first) {
+    public <T extends OneArg<A>, I extends T, A> void filter(String id, Class<T> type,
+            Class<I> impl, OneArgumentFilter<T, A> builder, Serializer<A> first) {
         filterJson(id, type, impl, builder);
         filterSerializer.register(id, type, builder, first);
     }
 
     @Override
-    public <T extends TwoArgs<A, B>, I extends T, A, B> void filter(String id, Class<T> type, Class<I> impl,
-            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second) {
+    public <T extends TwoArgs<A, B>, I extends T, A, B> void filter(String id, Class<T> type,
+            Class<I> impl, TwoArgumentsFilter<T, A, B> builder, Serializer<A> first,
+            Serializer<B> second) {
         filterJson(id, type, impl, builder);
         filterSerializer.register(id, type, builder, first, second);
     }
 
     @Override
-    public <T extends MultiArgs<A>, I extends T, A> void filter(String id, Class<T> type, Class<I> impl,
-            MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
+    public <T extends MultiArgs<A>, I extends T, A> void filter(String id, Class<T> type,
+            Class<I> impl, MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
         filterJson(id, type, impl, builder);
         filterSerializer.register(id, type, builder, term);
     }
@@ -108,16 +109,18 @@ public class CoreHeroicContext implements HeroicContext {
 
     @Override
     public AsyncFuture<Void> startedFuture() {
-        synchronized ($lock) {
-            if (this.startedFuture == null)
+        synchronized (lock) {
+            if (this.startedFuture == null) {
                 this.startedFuture = async.future();
+            }
         }
 
         return this.startedFuture;
     }
 
     public void resolveCoreFuture() {
-        if (this.startedFuture != null)
+        if (this.startedFuture != null) {
             this.startedFuture.resolve(null);
+        }
     }
 }

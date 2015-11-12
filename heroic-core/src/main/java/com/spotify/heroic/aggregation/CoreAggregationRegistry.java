@@ -39,7 +39,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Serializes aggregation configurations.
  *
- * Each aggregation configuration is packed into a Composite which has the type of the aggregation as a prefixed short.
+ * Each aggregation configuration is packed into a Composite which has the type of the aggregation
+ * as a prefixed short.
  *
  * @author udoprog
  */
@@ -50,21 +51,24 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
 
     private final Map<Class<? extends Aggregation>, String> queryTypes = new HashMap<>();
     private final Map<Class<? extends AggregationInstance>, String> types = new HashMap<>();
-    private final Map<String, Serializer<? extends AggregationInstance>> serializers = new HashMap<>();
+    private final Map<String, Serializer<? extends AggregationInstance>> serializers =
+            new HashMap<>();
     private final Map<String, AggregationDSL> builders = new HashMap<>();
 
     @Override
     public <T extends Aggregation> void registerQuery(String id, Class<T> queryType) {
         if (queryTypes.put(queryType, id) != null) {
-            throw new IllegalArgumentException("An aggregaiton query with the id '" + id + "' is already registered.");
+            throw new IllegalArgumentException(
+                    "An aggregaiton query with the id '" + id + "' is already registered.");
         }
     }
 
     @Override
-    public <T extends AggregationInstance> void register(String id, Class<T> clazz, Serializer<T> serializer,
-            AggregationDSL builder) {
+    public <T extends AggregationInstance> void register(String id, Class<T> clazz,
+            Serializer<T> serializer, AggregationDSL builder) {
         if (types.put(clazz, id) != null) {
-            throw new IllegalArgumentException("A type with the id '" + id + "' is already registered.");
+            throw new IllegalArgumentException(
+                    "A type with the id '" + id + "' is already registered.");
         }
 
         serializers.put(id, serializer);
@@ -75,15 +79,18 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
     public void serialize(SerialWriter buffer, AggregationInstance value) throws IOException {
         final String id = types.get(value.getClass());
 
-        if (id == null)
-            throw new RuntimeException("Type is not a serializable aggregate: " + value.getClass());
+        if (id == null) {
+            throw new IllegalArgumentException(
+                    "Type is not a serializable aggergation: " + value.getClass());
+        }
 
         string.serialize(buffer, id);
 
         final SerialWriter.Scope scope = buffer.scope();
 
         @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer = (Serializer<AggregationInstance>) serializers.get(id);
+        final Serializer<AggregationInstance> serializer =
+                (Serializer<AggregationInstance>) serializers.get(id);
 
         serializer.serialize(scope, value);
     }
@@ -93,7 +100,8 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
         final String id = string.deserialize(buffer);
 
         @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer = (Serializer<AggregationInstance>) serializers.get(id);
+        final Serializer<AggregationInstance> serializer =
+                (Serializer<AggregationInstance>) serializers.get(id);
 
         if (serializer == null) {
             buffer.skip();
@@ -128,10 +136,12 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
     }
 
     public void configure(SimpleModule module) {
-        for (final Map.Entry<Class<? extends AggregationInstance>, String> e : types.entrySet())
+        for (final Map.Entry<Class<? extends AggregationInstance>, String> e : types.entrySet()) {
             module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
+        }
 
-        for (final Map.Entry<Class<? extends Aggregation>, String> e : queryTypes.entrySet())
+        for (final Map.Entry<Class<? extends Aggregation>, String> e : queryTypes.entrySet()) {
             module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
+        }
     }
 }

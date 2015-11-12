@@ -28,15 +28,15 @@ import com.google.inject.Module;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
 public interface ConsumerModule {
-    public Module module(Key<Consumer> key, ConsumerReporter consumerReporter);
+    Module module(Key<Consumer> key, ConsumerReporter consumerReporter);
 
-    public Optional<String> id();
+    Optional<String> id();
 
-    public String buildId(int i);
+    String buildId(int i);
 
-    public interface Builder {
-        public ConsumerModule build();
+    interface Builder {
+        ConsumerModule build();
 
-        public Builder merge(Builder o);
+        Builder merge(Builder o);
     }
 }

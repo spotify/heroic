@@ -80,7 +80,8 @@ public class Fetch implements ShellTask {
         }
 
         final long start = params.start == null ? now : Tasks.parseInstant(params.start, now);
-        final long end = params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
+        final long end =
+                params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
 
         final DateRange range = new DateRange(start, end);
         final int limit = Math.max(1, params.limit);
@@ -109,10 +110,12 @@ public class Fetch implements ShellTask {
                         io.out().println(flip.format(current.getTime()));
                     }
 
-                    io.out().println(String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
+                    io.out().println(
+                            String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
 
-                    if (i++ >= limit)
+                    if (i++ >= limit) {
                         break outer;
+                    }
 
                     last = current;
                 }
@@ -127,20 +130,25 @@ public class Fetch implements ShellTask {
     }
 
     private boolean flipped(Calendar last, Calendar current) {
-        if (last == null)
+        if (last == null) {
             return true;
+        }
 
-        if (last.get(Calendar.YEAR) != current.get(Calendar.YEAR))
+        if (last.get(Calendar.YEAR) != current.get(Calendar.YEAR)) {
             return true;
+        }
 
-        if (last.get(Calendar.MONTH) != current.get(Calendar.MONTH))
+        if (last.get(Calendar.MONTH) != current.get(Calendar.MONTH)) {
             return true;
+        }
 
-        if (last.get(Calendar.DAY_OF_MONTH) != current.get(Calendar.DAY_OF_MONTH))
+        if (last.get(Calendar.DAY_OF_MONTH) != current.get(Calendar.DAY_OF_MONTH)) {
             return true;
+        }
 
-        if (last.get(Calendar.HOUR_OF_DAY) != current.get(Calendar.HOUR_OF_DAY))
+        if (last.get(Calendar.HOUR_OF_DAY) != current.get(Calendar.HOUR_OF_DAY)) {
             return true;
+        }
 
         return false;
     }
@@ -151,10 +159,12 @@ public class Fetch implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch", metaVar = "<json>")
+        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch",
+                metaVar = "<json>")
         private String series;
 
-        @Option(name = "--source", aliases = { "--source" }, usage = "Source to fetch", metaVar = "<events|points>")
+        @Option(name = "--source", aliases = { "--source" }, usage = "Source to fetch",
+                metaVar = "<events|points>")
         private String source = MetricType.POINT.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
@@ -163,10 +173,12 @@ public class Fetch implements ShellTask {
         @Option(name = "--end", usage = "End date", metaVar = "<datetime>")
         private String end;
 
-        @Option(name = "--limit", usage = "Maximum number of datapoints to fetch", metaVar = "<int>")
+        @Option(name = "--limit", usage = "Maximum number of datapoints to fetch",
+                metaVar = "<int>")
         private int limit = 1000;
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")

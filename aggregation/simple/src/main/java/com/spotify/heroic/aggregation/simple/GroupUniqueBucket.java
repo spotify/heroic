@@ -42,8 +42,10 @@ import lombok.RequiredArgsConstructor;
 public class GroupUniqueBucket extends AbstractBucket implements Bucket {
     final SortedSet<Point> points = new ConcurrentSkipListSet<Point>(MetricType.POINT.comparator());
     final SortedSet<Event> events = new ConcurrentSkipListSet<Event>(MetricType.EVENT.comparator());
-    final SortedSet<Spread> spreads = new ConcurrentSkipListSet<Spread>(MetricType.SPREAD.comparator());
-    final SortedSet<MetricGroup> groups = new ConcurrentSkipListSet<MetricGroup>(MetricType.GROUP.comparator());
+    final SortedSet<Spread> spreads =
+            new ConcurrentSkipListSet<Spread>(MetricType.SPREAD.comparator());
+    final SortedSet<MetricGroup> groups =
+            new ConcurrentSkipListSet<MetricGroup>(MetricType.GROUP.comparator());
 
     final long timestamp;
 

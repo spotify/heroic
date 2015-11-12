@@ -30,8 +30,8 @@ public final class StringValue implements Value {
 
     @Override
     public Value sub(Value other) {
-        throw new IllegalArgumentException(String.format("subtraction with string is not supported", this.getClass(),
-                other.getClass()));
+        throw new IllegalArgumentException(String.format("subtraction with string is not supported",
+                this.getClass(), other.getClass()));
     }
 
     @Override
@@ -46,8 +46,9 @@ public final class StringValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(T to) {
-        if (to instanceof StringValue)
+        if (to instanceof StringValue) {
             return (T) this;
+        }
 
         if (to instanceof Long) {
             try {
@@ -63,11 +64,13 @@ public final class StringValue implements Value {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T cast(Class<T> to) {
-        if (to.isAssignableFrom(StringValue.class))
+        if (to.isAssignableFrom(StringValue.class)) {
             return (T) this;
+        }
 
-        if (to == String.class)
+        if (to == String.class) {
             return (T) string;
+        }
 
         throw new ValueTypeCastException(this, to);
     }

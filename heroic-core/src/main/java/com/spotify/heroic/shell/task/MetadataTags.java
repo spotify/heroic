@@ -80,10 +80,12 @@ public class MetadataTags implements ShellTask {
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group;
 
-        @Option(name = "--limit", aliases = { "--limit" }, usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = { "--limit" },
+                usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 

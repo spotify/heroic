@@ -90,7 +90,8 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
         private final AtomicReference<Timeout> heartbeatTimeout;
 
         @Override
-        protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+        protected void channelRead0(final ChannelHandlerContext ctx, final Object msg)
+                throws Exception {
             if (msg instanceof NativeRpcRequest) {
                 try {
                     handleRequest(ctx.channel(), (NativeRpcRequest) msg);
@@ -108,16 +109,18 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
 
         private void handleRequest(final Channel ch, NativeRpcRequest msg) throws Exception {
             final NativeRpcRequest request = (NativeRpcRequest) msg;
-            final NativeRpcContainer.EndpointSpec<Object, Object> handle = container.get(request.getEndpoint());
+            final NativeRpcContainer.EndpointSpec<Object, Object> handle =
+                    container.get(request.getEndpoint());
 
             if (handle == null) {
-                sendError(ch, "No such endpoint: " + request.getEndpoint()).addListener(closeListener());
+                sendError(ch, "No such endpoint: " + request.getEndpoint())
+                        .addListener(closeListener());
                 return;
             }
 
             if (log.isTraceEnabled()) {
-                log.trace("request[{}:{}ms] {}", request.getEndpoint(), request.getHeartbeatInterval(),
-                        new String(request.getBody(), UTF8));
+                log.trace("request[{}:{}ms] {}", request.getEndpoint(),
+                        request.getHeartbeatInterval(), new String(request.getBody(), UTF8));
             }
 
             final long heartbeatInterval = calculcateHeartbeatInterval(msg);
@@ -134,9 +137,11 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             // Serialize in a separate thread on the async thread pool.
             // this also neatly catches errors for us in the next step.
             // Stop sending heartbeats immediately when the future has been finished.
-            // this will cause the other end to time out if a response is available, but its unable to pass the
+            // this will cause the other end to time out if a response is available, but its unable
+            // to pass the
             // network.
-            handleFuture.directTransform(serialize(request)).onFinished(() -> stopCurrentTimeout(heartbeatTimeout))
+            handleFuture.directTransform(serialize(request))
+                    .onFinished(() -> stopCurrentTimeout(heartbeatTimeout))
                     .onDone(sendResponseHandle(ch));
         }
 
@@ -185,7 +190,8 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 public NativeRpcResponse transform(Object result) throws Exception {
                     final byte[] response = mapper.writeValueAsBytes(result);
                     if (log.isTraceEnabled()) {
-                        log.trace("response[{}]: {}", request.getEndpoint(), new String(response, UTF8));
+                        log.trace("response[{}]: {}", request.getEndpoint(),
+                                new String(response, UTF8));
                     }
 
                     return new NativeRpcResponse(response);
@@ -198,13 +204,15 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 @Override
                 public void cancelled() throws Exception {
                     log.error("{}: request cancelled", ch);
-                    ch.writeAndFlush(new NativeRpcError("request cancelled")).addListener(closeListener());
+                    ch.writeAndFlush(new NativeRpcError("request cancelled"))
+                            .addListener(closeListener());
                 }
 
                 @Override
                 public void failed(final Throwable e) throws Exception {
                     log.error("{}: request failed", ch, e);
-                    ch.writeAndFlush(new NativeRpcError(e.getMessage())).addListener(closeListener());
+                    ch.writeAndFlush(new NativeRpcError(e.getMessage()))
+                            .addListener(closeListener());
                 }
 
                 @Override
@@ -214,8 +222,9 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                         public void operationComplete(ChannelFuture f) throws Exception {
                             if (!f.isSuccess()) {
                                 sendError(ch,
-                                        f.cause() == null ? "send of tail heartbeat failed" : f.cause().getMessage())
-                                        .addListener(closeListener());
+                                        f.cause() == null ? "send of tail heartbeat failed"
+                                                : f.cause().getMessage())
+                                                        .addListener(closeListener());
                                 return;
                             }
 

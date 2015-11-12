@@ -85,7 +85,8 @@ public class MetadataManagerModule extends PrivateModule {
     }
 
     private void bindBackends(final Collection<MetadataModule> configs) {
-        final Multibinder<MetadataBackend> bindings = Multibinder.newSetBinder(binder(), MetadataBackend.class);
+        final Multibinder<MetadataBackend> bindings =
+                Multibinder.newSetBinder(binder(), MetadataBackend.class);
 
         int i = 0;
 
@@ -104,8 +105,8 @@ public class MetadataManagerModule extends PrivateModule {
         return new Builder();
     }
 
-    @NoArgsConstructor(access=AccessLevel.PRIVATE)
-    @AllArgsConstructor(access=AccessLevel.PRIVATE)
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<List<MetadataModule>> backends = empty();
         private Optional<List<String>> defaultBackends = empty();

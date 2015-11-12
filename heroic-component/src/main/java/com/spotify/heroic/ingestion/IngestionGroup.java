@@ -28,5 +28,5 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionGroup extends Grouped {
-    public AsyncFuture<WriteResult> write(WriteMetric write);
+    AsyncFuture<WriteResult> write(WriteMetric write);
 }

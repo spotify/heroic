@@ -135,8 +135,8 @@ public class HeroicLoadingModule extends AbstractModule {
 
     @Provides
     @Singleton
-    Serializer<CacheKey> cacheKeySerializer(@Named("common") SerializerFramework s, FilterSerializer filter,
-            AggregationSerializer aggregation) {
+    Serializer<CacheKey> cacheKeySerializer(@Named("common") SerializerFramework s,
+            FilterSerializer filter, AggregationSerializer aggregation) {
         return new CacheKey_Serializer(s, filter, aggregation);
     }
 
@@ -182,7 +182,8 @@ public class HeroicLoadingModule extends AbstractModule {
         bind(FilterModifier.class).to(CoreFilterModifier.class).in(Scopes.SINGLETON);
         bind(QueryParser.class).to(CoreQueryParser.class).in(Scopes.SINGLETON);
 
-        bind(HeroicConfigurationContext.class).to(CoreHeroicConfigurationContext.class).in(Scopes.SINGLETON);
+        bind(HeroicConfigurationContext.class).to(CoreHeroicConfigurationContext.class)
+                .in(Scopes.SINGLETON);
 
         bind(HeroicContext.class).toInstance(new CoreHeroicContext());
         bind(ExecutorService.class).toInstance(executor);

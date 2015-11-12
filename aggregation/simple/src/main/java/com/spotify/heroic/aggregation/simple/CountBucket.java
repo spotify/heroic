@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * Bucket that counts the number of seen samples.
- * 
+ *
  * @author udoprog
  */
 @RequiredArgsConstructor

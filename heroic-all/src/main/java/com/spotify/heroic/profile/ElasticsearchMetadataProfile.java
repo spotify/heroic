@@ -47,18 +47,20 @@ public class ElasticsearchMetadataProfile extends HeroicProfileBase {
 
         params.get("elasticsearch.pattern").map(index::pattern);
 
-        final ManagedConnectionFactory.Builder connection = ManagedConnectionFactory.builder().index(index.build());
+        final ManagedConnectionFactory.Builder connection = ManagedConnectionFactory.builder()
+                .index(index.build());
 
         params.get("elasticsearch.clusterName").map(connection::clusterName);
-        params.get("elasticsearch.seeds").map(s -> connection.seeds(ImmutableList.copyOf(splitter.split(s))));
+        params.get("elasticsearch.seeds")
+                .map(s -> connection.seeds(ImmutableList.copyOf(splitter.split(s))));
 
         final ElasticsearchMetadataModule.Builder module = ElasticsearchMetadataModule.builder()
                 .connection(connection.build());
 
         params.get("elasticsearch.type").map(module::backendType);
 
-        return HeroicConfig.builder()
-                .metadata(MetadataManagerModule.builder().backends(ImmutableList.<MetadataModule> of(module.build())));
+        return HeroicConfig.builder().metadata(MetadataManagerModule.builder()
+                .backends(ImmutableList.<MetadataModule> of(module.build())));
     }
 
     @Override

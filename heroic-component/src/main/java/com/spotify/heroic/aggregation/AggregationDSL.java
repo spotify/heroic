@@ -22,5 +22,5 @@
 package com.spotify.heroic.aggregation;
 
 public interface AggregationDSL {
-    public Aggregation build(final AggregationArguments arguments);
+    Aggregation build(final AggregationArguments arguments);
 }

@@ -29,7 +29,7 @@ import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({ @JsonSubTypes.Type(value = LegacySchemaModule.class, name = "legacy"),
-    @JsonSubTypes.Type(value = NextGenSchemaModule.class, name = "ng") })
+        @JsonSubTypes.Type(value = NextGenSchemaModule.class, name = "ng") })
 public interface SchemaModule {
     public Module module();
 }

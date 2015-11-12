@@ -67,14 +67,17 @@ public abstract class AbstractElasticsearchMetadataBackend {
         return future;
     }
 
-    protected AsyncFuture<FindSeries> scrollOverSeries(final Connection c, final SearchRequestBuilder request,
-            final long limit, final Function<SearchHit, Series> converter) {
+    protected AsyncFuture<FindSeries> scrollOverSeries(final Connection c,
+            final SearchRequestBuilder request, final long limit,
+            final Function<SearchHit, Series> converter) {
         return bind(request.execute()).lazyTransform((initial) -> {
             if (initial.getScrollId() == null) {
                 return async.resolved(FindSeries.EMPTY);
             }
 
-            return bind(c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute()).lazyTransform((response) -> {
+            return bind(
+                    c.prepareSearchScroll(initial.getScrollId()).setScroll(SCROLL_TIME).execute())
+                            .lazyTransform((response) -> {
                 final ResolvableFuture<FindSeries> future = async.future();
                 final Set<Series> series = new HashSet<>();
                 final AtomicInteger count = new AtomicInteger();
@@ -90,12 +93,14 @@ public abstract class AbstractElasticsearchMetadataBackend {
 
                         count.addAndGet(hits.length);
 
-                        if (hits.length == 0 || count.get() >= limit || response.getScrollId() == null) {
+                        if (hits.length == 0 || count.get() >= limit
+                                || response.getScrollId() == null) {
                             future.resolve(new FindSeries(series, series.size(), 0));
                             return;
                         }
 
-                        bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME).execute()).onDone(new FutureDone<SearchResponse>() {
+                        bind(c.prepareSearchScroll(response.getScrollId()).setScroll(SCROLL_TIME)
+                                .execute()).onDone(new FutureDone<SearchResponse>() {
                             @Override
                             public void failed(Throwable cause) throws Exception {
                                 future.fail(cause);

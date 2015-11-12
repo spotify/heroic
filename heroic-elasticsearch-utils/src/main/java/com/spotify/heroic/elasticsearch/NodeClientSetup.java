@@ -40,7 +40,7 @@ public class NodeClientSetup implements ClientSetup {
     private final String clusterName;
     private final String[] seeds;
 
-    private final Object $lock = new Object();
+    private final Object lock = new Object();
     private final AtomicReference<Node> node = new AtomicReference<>();
 
     @JsonCreator
@@ -51,16 +51,18 @@ public class NodeClientSetup implements ClientSetup {
 
     @Override
     public Client setup() throws Exception {
-        synchronized ($lock) {
-            if (node.get() != null)
+        synchronized (lock) {
+            if (node.get() != null) {
                 throw new IllegalStateException("already started");
+            }
 
             final Settings settings = ImmutableSettings.builder()
                     .put("node.name", InetAddress.getLocalHost().getHostName())
                     .put("discovery.zen.ping.multicast.enabled", false)
                     .putArray("discovery.zen.ping.unicast.hosts", seeds).build();
 
-            final Node node = NodeBuilder.nodeBuilder().settings(settings).client(true).clusterName(clusterName).node();
+            final Node node = NodeBuilder.nodeBuilder().settings(settings).client(true)
+                    .clusterName(clusterName).node();
 
             this.node.set(node);
             return node.client();
@@ -69,11 +71,12 @@ public class NodeClientSetup implements ClientSetup {
 
     @Override
     public void stop() throws Exception {
-        synchronized ($lock) {
+        synchronized (lock) {
             final Node node = this.node.getAndSet(null);
 
-            if (node == null)
+            if (node == null) {
                 throw new IllegalStateException("not started");
+            }
 
             node.stop();
         }

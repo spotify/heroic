@@ -39,7 +39,8 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(of = { "start", "end" })
 public class DateRange implements Comparable<DateRange> {
-    private static final FastDateFormat FORMAT = FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final FastDateFormat FORMAT =
+            FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");
 
     private final long start;
     private final long end;
@@ -48,7 +49,8 @@ public class DateRange implements Comparable<DateRange> {
         checkArgument(start >= 0, "start must be a positive number");
 
         if (end < start) {
-            throw new IllegalArgumentException(String.format("start (%d) must come before end (%d)", start, end));
+            throw new IllegalArgumentException(
+                    String.format("start (%d) must come before end (%d)", start, end));
         }
 
         this.start = start;
@@ -84,8 +86,9 @@ public class DateRange implements Comparable<DateRange> {
      * @return Rounded date range.
      */
     public DateRange rounded(long interval) {
-        if (interval <= 0)
+        if (interval <= 0) {
             return this;
+        }
 
         return new DateRange(start - start % interval, end + (interval - end % interval));
     }
@@ -120,8 +123,8 @@ public class DateRange implements Comparable<DateRange> {
     /**
      * Modify this range with another range.
      *
-     * A modification asserts that the new range is a subset of the current range. Any span which would cause the new
-     * range to become out of bounds will be cropped.
+     * A modification asserts that the new range is a subset of the current range. Any span which
+     * would cause the new range to become out of bounds will be cropped.
      *
      * @param range The constraints to modify this range against.
      * @return A new range representing the modified range.

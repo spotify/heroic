@@ -76,42 +76,46 @@ public class Keys implements ShellTask {
 
         final MetricBackendGroup group = metrics.useGroup(params.group);
 
-        return MetricBackends.keysPager(start, limit, (s, l) -> group.keys(s, l, options), (set) -> {
-            if (set.getTrace().isPresent()) {
-                set.getTrace().get().formatTrace(io.out());
-                io.out().flush();
-            }
-        }).directTransform(result -> {
-            while (result.hasNext()) {
-                final BackendKey next;
+        return MetricBackends
+                .keysPager(start, limit, (s, l) -> group.keys(s, l, options), (set) -> {
+                    if (set.getTrace().isPresent()) {
+                        set.getTrace().get().formatTrace(io.out());
+                        io.out().flush();
+                    }
+                }).directTransform(result -> {
+                    while (result.hasNext()) {
+                        final BackendKey next;
 
-                try {
-                    next = result.next();
-                } catch (Exception e) {
-                    log.warn("Exception when pulling key", e);
-                    continue;
-                }
+                        try {
+                            next = result.next();
+                        } catch (Exception e) {
+                            log.warn("Exception when pulling key", e);
+                            continue;
+                        }
 
-                io.out().println(mapper.writeValueAsString(next));
-                io.out().flush();
-            }
+                        io.out().println(mapper.writeValueAsString(next));
+                        io.out().flush();
+                    }
 
-            return null;
-        });
+                    return null;
+                });
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--start", usage = "First key to list (overrides start value from --series)", metaVar = "<json>")
+        @Option(name = "--start", usage = "First key to list (overrides start value from --series)",
+                metaVar = "<json>")
         private String start;
 
-        @Option(name = "--limit", usage = "Maximum number of keys to fetch per batch", metaVar = "<int>")
+        @Option(name = "--limit", usage = "Maximum number of keys to fetch per batch",
+                metaVar = "<int>")
         private int limit = 10000;
 
         @Option(name = "--group", usage = "Backend group to use", metaVar = "<group>")
         private String group = null;
 
-        @Option(name = "--tracing", usage = "Trace the queries for more debugging when things go wrong")
+        @Option(name = "--tracing",
+                usage = "Trace the queries for more debugging when things go wrong")
         private boolean tracing = false;
     }
 }

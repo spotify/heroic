@@ -75,10 +75,12 @@ public class QueryResource {
 
     @POST
     @Path("/metrics/stream")
-    public List<StreamId> metricsStream(@QueryParam("backend") String backendGroup, QueryMetrics query) {
+    public List<StreamId> metricsStream(@QueryParam("backend") String backendGroup,
+            QueryMetrics query) {
         final Query request = setupQuery(query).build();
 
-        final Collection<? extends QueryManager.Group> groups = this.query.useGroupPerNode(backendGroup);
+        final Collection<? extends QueryManager.Group> groups =
+                this.query.useGroupPerNode(backendGroup);
         final List<StreamId> ids = new ArrayList<>();
 
         for (QueryManager.Group group : groups) {
@@ -92,7 +94,8 @@ public class QueryResource {
 
     @POST
     @Path("/metrics/stream/{id}")
-    public void metricsStreamId(@Suspended final AsyncResponse response, @PathParam("id") final UUID id) {
+    public void metricsStreamId(@Suspended final AsyncResponse response,
+            @PathParam("id") final UUID id) {
         if (id == null) {
             throw new BadRequestException("Id must be a valid UUID");
         }
@@ -114,8 +117,8 @@ public class QueryResource {
 
     @POST
     @Path("/metrics")
-    public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
-            QueryMetrics query) {
+    public void metrics(@Suspended final AsyncResponse response,
+            @QueryParam("backend") String backendGroup, QueryMetrics query) {
         final Query q = setupQuery(query).build();
 
         final QueryManager.Group group = this.query.useGroup(backendGroup);
@@ -126,8 +129,8 @@ public class QueryResource {
 
     @POST
     @Path("/batch")
-    public void metrics(@Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
-            final QueryBatch query) {
+    public void metrics(@Suspended final AsyncResponse response,
+            @QueryParam("backend") String backendGroup, final QueryBatch query) {
         final QueryManager.Group group = this.query.useGroup(backendGroup);
 
         final List<AsyncFuture<Pair<String, QueryResult>>> futures = new ArrayList<>();
@@ -137,40 +140,43 @@ public class QueryResource {
             futures.add(group.query(q).directTransform(r -> Pair.of(e.getKey(), r)));
         }
 
-        final AsyncFuture<QueryBatchResponse> future = async.collect(futures).directTransform(entries -> {
-            final ImmutableMap.Builder<String, QueryMetricsResponse> results = ImmutableMap.builder();
+        final AsyncFuture<QueryBatchResponse> future =
+                async.collect(futures).directTransform(entries -> {
+                    final ImmutableMap.Builder<String, QueryMetricsResponse> results =
+                            ImmutableMap.builder();
 
-            for (final Pair<String, QueryResult> e : entries) {
-                final QueryResult r = e.getRight();
-                results.put(e.getLeft(), new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace()));
-            }
+                    for (final Pair<String, QueryResult> e : entries) {
+                        final QueryResult r = e.getRight();
+                        results.put(e.getLeft(), new QueryMetricsResponse(r.getRange(),
+                                r.getGroups(), r.getErrors(), r.getTrace()));
+                    }
 
-            return new QueryBatchResponse(results.build());
-        });
+                    return new QueryBatchResponse(results.build());
+                });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
         httpAsync.bind(response, future);
     }
 
-    private void bindMetricsResponse(final AsyncResponse response, final AsyncFuture<QueryResult> callback) {
+    private void bindMetricsResponse(final AsyncResponse response,
+            final AsyncFuture<QueryResult> callback) {
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        httpAsync.bind(response, callback,
-                r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(), r.getTrace()));
+        httpAsync.bind(response, callback, r -> new QueryMetricsResponse(r.getRange(),
+                r.getGroups(), r.getErrors(), r.getTrace()));
     }
 
     @SuppressWarnings("deprecation")
     private QueryBuilder setupQuery(final QueryMetrics q) {
         Supplier<? extends QueryBuilder> supplier = () -> {
-            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy()).filter(q.getFilter())
-                    .range(q.getRange()).aggregation(q.getAggregation())
-                    .source(q.getSource())
-                    .options(q.getOptions());
+            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy())
+                    .filter(q.getFilter()).range(q.getRange()).aggregation(q.getAggregation())
+                    .source(q.getSource()).options(q.getOptions());
         };
 
-        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier).rangeIfAbsent(q.getRange())
-                .optionsIfAbsent(q.getOptions());
+        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier)
+                .rangeIfAbsent(q.getRange()).optionsIfAbsent(q.getOptions());
     }
 
     @Data

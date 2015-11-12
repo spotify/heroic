@@ -96,14 +96,14 @@ public class HeroicServer implements LifeCycle {
 
     private volatile Server server;
 
-    private final Object $lock = new Object();
+    private final Object lock = new Object();
 
     @Override
     public AsyncFuture<Void> start() {
         return async.call(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                synchronized ($lock) {
+                synchronized (lock) {
                     if (server != null) {
                         throw new IllegalStateException("Server has already been started");
                     }
@@ -115,7 +115,8 @@ public class HeroicServer implements LifeCycle {
 
                     server.addLifeCycleListener(new AbstractLifeCycle.AbstractLifeCycleListener() {
                         @Override
-                        public void lifeCycleStarted(org.eclipse.jetty.util.component.LifeCycle event) {
+                        public void lifeCycleStarted(
+                                org.eclipse.jetty.util.component.LifeCycle event) {
                             latch.countDown();
                         }
                     });
@@ -134,7 +135,7 @@ public class HeroicServer implements LifeCycle {
     }
 
     public int getPort() {
-        synchronized ($lock) {
+        synchronized (lock) {
             if (server == null) {
                 throw new IllegalStateException("Server is not running");
             }
@@ -166,7 +167,7 @@ public class HeroicServer implements LifeCycle {
         return async.call(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                synchronized ($lock) {
+                synchronized (lock) {
                     if (server == null) {
                         throw new IllegalStateException("Server has not been started");
                     }
@@ -189,7 +190,8 @@ public class HeroicServer implements LifeCycle {
 
     private HandlerCollection setupHandler() throws IOException, ExecutionException {
         // statically provide injector to jersey application.
-        final ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+        final ServletContextHandler context =
+                new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/");
 
         final ResourceConfig resourceConfig = setupResourceConfig();
@@ -210,7 +212,7 @@ public class HeroicServer implements LifeCycle {
         makeRewriteRules(rewrite);
 
         final HandlerCollection handlers = new HandlerCollection();
-        handlers.setHandlers(new Handler[] { rewrite, context, requestLogHandler });
+        handlers.setHandlers(new Handler[] {rewrite, context, requestLogHandler});
 
         return handlers;
     }
@@ -260,7 +262,8 @@ public class HeroicServer implements LifeCycle {
 
         c.register(JsonParseExceptionMapper.class);
         c.register(JsonMappingExceptionMapper.class);
-        c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class, MessageBodyWriter.class);
+        c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class,
+                MessageBodyWriter.class);
 
         return c;
     }

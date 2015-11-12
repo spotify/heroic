@@ -167,8 +167,8 @@ public final class Tasks {
             return n.value();
         }
 
-        throw new IllegalStateException(String.format("No name configured with @TaskName on %s",
-                task.getCanonicalName()));
+        throw new IllegalStateException(
+                String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
     }
 
     public static List<String> allNames(final Class<? extends ShellTask> task) {
@@ -217,20 +217,24 @@ public final class Tasks {
         try {
             return constructor.newInstance();
         } catch (ReflectiveOperationException e) {
-            throw new Exception("Failed to invoke constructor of '" + taskType.getCanonicalName(), e);
+            throw new Exception("Failed to invoke constructor of '" + taskType.getCanonicalName(),
+                    e);
         }
     }
 
-    public static Filter setupFilter(FilterFactory filters, QueryParser parser, TaskQueryParameters params) {
+    public static Filter setupFilter(FilterFactory filters, QueryParser parser,
+            TaskQueryParameters params) {
         final List<String> query = params.getQuery();
 
-        if (query.isEmpty())
+        if (query.isEmpty()) {
             return filters.t();
+        }
 
         return parser.parseFilter(StringUtils.join(query, " "));
     }
 
-    public abstract static class QueryParamsBase extends AbstractShellTaskParams implements TaskQueryParameters {
+    public abstract static class QueryParamsBase extends AbstractShellTaskParams
+            implements TaskQueryParameters {
         private final DateRange defaultDateRange;
 
         public QueryParamsBase() {
@@ -245,7 +249,8 @@ public final class Tasks {
         }
     }
 
-    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser, TaskQueryParameters params) {
+    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser,
+            TaskQueryParameters params) {
         final Filter filter = setupFilter(filters, parser, params);
         return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
@@ -291,7 +296,8 @@ public final class Tasks {
         final DateTime n = new DateTime(now, chrono);
 
         for (final DateTimeParser p : today) {
-            final DateTimeParserBucket bucket = new DateTimeParserBucket(0, chrono, null, null, 2000);
+            final DateTimeParserBucket bucket =
+                    new DateTimeParserBucket(0, chrono, null, null, 2000);
 
             bucket.saveField(chrono.year(), n.getYear());
             bucket.saveField(chrono.monthOfYear(), n.getMonthOfYear());
@@ -312,7 +318,8 @@ public final class Tasks {
 
     private static long parseFullInstant(String input, final Chronology chrono) {
         for (final DateTimeParser p : full) {
-            final DateTimeParserBucket bucket = new DateTimeParserBucket(0, chrono, null, null, 2000);
+            final DateTimeParserBucket bucket =
+                    new DateTimeParserBucket(0, chrono, null, null, 2000);
 
             try {
                 p.parseInto(bucket, input, 0);

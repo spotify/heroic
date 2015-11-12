@@ -36,7 +36,8 @@ public class EmptyMetricCollection extends MetricCollection {
     }
 
     @Override
-    public void updateAggregation(AggregationSession session, Map<String, String> tags, Set<Series> series) {
+    public void updateAggregation(AggregationSession session, Map<String, String> tags,
+            Set<Series> series) {
     }
 
     @Override

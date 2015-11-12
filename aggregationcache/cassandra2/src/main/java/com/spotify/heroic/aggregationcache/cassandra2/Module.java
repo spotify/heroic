@@ -35,7 +35,8 @@ public class Module implements HeroicModule {
 
             @Override
             public void setup() {
-                configurationContext.registerType("cassandra2", Cassandra2AggregationCacheBackendModule.class);
+                configurationContext.registerType("cassandra2",
+                        Cassandra2AggregationCacheBackendModule.class);
             }
         };
     }

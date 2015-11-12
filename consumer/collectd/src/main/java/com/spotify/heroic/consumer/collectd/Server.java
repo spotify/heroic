@@ -49,7 +49,8 @@ public class Server {
         return async.resolved();
     }
 
-    public static AsyncFuture<Server> setup(final AsyncFramework async, final CollectdChannelHandler handler, final InetAddress host, final int port) {
+    public static AsyncFuture<Server> setup(final AsyncFramework async,
+            final CollectdChannelHandler handler, final InetAddress host, final int port) {
         final EventLoopGroup group = new NioEventLoopGroup();
         final Bootstrap b = new Bootstrap();
 
@@ -64,7 +65,8 @@ public class Server {
                 if (f.isSuccess()) {
                     future.resolve(new Server(async, f.channel()));
                 } else {
-                    future.fail(f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
+                    future.fail(
+                            f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
                 }
             }
         });

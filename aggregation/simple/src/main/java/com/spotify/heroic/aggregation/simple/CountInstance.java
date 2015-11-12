@@ -32,7 +32,8 @@ import com.spotify.heroic.metric.Point;
 
 public class CountInstance extends DistributedBucketInstance<StripedCountBucket> {
     @JsonCreator
-    public CountInstance(@JsonProperty("size") final long size, @JsonProperty("extent") final long extent) {
+    public CountInstance(@JsonProperty("size") final long size,
+            @JsonProperty("extent") final long extent) {
         super(size, extent, ALL_TYPES, MetricType.POINT);
     }
 

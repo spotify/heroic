@@ -86,8 +86,10 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
 
                 if (result != null) {
                     for (final Record a : result) {
-                        final SRVRecord srv = (SRVRecord)a;
-                        results.add(new URI(protocol.orElse(DEFAULT_PROTOCOL) + "://" + srv.getTarget().canonicalize() + ":" + port.orElse(DEFAULT_PORT)));
+                        final SRVRecord srv = (SRVRecord) a;
+                        results.add(new URI(protocol.orElse(DEFAULT_PROTOCOL) + "://"
+                                + srv.getTarget().canonicalize() + ":"
+                                + port.orElse(DEFAULT_PORT)));
                     }
                 }
 

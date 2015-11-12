@@ -44,11 +44,13 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
         config.put("zookeeper.connect", params.require("kafka.zookeeper"));
         config.put("group.id", params.require("kafka.group"));
 
-        final KafkaConsumerModule.Builder module = KafkaConsumerModule.builder().config(config.build());
+        final KafkaConsumerModule.Builder module = KafkaConsumerModule.builder()
+                .config(config.build());
 
         module.schema(params.require("kafka.schema"));
 
-        params.get("kafka.topics").map(splitter::split).map(topics -> module.topics(ImmutableList.copyOf(topics)));
+        params.get("kafka.topics").map(splitter::split)
+                .map(topics -> module.topics(ImmutableList.copyOf(topics)));
 
         // @formatter:off
         return HeroicConfig.builder()

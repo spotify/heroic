@@ -41,7 +41,8 @@ public class Average extends SamplingAggregation {
     }
 
     @Override
-    public AverageInstance apply(final AggregationContext context, final long size, final long extent) {
+    public AverageInstance apply(final AggregationContext context, final long size,
+            final long extent) {
         return new AverageInstance(size, extent);
     }
 

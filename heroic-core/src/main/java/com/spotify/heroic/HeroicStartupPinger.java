@@ -44,9 +44,9 @@ import eu.toolchain.async.AsyncFuture;
 
 /**
  * Component that executes a startup 'ping' after the service has started.
- * 
- * This is used primarally to hook into integration tests to assert that the service has been configured before tests
- * are being executed.
+ *
+ * This is used primarally to hook into integration tests to assert that the service has been
+ * configured before tests are being executed.
  *
  * @author udoprog
  */
@@ -105,8 +105,9 @@ public class HeroicStartupPinger implements LifeCycle {
     }
 
     private void sendUDP(PingMessage p) throws IOException {
-        if (ping.getPort() == -1)
+        if (ping.getPort() == -1) {
             throw new IllegalArgumentException("Invalid URI, port is required: " + ping);
+        }
 
         final byte[] frame = mapper.writeValueAsBytes(p);
 

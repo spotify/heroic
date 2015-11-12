@@ -36,7 +36,8 @@ public class Count extends SamplingAggregation {
     }
 
     @Override
-    public CountInstance apply(final AggregationContext context, final long size, final long extent) {
+    public CountInstance apply(final AggregationContext context, final long size,
+            final long extent) {
         return new CountInstance(size, extent);
     }
 

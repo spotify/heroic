@@ -57,7 +57,8 @@ public class Partition implements Aggregation {
         return pickFrom(Math::max, Aggregation::extent);
     }
 
-    private <T> Optional<T> pickFrom(final BiFunction<T, T, T> reducer, final Function<Aggregation, Optional<T>> value) {
+    private <T> Optional<T> pickFrom(final BiFunction<T, T, T> reducer,
+            final Function<Aggregation, Optional<T>> value) {
         Optional<T> result = Optional.empty();
 
         for (final Aggregation a : children) {
@@ -80,12 +81,14 @@ public class Partition implements Aggregation {
 
     @Override
     public PartitionInstance apply(final AggregationContext context) {
-        final List<AggregationInstance> children = ImmutableList.copyOf(this.children.stream().map((c) -> c.apply(context)).iterator());
+        final List<AggregationInstance> children = ImmutableList
+                .copyOf(this.children.stream().map((c) -> c.apply(context)).iterator());
         return new PartitionInstance(children);
     }
 
     @Override
     public String toDSL() {
-        return String.format("%s(%s)", NAME, params.join(children.stream().map(Aggregation::toDSL).iterator()));
+        return String.format("%s(%s)", NAME,
+                params.join(children.stream().map(Aggregation::toDSL).iterator()));
     }
 }

@@ -110,7 +110,8 @@ public class NoopClusteredMetadataManagerReporter implements ClusteredMetadataMa
     public void registerShards(Set<Map<String, String>> knownShards) {
     }
 
-    private static final NoopClusteredMetadataManagerReporter instance = new NoopClusteredMetadataManagerReporter();
+    private static final NoopClusteredMetadataManagerReporter instance =
+            new NoopClusteredMetadataManagerReporter();
 
     public static NoopClusteredMetadataManagerReporter get() {
         return instance;

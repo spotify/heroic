@@ -28,10 +28,10 @@ import com.spotify.heroic.filter.Filter;
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionManager extends UsableGroupManager<IngestionGroup> {
-    public static final String INGESTED = "ingested";
-    public static final String AVAILABLE_WRITE_PERMITS = "available-write-permits";
+    String INGESTED = "ingested";
+    String AVAILABLE_WRITE_PERMITS = "available-write-permits";
 
-    public Statistics getStatistics();
+    Statistics getStatistics();
 
     /**
      * Configure a filter to use for ingestion.
@@ -41,7 +41,7 @@ public interface IngestionManager extends UsableGroupManager<IngestionGroup> {
      * @param filter Filter to configure.
      * @return A future that resolved when the filter has been installed.
      */
-    public AsyncFuture<Void> setFilter(Filter filter);
+    AsyncFuture<Void> setFilter(Filter filter);
 
-    public AsyncFuture<Filter> getFilter();
+    AsyncFuture<Filter> getFilter();
 }

@@ -103,8 +103,8 @@ public class MetricCollectionSerialization {
 
     public static class Serializer extends JsonSerializer<MetricCollection> {
         @Override
-        public void serialize(MetricCollection group, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(MetricCollection group, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeStartObject();
             g.writeObjectField(TYPE, group.getType());
             g.writeObjectField(DATA, group.getData());

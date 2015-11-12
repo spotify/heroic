@@ -43,21 +43,25 @@ import lombok.RequiredArgsConstructor;
 public class AbstractCassandraSchema {
     protected final AsyncFramework async;
 
-    protected AsyncFuture<PreparedStatement> prepareTemplate(final Map<String, String> values, Session s, final String path) throws IOException {
+    protected AsyncFuture<PreparedStatement> prepareTemplate(final Map<String, String> values,
+            Session s, final String path) throws IOException {
         return Async.bind(async, s.prepareAsync(loadTemplate(path, values)));
     }
 
-    protected AsyncFuture<PreparedStatement> prepareAsync(final Map<String, String> values, Session s, final String cql) {
+    protected AsyncFuture<PreparedStatement> prepareAsync(final Map<String, String> values,
+            Session s, final String cql) {
         return Async.bind(async, s.prepareAsync(variables(cql, values)));
     }
 
-    private String loadTemplate(final String path, final Map<String, String> values) throws IOException {
+    private String loadTemplate(final String path, final Map<String, String> values)
+            throws IOException {
         final String string;
         final ClassLoader loader = ManagedSetupConnection.class.getClassLoader();
 
         try (final InputStream is = loader.getResourceAsStream(path)) {
-            if (is == null)
+            if (is == null) {
                 throw new IOException("No such resource: " + path);
+            }
 
             string = CharStreams.toString(new InputStreamReader(is, Charsets.UTF_8));
         }

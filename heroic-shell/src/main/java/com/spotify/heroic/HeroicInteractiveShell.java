@@ -173,8 +173,8 @@ public class HeroicInteractiveShell {
         }
     }
 
-    void runTask(List<String> command, final ShellIO io, final CoreInterface core) throws Exception,
-            IOException {
+    void runTask(List<String> command, final ShellIO io, final CoreInterface core)
+            throws Exception, IOException {
         final AsyncFuture<Void> t;
 
         try {
@@ -205,7 +205,8 @@ public class HeroicInteractiveShell {
         return;
     }
 
-    Void awaitFinished(final AsyncFuture<Void> t) throws InterruptedException, ExecutionException, TimeoutException {
+    Void awaitFinished(final AsyncFuture<Void> t)
+            throws InterruptedException, ExecutionException, TimeoutException {
         if (timeout > 0) {
             return t.get(timeout, TimeUnit.SECONDS);
         }
@@ -214,7 +215,8 @@ public class HeroicInteractiveShell {
         return t.get();
     }
 
-    public static HeroicInteractiveShell buildInstance(final List<CommandDefinition> commands, FileInputStream input) throws Exception {
+    public static HeroicInteractiveShell buildInstance(final List<CommandDefinition> commands,
+            FileInputStream input) throws Exception {
         final ConsoleReader reader = new ConsoleReader("heroicsh", input, System.out, null);
 
         final FileHistory history = setupHistory(reader);
@@ -224,8 +226,8 @@ public class HeroicInteractiveShell {
         }
 
         reader.setPrompt(String.format("heroic> "));
-        reader.addCompleter(new StringsCompleter(ImmutableList.copyOf(commands.stream().map((d) -> d.getName())
-                .iterator())));
+        reader.addCompleter(new StringsCompleter(
+                ImmutableList.copyOf(commands.stream().map((d) -> d.getName()).iterator())));
         reader.setHandleUserInterrupt(true);
 
         return new HeroicInteractiveShell(reader, commands, history);

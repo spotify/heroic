@@ -82,8 +82,7 @@ public class IngestionManagerImpl implements IngestionManager {
     public IngestionManagerImpl(@Named("updateMetrics") final boolean updateMetrics,
             @Named("updateMetadata") final boolean updateMetadata,
             @Named("updateSuggestions") final boolean updateSuggestions,
-            @Named("maxConcurrentWrites") final int maxConcurrentWrites,
-            final Filter filter) {
+            @Named("maxConcurrentWrites") final int maxConcurrentWrites, final Filter filter) {
         this.updateMetrics = updateMetrics;
         this.updateMetadata = updateMetadata;
         this.updateSuggestions = updateSuggestions;
@@ -104,7 +103,8 @@ public class IngestionManagerImpl implements IngestionManager {
 
     @Override
     public IngestionGroup useDefaultGroup() {
-        return supplyGroup(metric::useDefaultGroup, metadata::useDefaultGroup, suggest::useDefaultGroup);
+        return supplyGroup(metric::useDefaultGroup, metadata::useDefaultGroup,
+                suggest::useDefaultGroup);
     }
 
     @Override
@@ -120,9 +120,8 @@ public class IngestionManagerImpl implements IngestionManager {
 
     @Override
     public Statistics getStatistics() {
-        return Statistics.of(
-                INGESTED, ingested.sum(),
-                AVAILABLE_WRITE_PERMITS, writePermits.availablePermits());
+        return Statistics.of(INGESTED, ingested.sum(), AVAILABLE_WRITE_PERMITS,
+                writePermits.availablePermits());
     }
 
     private <I> IngestionGroup supplyGroup(Supplier<MetricBackend> metric,

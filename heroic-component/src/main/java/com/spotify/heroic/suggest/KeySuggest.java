@@ -82,8 +82,9 @@ public class KeySuggest {
                             continue;
                         }
 
-                        if (alt.score < s.score)
+                        if (alt.score < s.score) {
                             suggestions.put(s.key, s);
+                        }
                     }
                 }
 
@@ -95,14 +96,17 @@ public class KeySuggest {
         };
     }
 
-    public static Transform<Throwable, ? extends KeySuggest> nodeError(final NodeRegistryEntry node) {
+    public static Transform<Throwable, ? extends KeySuggest> nodeError(
+            final NodeRegistryEntry node) {
         return new Transform<Throwable, KeySuggest>() {
             @Override
             public KeySuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new KeySuggest(ImmutableList.<RequestError> of(NodeError.fromThrowable(m.getId(), c.toString(),
-                        m.getTags(), e)), EMPTY_SUGGESTIONS);
+                return new KeySuggest(
+                        ImmutableList.<RequestError> of(
+                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                        EMPTY_SUGGESTIONS);
             }
         };
     }
@@ -118,38 +122,43 @@ public class KeySuggest {
             this.key = checkNotNull(key, "value must not be null");
         }
 
-        private static Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
+        private static final Comparator<Suggestion> COMPARATOR = new Comparator<Suggestion>() {
             @Override
             public int compare(Suggestion a, Suggestion b) {
                 final int score = Float.compare(b.score, a.score);
 
-                if (score != 0)
+                if (score != 0) {
                     return score;
+                }
 
                 return compareKey(a, b);
             }
 
             private int compareKey(Suggestion a, Suggestion b) {
-                if (a.key == null && b.key == null)
+                if (a.key == null && b.key == null) {
                     return 0;
+                }
 
-                if (a.key == null)
+                if (a.key == null) {
                     return 1;
+                }
 
-                if (b.key == null)
+                if (b.key == null) {
                     return -1;
+                }
 
                 return a.key.compareTo(b.key);
             }
         };
     }
 
-    public static Transform<Throwable, ? extends KeySuggest> nodeError(final ClusterNode.Group group) {
+    public static Transform<Throwable, ? extends KeySuggest> nodeError(
+            final ClusterNode.Group group) {
         return new Transform<Throwable, KeySuggest>() {
             @Override
             public KeySuggest transform(Throwable e) throws Exception {
-                final List<RequestError> errors = ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(),
-                        e));
+                final List<RequestError> errors =
+                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
                 return new KeySuggest(errors, EMPTY_SUGGESTIONS);
             }
         };

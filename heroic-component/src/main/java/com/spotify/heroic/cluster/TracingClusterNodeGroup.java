@@ -67,9 +67,10 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
-            QueryOptions options) {
-        return delegate.query(source, filter, range, aggregation, options).directTransform(ResultGroups.trace(query));
+    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
+            AggregationInstance aggregation, QueryOptions options) {
+        return delegate.query(source, filter, range, aggregation, options)
+                .directTransform(ResultGroups.trace(query));
     }
 
     @Override
@@ -103,17 +104,20 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key, String value) {
+    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
+            String value) {
         return delegate.tagSuggest(filter, options, key, value);
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key) {
+    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options,
+            String key) {
         return delegate.keySuggest(filter, options, key);
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude, int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
+            int groupLimit) {
         return delegate.tagValuesSuggest(filter, exclude, groupLimit);
     }
 

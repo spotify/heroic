@@ -41,15 +41,17 @@ public final class MaybeError<T> {
 
     @SuppressWarnings("unchecked")
     public T getJust() {
-        if (!just)
+        if (!just) {
             throw new IllegalStateException("not a value");
+        }
 
         return (T) data;
     }
 
     public Throwable getError() {
-        if (just)
+        if (just) {
             throw new IllegalStateException("not an error");
+        }
 
         return (Throwable) data;
     }
@@ -82,12 +84,13 @@ public final class MaybeError<T> {
         return new MaybeError<A>(false, error);
     }
 
-    private static final Transform<? extends Object, ? extends MaybeError<? extends Object>> toJust = new Transform<Object, MaybeError<Object>>() {
-        @Override
-        public MaybeError<Object> transform(Object result) throws Exception {
-            return MaybeError.just(result);
-        }
-    };
+    private static final Transform<Object, ? extends MaybeError<? extends Object>> toJust =
+            new Transform<Object, MaybeError<Object>>() {
+                @Override
+                public MaybeError<Object> transform(Object result) throws Exception {
+                    return MaybeError.just(result);
+                }
+            };
 
     @SuppressWarnings("unchecked")
     public static <A> Transform<A, MaybeError<A>> transformJust() {

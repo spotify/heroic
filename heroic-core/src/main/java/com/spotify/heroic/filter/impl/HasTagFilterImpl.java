@@ -66,8 +66,9 @@ public class HasTagFilterImpl implements Filter.HasTag {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.HasTag.class.isAssignableFrom(o.getClass()))
+        if (!Filter.HasTag.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         final Filter.HasTag other = (Filter.HasTag) o;
         return FilterComparatorUtils.stringCompare(this.tag, other.first());

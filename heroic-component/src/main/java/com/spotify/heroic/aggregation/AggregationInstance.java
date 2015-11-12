@@ -34,7 +34,7 @@ public interface AggregationInstance {
      * @param range Range to perform aggregation over.
      * @return Number of datapoints required for aggregation, or {@code -1} if not known.
      */
-    public long estimate(DateRange range);
+    long estimate(DateRange range);
 
     /**
      * Get the cadence of the current aggregation.
@@ -43,25 +43,27 @@ public interface AggregationInstance {
      *
      * @return The cadence of the resulting aggregation, or {@code 0} if this is unknown.
      */
-    public long cadence();
+    long cadence();
 
     /**
      * Traverse the possible aggregations and build the necessary graph out of them.
      */
-    public AggregationTraversal session(List<AggregationState> states, DateRange range);
+    AggregationTraversal session(List<AggregationState> states, DateRange range);
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.
      *
-     * A distributed aggregation instance is suitable for performing a sub-aggregation in order to allow non-destructive
-     * recombination of the results.
+     * A distributed aggregation instance is suitable for performing a sub-aggregation in order to
+     * allow non-destructive recombination of the results.
      *
-     * Consider distributing an average aggregation, if done naively this would cause a large loss in precision because
-     * the following does not hold true {@code avg(A, B) != avg(avg(A), avg(B))}
+     * Consider distributing an average aggregation, if done naively this would cause a large loss
+     * in precision because the following does not hold true
+     * {@code avg(A, B) != avg(avg(A), avg(B))}
      *
-     * Instead the average aggregation can designate another type of aggregation as its intermediate, which preserves
-     * the information from each sub-aggregation in a non-destructive form. This can be accomplished by using an
-     * aggregation that outputs the sum and the count of all seen values.
+     * Instead the average aggregation can designate another type of aggregation as its
+     * intermediate, which preserves the information from each sub-aggregation in a non-destructive
+     * form. This can be accomplished by using an aggregation that outputs the sum and the count of
+     * all seen values.
      *
      * @return The distributed aggregation for the current aggregation.
      */
@@ -72,18 +74,18 @@ public interface AggregationInstance {
     /**
      * Build a reducer for the given aggregation.
      *
-     * A reducer is responsible for taking a set of distributed sub-aggregations, and non-destructively combine them
-     * into a complete result.
+     * A reducer is responsible for taking a set of distributed sub-aggregations, and
+     * non-destructively combine them into a complete result.
      *
      * @return A reducer for the current aggregation.
      */
-    public ReducerSession reducer(final DateRange range);
+    ReducerSession reducer(final DateRange range);
 
     /**
      * Build a combiner for the given aggregation.
      *
-     * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations have different
-     * methods of recombining results that are more or less efficient.
+     * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations
+     * have different methods of recombining results that are more or less efficient.
      *
      * @return An aggregation combiner.
      */

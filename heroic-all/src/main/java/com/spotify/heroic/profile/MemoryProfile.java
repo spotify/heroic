@@ -106,6 +106,8 @@ public class MemoryProfile extends HeroicProfileBase {
 
     @Override
     public String description() {
+        // @formatter:off
         return "Configures in-memory backends for everything (useful for integration/performance testing)";
+        // @formatter:on
     }
 }

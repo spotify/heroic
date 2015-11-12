@@ -56,8 +56,10 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreClusterNodeGroup implements ClusterNodeGroup {
-    public static final QueryTrace.Identifier QUERY_NODE = QueryTrace.identifier(CoreClusterNodeGroup.class, "query_node");
-    public static final QueryTrace.Identifier QUERY = QueryTrace.identifier(CoreClusterNodeGroup.class, "query");
+    public static final QueryTrace.Identifier QUERY_NODE =
+            QueryTrace.identifier(CoreClusterNodeGroup.class, "query_node");
+    public static final QueryTrace.Identifier QUERY =
+            QueryTrace.identifier(CoreClusterNodeGroup.class, "query");
 
     private final AsyncFramework async;
     private final Collection<ClusterNode.Group> entries;
@@ -73,8 +75,8 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-            DateRange range, AggregationInstance aggregation, QueryOptions options) {
+    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
+            AggregationInstance aggregation, QueryOptions options) {
         final List<AsyncFuture<ResultGroups>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
@@ -152,18 +154,21 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key, String value) {
+    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
+            String value) {
         final List<AsyncFuture<TagSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagSuggest(filter, options, key, value).catchFailed(TagSuggest.nodeError(g)));
+            futures.add(
+                    g.tagSuggest(filter, options, key, value).catchFailed(TagSuggest.nodeError(g)));
         }
 
         return async.collect(futures, TagSuggest.reduce(filter.getLimit()));
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key) {
+    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options,
+            String key) {
         final List<AsyncFuture<KeySuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
@@ -174,11 +179,13 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude, int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
+            int groupLimit) {
         final List<AsyncFuture<TagValuesSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {
-            futures.add(g.tagValuesSuggest(filter, exclude, groupLimit).catchFailed(TagValuesSuggest.nodeError(g)));
+            futures.add(g.tagValuesSuggest(filter, exclude, groupLimit)
+                    .catchFailed(TagValuesSuggest.nodeError(g)));
         }
 
         return async.collect(futures, TagValuesSuggest.reduce(filter.getLimit(), groupLimit));

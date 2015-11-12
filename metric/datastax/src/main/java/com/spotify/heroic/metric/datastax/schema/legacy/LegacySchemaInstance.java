@@ -56,10 +56,11 @@ public class LegacySchemaInstance implements SchemaInstance {
     private final PreparedStatement keysPagingLeftLimit;
 
     /**
-     * This constant represents the maximum row width of the metrics column family. It equals the amount of numbers that
-     * can be represented by Integer. Since the column name is the timestamp offset, having an integer as column offset
-     * indicates that we can fit about 49 days of data into one row. We do not assume that Integers are 32 bits. This
-     * makes it possible to work even if it's not 32 bits.
+     * This constant represents the maximum row width of the metrics column family. It equals the
+     * amount of numbers that can be represented by Integer. Since the column name is the timestamp
+     * offset, having an integer as column offset indicates that we can fit about 49 days of data
+     * into one row. We do not assume that Integers are 32 bits. This makes it possible to work even
+     * if it's not 32 bits.
      */
     public static final long MAX_WIDTH = (long) Integer.MAX_VALUE - (long) Integer.MIN_VALUE + 1;
 
@@ -79,7 +80,8 @@ public class LegacySchemaInstance implements SchemaInstance {
     }
 
     @Override
-    public List<PreparedFetch> ranges(final Series series, final DateRange range) throws IOException {
+    public List<PreparedFetch> ranges(final Series series, final DateRange range)
+            throws IOException {
         final List<PreparedFetch> bases = new ArrayList<>();
 
         final long start = calculateBaseTimestamp(range.getStart());
@@ -153,7 +155,8 @@ public class LegacySchemaInstance implements SchemaInstance {
 
     @Override
     public BoundStatement keysPaging(Optional<ByteBuffer> first, int limit) {
-        return first.map(f ->  keysPagingLeftLimit.bind(f, limit)).orElseGet(() -> keysPagingLimit.bind(limit));
+        return first.map(f -> keysPagingLeftLimit.bind(f, limit))
+                .orElseGet(() -> keysPagingLimit.bind(limit));
     }
 
     @Override

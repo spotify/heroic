@@ -106,28 +106,32 @@ public class PartitionInstance implements AggregationInstance {
         private final List<AggregationSession> sessions;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series, List<Point> values) {
+        public void updatePoints(Map<String, String> group, Set<Series> series,
+                List<Point> values) {
             for (final AggregationSession s : sessions) {
                 s.updatePoints(group, series, values);
             }
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series, List<Event> values) {
+        public void updateEvents(Map<String, String> group, Set<Series> series,
+                List<Event> values) {
             for (final AggregationSession s : sessions) {
                 s.updateEvents(group, series, values);
             }
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series, List<Spread> values) {
+        public void updateSpreads(Map<String, String> group, Set<Series> series,
+                List<Spread> values) {
             for (final AggregationSession s : sessions) {
                 s.updateSpreads(group, series, values);
             }
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series, List<MetricGroup> values) {
+        public void updateGroup(Map<String, String> group, Set<Series> series,
+                List<MetricGroup> values) {
             for (final AggregationSession s : sessions) {
                 s.updateGroup(group, series, values);
             }

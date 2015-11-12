@@ -40,7 +40,8 @@ public class DefaultRateLimitedCacheTest {
 
     @Test
     public void testCacheEarlyHit() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c = new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
+        final DefaultRateLimitedCache<K, V> c =
+                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
         doReturn(shortcut).when(cache).getIfPresent(key);
 
         assertEquals(shortcut, c.get(key, callable));
@@ -52,7 +53,8 @@ public class DefaultRateLimitedCacheTest {
 
     @Test(expected = RateLimitExceededException.class)
     public void testGetRateLimiting() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c = new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
+        final DefaultRateLimitedCache<K, V> c =
+                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
         doReturn(null).when(cache).getIfPresent(key);
         doReturn(false).when(rateLimiter).tryAcquire();
 
@@ -61,7 +63,8 @@ public class DefaultRateLimitedCacheTest {
 
     @Test
     public void testGet() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c = new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
+        final DefaultRateLimitedCache<K, V> c =
+                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
         doReturn(null).when(cache).getIfPresent(key);
         doReturn(true).when(rateLimiter).tryAcquire();
         doReturn(value).when(cache).get(key, callable);

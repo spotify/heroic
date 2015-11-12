@@ -23,7 +23,6 @@ package com.spotify.heroic.cluster;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
 import com.spotify.heroic.common.LifeCycle;
 
@@ -33,16 +32,17 @@ import lombok.Data;
 /**
  * Handles management of cluster state.
  *
- * The primary responsibility is to receive refresh requests through {@link #refresh()} that should cause the cluster
- * state to be updated.
+ * The primary responsibility is to receive refresh requests through {@link #refresh()} that should
+ * cause the cluster state to be updated.
  *
- * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}.
+ * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}
+ * .
  *
  * @author udoprog
  */
 public interface ClusterManager extends LifeCycle {
     @Data
-    public static final class Statistics {
+    class Statistics {
         private final int onlineNodes;
         private final int offlineNodes;
     }
@@ -50,20 +50,20 @@ public interface ClusterManager extends LifeCycle {
     /**
      * Add a static node, mainly used for testing.
      */
-    public AsyncFuture<Void> addStaticNode(URI node);
+    AsyncFuture<Void> addStaticNode(URI node);
 
-    public List<NodeRegistryEntry> getNodes();
+    List<NodeRegistryEntry> getNodes();
 
-    public AsyncFuture<Void> refresh();
+    AsyncFuture<Void> refresh();
 
-    public Statistics getStatistics();
+    Statistics getStatistics();
 
-    public ClusterNodeGroup useDefaultGroup();
+    ClusterNodeGroup useDefaultGroup();
 
-    public ClusterNodeGroup useGroup(String group);
+    ClusterNodeGroup useGroup(String group);
 
     /**
      * Future that will be resolved, after the cluster manager has been fully initialized.
      */
-    public AsyncFuture<Void> initialized();
+    AsyncFuture<Void> initialized();
 }

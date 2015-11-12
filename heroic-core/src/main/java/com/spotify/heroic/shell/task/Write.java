@@ -64,8 +64,9 @@ import lombok.ToString;
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
 public class Write implements ShellTask {
-    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE = new TypeReference<Map<String, Object>>() {
-    };
+    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
+            new TypeReference<Map<String, Object>>() {
+            };
 
     @Inject
     private MetricManager metrics;
@@ -152,7 +153,8 @@ public class Write implements ShellTask {
         }
 
         for (final MetricCollection group : groups.build()) {
-            writes.add(g.write(new WriteMetric(series, group)).directTransform(reportResult("metrics", io.out())));
+            writes.add(g.write(new WriteMetric(series, group))
+                    .directTransform(reportResult("metrics", io.out())));
         }
 
         return async.collectAndDiscard(writes);
@@ -180,7 +182,7 @@ public class Write implements ShellTask {
         final List<Event> output = new ArrayList<>();
 
         for (final String p : points) {
-            final String parts[] = p.split("=");
+            final String[] parts = p.split("=");
 
             final long timestamp;
             final Map<String, Object> payload;
@@ -203,7 +205,7 @@ public class Write implements ShellTask {
         final List<Point> output = new ArrayList<>();
 
         for (final String p : points) {
-            final String parts[] = p.split("=");
+            final String[] parts = p.split("=");
 
             final long timestamp;
             final double value;
@@ -224,10 +226,12 @@ public class Write implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch", metaVar = "<json>")
+        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch",
+                metaVar = "<json>")
         private String series;
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use", metaVar = "<group>")
+        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+                metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--no-metadata", usage = "Do not write metadata")
@@ -236,10 +240,12 @@ public class Write implements ShellTask {
         @Option(name = "--no-suggest", usage = "Do not write suggestions")
         private boolean noSuggest = false;
 
-        @Option(name = "-p", aliases = { "--point" }, usage = "Point to write", metaVar = "<time>=<value>")
+        @Option(name = "-p", aliases = { "--point" }, usage = "Point to write",
+                metaVar = "<time>=<value>")
         private List<String> points = new ArrayList<>();
 
-        @Option(name = "-e", aliases = { "--event" }, usage = "Event to write", metaVar = "<time>=<payload>")
+        @Option(name = "-e", aliases = { "--event" }, usage = "Event to write",
+                metaVar = "<time>=<payload>")
         private List<String> events = new ArrayList<>();
     }
 }

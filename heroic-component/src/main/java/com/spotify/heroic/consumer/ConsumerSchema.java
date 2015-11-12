@@ -24,5 +24,5 @@ package com.spotify.heroic.consumer;
 import com.spotify.heroic.ingestion.IngestionGroup;
 
 public interface ConsumerSchema {
-    public void consume(final IngestionGroup ingestion, byte[] message) throws ConsumerSchemaException;
+    void consume(final IngestionGroup ingestion, byte[] message) throws ConsumerSchemaException;
 }

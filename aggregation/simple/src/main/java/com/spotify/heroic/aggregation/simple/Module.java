@@ -80,46 +80,53 @@ public class Module implements HeroicModule {
                         samplingSerializer(StdDevInstance::new), samplingBuilder(StdDev::new));
 
                 ctx.aggregation(CountUnique.NAME, CountUniqueInstance.class, CountUnique.class,
-                        samplingSerializer(CountUniqueInstance::new), samplingBuilder(CountUnique::new));
+                        samplingSerializer(CountUniqueInstance::new),
+                        samplingBuilder(CountUnique::new));
 
                 ctx.aggregation(Count.NAME, CountInstance.class, Count.class,
                         samplingSerializer(CountInstance::new), samplingBuilder(Count::new));
 
                 ctx.aggregation(GroupUnique.NAME, GroupUniqueInstance.class, GroupUnique.class,
-                        samplingSerializer(GroupUniqueInstance::new), samplingBuilder(GroupUnique::new));
+                        samplingSerializer(GroupUniqueInstance::new),
+                        samplingBuilder(GroupUnique::new));
 
                 ctx.aggregation(Quantile.NAME, QuantileInstance.class, Quantile.class,
                         new Serializer<QuantileInstance>() {
-                            final Serializer<Double> fixedDouble = s.fixedDouble();
-                            final Serializer<Long> fixedLong = s.fixedLong();
+                    final Serializer<Double> fixedDouble = s.fixedDouble();
+                    final Serializer<Long> fixedLong = s.fixedLong();
 
-                            @Override
-                            public void serialize(SerialWriter buffer, QuantileInstance value) throws IOException {
-                                fixedLong.serialize(buffer, value.getSize());
-                                fixedLong.serialize(buffer, value.getExtent());
-                                fixedDouble.serialize(buffer, value.getQ());
-                                fixedDouble.serialize(buffer, value.getError());
-                            }
+                    @Override
+                    public void serialize(SerialWriter buffer, QuantileInstance value)
+                            throws IOException {
+                        fixedLong.serialize(buffer, value.getSize());
+                        fixedLong.serialize(buffer, value.getExtent());
+                        fixedDouble.serialize(buffer, value.getQ());
+                        fixedDouble.serialize(buffer, value.getError());
+                    }
 
-                            @Override
-                            public QuantileInstance deserialize(SerialReader buffer) throws IOException {
-                                final long size = fixedLong.deserialize(buffer);
-                                final long extent = fixedLong.deserialize(buffer);
-                                final double q = fixedDouble.deserialize(buffer);
-                                final double error = fixedDouble.deserialize(buffer);
-                                return new QuantileInstance(size, extent, q, error);
-                            }
-                        }, new SamplingAggregationDSL<Quantile>(factory) {
-                            @Override
-                            protected Quantile buildWith(final AggregationArguments args, final SamplingQuery sampling) {
-                                double q = args.getNext("q", Long.class).map(v -> ((double)v) / 100.0).orElse(Quantile.DEFAULT_QUANTILE);
-                                double error = args.getNext("error", Long.class).map(v -> ((double)v) / 100.0).orElse(Quantile.DEFAULT_ERROR);
-                                return new Quantile(sampling, q, error);
-                            }
-                        });
+                    @Override
+                    public QuantileInstance deserialize(SerialReader buffer) throws IOException {
+                        final long size = fixedLong.deserialize(buffer);
+                        final long extent = fixedLong.deserialize(buffer);
+                        final double q = fixedDouble.deserialize(buffer);
+                        final double error = fixedDouble.deserialize(buffer);
+                        return new QuantileInstance(size, extent, q, error);
+                    }
+                }, new SamplingAggregationDSL<Quantile>(factory) {
+                    @Override
+                    protected Quantile buildWith(final AggregationArguments args,
+                            final SamplingQuery sampling) {
+                        double q = args.getNext("q", Long.class).map(v -> ((double) v) / 100.0)
+                                .orElse(Quantile.DEFAULT_QUANTILE);
+                        double error = args.getNext("error", Long.class)
+                                .map(v -> ((double) v) / 100.0).orElse(Quantile.DEFAULT_ERROR);
+                        return new Quantile(sampling, q, error);
+                    }
+                });
             }
 
-            private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(BiFunction<Long, Long, T> builder) {
+            private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
+                    BiFunction<Long, Long, T> builder) {
                 final Serializer<Long> fixedLong = s.fixedLong();
 
                 return new Serializer<T>() {
@@ -138,10 +145,12 @@ public class Module implements HeroicModule {
                 };
             }
 
-            private <T extends Aggregation> SamplingAggregationDSL<T> samplingBuilder(Function<SamplingQuery, T> builder) {
+            private <T extends Aggregation> SamplingAggregationDSL<T> samplingBuilder(
+                    Function<SamplingQuery, T> builder) {
                 return new SamplingAggregationDSL<T>(factory) {
                     @Override
-                    protected T buildWith(final AggregationArguments args, final SamplingQuery sampling) {
+                    protected T buildWith(final AggregationArguments args,
+                            final SamplingQuery sampling) {
                         return builder.apply(sampling);
                     }
                 };

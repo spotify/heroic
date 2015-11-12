@@ -46,8 +46,9 @@ public class NotFilterImpl implements Filter.Not {
 
     @Override
     public Filter optimize() {
-        if (filter instanceof Filter.Not)
+        if (filter instanceof Filter.Not) {
             return ((Filter.Not) filter).first().optimize();
+        }
 
         return new NotFilterImpl(filter.optimize());
     }
@@ -64,8 +65,9 @@ public class NotFilterImpl implements Filter.Not {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.Not.class.isAssignableFrom(o.getClass()))
+        if (!Filter.Not.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         return filter.compareTo(o);
     }

@@ -24,7 +24,8 @@
  *
  * It is licensed under the Apache 2.0 license.
  *
- * The below link is a snapshot of the commit that this code was copied from, it includes licensing information.
+ * The below link is a snapshot of the commit that this code was copied from, it includes licensing
+ * information.
  * https://github.com/dropwizard/metrics/tree/e45597d00b972e530b0a79b95190615b4e031ec9
  */
 package com.spotify.heroic.metrics;
@@ -51,7 +52,8 @@ public class EWMA {
     private static final int FIFTEEN_MINUTES = 15;
     private static final double M1_ALPHA = 1 - exp(-INTERVAL / SECONDS_PER_MINUTE / ONE_MINUTE);
     private static final double M5_ALPHA = 1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIVE_MINUTES);
-    private static final double M15_ALPHA = 1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIFTEEN_MINUTES);
+    private static final double M15_ALPHA =
+            1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIFTEEN_MINUTES);
 
     private volatile boolean initialized = false;
     private volatile double rate = 0.0;
@@ -92,8 +94,8 @@ public class EWMA {
     /**
      * Create a new EWMA with a specific smoothing constant.
      *
-     * @param alpha        the smoothing constant
-     * @param interval     the expected tick interval
+     * @param alpha the smoothing constant
+     * @param interval the expected tick interval
      * @param intervalUnit the time unit of the tick interval
      */
     public EWMA(double alpha, long interval, TimeUnit intervalUnit) {

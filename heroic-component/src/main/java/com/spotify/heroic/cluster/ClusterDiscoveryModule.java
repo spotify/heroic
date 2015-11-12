@@ -36,9 +36,9 @@ import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 
 public interface ClusterDiscoveryModule {
-    public Module module(final Key<ClusterDiscovery> key);
+    Module module(final Key<ClusterDiscovery> key);
 
-    public static ClusterDiscoveryModule nullModule() {
+    static ClusterDiscoveryModule nullModule() {
         return new ClusterDiscoveryModule() {
             @Override
             public Module module(Key<ClusterDiscovery> key) {
@@ -55,7 +55,7 @@ public interface ClusterDiscoveryModule {
 
     @Data
     @Singleton
-    public static class Null implements ClusterDiscovery {
+    class Null implements ClusterDiscovery {
         @Inject
         private AsyncFramework async;
 

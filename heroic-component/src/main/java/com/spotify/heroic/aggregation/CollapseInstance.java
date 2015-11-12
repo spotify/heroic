@@ -34,7 +34,8 @@ public class CollapseInstance extends GroupingAggregation {
     public static final Map<String, String> NO_GROUP = ImmutableMap.of();
 
     @JsonCreator
-    public CollapseInstance(@JsonProperty("of") Optional<List<String>> of, @JsonProperty("each") AggregationInstance each) {
+    public CollapseInstance(@JsonProperty("of") Optional<List<String>> of,
+            @JsonProperty("each") AggregationInstance each) {
         super(of, each);
     }
 
@@ -57,7 +58,8 @@ public class CollapseInstance extends GroupingAggregation {
     }
 
     @Override
-    protected AggregationInstance newInstance(final Optional<List<String>> of, final AggregationInstance each) {
+    protected AggregationInstance newInstance(final Optional<List<String>> of,
+            final AggregationInstance each) {
         return new CollapseInstance(of, each);
     }
 }

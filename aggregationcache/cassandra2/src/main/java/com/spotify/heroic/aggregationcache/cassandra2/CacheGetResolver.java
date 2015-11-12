@@ -25,8 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import lombok.RequiredArgsConstructor;
-
 import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -43,9 +41,12 @@ import com.spotify.heroic.aggregationcache.CacheKey;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.metric.Point;
 
+import lombok.RequiredArgsConstructor;
+
 @RequiredArgsConstructor
 public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
-    static final String CQL_QUERY = "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
+    static final String CQL_QUERY =
+            "SELECT data_offset, data_value FROM aggregations_1200 WHERE aggregation_key = ?";
 
     private final Serializer<CacheKey> cacheKeySerializer;
     private final Context ctx;
@@ -68,11 +69,12 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
         final List<Point> datapoints = new ArrayList<Point>();
 
         for (final long base : bases) {
-            final CacheKey cacheKey = new CacheKey(CacheKey.VERSION, key.getFilter(), key.getGroup(), aggregation, base);
+            final CacheKey cacheKey = new CacheKey(CacheKey.VERSION, key.getFilter(),
+                    key.getGroup(), aggregation, base);
 
-            final OperationResult<CqlResult<Integer, String>> op = keyspace.prepareQuery(columnFamily)
-                    .withCql(CQL_QUERY).asPreparedStatement().withByteBufferValue(cacheKey, cacheKeySerializer)
-                    .execute();
+            final OperationResult<CqlResult<Integer, String>> op =
+                    keyspace.prepareQuery(columnFamily).withCql(CQL_QUERY).asPreparedStatement()
+                            .withByteBufferValue(cacheKey, cacheKeySerializer).execute();
 
             final CqlResult<Integer, String> result = op.getResult();
             final Rows<Integer, String> rows = result.getRows();
@@ -84,8 +86,9 @@ public final class CacheGetResolver implements Callable<CacheBackendGetResult> {
 
                 final long timestamp = getDataPointTimestamp(base, columnSize, offset);
 
-                if (timestamp < range.getStart() || timestamp > range.getEnd())
+                if (timestamp < range.getStart() || timestamp >= range.getEnd()) {
                     continue;
+                }
 
                 datapoints.add(new Point(timestamp, value));
             }

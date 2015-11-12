@@ -35,8 +35,8 @@ import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 
 class SeriesSerializer extends AbstractSerializer<Series> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer.get();
-    private static final MapSerializer<String, String> tagsSerializer = new MapSerializer<String, String>(
-            SafeUTF8Type.instance, SafeUTF8Type.instance);
+    private static final MapSerializer<String, String> tagsSerializer =
+            new MapSerializer<String, String>(SafeUTF8Type.instance, SafeUTF8Type.instance);
 
     private static final SeriesSerializer instance = new SeriesSerializer();
 
@@ -47,11 +47,13 @@ class SeriesSerializer extends AbstractSerializer<Series> {
     private static final Comparator<String> COMPARATOR = new Comparator<String>() {
         public int compare(String a, String b) {
             if (a == null || b == null) {
-                if (a == null)
+                if (a == null) {
                     return -1;
+                }
 
-                if (b == null)
+                if (b == null) {
                     return 1;
+                }
 
                 return 0;
             }

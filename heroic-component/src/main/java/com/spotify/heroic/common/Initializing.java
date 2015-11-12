@@ -29,5 +29,5 @@ package com.spotify.heroic.common;
  * @author udoprog
  */
 public interface Initializing {
-    public boolean isReady();
+    boolean isReady();
 }

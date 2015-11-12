@@ -187,8 +187,9 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     @Override
     public void exitValueExpr(ValueExprContext ctx) {
-        if (ctx.getChildCount() == 1)
+        if (ctx.getChildCount() == 1) {
             return;
+        }
 
         final ContextImpl c = new ContextImpl(ctx);
 
@@ -262,7 +263,8 @@ public class QueryListener extends HeroicQueryBaseListener {
             return Optional.of(aggregations.build(name.getString(), arguments, keywordArguments));
         }
 
-        throw c.error(String.format("expected %s, but was %s", name(AggregationValue.class), value.toString()));
+        throw c.error(String.format("expected %s, but was %s", name(AggregationValue.class),
+                value.toString()));
     }
 
     @Override
@@ -366,7 +368,8 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final StringValue name = pop(c, StringValue.class);
 
-        push(new AggregationValue(name.getString(), arguments.getPositional(), arguments.getKeywords()));
+        push(new AggregationValue(name.getString(), arguments.getPositional(),
+                arguments.getKeywords()));
     }
 
     @Override
@@ -381,8 +384,9 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final String sourceText = ctx.getChild(1).getText();
 
-        final MetricType source = MetricType.fromIdentifier(sourceText).orElseThrow(
-                () -> context.error("Invalid source (" + sourceText + "), must be one of " + MetricType.values()));
+        final MetricType source = MetricType.fromIdentifier(sourceText)
+                .orElseThrow(() -> context.error("Invalid source (" + sourceText
+                        + "), must be one of " + MetricType.values()));
 
         final Optional<QueryDateRange> range;
 
@@ -420,7 +424,8 @@ public class QueryListener extends HeroicQueryBaseListener {
         final ParseTree child = ctx.getChild(0);
         final CommonToken token = (CommonToken) child.getPayload();
 
-        if (token.getType() == HeroicQueryLexer.SimpleString || token.getType() == HeroicQueryLexer.Identifier) {
+        if (token.getType() == HeroicQueryLexer.SimpleString
+                || token.getType() == HeroicQueryLexer.Identifier) {
             push(new StringValue(child.getText()));
             return;
         }
@@ -516,8 +521,9 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitFilterExprs(FilterExprsContext ctx) {
         // a single filter should already be on the stack, regardless of expression type.
-        if (ctx.getChildCount() == 1)
+        if (ctx.getChildCount() == 1) {
             return;
+        }
 
         final Context c = new ContextImpl(ctx);
 
@@ -576,17 +582,21 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     private TimeUnit extractUnit(Context ctx, String text) {
-        if ("s".equals(text))
+        if ("s".equals(text)) {
             return TimeUnit.SECONDS;
+        }
 
-        if ("m".equals(text))
+        if ("m".equals(text)) {
             return TimeUnit.MINUTES;
+        }
 
-        if ("H".equals(text) || "h".equals(text))
+        if ("H".equals(text) || "h".equals(text)) {
             return TimeUnit.HOURS;
+        }
 
-        if ("d".equals(text))
+        if ("d".equals(text)) {
             return TimeUnit.DAYS;
+        }
 
         throw ctx.error("illegal unit: " + text);
     }
@@ -600,8 +610,9 @@ public class QueryListener extends HeroicQueryBaseListener {
         while (i < text.length()) {
             final char c = text.charAt(i++);
 
-            if (i == 1 || i == text.length())
+            if (i == 1 || i == text.length()) {
                 continue;
+            }
 
             if (escapeNext) {
                 if (c == 'b') {
@@ -662,8 +673,9 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     public <T> T pop(Class<T> type) {
-        if (stack.isEmpty())
+        if (stack.isEmpty()) {
             throw new IllegalStateException("stack is empty (did you parse something?)");
+        }
 
         final Object popped = stack.pop();
 
@@ -674,7 +686,8 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     private <T> void checkType(Class<T> expected, Class<?> actual) {
         if (!expected.isAssignableFrom(actual)) {
-            throw new IllegalStateException(String.format("expected %s, but was %s", name(expected), name(actual)));
+            throw new IllegalStateException(
+                    String.format("expected %s, but was %s", name(expected), name(actual)));
         }
     }
 
@@ -727,7 +740,8 @@ public class QueryListener extends HeroicQueryBaseListener {
         final List<Value> positional;
         final Map<String, Value> keywords;
 
-        static final AggregationArguments empty = new AggregationArguments(ImmutableList.of(), ImmutableMap.of());
+        static final AggregationArguments empty = new AggregationArguments(ImmutableList.of(),
+                ImmutableMap.of());
 
         public static AggregationArguments empty() {
             return empty;
@@ -759,8 +773,9 @@ public class QueryListener extends HeroicQueryBaseListener {
     private static String name(Class<?> type) {
         final ValueName name = type.getAnnotation(ValueName.class);
 
-        if (name == null)
+        if (name == null) {
             return type.getName();
+        }
 
         return "<" + name.value() + ">";
     }

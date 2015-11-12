@@ -25,9 +25,9 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 
 public interface SuggestModule {
-    public String buildId(int i);
+    String buildId(int i);
 
-    public String id();
+    String id();
 
-    public Module module(Key<SuggestBackend> key, String id);
+    Module module(Key<SuggestBackend> key, String id);
 }

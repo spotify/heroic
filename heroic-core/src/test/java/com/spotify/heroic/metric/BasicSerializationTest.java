@@ -28,8 +28,8 @@ public class BasicSerializationTest {
 
     @Test
     public void testEvent() throws Exception {
-        final Event expected = new Event(1024L, ImmutableMap.<String, Object> of("int", 1234, "float", 0.25d,
-                "string", "foo"));
+        final Event expected = new Event(1024L,
+                ImmutableMap.<String, Object> of("int", 1234, "float", 0.25d, "string", "foo"));
         assertSerialization("Event.json", expected, Event.class);
     }
 
@@ -48,7 +48,8 @@ public class BasicSerializationTest {
     @Test
     public void testResultGroup() throws Exception {
         final List<TagValues> tags = new ArrayList<>();
-        final ResultGroup expected = new ResultGroup(tags, MetricCollection.points(new ArrayList<>()), 0l);
+        final ResultGroup expected =
+                new ResultGroup(tags, MetricCollection.points(new ArrayList<>()), 0L);
         assertSerialization("ResultGroup.json", expected, ResultGroup.class);
     }
 
@@ -56,12 +57,14 @@ public class BasicSerializationTest {
     public void testResultGroups() throws Exception {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
-        final ResultGroups expected = new ResultGroups(groups, errors, Statistics.empty(), new QueryTrace(QueryTrace.identifier("test")));
+        final ResultGroups expected = new ResultGroups(groups, errors, Statistics.empty(),
+                new QueryTrace(QueryTrace.identifier("test")));
 
         assertSerialization("ResultGroups.json", expected, ResultGroups.class);
     }
 
-    private <T> void assertSerialization(final String json, final T expected, final Class<T> type) throws IOException, JsonParseException, JsonMappingException {
+    private <T> void assertSerialization(final String json, final T expected, final Class<T> type)
+            throws IOException, JsonParseException, JsonMappingException {
         // verify that it is equal to the local file.
         try (InputStream in = openResource(json)) {
             assertEquals(expected, mapper.readValue(in, type));

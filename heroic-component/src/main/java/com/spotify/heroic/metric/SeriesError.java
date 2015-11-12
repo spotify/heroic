@@ -40,8 +40,8 @@ public class SeriesError implements RequestError {
     private final boolean internal;
 
     @JsonCreator
-    public static SeriesError create(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("error") String error,
-            @JsonProperty("internal") Boolean internal) {
+    public static SeriesError create(@JsonProperty("tags") List<TagValues> tags,
+            @JsonProperty("error") String error, @JsonProperty("internal") Boolean internal) {
         return new SeriesError(tags, error, internal);
     }
 
@@ -54,8 +54,9 @@ public class SeriesError implements RequestError {
     private static String errorMessage(Throwable e) {
         final String message = e.getMessage() == null ? "<null>" : e.getMessage();
 
-        if (e.getCause() == null)
+        if (e.getCause() == null) {
             return message;
+        }
 
         return String.format("%s, caused by %s", message, errorMessage(e.getCause()));
     }

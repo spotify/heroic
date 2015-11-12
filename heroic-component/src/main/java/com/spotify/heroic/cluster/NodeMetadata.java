@@ -63,7 +63,8 @@ public class NodeMetadata {
     }
 
     /**
-     * Capabilities match if the node capabilities are not set, or if it is set and contains the specified value.
+     * Capabilities match if the node capabilities are not set, or if it is set and contains the
+     * specified value.
      *
      * @param capability The capability to match, or <code>null</code> for any capability.
      * @return <code>bool</code> indicating if the capabiltiy matches or not.

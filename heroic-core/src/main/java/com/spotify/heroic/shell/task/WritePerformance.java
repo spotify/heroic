@@ -90,7 +90,8 @@ public class WritePerformance implements ShellTask {
 
         final List<Series> series = generateSeries(params.series);
 
-        final long startRange = now.getTime() - TimeUnit.MILLISECONDS.convert(params.history, TimeUnit.SECONDS);
+        final long startRange =
+                now.getTime() - TimeUnit.MILLISECONDS.convert(params.history, TimeUnit.SECONDS);
         final long endRange = now.getTime();
         final DateRange range = new DateRange(startRange, endRange);
 
@@ -120,7 +121,8 @@ public class WritePerformance implements ShellTask {
             for (int i = 0; i < params.warmup; i++) {
                 io.out().println(String.format("Warmup step %d/%d", (i + 1), params.warmup));
 
-                final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, warmupStart);
+                final List<Callable<AsyncFuture<Times>>> writes =
+                        buildWrites(targets, input, params, warmupStart);
 
                 warmup.add(collectWrites(io.out(), writes, params.parallelism).get());
                 // try to trick the JVM not to optimize out any steps
@@ -144,7 +146,8 @@ public class WritePerformance implements ShellTask {
 
                 final long start = System.currentTimeMillis();
 
-                final List<Callable<AsyncFuture<Times>>> writes = buildWrites(targets, input, params, start);
+                final List<Callable<AsyncFuture<Times>>> writes =
+                        buildWrites(targets, input, params, start);
                 all.add(collectWrites(io.out(), writes, params.parallelism).get());
 
                 final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
@@ -163,7 +166,8 @@ public class WritePerformance implements ShellTask {
             printHistogram("Batch Times", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
             io.out().println();
 
-            printHistogram("Individual Times", io.out(), times.executionTimes, TimeUnit.NANOSECONDS);
+            printHistogram("Individual Times", io.out(), times.executionTimes,
+                    TimeUnit.NANOSECONDS);
             io.out().flush();
 
             return null;
@@ -189,8 +193,9 @@ public class WritePerformance implements ShellTask {
     }
 
     private List<MetricBackend> resolveTargets(List<String> targets) {
-        if (targets.isEmpty())
+        if (targets.isEmpty()) {
             throw new IllegalArgumentException("'targets' is empty, add some with --target");
+        }
 
         final List<MetricBackend> backends = new ArrayList<>();
 
@@ -201,7 +206,8 @@ public class WritePerformance implements ShellTask {
         return backends;
     }
 
-    private void printHistogram(String title, final PrintWriter out, final List<Long> times, TimeUnit unit) {
+    private void printHistogram(String title, final PrintWriter out, final List<Long> times,
+            TimeUnit unit) {
         if (times.isEmpty()) {
             out.println(String.format("%s: (no samples)", title));
             return;
@@ -226,8 +232,8 @@ public class WritePerformance implements ShellTask {
         out.println(String.format("  99th: %d ms", TimeUnit.MILLISECONDS.convert(q99, unit)));
     }
 
-    private List<Callable<AsyncFuture<Times>>> buildWrites(List<MetricBackend> targets, Collection<List<WriteMetric>> input,
-            final Parameters params, final long start) {
+    private List<Callable<AsyncFuture<Times>>> buildWrites(List<MetricBackend> targets,
+            Collection<List<WriteMetric>> input, final Parameters params, final long start) {
         final List<Callable<AsyncFuture<Times>>> writes = new ArrayList<>();
 
         int request = 0;
@@ -263,60 +269,66 @@ public class WritePerformance implements ShellTask {
         return writes;
     }
 
-    private AsyncFuture<CollectedTimes> collectWrites(final PrintWriter out, Collection<Callable<AsyncFuture<Times>>> writes, int parallelism) {
+    private AsyncFuture<CollectedTimes> collectWrites(final PrintWriter out,
+            Collection<Callable<AsyncFuture<Times>>> writes, int parallelism) {
         final int div = Math.max(writes.size() / 40, 1);
         final boolean mod = writes.size() % div == 0;
 
         final AtomicInteger errors = new AtomicInteger();
         final AtomicInteger count = new AtomicInteger();
 
-        final AsyncFuture<CollectedTimes> results = async.eventuallyCollect(writes, new StreamCollector<Times, CollectedTimes>() {
-            final ConcurrentLinkedQueue<Long> runtimes = new ConcurrentLinkedQueue<>();
-            final ConcurrentLinkedQueue<Long> executionTimes = new ConcurrentLinkedQueue<>();
+        final AsyncFuture<CollectedTimes> results =
+                async.eventuallyCollect(writes, new StreamCollector<Times, CollectedTimes>() {
+                    final ConcurrentLinkedQueue<Long> runtimes = new ConcurrentLinkedQueue<>();
+                    final ConcurrentLinkedQueue<Long> executionTimes =
+                            new ConcurrentLinkedQueue<>();
 
-            @Override
-            public void resolved(Times result) throws Exception {
-                runtimes.add(result.getRuntime());
-                executionTimes.addAll(result.getExecutionTimes());
-                check();
-            }
+                    @Override
+                    public void resolved(Times result) throws Exception {
+                        runtimes.add(result.getRuntime());
+                        executionTimes.addAll(result.getExecutionTimes());
+                        check();
+                    }
 
-            @Override
-            public void failed(Throwable cause) throws Exception {
-                cause.printStackTrace(out);
-                errors.incrementAndGet();
-                check();
-            }
+                    @Override
+                    public void failed(Throwable cause) throws Exception {
+                        cause.printStackTrace(out);
+                        errors.incrementAndGet();
+                        check();
+                    }
 
-            @Override
-            public void cancelled() throws Exception {
-                errors.incrementAndGet();
-                check();
-            }
+                    @Override
+                    public void cancelled() throws Exception {
+                        errors.incrementAndGet();
+                        check();
+                    }
 
-            private void check() {
-                if (count.incrementAndGet() % div == 0)
-                    dot();
-            }
+                    private void check() {
+                        if (count.incrementAndGet() % div == 0) {
+                            dot();
+                        }
+                    }
 
-            private void dot() {
-                out.print(errors.getAndSet(0) > 0 ? '!' : '.');
-                out.flush();
-            }
+                    private void dot() {
+                        out.print(errors.getAndSet(0) > 0 ? '!' : '.');
+                        out.flush();
+                    }
 
-            @Override
-            public CollectedTimes end(int resolved, int failed, int cancelled) throws Exception {
-                if (!mod)
-                    dot();
+                    @Override
+                    public CollectedTimes end(int resolved, int failed, int cancelled)
+                            throws Exception {
+                        if (!mod) {
+                            dot();
+                        }
 
-                out.println();
-                out.flush();
+                        out.println();
+                        out.flush();
 
-                final List<Long> runtimes = new ArrayList<Long>(this.runtimes);
-                final List<Long> executionTimes = new ArrayList<>(this.executionTimes);
-                return new CollectedTimes(runtimes, executionTimes, errors.get());
-            }
-        }, parallelism);
+                        final List<Long> runtimes = new ArrayList<Long>(this.runtimes);
+                        final List<Long> executionTimes = new ArrayList<>(this.executionTimes);
+                        return new CollectedTimes(runtimes, executionTimes, errors.get());
+                    }
+                }, parallelism);
 
         return results;
     }
@@ -335,39 +347,49 @@ public class WritePerformance implements ShellTask {
     private long average(List<Long> times) {
         long total = 0;
 
-        for (final long v : times)
+        for (final long v : times) {
             total += v;
+        }
 
         return total / times.size();
     }
 
     @ToString
     public static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "--limit", usage = "Maximum number of datapoints to fetch (default: 1000000)", metaVar = "<int>")
+        @Option(name = "--limit",
+                usage = "Maximum number of datapoints to fetch (default: 1000000)",
+                metaVar = "<int>")
         private int limit = 1000000;
 
-        @Option(name = "--series", required = true, usage = "Number of different series to write", metaVar = "<number>")
+        @Option(name = "--series", required = true, usage = "Number of different series to write",
+                metaVar = "<number>")
         private int series = 10;
 
-        @Option(name = "--from", required = true, usage = "Group to read data from", metaVar = "<group>")
+        @Option(name = "--from", required = true, usage = "Group to read data from",
+                metaVar = "<group>")
         private String from;
 
         @Option(name = "--target", usage = "Group to write data to", metaVar = "<backend>")
         private List<String> targets = new ArrayList<>();
 
-        @Option(name = "--history", usage = "Seconds of data to copy (default: 3600)", metaVar = "<number>")
+        @Option(name = "--history", usage = "Seconds of data to copy (default: 3600)",
+                metaVar = "<number>")
         private long history = 3600;
 
-        @Option(name = "--writes", usage = "How many writes to perform (default: 1000)", metaVar = "<number>")
+        @Option(name = "--writes", usage = "How many writes to perform (default: 1000)",
+                metaVar = "<number>")
         private int writes = 10;
 
         @Option(name = "-B", aliases = { "--batch" }, usage = "Write using batch API")
         private boolean batch = false;
 
-        @Option(name = "--parallelism", usage = "The number of requests to send in parallel (default: 100)", metaVar = "<number>")
+        @Option(name = "--parallelism",
+                usage = "The number of requests to send in parallel (default: 100)",
+                metaVar = "<number>")
         private int parallelism = 100;
 
-        @Option(name = "--warmup", usage = "Loop the test several times to warm up", metaVar = "<number>")
+        @Option(name = "--warmup", usage = "Loop the test several times to warm up",
+                metaVar = "<number>")
         private int warmup = 4;
 
         @Option(name = "--loop", usage = "Loop the test several times", metaVar = "<number>")

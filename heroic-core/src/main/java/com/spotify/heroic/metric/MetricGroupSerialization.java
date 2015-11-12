@@ -36,23 +36,26 @@ import com.google.common.collect.ImmutableList;
 public class MetricGroupSerialization {
     public static class Deserializer extends JsonDeserializer<MetricGroup> {
         @Override
-        public MetricGroup deserialize(JsonParser p, DeserializationContext c) throws IOException,
-                JsonProcessingException {
+        public MetricGroup deserialize(JsonParser p, DeserializationContext c)
+                throws IOException, JsonProcessingException {
 
-            if (p.getCurrentToken() != JsonToken.START_ARRAY)
+            if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException("Expected start of array");
+            }
 
             final Long timestamp;
 
             {
-                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT)
+                if (p.nextToken() != JsonToken.VALUE_NUMBER_INT) {
                     throw c.mappingException("Expected number (timestamp)");
+                }
 
                 timestamp = p.readValueAs(Long.class);
             }
 
-            if (p.nextToken() != JsonToken.START_ARRAY)
+            if (p.nextToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException("Expected start of array");
+            }
 
             final ImmutableList.Builder<MetricCollection> groups = ImmutableList.builder();
 
@@ -60,11 +63,13 @@ public class MetricGroupSerialization {
                 groups.add(p.readValueAs(MetricCollection.class));
             }
 
-            if (p.getCurrentToken() != JsonToken.END_ARRAY)
+            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
                 throw c.mappingException("Expected end of array");
+            }
 
-            if (p.getCurrentToken() != JsonToken.END_ARRAY)
+            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
                 throw c.mappingException("Expected end of array");
+            }
 
             return new MetricGroup(timestamp, groups.build());
         }
@@ -72,8 +77,8 @@ public class MetricGroupSerialization {
 
     public static class Serializer extends JsonSerializer<MetricGroup> {
         @Override
-        public void serialize(MetricGroup d, JsonGenerator g, SerializerProvider provider) throws IOException,
-                JsonProcessingException {
+        public void serialize(MetricGroup d, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

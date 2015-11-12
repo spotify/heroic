@@ -54,16 +54,19 @@ public final class ConsumerThread extends Thread {
     private final AtomicInteger active;
     private final AtomicLong errors;
     private final LongAdder consumed;
-    // use a latch as a signal so that we can block on it instead of Thread#sleep (or similar) which would be a pain to interrupt.
+    // use a latch as a signal so that we can block on it instead of Thread#sleep (or similar) which
+    // would be a pain to
+    // interrupt.
     private final CountDownLatch stopSignal = new CountDownLatch(1);
 
     protected final ResolvableFuture<Void> stopFuture;
 
     private volatile AtomicReference<CountDownLatch> paused = new AtomicReference<>();
 
-    public ConsumerThread(final AsyncFramework async, final IngestionGroup ingestion, final String name, final ConsumerReporter reporter, final KafkaStream<byte[], byte[]> stream,
-            final ConsumerSchema schema, final AtomicInteger active, final AtomicLong errors,
-            final LongAdder consumed) {
+    public ConsumerThread(final AsyncFramework async, final IngestionGroup ingestion,
+            final String name, final ConsumerReporter reporter,
+            final KafkaStream<byte[], byte[]> stream, final ConsumerSchema schema,
+            final AtomicInteger active, final AtomicLong errors, final LongAdder consumed) {
         super(String.format("%s: %s", ConsumerThread.class.getCanonicalName(), name));
 
         this.async = async;
@@ -158,7 +161,8 @@ public final class ConsumerThread extends Thread {
 
         log.info("Pausing");
 
-        /* block on stop signal while paused, re-check since multiple calls to {#link #pause()} might swap it */
+        /* block on stop signal while paused, re-check since multiple calls to {#link #pause()}
+         * might swap it */
         while (p != null && stopSignal.getCount() > 0) {
             p.await();
             p = paused.get();
@@ -204,8 +208,8 @@ public final class ConsumerThread extends Thread {
     private void handleRetry(long sleep) throws InterruptedException {
         log.info("{}: Retrying in {} second(s)", name, sleep);
 
-        /* decrementing the number of active active consumers indicates an error to the consumer module. This makes sure
-         * that the status of the service is set to as 'failing'. */
+        /* decrementing the number of active active consumers indicates an error to the consumer
+         * module. This makes sure that the status of the service is set to as 'failing'. */
         active.decrementAndGet();
         stopSignal.await(sleep, TimeUnit.SECONDS);
         active.incrementAndGet();

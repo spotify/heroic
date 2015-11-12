@@ -32,7 +32,8 @@ public interface BigtableClient {
 
     BigtableMutationsBuilder mutations();
 
-    AsyncFuture<List<BigtableLatestRow>> readRows(String tableName, ByteString rowKey, BigtableRowFilter filter);
+    AsyncFuture<List<BigtableLatestRow>> readRows(String tableName, ByteString rowKey,
+            BigtableRowFilter filter);
 
     BigtableRowFilter columnFilter(String family, ByteString start, ByteString end);
 }

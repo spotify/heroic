@@ -135,7 +135,8 @@ public class Connection {
         return index.writeIndices(range);
     }
 
-    public SearchRequestBuilder search(DateRange range, String type) throws NoIndexSelectedException {
+    public SearchRequestBuilder search(DateRange range, String type)
+            throws NoIndexSelectedException {
         return index.search(client, range, type);
     }
 
@@ -143,7 +144,8 @@ public class Connection {
         return index.count(client, range, type);
     }
 
-    public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type) throws NoIndexSelectedException {
+    public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type)
+            throws NoIndexSelectedException {
         return index.deleteByQuery(client, range, type);
     }
 

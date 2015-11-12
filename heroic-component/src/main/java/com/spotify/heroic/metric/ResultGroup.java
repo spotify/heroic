@@ -38,20 +38,22 @@ public class ResultGroup {
     final MetricCollection group;
 
     /**
-     * The interval in milliseconds for which a sample can be expected.
-     * A cadence of 0 indicates that this value is unknown.
+     * The interval in milliseconds for which a sample can be expected. A cadence of 0 indicates
+     * that this value is unknown.
      */
     final long cadence;
 
     @JsonCreator
-    public ResultGroup(@JsonProperty("tags") List<TagValues> tags, @JsonProperty("group") MetricCollection group,
-            @JsonProperty("cadence") Long cadence) {
+    public ResultGroup(@JsonProperty("tags") List<TagValues> tags,
+            @JsonProperty("group") MetricCollection group, @JsonProperty("cadence") Long cadence) {
         this.tags = checkNotNull(tags, "tags");
         this.group = checkNotNull(group, "group");
         this.cadence = checkNotNull(cadence, "cadence");
     }
 
-    public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(final ClusterNode c) {
-        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getTags(), g.getGroup(), g.getCadence());
+    public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(
+            final ClusterNode c) {
+        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getTags(), g.getGroup(),
+                g.getCadence());
     }
 }

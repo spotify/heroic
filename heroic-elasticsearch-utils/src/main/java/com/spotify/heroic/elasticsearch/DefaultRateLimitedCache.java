@@ -42,7 +42,8 @@ public class DefaultRateLimitedCache<K, V> implements RateLimitedCache<K, V> {
     private final Cache<K, V> cache;
     private final RateLimiter rateLimiter;
 
-    public V get(K key, final Callable<V> callable) throws ExecutionException, RateLimitExceededException {
+    public V get(K key, final Callable<V> callable)
+            throws ExecutionException, RateLimitExceededException {
         final V shortcut = cache.getIfPresent(key);
 
         if (shortcut != null) {

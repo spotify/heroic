@@ -31,9 +31,9 @@ import java.util.TreeSet;
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.MultiArgumentsFilterBuilder;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -49,13 +49,6 @@ public class AndFilterImpl implements Filter.And {
     public boolean apply(Series series) {
         return statements.stream().allMatch(s -> s.apply(series));
     }
-
-    final MultiArgumentsFilterBuilder<Filter.And, Filter> BUILDER = new MultiArgumentsFilterBuilder<Filter.And, Filter>() {
-        @Override
-        public Filter.And build(Collection<Filter> terms) {
-            return new AndFilterImpl(new ArrayList<>(terms));
-        }
-    };
 
     @Override
     public String toString() {
@@ -84,8 +77,9 @@ public class AndFilterImpl implements Filter.And {
         for (final Filter f : statements) {
             final Filter o = f.optimize();
 
-            if (o == null)
+            if (o == null) {
                 continue;
+            }
 
             if (o instanceof Filter.And) {
                 result.addAll(((Filter.And) o).terms());
@@ -108,12 +102,8 @@ public class AndFilterImpl implements Filter.And {
     }
 
     private static List<Filter> collapseNotOr(Filter.Or first) {
-        final List<Filter> result = new ArrayList<>();
-
-        for (final Filter term : first.terms())
-            result.add(new NotFilterImpl(term).optimize());
-
-        return result;
+        return ImmutableList.copyOf(
+                first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
     }
 
     private static Filter optimize(SortedSet<Filter> statements) {
@@ -124,8 +114,9 @@ public class AndFilterImpl implements Filter.And {
             if (f instanceof Filter.Not) {
                 final Filter.Not not = (Filter.Not) f;
 
-                if (statements.contains(not.first()))
+                if (statements.contains(not.first())) {
                     return FalseFilterImpl.get();
+                }
 
                 result.add(f);
                 continue;
@@ -138,17 +129,20 @@ public class AndFilterImpl implements Filter.And {
                 final Filter.MatchTag outer = (Filter.MatchTag) f;
 
                 for (final Filter inner : statements) {
-                    if (inner.equals(outer))
+                    if (inner.equals(outer)) {
                         continue;
+                    }
 
                     if (inner instanceof Filter.MatchTag) {
                         final Filter.MatchTag matchTag = (Filter.MatchTag) inner;
 
-                        if (!outer.first().equals(matchTag.first()))
+                        if (!outer.first().equals(matchTag.first())) {
                             continue;
+                        }
 
-                        if (!FilterComparatorUtils.isEqual(outer.second(), matchTag.second()))
+                        if (!FilterComparatorUtils.isEqual(outer.second(), matchTag.second())) {
                             return FalseFilterImpl.get();
+                        }
                     }
                 }
 
@@ -160,17 +154,20 @@ public class AndFilterImpl implements Filter.And {
                 final Filter.MatchTag outer = (Filter.MatchTag) f;
 
                 for (final Filter inner : statements) {
-                    if (inner.equals(outer))
+                    if (inner.equals(outer)) {
                         continue;
+                    }
 
                     if (inner instanceof Filter.MatchTag) {
                         final Filter.MatchTag tag = (Filter.MatchTag) inner;
 
-                        if (!outer.first().equals(tag.first()))
+                        if (!outer.first().equals(tag.first())) {
                             continue;
+                        }
 
-                        if (!FilterComparatorUtils.isEqual(outer.second(), tag.second()))
+                        if (!FilterComparatorUtils.isEqual(outer.second(), tag.second())) {
                             return FalseFilterImpl.get();
+                        }
                     }
                 }
 
@@ -184,17 +181,20 @@ public class AndFilterImpl implements Filter.And {
                 final Filter.StartsWith outer = (Filter.StartsWith) f;
 
                 for (final Filter inner : statements) {
-                    if (inner.equals(outer))
+                    if (inner.equals(outer)) {
                         continue;
+                    }
 
                     if (inner instanceof Filter.StartsWith) {
                         final Filter.StartsWith starts = (Filter.StartsWith) inner;
 
-                        if (!outer.first().equals(starts.first()))
+                        if (!outer.first().equals(starts.first())) {
                             continue;
+                        }
 
-                        if (FilterComparatorUtils.prefixedWith(starts.second(), outer.second()))
+                        if (FilterComparatorUtils.prefixedWith(starts.second(), outer.second())) {
                             continue root;
+                        }
                     }
                 }
 
@@ -206,11 +206,13 @@ public class AndFilterImpl implements Filter.And {
             result.add(f);
         }
 
-        if (result.isEmpty())
+        if (result.isEmpty()) {
             return FalseFilterImpl.get();
+        }
 
-        if (result.size() == 1)
+        if (result.size() == 1) {
             return result.iterator().next();
+        }
 
         return new AndFilterImpl(new ArrayList<>(result));
     }
@@ -231,8 +233,9 @@ public class AndFilterImpl implements Filter.And {
 
     @Override
     public int compareTo(Filter o) {
-        if (!Filter.And.class.isAssignableFrom(o.getClass()))
+        if (!Filter.And.class.isAssignableFrom(o.getClass())) {
             return operator().compareTo(o.operator());
+        }
 
         final Filter.And other = (Filter.And) o;
         return FilterComparatorUtils.compareLists(terms(), other.terms());

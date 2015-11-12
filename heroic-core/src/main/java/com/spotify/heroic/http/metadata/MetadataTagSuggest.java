@@ -34,7 +34,7 @@ import lombok.Data;
 @Data
 public class MetadataTagSuggest {
     private static final int DEFAULT_LIMIT = 10;
-    private static MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(false).build();
+    private static final MatchOptions DEFAULT_MATCH = MatchOptions.builder().fuzzy(false).build();
 
     private final Optional<Filter> filter;
     private final int limit;
@@ -44,9 +44,10 @@ public class MetadataTagSuggest {
     private final String value;
 
     @JsonCreator
-    public MetadataTagSuggest(@JsonProperty("filter") Filter filter, @JsonProperty("limit") Integer limit,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("match") MatchOptions match,
-            @JsonProperty("key") String key, @JsonProperty("value") String value) {
+    public MetadataTagSuggest(@JsonProperty("filter") Filter filter,
+            @JsonProperty("limit") Integer limit, @JsonProperty("range") QueryDateRange range,
+            @JsonProperty("match") MatchOptions match, @JsonProperty("key") String key,
+            @JsonProperty("value") String value) {
         this.filter = Optional.ofNullable(filter);
         this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);

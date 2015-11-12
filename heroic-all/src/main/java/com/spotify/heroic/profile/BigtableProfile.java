@@ -57,7 +57,8 @@ public class BigtableProfile extends HeroicProfileBase {
             module.credentials(j.build());
             break;
         case "service-account":
-            final ServiceAccountCredentialsBuilder.Builder sa = ServiceAccountCredentialsBuilder.builder();
+            final ServiceAccountCredentialsBuilder.Builder sa = ServiceAccountCredentialsBuilder
+                    .builder();
             params.get("bigtable.serviceAccount").ifPresent(sa::serviceAccount);
             params.get("bigtable.keyFile").ifPresent(sa::keyFile);
             module.credentials(sa.build());
@@ -66,7 +67,8 @@ public class BigtableProfile extends HeroicProfileBase {
             module.credentials(new ComputeEngineCredentialsBuilder());
             break;
         default:
-            throw new IllegalArgumentException("bigtable.credentials: invalid value: " + credentials);
+            throw new IllegalArgumentException(
+                    "bigtable.credentials: invalid value: " + credentials);
         }
 
         // @formatter:off

@@ -18,6 +18,6 @@ public class MinBucketIntegrationTest extends ValueBucketIntegrationTest {
 
     @Override
     public Collection<DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new MinBucket(0l), new StripedMinBucket(0l));
+        return ImmutableList.<DoubleBucket> of(new MinBucket(0L), new StripedMinBucket(0L));
     }
 }

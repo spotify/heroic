@@ -31,7 +31,8 @@ import eu.toolchain.serializer.Serializer;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class GroupingAggregationSerializer<T extends GroupingAggregation> implements Serializer<T> {
+public abstract class GroupingAggregationSerializer<T extends GroupingAggregation>
+        implements Serializer<T> {
     private final Serializer<Optional<List<String>>> list;
     private final Serializer<AggregationInstance> aggregation;
 

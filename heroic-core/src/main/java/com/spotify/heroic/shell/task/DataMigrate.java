@@ -85,7 +85,7 @@ public class DataMigrate implements ShellTask {
 
     @Override
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters p) throws Exception {
-        final Parameters params = (Parameters)p;
+        final Parameters params = (Parameters) p;
 
         final BackendKey start;
 
@@ -104,131 +104,142 @@ public class DataMigrate implements ShellTask {
         final AtomicInteger writing = new AtomicInteger();
         final AtomicInteger fetching = new AtomicInteger();
 
-        return MetricBackends.keysPager(start, params.pageLimit, (s, l) -> from.keys(s, l, options), (set) -> {
-            if (set.getTrace().isPresent()) {
-                set.getTrace().get().formatTrace(io.out());
-                io.out().flush();
-            }
-        }).lazyTransform(result -> {
-            final Supplier<Optional<Pair<Integer, BackendKey>>> supplier = new Supplier<Optional<Pair<Integer, BackendKey>>>() {
-                int index = 0;
-
-                @Override
-                public Optional<Pair<Integer, BackendKey>> get() {
-                    synchronized (io) {
-                        while (result.hasNext() && index < params.limit) {
-                            final BackendKey next;
-
-                            try {
-                                next = result.next();
-                            } catch (Exception e) {
-                                io.out().println(index + ": Exception when pulling key: " + e);
-                                e.printStackTrace(io.out());
-                                continue;
-                            }
-
-                            if (!filter.apply(next.getSeries())) {
-                                io.out().println(
-                                        String.format("%d: Skipping key since it does not match filter (%s): %s", index,
-                                                filter, next));
-                                continue;
-                            }
-
-                            return Optional.of(Pair.of(index++, next));
-                        }
-
-                        return Optional.empty();
+        return MetricBackends
+                .keysPager(start, params.pageLimit, (s, l) -> from.keys(s, l, options), (set) -> {
+                    if (set.getTrace().isPresent()) {
+                        set.getTrace().get().formatTrace(io.out());
+                        io.out().flush();
                     }
-                }
-            };
+                }).lazyTransform(result -> {
+                    final Supplier<Optional<Pair<Integer, BackendKey>>> supplier =
+                            new Supplier<Optional<Pair<Integer, BackendKey>>>() {
+                        int index = 0;
 
-            final ResolvableFuture<Void> future = async.future();
+                        @Override
+                        public Optional<Pair<Integer, BackendKey>> get() {
+                            synchronized (io) {
+                                while (result.hasNext() && index < params.limit) {
+                                    final BackendKey next;
 
-            final AtomicInteger active = new AtomicInteger(params.parallelism);
+                                    try {
+                                        next = result.next();
+                                    } catch (Exception e) {
+                                        io.out().println(
+                                                index + ": Exception when pulling key: " + e);
+                                        e.printStackTrace(io.out());
+                                        continue;
+                                    }
 
-            final Callable<Void> doOne = new Callable<Void>() {
-                public Void call() throws Exception {
-                    final Optional<Pair<Integer, BackendKey>> next = supplier.get();
+                                    if (!filter.apply(next.getSeries())) {
+                                        io.out().println(String.format(
+                                                "%d: Skipping key since it does not "
+                                                        + "match filter (%s): %s",
+                                                index, filter, next));
+                                        continue;
+                                    }
 
-                    if (!next.isPresent()) {
-                        if (active.decrementAndGet() == 0) {
-                            future.resolve(null);
+                                    return Optional.of(Pair.of(index++, next));
+                                }
+
+                                return Optional.empty();
+                            }
                         }
+                    };
 
-                        return null;
+                    final ResolvableFuture<Void> future = async.future();
+
+                    final AtomicInteger active = new AtomicInteger(params.parallelism);
+
+                    final Callable<Void> doOne = new Callable<Void>() {
+                        public Void call() throws Exception {
+                            final Optional<Pair<Integer, BackendKey>> next = supplier.get();
+
+                            if (!next.isPresent()) {
+                                if (active.decrementAndGet() == 0) {
+                                    future.resolve(null);
+                                }
+
+                                return null;
+                            }
+
+                            final Pair<Integer, BackendKey> n = next.get();
+
+                            final int index = n.getLeft();
+                            final String json = mapper.writeValueAsString(n.getRight());
+
+                            fetching.incrementAndGet();
+
+                            from.streamRow(n.getRight())
+                                    .observe(new AsyncObserver<MetricCollection>() {
+                                @Override
+                                public AsyncFuture<Void> observe(final MetricCollection value)
+                                        throws Exception {
+                                    writing.incrementAndGet();
+                                    return to
+                                            .write(new WriteMetric(n.getRight().getSeries(), value))
+                                            .onFinished(writing::decrementAndGet)
+                                            .directTransform(v -> null);
+                                }
+
+                                @Override
+                                public void cancel() throws Exception {
+                                    synchronized (io) {
+                                        io.out().println(String.format("%d: Cancelled (%d, %d): %s",
+                                                index, writing.get(), fetching.get(), json));
+                                        io.out().flush();
+                                    }
+                                }
+
+                                @Override
+                                public void fail(final Throwable cause) throws Exception {
+                                    synchronized (io) {
+                                        io.out().println(String.format("%d: Failed (%d, %d): %s",
+                                                index, writing.get(), fetching.get(), json));
+                                        cause.printStackTrace(io.out());
+                                        io.out().flush();
+                                    }
+                                }
+
+                                @Override
+                                public void end() throws Exception {
+                                    synchronized (io) {
+                                        io.out().println(String.format("%d: Migrated (%d, %d): %s",
+                                                index, writing.get(), fetching.get(), json));
+                                        io.out().flush();
+                                    }
+
+                                    fetching.decrementAndGet();
+                                    call();
+                                }
+                            });
+
+                            return null;
+                        }
+                    };
+
+                    for (int i = 0; i < params.parallelism; i++) {
+                        doOne.call();
                     }
 
-                    final Pair<Integer, BackendKey> n = next.get();
-
-                    final int index = n.getLeft();
-                    final String json = mapper.writeValueAsString(n.getRight());
-
-                    fetching.incrementAndGet();
-
-                    from.streamRow(n.getRight()).observe(new AsyncObserver<MetricCollection>() {
-                        @Override
-                        public AsyncFuture<Void> observe(final MetricCollection value) throws Exception {
-                            writing.incrementAndGet();
-                            return to.write(new WriteMetric(n.getRight().getSeries(), value))
-                                    .onFinished(writing::decrementAndGet).directTransform(v -> null);
-                        }
-
-                        @Override
-                        public void cancel() throws Exception {
-                            synchronized (io) {
-                                io.out().println(String.format("%d: Cancelled (%d, %d): %s", index, writing.get(),
-                                        fetching.get(), json));
-                                io.out().flush();
-                            }
-                        }
-
-                        @Override
-                        public void fail(final Throwable cause) throws Exception {
-                            synchronized (io) {
-                                io.out().println(String.format("%d: Failed (%d, %d): %s", index, writing.get(),
-                                        fetching.get(), json));
-                                cause.printStackTrace(io.out());
-                                io.out().flush();
-                            }
-                        }
-
-                        @Override
-                        public void end() throws Exception {
-                            synchronized (io) {
-                                io.out().println(String.format("%d: Migrated (%d, %d): %s", index, writing.get(),
-                                        fetching.get(), json));
-                                io.out().flush();
-                            }
-
-                            fetching.decrementAndGet();
-                            call();
-                        }
-                    });
-
-                    return null;
-                }
-            };
-
-            for (int i = 0; i < params.parallelism; i++) {
-                doOne.call();
-            }
-
-            return future;
-        });
+                    return future;
+                });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-f", aliases = { "--from" }, usage = "Backend group to load data from", metaVar = "<group>")
+        @Option(name = "-f", aliases = { "--from" }, usage = "Backend group to load data from",
+                metaVar = "<group>")
         private String from;
 
-        @Option(name = "-t", aliases = { "--to" }, usage = "Backend group to load data to", metaVar = "<group>")
+        @Option(name = "-t", aliases = { "--to" }, usage = "Backend group to load data to",
+                metaVar = "<group>")
         private String to;
 
         @Option(name = "--start", usage = "First key to migrate", metaVar = "<json>")
         private String start;
 
-        @Option(name = "--page-limit", usage = "Limit the number metadata entries to fetch per page (default: 100)")
+        @Option(name = "--page-limit",
+                usage = "Limit the number metadata entries to fetch per page (default: 100)")
         @Getter
         private int pageLimit = 100;
 
@@ -236,10 +247,13 @@ public class DataMigrate implements ShellTask {
         @Getter
         private int limit = Integer.MAX_VALUE;
 
-        @Option(name = "--tracing", usage = "Trace the queries for more debugging when things go wrong")
+        @Option(name = "--tracing",
+                usage = "Trace the queries for more debugging when things go wrong")
         private boolean tracing = false;
 
-        @Option(name = "--parallelism", usage = "The number of migration requests to send in parallel (default: 100)", metaVar = "<number>")
+        @Option(name = "--parallelism",
+                usage = "The number of migration requests to send in parallel (default: 100)",
+                metaVar = "<number>")
         private int parallelism = 100;
 
         @Argument

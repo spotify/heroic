@@ -73,7 +73,7 @@ import lombok.ToString;
 
 @RequiredArgsConstructor
 public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
-    private final String USER_AGENT = "heroic";
+    private static final String USER_AGENT = "heroic";
 
     private final String project;
     private final String zone;
@@ -88,10 +88,9 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnection call() throws Exception {
         final CredentialOptions credentials = this.credentials.build();
 
-        final BigtableOptions options = new BigtableOptions.Builder().setProjectId(project).setZoneId(zone)
-                .setClusterId(cluster).setUserAgent(USER_AGENT)
-                .setDataChannelCount(64)
-                .setCredentialOptions(credentials).build();
+        final BigtableOptions options = new BigtableOptions.Builder().setProjectId(project)
+                .setZoneId(zone).setClusterId(cluster).setUserAgent(USER_AGENT)
+                .setDataChannelCount(64).setCredentialOptions(credentials).build();
 
         final BigtableSession session = new BigtableSession(options, executorService);
 
@@ -102,7 +101,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     }
 
     @RequiredArgsConstructor
-    @ToString(of = { "project", "zone", "cluster" })
+    @ToString(of = {"project", "zone", "cluster"})
     public static class GrpcBigtableConnection implements BigtableConnection {
         private final String project;
         private final String zone;
@@ -132,7 +131,8 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     @ToString
     class BigtableAdminClientImpl implements BigtableTableAdminClient {
         final BigtableSession session;
-        final String clusterUri = String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+        final String clusterUri =
+                String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
 
         @Override
         public BigtableTable getTable(String name) throws IOException {
@@ -143,9 +143,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
             final List<BigtableColumnFamily> columnFamilies = new ArrayList<>();
 
-            for (final Entry<String, ColumnFamily> e : tableDetails.getColumnFamilies().entrySet()) {
+            for (final Entry<String, ColumnFamily> e : tableDetails.getColumnFamilies()
+                    .entrySet()) {
                 final ColumnFamily v = e.getValue();
-                columnFamilies.add(new BigtableColumnFamily(columnFamilyUriToName(tableName, v.getName())));
+                columnFamilies.add(
+                        new BigtableColumnFamily(columnFamilyUriToName(tableName, v.getName())));
             }
 
             return new BigtableTable(tableName, ImmutableList.copyOf(columnFamilies));
@@ -154,8 +156,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         @Override
         public void createTable(BigtableTable table) throws IOException {
             final CreateTableRequest request = CreateTableRequest.newBuilder().setName(clusterUri)
-                    .setTableId(table.getName())
-                    .build();
+                    .setTableId(table.getName()).build();
 
             session.getTableAdminClient().createTable(request);
 
@@ -165,20 +166,22 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         }
 
         @Override
-        public void createColumnFamily(String table, BigtableColumnFamily family) throws IOException {
+        public void createColumnFamily(String table, BigtableColumnFamily family)
+                throws IOException {
             // name MUST be empty during creation, do not set it.
             final ColumnFamily cf = ColumnFamily.newBuilder().build();
 
-            final CreateColumnFamilyRequest request = CreateColumnFamilyRequest.newBuilder().setName(tableNameToUri(table))
-                    .setColumnFamilyId(family.getName()).setColumnFamily(cf)
-                    .build();
+            final CreateColumnFamilyRequest request =
+                    CreateColumnFamilyRequest.newBuilder().setName(tableNameToUri(table))
+                            .setColumnFamilyId(family.getName()).setColumnFamily(cf).build();
 
             session.getTableAdminClient().createColumnFamily(request);
         }
 
         @Override
         public List<BigtableTable> listTablesDetails() throws IOException {
-            final ListTablesRequest request = ListTablesRequest.newBuilder().setName(clusterUri).build();
+            final ListTablesRequest request =
+                    ListTablesRequest.newBuilder().setName(clusterUri).build();
 
             final ListTablesResponse response = session.getTableAdminClient().listTables(request);
 
@@ -204,17 +207,21 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         String columnFamilyUriToName(String tableName, String name) {
             final String tableUri = tableNameToUri(tableName);
 
-            if (!name.startsWith(tableUri))
+            if (!name.startsWith(tableUri)) {
                 throw new IllegalArgumentException(String.format(
-                        "Somehow you are converting a table (%s) from a different cluster (%s)", name, tableUri));
+                        "Somehow you are converting a table (%s) from a different cluster (%s)",
+                        name, tableUri));
+            }
 
             return name.substring(tableUri.length() + "/columnFamilies/".length(), name.length());
         }
 
         String tableUriToName(String name) {
-            if (!name.startsWith(clusterUri))
+            if (!name.startsWith(clusterUri)) {
                 throw new IllegalArgumentException(String.format(
-                        "Somehow you are converting a table (%s) from a different cluster (%s)", name, clusterUri));
+                        "Somehow you are converting a table (%s) from a different cluster (%s)",
+                        name, clusterUri));
+            }
 
             return name.substring(clusterUri.length() + "/tables/".length(), name.length());
         }
@@ -233,15 +240,18 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     class BigtableClientImpl implements BigtableClient {
         final BigtableSession session;
 
-        final String clusterUri = String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+        final String clusterUri =
+                String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
 
         @Override
-        public AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, BigtableMutations mutations) {
+        public AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey,
+                BigtableMutations mutations) {
             final ListenableFuture<Empty> request;
 
             try {
-                request = session.getDataClient().mutateRowAsync(
-                        MutateRowRequest.newBuilder().setTableName(tableName(tableName)).setRowKey(rowKey)
+                request = session.getDataClient()
+                        .mutateRowAsync(MutateRowRequest.newBuilder()
+                                .setTableName(tableName(tableName)).setRowKey(rowKey)
                                 .addAllMutations(mutations.getMutations()).build());
             } catch (final Exception e) {
                 return async.failed(e);
@@ -253,9 +263,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         String columnFamilyUriToName(String tableName, String name) {
             final String tableUri = tableNameToUri(tableName);
 
-            if (!name.startsWith(tableUri))
+            if (!name.startsWith(tableUri)) {
                 throw new IllegalArgumentException(String.format(
-                        "Somehow you are converting a table (%s) from a different cluster (%s)", name, tableUri));
+                        "Somehow you are converting a table (%s) from a different cluster (%s)",
+                        name, tableUri));
+            }
 
             return name.substring(tableUri.length() + "/columnFamilies/".length(), name.length());
         }
@@ -274,10 +286,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         }
 
         @Override
-        public AsyncFuture<List<BigtableLatestRow>> readRows(final String tableName, ByteString rowKey,
-                BigtableRowFilter filter) {
-            final ReadRowsRequest request = ReadRowsRequest.newBuilder().setTableName(tableName(tableName))
-                    .setRowKey(rowKey).setFilter(filter.getFilter()).build();
+        public AsyncFuture<List<BigtableLatestRow>> readRows(final String tableName,
+                ByteString rowKey, BigtableRowFilter filter) {
+            final ReadRowsRequest request =
+                    ReadRowsRequest.newBuilder().setTableName(tableName(tableName))
+                            .setRowKey(rowKey).setFilter(filter.getFilter()).build();
 
             final ListenableFuture<List<Row>> readRowsAsync;
 
@@ -307,10 +320,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         @Override
         public BigtableRowFilter columnFilter(String family, ByteString start, ByteString end) {
-            final ColumnRange range = ColumnRange.newBuilder().setFamilyName(family).setStartQualifierExclusive(start)
-                    .setEndQualifierInclusive(end).build();
+            final ColumnRange range = ColumnRange.newBuilder().setFamilyName(family)
+                    .setStartQualifierExclusive(start).setEndQualifierInclusive(end).build();
 
-            return new BigtableRowFilter(RowFilter.newBuilder().setColumnRangeFilter(range).build());
+            return new BigtableRowFilter(
+                    RowFilter.newBuilder().setColumnRangeFilter(range).build());
         }
     }
 

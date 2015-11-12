@@ -39,22 +39,24 @@ public interface AggregationCacheBackend extends LifeCycle {
      * Get an entry from the cache.
      *
      * @param key The entry key to get.
-     * @return A callback that will be executed when the entry is available with the datapoints contained in the entry.
-     *         This array can contain null values to indicate that entries are missing.
+     * @return A callback that will be executed when the entry is available with the datapoints
+     *         contained in the entry. This array can contain null values to indicate that entries
+     *         are missing.
      * @throws CacheOperationException
      */
-    public AsyncFuture<CacheBackendGetResult> get(CacheBackendKey key, DateRange range) throws CacheOperationException;
+    AsyncFuture<CacheBackendGetResult> get(CacheBackendKey key, DateRange range)
+            throws CacheOperationException;
 
     /**
      * Put a new entry into the aggregation cache.
      *
-     *
-     *
      * @param key
      * @param datapoints An array of datapoints, <code>null</code> entries should be ignored.
-     * @return A callback that will be executed as soon as any underlying request has been satisfied.
-     * @throws CacheOperationException An early throw exception, if the backend is unable to prepare the request.
+     * @return A callback that will be executed as soon as any underlying request has been
+     *         satisfied.
+     * @throws CacheOperationException An early throw exception, if the backend is unable to prepare
+     *             the request.
      */
-    public AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<Point> datapoints)
+    AsyncFuture<CacheBackendPutResult> put(CacheBackendKey key, List<Point> datapoints)
             throws CacheOperationException;
 }

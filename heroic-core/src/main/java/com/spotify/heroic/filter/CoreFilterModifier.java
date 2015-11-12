@@ -44,8 +44,9 @@ public final class CoreFilterModifier implements FilterModifier {
                 statements.add(removeTag(f, tag));
             }
 
-            if (statements.isEmpty())
+            if (statements.isEmpty()) {
                 return filters.t();
+            }
 
             return filters.and(statements).optimize();
         }
@@ -59,8 +60,9 @@ public final class CoreFilterModifier implements FilterModifier {
                 statements.add(removeTag(f, tag));
             }
 
-            if (statements.isEmpty())
+            if (statements.isEmpty()) {
                 return filters.t();
+            }
 
             return new OrFilterImpl(statements).optimize();
         }
@@ -68,8 +70,9 @@ public final class CoreFilterModifier implements FilterModifier {
         if (filter instanceof MatchTagFilterImpl) {
             final MatchTagFilterImpl matchTag = (MatchTagFilterImpl) filter;
 
-            if (matchTag.getTag().equals(tag))
+            if (matchTag.getTag().equals(tag)) {
                 return filters.t();
+            }
 
             return matchTag;
         }
@@ -77,8 +80,9 @@ public final class CoreFilterModifier implements FilterModifier {
         if (filter instanceof HasTagFilterImpl) {
             final HasTagFilterImpl hasTag = (HasTagFilterImpl) filter;
 
-            if (hasTag.getTag().equals(tag))
+            if (hasTag.getTag().equals(tag)) {
                 return filters.t();
+            }
 
             return hasTag;
         }

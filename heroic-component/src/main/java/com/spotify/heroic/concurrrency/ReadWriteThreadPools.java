@@ -39,8 +39,8 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
 /**
- * An abstraction for the concept of having separate thread pools dedicated towards reading vs. writing to separate
- * filling one up.
+ * An abstraction for the concept of having separate thread pools dedicated towards reading vs.
+ * writing to separate filling one up.
  *
  * @author udoprog
  */
@@ -60,9 +60,11 @@ public class ReadWriteThreadPools {
                 @JsonProperty("writeThreads") Integer writeThreads,
                 @JsonProperty("writeQueueSize") Integer writeQueueSize) {
             this.readThreads = Optional.fromNullable(readThreads).or(ThreadPool.DEFAULT_THREADS);
-            this.readQueueSize = Optional.fromNullable(readQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
+            this.readQueueSize =
+                    Optional.fromNullable(readQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
             this.writeThreads = Optional.fromNullable(writeThreads).or(ThreadPool.DEFAULT_THREADS);
-            this.writeQueueSize = Optional.fromNullable(writeQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
+            this.writeQueueSize =
+                    Optional.fromNullable(writeQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
         }
 
         public static Config buildDefault() {
@@ -79,9 +81,11 @@ public class ReadWriteThreadPools {
         }
 
         public ReadWriteThreadPools construct(AsyncFramework async, ThreadPoolReporter reporter) {
-            final ThreadPool read = ThreadPool.create(async, "read", reporter, readThreads, readQueueSize);
+            final ThreadPool read =
+                    ThreadPool.create(async, "read", reporter, readThreads, readQueueSize);
 
-            final ThreadPool write = ThreadPool.create(async, "write", reporter, writeThreads, writeQueueSize);
+            final ThreadPool write =
+                    ThreadPool.create(async, "write", reporter, writeThreads, writeQueueSize);
 
             return new ReadWriteThreadPools(async, read, write);
         }
