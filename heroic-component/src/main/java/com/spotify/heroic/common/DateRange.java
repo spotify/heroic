@@ -130,8 +130,15 @@ public class DateRange implements Comparable<DateRange> {
         return modify(range.getStart(), range.getEnd());
     }
 
+    /**
+     * Modify the date range so that it fits within the given range (start - end).
+     *
+     * @param start Start value to fit this range into.
+     * @param end End value (exclusive) to fit this range into.
+     * @return A modified date range that fits within the given range.
+     */
     public DateRange modify(long start, long end) {
-        return new DateRange(Math.max(this.start, start), Math.min(this.end, end));
+        return new DateRange(Math.max(this.start, start), Math.min(this.end, end - 1));
     }
 
     public DateRange start(long start) {
