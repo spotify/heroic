@@ -59,6 +59,7 @@ public class CollectdConsumerModule implements ConsumerModule {
     private final Optional<String> host;
     private final Optional<Integer> port;
     private final Optional<GrokProcessor> hostProcessor;
+    private final CollectdTypes types;
 
     @Override
     public Module module(final Key<Consumer> key, final ConsumerReporter reporter) {
@@ -79,7 +80,7 @@ public class CollectdConsumerModule implements ConsumerModule {
                             log.warn("No backends are part of the selected ingestion group");
                         }
 
-                        final CollectdChannelHandler handler = new CollectdChannelHandler(async, ingestion, hostProcessor);
+                        final CollectdChannelHandler handler = new CollectdChannelHandler(async, ingestion, hostProcessor, types);
 
                         final InetAddress h = host.map(host -> {
                             try {
@@ -133,14 +134,18 @@ public class CollectdConsumerModule implements ConsumerModule {
         private Optional<String> host = Optional.empty();
         private Optional<Integer> port = Optional.empty();
         private Optional<GrokProcessor> hostProcessor = Optional.empty();
+        private Optional<CollectdTypes> types = Optional.empty();
 
         @JsonCreator
         public Builder(@JsonProperty("id") Optional<String> id, @JsonProperty("host") Optional<String> host,
-                @JsonProperty("port") Optional<Integer> port, @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern) {
+                @JsonProperty("port") Optional<Integer> port,
+                @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern,
+                @JsonProperty("types") Optional<CollectdTypes> types) {
             this.id = id;
             this.host = host;
             this.port = port;
             this.hostProcessor = hostPattern;
+            this.types = types;
         }
 
         public Builder id(String id) {
@@ -163,6 +168,11 @@ public class CollectdConsumerModule implements ConsumerModule {
             return this;
         }
 
+        public Builder types(CollectdTypes types) {
+            this.types = Optional.of(types);
+            return this;
+        }
+
         @Override
         public ConsumerModule.Builder merge(final ConsumerModule.Builder u) {
             final Builder o = (Builder) u;
@@ -172,7 +182,8 @@ public class CollectdConsumerModule implements ConsumerModule {
                 o.id.isPresent() ? o.id : id,
                 o.host.isPresent() ? o.host : host,
                 o.port.isPresent() ? o.port : port,
-                o.hostProcessor.isPresent() ? o.hostProcessor : hostProcessor
+                o.hostProcessor.isPresent() ? o.hostProcessor : hostProcessor,
+                o.types.isPresent() ? o.types : types
             );
             // @formatter:on
         }
@@ -184,7 +195,8 @@ public class CollectdConsumerModule implements ConsumerModule {
                 id,
                 host,
                 port,
-                hostProcessor
+                hostProcessor,
+                types.orElseGet(CollectdTypes::supplyDefault)
             );
             // @formatter:on
         }

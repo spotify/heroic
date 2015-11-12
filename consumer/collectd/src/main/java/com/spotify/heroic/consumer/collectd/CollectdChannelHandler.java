@@ -46,14 +46,12 @@ import io.netty.channel.socket.DatagramPacket;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @RequiredArgsConstructor
 public class CollectdChannelHandler extends SimpleChannelInboundHandler<DatagramPacket> {
     private final AsyncFramework async;
     private final IngestionGroup ingestion;
     private final Optional<GrokProcessor> hostProcessor;
-
-    private final CollectdTypes types = new CollectdTypes();
+    private final CollectdTypes types;
 
     @Override
     protected void channelRead0(final ChannelHandlerContext ctx, final DatagramPacket msg) throws Exception {

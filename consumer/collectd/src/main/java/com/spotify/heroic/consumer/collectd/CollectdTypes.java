@@ -25,7 +25,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -37,30 +40,104 @@ import com.spotify.heroic.metric.WriteMetric;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 public class CollectdTypes {
-    public static final String KEY = "collectd";
+    private static final Map<String, Mapping> mappings = new HashMap<>();
 
-    private final Map<String, Mapping> mappings = new HashMap<>();
-
-    public CollectdTypes() {
+    {
         mappings.put("cpu", new Mapping(ImmutableList.of(new CPU())));
         mappings.put("aggregation", new Mapping(ImmutableList.of(new Aggregation())));
+    }
+
+    public static final String DEFAULT_KEY = "collectd";
+
+    private static final String DEFAULT_PLUGIN_TAG = "plugin";
+    private static final String DEFAULT_PLUGIN_INSTANCE_TAG = "plugin_instance";
+    private static final String DEFAULT_TYPE_TAG = "type";
+    private static final String DEFAULT_TYPE_INSTANCE_TAG = "type_instance";
+
+    private final String key;
+    private final String pluginTag;
+    private final String pluginInstanceTag;
+    private final String typeTag;
+    private final String typeInstanceTag;
+
+    @JsonCreator
+    public CollectdTypes(@JsonProperty("key") Optional<String> key, @JsonProperty("pluginTag") Optional<String> pluginTag,
+            @JsonProperty("pluginInstanceTag") Optional<String> pluginInstanceTag,
+            @JsonProperty("typeTag") Optional<String> typeTag,
+            @JsonProperty("typeInstanceTag") Optional<String> typeInstanceTag) {
+        this.key = key.orElse(DEFAULT_KEY);
+        this.pluginTag = pluginTag.orElse(DEFAULT_PLUGIN_TAG);
+        this.pluginInstanceTag = pluginInstanceTag.orElse(DEFAULT_PLUGIN_INSTANCE_TAG);
+        this.typeTag = typeTag.orElse(DEFAULT_TYPE_TAG);
+        this.typeInstanceTag = typeInstanceTag.orElse(DEFAULT_TYPE_INSTANCE_TAG);
+    }
+
+    public static CollectdTypes supplyDefault() {
+        return new CollectdTypes(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public List<WriteMetric> convert(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
         final Mapping mapping = mappings.get(sample.getPlugin());
 
         if (mapping == null) {
-            // XXX: fallback to a worse strategy than explicit mapping?
-            return ImmutableList.of();
+            return convertDefault(sample, tags);
         }
 
         return mapping.convert(sample, tags);
     }
 
+    /**
+     * Default conversion of collectd samples.
+     *
+     * This 
+     */
+    private List<WriteMetric> convertDefault(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
+        final long time = sample.getTime() * 1000;
+
+        final Iterator<CollectdValue> values = sample.getValues().iterator();
+        final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+        final Iterable<Map.Entry<String, String>> sampleTags = defaultTags(sample);
+
+        while (values.hasNext()) {
+            final CollectdValue value = values.next();
+
+            final Series series = Series.of(key, Iterables.concat(tags, sampleTags).iterator());
+            final Point point = new Point(time, value.toDouble());
+
+            final MetricCollection data = MetricCollection
+                    .points(ImmutableList.of(point));
+
+            writes.add(new WriteMetric(series, data));
+        }
+
+        return writes.build();
+    }
+
+    private Iterable<Map.Entry<String, String>> defaultTags(final CollectdSample sample) {
+        final ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
+
+        if (!"".equals(sample.getPlugin())) {
+            builder.put(pluginTag, sample.getPlugin());
+        }
+
+        if (!"".equals(sample.getPlugin())) {
+            builder.put(pluginInstanceTag, sample.getPlugin());
+        }
+
+        if (!"".equals(sample.getPlugin())) {
+            builder.put(typeTag, sample.getPlugin());
+        }
+
+        if (!"".equals(sample.getPlugin())) {
+            builder.put(typeInstanceTag, sample.getPlugin());
+        }
+
+        return builder.build().entrySet();
+    }
+
     @Data
-    public static class Mapping {
+    private class Mapping {
         private final List<Field> fields;
 
         public List<WriteMetric> convert(final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags) {
@@ -79,7 +156,7 @@ public class CollectdTypes {
                 final Field field = fields.next();
                 final CollectdValue value = values.next();
 
-                final Series series = Series.of(KEY,
+                final Series series = Series.of(key,
                         Iterables.concat(tags, field.tags(sample, value).entrySet()).iterator());
                 final Point point = new Point(time, value.convert(field));
 

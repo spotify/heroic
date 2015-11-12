@@ -28,6 +28,8 @@ import lombok.Data;
 public interface CollectdValue {
     public double convert(final CollectdTypes.Field field);
 
+    public double toDouble();
+
     @Data
     public static class Gauge implements CollectdValue {
         private final double value;
@@ -35,6 +37,11 @@ public interface CollectdValue {
         @Override
         public double convert(final Field field) {
             return field.convertGauge(value);
+        }
+
+        @Override
+        public double toDouble() {
+            return value;
         }
     }
 
@@ -46,6 +53,11 @@ public interface CollectdValue {
         public double convert(final Field field) {
             return field.convertAbsolute(value);
         }
+
+        @Override
+        public double toDouble() {
+            return value;
+        }
     }
 
     @Data
@@ -56,6 +68,11 @@ public interface CollectdValue {
         public double convert(final Field field) {
             return field.convertAbsolute(derivate);
         }
+
+        @Override
+        public double toDouble() {
+            return derivate;
+        }
     }
 
     @Data
@@ -65,6 +82,11 @@ public interface CollectdValue {
         @Override
         public double convert(final Field field) {
             return field.convertAbsolute(counter);
+        }
+
+        @Override
+        public double toDouble() {
+            return counter;
         }
     }
 }
