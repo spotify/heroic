@@ -45,6 +45,8 @@ public class LegacySchema extends AbstractCassandraSchema implements Schema {
     public static final String CREATE_TABLES_CQL =
             NextGenSchema.class.getPackage().getName() + "/tables.cql";
 
+    public static final String POINTS_TABLE = "metrics";
+
     // @formatter:off
     private static final String WRITE_METRICS_CQL =
             "INSERT INTO {{keyspace}}.metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
@@ -54,14 +56,6 @@ public class LegacySchema extends AbstractCassandraSchema implements Schema {
             "DELETE FROM {{keyspace}}.metrics WHERE metric_key = ?";
     private static final String COUNT_METRICS_CQL =
             "SELECT count(*) FROM {{keyspace}}.metrics WHERE metric_key = ?";
-    private static final String KEYS_PAGING =
-            "SELECT DISTINCT metric_key FROM {{keyspace}}.metrics";
-    private static final String KEYS_PAGING_LEFT =
-            "SELECT DISTINCT metric_key FROM {{keyspace}}.metrics WHERE token(metric_key) > token(?)";
-    private static final String KEYS_PAGING_LIMIT =
-            "SELECT DISTINCT metric_key FROM {{keyspace}}.metrics limit ?";
-    private static final String KEYS_PAGING_LEFT_LIMIT =
-            "SELECT DISTINCT metric_key FROM {{keyspace}}.metrics WHERE token(metric_key) > token(?) limit ?";
     // @formatter:on
 
     private final String keyspace;
@@ -108,21 +102,11 @@ public class LegacySchema extends AbstractCassandraSchema implements Schema {
         final AsyncFuture<PreparedStatement> fetch = prepareAsync(values, s, FETCH_METRICS_CQL);
         final AsyncFuture<PreparedStatement> delete = prepareAsync(values, s, DELETE_METRICS_CQL);
         final AsyncFuture<PreparedStatement> count = prepareAsync(values, s, COUNT_METRICS_CQL);
-        final AsyncFuture<PreparedStatement> keysPaging = prepareAsync(values, s, KEYS_PAGING);
-        final AsyncFuture<PreparedStatement> keysPagingLeft =
-                prepareAsync(values, s, KEYS_PAGING_LEFT);
-        final AsyncFuture<PreparedStatement> keysPagingLimit =
-                prepareAsync(values, s, KEYS_PAGING_LIMIT);
-        final AsyncFuture<PreparedStatement> keysPagingLeftLimit =
-                prepareAsync(values, s, KEYS_PAGING_LEFT_LIMIT);
 
-        return async
-                .collectAndDiscard(ImmutableList.of(write, fetch, delete, count, keysPaging,
-                        keysPagingLeft, keysPagingLimit, keysPagingLeftLimit))
+        return async.collectAndDiscard(ImmutableList.of(write, fetch, delete, count))
                 .directTransform(r -> {
-                    return new LegacySchemaInstance(write.getNow(), fetch.getNow(), delete.getNow(),
-                            count.getNow(), keysPaging.getNow(), keysPagingLeft.getNow(),
-                            keysPagingLimit.getNow(), keysPagingLeftLimit.getNow());
+                    return new LegacySchemaInstance(keyspace, POINTS_TABLE, write.getNow(),
+                            fetch.getNow(), delete.getNow(), count.getNow());
                 });
     }
 }

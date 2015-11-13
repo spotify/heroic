@@ -42,7 +42,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
-@ToString(of = { "seeds" })
+@ToString(of = {"seeds"})
 @Slf4j
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final AsyncFramework async;
@@ -57,7 +57,6 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                 final PoolingOptions pooling = new PoolingOptions();
 
                 final QueryOptions queryOptions = new QueryOptions()
-                    .setFetchSize(1000)
                     .setConsistencyLevel(ConsistencyLevel.ONE);
 
                 final SocketOptions socketOptions = new SocketOptions();

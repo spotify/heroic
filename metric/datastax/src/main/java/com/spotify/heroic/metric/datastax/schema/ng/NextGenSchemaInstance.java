@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -39,8 +38,8 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.MetricsRowKey_Serializer;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
+import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
-import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
 
 import eu.toolchain.async.Transform;
 import eu.toolchain.serializer.BytesSerialWriter;
@@ -51,13 +50,27 @@ import eu.toolchain.serializer.TinySerializer;
 import lombok.Data;
 
 @Data
-public class NextGenSchemaInstance implements SchemaInstance {
+public class NextGenSchemaInstance extends AbstractSchemaInstance {
+    public static final String KEY = "metric_key";
+
+    private final String keyspace;
+    private final String pointsTable;
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
     private final PreparedStatement count;
-    private final PreparedStatement keysPagingLimit;
-    private final PreparedStatement keysPagingLeftLimit;
+
+    public NextGenSchemaInstance(final String keyspace, final String pointsTable,
+            final PreparedStatement write, final PreparedStatement fetch,
+            final PreparedStatement delete, final PreparedStatement count) {
+        super(KEY, keyspace, pointsTable);
+        this.keyspace = keyspace;
+        this.pointsTable = pointsTable;
+        this.write = write;
+        this.fetch = fetch;
+        this.delete = delete;
+        this.count = count;
+    }
 
     public static final long MAX_WIDTH = Integer.MAX_VALUE;
 
@@ -84,20 +97,6 @@ public class NextGenSchemaInstance implements SchemaInstance {
     @Override
     public TypeSerializer<MetricsRowKey> rowKey() {
         return rowKey;
-    }
-
-    @Override
-    public BoundStatement keysPaging(Optional<ByteBuffer> first, int limit) {
-        return first.map(f -> keysPagingLeftLimit.bind(f, limit))
-                .orElseGet(() -> keysPagingLimit.bind(limit));
-    }
-
-    @Override
-    public Transform<Row, BackendKey> keyConverter() {
-        return row -> {
-            final MetricsRowKey key = rowKey.deserialize(row.getBytes("metric_key"));
-            return new BackendKey(key.getSeries(), key.getBase());
-        };
     }
 
     @Override
@@ -205,15 +204,15 @@ public class NextGenSchemaInstance implements SchemaInstance {
         return count.bind(k);
     }
 
-    private long calculateBaseTimestamp(long timestamp) {
+    static long calculateBaseTimestamp(final long timestamp) {
         return timestamp - timestamp % MAX_WIDTH;
     }
 
-    private int calculateColumnKey(long timestamp) {
+    static int calculateColumnKey(final long timestamp) {
         return (int) (timestamp % MAX_WIDTH);
     }
 
-    private long calculateAbsoluteTimestamp(long base, int key) {
+    static long calculateAbsoluteTimestamp(final long base, final int key) {
         return base + (long) key;
     }
 }

@@ -296,7 +296,7 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
             try {
                 readRowsAsync = session.getDataClient().readRowsAsync(request);
-            } catch (final IOException e) {
+            } catch (final Exception e) {
                 return async.failed(e);
             }
 

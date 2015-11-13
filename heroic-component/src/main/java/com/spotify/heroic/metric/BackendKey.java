@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.metric;
 
+import java.util.Optional;
+
 import com.spotify.heroic.common.Series;
 
 import lombok.Data;
@@ -32,8 +34,9 @@ public class BackendKey {
     private final Series series;
     private final long base;
     private final MetricType type;
+    private final Optional<Long> token;
 
     public BackendKey(final Series series, final long base) {
-        this(series, base, MetricType.POINT);
+        this(series, base, MetricType.POINT, Optional.empty());
     }
 }

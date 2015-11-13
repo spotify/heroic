@@ -55,8 +55,6 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
-import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Metric;
@@ -214,32 +212,6 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 return async.collect(queries, FetchData.collect(FETCH, series));
             });
-        });
-    }
-
-    @Override
-    public AsyncFuture<BackendKeySet> keys(BackendKey start, final int limit,
-            final QueryOptions options) {
-        final MetricsRowKey first =
-                start != null ? new MetricsRowKey(start.getSeries(), start.getBase()) : null;
-
-        return context.doto(ctx -> {
-            return async.call(() -> {
-                final OperationResult<Rows<MetricsRowKey, Integer>> op =
-                        ctx.client.prepareQuery(METRICS_CF)
-                                .getKeyRange(first, null, null, null, limit).execute();
-
-                final Rows<MetricsRowKey, Integer> result = op.getResult();
-
-                final List<BackendKey> keys = new ArrayList<>(result.size());
-
-                for (Row<MetricsRowKey, Integer> row : result) {
-                    final MetricsRowKey k = row.getKey();
-                    keys.add(new BackendKey(k.getSeries(), k.getBase()));
-                }
-
-                return new BackendKeySet(keys);
-            }, pools.read());
         });
     }
 

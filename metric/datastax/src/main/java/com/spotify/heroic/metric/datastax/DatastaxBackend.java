@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.inject.Inject;
@@ -41,6 +42,8 @@ import com.datastax.driver.core.ExecutionInfo;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.querybuilder.Clause;
+import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.Bytes;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -54,7 +57,8 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeySet;
+import com.spotify.heroic.metric.BackendKeyCriteria;
+import com.spotify.heroic.metric.BackendKeyCriteria.Limited;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
@@ -85,7 +89,7 @@ import lombok.extern.slf4j.Slf4j;
  * MetricBackend for Heroic cassandra datastore.
  */
 @Slf4j
-@ToString(of = { "connection" })
+@ToString(of = {"connection"})
 public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle {
     public static final QueryTrace.Identifier KEYS =
             QueryTrace.identifier(DatastaxBackend.class, "keys");
@@ -170,42 +174,71 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncFuture<BackendKeySet> keys(BackendKey start, final int limit,
+    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyCriteria criteria,
             final QueryOptions options) {
-        return connection.doto(c -> {
-            final Optional<ByteBuffer> first = start == null ? Optional.empty()
-                    : Optional.of(c.schema.rowKey()
-                            .serialize(new MetricsRowKey(start.getSeries(), start.getBase())));
+        return observer -> {
+            final Borrowed<Connection> b = connection.borrow();
 
-            final Statement stmt;
-            final Transform<RowFetchResult<BackendKey>, AsyncFuture<BackendKeySet>> converter;
+            if (!b.isValid()) {
+                observer.fail(new RuntimeException("failed to borrow connection"));
+                return;
+            }
+
+            final Connection c = b.get();
 
             final Stopwatch w = Stopwatch.createStarted();
 
+            final Select select = c.schema.selectKeys();
+            applyCriteria(c.schema, criteria, select);
+
+            final Statement stmt;
+
             if (options.isTracing()) {
-                stmt = c.schema.keysPaging(first, limit).enableTracing();
-                converter = result -> {
-                    return buildTrace(c, KEYS, w.elapsed(TimeUnit.NANOSECONDS), result.info)
-                            .directTransform(trace -> {
-                        return new BackendKeySet(result.data, Optional.of(trace));
-                    });
-                };
+                stmt = select.enableTracing();
             } else {
-                stmt = c.schema.keysPaging(first, limit);
-                converter = result -> {
-                    final QueryTrace trace = new QueryTrace(KEYS, w.elapsed(TimeUnit.NANOSECONDS));
-                    return async.resolved(new BackendKeySet(result.data, Optional.of(trace)));
-                };
+                stmt = select;
             }
 
-            final ResolvableFuture<BackendKeySet> future = async.future();
+            final AsyncObserver<List<BackendKey>> helperObserver =
+                    new AsyncObserver<List<BackendKey>>() {
+                @Override
+                public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
+                    return observer.observe(keys);
+                }
 
-            Async.bind(async, c.session.executeAsync(stmt))
-                    .onDone(new RowFetchHelper<BackendKey, BackendKeySet>(future,
-                            c.schema.keyConverter(), converter));
+                @Override
+                public void cancel() throws Exception {
+                    try {
+                        observer.cancel();
+                    } finally {
+                        b.release();
+                    }
+                }
 
-            return future;
-        });
+                @Override
+                public void fail(Throwable cause) throws Exception {
+                    try {
+                        observer.fail(cause);
+                    } finally {
+                        b.release();
+                    }
+                }
+
+                @Override
+                public void end() throws Exception {
+                    try {
+                        observer.end();
+                    } finally {
+                        b.release();
+                    }
+                }
+            };
+
+            final RowStreamHelper<BackendKey> helper =
+                    new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter());
+
+            Async.bind(async, c.session.executeAsync(stmt)).onDone(helper);
+        };
     }
 
     @Override
@@ -459,6 +492,60 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         });
     }
 
+    private void applyCriteria(final SchemaInstance schema, final BackendKeyCriteria criteria,
+            final Select select) throws Exception {
+        if (criteria instanceof BackendKeyCriteria.Limited) {
+            final Limited limited = BackendKeyCriteria.Limited.class.cast(criteria);
+            select.limit(limited.getLimit());
+            applyCriteria(schema, limited.getCriteria(), select);
+            return;
+        }
+
+        if (criteria instanceof BackendKeyCriteria.And) {
+            final BackendKeyCriteria.And and = (BackendKeyCriteria.And) criteria;
+
+            for (final BackendKeyCriteria c : and.getCriterias()) {
+                applyClause(schema, c, select.where()::and);
+            }
+
+            return;
+        }
+
+        applyClause(schema, criteria, select::where);
+    }
+
+    private void applyClause(final SchemaInstance schema, final BackendKeyCriteria criteria,
+            final Consumer<Clause> consumer) throws Exception {
+        if (criteria instanceof BackendKeyCriteria.All) {
+            return;
+        }
+
+        if (criteria instanceof BackendKeyCriteria.KeyGreaterOrEqual) {
+            consumer.accept(schema
+                    .keyGreaterOrEqual(BackendKeyCriteria.KeyGreaterOrEqual.class.cast(criteria)));
+            return;
+        }
+
+        if (criteria instanceof BackendKeyCriteria.KeyLess) {
+            consumer.accept(schema.keyLess(BackendKeyCriteria.KeyLess.class.cast(criteria)));
+            return;
+        }
+
+        if (criteria instanceof BackendKeyCriteria.PercentageGereaterOrEqual) {
+            consumer.accept(schema.keyPercentageGreaterOrEqual(
+                    BackendKeyCriteria.PercentageGereaterOrEqual.class.cast(criteria)));
+            return;
+        }
+
+        if (criteria instanceof BackendKeyCriteria.PercentageLess) {
+            consumer.accept(schema
+                    .keyPercentageLess(BackendKeyCriteria.PercentageLess.class.cast(criteria)));
+            return;
+        }
+
+        throw new IllegalArgumentException("Unsupported criteria: " + criteria);
+    }
+
     @RequiredArgsConstructor
     private final class RowFetchHelper<R, T> implements FutureDone<ResultSet> {
         private final List<R> data = new ArrayList<>();
@@ -590,30 +677,42 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 batch.add(part);
             }
 
-            observer.observe(batch).directTransform(r -> {
-                if (nextFetch.isPresent()) {
-                    nextFetch.get().onDone(new FutureDone<Void>() {
-                        @Override
-                        public void failed(Throwable cause) throws Exception {
-                            RowStreamHelper.this.failed(cause);
-                        }
-
-                        @Override
-                        public void cancelled() throws Exception {
-                            RowStreamHelper.this.cancelled();
-                        }
-
-                        @Override
-                        public void resolved(Void result) throws Exception {
-                            RowStreamHelper.this.resolved(rows);
-                        }
-                    });
-
-                    return null;
+            observer.observe(batch).onDone(new FutureDone<Void>() {
+                @Override
+                public void failed(Throwable cause) throws Exception {
+                    observer.fail(cause);
                 }
 
-                observer.end();
-                return null;
+                @Override
+                public void cancelled() throws Exception {
+                    observer.cancel();
+                }
+
+                @Override
+                public void resolved(Void result) throws Exception {
+                    if (nextFetch.isPresent()) {
+                        nextFetch.get().onDone(new FutureDone<Void>() {
+                            @Override
+                            public void failed(Throwable cause) throws Exception {
+                                RowStreamHelper.this.failed(cause);
+                            }
+
+                            @Override
+                            public void cancelled() throws Exception {
+                                RowStreamHelper.this.cancelled();
+                            }
+
+                            @Override
+                            public void resolved(Void result) throws Exception {
+                                RowStreamHelper.this.resolved(rows);
+                            }
+                        });
+
+                        return;
+                    }
+
+                    observer.end();
+                }
             });
         }
     }
@@ -630,12 +729,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     private AsyncFuture<List<Event>> getEvents(final Connection c, final UUID id) {
         final ResolvableFuture<List<Event>> future = async.future();
 
+        final Transform<Row, Event> converter = row -> {
+            return new Event(row.getString("activity"), row.getUUID("event_id").timestamp(),
+                    row.getInet("source"), row.getInt("source_elapsed"), row.getString("thread"));
+        };
+
         Async.bind(async, c.session.executeAsync(SELECT_EVENTS_FORMAT, id))
-                .onDone(new RowFetchHelper<Event, List<Event>>(future, row -> {
-                    return new Event(row.getString("activity"), row.getUUID("event_id").timestamp(),
-                            row.getInet("source"), row.getInt("source_elapsed"),
-                            row.getString("thread"));
-                }, result -> {
+                .onDone(new RowFetchHelper<Event, List<Event>>(future, converter, result -> {
                     return async.resolved(ImmutableList.copyOf(result.getData()));
                 }));
 

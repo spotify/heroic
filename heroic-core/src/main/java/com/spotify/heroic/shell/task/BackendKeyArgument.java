@@ -38,16 +38,19 @@ public class BackendKeyArgument {
     private final Series series;
     private final long base;
     private final MetricType type;
+    private final Optional<Long> token;
 
     @JsonCreator
     public BackendKeyArgument(@JsonProperty("series") Series series,
-            @JsonProperty("base") Long base, @JsonProperty("type") MetricType type) {
+            @JsonProperty("base") Long base, @JsonProperty("type") MetricType type,
+            @JsonProperty("token") Optional<Long> token) {
         this.series = checkNotNull(series, "series");
         this.base = checkNotNull(base, "base");
         this.type = Optional.ofNullable(type).orElse(MetricType.POINT);
+        this.token = token;
     }
 
     public BackendKey toBackendKey() {
-        return new BackendKey(series, base, type);
+        return new BackendKey(series, base, type, token);
     }
 }

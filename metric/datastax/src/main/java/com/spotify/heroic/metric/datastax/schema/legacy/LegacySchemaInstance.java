@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
@@ -38,22 +37,30 @@ import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
+import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
-import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
 
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
 @Data
-public class LegacySchemaInstance implements SchemaInstance {
+public class LegacySchemaInstance extends AbstractSchemaInstance {
+    public static final String KEY = "metric_key";
+
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
     private final PreparedStatement count;
-    private final PreparedStatement keysPaging;
-    private final PreparedStatement keysPagingLeft;
-    private final PreparedStatement keysPagingLimit;
-    private final PreparedStatement keysPagingLeftLimit;
+
+    public LegacySchemaInstance(final String keyspace, final String pointsTable,
+            final PreparedStatement write, final PreparedStatement fetch,
+            final PreparedStatement delete, final PreparedStatement count) {
+        super(KEY, keyspace, pointsTable);
+        this.write = write;
+        this.fetch = fetch;
+        this.delete = delete;
+        this.count = count;
+    }
 
     /**
      * This constant represents the maximum row width of the metrics column family. It equals the
@@ -69,14 +76,6 @@ public class LegacySchemaInstance implements SchemaInstance {
     @Override
     public TypeSerializer<MetricsRowKey> rowKey() {
         return rowKey;
-    }
-
-    @Override
-    public Transform<Row, BackendKey> keyConverter() {
-        return row -> {
-            final MetricsRowKey key = rowKey.deserialize(row.getBytes("metric_key"));
-            return new BackendKey(key.getSeries(), key.getBase());
-        };
     }
 
     @Override
@@ -151,12 +150,6 @@ public class LegacySchemaInstance implements SchemaInstance {
                 return "<Fetch Row " + key + ">";
             }
         };
-    }
-
-    @Override
-    public BoundStatement keysPaging(Optional<ByteBuffer> first, int limit) {
-        return first.map(f -> keysPagingLeftLimit.bind(f, limit))
-                .orElseGet(() -> keysPagingLimit.bind(limit));
     }
 
     @Override

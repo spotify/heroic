@@ -71,4 +71,13 @@ public interface AsyncObservable<T> {
             }
         };
     }
+
+    static <T> AsyncObservable<T> empty() {
+        return new AsyncObservable<T>() {
+            @Override
+            public void observe(final AsyncObserver<T> observer) throws Exception {
+                observer.end();
+            }
+        };
+    }
 }

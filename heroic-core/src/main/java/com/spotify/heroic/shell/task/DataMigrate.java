@@ -23,12 +23,11 @@ package com.spotify.heroic.shell.task;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
@@ -41,8 +40,8 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeyCriteria;
 import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.MetricBackends;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.WriteMetric;
@@ -56,12 +55,17 @@ import com.spotify.heroic.shell.Tasks;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 
 @TaskUsage("Migrate data from one backend to another")
 @TaskName("data-migrate")
 public class DataMigrate implements ShellTask {
+    public static final long DOTS = 100;
+    public static final long LINES = DOTS * 20;
+    public static final long ALLOWED_ERRORS = 5;
+
     @Inject
     private FilterFactory filters;
 
@@ -87,156 +91,284 @@ public class DataMigrate implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters p) throws Exception {
         final Parameters params = (Parameters) p;
 
-        final BackendKey start;
-
-        if (params.start != null) {
-            start = mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey();
-        } else {
-            start = null;
-        }
-
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
         final Filter filter = Tasks.setupFilter(filters, parser, params);
         final MetricBackend from = metric.useGroup(params.from);
         final MetricBackend to = metric.useGroup(params.to);
 
-        final AtomicInteger writing = new AtomicInteger();
-        final AtomicInteger fetching = new AtomicInteger();
+        final BackendKeyCriteria criteria = setupCriteria(params);
 
-        return MetricBackends
-                .keysPager(start, params.pageLimit, (s, l) -> from.keys(s, l, options), (set) -> {
-                    if (set.getTrace().isPresent()) {
-                        set.getTrace().get().formatTrace(io.out());
-                        io.out().flush();
-                    }
-                }).lazyTransform(result -> {
-                    final Supplier<Optional<Pair<Integer, BackendKey>>> supplier =
-                            new Supplier<Optional<Pair<Integer, BackendKey>>>() {
-                        int index = 0;
+        final ResolvableFuture<Void> future = async.future();
 
-                        @Override
-                        public Optional<Pair<Integer, BackendKey>> get() {
-                            synchronized (io) {
-                                while (result.hasNext() && index < params.limit) {
-                                    final BackendKey next;
+        /* all errors seen */
+        final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
-                                    try {
-                                        next = result.next();
-                                    } catch (Exception e) {
-                                        io.out().println(
-                                                index + ": Exception when pulling key: " + e);
-                                        e.printStackTrace(io.out());
-                                        continue;
-                                    }
+        from.streamKeys(criteria, options)
+                .observe(new KeyObserver(io, params, filter, from, to, future, errors));
 
-                                    if (!filter.apply(next.getSeries())) {
-                                        io.out().println(String.format(
-                                                "%d: Skipping key since it does not "
-                                                        + "match filter (%s): %s",
-                                                index, filter, next));
-                                        continue;
-                                    }
+        return future.directTransform(v -> {
+            io.out().println();
 
-                                    return Optional.of(Pair.of(index++, next));
-                                }
+            if (!errors.isEmpty()) {
+                io.out().println("ERRORS: ");
 
-                                return Optional.empty();
-                            }
-                        }
-                    };
+                for (final Throwable t : errors) {
+                    io.out().println(t.getMessage());
+                    t.printStackTrace(io.out());
+                }
+            }
 
-                    final ResolvableFuture<Void> future = async.future();
+            io.out().flush();
+            return null;
+        });
+    }
 
-                    final AtomicInteger active = new AtomicInteger(params.parallelism);
+    private BackendKeyCriteria setupCriteria(final Parameters params) throws Exception {
+        final List<BackendKeyCriteria> criterias = new ArrayList<>();
 
-                    final Callable<Void> doOne = new Callable<Void>() {
-                        public Void call() throws Exception {
-                            final Optional<Pair<Integer, BackendKey>> next = supplier.get();
+        if (params.start != null) {
+            criterias.add(BackendKeyCriteria
+                    .gte(mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
+        }
 
-                            if (!next.isPresent()) {
-                                if (active.decrementAndGet() == 0) {
-                                    future.resolve(null);
-                                }
+        if (params.startPercentage >= 0) {
+            criterias.add(BackendKeyCriteria.gte((float) params.startPercentage / 100f));
+        }
 
-                                return null;
-                            }
+        if (params.endPercentage >= 0) {
+            criterias.add(BackendKeyCriteria.lt((float) params.endPercentage / 100f));
+        }
 
-                            final Pair<Integer, BackendKey> n = next.get();
+        final BackendKeyCriteria criteria = BackendKeyCriteria.and(criterias);
 
-                            final int index = n.getLeft();
-                            final String json = mapper.writeValueAsString(n.getRight());
+        if (params.limit >= 0) {
+            return BackendKeyCriteria.limited(criteria, params.limit);
+        }
 
-                            fetching.incrementAndGet();
+        return criteria;
+    }
 
-                            from.streamRow(n.getRight())
-                                    .observe(new AsyncObserver<MetricCollection>() {
-                                @Override
-                                public AsyncFuture<Void> observe(final MetricCollection value)
-                                        throws Exception {
-                                    writing.incrementAndGet();
-                                    return to
-                                            .write(new WriteMetric(n.getRight().getSeries(), value))
-                                            .onFinished(writing::decrementAndGet)
-                                            .directTransform(v -> null);
-                                }
+    @Data
+    class KeyObserver implements AsyncObserver<List<BackendKey>> {
+        final ShellIO io;
+        final Parameters params;
+        final Filter filter;
+        final MetricBackend from;
+        final MetricBackend to;
+        final ResolvableFuture<Void> future;
+        final ConcurrentLinkedQueue<Throwable> errors;
 
-                                @Override
-                                public void cancel() throws Exception {
-                                    synchronized (io) {
-                                        io.out().println(String.format("%d: Cancelled (%d, %d): %s",
-                                                index, writing.get(), fetching.get(), json));
-                                        io.out().flush();
-                                    }
-                                }
+        final Object lock = new Object();
 
-                                @Override
-                                public void fail(final Throwable cause) throws Exception {
-                                    synchronized (io) {
-                                        io.out().println(String.format("%d: Failed (%d, %d): %s",
-                                                index, writing.get(), fetching.get(), json));
-                                        cause.printStackTrace(io.out());
-                                        io.out().flush();
-                                    }
-                                }
+        /** must synchronize access with {@link #lock} */
+        volatile boolean done = false;
 
-                                @Override
-                                public void end() throws Exception {
-                                    synchronized (io) {
-                                        io.out().println(String.format("%d: Migrated (%d, %d): %s",
-                                                index, writing.get(), fetching.get(), json));
-                                        io.out().flush();
-                                    }
+        int pending = 0;
+        ResolvableFuture<Void> next = null;
 
-                                    fetching.decrementAndGet();
-                                    call();
-                                }
-                            });
+        /* a queue of the next keys to migrate */
+        final ConcurrentLinkedQueue<BackendKey> current = new ConcurrentLinkedQueue<>();
 
-                            return null;
-                        }
-                    };
+        /* the total number of keys migrated */
+        final AtomicLong total = new AtomicLong();
 
-                    for (int i = 0; i < params.parallelism; i++) {
-                        doOne.call();
+        @Override
+        public AsyncFuture<Void> observe(final List<BackendKey> keys) throws Exception {
+            if (next != null) {
+                return async.failed(new RuntimeException("next future is still set"));
+            }
+
+            if (errors.size() > ALLOWED_ERRORS) {
+                return async.failed(new RuntimeException("too many failed migrations"));
+            }
+
+            if (future.isDone()) {
+                return async.cancelled();
+            }
+
+            if (keys.isEmpty()) {
+                return async.resolved();
+            }
+
+            current.addAll(keys);
+
+            synchronized (lock) {
+                next = async.future();
+
+                while (true) {
+                    if (pending >= params.parallelism) {
+                        break;
                     }
 
-                    return future;
-                });
+                    final BackendKey k = current.poll();
+
+                    if (k == null) {
+                        break;
+                    }
+
+                    pending++;
+                    streamOne(k);
+                }
+
+                if (pending < params.parallelism) {
+                    return async.resolved();
+                }
+
+                return next;
+            }
+        }
+
+        void streamOne(final BackendKey key) throws Exception {
+            if (!filter.apply(key.getSeries())) {
+                endOne(key);
+                return;
+            }
+
+            from.streamRow(key).observe(
+                    new RowObserver(errors, to, future, key, () -> done, this::endOneRuntime));
+        }
+
+        void endOneRuntime(final BackendKey key) {
+            try {
+                endOne(key);
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        void endOne(final BackendKey key) throws Exception {
+            streamDot(io, key, total.incrementAndGet());
+
+            // opportunistically pick up the next available task without locking (if available).
+            final BackendKey k = current.poll();
+
+            if (k != null) {
+                streamOne(k);
+                return;
+            }
+
+            synchronized (lock) {
+                pending--;
+
+                if (next != null) {
+                    final ResolvableFuture<Void> tmp = next;
+                    next = null;
+                    tmp.resolve(null);
+                }
+
+                checkFinished();
+            }
+        }
+
+        @Override
+        public void cancel() throws Exception {
+            synchronized (io) {
+                io.out().println("Cancelled when reading keys");
+            }
+
+            end();
+        }
+
+        @Override
+        public void fail(final Throwable cause) throws Exception {
+            synchronized (io) {
+                io.out().println("Error when reading keys: " + cause.getMessage());
+                cause.printStackTrace(io.out());
+                io.out().flush();
+            }
+
+            end();
+        }
+
+        @Override
+        public void end() throws Exception {
+            synchronized (lock) {
+                done = true;
+                checkFinished();
+            }
+        }
+
+        void checkFinished() {
+            if (done && pending == 0) {
+                future.resolve(null);
+            }
+        }
+
+        void streamDot(final ShellIO io, final BackendKey key, final long n) throws Exception {
+            if (n % LINES == 0) {
+                synchronized (io) {
+                    io.out().println(" last: " + mapper.writeValueAsString(key));
+                    io.out().flush();
+                }
+            } else if (n % DOTS == 0) {
+                synchronized (io) {
+                    io.out().print(".");
+                    io.out().flush();
+                }
+            }
+        }
+    }
+
+    @Data
+    class RowObserver implements AsyncObserver<MetricCollection> {
+        final ConcurrentLinkedQueue<Throwable> errors;
+        final MetricBackend to;
+        final ResolvableFuture<Void> future;
+        final BackendKey key;
+        final Supplier<Boolean> done;
+        final Consumer<BackendKey> end;
+
+        @Override
+        public AsyncFuture<Void> observe(MetricCollection value) throws Exception {
+            if (future.isDone() || done.get()) {
+                return async.cancelled();
+            }
+
+            final AsyncFuture<Void> write =
+                    to.write(new WriteMetric(key.getSeries(), value)).directTransform(v -> null);
+
+            future.bind(write);
+            return write;
+        }
+
+        @Override
+        public void cancel() throws Exception {
+            end();
+        }
+
+        @Override
+        public void fail(Throwable cause) throws Exception {
+            errors.add(cause);
+            end();
+        }
+
+        @Override
+        public void end() throws Exception {
+            end.accept(key);
+        }
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-f", aliases = { "--from" }, usage = "Backend group to load data from",
+        @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
                 metaVar = "<group>")
         private String from;
 
-        @Option(name = "-t", aliases = { "--to" }, usage = "Backend group to load data to",
+        @Option(name = "-t", aliases = {"--to"}, usage = "Backend group to load data to",
                 metaVar = "<group>")
         private String to;
 
         @Option(name = "--start", usage = "First key to migrate", metaVar = "<json>")
         private String start;
+
+        @Option(name = "--start-percentage", usage = "First key to list in percentage",
+                metaVar = "<int>")
+        private int startPercentage = -1;
+
+        @Option(name = "--end-percentage", usage = "Last key to list (exclusive) in percentage",
+                metaVar = "<int>")
+        private int endPercentage = -1;
 
         @Option(name = "--page-limit",
                 usage = "Limit the number metadata entries to fetch per page (default: 100)")
@@ -245,7 +377,7 @@ public class DataMigrate implements ShellTask {
 
         @Option(name = "--limit", usage = "Limit the number entries to migrate")
         @Getter
-        private int limit = Integer.MAX_VALUE;
+        private int limit = -1;
 
         @Option(name = "--tracing",
                 usage = "Trace the queries for more debugging when things go wrong")
@@ -254,7 +386,7 @@ public class DataMigrate implements ShellTask {
         @Option(name = "--parallelism",
                 usage = "The number of migration requests to send in parallel (default: 100)",
                 metaVar = "<number>")
-        private int parallelism = 100;
+        private int parallelism = Runtime.getRuntime().availableProcessors() * 4;
 
         @Argument
         @Getter

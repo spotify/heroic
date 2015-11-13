@@ -51,8 +51,6 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
-import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
@@ -342,12 +340,6 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycle 
     @Override
     public Iterable<BackendEntry> listEntries() {
         return ImmutableList.of();
-    }
-
-    @Override
-    public AsyncFuture<BackendKeySet> keys(BackendKey start, int limit,
-            final QueryOptions options) {
-        return async.resolved(new BackendKeySet());
     }
 
     @Override
