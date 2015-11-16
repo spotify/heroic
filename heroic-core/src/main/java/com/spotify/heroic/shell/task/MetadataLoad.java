@@ -32,6 +32,7 @@ import java.util.zip.GZIPInputStream;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
@@ -158,15 +159,15 @@ public class MetadataLoad implements ShellTask {
 
         // unpack gzip.
         if (!file.getFileName().toString().endsWith(".gz")) {
-            return new InputStreamReader(input);
+            return new InputStreamReader(input, Charsets.UTF_8);
         }
 
-        return new InputStreamReader(new GZIPInputStream(input));
+        return new InputStreamReader(new GZIPInputStream(input), Charsets.UTF_8);
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to",
+        @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
                 metaVar = "<metadata-group>")
         private String target;
 

@@ -75,7 +75,7 @@ public class TransportClientSetup implements ClientSetup {
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {
         if (seed.contains(":")) {
             final String[] parts = seed.split(":");
-            return new InetSocketTransportAddress(parts[0], Integer.valueOf(parts[1]));
+            return new InetSocketTransportAddress(parts[0], Integer.parseInt(parts[1]));
         }
 
         return new InetSocketTransportAddress(seed, DEFAULT_PORT);

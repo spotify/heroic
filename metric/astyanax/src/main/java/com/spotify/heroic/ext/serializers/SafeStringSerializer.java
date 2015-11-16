@@ -40,11 +40,11 @@ public class SafeStringSerializer extends AbstractSerializer<String> {
 
     @Override
     public ByteBuffer toByteBuffer(String obj) {
-        return SafeUTF8Type.instance.decompose(obj);
+        return SafeUTF8Type.INSTANCE.decompose(obj);
     }
 
     @Override
     public String fromByteBuffer(ByteBuffer byteBuffer) {
-        return SafeUTF8Type.instance.compose(byteBuffer);
+        return SafeUTF8Type.INSTANCE.compose(byteBuffer);
     }
 }

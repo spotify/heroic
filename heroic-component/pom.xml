@@ -88,6 +88,15 @@
     </dependency>
 
     <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>io.thekraken</groupId>
       <artifactId>grok</artifactId>
       <version>0.1.1</version>

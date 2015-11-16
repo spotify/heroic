@@ -29,9 +29,12 @@ import com.google.common.base.Preconditions;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValueSuggest {
     private static final int DEFAULT_LIMIT = 10;
 
@@ -56,16 +59,17 @@ public class MetadataTagValueSuggest {
     private final String key;
 
     @JsonCreator
-    public MetadataTagValueSuggest(@JsonProperty("filter") Filter filter,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit,
-            @JsonProperty("key") String key) {
-        this.filter = Optional.ofNullable(filter);
-        this.range = Optional.ofNullable(range);
-        this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
+    public MetadataTagValueSuggest(@JsonProperty("filter") Optional<Filter> filter,
+            @JsonProperty("range") Optional<QueryDateRange> range,
+            @JsonProperty("limit") Optional<Integer> limit, @JsonProperty("key") String key) {
+        this.filter = filter;
+        this.range = range;
+        this.limit = limit.orElse(DEFAULT_LIMIT);
         this.key = Preconditions.checkNotNull(key, "key must not be null");
     }
 
     public static MetadataTagValueSuggest createDefault() {
-        return new MetadataTagValueSuggest(null, null, null, null);
+        return new MetadataTagValueSuggest(Optional.empty(), Optional.empty(), Optional.empty(),
+                "");
     }
 }

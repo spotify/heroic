@@ -30,8 +30,9 @@ public final class StringValue implements Value {
 
     @Override
     public Value sub(Value other) {
-        throw new IllegalArgumentException(String.format("subtraction with string is not supported",
-                this.getClass(), other.getClass()));
+        throw new IllegalArgumentException(
+                String.format("subtraction with string is not supported (%s - %s)", this.getClass(),
+                        other.getClass()));
     }
 
     @Override

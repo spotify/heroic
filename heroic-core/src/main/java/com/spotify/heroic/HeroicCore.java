@@ -79,6 +79,7 @@ import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -288,6 +289,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                 return coreInjector.get().getInstance(cls);
             }
 
+            @SuppressFBWarnings("DM_GC")
             @Override
             public void shutdown() {
                 final Injector injector = coreInjector.get();
@@ -311,10 +313,10 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                     log.info("Stopping internal life cycle");
                     lifecycle.stop();
 
-                    // perform a gc to try to cause any dangling references to be logged through
-                    // their {@code
-                    // Object#finalize()}
-                    // method.
+                    /**
+                     * perform a gc to try to cause any dangling references to be logged through
+                     * their {@link Object#finalize()} method.
+                     */
                     Runtime.getRuntime().gc();
 
                     log.info("Done shutting down, bye bye!");
@@ -655,7 +657,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
      * early injection.
      *
      * @param injector Injector to wire up modules using.
-     * @throws MalformedURLException
      * @throws IOException
      */
     private void loadModules(final Injector injector) throws Exception {

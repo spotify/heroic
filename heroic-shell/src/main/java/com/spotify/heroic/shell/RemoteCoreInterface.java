@@ -260,7 +260,7 @@ public class RemoteCoreInterface implements CoreInterface {
 
         if ((index = connect.indexOf(':')) > 0) {
             host = connect.substring(0, index);
-            port = Integer.valueOf(connect.substring(index + 1));
+            port = Integer.parseInt(connect.substring(index + 1));
         } else {
             host = connect;
             port = DEFAULT_PORT;

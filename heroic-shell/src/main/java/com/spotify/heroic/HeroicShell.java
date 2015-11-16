@@ -24,6 +24,8 @@ package com.spotify.heroic;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -41,6 +43,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.spotify.heroic.HeroicCore.Builder;
@@ -67,7 +70,7 @@ public class HeroicShell {
     public static final Path[] DEFAULT_CONFIGS =
             new Path[] {Paths.get("heroic.yml"), Paths.get("/etc/heroic/heroic.yml")};
 
-    public static SerializerFramework serializer = ShellProtocol.setupSerializer();
+    public static final SerializerFramework serializer = ShellProtocol.setupSerializer();
 
     public static void main(String[] args) throws IOException {
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
@@ -278,11 +281,15 @@ public class HeroicShell {
 
     static PrintWriter standaloneOutput(final TaskParameters params, final PrintStream original)
             throws IOException {
+        final OutputStream out;
+
         if (params.output() != null && !"-".equals(params.output())) {
-            return new PrintWriter(Files.newOutputStream(Paths.get(params.output())));
+            out = Files.newOutputStream(Paths.get(params.output()));
+        } else {
+            out = original;
         }
 
-        return new PrintWriter(original);
+        return new PrintWriter(new OutputStreamWriter(out, Charsets.UTF_8));
     }
 
     static Path parseConfigPath(String config) {

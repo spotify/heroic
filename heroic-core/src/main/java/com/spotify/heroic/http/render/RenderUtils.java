@@ -42,8 +42,8 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.data.xy.YIntervalSeries;
 import org.jfree.data.xy.YIntervalSeriesCollection;
 
-import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
@@ -67,10 +67,6 @@ public final class RenderUtils {
         int intervalCount = 0;
 
         for (final ShardedResultGroup resultGroup : groups) {
-            if (highlight != null && !highlight.equals(resultGroup.getGroup())) {
-                continue;
-            }
-
             final MetricCollection group = resultGroup.getGroup();
 
             if (group.getType() == MetricType.POINT) {

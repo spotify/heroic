@@ -30,9 +30,12 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValuesSuggest {
     private static final int DEFAULT_LIMIT = 10;
     private static final List<String> DEFAULT_EXCLUDE = ImmutableList.of();

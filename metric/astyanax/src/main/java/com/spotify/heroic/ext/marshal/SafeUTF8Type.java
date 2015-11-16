@@ -33,7 +33,7 @@ import org.apache.cassandra.db.marshal.UTF8Type;
  * @author udoprog
  */
 public class SafeUTF8Type extends AbstractType<String> {
-    public static SafeUTF8Type instance = new SafeUTF8Type();
+    public static final SafeUTF8Type INSTANCE = new SafeUTF8Type();
 
     private static final byte IS_NULL = 0x0;
     private static final byte IS_EMPTY_STRING = 0x1;

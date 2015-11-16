@@ -108,7 +108,7 @@ public class DurationSerialization {
                 throw c.mappingException("not a valid duration: " + s);
             }
 
-            final long duration = Long.valueOf(m.group(1));
+            final long duration = Long.parseLong(m.group(1));
             final String unitString = m.group(2);
 
             if (unitString.isEmpty()) {

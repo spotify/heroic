@@ -24,11 +24,12 @@ package com.spotify.heroic.metric.datastax.schema.legacy;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import com.google.common.base.Charsets;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
 
 public class StringSerializer implements TypeSerializer<String> {
     private static final String EMPTY = "";
-    private static final Charset UTF8 = Charset.forName("UTF-8");
+    private static final Charset UTF8 = Charsets.UTF_8;
 
     private static final int IS_NULL = 0x0;
     private static final int IS_EMPTY = 0x1;

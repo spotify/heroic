@@ -22,6 +22,7 @@
 package com.spotify.heroic.coalesce;
 
 import java.io.File;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.concurrent.CountDownLatch;
 
@@ -31,6 +32,7 @@ import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import com.spotify.heroic.HeroicBootstrap;
 import com.spotify.heroic.HeroicCore;
@@ -59,7 +61,8 @@ public class CoalesceService {
 
         if (params.help) {
             parser.printUsage(System.err);
-            HeroicModules.printAllUsage(new PrintWriter(System.err), "-P");
+            HeroicModules.printAllUsage(
+                    new PrintWriter(new OutputStreamWriter(System.err, Charsets.UTF_8)), "-P");
             System.exit(0);
             return;
         }

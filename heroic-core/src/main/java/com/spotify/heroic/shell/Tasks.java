@@ -278,7 +278,7 @@ public final class Tasks {
 
         // try to parse just milliseconds
         try {
-            return Long.valueOf(input);
+            return Long.parseLong(input);
         } catch (IllegalArgumentException e) {
             // pass-through
         }

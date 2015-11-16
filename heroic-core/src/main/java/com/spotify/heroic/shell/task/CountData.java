@@ -23,6 +23,7 @@ package com.spotify.heroic.shell.task;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -54,6 +56,8 @@ import lombok.ToString;
 @TaskUsage("Count data for a given set of keys")
 @TaskName("count-data")
 public class CountData implements ShellTask {
+    private static final Charset UTF8 = Charsets.UTF_8;
+
     @Inject
     private MetricManager metrics;
 
@@ -80,8 +84,8 @@ public class CountData implements ShellTask {
         final ImmutableList.Builder<BackendKey> keys = ImmutableList.builder();
 
         if (params.file != null) {
-            try (final BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(io.newInputStream(params.file)))) {
+            try (final BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(io.newInputStream(params.file), UTF8))) {
                 String line;
 
                 while ((line = reader.readLine()) != null) {
@@ -157,14 +161,14 @@ public class CountData implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-f", aliases = { "--file" }, usage = "File to read keys from",
+        @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
                 metaVar = "<file>")
         private Path file;
 
-        @Option(name = "-k", aliases = { "--key" }, usage = "Key to delete", metaVar = "<json>")
+        @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
                 metaVar = "<group>")
         private String group = null;
 

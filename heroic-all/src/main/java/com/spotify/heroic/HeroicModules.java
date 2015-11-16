@@ -21,11 +21,13 @@
 
 package com.spotify.heroic;
 
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.profile.BigtableProfile;
@@ -111,7 +113,7 @@ public class HeroicModules {
     }
 
     public static void printAllUsage(final PrintStream out, final String option) {
-        final PrintWriter o = new PrintWriter(out);
+        final PrintWriter o = new PrintWriter(new OutputStreamWriter(out, Charsets.UTF_8));
 
         try {
             printAllUsage(o, option);

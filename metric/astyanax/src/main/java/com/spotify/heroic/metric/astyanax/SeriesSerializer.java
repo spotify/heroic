@@ -36,7 +36,7 @@ import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 class SeriesSerializer extends AbstractSerializer<Series> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer.get();
     private static final MapSerializer<String, String> tagsSerializer =
-            new MapSerializer<String, String>(SafeUTF8Type.instance, SafeUTF8Type.instance);
+            new MapSerializer<String, String>(SafeUTF8Type.INSTANCE, SafeUTF8Type.INSTANCE);
 
     private static final SeriesSerializer instance = new SeriesSerializer();
 

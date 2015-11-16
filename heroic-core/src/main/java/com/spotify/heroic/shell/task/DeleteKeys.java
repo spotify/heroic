@@ -24,6 +24,7 @@ package com.spotify.heroic.shell.task;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,6 +36,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.kohsuke.args4j.Option;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -60,6 +62,8 @@ import lombok.ToString;
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
 public class DeleteKeys implements ShellTask {
+    public static final Charset UTF8 = Charsets.UTF_8;
+
     @Inject
     private MetricManager metrics;
 
@@ -194,7 +198,8 @@ public class DeleteKeys implements ShellTask {
                 final BufferedReader reader;
 
                 try {
-                    reader = new BufferedReader(new InputStreamReader(io.newInputStream(file)));
+                    reader = new BufferedReader(
+                            new InputStreamReader(io.newInputStream(file), UTF8));
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to open file", e);
                 }
@@ -265,11 +270,11 @@ public class DeleteKeys implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-f", aliases = { "--file" }, usage = "File to read keys from",
+        @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
                 metaVar = "<file>")
         private Path file;
 
-        @Option(name = "-k", aliases = { "--key" }, usage = "Key to delete", metaVar = "<json>")
+        @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
 
         @Option(name = "--ok", usage = "Really delete keys", metaVar = "<file>")
@@ -278,7 +283,7 @@ public class DeleteKeys implements ShellTask {
         @Option(name = "--verbose", usage = "Print information about every deleted key")
         private boolean verbose = false;
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
                 metaVar = "<group>")
         private String group = null;
 

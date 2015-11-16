@@ -416,7 +416,7 @@ public class QueryListener extends HeroicQueryBaseListener {
 
     @Override
     public void exitInteger(IntegerContext ctx) {
-        push(new IntValue(Long.valueOf(ctx.getText())));
+        push(new IntValue(Long.parseLong(ctx.getText())));
     }
 
     @Override
@@ -444,10 +444,10 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         if (text.length() > 2 && "ms".equals(text.substring(text.length() - 2, text.length()))) {
             unit = TimeUnit.MILLISECONDS;
-            value = Integer.valueOf(text.substring(0, text.length() - 2));
+            value = Integer.parseInt(text.substring(0, text.length() - 2));
         } else {
             unit = extractUnit(c, text.substring(text.length() - 1, text.length()));
-            value = Integer.valueOf(text.substring(0, text.length() - 1));
+            value = Integer.parseInt(text.substring(0, text.length() - 1));
         }
 
         push(new DurationValue(unit, value));
@@ -740,8 +740,8 @@ public class QueryListener extends HeroicQueryBaseListener {
         final List<Value> positional;
         final Map<String, Value> keywords;
 
-        static final AggregationArguments empty = new AggregationArguments(ImmutableList.of(),
-                ImmutableMap.of());
+        static final AggregationArguments empty =
+                new AggregationArguments(ImmutableList.of(), ImmutableMap.of());
 
         public static AggregationArguments empty() {
             return empty;

@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.ToString;
-
 import com.google.inject.Inject;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
@@ -35,6 +33,7 @@ import com.spotify.heroic.metric.Point;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import lombok.ToString;
 
 /**
  * A reference aggregation cache implementation to allow for easier testing of application logic.
@@ -68,10 +67,6 @@ public class InMemoryAggregationCacheBackend implements AggregationCacheBackend 
         }
 
         final List<Point> datapoints = new ArrayList<Point>();
-
-        if (cadence == 0) {
-            return async.resolved(new CacheBackendGetResult(key, datapoints));
-        }
 
         final long start = range.getStart() - range.getStart() % cadence;
         final long end = range.getEnd() - range.getEnd() % cadence;

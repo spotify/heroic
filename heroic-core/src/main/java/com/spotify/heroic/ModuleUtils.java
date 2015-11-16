@@ -27,10 +27,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Charsets;
+
 public class ModuleUtils {
+    public static final Charset UTF8 = Charsets.UTF_8;
     public static final String ENTRY_CLASS_NAME = "Entry";
 
     public static List<HeroicModule> loadModules(List<URL> moduleLocations) throws IOException {
@@ -42,7 +46,7 @@ public class ModuleUtils {
             final InputStream inputStream = input.openStream();
 
             try (final BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(inputStream))) {
+                    new BufferedReader(new InputStreamReader(inputStream, UTF8))) {
                 modules.addAll(loadModule(reader, loader));
             }
         }

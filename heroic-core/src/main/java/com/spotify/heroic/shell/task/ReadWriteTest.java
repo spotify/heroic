@@ -25,11 +25,13 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.kohsuke.args4j.Option;
 
+import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -45,6 +47,8 @@ import lombok.ToString;
 @TaskUsage("Test to read and write a file")
 @TaskName("read-write-test")
 public class ReadWriteTest implements ShellTask {
+    private static final Charset UTF8 = Charsets.UTF_8;
+
     @Inject
     private AsyncFramework async;
 
@@ -60,12 +64,12 @@ public class ReadWriteTest implements ShellTask {
         final Path p = Paths.get(params.file);
 
         try (final BufferedWriter writer =
-                new BufferedWriter(new OutputStreamWriter(io.newOutputStream(p)))) {
+                new BufferedWriter(new OutputStreamWriter(io.newOutputStream(p), UTF8))) {
             writer.write("Hello World\n");
         }
 
         try (final BufferedReader reader =
-                new BufferedReader(new InputStreamReader(io.newInputStream(p)))) {
+                new BufferedReader(new InputStreamReader(io.newInputStream(p), UTF8))) {
             io.out().println(reader.readLine());
         }
 
@@ -75,7 +79,7 @@ public class ReadWriteTest implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-f", aliases = { "--file" }, usage = "File to perform test against",
+        @Option(name = "-f", aliases = {"--file"}, usage = "File to perform test against",
                 metaVar = "<file>")
         private String file = null;
     }

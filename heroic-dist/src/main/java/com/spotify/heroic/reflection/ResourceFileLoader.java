@@ -31,9 +31,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
-
+import com.google.common.base.Charsets;
 import com.spotify.heroic.HeroicService.Configuration;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public final class ResourceFileLoader {
@@ -50,7 +51,7 @@ public final class ResourceFileLoader {
         final ResourcePathContext pathCtx = new ResourcePathContext(resource.toString());
 
         try (final InputStream stream = resource.openStream()) {
-            try (final Reader reader = new InputStreamReader(stream)) {
+            try (final Reader reader = new InputStreamReader(stream, Charsets.UTF_8)) {
                 try (final BufferedReader buffered = new BufferedReader(reader)) {
                     int lineNumber = 0;
 

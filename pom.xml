@@ -61,6 +61,7 @@
     <elasticsearch.version>1.7.1</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
     <lombok.version>1.16.6</lombok.version>
+    <findbugs.version>3.0.1</findbugs.version>
   </properties>
 
   <dependencyManagement>
@@ -170,11 +171,6 @@
       </dependency>
       <dependency>
         <groupId>com.spotify.heroic.rpc</groupId>
-        <artifactId>heroic-rpc-httprpc</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic.rpc</groupId>
         <artifactId>heroic-rpc-nativerpc</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -239,7 +235,12 @@
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
-        <version>2.0.3</version>
+        <version>${findbugs.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>annotations</artifactId>
+        <version>${findbugs.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -427,31 +428,6 @@
         <groupId>org.apache.onami</groupId>
         <artifactId>org.apache.onami.scheduler</artifactId>
         <version>1.4.0</version>
-      </dependency>
-      <!-- used by com.spotify.heroic.statistics.semantic
-           TODO: break out -->
-      <dependency>
-        <groupId>com.spotify.metrics</groupId>
-        <artifactId>semantic-metrics-core</artifactId>
-        <version>${semantic-metrics.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-
-      <dependency>
-        <groupId>com.spotify.metrics</groupId>
-        <artifactId>semantic-metrics-ffwd-reporter</artifactId>
-        <version>${semantic-metrics.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <!-- used by: com.spotify.heroic.consumer.kafka -->
       <dependency>
@@ -675,14 +651,17 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>findbugs-maven-plugin</artifactId>
-          <version>2.5.2</version>
+          <version>3.0.3</version>
           <configuration>
+            <failOnError>true</failOnError>
             <effort>Max</effort>
-            <threshold>Default</threshold>
+            <threshold>High</threshold>
             <xmlOutput>true</xmlOutput>
           </configuration>
           <executions>
             <execution>
+              <id>analyze-compile</id>
+              <phase>compile</phase>
               <goals>
                 <goal>check</goal>
               </goals>

@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.consumer.collectd.CollectdValue.Counter;
 
@@ -50,7 +51,7 @@ public class CollectdParser {
 
     public static final long FACTOR_HR = 1 << 30;
 
-    public static final Charset UTF8 = Charset.forName("UTF8");
+    public static final Charset UTF8 = Charsets.UTF_8;
 
     public static Iterator<CollectdSample> parse(final ByteBuf frame) {
         if (frame.readableBytes() < 4) {

@@ -133,7 +133,7 @@ public class Spotify100 implements ConsumerSchema {
 
         if (metric.getVersion() == null || !SCHEMA_VERSION.equals(metric.getVersion())) {
             throw new ConsumerSchemaValidationException(String.format(
-                    "Invalid version {}, expected {}", metric.getVersion(), SCHEMA_VERSION));
+                    "Invalid version %s, expected %s", metric.getVersion(), SCHEMA_VERSION));
         }
 
         if (metric.getTime() == null) {

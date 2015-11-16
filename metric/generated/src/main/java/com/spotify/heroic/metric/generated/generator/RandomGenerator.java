@@ -37,6 +37,8 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * A generator that generates pseudo random numbers depending on which serie and time range is
  * required.
@@ -110,10 +112,20 @@ public class RandomGenerator implements Generator {
         return start + (start % step == 0 ? 0 : (step - (start % step)));
     }
 
+    /**
+     * TODO: get rid of this through a better method of converting an int to a double between [0.0,
+     * 1.0].
+     */
+    @SuppressFBWarnings("DMI_RANDOM_USED_ONLY_ONCE")
     private double seriesRand(int seriesHash) {
         return new Random(seriesHash).nextDouble();
     }
 
+    /**
+     * TODO: get rid of this through a better method of converting an int to a double between [0.0,
+     * 1.0].
+     */
+    @SuppressFBWarnings("DMI_RANDOM_USED_ONLY_ONCE")
     private double positionRand(int seriesHash, long position) {
         final int prime = 31;
         int result = 1;
