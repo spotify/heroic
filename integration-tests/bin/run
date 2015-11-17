@@ -5,6 +5,11 @@ import subprocess as sp
 import contextlib
 import unittest
 import importlib
+import argparse
+
+parser = argparse.ArgumentParser(description='Run Heroic Integration Tests')
+parser.add_argument('--debug', help='Enable Debugging Output', dest='debug',
+                    action='store_const', const=True, default=False)
 
 @contextlib.contextmanager
 def in_dir(directory):
@@ -26,12 +31,14 @@ def find_tests(tests):
         yield "tests.{}".format(base)
 
 def main(program, args):
+    ns = parser.parse_args(args)
+
     root = os.path.abspath(os.path.join(os.path.dirname(program), ".."))
     tests_dir = os.path.join(root, 'tests')
 
     build_root = os.path.dirname(root)
     pom_xml = os.path.join(build_root, 'pom.xml')
-    heroic_jar = os.path.join(build_root, 'heroic-dist', 'target', 'heroic-dist-0.0.1-SNAPSHOT.jar')
+    heroic_jar = os.path.join(build_root, 'heroic-dist', 'target', 'heroic-dist-0.0.1-SNAPSHOT-shaded.jar')
 
     sys.path.append(root)
 
@@ -47,7 +54,7 @@ def main(program, args):
         raise Exception("no such jar: {}".format(pom_xml))
 
     import tests.helpers as h
-    h.setup(heroic_jar=heroic_jar)
+    h.setup(heroic_jar=heroic_jar, debug=ns.debug)
 
     loader = unittest.TestLoader()
 

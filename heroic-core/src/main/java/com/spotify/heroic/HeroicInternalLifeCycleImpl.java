@@ -34,7 +34,7 @@ import com.google.inject.Injector;
 
 @Slf4j
 @RequiredArgsConstructor
-public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
+public class HeroicInternalLifeCycleImpl implements HeroicInternalLifeCycle {
     private final List<Runnable> shutdownHooks = new ArrayList<Runnable>();
     private final List<StartupHookRunnable> startupHooks = new LinkedList<>();
 
@@ -71,22 +71,8 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
 
     @Override
     public void register(final String name, final StartupHook hook) {
-        if (started.get()) {
-            throw new IllegalStateException("lifecycle already started");
-        }
-
-        synchronized (lock) {
-            if (started.get()) {
-                throw new IllegalStateException("lifecycle already started");
-            }
-
-            startupHooks.add(new StartupHookRunnable() {
-                @Override
-                public void run(final Injector injector) {
-                    log.info("Starting up '{}'", name);
-                    runStartupHook(name, hook);
-                }
-            });
+        if (!registerHook(name, hook)) {
+            runStartupHook(name, hook);
         }
     }
 
@@ -126,7 +112,42 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
         }
     }
 
-    private void runShutdownHook(final String name, final ShutdownHook hook) {
+    /**
+     * Registers a startup hook, unless the lifecycle has already been started.
+     *
+     * @param name Name of the hook to register.
+     * @param hook Hook to register.
+     * @return {@code true} if the hook was registered, {@code false} otherwise.
+     */
+    boolean registerHook(String name, StartupHook hook) {
+        if (started.get()) {
+            return false;
+        }
+
+        synchronized (lock) {
+            if (started.get()) {
+                return false;
+            }
+
+            startupHooks.add(new StartupHookRunnable() {
+                @Override
+                public void run(final Injector injector) {
+                    log.info("Starting up '{}'", name);
+                    runStartupHook(name, hook);
+                }
+            });
+
+            return true;
+        }
+    }
+
+    /**
+     * Run the given shutdown hook in a safe environment that catches and logs exceptions.
+     *
+     * @param name The name of the hook.
+     * @param hook The hook to run.
+     */
+    void runShutdownHook(final String name, final ShutdownHook hook) {
         try {
             hook.onShutdown();
         } catch (final Exception e) {
@@ -134,11 +155,17 @@ public class HeroicInernalLifeCycleImpl implements HeroicInternalLifeCycle {
         }
     }
 
-    private void runStartupHook(final String name, final StartupHook hook) {
+    /**
+     * Run the given startup hook in a safe environment that catches and logs exceptions.
+     *
+     * @param name The name of the hook.
+     * @param hook The hook to run.
+     */
+    void runStartupHook(final String name, final StartupHook hook) {
         final Context context = new Context() {
             @Override
             public void registerShutdown(ShutdownHook hook) {
-                HeroicInernalLifeCycleImpl.this.registerShutdown(name, hook);
+                HeroicInternalLifeCycleImpl.this.registerShutdown(name, hook);
             }
         };
 

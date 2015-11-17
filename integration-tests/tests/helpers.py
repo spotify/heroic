@@ -83,6 +83,7 @@ class HeroicAPI(object):
 class Settings(object):
     def __init__(self, **kwargs):
         self.heroic_jar = kwargs.pop('heroic_jar', None)
+        self.debug = kwargs.pop('debug', False)
 
 
 S = Settings()
@@ -95,7 +96,7 @@ def heroic(identifier, *args, **kwargs):
         raise Exception("setup() has not been called, run through bin/run")
 
     config = kwargs.pop("config", None)
-    debug = kwargs.pop("debug", False)
+    debug = kwargs.pop("debug", S.debug)
 
     instance_args = ["--startup-ping", "udp://localhost:{}".format(PING_PORT),
                      "--startup-id", str(identifier),
@@ -190,10 +191,13 @@ def timeout(seconds=5, error_message="Timeout in Test"):
     return decorator
 
 
-def setup_apis(configs, sock, debug=False):
+def setup_apis(configs, sock, **kwargs):
     """
     Setup configurations and wait until all processes has responded with a ping.
     """
+    global S
+
+    debug = kwargs.pop('debug', S.debug)
 
     procs = dict()
     tempfiles = []
@@ -268,7 +272,7 @@ def read_config(procs, sock):
 def managed(*configs, **kwargs):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    debug = kwargs.pop("debug", False)
+    debug = kwargs.pop("debug", S.debug)
 
     try:
         sock.bind(('localhost', PING_PORT))
