@@ -173,7 +173,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return doto(new ManagedAction<Connection, WriteResult>() {
             @Override
             public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final String id = Long.toHexString(series.hash());
+                final String id = series.hash();
 
                 final String[] indices;
 

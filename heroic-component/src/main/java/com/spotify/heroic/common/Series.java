@@ -31,8 +31,12 @@ import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSortedMap;
 
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.ToString;
 
@@ -46,7 +50,7 @@ public class Series implements Comparable<Series> {
     final SortedMap<String, String> tags;
 
     @AutoSerialize.Ignore
-    final long hash;
+    final HashCode hashCode;
 
     /**
      * Package-private constructor to avoid invalid inputs.
@@ -58,7 +62,7 @@ public class Series implements Comparable<Series> {
     Series(@JsonProperty("key") String key, @JsonProperty("tags") SortedMap<String, String> tags) {
         this.key = key;
         this.tags = checkNotNull(tags, "tags");
-        this.hash = generateHash();
+        this.hashCode = generateHash();
     }
 
     public String getKey() {
@@ -69,41 +73,37 @@ public class Series implements Comparable<Series> {
         return tags;
     }
 
-    public long generateHash() {
-        final long prime = 61;
-        long result = 1;
-        result = prime * result + ((key == null) ? 0 : stringHash(key));
+    private HashCode generateHash() {
+        final Hasher hasher = Hashing.murmur3_128().newHasher();
 
-        for (final Map.Entry<String, String> e : tags.entrySet()) {
-            result = prime * result + stringHash(e.getKey());
-            result = prime * result + (e.getValue() == null ? 0 : stringHash(e.getValue()));
+        if (key != null) {
+            hasher.putString(key, Charsets.UTF_8);
         }
 
-        return result;
-    }
+        for (final Map.Entry<String, String> kv : tags.entrySet()) {
+            final String k = kv.getKey();
+            final String v = kv.getValue();
 
-    private long stringHash(String string) {
-        final long prime = 61;
-        long result = 1;
+            if (k != null) {
+                hasher.putString(k, Charsets.UTF_8);
+            }
 
-        for (int i = 0; i < string.length(); i++) {
-            result = prime * result + string.charAt(i);
+            if (v != null) {
+                hasher.putString(v, Charsets.UTF_8);
+            }
         }
 
-        return result;
+        return hasher.hash();
     }
 
-    public long hash() {
-        return hash;
+
+    public String hash() {
+        return hashCode.toString();
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((key == null) ? 0 : key.hashCode());
-        result = prime * result + tags.hashCode();
-        return result;
+        return hashCode.asInt();
     }
 
     @Override
@@ -122,7 +122,7 @@ public class Series implements Comparable<Series> {
 
         final Series o = (Series) obj;
 
-        if (hash != o.hash) {
+        if (!hashCode.equals(o.hashCode)) {
             return false;
         }
 

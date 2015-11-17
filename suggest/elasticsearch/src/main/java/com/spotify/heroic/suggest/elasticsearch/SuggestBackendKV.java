@@ -515,7 +515,7 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
                     final Pair<String, Series> key = Pair.of(index, s);
 
                     final Callable<AsyncFuture<WriteResult>> loader = () -> {
-                            final String seriesId = Long.toHexString(s.hash());
+                            final String seriesId = s.hash();
 
                             final List<AsyncFuture<WriteResult>> w = new ArrayList<>();
 
