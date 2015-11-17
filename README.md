@@ -1,4 +1,5 @@
 # Heroic Metrics API
+[![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
 
 Heroic a scalable time series database based on Cassandra and Elasticsearch.
 
