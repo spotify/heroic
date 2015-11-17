@@ -2,6 +2,7 @@
 
 <ul>
   <li><a ui-sref=".({'#': 'cassandra'})">Configuring Cassandra</a></li>
+  <li><a ui-sref=".({'#': 'elasticsearch'})">Configuring Elasticsearch</a></li>
   <li><a ui-sref=".({'#': 'heroic'})">Configuring Heroic</a></li>
 </ul>
 
@@ -10,59 +11,29 @@
 </h3>
 
 <p>
-  Heroic (by default) uses the <code>heroic</code> keyspace, which has to be
-  configured using <code>cqlsh</code>.
+  Heroic (by default) uses the <code>heroic</code> keyspace, which can be
+  configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
 </p>
 
-<pre><code language="sql">
-CREATE KEYSPACE heroic
-  WITH REPLICATION = {
-    'class': 'SimpleStrategy',
-    'replication_factor': 3
-  };
-
-CREATE TABLE heroic.metrics (
-  metric_key blob,
-  data_timestamp_offset int,
-  data_value double,
-  PRIMARY KEY(metric_key, data_timestamp_offset)
-) WITH COMPACT STORAGE;
+<pre><code language="bash">
+tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X cassandra.configure
+...
+heroic> configure
 </code></pre>
-
-<p>
-  Copy the above CQL into a file <code>heroic.cql</code> and run <code>cqlsh</code>
-  like the following.
-</p>
-
-<pre><code language="sql">
-cqlsh < heroic.cql
-</code></pre>
-
-<div class="callout callout-danger">
-  <h4>COMPACT STORAGE</h4>
-  <p>
-    The <code>COMPACT STORAGE</code> directive is required on the metrics table
-    since Heroic supports writing data with Thrift.
-    See <a href="http://docs.datastax.com/en/cql/3.0/cql/cql_reference/create_table_r.html?scroll=reference_ds_v3f_vfk_xj__using-compact-storage">Datastax Documentation</a> for details.
-  </p>
-</div>
 
 <h3 id="elasticsearch">
   Configuring ElasticSearch
 </h3>
 
 <p>
-  Heroic attempts to configure ElasticSearch as soon as the service starts.
+  Elasticsearch is also configured using the <a ui-sref="^.^.shell">Heroic shell</a>.
 </p>
 
-<p>
-  After the first startup the following templates should have been created.
-</p>
-
-<ul>
-  <li><b>heroic-metadata</b></li>
-  <li><b>heroic-suggest</b></li>
-</ul>
+<pre><code language="bash">
+tools/heroic-shell -P elasticsearch-suggest -P elasticsearch-metadata -X elasticsearch.seeds=&lt;seeds&gt;
+...
+heroic> configure
+</code></pre>
 
 <p>
   Heroic suggest also requires dynamic scripting to be enabled, you do this by
@@ -83,14 +54,12 @@ script:
   </p>
 </div>
 
-<h3>Configuring Heroic</h3>
+<h3 id="heroic">Configuring Heroic</h3>
 
 <p>
   The following configuration assumes that you've managed to either download or
   build the heroic project.
 </p>
-
-<p>
 
 <p>
   We will look into setting up three different <em>kinds</em> of heroic nodes,
