@@ -1,6 +1,8 @@
 <div class="jumbotron">
-  <h1>Heroic</h1>
-  <p>A Scalable Time Series Database</p>
+  <div class="container">
+    <h1>Heroic</h1>
+    <p>The Heroic Time Series Database</p>
+  </div>
 </div>
 
 <div class="row">

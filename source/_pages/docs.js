@@ -52,7 +52,7 @@
       .state('docs.getting_started', {
         abstract: true,
         url: '/getting_started',
-        template: '<ui-view></ui-view>'
+        template: '<ui-view autoscroll="true"></ui-view>'
       })
       .state('docs.getting_started.index', {
         url: '',
@@ -105,7 +105,7 @@
       .state('docs.config', {
         abstract: true,
         url: '/config',
-        template: '<ui-view></ui-view>'
+        template: '<ui-view autoscroll="true"></ui-view>'
       })
       .state('docs.config.cluster', {
         url: '/cluster',

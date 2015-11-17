@@ -87,7 +87,5 @@
     </ul>
   </div>
 
-  <div class="col-md-9">
-    <ui-view></ui-view>
-  </div>
+  <div class="col-md-9" ui-view autoscroll="true"></div>
 </div>

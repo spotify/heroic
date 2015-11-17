@@ -6,6 +6,7 @@
     "angular-ui-router": "0.2.15",
     "angular-ui-bootstrap-bower": "0.14.2",
     "bootstrap": "3.3.5",
+    "bootstrap-social": "4.10.1",
     "prism": "*"
   }
 }
