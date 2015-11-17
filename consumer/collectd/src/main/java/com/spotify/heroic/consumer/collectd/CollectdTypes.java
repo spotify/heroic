@@ -123,16 +123,16 @@ public class CollectdTypes {
             builder.put(pluginTag, sample.getPlugin());
         }
 
-        if (!"".equals(sample.getPlugin())) {
-            builder.put(pluginInstanceTag, sample.getPlugin());
+        if (!"".equals(sample.getPluginInstance())) {
+            builder.put(pluginInstanceTag, sample.getPluginInstance());
         }
 
-        if (!"".equals(sample.getPlugin())) {
-            builder.put(typeTag, sample.getPlugin());
+        if (!"".equals(sample.getType())) {
+            builder.put(typeTag, sample.getType());
         }
 
-        if (!"".equals(sample.getPlugin())) {
-            builder.put(typeInstanceTag, sample.getPlugin());
+        if (!"".equals(sample.getTypeInstance())) {
+            builder.put(typeInstanceTag, sample.getTypeInstance());
         }
 
         return builder.build().entrySet();
