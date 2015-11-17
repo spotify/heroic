@@ -8,7 +8,7 @@ Go to https://spotify.github.io/heroic/ for documentation.
 Heroic should in its current state be considered Alpha-grade software.
 
 Do not use in production unless you are willing to spend a lot of time with it,
-and you are OK with loosing your data to goblins.
+and you are OK with losing your data to goblins.
 
 It is currently not on a release schedule and is not versioned.
 
