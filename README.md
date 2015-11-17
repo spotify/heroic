@@ -26,7 +26,18 @@ $ mvn clean package
 This will cause the `heroic-dist` module to produce a shaded jar that contains
 all required dependencies.
 
-### Building a Debian Package
+#### Speedy Building
+
+For a speedy build without tests and checks, you can run:
+
+```bash
+$ mvn clean package -D findbugs.skip=true -D checkstyle.skip=true -D maven.test.skip=true
+```
+
+It is strongly recommended that you run through findbugs and checkstyle before
+setting up a pull request.
+
+#### Building a Debian Package
 
 This project does not provide a single debian package, this is primarily
 because the current nature of the service (alpha state) does not mesh well with
@@ -59,7 +70,9 @@ $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
 
 ## Hacking
 
-### Module Orientation
+* [Using Eclipse](eclipse)
+
+#### Module Orientation
 
 The Heroic project is split into a couple of modules.
 
@@ -103,33 +116,28 @@ implementation. Here is where everything is bound together into a distribution
 &mdash; a shaded jar. It also provides the entry-point for services, namely
 [`com.spotify.heroic.HeroicService`](heroic-dist/src/main/java/com/spotify/heroic/HeroicService.java).
 
-### Using Eclipse
+#### Bypassing Validation
 
-You must use at least Eclipse 4.5.0, this is due to issues with annotation
-processing in earlier versions.
+To bypass automatic formatting and checkstyle validation you can use the
+following stanza:
 
-The following plugins are required:
-
-* lombok (https://projectlombok.org/download.html)
-* m2e-apt (install through Marketplace)
-  * Enable automatic configuration of JDT APT in
-    (Preferences &rarr; Maven &rarr; Annotation Processing).
-* m2e checkstyle connector (will be required on initial import)
-  * Configure it to use the provided [checkstyle.xml](checkstyle.xml) file in
-    (Preferences &rarr; Checkstyle).
-    You must set the `${basedir}` property to the path of the checked out
-    heroic project.
-
-The project contains a repackaged version of
-[bigtable-client-core](http://search.maven.org/#artifactdetails%7Ccom.google.cloud.bigtable%7Cbigtable-client-core%7C0.2.1%7Cjar)
-which you should install locally to make it easier for Eclipse to discover:
-
-```bash
-$ cd repackaged/bigtable && mvn clean install
+```java
+// @formatter:off
+final List<String> list = ImmutableList.of(
+   "Welcome to...",
+   "... The Wild West"
+);
+// @formatter:on
 ```
 
-Import the directory as a Maven project (File &rarr; Import &rarr; Maven &rarr;
-Existing Maven Projects), select all modules.
+To bypass a FindBugs error, you should use the `@SupressFBWarnings` annotation.
+
+```java
+@SupressFBWarnings(value="FINDBUGS_ERROR_CODE", justification="I Know Better Than FindBugs")
+public class IKnowBetterThanFindbugs() {
+    // ...
+}
+```
 
 ## HeroicShell
 
