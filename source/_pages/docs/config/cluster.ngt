@@ -25,7 +25,7 @@ cluster:
       - "nativerpc://heroic-london-b"
 </codeblock>
 
-<h3><code>tags</code></h3>
+<h3 id="tags"><code>tags</code></h3>
 
 <codeblock language="yaml">
 site: london

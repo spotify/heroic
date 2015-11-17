@@ -114,6 +114,30 @@
     };
   });
 
+  m.directive('gitHrefPackage', function(github) {
+    return {
+      restrict: 'A',
+      link: function($scope, $element, $attr) {
+        var href = $attr.gitHrefPackage;
+        var colon = href.indexOf(':');
+
+        var component, path;
+
+        if (colon == -1) {
+          component = href;
+          path = $element.text();
+        } else {
+          component = href.substring(0, colon);
+          path = href.substring(colon + 1, href.length);
+        }
+
+        path = path.replace(/\./g, '/');
+        var newHref = component + '/src/main/java/' + path;
+        $element.attr('href', github.blobUrl(newHref));
+      }
+    };
+  });
+
   m.directive('gitHrefJava', function(github) {
     return {
       restrict: 'A',

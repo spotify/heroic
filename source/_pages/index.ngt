@@ -1,30 +1,35 @@
 <div class="jumbotron">
   <h1>Heroic</h1>
-  <p>A fairly scalable TSDB</p>
+  <p>A Scalable Time Series Database</p>
 </div>
 
 <div class="row">
   <div class="col-md-3">
     <h4><a ui-sref="docs.architecture">Architecture</a></h4>
-    <p>Start here, the 10k overview</p>
+    <p>
+      Start here, the 10k overview.
+    </p>
   </div>
 
   <div class="col-md-3">
     <h4><a ui-sref="docs.getting_started.index">Getting Started</a></h4>
-    <p>Land on the ground running</p>
+    <p>
+      Land on the ground running.
+    </p>
   </div>
 
   <div class="col-md-3">
     <h4><a ui-sref="docs.data_model">Data Model</a></h4>
-    <p>Dimensional, semantic from the source time series</p>
-    <p>"Data, what does it even mean?"</p>
+    <p>
+      Dimensional, semantic from the source time series.
+    </p>
   </div>
 
   <div class="col-md-3">
     <h4><a ui-sref="docs.filter_dsl">Rich Filtering</a></h4>
     <p>
       Leverage multi-dimensional time series using a comprehensive and
-      expressive filtering language
+      expressive filter language.
     </p>
   </div>
 </div>
@@ -32,11 +37,15 @@
 <div class="row">
   <div class="col-md-3">
     <h4><a ui-sref="docs.api">API Documentation</a></h4>
-    <p>Learn how to interact with Heroic's Restful API</p>
+    <p>
+      Learn how to interact with Heroic's API
+    </p>
   </div>
 
   <div class="col-md-3">
     <h4><a ui-sref="docs.aggregations">Aggregations</a></h4>
-    <p>Learn how to perform powerful aggregations on your data</p>
+    <p>
+      Learn how to perform powerful aggregations on your data
+    </p>
   </div>
 </div>

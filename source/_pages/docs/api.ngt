@@ -80,7 +80,7 @@
     Query and aggregate metrics.
   </p>
 
-  <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregators": []}'>
+  <api-accept curl-data='{"range": {"type": "relative"}, "filter": ["and", ["key", "foo"], ["=", "foo", "bar"], ["+", "role"]], "groupBy": ["site"], "aggregation": []}'>
     <api-type>
       <api-field required="true" name="range" type-href="QueryDateRange">
         The range in time for which to query
@@ -98,8 +98,8 @@
         </p>
       </api-field>
 
-      <api-field name="aggregators" type-href="Aggregation">
-        Aggregators used to downsample the response.
+      <api-field name="aggregation" type-href="Aggregation">
+        Aggregation to use when down-sampling.
       </api-field>
 
       <api-field name="groupBy">
@@ -458,7 +458,7 @@
 
 <api-type name="QueryDateRange.Absolute">
   <p>
-    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.QueryDateRange</a>
   </p>
 
   <p>
@@ -480,7 +480,7 @@
 
 <api-type name="QueryDateRange.Relative">
   <p>
-    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.http.query.QueryDateRange</a>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.QueryDateRange</a>
   </p>
 
   <p>
@@ -523,7 +523,7 @@
 
 <api-type name="Aggregation">
   <p>
-    Java Class: <a git-href-java="heroic-core">com.spotify.heroic.metric.Aggregation</a>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.aggregation.Aggregation</a>
   </p>
 
   <p>
@@ -539,8 +539,78 @@
     Type of the aggregation.
   </api-field>
 
-  <api-field name="sampling" type-href='Sampling'>
+  <api-field name="sampling" type-href='SamplingQuery'>
     Sampling to use with aggregation.
+  </api-field>
+</api-type>
+
+<api-type name="SamplingQuery">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.aggregation.SamplingQuery</a>
+  </p>
+
+  <api-field required="false" name="unit" type-json='<string>'>
+    The default unit to use in size and extent (unless specified).
+  </api-field>
+
+  <api-field required="true" name="size" type-json='<number> | {"unit": <string>, "value": <number>}'>
+    The size to use in a given aggregation.
+  </api-field>
+
+  <api-field required="true" name="extent" type-json='<number> | {"unit": <string>, "value": <number>}'>
+    The extent to use in a given aggregation.
+  </api-field>
+</api-type>
+
+<api-type name="RequestError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.RequestError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"node"|"series"'>
+    Type of the error.
+
+    The different error types have different sets of information associated with them.
+  </api-field>
+</api-type>
+
+<api-type name="RequestError.SeriesError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.SeriesError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"series"'></api-field>
+
+  <api-field required="true" name="error" type-json='<string>'>
+    An error message.
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='[{"key": <string>, "values": [<string>, ..]}, ..]'>
+    Tags associated with the failing time series.
+  </api-field>
+</api-type>
+
+<api-type name="RequestError.NodeError">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.NodeError</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"node"'></api-field>
+
+  <api-field required="true" name="error" type-json='<string>'>
+    An error message.
+  </api-field>
+
+  <api-field required="true" name="nodeId" type-json='<string>'>
+    UUID of the failing node.
+  </api-field>
+
+  <api-field required="true" name="node" type-json='<string>'>
+    String-representation of the failing node.
+  </api-field>
+
+  <api-field required="true" name="tags" type-json='{<string>: <string>, ..}'>
+    <a ui-sref="^.config.cluster({'#': 'tags'})">Cluster tags</a> of the failing node.
   </api-field>
 </api-type>
 
@@ -549,7 +619,7 @@
     Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.ShardedResultGroup</a>
   </p>
 
-  <api-field required="true" name="type" type-json='"series"|"events"|"spreads"|"groups"'>
+  <api-field required="true" name="type" type-json='"points"|"events"|"spreads"|"groups"'>
     Type of the result group.
   </api-field>
 

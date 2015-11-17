@@ -33,15 +33,51 @@ consumers:
 
 <h3 id="kafka">Kafka</h3>
 
+<codeblock language="yaml">
+type: kafka
+schema: com.spotify.heroic.consumer.schemas.Spotify100
+topics:
+  - "metrics-sto1"
+  - "metrics-sto2"
+config:
+  group.id: heroic-sto
+  zookeeper.connect: zookeeper1.example.com,zookeeper2.example.com,zookeeper3.example.com/heroic
+  auto.offset.reset: largest
+  auto.commit.enable: true
+</codeblock>
+
 <p>
-  This is a pull-based consumer that reads and parses data out of a Kafka queue.
+  A kafka consumer that reads and parses data out of a Kafka queue.
 </p>
+
+<table class="table">
+  <tr>
+    <td colspan="2">
+      <code>type: kafka</code>
+    </td>
+  </tr>
+  <tr>
+    <td><code>schema</code></td>
+    <td>The schema to use when decoding messages.</td>
+  </tr>
+  <tr>
+    <td><code>topics</code></td>
+    <td>A list of topics to read from.</td>
+  </tr>
+  <tr>
+    <td><code>config</code></td>
+    <td>
+      An object that will be provided to the Kafka consumer as configuration.
+      See the <a href="https://kafka.apache.org/08/configuration.html#consumerconfigs">official documentation</a> for what is expected.
+    </td>
+  </tr>
+</table>
 
 <h3 id="collectd">Collectd</h3>
 
 <div class="callout callout-warning">
   <h4>support for collectd is currently in early stage development</h4>
-  <p>If you are interested in this, please help out by <a git-href-java="consumer/collectd">contributing to the module</a></p>
+  <p>If you are interested in this, please help out by <a git-href-package="consumer/collectd:com.spotify.heroic.consumer.collectd">contributing to the module</a></p>
 </div>
 
 <p>
@@ -63,7 +99,7 @@ hostPattern:
 <table class="table">
   <tr>
     <td colspan="2">
-      <code>key: collectd</code>
+      <code>type: collectd</code>
     </td>
   </tr>
   <tr>
