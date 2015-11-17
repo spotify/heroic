@@ -25,6 +25,15 @@ import java.util.List;
 
 import com.spotify.heroic.common.DateRange;
 
+/**
+ * An instance of an aggregation.
+ *
+ * Contains the materialized configuration of a given aggregation.
+ * All members must be fully thread-safe.
+ *
+ * @see Aggregation
+ * @author udoprog
+ */
 public interface AggregationInstance {
     public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
 

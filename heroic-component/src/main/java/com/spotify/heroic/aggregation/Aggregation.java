@@ -24,10 +24,42 @@ package com.spotify.heroic.aggregation;
 import java.util.Optional;
 import java.util.function.Function;
 
+/**
+ * Describes an aggregation.
+ *
+ * Aggregations are responsible for down-sampling time-series data into more compact representations
+ * that are easier to reason about.
+ *
+ * All members must be fully thread-safe. This class describes and contains the configuration for a
+ * given aggregation, in order to perform one you would use the {@link #apply(AggregationContext)}
+ * method which will return an instance of the current aggregation.
+ *
+ * @see AggregationInstance
+ * @author udoprog
+ */
 public interface Aggregation extends Function<AggregationContext, AggregationInstance> {
+    /**
+     * Get the size of the aggregation.
+     *
+     * The size is the space of time between subsequent samples.
+     *
+     * @return The size if available, otherwise an empty result.
+     */
     Optional<Long> size();
 
+    /**
+     * Get the extent of the aggregation.
+     *
+     * The extent is the space of time in milliseconds that an aggregation takes samples.
+     *
+     * @return The extent if available, otherwise an empty result.
+     */
     Optional<Long> extent();
 
+    /**
+     * Convert to Heroic DSL.
+     *
+     * @return A DSL version of the current aggregation.
+     */
     String toDSL();
 }
