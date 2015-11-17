@@ -14,11 +14,11 @@
   currently either a set of data points, or events.
 </p>
 
-<h3 id="data-points">Data Points</h3>
+<h3 id="data-points">Points</h3>
 
 <p>
   Java Class:
-  <a git-href-java="heroic-component">com.spotify.heroic.metric.DataPoint</a>
+  <a git-href-java="heroic-component">com.spotify.heroic.metric.Point</a>
 </p>
 
 <p>
