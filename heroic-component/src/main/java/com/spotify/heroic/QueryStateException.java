@@ -19,29 +19,12 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic;
 
-import javax.ws.rs.core.Response;
+public class QueryStateException extends RuntimeException {
+    private static final long serialVersionUID = -8774428990940670028L;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
-public class ErrorMessage {
-    @Getter
-    private final String message;
-    @Getter
-    private final String reason;
-    @Getter
-    private final int status;
-
-    public ErrorMessage(final String message, final Response.Status status) {
-        this.message = message;
-        this.reason = status.getReasonPhrase();
-        this.status = status.getStatusCode();
-    }
-
-    public String getType() {
-        return "error";
+    public QueryStateException(String message) {
+        super(message);
     }
 }

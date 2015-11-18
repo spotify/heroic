@@ -26,16 +26,40 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.spotify.heroic.grammar.ParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Provider
-public class ParseExceptionMapper implements ExceptionMapper<ParseException> {
+public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingException> {
     @Override
-    public Response toResponse(ParseException e) {
-        final ParseErrorMessage entity =
-                new ParseErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST, e.getLine(),
-                        e.getCol(), e.getLineEnd(), e.getColEnd());
-        return Response.status(Response.Status.BAD_REQUEST).entity(entity)
+    public Response toResponse(JsonMappingException e) {
+        final String path = constructPath(e);
+
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new JsonErrorMessage(e.getOriginalMessage(),
+                        Response.Status.BAD_REQUEST, path))
                 .type(MediaType.APPLICATION_JSON).build();
+    }
+
+    private String constructPath(final JsonMappingException e) {
+        final StringBuilder builder = new StringBuilder();
+
+        boolean lastIndex = false;
+
+        for (final JsonMappingException.Reference reference : e.getPath()) {
+            if (reference.getIndex() >= 0) {
+                builder.append("[" + reference.getIndex() + "]");
+                lastIndex = true;
+                continue;
+            }
+
+            if (builder.length() > 0 && !lastIndex) {
+                builder.append(".");
+            }
+
+            builder.append(reference.getFieldName());
+            lastIndex = false;
+        }
+
+        return builder.toString();
     }
 }

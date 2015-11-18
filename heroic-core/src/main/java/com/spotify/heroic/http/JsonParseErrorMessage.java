@@ -21,20 +21,24 @@
 
 package com.spotify.heroic.http;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
-import lombok.extern.slf4j.Slf4j;
+import lombok.Getter;
 
-@Provider
-@Slf4j
-public class CustomExceptionMapper implements ExceptionMapper<Exception> {
-    @Override
-    public Response toResponse(Exception e) {
-        log.error("Error in request", e);
-        return Response.status(Response.Status.BAD_REQUEST).entity(new ErrorMessage(e.getMessage()))
-                .type(MediaType.APPLICATION_JSON_TYPE).build();
+public class JsonParseErrorMessage extends ErrorMessage {
+    @Getter
+    private final int line;
+    @Getter
+    private final int col;
+
+    public JsonParseErrorMessage(final String message, final Response.Status status, final int line,
+            final int col) {
+        super(message, status);
+        this.line = line;
+        this.col = col;
+    }
+
+    public String getType() {
+        return "json-parse-error";
     }
 }

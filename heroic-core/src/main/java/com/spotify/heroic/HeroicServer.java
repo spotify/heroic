@@ -21,7 +21,9 @@
 
 package com.spotify.heroic;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.util.Optional;
@@ -32,6 +34,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
@@ -39,10 +43,14 @@ import javax.ws.rs.ext.MessageBodyWriter;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
 import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.Dispatcher;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.Slf4jRequestLog;
+import org.eclipse.jetty.server.handler.ErrorHandler;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -52,12 +60,12 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.base.JsonMappingExceptionMapper;
-import com.fasterxml.jackson.jaxrs.base.JsonParseExceptionMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.google.common.base.Charsets;
 import com.google.inject.Injector;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.http.CorsResponseFilter;
+import com.spotify.heroic.http.InternalErrorMessage;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -65,7 +73,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ToString(of = { "address" })
+@ToString(of = {"address"})
 public class HeroicServer implements LifeCycle {
     public static final String DEFAULT_CORS_ALLOW_ORIGIN = "*";
 
@@ -203,6 +211,7 @@ public class HeroicServer implements LifeCycle {
         jerseyServlet.setInitOrder(1);
 
         context.addServlet(jerseyServlet, "/*");
+        context.setErrorHandler(setupErrorHandler());
 
         final RequestLogHandler requestLogHandler = new RequestLogHandler();
 
@@ -215,6 +224,50 @@ public class HeroicServer implements LifeCycle {
         handlers.setHandlers(new Handler[] {rewrite, context, requestLogHandler});
 
         return handlers;
+    }
+
+    private ErrorHandler setupErrorHandler() {
+        return new ErrorHandler() {
+            private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
+
+            @Override
+            public void handle(String target, Request baseRequest, HttpServletRequest request,
+                    HttpServletResponse response) throws IOException {
+                baseRequest.setHandled(true);
+                response.setContentType(CONTENT_TYPE);
+
+                final String message;
+                final javax.ws.rs.core.Response.Status status;
+
+                if (response instanceof Response) {
+                    final Response r = (Response) response;
+                    status = javax.ws.rs.core.Response.Status.fromStatusCode(r.getStatus());
+                } else {
+                    status = javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
+                }
+
+                final Throwable cause =
+                        (Throwable) request.getAttribute(Dispatcher.ERROR_EXCEPTION);
+
+                if (cause != null && cause.getMessage() != null) {
+                    message = cause.getMessage();
+                } else if (cause instanceof NullPointerException) {
+                    message = "NPE";
+                } else {
+                    message = status.getReasonPhrase();
+                }
+
+                final InternalErrorMessage info = new InternalErrorMessage(message, status);
+
+                try (final ByteArrayOutputStream output = new ByteArrayOutputStream(4096)) {
+                    final OutputStreamWriter writer =
+                            new OutputStreamWriter(output, Charsets.UTF_8);
+                    mapper.writeValue(writer, info);
+                    response.setContentLength(output.size());
+                    output.writeTo(response.getOutputStream());
+                }
+            }
+        };
     }
 
     private void makeRewriteRules(RewriteHandler rewrite) {
@@ -260,8 +313,6 @@ public class HeroicServer implements LifeCycle {
             c.register(new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
         }
 
-        c.register(JsonParseExceptionMapper.class);
-        c.register(JsonMappingExceptionMapper.class);
         c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class,
                 MessageBodyWriter.class);
 

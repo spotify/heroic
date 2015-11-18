@@ -25,17 +25,18 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Inject;
 import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
+
+import lombok.RequiredArgsConstructor;
 
 public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
         implements FilterJsonDeserializer {
@@ -76,17 +77,24 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
 
         final FilterJsonSerialization.Deserializer d = new Deserializer(p, c);
 
-        final Filter filter = deserializer.deserialize(d);
+        final Filter filter;
 
-        if (p.getCurrentToken() != JsonToken.END_ARRAY) {
-            throw c.mappingException("Expected end of array from '" + deserializer + "'");
+        try {
+            filter = deserializer.deserialize(d);
+
+            if (p.getCurrentToken() != JsonToken.END_ARRAY) {
+                throw c.mappingException("Expected end of array from '" + deserializer + "'");
+            }
+
+            if (filter instanceof Filter.Raw) {
+                return parseRawFilter((Filter.Raw) filter);
+            }
+
+            return filter.optimize();
+        } catch (final Exception e) {
+            // use special {operator} syntax to indicate filter.
+            throw JsonMappingException.wrapWithPath(e, this, "{" + operator + "}");
         }
-
-        if (filter instanceof Filter.Raw) {
-            return parseRawFilter((Filter.Raw) filter);
-        }
-
-        return filter.optimize();
     }
 
     private Filter parseRawFilter(Raw filter) {
@@ -98,8 +106,12 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
         private final JsonParser parser;
         private final DeserializationContext c;
 
+        private int index = 0;
+
         @Override
         public String string() throws IOException {
+            final int index = this.index++;
+
             if (parser.getCurrentToken() == JsonToken.END_ARRAY) {
                 return null;
             }
@@ -108,7 +120,13 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
                 throw c.mappingException("Expected string");
             }
 
-            final String string = parser.getValueAsString();
+            final String string;
+
+            try {
+                string = parser.getValueAsString();
+            } catch (JsonMappingException e) {
+                throw JsonMappingException.wrapWithPath(e, this, index);
+            }
 
             parser.nextToken();
             return string;
@@ -116,6 +134,8 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
 
         @Override
         public Filter filter() throws IOException {
+            final int index = this.index++;
+
             if (parser.getCurrentToken() == JsonToken.END_ARRAY) {
                 return null;
             }
@@ -124,7 +144,13 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
                 throw c.mappingException("Expected start of new filter expression");
             }
 
-            final Filter filter = parser.readValueAs(Filter.class);
+            final Filter filter;
+
+            try {
+                filter = parser.readValueAs(Filter.class);
+            } catch (JsonMappingException e) {
+                throw JsonMappingException.wrapWithPath(e, this, index);
+            }
 
             parser.nextToken();
             return filter;

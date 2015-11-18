@@ -26,7 +26,6 @@ import java.util.List;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -53,14 +52,6 @@ public class HeroicResource {
 
     @Inject
     private SuggestManager suggest;
-
-    @POST
-    @Path("/shutdown")
-    public Response shutdown() {
-        // lol, no :), send TERM signal instead.
-        return Response.status(Response.Status.OK)
-                .entity(new ErrorMessage("Not shutting down, use TERM signal instead.")).build();
-    }
 
     @GET
     @Path("/backends")

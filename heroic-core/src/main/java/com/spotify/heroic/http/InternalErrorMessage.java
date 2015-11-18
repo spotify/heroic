@@ -23,25 +23,12 @@ package com.spotify.heroic.http;
 
 import javax.ws.rs.core.Response;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
-public class ErrorMessage {
-    @Getter
-    private final String message;
-    @Getter
-    private final String reason;
-    @Getter
-    private final int status;
-
-    public ErrorMessage(final String message, final Response.Status status) {
-        this.message = message;
-        this.reason = status.getReasonPhrase();
-        this.status = status.getStatusCode();
+public class InternalErrorMessage extends ErrorMessage {
+    public InternalErrorMessage(final String message, final Response.Status status) {
+        super(message, status);
     }
 
     public String getType() {
-        return "error";
+        return "internal-error";
     }
 }

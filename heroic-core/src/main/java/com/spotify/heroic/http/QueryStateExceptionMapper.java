@@ -21,27 +21,19 @@
 
 package com.spotify.heroic.http;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import com.spotify.heroic.QueryStateException;
 
-@RequiredArgsConstructor
-public class ErrorMessage {
-    @Getter
-    private final String message;
-    @Getter
-    private final String reason;
-    @Getter
-    private final int status;
-
-    public ErrorMessage(final String message, final Response.Status status) {
-        this.message = message;
-        this.reason = status.getReasonPhrase();
-        this.status = status.getStatusCode();
-    }
-
-    public String getType() {
-        return "error";
+@Provider
+public class QueryStateExceptionMapper implements ExceptionMapper<QueryStateException> {
+    @Override
+    public Response toResponse(final QueryStateException e) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new ErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST))
+                .type(MediaType.APPLICATION_JSON).build();
     }
 }
