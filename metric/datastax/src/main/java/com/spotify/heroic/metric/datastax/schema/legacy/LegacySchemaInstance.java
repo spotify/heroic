@@ -38,6 +38,7 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
 import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
+import com.spotify.heroic.metric.datastax.schema.BackendKeyUtils;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
 
 import eu.toolchain.async.Transform;
@@ -47,19 +48,23 @@ import lombok.Data;
 public class LegacySchemaInstance extends AbstractSchemaInstance {
     public static final String KEY = "metric_key";
 
+    public static final TypeSerializer<MetricsRowKey> ROW_KEY = new MetricsRowKeySerializer();
+
     private final PreparedStatement write;
     private final PreparedStatement fetch;
     private final PreparedStatement delete;
     private final PreparedStatement count;
+    private final BackendKeyUtils keyUtils;
 
     public LegacySchemaInstance(final String keyspace, final String pointsTable,
             final PreparedStatement write, final PreparedStatement fetch,
             final PreparedStatement delete, final PreparedStatement count) {
-        super(KEY, keyspace, pointsTable);
+        super(KEY);
         this.write = write;
         this.fetch = fetch;
         this.delete = delete;
         this.count = count;
+        this.keyUtils = new BackendKeyUtils(KEY, keyspace, pointsTable, this);
     }
 
     /**
@@ -71,11 +76,14 @@ public class LegacySchemaInstance extends AbstractSchemaInstance {
      */
     public static final long MAX_WIDTH = (long) Integer.MAX_VALUE - (long) Integer.MIN_VALUE + 1;
 
-    private final TypeSerializer<MetricsRowKey> rowKey = new MetricsRowKeySerializer();
-
     @Override
     public TypeSerializer<MetricsRowKey> rowKey() {
-        return rowKey;
+        return ROW_KEY;
+    }
+
+    @Override
+    public BackendKeyUtils keyUtils() {
+        return keyUtils;
     }
 
     @Override
@@ -94,7 +102,7 @@ public class LegacySchemaInstance extends AbstractSchemaInstance {
             }
 
             final MetricsRowKey key = new MetricsRowKey(series, currentBase);
-            final ByteBuffer keyBlob = rowKey.serialize(key);
+            final ByteBuffer keyBlob = ROW_KEY.serialize(key);
             final int startKey = calculateColumnKey(modified.start());
             final int endKey = calculateColumnKey(modified.end());
             final long base = currentBase;
@@ -128,7 +136,7 @@ public class LegacySchemaInstance extends AbstractSchemaInstance {
     public PreparedFetch row(final BackendKey key) throws IOException {
         final long base = key.getBase();
 
-        final ByteBuffer k = rowKey.serialize(new MetricsRowKey(key.getSeries(), base));
+        final ByteBuffer k = ROW_KEY.serialize(new MetricsRowKey(key.getSeries(), base));
 
         return new PreparedFetch() {
             @Override
@@ -164,7 +172,7 @@ public class LegacySchemaInstance extends AbstractSchemaInstance {
                 ByteBuffer key = cache.get(base);
 
                 if (key == null) {
-                    key = rowKey.serialize(new MetricsRowKey(series, base));
+                    key = ROW_KEY.serialize(new MetricsRowKey(series, base));
                     cache.put(base, key);
                 }
 

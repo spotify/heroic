@@ -32,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.inject.Inject;
@@ -42,8 +41,6 @@ import com.datastax.driver.core.ExecutionInfo;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
-import com.datastax.driver.core.querybuilder.Clause;
-import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.Bytes;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -57,8 +54,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyCriteria;
-import com.spotify.heroic.metric.BackendKeyCriteria.Limited;
+import com.spotify.heroic.metric.BackendKeyClause;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
@@ -69,6 +65,7 @@ import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.metric.datastax.schema.Schema;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
+import com.spotify.heroic.metric.datastax.schema.SchemaBoundStatement;
 import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 
@@ -174,7 +171,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyCriteria criteria,
+    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyClause clause,
             final QueryOptions options) {
         return observer -> {
             final Borrowed<Connection> b = connection.borrow();
@@ -184,60 +181,63 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 return;
             }
 
-            final Connection c = b.get();
+            try {
+                final Connection c = b.get();
 
-            final Stopwatch w = Stopwatch.createStarted();
+                final Stopwatch w = Stopwatch.createStarted();
 
-            final Select select = c.schema.selectKeys();
-            applyCriteria(c.schema, criteria, select);
+                final SchemaBoundStatement select = c.schema.keyUtils().selectKeys(clause);
 
-            final Statement stmt;
+                Statement stmt = c.session.prepare(select.getStatement())
+                        .bind(select.getBindings().toArray());
 
-            if (options.isTracing()) {
-                stmt = select.enableTracing();
-            } else {
-                stmt = select;
+                if (options.isTracing()) {
+                    stmt = stmt.enableTracing();
+                }
+
+                final AsyncObserver<List<BackendKey>> helperObserver =
+                        new AsyncObserver<List<BackendKey>>() {
+                    @Override
+                    public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
+                        return observer.observe(keys);
+                    }
+
+                    @Override
+                    public void cancel() throws Exception {
+                        try {
+                            observer.cancel();
+                        } finally {
+                            b.release();
+                        }
+                    }
+
+                    @Override
+                    public void fail(Throwable cause) throws Exception {
+                        try {
+                            observer.fail(cause);
+                        } finally {
+                            b.release();
+                        }
+                    }
+
+                    @Override
+                    public void end() throws Exception {
+                        try {
+                            observer.end();
+                        } finally {
+                            b.release();
+                        }
+                    }
+                };
+
+                final RowStreamHelper<BackendKey> helper =
+                        new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter());
+
+                Async.bind(async, c.session.executeAsync(stmt)).onDone(helper);
+            } catch (Throwable t) {
+                b.release();
+                throw t;
             }
-
-            final AsyncObserver<List<BackendKey>> helperObserver =
-                    new AsyncObserver<List<BackendKey>>() {
-                @Override
-                public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
-                    return observer.observe(keys);
-                }
-
-                @Override
-                public void cancel() throws Exception {
-                    try {
-                        observer.cancel();
-                    } finally {
-                        b.release();
-                    }
-                }
-
-                @Override
-                public void fail(Throwable cause) throws Exception {
-                    try {
-                        observer.fail(cause);
-                    } finally {
-                        b.release();
-                    }
-                }
-
-                @Override
-                public void end() throws Exception {
-                    try {
-                        observer.end();
-                    } finally {
-                        b.release();
-                    }
-                }
-            };
-
-            final RowStreamHelper<BackendKey> helper =
-                    new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter());
-
-            Async.bind(async, c.session.executeAsync(stmt)).onDone(helper);
         };
     }
 
@@ -490,60 +490,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
             return async.collect(futures, FetchData.collect(FETCH, series));
         });
-    }
-
-    private void applyCriteria(final SchemaInstance schema, final BackendKeyCriteria criteria,
-            final Select select) throws Exception {
-        if (criteria instanceof BackendKeyCriteria.Limited) {
-            final Limited limited = BackendKeyCriteria.Limited.class.cast(criteria);
-            select.limit(limited.getLimit());
-            applyCriteria(schema, limited.getCriteria(), select);
-            return;
-        }
-
-        if (criteria instanceof BackendKeyCriteria.And) {
-            final BackendKeyCriteria.And and = (BackendKeyCriteria.And) criteria;
-
-            for (final BackendKeyCriteria c : and.getCriterias()) {
-                applyClause(schema, c, select.where()::and);
-            }
-
-            return;
-        }
-
-        applyClause(schema, criteria, select::where);
-    }
-
-    private void applyClause(final SchemaInstance schema, final BackendKeyCriteria criteria,
-            final Consumer<Clause> consumer) throws Exception {
-        if (criteria instanceof BackendKeyCriteria.All) {
-            return;
-        }
-
-        if (criteria instanceof BackendKeyCriteria.KeyGreaterOrEqual) {
-            consumer.accept(schema
-                    .keyGreaterOrEqual(BackendKeyCriteria.KeyGreaterOrEqual.class.cast(criteria)));
-            return;
-        }
-
-        if (criteria instanceof BackendKeyCriteria.KeyLess) {
-            consumer.accept(schema.keyLess(BackendKeyCriteria.KeyLess.class.cast(criteria)));
-            return;
-        }
-
-        if (criteria instanceof BackendKeyCriteria.PercentageGereaterOrEqual) {
-            consumer.accept(schema.keyPercentageGreaterOrEqual(
-                    BackendKeyCriteria.PercentageGereaterOrEqual.class.cast(criteria)));
-            return;
-        }
-
-        if (criteria instanceof BackendKeyCriteria.PercentageLess) {
-            consumer.accept(schema
-                    .keyPercentageLess(BackendKeyCriteria.PercentageLess.class.cast(criteria)));
-            return;
-        }
-
-        throw new IllegalArgumentException("Unsupported criteria: " + criteria);
     }
 
     @RequiredArgsConstructor

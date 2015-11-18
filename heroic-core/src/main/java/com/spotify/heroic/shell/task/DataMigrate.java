@@ -40,7 +40,7 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyCriteria;
+import com.spotify.heroic.metric.BackendKeyClause;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
@@ -97,14 +97,14 @@ public class DataMigrate implements ShellTask {
         final MetricBackend from = metric.useGroup(params.from);
         final MetricBackend to = metric.useGroup(params.to);
 
-        final BackendKeyCriteria criteria = setupCriteria(params);
+        final BackendKeyClause clause = Tasks.setupClause(params, mapper);
 
         final ResolvableFuture<Void> future = async.future();
 
         /* all errors seen */
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
-        from.streamKeys(criteria, options)
+        from.streamKeys(clause, options)
                 .observe(new KeyObserver(io, params, filter, from, to, future, errors));
 
         return future.directTransform(v -> {
@@ -122,31 +122,6 @@ public class DataMigrate implements ShellTask {
             io.out().flush();
             return null;
         });
-    }
-
-    private BackendKeyCriteria setupCriteria(final Parameters params) throws Exception {
-        final List<BackendKeyCriteria> criterias = new ArrayList<>();
-
-        if (params.start != null) {
-            criterias.add(BackendKeyCriteria
-                    .gte(mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
-        }
-
-        if (params.startPercentage >= 0) {
-            criterias.add(BackendKeyCriteria.gte((float) params.startPercentage / 100f));
-        }
-
-        if (params.endPercentage >= 0) {
-            criterias.add(BackendKeyCriteria.lt((float) params.endPercentage / 100f));
-        }
-
-        final BackendKeyCriteria criteria = BackendKeyCriteria.and(criterias);
-
-        if (params.limit >= 0) {
-            return BackendKeyCriteria.limited(criteria, params.limit);
-        }
-
-        return criteria;
     }
 
     @Data
@@ -350,7 +325,7 @@ public class DataMigrate implements ShellTask {
     }
 
     @ToString
-    private static class Parameters extends Tasks.QueryParamsBase {
+    private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
                 metaVar = "<group>")
         private String from;
@@ -359,25 +334,10 @@ public class DataMigrate implements ShellTask {
                 metaVar = "<group>")
         private String to;
 
-        @Option(name = "--start", usage = "First key to migrate", metaVar = "<json>")
-        private String start;
-
-        @Option(name = "--start-percentage", usage = "First key to list in percentage",
-                metaVar = "<int>")
-        private int startPercentage = -1;
-
-        @Option(name = "--end-percentage", usage = "Last key to list (exclusive) in percentage",
-                metaVar = "<int>")
-        private int endPercentage = -1;
-
         @Option(name = "--page-limit",
                 usage = "Limit the number metadata entries to fetch per page (default: 100)")
         @Getter
         private int pageLimit = 100;
-
-        @Option(name = "--limit", usage = "Limit the number entries to migrate")
-        @Getter
-        private int limit = -1;
 
         @Option(name = "--tracing",
                 usage = "Trace the queries for more debugging when things go wrong")

@@ -52,7 +52,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyCriteria criteria,
+    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyClause clause,
             QueryOptions options) {
         return AsyncObservable.empty();
     }
