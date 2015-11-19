@@ -27,12 +27,9 @@ import java.util.List;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.querybuilder.Clause;
-import com.datastax.driver.core.querybuilder.Select;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyCriteria;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
@@ -56,16 +53,7 @@ public interface SchemaInstance {
 
     public Transform<Row, BackendKey> keyConverter();
 
-    public Select selectKeys();
-
-    public Clause keyGreaterOrEqual(BackendKeyCriteria.KeyGreaterOrEqual criteria) throws Exception;
-
-    public Clause keyLess(BackendKeyCriteria.KeyLess criteria) throws Exception;
-
-    public Clause keyPercentageGreaterOrEqual(BackendKeyCriteria.PercentageGereaterOrEqual criteria)
-            throws Exception;
-
-    public Clause keyPercentageLess(BackendKeyCriteria.PercentageLess criteria) throws Exception;
+    public BackendKeyUtils keyUtils();
 
     public static interface WriteSession {
         public BoundStatement writePoint(Series series, Point d) throws IOException;

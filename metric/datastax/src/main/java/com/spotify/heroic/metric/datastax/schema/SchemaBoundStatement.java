@@ -21,26 +21,17 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
-import java.util.Optional;
+import java.util.List;
 
-import com.datastax.driver.core.Row;
-import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.MetricType;
-import com.spotify.heroic.metric.datastax.MetricsRowKey;
+import lombok.Data;
 
-import eu.toolchain.async.Transform;
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
-public abstract class AbstractSchemaInstance implements SchemaInstance {
-    protected final String key;
-
-    @Override
-    public Transform<Row, BackendKey> keyConverter() {
-        return row -> {
-            final MetricsRowKey key = rowKey().deserialize(row.getBytes(this.key));
-            return new BackendKey(key.getSeries(), key.getBase(), MetricType.POINT,
-                    Optional.of(row.getLong(1)));
-        };
-    }
+/**
+ * Represents a CQL statement with a list of bindings that should be applied.
+ *
+ * @author udoprog
+ */
+@Data
+public class SchemaBoundStatement {
+    final String statement;
+    final List<Object> bindings;
 }

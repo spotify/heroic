@@ -342,9 +342,9 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncObservable<List<BackendKey>> streamKeys(final BackendKeyCriteria criteria,
+        public AsyncObservable<List<BackendKey>> streamKeys(final BackendKeyClause clause,
                 final QueryOptions options) {
-            return AsyncObservable.chain(run(b -> b.streamKeys(criteria, options)));
+            return AsyncObservable.chain(run(b -> b.streamKeys(clause, options)));
         }
 
         @Override

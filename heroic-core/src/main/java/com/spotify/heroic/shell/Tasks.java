@@ -33,13 +33,17 @@ import org.joda.time.chrono.ISOChronology;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeParser;
 import org.joda.time.format.DateTimeParserBucket;
+import org.kohsuke.args4j.Option;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metric.BackendKeyClause;
+import com.spotify.heroic.shell.task.BackendKeyArgument;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.CountData;
@@ -72,6 +76,8 @@ import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
+
+import lombok.Getter;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
@@ -233,6 +239,45 @@ public final class Tasks {
         return parser.parseFilter(StringUtils.join(query, " "));
     }
 
+    public static BackendKeyClause setupClause(KeyspaceBase params, ObjectMapper mapper)
+            throws Exception {
+        final List<BackendKeyClause> clauses = new ArrayList<>();
+
+        if (params.start != null) {
+            clauses.add(BackendKeyClause
+                    .gte(mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
+        }
+
+        if (params.end != null) {
+            clauses.add(BackendKeyClause
+                    .lt(mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
+        }
+
+        if (params.startPercentage >= 0) {
+            clauses.add(BackendKeyClause.gtePercentage((float) params.startPercentage / 100f));
+        }
+
+        if (params.endPercentage >= 0) {
+            clauses.add(BackendKeyClause.ltPercentage((float) params.endPercentage / 100f));
+        }
+
+        if (params.startToken != null) {
+            clauses.add(BackendKeyClause.gteToken(params.startToken));
+        }
+
+        if (params.endToken != null) {
+            clauses.add(BackendKeyClause.ltToken(params.endToken));
+        }
+
+        final BackendKeyClause clause = BackendKeyClause.and(clauses);
+
+        if (params.limit >= 0) {
+            return BackendKeyClause.limited(clause, params.limit);
+        }
+
+        return clause;
+    }
+
     public abstract static class QueryParamsBase extends AbstractShellTaskParams
             implements TaskQueryParameters {
         private final DateRange defaultDateRange;
@@ -247,6 +292,33 @@ public final class Tasks {
         public DateRange getRange() {
             return defaultDateRange;
         }
+    }
+
+    public abstract static class KeyspaceBase extends QueryParamsBase {
+        @Option(name = "--start", usage = "First key to operate on", metaVar = "<json>")
+        protected String start;
+
+        @Option(name = "--end", usage = "Last key to operate on (exclusive)", metaVar = "<json>")
+        protected String end;
+
+        @Option(name = "--start-percentage", usage = "First key to operate on in percentage",
+                metaVar = "<int>")
+        protected int startPercentage = -1;
+
+        @Option(name = "--end-percentage",
+                usage = "Last key to operate on (exclusive) in percentage", metaVar = "<int>")
+        protected int endPercentage = -1;
+
+        @Option(name = "--start-token", usage = "First token to operate on", metaVar = "<long>")
+        protected Long startToken = null;
+
+        @Option(name = "--end-token", usage = "Last token to operate on (exclusive)",
+                metaVar = "<int>")
+        protected Long endToken = null;
+
+        @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
+        @Getter
+        protected int limit = -1;
     }
 
     public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser,
