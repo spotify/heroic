@@ -177,7 +177,7 @@ public class CoreQueryManager implements QueryManager {
             final long now = System.currentTimeMillis();
 
             return q.getRange().map(r -> r.buildDateRange(now))
-                    .orElseThrow(() -> new IllegalStateException("Range is not present"));
+                    .orElseThrow(() -> new QueryStateException("Range must be present"));
         }
 
         @Override

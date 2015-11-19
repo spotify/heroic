@@ -21,27 +21,18 @@
 
 package com.spotify.heroic.http;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
-public class ErrorMessage {
-    @Getter
-    private final String message;
-    @Getter
-    private final String reason;
-    @Getter
-    private final int status;
-
-    public ErrorMessage(final String message, final Response.Status status) {
-        this.message = message;
-        this.reason = status.getReasonPhrase();
-        this.status = status.getStatusCode();
-    }
-
-    public String getType() {
-        return "error";
+@Provider
+public class ExceptionExceptionMapper implements ExceptionMapper<Throwable> {
+    @Override
+    public Response toResponse(Throwable e) {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(new InternalErrorMessage(e.getMessage(),
+                        Response.Status.INTERNAL_SERVER_ERROR))
+                .type(MediaType.APPLICATION_JSON).build();
     }
 }

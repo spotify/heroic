@@ -54,10 +54,12 @@ public class Module implements HeroicModule {
                 config.resource(ClusterResource.class);
                 config.resource(ParserResource.class);
 
+                config.resource(ExceptionExceptionMapper.class);
                 config.resource(ErrorMapper.class);
                 config.resource(ParseExceptionMapper.class);
-                config.resource(CustomExceptionMapper.class);
-                config.resource(UnrecognizedPropertyExceptionMapper.class);
+                config.resource(QueryStateExceptionMapper.class);
+                config.resource(JsonMappingExceptionMapper.class);
+                config.resource(JsonParseExceptionMapper.class);
             }
         };
     }

@@ -21,13 +21,30 @@
 
 package com.spotify.heroic.http;
 
-import lombok.Data;
+import javax.ws.rs.core.Response;
 
-@Data
-public class ParseErrorMessage {
-    private final String message;
+import lombok.Getter;
+
+public class ParseErrorMessage extends ErrorMessage {
+    @Getter
     private final int line;
+    @Getter
     private final int col;
+    @Getter
     private final int lineEnd;
+    @Getter
     private final int colEnd;
+
+    public ParseErrorMessage(final String message, final Response.Status status, final int line,
+            final int col, final int lineEnd, final int colEnd) {
+        super(message, status);
+        this.line = line;
+        this.col = col;
+        this.lineEnd = lineEnd;
+        this.colEnd = colEnd;
+    }
+
+    public String getType() {
+        return "parse-error";
+    }
 }
