@@ -12,7 +12,7 @@
   <artifactId>heroic-dist</artifactId>
   <packaging>jar</packaging>
 
-  <name>Heroic: Self-Contained Distrubtion Project</name>
+  <name>Heroic: Self-Contained Distribution Project</name>
 
   <description>
     This manifest is intended to build a completely self-contained Heroic
