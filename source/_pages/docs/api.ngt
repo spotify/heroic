@@ -75,7 +75,7 @@
   </api-response>
 </api-endpoint>
 
-<api-endpoint path="/query" method="POST">
+<api-endpoint path="/query/metrics" method="POST">
   <p>
     Query and aggregate metrics.
   </p>
@@ -202,8 +202,8 @@
         <p>Time series to write data to.</p>
       </api-field>
 
-      <api-field name="data" required="true" type-array-href="Point">
-        <p>Data to write.</p>
+      <api-field name="data" required="true" type-href="MetricCollection">
+        <p>Collection of metrics to write.</p>
       </api-field>
     </api-type>
 
@@ -212,7 +212,7 @@
     <codeblock language="json">
     {
       "series": {"key": "foo", "tags": {"site": "lon", "host": "www.example.com"}},
-      "data": [[1300000000000, 42.0], [1300001000000, 84.0]]
+      "data": {"type": "points", "data": [[1300000000000, 42.0], [1300001000000, 84.0]]}
     }
     </codeblock>
   </api-accept>
@@ -376,6 +376,20 @@
 
   <api-field required="true" name="tags" type-json='{<string>: <string>, ...}'>
     Tags of the series.
+  </api-field>
+</api-type>
+
+<api-type name="MetricCollection">
+  <p>
+    Java Class: <a git-href-java="heroic-component">com.spotify.heroic.metric.MetricCollection</a>
+  </p>
+
+  <api-field required="true" name="type" type-json='"points" | "events"'>
+    The type of data to write.
+  </api-field>
+
+  <api-field required="true" name="data" type-json='[Point | Event, ..]'>
+    The data to write. The type depends on the value of the <code language="json">type</code> field.
   </api-field>
 </api-type>
 
