@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.rpc.nativerpc.message.NativeOptions;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
@@ -52,13 +53,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class NativeRpcServerSessionInitializer extends ChannelInitializer<SocketChannel> {
+public class NativeRpcServerSession extends ChannelInitializer<SocketChannel> {
     private static final Charset UTF8 = Charset.forName("UTF-8");
 
     private final Timer timer;
     private final ObjectMapper mapper;
     private final NativeRpcContainer container;
     private final int maxFrameSize;
+    private final NativeEncoding encoding;
 
     @Override
     protected void initChannel(final SocketChannel ch) throws Exception {
@@ -130,7 +132,10 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
                 setupHeartbeat(ch, heartbeatInterval);
             }
 
-            final Object body = mapper.readValue(request.getBody(), handle.requestType());
+            final byte[] bytes = NativeUtils.decodeBody(request.getOptions(), request.getSize(),
+                    request.getBody());
+
+            final Object body = mapper.readValue(bytes, handle.requestType());
 
             final AsyncFuture<Object> handleFuture = handle.handle(body);
 
@@ -138,8 +143,7 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             // this also neatly catches errors for us in the next step.
             // Stop sending heartbeats immediately when the future has been finished.
             // this will cause the other end to time out if a response is available, but its unable
-            // to pass the
-            // network.
+            // to pass the network.
             handleFuture.directTransform(serialize(request))
                     .onFinished(() -> stopCurrentTimeout(heartbeatTimeout))
                     .onDone(sendResponseHandle(ch));
@@ -188,13 +192,17 @@ public class NativeRpcServerSessionInitializer extends ChannelInitializer<Socket
             return new Transform<Object, NativeRpcResponse>() {
                 @Override
                 public NativeRpcResponse transform(Object result) throws Exception {
-                    final byte[] response = mapper.writeValueAsBytes(result);
+                    byte[] body = mapper.writeValueAsBytes(result);
+
                     if (log.isTraceEnabled()) {
                         log.trace("response[{}]: {}", request.getEndpoint(),
-                                new String(response, UTF8));
+                                new String(body, UTF8));
                     }
 
-                    return new NativeRpcResponse(response);
+                    final int bodySize = body.length;
+                    final NativeOptions options = new NativeOptions(encoding);
+                    return new NativeRpcResponse(options, bodySize,
+                            NativeUtils.encodeBody(options, body));
                 }
             };
         }

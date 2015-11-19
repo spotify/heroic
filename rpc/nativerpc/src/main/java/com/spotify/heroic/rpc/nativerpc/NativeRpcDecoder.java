@@ -21,12 +21,6 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ByteToMessageDecoder;
-
-import java.io.IOException;
 import java.util.List;
 
 import org.msgpack.MessagePack;
@@ -36,6 +30,11 @@ import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 public class NativeRpcDecoder extends ByteToMessageDecoder {
     private final MessagePack messagePack = new MessagePack();
@@ -56,37 +55,20 @@ public class NativeRpcDecoder extends ByteToMessageDecoder {
 
             switch (type) {
             case NativeRpc.HEARTBEAT:
-                out.add(new NativeRpcHeartBeat());
+                out.add(NativeRpcHeartBeat.unpack(unpacker));
                 return;
             case NativeRpc.REQUEST:
-                out.add(decodeRequest(unpacker));
+                out.add(NativeRpcRequest.unpack(unpacker));
                 return;
             case NativeRpc.RESPONSE:
-                out.add(decodeResponse(unpacker));
+                out.add(NativeRpcResponse.unpack(unpacker));
                 return;
             case NativeRpc.ERR_RESPONSE:
-                out.add(decodeErrorResponse(unpacker));
+                out.add(NativeRpcError.unpack(unpacker));
                 return;
             default:
                 throw new IllegalArgumentException("Invalid RPC message type: " + type);
             }
         }
-    }
-
-    private NativeRpcRequest decodeRequest(final Unpacker unpacker) throws IOException {
-        final String endpoint = unpacker.readString();
-        final byte[] body = unpacker.readByteArray();
-        final long heartbeatInterval = unpacker.readLong();
-        return new NativeRpcRequest(endpoint, body, heartbeatInterval);
-    }
-
-    private NativeRpcResponse decodeResponse(final Unpacker unpacker) throws IOException {
-        final byte[] body = unpacker.readByteArray();
-        return new NativeRpcResponse(body);
-    }
-
-    private NativeRpcError decodeErrorResponse(final Unpacker unpacker) throws IOException {
-        final String message = unpacker.readString();
-        return new NativeRpcError(message);
     }
 }

@@ -21,10 +21,13 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
@@ -47,7 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Channel> {
+public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
     private final ObjectMapper mapper;
     private final Timer timer;
     private final long heartbeatInterval;
@@ -94,15 +97,12 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
                         log.trace("[{}] response: cancelling heartbeat", ctx.channel());
                     }
 
-                    final Timeout old = heartbeatTimeout.getAndSet(null);
-
-                    if (old != null) {
-                        old.cancel();
+                    try {
+                        handleResponse((NativeRpcResponse) msg);
+                    } catch (Exception e) {
+                        future.fail(new Exception("Failed to handle response", e));
                     }
 
-                    final NativeRpcResponse response = (NativeRpcResponse) msg;
-                    final R responseBody = mapper.readValue(response.getBody(), expected);
-                    future.resolve(responseBody);
                     return;
                 }
 
@@ -136,6 +136,14 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
         pipeline.addLast(new NativeRpcEncoder());
     }
 
+    private void unsetTimeout() {
+        final Timeout old = heartbeatTimeout.getAndSet(null);
+
+        if (old != null) {
+            old.cancel();
+        }
+    }
+
     private void bumpTimeout(final ChannelHandlerContext ctx) {
         final Timeout timeout = timer.newTimeout(heartbeatTimeout(ctx.channel(), future),
                 heartbeatInterval, TimeUnit.MILLISECONDS);
@@ -145,6 +153,18 @@ public class NativeRpcClientSessionInitializer<R> extends ChannelInitializer<Cha
         if (old != null) {
             old.cancel();
         }
+    }
+
+    private void handleResponse(final NativeRpcResponse response)
+            throws IOException, JsonParseException, JsonMappingException {
+        unsetTimeout();
+
+        final byte[] bytes = NativeUtils.decodeBody(response.getOptions(), response.getSize(),
+                response.getBody());
+
+        final R responseBody = mapper.readValue(bytes, expected);
+
+        future.resolve(responseBody);
     }
 
     private TimerTask heartbeatTimeout(final Channel ch, final ResolvableFuture<?> future) {

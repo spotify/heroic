@@ -13,8 +13,8 @@ import eu.toolchain.async.AsyncFuture;
 public class NativeRpcContainerTest {
     @Test
     public void testTypeReference() {
-        final RpcEndpoint<Map<String, Integer>, String> endpoint =
-                new RpcEndpoint<Map<String, Integer>, String>() {
+        final NativeRpcEndpoint<Map<String, Integer>, String> endpoint =
+                new NativeRpcEndpoint<Map<String, Integer>, String>() {
                     @Override
                     public AsyncFuture<String> handle(Map<String, Integer> request)
                             throws Exception {

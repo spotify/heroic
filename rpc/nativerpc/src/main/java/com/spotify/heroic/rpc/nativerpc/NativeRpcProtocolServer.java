@@ -52,6 +52,7 @@ import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcSuggestTagValue;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcSuggestTagValues;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcTagSuggest;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocol.RpcWriteSeries;
+import com.spotify.heroic.rpc.nativerpc.message.NativeRpcEmptyBody;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagKeyCount;
@@ -105,6 +106,9 @@ public class NativeRpcProtocolServer implements LifeCycle {
     @Named("worker")
     private EventLoopGroup workerGroup;
 
+    @Inject
+    private NativeEncoding encoding;
+
     private final SocketAddress address;
     private final int maxFrameSize;
 
@@ -112,17 +116,16 @@ public class NativeRpcProtocolServer implements LifeCycle {
     private final NativeRpcContainer container = new NativeRpcContainer();
 
     {
-        container.register("metadata",
-                new RpcEndpoint<RpcEmptyBody, NodeMetadata>() {
-                    @Override
-                    public AsyncFuture<NodeMetadata> handle(final RpcEmptyBody request)
-                            throws Exception {
-                        return async.resolved(localMetadata);
-                    }
-                });
+        container.register("metadata", new NativeRpcEndpoint<NativeRpcEmptyBody, NodeMetadata>() {
+            @Override
+            public AsyncFuture<NodeMetadata> handle(final NativeRpcEmptyBody request)
+                    throws Exception {
+                return async.resolved(localMetadata);
+            }
+        });
 
         container.register(NativeRpcProtocol.METRICS_QUERY,
-                new RpcEndpoint<GroupedQuery<RpcQuery>, ResultGroups>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcQuery>, ResultGroups>() {
                     @Override
                     public AsyncFuture<ResultGroups> handle(final GroupedQuery<RpcQuery> grouped)
                             throws Exception {
@@ -135,7 +138,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METRICS_WRITE,
-                new RpcEndpoint<GroupedQuery<WriteMetric>, WriteResult>() {
+                new NativeRpcEndpoint<GroupedQuery<WriteMetric>, WriteResult>() {
                     @Override
                     public AsyncFuture<WriteResult> handle(final GroupedQuery<WriteMetric> grouped)
                             throws Exception {
@@ -145,7 +148,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_FIND_TAGS,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, FindTags>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, FindTags>() {
                     @Override
                     public AsyncFuture<FindTags> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -154,7 +157,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_FIND_KEYS,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, FindKeys>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, FindKeys>() {
                     @Override
                     public AsyncFuture<FindKeys> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -163,7 +166,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_FIND_SERIES,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, FindSeries>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, FindSeries>() {
                     @Override
                     public AsyncFuture<FindSeries> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -172,7 +175,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_COUNT_SERIES,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, CountSeries>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, CountSeries>() {
                     @Override
                     public AsyncFuture<CountSeries> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -182,7 +185,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_WRITE,
-                new RpcEndpoint<GroupedQuery<RpcWriteSeries>, WriteResult>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcWriteSeries>, WriteResult>() {
                     @Override
                     public AsyncFuture<WriteResult> handle(
                             final GroupedQuery<RpcWriteSeries> grouped) throws Exception {
@@ -193,7 +196,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.METADATA_DELETE_SERIES,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, DeleteSeries>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, DeleteSeries>() {
                     @Override
                     public AsyncFuture<DeleteSeries> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -203,7 +206,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.SUGGEST_TAG_KEY_COUNT,
-                new RpcEndpoint<GroupedQuery<RangeFilter>, TagKeyCount>() {
+                new NativeRpcEndpoint<GroupedQuery<RangeFilter>, TagKeyCount>() {
                     @Override
                     public AsyncFuture<TagKeyCount> handle(final GroupedQuery<RangeFilter> grouped)
                             throws Exception {
@@ -212,7 +215,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.SUGGEST_TAG,
-                new RpcEndpoint<GroupedQuery<RpcTagSuggest>, TagSuggest>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcTagSuggest>, TagSuggest>() {
                     @Override
                     public AsyncFuture<TagSuggest> handle(final GroupedQuery<RpcTagSuggest> grouped)
                             throws Exception {
@@ -223,7 +226,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.SUGGEST_KEY,
-                new RpcEndpoint<GroupedQuery<RpcKeySuggest>, KeySuggest>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcKeySuggest>, KeySuggest>() {
                     @Override
                     public AsyncFuture<KeySuggest> handle(final GroupedQuery<RpcKeySuggest> grouped)
                             throws Exception {
@@ -234,7 +237,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.SUGGEST_TAG_VALUES,
-                new RpcEndpoint<GroupedQuery<RpcSuggestTagValues>, TagValuesSuggest>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcSuggestTagValues>, TagValuesSuggest>() {
                     @Override
                     public AsyncFuture<TagValuesSuggest> handle(
                             final GroupedQuery<RpcSuggestTagValues> grouped) throws Exception {
@@ -245,7 +248,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 });
 
         container.register(NativeRpcProtocol.SUGGEST_TAG_VALUE,
-                new RpcEndpoint<GroupedQuery<RpcSuggestTagValue>, TagValueSuggest>() {
+                new NativeRpcEndpoint<GroupedQuery<RpcSuggestTagValue>, TagValueSuggest>() {
                     @Override
                     public AsyncFuture<TagValueSuggest> handle(
                             final GroupedQuery<RpcSuggestTagValue> grouped) throws Exception {
@@ -262,7 +265,7 @@ public class NativeRpcProtocolServer implements LifeCycle {
         s.channel(NioServerSocketChannel.class);
         s.group(bossGroup, workerGroup);
         s.childHandler(
-                new NativeRpcServerSessionInitializer(timer, mapper, container, maxFrameSize));
+                new NativeRpcServerSession(timer, mapper, container, maxFrameSize, encoding));
 
         final ResolvableFuture<Void> bindFuture = async.future();
 

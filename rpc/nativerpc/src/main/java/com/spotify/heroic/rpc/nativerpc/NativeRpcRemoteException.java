@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 import lombok.Getter;
 import lombok.ToString;
 
-@ToString(of = { "address", "message" })
+@ToString(of = {"address", "message"})
 public class NativeRpcRemoteException extends Exception {
     private static final long serialVersionUID = -664905544594225316L;
 

@@ -99,6 +99,9 @@ public class NativeRpcProtocol implements RpcProtocol {
     @Inject
     private Timer timer;
 
+    @Inject
+    private NativeEncoding encoding;
+
     private final int defaultPort;
     private final int maxFrameSize;
     private final long sendTimeout;
@@ -109,7 +112,7 @@ public class NativeRpcProtocol implements RpcProtocol {
         final InetSocketAddress address = new InetSocketAddress(uri.getHost(),
                 uri.getPort() == -1 ? defaultPort : uri.getPort());
         final NativeRpcClient client = new NativeRpcClient(async, workerGroup, maxFrameSize,
-                address, mapper, timer, sendTimeout, heartbeatReadInterval);
+                address, mapper, timer, sendTimeout, heartbeatReadInterval, encoding);
 
         return client.request(METADATA, NodeMetadata.class)
                 .directTransform(m -> new NativeRpcClusterNode(uri, client, m));
@@ -240,8 +243,7 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final T query;
 
         @JsonCreator
-        public GroupedQuery(@JsonProperty("group") String group,
-                @JsonProperty("query") T query) {
+        public GroupedQuery(@JsonProperty("group") String group, @JsonProperty("query") T query) {
             this.group = group;
             this.query = query;
         }

@@ -21,32 +21,15 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.spotify.heroic.rpc.nativerpc.NativeRpcContainer.EndpointSpec;
 
-import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
 
-public class NativeRpcContainer {
-    private final Map<String, EndpointSpec<Object, Object>> endpoints = new HashMap<>();
-
-    @SuppressWarnings("unchecked")
-    public void register(final String endpoint, final NativeRpcEndpoint<?, ?> handle) {
-        if (endpoints.containsKey(endpoint)) {
-            throw new IllegalStateException("Endpoint already registered: " + endpoint);
-        }
-
-        endpoints.put(endpoint, (EndpointSpec<Object, Object>) handle);
-    }
-
-    public EndpointSpec<Object, Object> get(String endpoint) {
-        return endpoints.get(endpoint);
-    }
-
-    public static interface EndpointSpec<Q, R> {
-        public AsyncFuture<R> handle(final Q request) throws Exception;
-
-        public TypeReference<Q> requestType();
+@RequiredArgsConstructor
+public abstract class NativeRpcEndpoint<Q, R> extends TypeReference<Q>
+        implements EndpointSpec<Q, R> {
+    public TypeReference<Q> requestType() {
+        return this;
     }
 }

@@ -19,12 +19,12 @@
  * under the License.
  */
 
-package com.spotify.heroic.rpc.nativerpc;
+package com.spotify.heroic.rpc.nativerpc.message;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-public class RpcEmptyBody {
+public class NativeRpcEmptyBody {
     @JsonCreator
-    public RpcEmptyBody() {
+    public NativeRpcEmptyBody() {
     }
 }

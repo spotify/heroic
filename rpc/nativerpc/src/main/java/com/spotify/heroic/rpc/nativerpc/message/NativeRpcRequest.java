@@ -21,11 +21,40 @@
 
 package com.spotify.heroic.rpc.nativerpc.message;
 
+import java.io.IOException;
+
+import org.msgpack.packer.Packer;
+import org.msgpack.unpacker.Unpacker;
+
 import lombok.Data;
 
 @Data
 public class NativeRpcRequest {
     private final String endpoint;
-    private final byte[] body;
     private final long heartbeatInterval;
+    private final NativeOptions options;
+    private final int size;
+    private final byte[] body;
+
+    public static NativeRpcRequest unpack(final Unpacker unpacker) throws IOException {
+        final String endpoint = unpacker.readString();
+        final long heartbeatInterval = unpacker.readLong();
+
+        final NativeOptions options = NativeOptions.unpack(unpacker);
+
+        final int size = unpacker.readInt();
+        final byte[] body = unpacker.readByteArray();
+        return new NativeRpcRequest(endpoint, heartbeatInterval, options, size, body);
+    }
+
+    public static void pack(final NativeRpcRequest in, final Packer out) throws IOException {
+        out.write(in.getEndpoint());
+        out.write(in.getHeartbeatInterval());
+
+        // OPTIONS
+        NativeOptions.pack(in.getOptions(), out);
+
+        out.write(in.getSize());
+        out.write(in.getBody());
+    }
 }

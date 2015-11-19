@@ -21,9 +21,23 @@
 
 package com.spotify.heroic.rpc.nativerpc.message;
 
+import java.io.IOException;
+
+import org.msgpack.packer.Packer;
+import org.msgpack.unpacker.Unpacker;
+
 import lombok.Data;
 
 @Data
 public class NativeRpcError {
     private final String message;
+
+    public static NativeRpcError unpack(final Unpacker unpacker) throws IOException {
+        final String message = unpacker.readString();
+        return new NativeRpcError(message);
+    }
+
+    public static void pack(final NativeRpcError in, final Packer out) throws IOException {
+        out.write(in.getMessage());
+    }
 }

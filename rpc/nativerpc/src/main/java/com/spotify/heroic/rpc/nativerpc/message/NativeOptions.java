@@ -26,27 +26,45 @@ import java.io.IOException;
 import org.msgpack.packer.Packer;
 import org.msgpack.unpacker.Unpacker;
 
+import com.spotify.heroic.rpc.nativerpc.NativeEncoding;
+
 import lombok.Data;
 
+/**
+ * A dynamic set of options that are part of a native rpc request.
+ */
 @Data
-public class NativeRpcResponse {
-    private final NativeOptions options;
-    private final int size;
-    private final byte[] body;
+public class NativeOptions {
+    /**
+     * Indicates the encoding that the body is encoded using.
+     */
+    static final String ENCODING = "encoding";
 
-    public static NativeRpcResponse unpack(final Unpacker unpacker) throws IOException {
-        final NativeOptions options = NativeOptions.unpack(unpacker);
+    private final NativeEncoding encoding;
+
+    public static NativeOptions unpack(final Unpacker unpacker) throws IOException {
+        NativeEncoding encoding = NativeEncoding.NONE;
+
         final int size = unpacker.readInt();
-        final byte[] body = unpacker.readByteArray();
 
-        return new NativeRpcResponse(options, size, body);
+        for (int i = 0; i < size; i++) {
+            switch (unpacker.readString()) {
+            case ENCODING:
+                encoding = NativeEncoding.valueOf(unpacker.readString());
+                break;
+            default: // ignore unknown options
+                break;
+            }
+        }
+
+        return new NativeOptions(encoding);
     }
 
-    public static void pack(NativeRpcResponse in, Packer out) throws IOException {
-        // OPTIONS
-        NativeOptions.pack(in.getOptions(), out);
+    public static void pack(NativeOptions options, Packer out) throws IOException {
+        // number of options
+        out.write(1);
 
-        out.write(in.getSize());
-        out.write(in.getBody());
+        out.write(ENCODING);
+        out.write(options.getEncoding().toString());
     }
 }
