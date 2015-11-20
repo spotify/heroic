@@ -61,6 +61,8 @@ public class ClusterProfile extends HeroicProfileBase {
             throw new IllegalArgumentException("illegal value for cluster.discovery");
         }
 
+        params.getBoolean("cluster.useLocal").ifPresent(module::useLocal);
+
         // @formatter:off
         return HeroicConfig.builder().cluster(module);
         // @formatter:on

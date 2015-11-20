@@ -116,4 +116,8 @@ public class ExtraParameters {
     public List<String> getAsList(final String key) {
         return ImmutableList.copyOf(parameters.get(key));
     }
+
+    public Optional<Boolean> getBoolean(final String key) {
+        return get(key).map(s -> "true".equals(s) || "yes".equals(s));
+    }
 }
