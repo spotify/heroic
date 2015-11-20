@@ -37,7 +37,6 @@ import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
-import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
@@ -99,8 +98,7 @@ public class MemoryProfile extends HeroicProfileBase {
             .cache(
                 AggregationCacheModule.builder()
                     .backend(InMemoryAggregationCacheBackendConfig.builder().build())
-            )
-            .shellServer(ShellServerModule.builder());
+            );
         // @formatter:on
     }
 
