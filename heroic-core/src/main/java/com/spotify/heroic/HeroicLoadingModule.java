@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -167,6 +168,7 @@ public class HeroicLoadingModule extends AbstractModule {
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
 
         m.registerModule(serialization());
+        m.registerModule(new Jdk8Module());
 
         return m;
     }
