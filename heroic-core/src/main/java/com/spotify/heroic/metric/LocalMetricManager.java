@@ -269,13 +269,14 @@ public class LocalMetricManager implements MetricManager {
 
                         @Override
                         public void resolved(FetchData result) throws Exception {
-                            super.resolved(result);
                             traces.add(result.getTrace());
+                            super.resolved(result);
                         }
 
                         @Override
                         public QueryTrace buildTrace() {
-                            return new QueryTrace(QUERY, w.elapsed(TimeUnit.NANOSECONDS));
+                            return new QueryTrace(QUERY, w.elapsed(TimeUnit.NANOSECONDS),
+                                    ImmutableList.copyOf(traces));
                         }
                     };
                 } else {
