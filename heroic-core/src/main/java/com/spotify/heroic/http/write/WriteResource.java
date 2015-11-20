@@ -34,8 +34,6 @@ import com.google.inject.Inject;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.ingestion.IngestionManager;
 
-import lombok.Data;
-
 @Path("/write")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -46,15 +44,9 @@ public class WriteResource {
     @Inject
     private JavaxRestFramework httpAsync;
 
-    @Data
-    public static final class Message {
-        private final String message;
-    }
-
     @POST
-    public void metrics(@Suspended final AsyncResponse response,
-            @QueryParam("backend") String backendGroup, WriteMetricRequest write) throws Exception {
-        httpAsync.bind(response, ingestion.useGroup(backendGroup).write(write.toWriteMetric()),
-                r -> r);
+    public void metrics(@Suspended final AsyncResponse response, @QueryParam("group") String group,
+            WriteMetricRequest write) throws Exception {
+        httpAsync.bind(response, ingestion.useGroup(group).write(write.toWriteMetric()), r -> r);
     }
 }
