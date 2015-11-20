@@ -11,6 +11,9 @@ parser = argparse.ArgumentParser(description='Run Heroic Integration Tests')
 parser.add_argument('--debug', help='Enable Debugging Output', dest='debug',
                     action='store_const', const=True, default=False)
 
+parser.add_argument('pattern', help='Pattern of tests to run', nargs='?',
+                    default="")
+
 @contextlib.contextmanager
 def in_dir(directory):
     original = os.getcwd()
@@ -21,11 +24,14 @@ def in_dir(directory):
     finally:
         os.chdir(original)
 
-def find_tests(tests):
+def find_tests(tests, pattern):
     for d in os.listdir(tests):
         base, ext = os.path.splitext(d)
 
         if base.startswith('.') or ext != '.py' or base in ['__init__', 'helpers']:
+            continue
+
+        if pattern not in base:
             continue
 
         yield "tests.{}".format(base)
@@ -60,7 +66,7 @@ def main(program, args):
 
     suites = []
 
-    for test in find_tests(tests_dir):
+    for test in find_tests(tests_dir, ns.pattern):
         m = importlib.import_module(test)
         suites.append(loader.loadTestsFromModule(m))
 

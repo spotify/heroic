@@ -79,6 +79,12 @@ class HeroicAPI(object):
     def cluster_add_node(self, uri):
         return self._post_json('cluster/nodes', uri)
 
+    def write(self, series, data):
+        return self._post_json('write', {"series": series, "data": data})
+
+    def query_metrics(self, query):
+        return self._post_json('query/metrics', query)
+
 
 class Settings(object):
     def __init__(self, **kwargs):
@@ -90,17 +96,16 @@ S = Settings()
 
 
 def heroic(identifier, *args, **kwargs):
-    global S
-
     if S.heroic_jar is None:
         raise Exception("setup() has not been called, run through bin/run")
 
     config = kwargs.pop("config", None)
     debug = kwargs.pop("debug", S.debug)
+    args = kwargs.pop("args", [])
 
     instance_args = ["--startup-ping", "udp://localhost:{}".format(PING_PORT),
                      "--startup-id", str(identifier),
-                     "--port", str(0)]
+                     "--port", str(0)] + args
 
     if debug:
         out = sys.stdout
@@ -193,11 +198,12 @@ def timeout(seconds=5, error_message="Timeout in Test"):
 
 def setup_apis(configs, sock, **kwargs):
     """
-    Setup configurations and wait until all processes has responded with a ping.
+    Setup configurations and wait until all processes has responded with a
+    ping.
     """
-    global S
 
     debug = kwargs.pop('debug', S.debug)
+    args = kwargs.pop('args', [])
 
     procs = dict()
     tempfiles = []
@@ -207,7 +213,7 @@ def setup_apis(configs, sock, **kwargs):
             t = tempfile.NamedTemporaryFile(prefix="heroic-config-")
             yaml.dump(c, t)
             tempfiles.append(t)
-            procs[i] = heroic(i, config=t.name, debug=debug)
+            procs[i] = heroic(i, config=t.name, debug=debug, args=args)
 
         apis = dict()
 
@@ -273,6 +279,7 @@ def managed(*configs, **kwargs):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     debug = kwargs.pop("debug", S.debug)
+    args = kwargs.pop("args", [])
 
     try:
         sock.bind(('localhost', PING_PORT))
@@ -281,7 +288,7 @@ def managed(*configs, **kwargs):
         raise
 
     try:
-        apis = setup_apis(configs, sock, debug=debug)
+        apis = setup_apis(configs, sock, debug=debug, args=args)
     finally:
         sock.close()
 
