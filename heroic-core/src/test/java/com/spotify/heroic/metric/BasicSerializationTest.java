@@ -13,6 +13,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicPrimaryModule;
 import com.spotify.heroic.common.Statistics;
@@ -40,9 +41,10 @@ public class BasicSerializationTest {
     }
 
     @Test
-    public void testMetricTypedGroup() throws Exception {
-        final MetricCollection expected = MetricCollection.points(new ArrayList<>());
-        assertSerialization("MetricTypedGroup.json", expected, MetricCollection.class);
+    public void testMetricCollection() throws Exception {
+        final MetricCollection expected = MetricCollection
+                .points(ImmutableList.of(new Point(1000, 10.0d), new Point(2000, 20.0d)));
+        assertSerialization("MetricCollection.json", expected, MetricCollection.class);
     }
 
     @Test

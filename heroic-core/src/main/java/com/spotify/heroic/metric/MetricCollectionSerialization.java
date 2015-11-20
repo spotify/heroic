@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric;
 
 import java.io.IOException;
-import java.util.List;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -30,14 +29,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableList;
+
+import lombok.RequiredArgsConstructor;
 
 public class MetricCollectionSerialization {
     private static final String TYPE = "type";
     private static final String DATA = "data";
 
+    @RequiredArgsConstructor
     public static class Deserializer extends JsonDeserializer<MetricCollection> {
         @Override
         public MetricCollection deserialize(JsonParser p, DeserializationContext c)
@@ -47,7 +51,7 @@ public class MetricCollectionSerialization {
             }
 
             MetricType type = null;
-            List<Metric> data = null;
+            JsonNode data = null;
 
             while (p.nextToken() == JsonToken.FIELD_NAME) {
                 final String name = p.getCurrentName();
@@ -56,37 +60,27 @@ public class MetricCollectionSerialization {
                     throw c.mappingException("Expected field name");
                 }
 
-                if (TYPE.equals(name)) {
+                switch (name) {
+                case TYPE:
                     if (p.nextToken() != JsonToken.VALUE_STRING) {
                         throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
                     }
 
                     type = p.readValueAs(MetricType.class);
-                    continue;
-                }
-
-                if (DATA.equals(name)) {
-                    if (type == null) {
-                        throw c.mappingException("'type' must be specified first");
-                    }
-
+                    break;
+                case DATA:
                     if (p.nextToken() != JsonToken.START_ARRAY) {
-                        throw c.mappingException("Expected start of array");
+                        throw c.wrongTokenException(p, JsonToken.START_ARRAY,
+                                "expected array for data");
                     }
 
-                    final ImmutableList.Builder<Metric> metrics = ImmutableList.builder();
-
-                    while (p.nextToken() != JsonToken.END_ARRAY) {
-                        metrics.add(p.readValueAs(type.type()));
-                    }
-
-                    data = metrics.build();
+                    data = p.readValueAsTree();
+                    break;
+                default:
+                    // skip unknown
+                    p.skipChildren();
                     continue;
                 }
-            }
-
-            if (p.getCurrentToken() != JsonToken.END_OBJECT) {
-                throw c.wrongTokenException(p, JsonToken.END_OBJECT, null);
             }
 
             if (type == null) {
@@ -97,7 +91,17 @@ public class MetricCollectionSerialization {
                 throw c.mappingException("'data' not specified");
             }
 
-            return MetricCollection.build(type, data);
+            final ImmutableList.Builder<Metric> d = ImmutableList.builder();
+
+            for (final JsonNode child : data) {
+                d.add(new TreeTraversingParser(child, p.getCodec()).readValueAs(type.type()));
+            }
+
+            if (p.getCurrentToken() != JsonToken.END_OBJECT) {
+                throw c.wrongTokenException(p, JsonToken.END_OBJECT, null);
+            }
+
+            return MetricCollection.build(type, d.build());
         }
     }
 
