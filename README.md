@@ -2,18 +2,15 @@
 [![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
 
 A scalable time series database based on Cassandra and Elasticsearch.
-Go to https://spotify.github.io/heroic/ for documentation.
+Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
 
-**Alpha Disclaimer:**
-Heroic should in its current state be considered Alpha-grade software.
-
-Do not use in production unless you are willing to spend a lot of time with it,
-and you are OK with losing your data to goblins.
+**Stability Disclaimer:**
+Heroic is an evolving project, and should in its current state be considered *unstable*.
+Do not use in production unless you are willing to spend time with it, experiment and contribute.
+Not doing so might result in losing your data to goblins.
 
 It is currently not on a release schedule and is not versioned.
-
-At Spotify we rely on *release branches* that we flip-flop between with Puppet
-to keep us sane.
+At Spotify we rely on multiple *release forks* that we actively maintain and flip between.
 
 ## Building
 
