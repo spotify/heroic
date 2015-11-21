@@ -25,12 +25,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -40,6 +40,7 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
 
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -49,22 +50,14 @@ import lombok.RequiredArgsConstructor;
  * @author udoprog
  */
 @Data
+@RequiredArgsConstructor(access = AccessLevel.MODULE)
 public class ChainInstance implements AggregationInstance {
-    private static final ArrayList<AggregationInstance> EMPTY_AGGREGATORS = new ArrayList<>();
-
     private final List<AggregationInstance> chain;
 
     @JsonCreator
-    public ChainInstance(@JsonProperty("chain") List<AggregationInstance> chain) {
-        this.chain = checkNotEmpty(Optional.fromNullable(chain).or(EMPTY_AGGREGATORS), "chain");
-    }
-
-    static <T> List<T> checkNotEmpty(List<T> list, String what) {
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException(what + " must not be empty");
-        }
-
-        return list;
+    public ChainInstance(@JsonProperty("chain") Optional<List<AggregationInstance>> chain) {
+        this.chain = chain.filter(c -> !c.isEmpty()).orElseThrow(
+                () -> new IllegalArgumentException("chain must be specified and non-empty"));
     }
 
     /**
@@ -127,11 +120,16 @@ public class ChainInstance implements AggregationInstance {
         return new AggregationTraversal(prev.getStates(), new Session(head.getSession(), tail));
     }
 
-    private static final Joiner chainJoiner = Joiner.on(" -> ");
+    @Override
+    public Set<String> requiredTags() {
+        return chain.iterator().next().requiredTags();
+    }
+
+    private static final Joiner CHAIN_JOINER = Joiner.on(" -> ");
 
     @Override
     public String toString() {
-        return "[" + chainJoiner.join(chain.stream().map(Object::toString).iterator()) + "]";
+        return "[" + CHAIN_JOINER.join(chain.stream().map(Object::toString).iterator()) + "]";
     }
 
     @RequiredArgsConstructor

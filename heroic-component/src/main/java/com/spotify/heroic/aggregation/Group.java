@@ -21,11 +21,15 @@
 
 package com.spotify.heroic.aggregation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,10 +43,10 @@ public class Group implements Aggregation {
     private final Aggregation each;
 
     @JsonCreator
-    public Group(@JsonProperty("of") List<String> of,
-            @JsonProperty("each") List<Aggregation> each) {
-        this.of = Optional.ofNullable(of);
-        this.each = Aggregations.chain(Optional.ofNullable(each));
+    public Group(@JsonProperty("of") Optional<List<String>> of,
+            @JsonProperty("each") Optional<List<Aggregation>> each) {
+        this.of = checkNotNull(of, "of");
+        this.each = Aggregations.chain(checkNotNull(each, "each"));
     }
 
     @Override
@@ -57,7 +61,15 @@ public class Group implements Aggregation {
 
     @Override
     public GroupInstance apply(final AggregationContext context) {
-        return new GroupInstance(of, each.apply(context));
+        final AggregationInstance instance = each.apply(context);
+
+        final Optional<List<String>> of = this.of.map(o -> {
+            final ImmutableSet.Builder<String> b = ImmutableSet.builder();
+            b.addAll(o).addAll(context.requiredTags()).addAll(instance.requiredTags());
+            return ImmutableList.copyOf(b.build());
+        });
+
+        return new GroupInstance(of, instance);
     }
 
     @Override

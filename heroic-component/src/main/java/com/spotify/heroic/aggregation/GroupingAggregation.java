@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -53,13 +54,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @Data
-@EqualsAndHashCode(of = { "of", "each" })
+@EqualsAndHashCode(of = {"of", "each"})
 public abstract class GroupingAggregation implements AggregationInstance {
     private final Optional<List<String>> of;
     private final AggregationInstance each;
 
     public GroupingAggregation(final Optional<List<String>> of, final AggregationInstance each) {
-        this.of = of;
+        this.of = checkNotNull(of, "of");
         this.each = checkNotNull(each, "each");
     }
 
@@ -81,6 +82,10 @@ public abstract class GroupingAggregation implements AggregationInstance {
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
         return traversal(map(states), range);
     }
+
+    public Set<String> requiredTags() {
+        return of.map(ImmutableSet::copyOf).orElseGet(ImmutableSet::of);
+    };
 
     /**
      * Traverse the given input states, and map them to their corresponding keys.

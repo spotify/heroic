@@ -22,14 +22,16 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 
 /**
  * An instance of an aggregation.
  *
- * Contains the materialized configuration of a given aggregation.
- * All members must be fully thread-safe.
+ * Contains the materialized configuration of a given aggregation. All members must be fully
+ * thread-safe.
  *
  * @see Aggregation
  * @author udoprog
@@ -101,4 +103,17 @@ public interface AggregationInstance {
     default AggregationCombiner combiner(final DateRange range) {
         return AggregationCombiner.DEFAULT;
     }
+
+    /**
+     * Get a set of required tags.
+     *
+     * This is used to elide a set of required tags that needs to be forwarded for a certain
+     * aggregation.
+     *
+     * @return Return the set of required tags for this aggregation.
+     */
+    default Set<String> requiredTags() {
+        return ImmutableSet.of();
+    }
+
 }

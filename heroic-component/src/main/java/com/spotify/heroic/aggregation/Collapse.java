@@ -26,6 +26,8 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,10 +41,10 @@ public class Collapse implements Aggregation {
     private final Aggregation each;
 
     @JsonCreator
-    public Collapse(@JsonProperty("of") List<String> of,
-            @JsonProperty("each") List<Aggregation> each) {
-        this.of = Optional.ofNullable(of);
-        this.each = Aggregations.chain(Optional.ofNullable(each));
+    public Collapse(@JsonProperty("of") Optional<List<String>> of,
+            @JsonProperty("each") Optional<List<Aggregation>> each) {
+        this.of = of;
+        this.each = Aggregations.chain(each);
     }
 
     @Override
@@ -57,6 +59,12 @@ public class Collapse implements Aggregation {
 
     @Override
     public CollapseInstance apply(final AggregationContext context) {
+        final Optional<List<String>> of = this.of.map(o -> {
+            final ImmutableSet.Builder<String> b = ImmutableSet.builder();
+            b.addAll(o).addAll(context.requiredTags());
+            return ImmutableList.copyOf(b.build());
+        });
+
         return new CollapseInstance(of, each.apply(context));
     }
 

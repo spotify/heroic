@@ -38,7 +38,7 @@ public abstract class Aggregations {
      * @param input The input chain.
      * @return A new aggregation for the given chain.
      */
-    public static Aggregation chain(final Optional<Iterable<Aggregation>> input) {
+    public static Aggregation chain(final Optional<? extends Iterable<Aggregation>> input) {
         return input.map(Iterable::iterator).filter(Iterator::hasNext).map(it -> {
             final Aggregation first = it.next();
 

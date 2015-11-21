@@ -22,7 +22,9 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.Optional;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Duration;
 
 public interface AggregationContext {
@@ -43,4 +45,38 @@ public interface AggregationContext {
     Duration defaultSize();
 
     Duration defaultExtent();
+
+    default Set<String> requiredTags() {
+        return ImmutableSet.of();
+    }
+
+    static AggregationContext withRequiredTags(final AggregationContext context,
+            final Set<String> tags) {
+        return new AggregationContext() {
+            @Override
+            public Optional<Duration> size() {
+                return context.size();
+            }
+
+            @Override
+            public Optional<Duration> extent() {
+                return context.extent();
+            }
+
+            @Override
+            public Duration defaultSize() {
+                return context.defaultSize();
+            }
+
+            @Override
+            public Duration defaultExtent() {
+                return context.defaultExtent();
+            }
+
+            @Override
+            public Set<String> requiredTags() {
+                return tags;
+            }
+        };
+    }
 }

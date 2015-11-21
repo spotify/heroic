@@ -22,12 +22,15 @@
 package com.spotify.heroic.aggregation;
 
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 
 import lombok.Data;
 
@@ -38,13 +41,14 @@ public class Chain implements Aggregation {
 
     private final List<Aggregation> chain;
 
-    @JsonCreator
-    public Chain(@JsonProperty("chain") List<Aggregation> chain) {
-        if (chain == null || chain.isEmpty()) {
-            throw new IllegalArgumentException("chain must be specified and non-empty");
-        }
+    public Chain(List<Aggregation> chain) {
+        this(Optional.ofNullable(chain));
+    }
 
-        this.chain = chain;
+    @JsonCreator
+    public Chain(@JsonProperty("chain") Optional<List<Aggregation>> chain) {
+        this.chain = chain.filter(c -> !c.isEmpty()).orElseThrow(
+                () -> new IllegalArgumentException("chain must be specified and non-empty"));
     }
 
     @Override
@@ -62,14 +66,31 @@ public class Chain implements Aggregation {
 
     @Override
     public ChainInstance apply(final AggregationContext context) {
-        final ImmutableList<AggregationInstance> chain =
-                ImmutableList.copyOf(this.chain.stream().map(c -> c.apply(context)).iterator());
-        return new ChainInstance(chain);
+        ListIterator<Aggregation> it = chain.listIterator(chain.size());
+
+        AggregationContext current = context;
+        final ImmutableSet.Builder<String> tags = ImmutableSet.builder();
+
+        final ImmutableList.Builder<AggregationInstance> chain = ImmutableList.builder();
+
+        while (it.hasPrevious()) {
+            final AggregationInstance instance = it.previous().apply(current);
+            tags.addAll(instance.requiredTags());
+            current = AggregationContext.withRequiredTags(context, tags.build());
+            chain.add(instance);
+        }
+
+        return new ChainInstance(Lists.reverse(chain.build()));
     }
 
     @Override
     public String toDSL() {
         return String.format("%s(%s)", NAME,
                 params.join(chain.stream().map(Aggregation::toDSL).iterator()));
+    }
+
+    @Override
+    public String toString() {
+        return toDSL();
     }
 }
