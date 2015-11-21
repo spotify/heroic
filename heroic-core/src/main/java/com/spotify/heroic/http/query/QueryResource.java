@@ -117,12 +117,26 @@ public class QueryResource {
 
     @POST
     @Path("/metrics")
-    public void metrics(@Suspended final AsyncResponse response,
-            @QueryParam("backend") String backendGroup, QueryMetrics query) {
+    @Consumes(MediaType.TEXT_PLAIN)
+    public void metricsText(@Suspended final AsyncResponse response,
+            @QueryParam("group") String group, String query) {
+        final Query q = this.query.newQueryFromString(query).build();
+
+        final QueryManager.Group g = this.query.useGroup(group);
+        final AsyncFuture<QueryResult> callback = g.query(q);
+
+        bindMetricsResponse(response, callback);
+    }
+
+    @POST
+    @Path("/metrics")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void metrics(@Suspended final AsyncResponse response, @QueryParam("group") String group,
+            QueryMetrics query) {
         final Query q = setupQuery(query).build();
 
-        final QueryManager.Group group = this.query.useGroup(backendGroup);
-        final AsyncFuture<QueryResult> callback = group.query(q);
+        final QueryManager.Group g = this.query.useGroup(group);
+        final AsyncFuture<QueryResult> callback = g.query(q);
 
         bindMetricsResponse(response, callback);
     }
