@@ -21,31 +21,48 @@
 
 package com.spotify.heroic.grammar;
 
+import java.util.Optional;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class ValueTypeCastException extends RuntimeException {
-    private static final long serialVersionUID = 3125985026131597565L;
+@EqualsAndHashCode(exclude = {"c"})
+public class EmptyValue implements Value {
+    private final Context c;
 
-    private final Object from;
-    private final Class<?> to;
-
-    public ValueTypeCastException(Object from, Class<?> to) {
-        super(String.format("%s cannot be cast to %s", from, name(to)));
-
-        this.from = from;
-        this.to = to;
+    @Override
+    public Context context() {
+        return c;
     }
 
-    private static String name(Class<?> type) {
-        final ValueName name = type.getAnnotation(ValueName.class);
+    @Override
+    public Value sub(Value other) {
+        throw new IllegalArgumentException("empty does not support subtraction");
+    }
 
-        if (name != null) {
-            return name.value();
-        }
+    @Override
+    public Value add(Value other) {
+        throw new IllegalArgumentException("empty does not support addition");
+    }
 
-        return type.getSimpleName();
+    @Override
+    public <T> T cast(T to) {
+        throw c.castError(this, to);
+    }
+
+    @Override
+    public <T> T cast(Class<T> to) {
+        throw c.castError(this, to);
+    }
+
+    @Override
+    public Optional<Value> toOptional() {
+        return Optional.empty();
+    }
+
+    @Override
+    public String toString() {
+        return "<empty>";
     }
 }

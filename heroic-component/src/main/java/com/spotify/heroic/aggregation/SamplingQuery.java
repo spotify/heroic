@@ -52,8 +52,4 @@ public class SamplingQuery {
             this.extent = Optionals.firstPresent(Optional.ofNullable(extent), this.size);
         }
     }
-
-    public static SamplingQuery empty() {
-        return new SamplingQuery(Optional.empty(), Optional.empty());
-    }
 }

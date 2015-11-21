@@ -21,8 +21,11 @@
 
 package com.spotify.heroic.grammar;
 
+import java.util.List;
 import java.util.Optional;
 
+import com.google.common.base.Joiner;
+import com.spotify.heroic.Query;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 
@@ -51,9 +54,18 @@ public interface QueryParser {
      * @return The parse query.
      * @throws ParseException if unable to parse string.
      */
-    QueryDSL parseQuery(String query);
+    Query parseQuery(String query);
 
-    String stringifyQuery(QueryDSL queryDSL);
+    String stringifyQuery(Query query);
+
+    static String escapeList(List<String> input) {
+        if (input.size() == 1) {
+            return escapeString(input.iterator().next());
+        }
+
+        return "[" + Joiner.on(", ").join(input.stream().map(QueryParser::escapeString).iterator())
+                + "]";
+    }
 
     static String escapeString(String input) {
         boolean quoted = false;

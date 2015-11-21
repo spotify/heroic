@@ -22,8 +22,8 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,6 +35,7 @@ import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.aggregation.SamplingQuery;
+import com.spotify.heroic.common.Duration;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -115,12 +116,12 @@ public class Module implements HeroicModule {
                 }, new SamplingAggregationDSL<Quantile>(factory) {
                     @Override
                     protected Quantile buildWith(final AggregationArguments args,
-                            final SamplingQuery sampling) {
-                        double q = args.getNext("q", Long.class).map(v -> ((double) v) / 100.0)
-                                .orElse(Quantile.DEFAULT_QUANTILE);
-                        double error = args.getNext("error", Long.class)
-                                .map(v -> ((double) v) / 100.0).orElse(Quantile.DEFAULT_ERROR);
-                        return new Quantile(sampling, q, error);
+                            final Optional<Duration> size, final Optional<Duration> extent) {
+                        final Optional<Double> q =
+                                args.getNext("q", Long.class).map(v -> ((double) v) / 100.0);
+                        final Optional<Double> error =
+                                args.getNext("error", Long.class).map(v -> ((double) v) / 100.0);
+                        return new Quantile(Optional.empty(), size, extent, q, error);
                     }
                 });
             }
@@ -146,15 +147,20 @@ public class Module implements HeroicModule {
             }
 
             private <T extends Aggregation> SamplingAggregationDSL<T> samplingBuilder(
-                    Function<SamplingQuery, T> builder) {
+                    SamplingBuilder<T> builder) {
                 return new SamplingAggregationDSL<T>(factory) {
                     @Override
                     protected T buildWith(final AggregationArguments args,
-                            final SamplingQuery sampling) {
-                        return builder.apply(sampling);
+                            final Optional<Duration> size, final Optional<Duration> extent) {
+                        return builder.apply(Optional.empty(), size, extent);
                     }
                 };
             }
         };
+    }
+
+    interface SamplingBuilder<T> {
+        T apply(Optional<SamplingQuery> sampling, Optional<Duration> size,
+                Optional<Duration> extent);
     }
 }

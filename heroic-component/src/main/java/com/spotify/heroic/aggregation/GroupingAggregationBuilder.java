@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
@@ -33,19 +34,19 @@ public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL 
         super(factory);
     }
 
-    protected abstract Aggregation build(Optional<List<String>> over, Aggregation each);
+    protected abstract Aggregation build(Optional<List<String>> of, Optional<Aggregation> each);
 
     @Override
     public Aggregation build(final AggregationArguments args) {
-        final Optional<List<String>> over =
-                args.getNext("of", ListValue.class).map(this::convertOf);
-        final Aggregation each =
-                Aggregations.chain(args.getNext("each", Value.class).map(this::flatten));
-        return build(over, each);
+        final Optional<List<String>> of =
+                args.getNext("of", Value.class).flatMap(Value::toOptional).map(this::convertOf);
+        final Optional<Aggregation> each =
+                args.getNext("each", AggregationValue.class).map(this::asAggregation);
+        return build(of, each);
     }
 
-    private List<String> convertOf(final ListValue list) {
-        return ImmutableList
-                .copyOf(list.getList().stream().map(v -> v.cast(String.class)).iterator());
+    private List<String> convertOf(final Value list) {
+        return ImmutableList.copyOf(list.cast(ListValue.class).getList().stream()
+                .map(v -> v.cast(String.class)).iterator());
     }
 }

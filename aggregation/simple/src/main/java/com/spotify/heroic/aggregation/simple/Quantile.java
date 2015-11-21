@@ -21,11 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.SamplingQuery;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.Optionals;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -38,25 +43,34 @@ public class Quantile extends SamplingAggregation {
     public static final double DEFAULT_QUANTILE = 0.5;
     public static final double DEFAULT_ERROR = 0.01;
 
-    private final double q;
-    private final double error;
+    private final Optional<Double> q;
+    private final Optional<Double> error;
 
     @JsonCreator
-    public Quantile(@JsonProperty("sampling") SamplingQuery sampling, @JsonProperty("q") Double q,
-            @JsonProperty("error") Double error) {
-        super(Optional.fromNullable(sampling).or(SamplingQuery::empty));
-        this.q = Optional.fromNullable(q).or(DEFAULT_QUANTILE);
-        this.error = Optional.fromNullable(error).or(DEFAULT_ERROR);
+    public Quantile(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
+            @JsonProperty("size") Optional<Duration> size,
+            @JsonProperty("extent") Optional<Duration> extent,
+            @JsonProperty("q") Optional<Double> q, @JsonProperty("error") Optional<Double> error) {
+        super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
+                Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
+        this.q = q;
+        this.error = error;
     }
 
     @Override
     public QuantileInstance apply(AggregationContext context, final long size, final long extent) {
-        return new QuantileInstance(size, extent, q, error);
+        return new QuantileInstance(size, extent, q.orElse(DEFAULT_QUANTILE),
+                error.orElse(DEFAULT_ERROR));
     }
 
     @Override
     public String toDSL() {
-        return samplingDSL(NAME, "q", percentage(q), "error", percentage(error));
+        final List<String> extra = new ArrayList<>();
+
+        this.q.ifPresent(q -> extra.add("q=" + percentage(q)));
+        this.error.ifPresent(error -> extra.add("error=" + percentage(error)));
+
+        return samplingDSL(NAME, extra);
     }
 
     private String percentage(double v) {

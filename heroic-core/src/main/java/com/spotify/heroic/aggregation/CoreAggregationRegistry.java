@@ -23,11 +23,11 @@ package com.spotify.heroic.aggregation;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
 import eu.toolchain.serializer.SerialReader;
@@ -113,14 +113,14 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
     }
 
     @Override
-    public Aggregation build(String name, List<Value> args, Map<String, Value> keywords) {
+    public Aggregation build(String name, ListValue args, Map<String, Value> keywords) {
         final AggregationDSL builder = builders.get(name);
 
         if (builder == null) {
             throw new IllegalArgumentException(String.format("no aggregation named %s", name));
         }
 
-        final AggregationArguments a = new AggregationArguments(args, keywords);
+        final AggregationArguments a = new AggregationArguments(args.getList(), keywords);
 
         final Aggregation aggregation;
 

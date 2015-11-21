@@ -29,43 +29,43 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-@AllArgsConstructor
 public class Collapse implements Aggregation {
     public static final String NAME = "collapse";
 
     private final Optional<List<String>> of;
-    private final Aggregation each;
+    private final Optional<Aggregation> each;
 
     @JsonCreator
     public Collapse(@JsonProperty("of") Optional<List<String>> of,
-            @JsonProperty("each") Optional<List<Aggregation>> each) {
+            @JsonProperty("each") Optional<Aggregation> each) {
         this.of = of;
-        this.each = Aggregations.chain(each);
+        this.each = each;
     }
 
     @Override
     public Optional<Long> size() {
-        return each.size();
+        return each.flatMap(Aggregation::size);
     }
 
     @Override
     public Optional<Long> extent() {
-        return each.extent();
+        return each.flatMap(Aggregation::extent);
     }
 
     @Override
     public CollapseInstance apply(final AggregationContext context) {
+        final AggregationInstance instance = each.orElse(Empty.INSTANCE).apply(context);
+
         final Optional<List<String>> of = this.of.map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();
-            b.addAll(o).addAll(context.requiredTags());
+            b.addAll(o).addAll(context.requiredTags()).addAll(instance.requiredTags());
             return ImmutableList.copyOf(b.build());
         });
 
-        return new CollapseInstance(of, each.apply(context));
+        return new CollapseInstance(of, instance);
     }
 
     @Override

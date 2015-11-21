@@ -23,9 +23,11 @@ package com.spotify.heroic.grammar;
 
 import java.util.List;
 
+import com.spotify.heroic.Query;
+
 import lombok.Data;
 
 @Data
 public final class Queries {
-    private final List<QueryDSL> queries;
+    private final List<Query> queries;
 }

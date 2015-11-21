@@ -31,6 +31,7 @@ import java.util.TreeMap;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -169,10 +170,12 @@ public class HeroicPrimaryModule extends AbstractModule {
 
         mapper.registerModule(module);
         mapper.registerModule(serializerModule());
-        mapper.registerModule(new Jdk8Module());
+        mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
         mapper.registerModule(HeroicLoadingModule.serialization());
 
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
         return mapper;
     }
 

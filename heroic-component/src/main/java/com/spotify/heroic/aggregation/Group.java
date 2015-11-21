@@ -30,38 +30,38 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.grammar.QueryParser;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
-@AllArgsConstructor
 public class Group implements Aggregation {
     public static final String NAME = "group";
+    public static final String ALL = "*";
 
     private final Optional<List<String>> of;
-    private final Aggregation each;
+    private final Optional<Aggregation> each;
 
     @JsonCreator
     public Group(@JsonProperty("of") Optional<List<String>> of,
-            @JsonProperty("each") Optional<List<Aggregation>> each) {
+            @JsonProperty("each") Optional<Aggregation> each) {
         this.of = checkNotNull(of, "of");
-        this.each = Aggregations.chain(checkNotNull(each, "each"));
+        this.each = checkNotNull(each, "each");
     }
 
     @Override
     public Optional<Long> size() {
-        return each.size();
+        return each.flatMap(Aggregation::size);
     }
 
     @Override
     public Optional<Long> extent() {
-        return each.extent();
+        return each.flatMap(Aggregation::extent);
     }
 
     @Override
     public GroupInstance apply(final AggregationContext context) {
-        final AggregationInstance instance = each.apply(context);
+        final AggregationInstance instance = each.orElse(Empty.INSTANCE).apply(context);
 
         final Optional<List<String>> of = this.of.map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();
@@ -74,6 +74,9 @@ public class Group implements Aggregation {
 
     @Override
     public String toDSL() {
-        return String.format("%s()", NAME);
+        final Aggregation each = this.each.orElse(Empty.INSTANCE);
+        final String eachDSL = each instanceof Chain ? "(" + each.toDSL() + ")" : each.toDSL();
+        final String ofDSL = of.map(QueryParser::escapeList).orElse(ALL);
+        return eachDSL + " by " + ofDSL;
     }
 }

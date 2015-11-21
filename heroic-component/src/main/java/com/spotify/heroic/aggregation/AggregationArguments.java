@@ -40,7 +40,8 @@ public class AggregationArguments {
     private final LinkedList<Value> args;
     private final Map<String, Value> kw;
 
-    public AggregationArguments(final List<Value> args, final Map<String, Value> kw) {
+    public AggregationArguments(final List<? extends Value> args,
+            final Map<String, ? extends Value> kw) {
         this.args = new LinkedList<>(args);
         this.kw = new HashMap<>(kw);
     }

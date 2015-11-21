@@ -21,38 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.grammar.AggregationValue;
-import com.spotify.heroic.grammar.ListValue;
-import com.spotify.heroic.grammar.Value;
 
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class AbstractAggregationDSL implements AggregationDSL {
     private final AggregationFactory factory;
-
-    protected List<Aggregation> flatten(final AggregationArguments args) {
-        final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
-        args.takeArguments(Value.class).stream().map(this::flatten).forEach(aggregations::addAll);
-        return aggregations.build();
-    }
-
-    protected List<Aggregation> flatten(final Value value) {
-        if (value instanceof ListValue) {
-            final ImmutableList.Builder<Aggregation> aggregations = ImmutableList.builder();
-
-            for (final Value item : ((ListValue) value).getList()) {
-                aggregations.addAll(flatten(item));
-            }
-
-            return aggregations.build();
-        }
-
-        return ImmutableList.of(asAggregation(value.cast(AggregationValue.class)));
-    }
 
     protected Aggregation asAggregation(final AggregationValue value) {
         return value.build(factory);

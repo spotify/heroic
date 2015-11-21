@@ -24,6 +24,7 @@ package com.spotify.heroic.grammar;
 import java.util.concurrent.TimeUnit;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * int's are represented internally as longs.
@@ -32,17 +33,24 @@ import lombok.Data;
  */
 @ValueName("int")
 @Data
+@EqualsAndHashCode(exclude = {"c"})
 public final class IntValue implements Value {
     private final Long value;
+    private final Context c;
+
+    @Override
+    public Context context() {
+        return c;
+    }
 
     @Override
     public Value sub(Value other) {
-        return new IntValue(value - other.cast(this).value);
+        return new IntValue(value - other.cast(this).value, c.join(other.context()));
     }
 
     @Override
     public Value add(Value other) {
-        return new IntValue(value + other.cast(this).value);
+        return new IntValue(value + other.cast(this).value, c.join(other.context()));
     }
 
     public String toString() {
@@ -59,10 +67,10 @@ public final class IntValue implements Value {
         if (to instanceof DurationValue) {
             final DurationValue o = (DurationValue) to;
             return (T) new DurationValue(o.getUnit(),
-                    o.getUnit().convert(value, TimeUnit.MILLISECONDS));
+                    o.getUnit().convert(value, TimeUnit.MILLISECONDS), c);
         }
 
-        throw new ValueCastException(this, to);
+        throw c.castError(this, to);
     }
 
     @SuppressWarnings("unchecked")
@@ -76,6 +84,6 @@ public final class IntValue implements Value {
             return (T) value;
         }
 
-        throw new ValueTypeCastException(this, to);
+        throw c.castError(this, to);
     }
 }

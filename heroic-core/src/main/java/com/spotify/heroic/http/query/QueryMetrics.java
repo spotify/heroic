@@ -43,7 +43,7 @@ import lombok.Data;
 public class QueryMetrics {
     private final Optional<String> query;
     private final Optional<Aggregation> aggregation;
-    private final MetricType source;
+    private final Optional<MetricType> source;
     private final Optional<QueryDateRange> range;
     private final Optional<Filter> filter;
     private final Optional<QueryOptions> options;
@@ -54,7 +54,7 @@ public class QueryMetrics {
     private final Optional<List<String>> groupBy;
 
     public QueryMetrics(Optional<String> query, Optional<Aggregation> aggregation,
-            MetricType source, Optional<QueryDateRange> range, Optional<Filter> filter,
+            Optional<MetricType> source, Optional<QueryDateRange> range, Optional<Filter> filter,
             Optional<QueryOptions> options) {
         this.query = query;
         this.aggregation = aggregation;
@@ -81,7 +81,7 @@ public class QueryMetrics {
         this.query = ofNullable(query);
         this.aggregation = firstPresent(ofNullable(aggregation),
                 ofNullable(aggregators).filter(c -> !c.isEmpty()).map(Chain::new));
-        this.source = MetricType.fromIdentifier(source).orElse(MetricType.POINT);
+        this.source = MetricType.fromIdentifier(source);
         this.range = ofNullable(range);
         this.filter = ofNullable(filter);
         this.options = ofNullable(options);

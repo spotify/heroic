@@ -27,7 +27,6 @@ import com.spotify.heroic.aggregation.AbstractAggregationDSL;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 
 public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
@@ -39,9 +38,10 @@ public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
     public Aggregation build(final AggregationArguments args) {
         final Optional<Duration> size = args.getNext("size", Duration.class);
         final Optional<Duration> extent = args.getNext("extent", Duration.class);
-        return buildWith(args, new SamplingQuery(size, extent));
+
+        return buildWith(args, size, extent);
     }
 
-    protected abstract Aggregation buildWith(final AggregationArguments args,
-            final SamplingQuery sampling);
+    protected abstract Aggregation buildWith(AggregationArguments args, Optional<Duration> size,
+            Optional<Duration> extent);
 }

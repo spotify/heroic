@@ -36,6 +36,7 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
+import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
@@ -46,10 +47,10 @@ import com.spotify.heroic.metric.MetricType;
 import lombok.Data;
 
 public class CoreQueryParser implements QueryParser {
-    public static final Operation<Value> VALUE_EXPR = new Operation<Value>() {
+    public static final Operation<Value> EXPRESSION = new Operation<Value>() {
         @Override
         public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.valueExpr();
+            return parser.expressionOnly();
         }
 
         public Value convert(QueryListener listener) {
@@ -57,27 +58,27 @@ public class CoreQueryParser implements QueryParser {
         };
     };
 
-    public static final Operation<QueryDSL> QUERY = new Operation<QueryDSL>() {
+    public static final Operation<Query> QUERY = new Operation<Query>() {
         @Override
         public ParserRuleContext context(HeroicQueryParser parser) {
             return parser.query();
         }
 
         @Override
-        public QueryDSL convert(QueryListener listener) {
-            return listener.pop(QueryDSL.class);
+        public Query convert(QueryListener listener) {
+            return listener.pop(Query.class);
         };
     };
 
     public static final Operation<Filter> FILTER = new Operation<Filter>() {
         @Override
         public ParserRuleContext context(HeroicQueryParser parser) {
-            return parser.filter();
+            return parser.filterOnly();
         }
 
         @Override
         public Filter convert(QueryListener listener) {
-            return listener.pop(Filter.class);
+            return listener.pop(Filter.class).optimize();
         };
     };
 
@@ -85,7 +86,7 @@ public class CoreQueryParser implements QueryParser {
             new Operation<AggregationValue>() {
                 @Override
                 public ParserRuleContext context(HeroicQueryParser parser) {
-                    return parser.aggregation();
+                    return parser.expressionOnly();
                 }
 
                 @Override
@@ -133,27 +134,26 @@ public class CoreQueryParser implements QueryParser {
     }
 
     @Override
-    public QueryDSL parseQuery(String query) {
+    public Query parseQuery(String query) {
         return parse(QUERY, query);
     }
 
     @Override
-    public String stringifyQuery(final QueryDSL q) {
+    public String stringifyQuery(final Query q) {
         final Joiner joiner = Joiner.on(" ");
-        final Joiner groups = Joiner.on(", ");
 
         final List<String> parts = new ArrayList<>();
 
         parts.add(q.getAggregation().map(Aggregation::toDSL).orElse("*"));
-        parts.add(String.format("from %s", formatSource(q)));
 
-        q.getWhere().ifPresent(filter -> {
-            parts.add("where " + filter.toDSL());
+        q.getSource().ifPresent(source -> {
+            parts.add("from " + q.getRange().map(range -> {
+                return source.identifier() + range.toDSL();
+            }).orElseGet(source::identifier));
         });
 
-        q.getGroupBy().ifPresent(groupBy -> {
-            parts.add("group by "
-                    + groups.join(groupBy.stream().map(QueryParser::escapeString).iterator()));
+        q.getFilter().ifPresent(filter -> {
+            parts.add("where " + filter.toDSL());
         });
 
         return joiner.join(parts);
@@ -201,17 +201,12 @@ public class CoreQueryParser implements QueryParser {
         final Token last = lexer.getToken();
 
         if (last.getType() != Token.EOF) {
-            throw new ParseException(String.format("garbage at end of string: %s", last.getText()),
+            throw new ParseException(
+                    String.format("garbage at end of string: '%s'", last.getText()), null,
                     last.getLine(), last.getCharPositionInLine());
         }
 
         return op.convert(listener);
-    }
-
-    private String formatSource(final QueryDSL source) {
-        return source.getRange().map(range -> {
-            return source.getSource().identifier() + range.toDSL();
-        }).orElseGet(source.getSource()::identifier);
     }
 
     private ParseException toParseException(final RecognitionException e) {
@@ -219,10 +214,10 @@ public class CoreQueryParser implements QueryParser {
 
         if (token.getType() == HeroicQueryLexer.UnterminatedQutoedString) {
             return new ParseException(String.format("unterminated string: %s", token.getText()),
-                    token.getLine(), token.getCharPositionInLine());
+                    null, token.getLine(), token.getCharPositionInLine());
         }
 
-        return new ParseException("unexpected token: " + token.getText(), token.getLine(),
+        return new ParseException("unexpected token: " + token.getText(), null, token.getLine(),
                 token.getCharPositionInLine());
     }
 

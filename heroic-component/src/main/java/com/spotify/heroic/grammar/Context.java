@@ -21,8 +21,50 @@
 
 package com.spotify.heroic.grammar;
 
-public interface Context {
-    RuntimeException error(String message);
+import lombok.Data;
 
-    RuntimeException error(Exception cause);
+@Data
+public class Context {
+    private final int line;
+    private final int col;
+    private final int lineEnd;
+    private final int colEnd;
+
+    public ParseException error(final String message) {
+        return new ParseException(message, null, line, col, lineEnd, colEnd);
+    }
+
+    public ParseException error(final Exception cause) {
+        return new ParseException(cause.getMessage(), cause, line, col, lineEnd, colEnd);
+    }
+
+    public ParseException castError(final Object from, final Class<?> to) {
+        return new ParseException(String.format("%s cannot be cast to %s", from, name(to)), null,
+                line, col, lineEnd, colEnd);
+    }
+
+    public ParseException castError(final Object from, final Object to) {
+        return new ParseException(
+                String.format("%s cannot be cast to a compatible type of %s", from, to), null, line,
+                col, lineEnd, colEnd);
+    }
+
+    public Context join(final Context o) {
+        return new Context(Math.min(getLine(), o.getLine()), Math.min(getCol(), o.getCol()),
+                Math.max(getLineEnd(), o.getLineEnd()), Math.max(getColEnd(), o.getColEnd()));
+    }
+
+    public static Context empty() {
+        return new Context(-1, -1, -1, -1);
+    }
+
+    static String name(Class<?> type) {
+        final ValueName name = type.getAnnotation(ValueName.class);
+
+        if (name != null) {
+            return name.value();
+        }
+
+        return type.getSimpleName();
+    }
 }

@@ -28,6 +28,7 @@ import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.common.Duration;
@@ -82,7 +83,8 @@ public class Module implements HeroicModule {
                     }
                 }, new GroupingAggregationBuilder(factory) {
                     @Override
-                    protected Aggregation build(Optional<List<String>> over, Aggregation each) {
+                    protected Aggregation build(Optional<List<String>> over,
+                            Optional<Aggregation> each) {
                         return new Group(over, each);
                     }
                 });
@@ -96,7 +98,8 @@ public class Module implements HeroicModule {
                     }
                 }, new GroupingAggregationBuilder(factory) {
                     @Override
-                    protected Aggregation build(Optional<List<String>> over, Aggregation each) {
+                    protected Aggregation build(Optional<List<String>> over,
+                            Optional<Aggregation> each) {
                         return new Collapse(over, each);
                     }
                 });
@@ -117,7 +120,11 @@ public class Module implements HeroicModule {
                 }, new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
-                        return new Chain(flatten(args));
+                        final List<Aggregation> chain =
+                                ImmutableList.copyOf(args.takeArguments(AggregationValue.class)
+                                        .stream().map(this::asAggregation).iterator());
+
+                        return new Chain(chain);
                     }
                 });
 
@@ -137,7 +144,10 @@ public class Module implements HeroicModule {
                 }, new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
-                        return new Partition(flatten(args));
+                        final List<Aggregation> children =
+                                ImmutableList.copyOf(args.takeArguments(AggregationValue.class)
+                                        .stream().map(this::asAggregation).iterator());
+                        return new Partition(children);
                     }
                 });
 
@@ -145,15 +155,20 @@ public class Module implements HeroicModule {
                         new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
-                        final Aggregation child =
+                        final Optional<Aggregation> child =
                                 args.getNext("aggregation", AggregationValue.class)
-                                        .map(this::asAggregation)
-                                        .orElseThrow(() -> new IllegalArgumentException(
-                                                "missing required arguments 'aggregation'"));
+                                        .map(this::asAggregation);
 
                         final Optional<Duration> size = args.keyword("size", Duration.class);
                         final Optional<Duration> extent = args.keyword("extent", Duration.class);
-                        final SamplingQuery sampling = new SamplingQuery(size, extent);
+
+                        final Optional<SamplingQuery> sampling;
+
+                        if (size.isPresent() || extent.isPresent()) {
+                            sampling = Optional.of(new SamplingQuery(size, extent));
+                        } else {
+                            sampling = Optional.empty();
+                        }
 
                         return new Options(sampling, child);
                     }

@@ -34,10 +34,6 @@ public class ParseException extends RuntimeException {
     private final int lineEnd;
     private final int colEnd;
 
-    public ParseException(String message, int line, int col) {
-        this(message, null, line, col);
-    }
-
     public ParseException(String message, Throwable cause, int line, int col) {
         this(message, cause, line, col, line, col);
     }
@@ -51,7 +47,8 @@ public class ParseException extends RuntimeException {
         this.colEnd = colEnd;
     }
 
+    @Override
     public String toString() {
-        return "ParseException(message=" + getMessage() + ")";
+        return super.toString();
     }
 }

@@ -62,12 +62,14 @@ import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
 import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
+import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
 import com.spotify.heroic.shell.task.Query;
 import com.spotify.heroic.shell.task.ReadWriteTest;
 import com.spotify.heroic.shell.task.Resume;
 import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.Statistics;
+import com.spotify.heroic.shell.task.StringifyQuery;
 import com.spotify.heroic.shell.task.SuggestKey;
 import com.spotify.heroic.shell.task.SuggestPerformance;
 import com.spotify.heroic.shell.task.SuggestTag;
@@ -115,6 +117,8 @@ public final class Tasks {
         available.add(shellTask(Resume.class));
         available.add(shellTask(IngestionFilter.class));
         available.add(shellTask(DataMigrate.class));
+        available.add(shellTask(ParseQuery.class));
+        available.add(shellTask(StringifyQuery.class));
     }
 
     public static List<ShellTaskDefinition> available() {

@@ -37,7 +37,7 @@ import lombok.Data;
 @Data
 public class Chain implements Aggregation {
     public static final String NAME = "chain";
-    public static final Joiner params = Joiner.on(", ");
+    public static final Joiner PIPE = Joiner.on(" | ");
 
     private final List<Aggregation> chain;
 
@@ -85,8 +85,7 @@ public class Chain implements Aggregation {
 
     @Override
     public String toDSL() {
-        return String.format("%s(%s)", NAME,
-                params.join(chain.stream().map(Aggregation::toDSL).iterator()));
+        return PIPE.join(chain.stream().map(Aggregation::toDSL).iterator());
     }
 
     @Override

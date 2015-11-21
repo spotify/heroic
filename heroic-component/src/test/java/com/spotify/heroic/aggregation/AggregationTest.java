@@ -47,9 +47,10 @@ public class AggregationTest {
      */
     @Test
     public void testTagElision() {
-        final Aggregation g1 = new Group(Optional.of(ImmutableList.of("foo")), a);
-        final Aggregation g2 = new Group(Optional.of(ImmutableList.of("bar")),
-                new Chain(ImmutableList.of(new Group(Optional.of(ImmutableList.of("baz")), a))));
+        final Aggregation g1 = new Group(Optional.of(ImmutableList.of("foo")), Optional.of(a));
+        final Aggregation g2 =
+                new Group(Optional.of(ImmutableList.of("bar")), Optional.of(new Chain(ImmutableList
+                        .of(new Group(Optional.of(ImmutableList.of("baz")), Optional.of(a))))));
 
         final AggregationInstance instance =
                 Aggregations.chain(Optional.of(ImmutableList.of(g1, g2))).apply(context);

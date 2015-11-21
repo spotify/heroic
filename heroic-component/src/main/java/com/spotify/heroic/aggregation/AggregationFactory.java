@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
 import java.util.Map;
 
+import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
 /**
@@ -34,5 +34,5 @@ import com.spotify.heroic.grammar.Value;
  * @author udoprog
  */
 public interface AggregationFactory {
-    public Aggregation build(String name, List<Value> args, Map<String, Value> keywords);
+    public Aggregation build(String name, ListValue args, Map<String, Value> keywords);
 }

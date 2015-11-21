@@ -30,7 +30,7 @@ import lombok.EqualsAndHashCode;
 
 @ValueName("duration")
 @Data
-@EqualsAndHashCode(of = { "unit", "value" })
+@EqualsAndHashCode(exclude = {"c"})
 public class DurationValue implements Value {
     private static final BinaryOperation ADD = new BinaryOperation() {
         @Override
@@ -48,6 +48,12 @@ public class DurationValue implements Value {
 
     private final TimeUnit unit;
     private final long value;
+    private final Context c;
+
+    @Override
+    public Context context() {
+        return c;
+    }
 
     @Override
     public Value sub(Value other) {
@@ -62,17 +68,19 @@ public class DurationValue implements Value {
     private Value operate(BinaryOperation op, Value other) {
         final DurationValue o = other.cast(this);
 
+        final Context c = this.c.join(other.context());
+
         if (unit == o.unit) {
-            return new DurationValue(unit, op.calculate(value, o.value));
+            return new DurationValue(unit, op.calculate(value, o.value), c);
         }
 
         // decide which unit to convert to depending on which has the greatest magnitude in
         // milliseconds.
         if (unit.toMillis(1) < o.unit.toMillis(1)) {
-            return new DurationValue(unit, op.calculate(value, unit.convert(o.value, o.unit)));
+            return new DurationValue(unit, op.calculate(value, unit.convert(o.value, o.unit)), c);
         }
 
-        return new DurationValue(o.unit, op.calculate(o.unit.convert(value, unit), o.value));
+        return new DurationValue(o.unit, op.calculate(o.unit.convert(value, unit), o.value), c);
     }
 
     public String toString() {
@@ -87,10 +95,10 @@ public class DurationValue implements Value {
         }
 
         if (to instanceof IntValue) {
-            return (T) new IntValue(TimeUnit.MILLISECONDS.convert(value, unit));
+            return (T) new IntValue(TimeUnit.MILLISECONDS.convert(value, unit), c);
         }
 
-        throw new ValueCastException(this, to);
+        throw c.castError(this, to);
     }
 
     @SuppressWarnings("unchecked")
@@ -104,7 +112,7 @@ public class DurationValue implements Value {
             return (T) this.toDuration();
         }
 
-        throw new ValueTypeCastException(this, to);
+        throw c.castError(this, to);
     }
 
     public Duration toDuration() {

@@ -38,31 +38,33 @@ public class Options implements Aggregation {
 
     public static final long DEFAULT_SIZE = TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES);
 
-    private final SamplingQuery sampling;
-    private final Aggregation aggregation;
+    private final Optional<SamplingQuery> sampling;
+    private final Optional<Aggregation> aggregation;
 
     @JsonCreator
-    public Options(@JsonProperty("sampling") SamplingQuery sampling,
-            @JsonProperty("aggregation") Aggregation aggregation) {
-        this.sampling = Optional.ofNullable(sampling).orElseGet(SamplingQuery::empty);
-        this.aggregation = Optional.ofNullable(aggregation).orElse(Empty.INSTANCE);
+    public Options(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
+            @JsonProperty("aggregation") Optional<Aggregation> aggregation) {
+        this.sampling = sampling;
+        this.aggregation = aggregation;
     }
 
     @Override
     public Optional<Long> size() {
-        return firstPresent(aggregation.size(), sampling.getSize().map(Duration::toMilliseconds));
+        return firstPresent(aggregation.flatMap(Aggregation::size),
+                sampling.flatMap(SamplingQuery::getSize).map(Duration::toMilliseconds));
     }
 
     @Override
     public Optional<Long> extent() {
-        return firstPresent(aggregation.extent(),
-                sampling.getExtent().map(Duration::toMilliseconds));
+        return firstPresent(aggregation.flatMap(Aggregation::extent),
+                sampling.flatMap(SamplingQuery::getExtent).map(Duration::toMilliseconds));
     }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
-        return aggregation
-                .apply(new OptionsContext(context, sampling.getSize(), sampling.getExtent()));
+        return aggregation.orElse(Empty.INSTANCE)
+                .apply(new OptionsContext(context, sampling.flatMap(SamplingQuery::getSize),
+                        sampling.flatMap(SamplingQuery::getExtent)));
     }
 
     @Override

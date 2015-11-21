@@ -1,6 +1,10 @@
 package com.spotify.heroic.grammar;
 
+import static com.spotify.heroic.grammar.Value.list;
+import static com.spotify.heroic.grammar.Value.string;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyList;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,11 +20,11 @@ import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.CoreQueryParser.FromDSL;
 import com.spotify.heroic.metric.MetricType;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -49,7 +53,9 @@ public class QueryParserTest {
         Mockito.when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class)))
                 .thenReturn(matchTag);
         Mockito.when(filters.and(anyFilter(), anyFilter())).thenReturn(and);
-        Mockito.when(filters.or(Mockito.any(List.class))).thenReturn(or);
+        Mockito.when(filters.or(anyFilter(), anyFilter())).thenReturn(or);
+        Mockito.when(filters.and((List<Filter>) anyList())).thenReturn(and);
+        Mockito.when(filters.or((List<Filter>) anyList())).thenReturn(or);
         Mockito.when(or.optimize()).thenReturn(optimized);
         Mockito.when(and.optimize()).thenReturn(optimized);
 
@@ -57,62 +63,85 @@ public class QueryParserTest {
     }
 
     @Test
-    public void testAggregation() {
-        final AggregationValue average = new AggregationValue("average",
-                ImmutableList.<Value> of(new DurationValue(TimeUnit.HOURS, 30)),
-                ImmutableMap.<String, Value> of());
-
-        final AggregationValue sum = new AggregationValue("sum",
-                ImmutableList.<Value> of(new DurationValue(TimeUnit.HOURS, 30)),
-                ImmutableMap.<String, Value> of());
-
-        final AggregationValue group = new AggregationValue("group",
-                ImmutableList.<Value> of(
-                        new ListValue(ImmutableList.<Value> of(new StringValue("host"))), average),
-                ImmutableMap.<String, Value> of());
-
-        final AggregationValue chain = new AggregationValue("chain",
-                ImmutableList.<Value> of(group, sum), ImmutableMap.<String, Value> of());
-
-        assertEquals(chain, parser.parse(CoreQueryParser.AGGREGATION,
-                "chain(group([host], average(30H)), sum(30H))"));
+    public void testList() {
+        assertEquals(Value.list(Value.number(1), Value.number(2), Value.number(3)),
+                expr("[1, 2, 3]"));
+        assertEquals(expr("[1, 2, 3]"), expr("{1, 2, 3}"));
     }
 
     @Test
-    public void testValueExpr() {
-        assertEquals("foobar",
-                parser.parse(CoreQueryParser.VALUE_EXPR, "foo + bar").cast(String.class));
-        assertEquals(new DurationValue(TimeUnit.HOURS, 7),
-                parser.parse(CoreQueryParser.VALUE_EXPR, "3H + 4H").cast(DurationValue.class));
-        assertEquals(new DurationValue(TimeUnit.MINUTES, 59),
-                parser.parse(CoreQueryParser.VALUE_EXPR, "1H - 1m").cast(DurationValue.class));
-        assertEquals(new DurationValue(TimeUnit.MINUTES, 59),
-                parser.parse(CoreQueryParser.VALUE_EXPR, "119m - 1H").cast(DurationValue.class));
-        assertEquals(new ListValue(ImmutableList.<Value> of(new IntValue(1L), new IntValue(2L))),
-                parser.parse(CoreQueryParser.VALUE_EXPR, "[1] + [2]").cast(ListValue.class));
+    public void testAggregation() {
+        final Value d = Value.duration(TimeUnit.HOURS, 30);
+
+        assertEquals(a("average", d), aggregation("average(30H)"));
+        assertEquals(a("sum", d), aggregation("sum(30H)"));
+
+        final AggregationValue chain = a("chain",
+                a("group", Value.list(Value.string("host")), a("average", d)), a("sum", d));
+
+        assertEquals(chain, aggregation("chain(group([host], average(30H)), sum(30H))"));
+        assertEquals(chain, aggregation("average(30H) by host | sum(30H)"));
+
+        // @formatter:off
+        assertEquals(
+                a("chain",
+                    a("group", list(string("host")), a("average")),
+                    a("group", list(string("site")), a("sum"))),
+                aggregation("average() by host | sum() by site"));
+        // @formatter:on
+
+        // test grouping
+        // @formatter:off
+        assertEquals(
+                a("group",
+                    list(string("site")),
+                    a("chain",
+                        a("group",list(string("host")), a("average")),
+                        a("sum"))),
+                aggregation("(average() by host | sum()) by site"));
+        // @formatter:on
+    }
+
+    @Test
+    public void testByAll() {
+        final AggregationValue reference =
+                Value.aggregation("group", Value.list(Value.empty(), Value.aggregation("average")));
+        assertEquals(reference, parser.parse(CoreQueryParser.AGGREGATION, "average by *"));
+    }
+
+    @Test
+    public void testArithmetics() {
+        final Value foo = expr("foo"), bar = expr("bar");
+
+        // numbers
+        assertEquals((Long) 3L, expr("1 + 2 + 3 - 3").cast(Long.class));
+
+        // two strings
+        assertEquals("foobar", expr("foo + bar").cast(String.class));
+
+        // two lists
+        assertEquals(Value.list(foo, bar), expr("[foo] + [bar]").cast(ListValue.class));
+
+        // durations
+        assertEquals(Value.duration(TimeUnit.MINUTES, 55), expr("1H - 5m"));
+        assertEquals(Value.duration(TimeUnit.HOURS, 7), expr("3H + 4H"));
+        assertEquals(Value.duration(TimeUnit.MINUTES, 59), expr("119m - 1H"));
+        assertEquals(Value.duration(TimeUnit.MINUTES, 60 * 11), expr("1H + 1m - 1m + 10H"));
     }
 
     @Test
     public void testFrom() {
-        checkFrom(MetricType.POINT, Optional.empty(),
-                parser.parse(CoreQueryParser.FROM, "from points"));
-        checkFrom(MetricType.EVENT, Optional.empty(),
-                parser.parse(CoreQueryParser.FROM, "from events"));
+        checkFrom(MetricType.POINT, Optional.empty(), from("from points"));
+        checkFrom(MetricType.EVENT, Optional.empty(), from("from events"));
 
         // absolute
         checkFrom(MetricType.POINT, Optional.of(new QueryDateRange.Absolute(0, 1234 + 4321)),
-                parser.parse(CoreQueryParser.FROM, "from points(0, 1234 + 4321)"));
+                from("from points(0, 1234 + 4321)"));
 
         // relative
         checkFrom(MetricType.POINT,
                 Optional.of(new QueryDateRange.Relative(TimeUnit.MILLISECONDS, 1000)),
-                parser.parse(CoreQueryParser.FROM, "from points(1000ms)", 1000));
-    }
-
-    void checkFrom(MetricType source, Optional<QueryDateRange> range,
-            CoreQueryParser.FromDSL result) {
-        assertEquals(source, result.getSource());
-        assertEquals(range, result.getRange());
+                from("from points(1000ms)"));
     }
 
     @Test
@@ -141,7 +170,7 @@ public class QueryParserTest {
     public void testUnterminatedString() {
         exception.expect(ParseException.class);
         exception.expectMessage("unterminated string");
-        parser.parse(CoreQueryParser.VALUE_EXPR, "\"open");
+        parser.parse(CoreQueryParser.EXPRESSION, "\"open");
     }
 
     @Test
@@ -154,7 +183,6 @@ public class QueryParserTest {
     @Test
     public void testInvalidSelect() {
         exception.expect(ParseException.class);
-        exception.expectMessage("expected <aggregation>, but was <1>");
         parser.parse(CoreQueryParser.SELECT, "1");
     }
 
@@ -165,7 +193,30 @@ public class QueryParserTest {
         parser.parse(CoreQueryParser.QUERY, "~ from points");
     }
 
-    private Filter anyFilter() {
-        return Mockito.any(Filter.class);
+    public static AggregationValue a(final String name, final Value... values) {
+        return Value.aggregation(name,
+                new ListValue(ImmutableList.copyOf(values), Context.empty()));
+    }
+
+    void checkFrom(MetricType source, Optional<QueryDateRange> range,
+            CoreQueryParser.FromDSL result) {
+        assertEquals(source, result.getSource());
+        assertEquals(range, result.getRange());
+    }
+
+    private AggregationValue aggregation(String input) {
+        return parser.parse(CoreQueryParser.AGGREGATION, input);
+    }
+
+    static Filter anyFilter() {
+        return any(Filter.class);
+    }
+
+    Value expr(String input) {
+        return parser.parse(CoreQueryParser.EXPRESSION, input);
+    }
+
+    FromDSL from(String input) {
+        return parser.parse(CoreQueryParser.FROM, input);
     }
 }

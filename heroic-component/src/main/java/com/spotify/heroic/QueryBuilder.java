@@ -40,8 +40,7 @@ import lombok.RequiredArgsConstructor;
 public class QueryBuilder {
     private final FilterFactory filters;
 
-    private MetricType source = MetricType.POINT;
-
+    private Optional<MetricType> source = Optional.empty();
     private Optional<Map<String, String>> tags = Optional.empty();
     private Optional<String> key = Optional.empty();
     private Optional<Filter> filter = Optional.empty();
@@ -76,8 +75,7 @@ public class QueryBuilder {
     /**
      * Specify a group by to use.
      *
-     * @deprecated Use {@link #aggregation(AggregationInstance)} with the appropriate
-     *             {@link GroupInstance} instead.
+     * @deprecated Use the group aggregation instead.
      */
     public QueryBuilder groupBy(final Optional<List<String>> groupBy) {
         checkNotNull(groupBy, "groupBy must not be null");
@@ -114,7 +112,7 @@ public class QueryBuilder {
         return this;
     }
 
-    public QueryBuilder source(MetricType source) {
+    public QueryBuilder source(Optional<MetricType> source) {
         this.source = source;
         return this;
     }
@@ -142,7 +140,7 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        return new Query(legacyFilter(), range, aggregation, source, options, groupBy);
+        return new Query(aggregation, source, range, legacyFilter(), options, groupBy);
     }
 
     /**

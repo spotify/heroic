@@ -44,8 +44,8 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.grammar.QueryDSL;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
@@ -112,19 +112,18 @@ public class CoreQueryManager implements QueryManager {
 
     @Override
     public QueryBuilder newQueryFromString(final String queryString) {
-        final QueryDSL q = parser.parseQuery(queryString);
+        final Query q = parser.parseQuery(queryString);
 
         /* get aggregation that is part of statement, if any */
         final Optional<Aggregation> aggregation = q.getAggregation();
 
         return newQuery().source(q.getSource()).range(q.getRange()).aggregation(aggregation)
-                .filter(q.getWhere()).groupBy(q.getGroupBy());
+                .filter(q.getFilter());
     }
 
     @Override
     public String queryToString(final Query q) {
-        return parser.stringifyQuery(new QueryDSL(q.getAggregation(), q.getSource(), q.getRange(),
-                q.getFilter(), q.getGroupBy()));
+        return parser.stringifyQuery(q);
     }
 
     @Override
@@ -139,6 +138,8 @@ public class CoreQueryManager implements QueryManager {
         @Override
         public AsyncFuture<QueryResult> query(Query q) {
             final List<AsyncFuture<QueryResultPart>> futures = new ArrayList<>();
+
+            final MetricType source = q.getSource().orElse(MetricType.POINT);
 
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
 
@@ -158,7 +159,7 @@ public class CoreQueryManager implements QueryManager {
                 final ClusterNode c = group.node();
 
                 final AsyncFuture<QueryResultPart> queryPart =
-                        group.query(q.getSource(), filter, range, aggregationInstance, options)
+                        group.query(source, filter, range, aggregationInstance, options)
                                 .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
                                 .directTransform(QueryResultPart.fromResultGroup(range, c));
 

@@ -21,12 +21,22 @@
 
 package com.spotify.heroic.grammar;
 
+import com.google.common.collect.ImmutableMap;
+
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @ValueName("string")
 @Data
+@EqualsAndHashCode(exclude = {"c"})
 public final class StringValue implements Value {
     private final String string;
+    private final Context c;
+
+    @Override
+    public Context context() {
+        return c;
+    }
 
     @Override
     public Value sub(Value other) {
@@ -37,7 +47,8 @@ public final class StringValue implements Value {
 
     @Override
     public Value add(Value other) {
-        return new StringValue(string + other.cast(this).string);
+        final StringValue o =  other.cast(this);
+        return new StringValue(string + o.string, c.join(o.c));
     }
 
     public String toString() {
@@ -59,7 +70,7 @@ public final class StringValue implements Value {
             }
         }
 
-        throw new ValueCastException(this, to);
+        throw c.castError(this, to);
     }
 
     @SuppressWarnings("unchecked")
@@ -69,10 +80,18 @@ public final class StringValue implements Value {
             return (T) this;
         }
 
+        if (to.isAssignableFrom(ListValue.class)) {
+            return (T) Value.list(this);
+        }
+
+        if (to.isAssignableFrom(AggregationValue.class)) {
+            return (T) new AggregationValue(string, Value.list(), ImmutableMap.of(), c);
+        }
+
         if (to == String.class) {
             return (T) string;
         }
 
-        throw new ValueTypeCastException(this, to);
+        throw c.castError(this, to);
     }
 }
