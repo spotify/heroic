@@ -10,15 +10,15 @@
 
         <ul class="nav">
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.installation">Installation</a>
+            <a ui-sref="docs.getting_started.compile">Compile Heroic</a>
           </li>
 
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.compile">Compile</a>
+            <a ui-sref="docs.getting_started.installation">Install Dependencies</a>
           </li>
 
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.configuration">Configure</a>
+            <a ui-sref="docs.getting_started.configuration">Configure Cluster</a>
           </li>
         </ul>
       </li>

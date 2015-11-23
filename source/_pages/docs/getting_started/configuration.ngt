@@ -1,4 +1,10 @@
-<h2>Configuration</h2>
+<h2>Configure Cluster</h2>
+
+<p>
+  In this section we'll be configuring all the components that make up a Heroic
+  cluster.
+  These should have been installed in the <a ui-sref="^.installation">previous step</a>.
+</p>
 
 <ul>
   <li><a ui-sref=".({'#': 'cassandra'})">Configuring Cassandra</a></li>

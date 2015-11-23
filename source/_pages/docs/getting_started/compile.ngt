@@ -1,4 +1,4 @@
-<h2>Compilation</h2>
+<h2>Compile Heroic</h2>
 
 <div class="callout callout-danger">
   <h4>
@@ -11,7 +11,11 @@
 </div>
 
 <p>
-  Get the Heroic source from github.
+  In order to compile Heroic, you'll need a working <a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java 8 JDK</a>, and <a href="https://maven.apache.org/">Maven 3</a>.
+</p>
+
+<p>
+  Get the Heroic source from GitHub:
 </p>
 
 <pre><code language="bash">
@@ -19,7 +23,7 @@ $ git clone https://github.com/spotify/heroic.git
 </code></pre>
 
 <p>
-  Go to the cloned directory and run maven
+  Go to the cloned directory and run Maven:
 </p>
 
 <pre><code language="bash">
@@ -29,7 +33,7 @@ $ mvn clean package
 
 <p>
   The previous command will generate a new .jar file, which you can use to run
-  heroic.
+  Heroic through <a git-href-java="heroic-dist">com.spotify.heroic.HeroicService</a>.
 </p>
 
 <pre><code language="bash">

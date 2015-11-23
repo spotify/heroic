@@ -1,4 +1,4 @@
-<h2>Installation</h2>
+<h2>Install Dependencies</h2>
 
 <p>
   For getting start, you'll need the following systems in place.
@@ -7,7 +7,7 @@
 <ul>
   <li><a ui-sref=".({'#': 'cassandra'})">A Cassandra cluster</a></li>
   <li><a ui-sref=".({'#': 'elasticsearch'})">An Elasticsearch cluster</a></li>
-  <li><a ui-sref=".({'#': kafka})">A Kafka Cluster</a></li>
+  <li><a ui-sref=".({'#': 'kafka'})">A Kafka Cluster</a></li>
 </ul>
 
 <div class="callout callout-danger">

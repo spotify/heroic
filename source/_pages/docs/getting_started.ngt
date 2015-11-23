@@ -1,7 +1,8 @@
 <h2>Getting Started</h2>
 
 <p>
-This section of the documentation will cover how to <a ui-sref="^.installation">install</a> and <a ui-sref="^.configuration">configure</a> Heroic from nothing, to a running <em>experimental</em> system.
+  This section of the documentation will cover how to <a ui-sref="^.compile">compile</a>, <a ui-sref="^.installation">install</a>, and <a ui-sref="^.configuration">configure</a> Heroic.
+  It will take us from nothing, to a running <em>experimental</em> system.
 </p>
 
 <p>
