@@ -14,11 +14,11 @@
           </li>
 
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.compile">Compilation</a>
+            <a ui-sref="docs.getting_started.compile">Compile</a>
           </li>
 
           <li ui-sref-active="active">
-            <a ui-sref="docs.getting_started.configuration">Configuration</a>
+            <a ui-sref="docs.getting_started.configuration">Configure</a>
           </li>
         </ul>
       </li>
