@@ -2,7 +2,7 @@
   <div class="col-md-3">
     <ul class="nav">
       <li ui-sref-active="active">
-        <a ui-sref="docs.architecture">Architecture</a>
+        <a ui-sref="docs.overview">Overview</a>
       </li>
 
       <li ui-sref-active="active">
@@ -62,7 +62,7 @@
       </li>
 
       <li ui-sref-active="active">
-        <a ui-sref="docs.filter_dsl">Filter DSL</a>
+        <a ui-sref="docs.query_language">Query Language</a>
       </li>
 
       <li ui-sref-active="active">

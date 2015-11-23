@@ -1,14 +1,13 @@
 (function() {
   var m = angular.module('hdoc.docs', [
     '_pages/docs.ngt',
-    '_pages/docs/index.ngt',
-    '_pages/docs/architecture.ngt',
     '_pages/docs/getting_started.ngt',
     '_pages/docs/getting_started/installation.ngt',
     '_pages/docs/getting_started/configuration.ngt',
     '_pages/docs/getting_started/compile.ngt',
     '_pages/docs/data_model.ngt',
-    '_pages/docs/filter_dsl.ngt',
+    '_pages/docs/query_language.ngt',
+    '_pages/docs/overview.ngt',
     '_pages/docs/api.ngt',
     '_pages/docs/api/accept-metadata-query-body.ngt',
     '_pages/docs/api/accept-series.ngt',
@@ -17,6 +16,7 @@
     '_pages/docs/profiles.ngt',
     '_pages/docs/config.ngt',
     '_pages/docs/federation.ngt',
+    '_pages/docs/federation-tail.ngt',
     '_pages/docs/config/cluster.ngt',
     '_pages/docs/config/metrics.ngt',
     '_pages/docs/config/metadata.ngt',
@@ -34,20 +34,9 @@
   m.config(function($stateProvider) {
     $stateProvider
       .state('docs', {
+        abstract: true,
         url: "/docs",
-        templateUrl: "_pages/docs.ngt",
-        controller: function($state) {
-          if ($state.is('docs'))
-            $state.go('docs.index');
-        }
-      })
-      .state('docs.index', {
-        url: "/index",
-        templateUrl: "_pages/docs/index.ngt"
-      })
-      .state('docs.architecture', {
-        url: '/architecture',
-        templateUrl: '_pages/docs/architecture.ngt'
+        templateUrl: "_pages/docs.ngt"
       })
       .state('docs.getting_started', {
         abstract: true,
@@ -70,9 +59,13 @@
         url: '/configuration',
         templateUrl: '_pages/docs/getting_started/configuration.ngt'
       })
-      .state('docs.filter_dsl', {
-        url: '/filter_dsl',
-        templateUrl: '_pages/docs/filter_dsl.ngt'
+      .state('docs.overview', {
+        url: '/overview',
+        templateUrl: '_pages/docs/overview.ngt'
+      })
+      .state('docs.query_language', {
+        url: '/query_language',
+        templateUrl: '_pages/docs/query_language.ngt'
       })
       .state('docs.data_model', {
         url: '/data_model',
@@ -105,7 +98,7 @@
       .state('docs.config', {
         abstract: true,
         url: '/config',
-        template: '<ui-view autoscroll="true"></ui-view>'
+        template: '<ui-view></ui-view>'
       })
       .state('docs.config.cluster', {
         url: '/cluster',

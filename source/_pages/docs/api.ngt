@@ -94,7 +94,7 @@
         </p>
 
         <p>
-          See <a ui-sref="docs.filter_dsl">Filter DSL</a> for details on how to build a filter.
+          See <a ui-sref="docs.query_language({'#': 'filtering'})">filtering</a> for details on how to build a filter.
         </p>
       </api-field>
 
@@ -450,7 +450,7 @@
 
   <p>
     The structure of a filter is explained in detail in
-    the <a ui-sref="docs.filter_dsl">Filter DSL</a> documentation.
+    the <a ui-sref="docs.query_language">Query Language</a> documentation.
     This will only be a brief, syntactical overview.
   </p>
 

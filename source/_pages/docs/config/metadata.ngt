@@ -1,7 +1,7 @@
 <h2>Configuring Metadata</h2>
 
 <p>
-  Metadata acts as the index to time series data, it is the driving force behind our <a ui-sref="^.^.filter_dsl">filter dsl</a>.
+  Metadata acts as the index to time series data, it is the driving force behind our <a ui-sref="^.^.query_language">Query Language</a>.
 </p>
 
 <p>

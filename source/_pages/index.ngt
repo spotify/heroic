@@ -7,9 +7,9 @@
 
 <div class="row">
   <div class="col-md-3">
-    <h4><a ui-sref="docs.architecture">Architecture</a></h4>
+    <h4><a ui-sref="docs.overview">Overview</a></h4>
     <p>
-      Start here, the 10k overview.
+      Start here, the 10k overview of Heroic.
     </p>
   </div>
 
@@ -28,10 +28,10 @@
   </div>
 
   <div class="col-md-3">
-    <h4><a ui-sref="docs.filter_dsl">Rich Filtering</a></h4>
+    <h4><a ui-sref="docs.query_language">Rich Query and Filtering Language</a></h4>
     <p>
       Leverage multi-dimensional time series using a comprehensive and
-      expressive filter language.
+      expressive query language.
     </p>
   </div>
 </div>

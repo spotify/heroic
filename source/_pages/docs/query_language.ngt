@@ -1,40 +1,52 @@
-<h2>Filter DSL</h2>
+<h2>Heroic Query Language</h2>
 
 <p>
-  Heroic uses a JSON-based DSL to define filters.
-  A filter reduces the number of selected time series, if no filter (or the <a ui-sref="{'#':'filter-true'}">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
+  Heroic uses a JSON-based language to define queries.
+  This can also be expressed using an experimental DSL.
 </p>
 
-<img style="width: 100%;" src="images/filter-dsl.svg"></img>
+<div class="callout callout-danger">
+  <h4>Experimental</h4>
+  <p>
+    The DSL should currently be considered experimental and might be subject to future changes.
+  </p>
+</div>
 
 <p>
-  This filter can either be expressed using <a ui-sref="{'#': 'json-dsl'}">JSON</a>, or as
-  <a ui-sref="{'#': 'parsable-dsl'}">a parsable DSL</a>.
-
-  Because the parsable syntax is more human friendly, examples will be written
-  using it, like the following.
+  The basic structure of a query is the following SQL-like stanza.
 </p>
 
-<pre><code language="hql">
-$key = "hello kitty" and host = foo.example.com
-</code></pre>
-
-<h3 id="json-dsl">JSON</h3>
+<codeblock language="hql">
+&lt;aggregation&gt; from &lt;source&gt; where &lt;filter&gt;
+</codeblock>
 
 <p>
-  A filter expressed as JSON a syntax tree which follows polish notation.
+  The following is a complete example for a DSL-based query:
+</p>
+
+<codeblock language="hql">
+average() by host | sum() by site from points(1d) where role=heroic and what=cpu-idle
+</codeblock>
+
+<h3 id="json-dsl">JSON vs DSL</h3>
+
+<p>
+  JSON is typically used when a query is built programatically because the structure is unambigious in terms of precedence and escaping.
+  There is also a ton of language support for it, and it meshes well with restful APIs.
 </p>
 
 <p>
-  JSON is typically used when a filter is built programatically, because the
-  syntax is unambigious in terms of precedence and escaping.
-  There is also a ton of language support for it, and it meshes well with
-  restful APIs.
+  The DSL was developed to make it easier for humans to express queries or filters in a manner which is more convenient.
+  The language is infix, and simple strings do not have to be escaped (e.g. <code language="hql">host</code> vs. <code language="hql">&quot;host&quot;</code>)
 </p>
 
 <p>
-  The following is an example filter expressed both in a parsable form, and
-  in JSON.
+  A primary Goal of the DSL is that it should act as a complement to the JSON queries.
+  Any query can be expressed either in JSON or DSL.
+</p>
+
+<p>
+  The following is an example filter expressed both in a JSON, and in the DSL.
 </p>
 
 <pre><code language="hql">
@@ -43,23 +55,99 @@ $key = "hello kitty" and host = foo.example.com
 ["and", ["$key", "hello kitty"], ["=", "host", "foo.example.com"]]
 </code></pre>
 
-<h3 id="parsable-dsl">Parsable DSL</h3>
-
 <p>
-  The parsable form was developed to make it easier for humans to express
-  filters in a manner which is most convenient.
-  The language is infix, and simple strings do not have to be escaped (e.g. <code language="hql">host</code> vs. <code language="hql">&quot;host&quot;</code>)
+  To test this principle you can fire up the <a ui-sref="^.shell">Heroic Shell</a> and run the following commands:
 </p>
 
-<div class="callout callout-danger">
-  <h4>Experimental</h4>
-  <p>
-    The parsable DSL should currently be considered experimental and might be
-    subject to future changes.
-  </p>
+<codeblock language="bash">
+$ tools/heroic-shell
+
+heroic> parse-query --no-indent "average by host | sum by site"
+{"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}
+
+heroic> stringify-query '{"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}'
+average by host | sum by site
+</codeblock>
+
+<h3>Aggregations</h3>
+
+<p>
+  Main Article: <a ui-sref="^.aggregations">Aggregations</a>
+</p>
+
+<p>
+  Aggregations are expressed as function calls, or typed documents.
+  See the following example using the <a ui-sref="^.aggregations({'#': 'sum'})">sum</a> aggregation.
+</p>
+
+<div class="table-responsive">
+<table class="table table-bordered">
+  <tr>
+    <td>
+      <codeblock language="hql">
+      sum(3m)
+      </codeblock>
+    </td>
+    <td>
+      <codeblock language="json">
+      {"type": "sum", "size": "3m"}
+      </codeblock>
+    </td>
+  </tr>
+</table>
+</div>
+
+<p>
+  There is also syntactic sugar for the special
+  <a ui-sref="^.aggregations({'#': 'group'})">group</a> and
+  <a ui-sref="^.aggregations({'#': 'chain'})">chain</a>
+  aggregations.
+</p>
+
+<div class="table-responsive">
+<table class="table table-bordered">
+  <tr>
+    <td>
+      <codeblock language="hql">
+      empty by host
+      </codeblock>
+    </td>
+    <td>
+      <codeblock language="json">
+      {"type": "group", "of": ["host"], "each": {"type": "empty"}}
+      </codeblock>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <codeblock language="hql">
+      average(5m) | sum(10m)
+      </codeblock>
+    </td>
+    <td>
+      <codeblock language="json">
+      {
+        "type": "chain",
+        "chain": [
+          {"type": "average", "size": "5m"},
+          {"type": "sum", "size": "10m"}
+        ]
+      }
+      </codeblock>
+    </td>
+  </tr>
+</table>
 </div>
 
 <h3>Filters</h3>
+
+<p>
+  A filter reduces the number of selected time series, if no filter (or the <a ui-sref="{'#':'filter-true'}">true filter</a>) is used, then it is implied that <em>all</em> time series in the database is selected.
+</p>
+
+<img style="width: 100%;" src="images/filter-dsl.svg"></img>
+
+<h3>Available Filters</h3>
 
 <h4>Boolean Operators</h4>
 
@@ -161,7 +249,9 @@ $key = "hello kitty" and host = foo.example.com
 </table>
 </div>
 
-<h4>Parsed Primitives</h4>
+<h3>The DSL Language</h3>
+
+<h4>Primitives</h4>
 
 <div class="table-responsive">
 <table class="table table-bordered">
@@ -186,7 +276,7 @@ $key = "hello kitty" and host = foo.example.com
 </table>
 </div>
 
-<h4>Parsed Arithmetic Expressions</h4>
+<h4>Arithmetic Expressions</h4>
 
 <div class="table-responsive">
 <table class="table table-bordered">
@@ -211,7 +301,23 @@ $key = "hello kitty" and host = foo.example.com
 </table>
 </div>
 
-<h4>Parsed Durations</h4>
+<h4 id="special-variables">Special Variables</h4>
+
+<div class="table-responsive">
+<table class="table table-bordered">
+  <tr>
+    <td><code language="hql">$key</code></td>
+    <td>Can be used in most places a tag is expected. It indicates that the given expression should match the special field <em>key</em> instead of a tag.</td>
+  </tr>
+
+  <tr>
+    <td><code language="hql">$now</code></td>
+    <td>Expands to the current (server-side) timestamp in milliseconds.</td>
+  </tr>
+</table>
+</div>
+
+<h4 id="duration">Durations</h4>
 
 <p>
   Durations are represented as a numeric component with a suffix, like <code language="hql">3H</code>
@@ -241,19 +347,3 @@ $key = "hello kitty" and host = foo.example.com
 <codeblock language="hql">
 $now - (1d + 1H)
 </codeblock>
-
-<h4 id="parsed-keyword">Parsed Keywords</h4>
-
-<div class="table-responsive">
-<table class="table table-bordered">
-  <tr>
-    <td><code language="hql">$key</code></td>
-    <td>Can be used in most places a tag is expected. It indicates that the given expression should match the special field <em>key</em> instead of a tag.</td>
-  </tr>
-
-  <tr>
-    <td><code language="hql">$now</code></td>
-    <td>Expands to the current (server-side) timestamp in milliseconds.</td>
-  </tr>
-</table>
-</div>

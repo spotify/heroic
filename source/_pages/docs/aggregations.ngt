@@ -16,6 +16,7 @@
   <li><a ui-sref="{'#': 'max'}">Maximum Aggregation</a></li>
   <li><a ui-sref="{'#': 'average'}">Average Aggregation</a></li>
   <li><a ui-sref="{'#': 'sum'}">Sum Aggregation</a></li>
+  <li><a ui-sref="{'#': 'chain'}">Chain Aggregation</a></li>
   <li><a ui-sref="{'#': 'group'}">Group Aggregation</a></li>
 </ul>
 
@@ -137,6 +138,25 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 
 <img style="width: 100%;" src="images/aggregation_sum.svg"></img>
 
+<h3 id="chain">Chain Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "chain", "chain": [&lt;aggregation&gt;, ..]}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+&lt;aggregation&gt; | ..
+</codeblock>
+
+<p>
+  A chain aggregation applies the specified aggregations in order.
+  The result of the first aggregation is fed into the second, and so forth.
+</p>
+
 <h3 id="group">Group Aggregation</h3>
 
 <h5>JSON</h5>
@@ -148,7 +168,9 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 <h5>HQL</h5>
 
 <codeblock language="hql">
-group(of=[&lt;string&gt;, ..], each=&lt;aggregation&gt;)
+&lt;aggregation&gt; by *
+&lt;aggregation&gt; by &lt;string&gt;
+&lt;aggregation&gt; by [&lt;string&gt;, ..]
 </codeblock>
 
 <h5>Description</h5>

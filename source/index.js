@@ -13,6 +13,7 @@
     'ui.bootstrap',
     'hdoc.index',
     'hdoc.docs',
+    'hdoc.tutorial',
     'hdoc.api'
   ]);
 

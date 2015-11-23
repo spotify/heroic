@@ -1,0 +1,137 @@
+<h2>Overview</h2>
+
+<p>
+  Heroic is an open-source monitoring system originally built at
+  <a href="https://spotify.com">Spotify</a> to address the problems that were
+  facing with large scale gathering and near real-time analysis of metrics.
+</p>
+
+<p>
+  Heroic's main features are:
+</p>
+
+<ul>
+  <li>An architecture that scales with you, large or small.</li>
+  <li>Indefinite retention, as long as you have the hardware spend.</li>
+  <li>A rich <a ui-sref="^.query_language">query and filtering language</a>, driven by Elasticsearch.</li>
+  <li><a ui-sref="^.federation">Federation support</a> to connect multiple Heroic clusters into a global interface.</li>
+</ul>
+
+<p>
+  Heroic uses a small set of components which are responsible for very specific things.
+</p>
+
+<h3>Consumers</h3>
+
+<p>
+  Consumers are the component responsible for <em>consuming</em> metrics.
+</p>
+
+<p>
+  We support consuming over <a ui-sref="^.config.consumer({'#': 'kafka'})">Kafka</a>, the <a ui-sref="^.config.consumer({'#': 'collectd'})">collectd protocol</a>, and over <a ui-sref="^.api({'#': 'post-write'})">HTTP</a>.
+</p>
+
+<p>
+  Out of these options, Kafka is the preferred one since it allows for a discovery-free architecture due to it being a pub-sub system.
+  It has proven to be horizontally scalable and resilient towards failures.
+</p>
+
+<p>
+  The following tutorials are available for configuring consumers:
+</p>
+
+<ul>
+  <li><a ui-sref="tutorial.kafka_consumer">Consuming metrics over Kafka</a></li>
+</ul>
+
+<h3>Metrics</h3>
+
+<p>
+  Metric storage is handled by Cassandra.
+  The technique used is described in
+  <a href="http://www.datastax.com/dev/blog/advanced-time-series-with-cassandra">Advanced Time Series with Cassandra</a>.
+  It was inspired by how it's implemented in
+  <a href="http://kairosdb.github.io/">KairosDB</a>.
+</p>
+
+<p>
+  Using Cassandra, you can store almost an indefinite amount of data as long as
+  you are willing to <a href="http://techblog.netflix.com/2011/11/benchmarking-cassandra-scalability-on.html">spend the hardware</a> on it.
+  As an alternative to operating your own Cassandra cluster, we are
+  <a href="https://github.com/spotify/heroic/tree/master/metric/bigtable">experimenting</a> with supporting
+  <a href="https://cloud.google.com/bigtable/">Google Cloud Bigtable</a>.
+</p>
+
+<p>
+  For more information, see the section detailing how to configure <a ui-sref="^.config.metrics">metrics backends</a>.
+</p>
+
+<h3>Metadata</h3>
+
+<p>
+  We use Elasticsearch to store and make metadata available to a heroic
+  cluster. It is the primary component that drives Heroic's <a ui-sref="^.query_language">Query Language</a>.
+</p>
+
+<p>
+  Elasticsearch has been <a href="https://aphyr.com/posts/323-call-me-maybe-elasticsearch-1-5-0">shown to not be reliable in terms of data safety</a>.
+  Because of this, Heroic uses Elasticsearch in a way so that it is not the primary storage and can rapidly be rebuilt.
+</p>
+
+<p>
+  For more information, see the section detailing how to configure <a ui-sref="^.config.metadata">metadata backends</a>.
+</p>
+
+<h3>Suggestions</h3>
+
+<p>
+  When building Heroic it was quickly realized that navigating millions, or hundreads of millions of time series without context is hard.
+  To address this, a specialized Elasticsearch backend was built to handle <a ui-sref="^.config.suggest">suggestions</a>.
+</p>
+
+<p>
+  Suggestions provide information about what tags are available for a specific context.
+  Assuming you are interested in which <code>what</code> tags exist for a given role, you could do the following:
+</p>
+
+<codeblock language="bash">
+$ curl -H "Content-Type: application/json" &lt;url&gt;/metadata/suggest-tag -d \
+  '{"filter": ["=", "role", "heroic"], "key": "what", "value": "us"}'
+</codeblock>
+
+<codeblock language="json">
+{
+  "suggestions": [
+    {"score": "1.0", "key": "what", "value": "cpu-usage"},
+    {"score": "1.0", "key": "what", "value": "disk-used-percentage"}
+  ]
+}
+</codeblock>
+
+<p>
+  Take note on the partial matching of <code>us</code> in <code>cpu-usage</code> and <code>disk-used-percentage</code>.
+  This is the point of suggestions, to provide the user with the most relevant matches for a specific input.
+  Especially partial ones.
+  A typical use-case would be to fill the content of drop-down box as the user is typing.
+</p>
+
+<p>
+  Suggestions are different from Metadata since it uses more intensive indexing techniques to analyze your tags.
+  Having it as a separate module is useful since they are not critical to the operation of Heroic.
+  Or to be more specific, its <a ui-sref="^.query_language">Query Language</a>.
+</p>
+
+<h3>Clustering and Federation</h3>
+
+<p>
+  Main article: <a ui-sref="^.federation">Federated Clusters</a>
+</p>
+
+<p>
+  Heroic has support for federating requests, which allows multiple independent
+  Heroic clusters to serve clients through a single global interface.
+  This can be used to reduce the amount of geographical traffic by allowing one
+  cluster to operate completely isolated within its zone.
+</p>
+
+<ng-include src="'_pages/docs/federation-tail.ngt'"></ng-include>
