@@ -41,7 +41,7 @@
       .state('docs.getting_started', {
         abstract: true,
         url: '/getting_started',
-        template: '<ui-view autoscroll="true"></ui-view>'
+        template: '<ui-view></ui-view>'
       })
       .state('docs.getting_started.index', {
         url: '',

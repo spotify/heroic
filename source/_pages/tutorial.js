@@ -9,7 +9,7 @@
       .state('tutorial', {
         abstract: true,
         url: '/tutorial',
-        template: '<ui-view autoscroll="true"></ui-view>'
+        template: '<ui-view></ui-view>'
       })
       .state('tutorial.index', {
         url: "/index",
