@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 
 import lombok.Data;
