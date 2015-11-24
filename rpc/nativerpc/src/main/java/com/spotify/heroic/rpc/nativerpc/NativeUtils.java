@@ -23,6 +23,7 @@ package com.spotify.heroic.rpc.nativerpc;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -46,7 +47,17 @@ public abstract class NativeUtils {
         final byte[] bytes = new byte[bodySize];
 
         try (final GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(body))) {
-            in.read(bytes);
+            int offset = 0;
+
+            while (offset < bodySize) {
+                int read = in.read(bytes, offset, bodySize - offset);
+
+                if (read < 0) {
+                    throw new EOFException();
+                }
+
+                offset += read;
+            }
         }
 
         return bytes;
