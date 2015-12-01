@@ -41,6 +41,7 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
+import com.spotify.heroic.metric.datastax.AggressiveRetryPolicy;
 import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.legacy.LegacySchemaModule;
@@ -106,6 +107,14 @@ public class CassandraProfile extends HeroicProfileBase {
     public static final int DEFAULT_ROTATE_HOST = 2;
 
     private RetryPolicy convertRetryPolicy(final String policyName, final ExtraParameters params) {
+        if ("aggressive".equals(policyName)) {
+            final int numRetries =
+                    params.getInteger("cassandra.numRetries").orElse(DEFAULT_NUM_RETRIES);
+            final int rotateHost =
+                    params.getInteger("cassandra.rotateHost").orElse(DEFAULT_ROTATE_HOST);
+            return new AggressiveRetryPolicy(numRetries, rotateHost);
+        }
+
         throw new IllegalArgumentException("Not a valid retry policy: " + policyName);
     }
 
