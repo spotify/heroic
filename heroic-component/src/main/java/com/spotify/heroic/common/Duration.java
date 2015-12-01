@@ -21,9 +21,13 @@
 
 package com.spotify.heroic.common;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import lombok.Data;
 
@@ -45,6 +49,8 @@ import lombok.Data;
  */
 @Data
 public class Duration {
+    public static final TimeUnit DEFAULT_UNIT = TimeUnit.MILLISECONDS;
+
     private final long duration;
     private final TimeUnit unit;
 
@@ -75,6 +81,47 @@ public class Duration {
 
     public String toDSL() {
         return Long.toString(duration) + unitSuffix(unit);
+    }
+
+    private static final Pattern PATTERN = Pattern.compile("^(\\d+)([a-zA-Z]*)$");
+
+    // @formatter:off
+    private static Map<String, TimeUnit> units = ImmutableMap.<String, TimeUnit>builder()
+        .put("ms", TimeUnit.MILLISECONDS)
+        .put("s", TimeUnit.SECONDS)
+        .put("m", TimeUnit.MINUTES)
+        .put("h", TimeUnit.HOURS)
+        .put("H", TimeUnit.HOURS)
+        .put("d", TimeUnit.DAYS)
+    .build();
+    // @formatter:on
+
+    public static Duration parseDuration(final String string) {
+        final Matcher m = PATTERN.matcher(string);
+
+        if (!m.matches()) {
+            throw new IllegalArgumentException("Invalid duration: " + string);
+        }
+
+        final long duration = Long.parseLong(m.group(1));
+        final String unitString = m.group(2);
+
+        if (unitString.isEmpty()) {
+            return new Duration(duration, DEFAULT_UNIT);
+        }
+
+        if ("w".equals(unitString)) {
+            return new Duration(duration * 7, TimeUnit.DAYS);
+        }
+
+        final TimeUnit unit = units.get(unitString);
+
+        if (unit == null) {
+            throw new IllegalArgumentException(
+                    "Invalid unit (" + unitString + ") in duration: " + string);
+        }
+
+        return new Duration(duration, unit);
     }
 
     public static String unitSuffix(TimeUnit unit) {
