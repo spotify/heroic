@@ -49,7 +49,7 @@
     <jetty.version>9.2.2.v20140723</jetty.version>
     <lucene.version>4.10.4</lucene.version>
     <astyanax.version>2.0.2</astyanax.version>
-    <datastax.version>2.1.4</datastax.version>
+    <datastax.version>2.1.9</datastax.version>
     <guice.version>4.0</guice.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.0.27.Final</netty.version>
