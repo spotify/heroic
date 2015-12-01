@@ -29,6 +29,7 @@ import java.util.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 
@@ -119,5 +120,9 @@ public class ExtraParameters {
 
     public Optional<Boolean> getBoolean(final String key) {
         return get(key).map(s -> "true".equals(s) || "yes".equals(s));
+    }
+
+    public Optional<Duration> getDuration(String key) {
+        return get(key).map(Duration::parseDuration);
     }
 }
