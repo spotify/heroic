@@ -24,6 +24,7 @@ package com.spotify.heroic.metric.datastax.schema;
 import java.util.List;
 
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Represents a CQL statement with a list of bindings that should be applied.
@@ -31,6 +32,7 @@ import lombok.Data;
  * @author udoprog
  */
 @Data
+@RequiredArgsConstructor
 public class SchemaBoundStatement {
     final String statement;
     final List<Object> bindings;

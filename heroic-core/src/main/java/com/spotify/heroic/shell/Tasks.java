@@ -42,7 +42,7 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metric.BackendKeyClause;
+import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
@@ -243,43 +243,43 @@ public final class Tasks {
         return parser.parseFilter(StringUtils.join(query, " "));
     }
 
-    public static BackendKeyClause setupClause(KeyspaceBase params, ObjectMapper mapper)
+    public static BackendKeyFilter setupKeyFilter(KeyspaceBase params, ObjectMapper mapper)
             throws Exception {
-        final List<BackendKeyClause> clauses = new ArrayList<>();
+        BackendKeyFilter filter = BackendKeyFilter.of();
 
         if (params.start != null) {
-            clauses.add(BackendKeyClause
+            filter = filter.withStart(BackendKeyFilter
                     .gte(mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
         }
 
-        if (params.end != null) {
-            clauses.add(BackendKeyClause
-                    .lt(mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
-        }
-
         if (params.startPercentage >= 0) {
-            clauses.add(BackendKeyClause.gtePercentage((float) params.startPercentage / 100f));
-        }
-
-        if (params.endPercentage >= 0) {
-            clauses.add(BackendKeyClause.ltPercentage((float) params.endPercentage / 100f));
+            filter = filter.withStart(
+                    BackendKeyFilter.gtePercentage((float) params.startPercentage / 100f));
         }
 
         if (params.startToken != null) {
-            clauses.add(BackendKeyClause.gteToken(params.startToken));
+            filter = filter.withStart(BackendKeyFilter.gteToken(params.startToken));
+        }
+
+        if (params.end != null) {
+            filter = filter.withEnd(BackendKeyFilter
+                    .lt(mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
+        }
+
+        if (params.endPercentage >= 0) {
+            filter = filter
+                    .withEnd(BackendKeyFilter.ltPercentage((float) params.endPercentage / 100f));
         }
 
         if (params.endToken != null) {
-            clauses.add(BackendKeyClause.ltToken(params.endToken));
+            filter = filter.withEnd(BackendKeyFilter.ltToken(params.endToken));
         }
-
-        final BackendKeyClause clause = BackendKeyClause.and(clauses);
 
         if (params.limit >= 0) {
-            return BackendKeyClause.limited(clause, params.limit);
+            filter = filter.withLimit(params.limit);
         }
 
-        return clause;
+        return filter;
     }
 
     public abstract static class QueryParamsBase extends AbstractShellTaskParams

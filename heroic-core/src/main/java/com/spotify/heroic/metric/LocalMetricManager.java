@@ -108,6 +108,18 @@ public class LocalMetricManager implements MetricManager {
     private final long dataLimit;
     private final int fetchParallelism;
 
+    @Inject
+    private AsyncFramework async;
+
+    @Inject
+    private BackendGroups<MetricBackend> backends;
+
+    @Inject
+    private MetadataManager metadata;
+
+    @Inject
+    private MetricBackendGroupReporter reporter;
+
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
      * @param seriesLimit The maximum amount of series in total an entire query may use.
@@ -124,18 +136,6 @@ public class LocalMetricManager implements MetricManager {
         this.dataLimit = dataLimit;
         this.fetchParallelism = fetchParallelism;
     }
-
-    @Inject
-    private BackendGroups<MetricBackend> backends;
-
-    @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private MetricBackendGroupReporter reporter;
 
     @Override
     public List<MetricBackend> allMembers() {
@@ -167,10 +167,17 @@ public class LocalMetricManager implements MetricManager {
         return new MetricBackendGroupImpl(backends.use(groups), metadata.useGroups(groups));
     }
 
-    @RequiredArgsConstructor
-    private class MetricBackendGroupImpl implements MetricBackendGroup {
+    private class MetricBackendGroupImpl extends AbstractMetricBackend
+            implements MetricBackendGroup {
         private final SelectedGroup<MetricBackend> backends;
         private final MetadataBackend metadata;
+
+        public MetricBackendGroupImpl(final SelectedGroup<MetricBackend> backends,
+                final MetadataBackend metadata) {
+            super(async);
+            this.backends = backends;
+            this.metadata = metadata;
+        }
 
         @Override
         public Groups getGroups() {
@@ -343,9 +350,9 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public AsyncObservable<List<BackendKey>> streamKeys(final BackendKeyClause clause,
+        public AsyncObservable<List<BackendKey>> streamKeys(final BackendKeyFilter filter,
                 final QueryOptions options) {
-            return AsyncObservable.chain(run(b -> b.streamKeys(clause, options)));
+            return AsyncObservable.chain(run(b -> b.streamKeys(filter, options)));
         }
 
         @Override

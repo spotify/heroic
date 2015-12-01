@@ -92,12 +92,23 @@ public interface MetricBackend extends Initializing, Grouped {
     /**
      * Return a list of all matching backend keys.
      *
-     * @param clause If specified, limit results using the given criteria.
-     * @param limit Limit the amount of results, max will always be 1000.
-     * @return A future containing a {@link BackendKeySet} that can be iterated over for all
+     * @param filter If specified, limit results using the given clause.
+     * @param options Query options to apply.
+     * @return An observable providing a list of {@link BackendKey}s that can be observed for all
      *         matching keys.
      */
-    AsyncObservable<List<BackendKey>> streamKeys(BackendKeyClause clause, QueryOptions options);
+    AsyncObservable<List<BackendKey>> streamKeys(BackendKeyFilter filter, QueryOptions options);
+
+    /**
+     * Stream keys with a high-level paging implementation.
+     *
+     * @param filter If specified, limit results using the given clause.
+     * @param options Query options to apply.
+     * @return An observable providing a list of {@link BackendKey}s that can be observed for all
+     *         matching keys.
+     */
+    AsyncObservable<List<BackendKey>> streamKeysPaged(BackendKeyFilter filter, QueryOptions options,
+            int pageSize);
 
     /**
      * Serialize the given key, and return the hex-representation.

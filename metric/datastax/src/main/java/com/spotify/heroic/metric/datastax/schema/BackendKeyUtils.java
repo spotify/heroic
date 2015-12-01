@@ -22,14 +22,10 @@
 package com.spotify.heroic.metric.datastax.schema;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyClause;
-import com.spotify.heroic.metric.BackendKeyClause.Limited;
+import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 
 /**
@@ -53,110 +49,101 @@ public class BackendKeyUtils {
         this.schema = schema;
     }
 
-    public SchemaBoundStatement selectKeys(final BackendKeyClause clause) throws Exception {
+    public SchemaBoundStatement selectKeys(final BackendKeyFilter filter) throws Exception {
         final SelectBuilder select = new SelectBuilder().distinct().column(column)
                 .column(columnToken).from(keyspace, table);
 
-        applyClause(clause, select);
+        filter.getStart().map(this::convertStart).ifPresent(select::and);
+        filter.getEnd().map(this::convertEnd).ifPresent(select::and);
+        filter.getLimit().ifPresent(select::limit);
 
         return select.toBoundStatement();
     }
 
-    void applyClause(final BackendKeyClause clause, final SelectBuilder select) throws Exception {
-        // apply a limit clause.
-        if (clause instanceof BackendKeyClause.Limited) {
-            final Limited limited = BackendKeyClause.Limited.class.cast(clause);
-
-            select.limit(limited.getLimit());
-
-            applyClause(limited.getClause(), select);
-            return;
-        }
-
-        final List<SchemaBoundStatement> statements = new ArrayList<>();
-
-        // apply multiple clauses with 'and' between them.
-        if (clause instanceof BackendKeyClause.And) {
-            final BackendKeyClause.And and = (BackendKeyClause.And) clause;
-
-            for (final BackendKeyClause c : and.getClauses()) {
-                applySimpleClause(c, statements::add);
+    SchemaBoundStatement convertStart(final BackendKeyFilter.Start start) throws RuntimeException {
+        if (start instanceof BackendKeyFilter.GT) {
+            try {
+                return gt(BackendKeyFilter.GT.class.cast(start));
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
             }
-        } else {
-            applySimpleClause(clause, statements::add);
         }
 
-        select.and(statements);
+        if (start instanceof BackendKeyFilter.GTE) {
+            try {
+                return gte(BackendKeyFilter.GTE.class.cast(start));
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (start instanceof BackendKeyFilter.GTEPercentage) {
+            return gtePercentage(BackendKeyFilter.GTEPercentage.class.cast(start));
+        }
+
+        if (start instanceof BackendKeyFilter.GTEToken) {
+            return gteToken(BackendKeyFilter.GTEToken.class.cast(start));
+        }
+
+        throw new IllegalArgumentException("Unsupported clause: " + start);
     }
 
-    void applySimpleClause(final BackendKeyClause clause,
-            final Consumer<SchemaBoundStatement> consumer) throws Exception {
-        if (clause instanceof BackendKeyClause.All) {
-            return;
+    SchemaBoundStatement convertEnd(final BackendKeyFilter.End end) throws RuntimeException {
+        if (end instanceof BackendKeyFilter.LT) {
+            try {
+                return lt(BackendKeyFilter.LT.class.cast(end));
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        if (clause instanceof BackendKeyClause.GTE) {
-            consumer.accept(gte(BackendKeyClause.GTE.class.cast(clause)));
-            return;
+        if (end instanceof BackendKeyFilter.LTPercentage) {
+            return ltPercentage(BackendKeyFilter.LTPercentage.class.cast(end));
         }
 
-        if (clause instanceof BackendKeyClause.LT) {
-            consumer.accept(lt(BackendKeyClause.LT.class.cast(clause)));
-            return;
+        if (end instanceof BackendKeyFilter.LTToken) {
+            return ltToken(BackendKeyFilter.LTToken.class.cast(end));
         }
 
-        if (clause instanceof BackendKeyClause.GTEPercentage) {
-            consumer.accept(gtePercentage(BackendKeyClause.GTEPercentage.class.cast(clause)));
-            return;
-        }
-
-        if (clause instanceof BackendKeyClause.LTPercentage) {
-            consumer.accept(ltPercentage(BackendKeyClause.LTPercentage.class.cast(clause)));
-            return;
-        }
-
-        if (clause instanceof BackendKeyClause.GTEToken) {
-            consumer.accept(gteToken(BackendKeyClause.GTEToken.class.cast(clause)));
-            return;
-        }
-
-        if (clause instanceof BackendKeyClause.LTToken) {
-            consumer.accept(ltToken(BackendKeyClause.LTToken.class.cast(clause)));
-            return;
-        }
-
-        throw new IllegalArgumentException("Unsupported clause: " + clause);
+        throw new IllegalArgumentException("Unsupported clause: " + end);
     }
 
-    SchemaBoundStatement gte(final BackendKeyClause.GTE clause) throws Exception {
+    SchemaBoundStatement gt(final BackendKeyFilter.GT clause) throws Exception {
+        final BackendKey k = clause.getKey();
+        final ByteBuffer buffer =
+                schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
+        return new SchemaBoundStatement(columnToken + " > token(?)", ImmutableList.of(buffer));
+    }
+
+    SchemaBoundStatement gte(final BackendKeyFilter.GTE clause) throws Exception {
         final BackendKey k = clause.getKey();
         final ByteBuffer buffer =
                 schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
         return new SchemaBoundStatement(columnToken + " >= token(?)", ImmutableList.of(buffer));
     }
 
-    SchemaBoundStatement lt(final BackendKeyClause.LT clause) throws Exception {
+    SchemaBoundStatement gtePercentage(final BackendKeyFilter.GTEPercentage clause) {
+        final long value = percentageToToken(clause.getPercentage());
+        return new SchemaBoundStatement(columnToken + " >= ?", ImmutableList.of(value));
+    }
+
+    SchemaBoundStatement gteToken(final BackendKeyFilter.GTEToken clause) {
+        return new SchemaBoundStatement(columnToken + " >= ?", ImmutableList.of(clause.getToken()));
+    }
+
+    SchemaBoundStatement lt(final BackendKeyFilter.LT clause) throws Exception {
         final BackendKey k = clause.getKey();
         final ByteBuffer buffer =
                 schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
         return new SchemaBoundStatement(columnToken + " < token(?)", ImmutableList.of(buffer));
     }
 
-    SchemaBoundStatement gtePercentage(final BackendKeyClause.GTEPercentage clause) {
-        final long value = percentageToToken(clause.getPercentage());
-        return new SchemaBoundStatement(columnToken + " >= ?", ImmutableList.of(value));
-    }
-
-    SchemaBoundStatement ltPercentage(final BackendKeyClause.LTPercentage clause) {
+    SchemaBoundStatement ltPercentage(final BackendKeyFilter.LTPercentage clause) {
         final long value = percentageToToken(clause.getPercentage());
         return new SchemaBoundStatement(columnToken + " < ?", ImmutableList.of(value));
     }
 
-    SchemaBoundStatement gteToken(final BackendKeyClause.GTEToken clause) {
-        return new SchemaBoundStatement(columnToken + " >= ?", ImmutableList.of(clause.getToken()));
-    }
-
-    SchemaBoundStatement ltToken(final BackendKeyClause.LTToken clause) {
+    SchemaBoundStatement ltToken(final BackendKeyFilter.LTToken clause) {
         return new SchemaBoundStatement(columnToken + " < ?", ImmutableList.of(clause.getToken()));
     }
 

@@ -35,12 +35,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyClause;
+import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
@@ -91,21 +92,32 @@ public class DataMigrate implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, final TaskParameters p) throws Exception {
         final Parameters params = (Parameters) p;
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
+
+        if (params.fetchSize != null) {
+            options.fetchSize(params.fetchSize);
+        }
 
         final Filter filter = Tasks.setupFilter(filters, parser, params);
         final MetricBackend from = metric.useGroup(params.from);
         final MetricBackend to = metric.useGroup(params.to);
 
-        final BackendKeyClause clause = Tasks.setupClause(params, mapper);
+        final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
         final ResolvableFuture<Void> future = async.future();
 
         /* all errors seen */
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
-        from.streamKeys(clause, options)
-                .observe(new KeyObserver(io, params, filter, from, to, future, errors));
+        final AsyncObservable<List<BackendKey>> observable;
+
+        if (params.keysPaged) {
+            observable = from.streamKeysPaged(keyFilter, options.build(), params.keysPageSize);
+        } else {
+            observable = from.streamKeys(keyFilter, options.build());
+        }
+
+        observable.observe(new KeyObserver(io, params, filter, from, to, future, errors));
 
         return future.directTransform(v -> {
             io.out().println();
@@ -338,6 +350,16 @@ public class DataMigrate implements ShellTask {
                 usage = "Limit the number metadata entries to fetch per page (default: 100)")
         @Getter
         private int pageLimit = 100;
+
+        @Option(name = "--keys-paged",
+                usage = "Use the high-level paging mechanism when streaming keys")
+        private boolean keysPaged = false;
+
+        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
+        private int keysPageSize = 10;
+
+        @Option(name = "--fetch-size", usage = "Use the given fetch size")
+        private Integer fetchSize = null;
 
         @Option(name = "--tracing",
                 usage = "Trace the queries for more debugging when things go wrong")

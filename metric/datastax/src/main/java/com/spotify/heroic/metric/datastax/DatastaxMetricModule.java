@@ -27,9 +27,13 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.policies.DefaultRetryPolicy;
+import com.datastax.driver.core.policies.RetryPolicy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -40,6 +44,7 @@ import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.name.Named;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricModule;
@@ -61,6 +66,8 @@ public final class DatastaxMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "heroic";
     public static final int DEFAULT_PORT = 9042;
     public static final boolean DEFAULT_CONFIGURE = false;
+    public static final int DEFAULT_FETCH_SIZE = 5000;
+    public static final Duration DEFAULT_READ_TIMEOUT = new Duration(30, TimeUnit.SECONDS);
 
     /* id of backend (defualt will be generated) */
     private final String id;
@@ -72,17 +79,33 @@ public final class DatastaxMetricModule implements MetricModule {
     private final SchemaModule schema;
     /* automatically configure database */
     private final boolean configure;
+    /* the default number of rows to fetch in a single batch */
+    private final int fetchSize;
+    /* the default read timeout for queries */
+    private final Duration readTimeout;
+    /* the default consistency level to use */
+    private final ConsistencyLevel consistencyLevel;
+    /* the retry policy to use */
+    private final RetryPolicy retryPolicy;
 
     @JsonCreator
     public DatastaxMetricModule(@JsonProperty("id") String id,
             @JsonProperty("groups") Groups groups, @JsonProperty("seeds") Set<String> seeds,
             @JsonProperty("schema") SchemaModule schema,
-            @JsonProperty("configure") Boolean configure) {
+            @JsonProperty("configure") Boolean configure,
+            @JsonProperty("fetchSize") Integer fetchSize,
+            @JsonProperty("readTimeout") Duration readTimeout,
+            @JsonProperty("consistencyLevel") ConsistencyLevel consistencyLevel,
+            @JsonProperty("retryPolicy") RetryPolicy retryPolicy) {
         this.id = id;
         this.groups = Optional.fromNullable(groups).or(Groups::empty).or("heroic");
         this.seeds = convert(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
         this.schema = Optional.fromNullable(schema).or(NextGenSchemaModule.builder()::build);
         this.configure = Optional.fromNullable(configure).or(DEFAULT_CONFIGURE);
+        this.fetchSize = Optional.fromNullable(fetchSize).or(DEFAULT_FETCH_SIZE);
+        this.readTimeout = Optional.fromNullable(readTimeout).or(DEFAULT_READ_TIMEOUT);
+        this.consistencyLevel = Optional.fromNullable(consistencyLevel).or(ConsistencyLevel.ONE);
+        this.retryPolicy = Optional.fromNullable(retryPolicy).or(DefaultRetryPolicy.INSTANCE);
     }
 
     private static List<InetSocketAddress> convert(Set<String> source) {
@@ -146,7 +169,8 @@ public final class DatastaxMetricModule implements MetricModule {
             @Singleton
             public Managed<Connection> connection(final AsyncFramework async,
                     @Named("configure") final boolean configure, final Schema schema) {
-                return async.managed(new ManagedSetupConnection(async, seeds, configure, schema));
+                return async.managed(new ManagedSetupConnection(async, seeds, schema, configure,
+                        fetchSize, readTimeout, consistencyLevel, retryPolicy));
             }
 
             @Override
@@ -178,6 +202,10 @@ public final class DatastaxMetricModule implements MetricModule {
         private Set<String> seeds;
         private SchemaModule schema;
         private boolean configure = DEFAULT_CONFIGURE;
+        private int fetchSize = DEFAULT_FETCH_SIZE;
+        private Duration readTimeout;
+        private ConsistencyLevel consistencyLevel;
+        private RetryPolicy retryPolicy;
 
         public Builder id(String id) {
             this.id = id;
@@ -204,8 +232,29 @@ public final class DatastaxMetricModule implements MetricModule {
             return this;
         }
 
+        public Builder fetchSize(int fetchSize) {
+            this.fetchSize = fetchSize;
+            return this;
+        }
+
+        public Builder readTimeout(Duration readTimeout) {
+            this.readTimeout = readTimeout;
+            return this;
+        }
+
+        public Builder consistencyLevel(ConsistencyLevel consistencyLevel) {
+            this.consistencyLevel = consistencyLevel;
+            return this;
+        }
+
+        public Builder retryPolicy(RetryPolicy retryPolicy) {
+            this.retryPolicy = retryPolicy;
+            return this;
+        }
+
         public DatastaxMetricModule build() {
-            return new DatastaxMetricModule(id, groups, seeds, schema, configure);
+            return new DatastaxMetricModule(id, groups, seeds, schema, configure, fetchSize,
+                    readTimeout, consistencyLevel, retryPolicy);
         }
     }
 }

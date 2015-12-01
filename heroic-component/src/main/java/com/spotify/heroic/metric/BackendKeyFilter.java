@@ -21,37 +21,30 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.List;
-
-import com.google.common.collect.ImmutableList;
+import java.util.Optional;
 
 import lombok.Data;
 
-/**
- * Generic filtering clauses for BackendKey's.
- *
- * These should be converted by the receiving backend to native types of filters.
- *
- * @author udoprog
- */
-public interface BackendKeyClause {
-    /**
-     * Match all keys.
-     *
-     * @return A {@link BackendKeyClause} matching all keys.
-     */
-    public static All all() {
-        return new All();
+@Data
+public class BackendKeyFilter {
+    private final Optional<Start> start;
+    private final Optional<End> end;
+    private final Optional<Integer> limit;
+
+    public static BackendKeyFilter of() {
+        return new BackendKeyFilter(Optional.empty(), Optional.empty(), Optional.empty());
     }
 
-    /**
-     * Match all keys, if all given sub-clauses match.
-     *
-     * @param clauses Sub-clauses to match.
-     * @return A {@link BackendKeyClause} matching if all sub-clauses match.
-     */
-    public static And and(final Iterable<BackendKeyClause> clauses) {
-        return new And(ImmutableList.copyOf(clauses));
+    public BackendKeyFilter withStart(Start start) {
+        return new BackendKeyFilter(Optional.of(start), end, limit);
+    }
+
+    public BackendKeyFilter withEnd(End end) {
+        return new BackendKeyFilter(start, Optional.of(end), limit);
+    }
+
+    public BackendKeyFilter withLimit(int limit) {
+        return new BackendKeyFilter(start, end, Optional.of(limit));
     }
 
     /**
@@ -62,6 +55,16 @@ public interface BackendKeyClause {
      */
     public static LT lt(final BackendKey key) {
         return new LT(key);
+    }
+
+    /**
+     * Match keys strictly greater than the given key.
+     *
+     * @param key Key to match against.
+     * @return A {@link BackendKeyClause} matching if a key is strictly greater than the given key.
+     */
+    public static GT gt(final BackendKey key) {
+        return new GT(key);
     }
 
     /**
@@ -115,61 +118,44 @@ public interface BackendKeyClause {
         return new GTEToken(token);
     }
 
-    /**
-     * Limit the number of matching keys returned.
-     *
-     * This must only be applied once, else the innermost clause wins.
-     *
-     * @param clause The clause to limit.
-     * @param limit The limit to apply.
-     * @return A {@link BackendKeyClause} limiting the number of matching keys.
-     */
-    public static BackendKeyClause limited(BackendKeyClause clause, int limit) {
-        return new Limited(clause, limit);
+    public interface Start {
+    }
+
+    public interface End {
     }
 
     @Data
-    class All implements BackendKeyClause {
-    }
-
-    @Data
-    class Limited implements BackendKeyClause {
-        private final BackendKeyClause clause;
-        private final int limit;
-    }
-
-    @Data
-    class GTE implements BackendKeyClause {
+    public static class GT implements Start {
         private final BackendKey key;
     }
 
     @Data
-    class LT implements BackendKeyClause {
+    public static class GTE implements Start {
         private final BackendKey key;
     }
 
     @Data
-    class GTEPercentage implements BackendKeyClause {
+    public static class GTEPercentage implements Start {
         private final float percentage;
     }
 
     @Data
-    class LTPercentage implements BackendKeyClause {
+    public static class GTEToken implements Start {
+        private final long token;
+    }
+
+    @Data
+    public static class LT implements End {
+        private final BackendKey key;
+    }
+
+    @Data
+    public static class LTPercentage implements End {
         private final float percentage;
     }
 
     @Data
-    class GTEToken implements BackendKeyClause {
+    public static class LTToken implements End {
         private final long token;
-    }
-
-    @Data
-    class LTToken implements BackendKeyClause {
-        private final long token;
-    }
-
-    @Data
-    class And implements BackendKeyClause {
-        private final List<BackendKeyClause> clauses;
     }
 }

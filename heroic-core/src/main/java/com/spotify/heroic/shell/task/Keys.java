@@ -30,9 +30,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyClause;
+import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -71,15 +72,27 @@ public class Keys implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final BackendKeyClause clause = Tasks.setupClause(params, mapper);
+        final BackendKeyFilter keyFilter = Tasks.setupKeyFilter(params, mapper);
 
-        final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
+        final QueryOptions.Builder options = QueryOptions.builder().tracing(params.tracing);
+
+        if (params.fetchSize != null) {
+            options.fetchSize(params.fetchSize);
+        }
 
         final MetricBackendGroup group = metrics.useGroup(params.group);
 
         final ResolvableFuture<Void> future = async.future();
 
-        group.streamKeys(clause, options).observe(new AsyncObserver<List<BackendKey>>() {
+        final AsyncObservable<List<BackendKey>> observable;
+
+        if (params.keysPaged) {
+            observable = group.streamKeysPaged(keyFilter, options.build(), params.keysPageSize);
+        } else {
+            observable = group.streamKeys(keyFilter, options.build());
+        }
+
+        observable.observe(new AsyncObserver<List<BackendKey>>() {
             @Override
             public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
                 for (final BackendKey key : keys) {
@@ -120,6 +133,16 @@ public class Keys implements ShellTask {
         @Option(name = "--tracing",
                 usage = "Trace the queries for more debugging when things go wrong")
         private boolean tracing = false;
+
+        @Option(name = "--keys-paged",
+                usage = "Use the high-level paging mechanism when streaming keys")
+        private boolean keysPaged = false;
+
+        @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
+        private int keysPageSize = 10;
+
+        @Option(name = "--fetch-size", usage = "Use the given fetch size")
+        private Integer fetchSize = null;
 
         @Override
         public List<String> getQuery() {

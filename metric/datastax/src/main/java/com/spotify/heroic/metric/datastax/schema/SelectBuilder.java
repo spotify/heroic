@@ -84,7 +84,10 @@ public class SelectBuilder {
     }
 
     public SelectBuilder limit(Object limit) {
-        this.limit = Optional.of(limit);
+        if (!this.limit.isPresent()) {
+            this.limit = Optional.of(limit);
+        }
+
         return this;
     }
 
@@ -98,8 +101,8 @@ public class SelectBuilder {
         return this;
     }
 
-    public SelectBuilder and(final List<SchemaBoundStatement> clauses) {
-        and.addAll(clauses);
+    public SelectBuilder and(SchemaBoundStatement statement) {
+        and.add(statement);
         return this;
     }
 

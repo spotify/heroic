@@ -30,7 +30,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -38,6 +40,7 @@ import javax.inject.Inject;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ExecutionInfo;
+import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Statement;
@@ -54,7 +57,7 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyClause;
+import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
@@ -171,7 +174,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyClause clause,
+    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyFilter filter,
             final QueryOptions options) {
         return observer -> {
             final Borrowed<Connection> b = connection.borrow();
@@ -181,19 +184,20 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 return;
             }
 
-            try {
-                final Connection c = b.get();
+            final Connection c = b.get();
 
-                final Stopwatch w = Stopwatch.createStarted();
+            final Stopwatch w = Stopwatch.createStarted();
 
-                final SchemaBoundStatement select = c.schema.keyUtils().selectKeys(clause);
+            final SchemaBoundStatement select = c.schema.keyUtils().selectKeys(filter);
 
-                Statement stmt = c.session.prepare(select.getStatement())
-                        .bind(select.getBindings().toArray());
+            prepareCachedStatement(c, select).directTransform(stmt -> {
+                BoundStatement bound = stmt.bind(select.getBindings().toArray());
 
                 if (options.isTracing()) {
-                    stmt = stmt.enableTracing();
+                    bound.enableTracing();
                 }
+
+                options.getFetchSize().ifPresent(bound::setFetchSize);
 
                 final AsyncObserver<List<BackendKey>> helperObserver =
                         new AsyncObserver<List<BackendKey>>() {
@@ -233,11 +237,9 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 final RowStreamHelper<BackendKey> helper =
                         new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter());
 
-                Async.bind(async, c.session.executeAsync(stmt)).onDone(helper);
-            } catch (Throwable t) {
-                b.release();
-                throw t;
-            }
+                Async.bind(async, c.session.executeAsync(bound)).onDone(helper);
+                return null;
+            });
         };
     }
 
@@ -357,6 +359,39 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
             Async.bind(async, c.session.executeAsync(f.fetch(Integer.MAX_VALUE))).onDone(helper);
         };
+    }
+
+    private final ConcurrentMap<String, AsyncFuture<PreparedStatement>> prepared =
+            new ConcurrentHashMap<>();
+
+    private final Object preparedLock = new Object();
+
+    private AsyncFuture<PreparedStatement> prepareCachedStatement(final Connection c,
+            final SchemaBoundStatement bound) {
+        final AsyncFuture<PreparedStatement> existing = prepared.get(bound.getStatement());
+
+        if (existing != null) {
+            return existing;
+        }
+
+        synchronized (preparedLock) {
+            final AsyncFuture<PreparedStatement> sneaky = prepared.get(bound.getStatement());
+
+            if (sneaky != null) {
+                return sneaky;
+            }
+
+            final AsyncFuture<PreparedStatement> newPrepared =
+                    Async.bind(async, c.session.prepareAsync(bound.getStatement()))
+                            .directTransform(stmt -> {
+                                // replace old future with a more efficient one.
+                                prepared.put(bound.getStatement(), async.resolved(stmt));
+                                return stmt;
+                            });
+
+            prepared.put(bound.getStatement(), newPrepared);
+            return newPrepared;
+        }
     }
 
     private AsyncFuture<WriteResult> doWrite(final Connection c,
