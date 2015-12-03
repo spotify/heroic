@@ -11,7 +11,7 @@ The following plugins are required:
   * Enable automatic configuration of JDT APT in
     **Preferences &rarr; Maven &rarr; Annotation Processing**.
 * m2e checkstyle connector (will be required on initial import)
-  * Configure it to use the provided [checkstyle.xml](checkstyle.xml) file in
+  * Configure it to use the provided [checkstyle.xml](/checkstyle.xml) file in
     **Preferences &rarr; Checkstyle**.
     You must set the `${basedir}` property to the path of the checked out
     heroic project.
