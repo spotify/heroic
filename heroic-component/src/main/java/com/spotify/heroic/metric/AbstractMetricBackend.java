@@ -53,7 +53,7 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyFilter filter,
+    public AsyncObservable<BackendKeySet> streamKeys(BackendKeyFilter filter,
             QueryOptions options) {
         return AsyncObservable.empty();
     }
@@ -81,14 +81,14 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeysPaged(BackendKeyFilter filter,
+    public AsyncObservable<BackendKeySet> streamKeysPaged(BackendKeyFilter filter,
             final QueryOptions options, final int pageSize) {
         return observer -> {
             streamKeysNextPage(observer, filter, options, pageSize, null);
         };
     }
 
-    private void streamKeysNextPage(final AsyncObserver<List<BackendKey>> observer,
+    private void streamKeysNextPage(final AsyncObserver<BackendKeySet> observer,
             final BackendKeyFilter filter, final QueryOptions options, final int pageSize,
             final BackendKey key) throws Exception {
         BackendKeyFilter partial = filter;
@@ -99,14 +99,14 @@ public abstract class AbstractMetricBackend implements MetricBackend {
 
         partial = partial.withLimit(pageSize);
 
-        final AsyncObservable<List<BackendKey>> observable = streamKeys(partial, options);
+        final AsyncObservable<BackendKeySet> observable = streamKeys(partial, options);
 
-        observable.observe(new AsyncObserver<List<BackendKey>>() {
+        observable.observe(new AsyncObserver<BackendKeySet>() {
             private BackendKey lastSeen = null;
 
             @Override
-            public AsyncFuture<Void> observe(List<BackendKey> value) throws Exception {
-                lastSeen = value.get(value.size() - 1);
+            public AsyncFuture<Void> observe(BackendKeySet value) throws Exception {
+                lastSeen = value.getKeys().get(value.getKeys().size() - 1);
                 return observer.observe(value);
             }
 

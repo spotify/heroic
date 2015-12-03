@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.inject.Inject;
@@ -58,6 +60,7 @@ import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.MetricCollection;
@@ -80,6 +83,7 @@ import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.StreamCollector;
 import eu.toolchain.async.Transform;
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -174,7 +178,7 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
     }
 
     @Override
-    public AsyncObservable<List<BackendKey>> streamKeys(BackendKeyFilter filter,
+    public AsyncObservable<BackendKeySet> streamKeys(BackendKeyFilter filter,
             final QueryOptions options) {
         return observer -> {
             final Borrowed<Connection> b = connection.borrow();
@@ -185,8 +189,6 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
             }
 
             final Connection c = b.get();
-
-            final Stopwatch w = Stopwatch.createStarted();
 
             final SchemaBoundStatement select = c.schema.keyUtils().selectKeys(filter);
 
@@ -199,11 +201,13 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
 
                 options.getFetchSize().ifPresent(bound::setFetchSize);
 
+                final AtomicLong failedKeys = new AtomicLong();
+
                 final AsyncObserver<List<BackendKey>> helperObserver =
                         new AsyncObserver<List<BackendKey>>() {
                     @Override
                     public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
-                        return observer.observe(keys);
+                        return observer.observe(new BackendKeySet(keys, failedKeys.getAndSet(0)));
                     }
 
                     @Override
@@ -235,7 +239,8 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 };
 
                 final RowStreamHelper<BackendKey> helper =
-                        new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter());
+                        new RowStreamHelper<BackendKey>(helperObserver, c.schema.keyConverter(),
+                                cause -> failedKeys.incrementAndGet());
 
                 Async.bind(async, c.session.executeAsync(bound)).onDone(helper);
                 return null;
@@ -621,10 +626,20 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
         }
     }
 
-    @RequiredArgsConstructor
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     private final class RowStreamHelper<R> implements FutureDone<ResultSet> {
         private final AsyncObserver<List<R>> observer;
         private final Transform<Row, R> rowConverter;
+        private final Optional<Consumer<Throwable>> errorHandler;
+
+        public RowStreamHelper(AsyncObserver<List<R>> observer, Transform<Row, R> rowConverter,
+                Consumer<Throwable> errorHandler) {
+            this(observer, rowConverter, Optional.of(errorHandler));
+        }
+
+        public RowStreamHelper(AsyncObserver<List<R>> observer, Transform<Row, R> rowConverter) {
+            this(observer, rowConverter, Optional.empty());
+        }
 
         @Override
         public void failed(Throwable cause) throws Exception {
@@ -651,6 +666,19 @@ public class DatastaxBackend extends AbstractMetricBackend implements LifeCycle 
                 try {
                     part = rowConverter.transform(rows.one());
                 } catch (Exception e) {
+                    /* custom error handling */
+                    if (errorHandler.isPresent()) {
+                        try {
+                            errorHandler.get().accept(e);
+                        } catch (final Exception inner) {
+                            inner.addSuppressed(e);
+                            observer.fail(inner);
+                            return;
+                        }
+
+                        continue;
+                    }
+
                     observer.fail(e);
                     return;
                 }

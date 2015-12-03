@@ -97,7 +97,7 @@ public interface MetricBackend extends Initializing, Grouped {
      * @return An observable providing a list of {@link BackendKey}s that can be observed for all
      *         matching keys.
      */
-    AsyncObservable<List<BackendKey>> streamKeys(BackendKeyFilter filter, QueryOptions options);
+    AsyncObservable<BackendKeySet> streamKeys(BackendKeyFilter filter, QueryOptions options);
 
     /**
      * Stream keys with a high-level paging implementation.
@@ -107,7 +107,7 @@ public interface MetricBackend extends Initializing, Grouped {
      * @return An observable providing a list of {@link BackendKey}s that can be observed for all
      *         matching keys.
      */
-    AsyncObservable<List<BackendKey>> streamKeysPaged(BackendKeyFilter filter, QueryOptions options,
+    AsyncObservable<BackendKeySet> streamKeysPaged(BackendKeyFilter filter, QueryOptions options,
             int pageSize);
 
     /**

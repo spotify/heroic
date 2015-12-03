@@ -42,6 +42,7 @@ import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricManager;
@@ -66,6 +67,7 @@ public class DataMigrate implements ShellTask {
     public static final long DOTS = 100;
     public static final long LINES = DOTS * 20;
     public static final long ALLOWED_ERRORS = 5;
+    public static final long ALLOWED_FAILED_KEYS = 100;
 
     @Inject
     private FilterFactory filters;
@@ -109,7 +111,7 @@ public class DataMigrate implements ShellTask {
         /* all errors seen */
         final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
-        final AsyncObservable<List<BackendKey>> observable;
+        final AsyncObservable<BackendKeySet> observable;
 
         if (params.keysPaged) {
             observable = from.streamKeysPaged(keyFilter, options.build(), params.keysPageSize);
@@ -137,7 +139,7 @@ public class DataMigrate implements ShellTask {
     }
 
     @Data
-    class KeyObserver implements AsyncObserver<List<BackendKey>> {
+    class KeyObserver implements AsyncObserver<BackendKeySet> {
         final ShellIO io;
         final Parameters params;
         final Filter filter;
@@ -160,25 +162,38 @@ public class DataMigrate implements ShellTask {
         /* the total number of keys migrated */
         final AtomicLong total = new AtomicLong();
 
+        /* the total number of failed keys */
+        final AtomicLong failedKeys = new AtomicLong();
+
+        /* the total number of keys */
+        final AtomicLong totalKeys = new AtomicLong();
+
         @Override
-        public AsyncFuture<Void> observe(final List<BackendKey> keys) throws Exception {
+        public AsyncFuture<Void> observe(final BackendKeySet set) throws Exception {
             if (next != null) {
                 return async.failed(new RuntimeException("next future is still set"));
             }
 
+            failedKeys.addAndGet(set.getFailedKeys());
+            totalKeys.addAndGet(set.getFailedKeys() + set.getKeys().size());
+
             if (errors.size() > ALLOWED_ERRORS) {
                 return async.failed(new RuntimeException("too many failed migrations"));
+            }
+
+            if (failedKeys.get() > ALLOWED_FAILED_KEYS) {
+                return async.failed(new RuntimeException("too many failed keys"));
             }
 
             if (future.isDone()) {
                 return async.cancelled();
             }
 
-            if (keys.isEmpty()) {
+            if (set.getKeys().isEmpty()) {
                 return async.resolved();
             }
 
-            current.addAll(keys);
+            current.addAll(set.getKeys());
 
             synchronized (lock) {
                 next = async.future();
@@ -285,7 +300,8 @@ public class DataMigrate implements ShellTask {
         void streamDot(final ShellIO io, final BackendKey key, final long n) throws Exception {
             if (n % LINES == 0) {
                 synchronized (io) {
-                    io.out().println(" last: " + mapper.writeValueAsString(key));
+                    io.out().println(" failedKeys: " + failedKeys.get() + ", last: "
+                            + mapper.writeValueAsString(key));
                     io.out().flush();
                 }
             } else if (n % DOTS == 0) {

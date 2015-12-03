@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.kohsuke.args4j.Option;
 
@@ -34,6 +35,7 @@ import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.metric.BackendKeySet;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.ShellIO;
@@ -84,7 +86,7 @@ public class Keys implements ShellTask {
 
         final ResolvableFuture<Void> future = async.future();
 
-        final AsyncObservable<List<BackendKey>> observable;
+        final AsyncObservable<BackendKeySet> observable;
 
         if (params.keysPaged) {
             observable = group.streamKeysPaged(keyFilter, options.build(), params.keysPageSize);
@@ -92,10 +94,16 @@ public class Keys implements ShellTask {
             observable = group.streamKeys(keyFilter, options.build());
         }
 
-        observable.observe(new AsyncObserver<List<BackendKey>>() {
+        observable.observe(new AsyncObserver<BackendKeySet>() {
+            final AtomicLong failedKeys = new AtomicLong();
+            final AtomicLong total = new AtomicLong();
+
             @Override
-            public AsyncFuture<Void> observe(List<BackendKey> keys) throws Exception {
-                for (final BackendKey key : keys) {
+            public AsyncFuture<Void> observe(BackendKeySet keys) throws Exception {
+                failedKeys.addAndGet(keys.getFailedKeys());
+                total.addAndGet(keys.getKeys().size() + keys.getFailedKeys());
+
+                for (final BackendKey key : keys.getKeys()) {
                     io.out().println(mapper.writeValueAsString(key));
                 }
 
@@ -117,6 +125,7 @@ public class Keys implements ShellTask {
 
             @Override
             public void end() throws Exception {
+                io.out().println("Failed Keys: " + failedKeys.get() + "/" + total.get());
                 future.resolve(null);
             }
         });
