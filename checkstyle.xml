@@ -27,7 +27,7 @@
     </module>
 
     <module name="TreeWalker">
-        <property name="cacheFile" value="${basedir}/checkstyle-cache" />
+        <property name="cacheFile" value="${basedir}/.cache/checkstyle-cache" />
 
         <module name="LineLength">
             <property name="max" value="100" />
