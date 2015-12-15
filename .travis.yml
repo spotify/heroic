@@ -6,3 +6,8 @@ jdk:
 branches:
   except:
     - site
+
+cache:
+  directories:
+    - $HOME/.m2
+    - checkstyle-cache
