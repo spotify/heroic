@@ -21,10 +21,6 @@
 
 package com.spotify.heroic.metric.datastax;
 
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.concurrent.Callable;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.PoolingOptions;
@@ -37,16 +33,18 @@ import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.metric.datastax.schema.Schema;
 
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.concurrent.Callable;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @ToString(of = {"seeds"})
-@Slf4j
 public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final AsyncFramework async;
     private final Collection<InetSocketAddress> seeds;
@@ -56,6 +54,7 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
     private final Duration readTimeout;
     private final ConsistencyLevel consistencyLevel;
     private final RetryPolicy retryPolicy;
+    private final DatastaxAuthentication authentication;
 
     public AsyncFuture<Connection> construct() {
         AsyncFuture<Session> session = async.call(new Callable<Session>() {
@@ -70,17 +69,17 @@ public class ManagedSetupConnection implements ManagedSetup<Connection> {
                 final SocketOptions socketOptions = new SocketOptions()
                     .setReadTimeoutMillis((int) readTimeout.toMilliseconds());
 
-                final Cluster cluster = Cluster.builder()
+                final Cluster.Builder cluster = Cluster.builder()
                     .addContactPointsWithPorts(seeds)
                     .withRetryPolicy(retryPolicy)
                     .withPoolingOptions(pooling)
                     .withQueryOptions(queryOptions)
                     .withSocketOptions(socketOptions)
-                    .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()))
-                    .build();
+                    .withLoadBalancingPolicy(new TokenAwarePolicy(new RoundRobinPolicy()));
                 // @formatter:on
 
-                return cluster.connect();
+                authentication.accept(cluster);
+                return cluster.build().connect();
             }
         });
 

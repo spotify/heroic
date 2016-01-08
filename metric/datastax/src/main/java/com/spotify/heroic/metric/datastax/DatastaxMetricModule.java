@@ -21,16 +21,6 @@
 
 package com.spotify.heroic.metric.datastax;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Singleton;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
@@ -53,6 +43,16 @@ import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
+
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import javax.inject.Singleton;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.Managed;
@@ -87,6 +87,8 @@ public final class DatastaxMetricModule implements MetricModule {
     private final ConsistencyLevel consistencyLevel;
     /* the retry policy to use */
     private final RetryPolicy retryPolicy;
+    /* authentication to apply to builder */
+    private final DatastaxAuthentication authentication;
 
     @JsonCreator
     public DatastaxMetricModule(@JsonProperty("id") String id,
@@ -96,7 +98,8 @@ public final class DatastaxMetricModule implements MetricModule {
             @JsonProperty("fetchSize") Integer fetchSize,
             @JsonProperty("readTimeout") Duration readTimeout,
             @JsonProperty("consistencyLevel") ConsistencyLevel consistencyLevel,
-            @JsonProperty("retryPolicy") RetryPolicy retryPolicy) {
+            @JsonProperty("retryPolicy") RetryPolicy retryPolicy,
+            @JsonProperty("authentication") DatastaxAuthentication authentication) {
         this.id = id;
         this.groups = Optional.fromNullable(groups).or(Groups::empty).or("heroic");
         this.seeds = convert(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
@@ -106,6 +109,8 @@ public final class DatastaxMetricModule implements MetricModule {
         this.readTimeout = Optional.fromNullable(readTimeout).or(DEFAULT_READ_TIMEOUT);
         this.consistencyLevel = Optional.fromNullable(consistencyLevel).or(ConsistencyLevel.ONE);
         this.retryPolicy = Optional.fromNullable(retryPolicy).or(DefaultRetryPolicy.INSTANCE);
+        this.authentication =
+                Optional.fromNullable(authentication).or(DatastaxAuthentication.None::new);
     }
 
     private static List<InetSocketAddress> convert(Set<String> source) {
@@ -170,7 +175,7 @@ public final class DatastaxMetricModule implements MetricModule {
             public Managed<Connection> connection(final AsyncFramework async,
                     @Named("configure") final boolean configure, final Schema schema) {
                 return async.managed(new ManagedSetupConnection(async, seeds, schema, configure,
-                        fetchSize, readTimeout, consistencyLevel, retryPolicy));
+                        fetchSize, readTimeout, consistencyLevel, retryPolicy, authentication));
             }
 
             @Override
@@ -206,6 +211,7 @@ public final class DatastaxMetricModule implements MetricModule {
         private Duration readTimeout;
         private ConsistencyLevel consistencyLevel;
         private RetryPolicy retryPolicy;
+        private DatastaxAuthentication authentication;
 
         public Builder id(String id) {
             this.id = id;
@@ -252,9 +258,14 @@ public final class DatastaxMetricModule implements MetricModule {
             return this;
         }
 
+        public Builder authentication(DatastaxAuthentication authentication) {
+            this.authentication = authentication;
+            return this;
+        }
+
         public DatastaxMetricModule build() {
             return new DatastaxMetricModule(id, groups, seeds, schema, configure, fetchSize,
-                    readTimeout, consistencyLevel, retryPolicy);
+                    readTimeout, consistencyLevel, retryPolicy, authentication);
         }
     }
 }
