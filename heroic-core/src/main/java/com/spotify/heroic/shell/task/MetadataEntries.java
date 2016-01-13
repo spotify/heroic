@@ -21,18 +21,15 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -41,7 +38,15 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -57,6 +62,13 @@ public class MetadataEntries implements ShellTask {
     @Inject
     private FilterFactory filters;
 
+    @Inject
+    @Named("application/json")
+    private ObjectMapper mapper;
+
+    @Inject
+    private AsyncFramework async;
+
     @Override
     public TaskParameters params() {
         return new Parameters();
@@ -70,29 +82,29 @@ public class MetadataEntries implements ShellTask {
 
         final MetadataBackend group = metadata.useGroup(params.group);
 
-        return group.countSeries(filter).directTransform(c -> {
-            Iterable<MetadataEntry> entries = group.entries(filter.getFilter(), filter.getRange());
+        return group.countSeries(filter).lazyTransform(c -> {
+            final ResolvableFuture<Void> future = async.future();
 
-            int i = 1;
-            final long count = c.getCount();
+            group.entries(filter).observe(AsyncObserver.bind(future, entries -> {
+                for (final Series s : entries) {
+                    io.out().println(mapper.writeValueAsString(s));
+                    io.out().flush();
+                }
 
-            for (final MetadataEntry e : entries) {
-                io.out().println(String.format("%d/%d: %s", i++, count, e));
-                io.out().flush();
-            }
+                return async.resolved();
+            }));
 
-            io.out().println(String.format("%d entrie(s)", (i - 1)));
-            return null;
+            return future;
         });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
                 metaVar = "<group>")
         private String group;
 
-        @Option(name = "--limit", aliases = { "--limit" },
+        @Option(name = "--limit", aliases = {"--limit"},
                 usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;

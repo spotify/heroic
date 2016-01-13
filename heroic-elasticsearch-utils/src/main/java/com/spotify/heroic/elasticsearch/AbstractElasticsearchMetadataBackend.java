@@ -21,33 +21,54 @@
 
 package com.spotify.heroic.elasticsearch;
 
+import com.spotify.heroic.async.AsyncObservable;
+import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metadata.FindSeries;
+import com.spotify.heroic.metadata.MetadataBackend;
+
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
-
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metadata.FindSeries;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public abstract class AbstractElasticsearchMetadataBackend {
+public abstract class AbstractElasticsearchMetadataBackend implements MetadataBackend {
     public static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
 
     private final AsyncFramework async;
+    private final String type;
+
+    protected abstract Managed<Connection> connection();
+
+    protected abstract FilterBuilder filter(Filter filter);
+
+    protected abstract Series toSeries(SearchHit hit);
 
     protected <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
         final ResolvableFuture<T> future = async.future();
@@ -68,8 +89,7 @@ public abstract class AbstractElasticsearchMetadataBackend {
     }
 
     protected AsyncFuture<FindSeries> scrollOverSeries(final Connection c,
-            final SearchRequestBuilder request, final long limit,
-            final Function<SearchHit, Series> converter) {
+            final SearchRequestBuilder request, final long limit) {
         return bind(request.execute()).lazyTransform((initial) -> {
             if (initial.getScrollId() == null) {
                 return async.resolved(FindSeries.EMPTY);
@@ -88,7 +108,7 @@ public abstract class AbstractElasticsearchMetadataBackend {
                         final SearchHit[] hits = response.getHits().hits();
 
                         for (final SearchHit hit : hits) {
-                            series.add(converter.apply(hit));
+                            series.add(toSeries(hit));
                         }
 
                         count.addAndGet(hits.length);
@@ -124,5 +144,92 @@ public abstract class AbstractElasticsearchMetadataBackend {
                 return future;
             });
         });
+    }
+
+    private static final int ENTRIES_SCAN_SIZE = 1000;
+    private static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
+
+    @Override
+    public AsyncObservable<List<Series>> entries(final RangeFilter filter) {
+        final FilterBuilder f = filter(filter.getFilter());
+
+        QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
+
+        final Borrowed<Connection> c = connection().borrow();
+
+        if (!c.isValid()) {
+            throw new IllegalStateException("connection is not available");
+        }
+
+        return observer -> {
+            final AtomicLong index = new AtomicLong();
+            final long limit = filter.getLimit();
+            final SearchRequestBuilder request;
+
+            try {
+                request = c.get().search(filter.getRange(), type).setSize(ENTRIES_SCAN_SIZE)
+                        .setScroll(ENTRIES_TIMEOUT).setSearchType(SearchType.SCAN).setQuery(query);
+            } catch (NoIndexSelectedException e) {
+                throw new IllegalArgumentException("no valid index selected", e);
+            }
+
+            final AsyncObserver<List<Series>> o = AsyncObserver.onFinished(observer, c::release);
+
+            bind(request.execute()).onDone(new FutureDone<SearchResponse>() {
+                @Override
+                public void failed(Throwable cause) throws Exception {
+                    o.fail(cause);
+                }
+
+                @Override
+                public void cancelled() throws Exception {
+                    o.cancel();
+                }
+
+                @Override
+                public void resolved(final SearchResponse result) throws Exception {
+                    final String scrollId = result.getScrollId();
+
+                    if (scrollId == null) {
+                        throw new RuntimeException("No scroll id associated with response");
+                    }
+
+                    handleNext(scrollId);
+                }
+
+                private void handleNext(final String scrollId) throws Exception {
+                    if (index.get() >= limit) {
+                        o.end();
+                        return;
+                    }
+
+                    bind(c.get().prepareSearchScroll(scrollId).setScroll(ENTRIES_TIMEOUT).execute())
+                            .onResolved(result -> {
+                        final SearchHit[] hits = result.getHits().hits();
+
+                        /* no more results */
+                        if (hits.length == 0) {
+                            o.end();
+                            return;
+                        }
+
+                        final List<Series> entries = new ArrayList<>();
+
+                        for (final SearchHit hit : hits) {
+                            final long i = index.getAndIncrement();
+
+                            if (i >= limit) {
+                                break;
+                            }
+
+                            entries.add(toSeries(hit));
+                        }
+
+                        o.observe(entries).onResolved(v -> handleNext(scrollId)).onFailed(o::fail)
+                                .onCancelled(o::cancel);
+                    }).onFailed(o::fail).onCancelled(o::cancel);
+                }
+            });
+        };
     }
 }

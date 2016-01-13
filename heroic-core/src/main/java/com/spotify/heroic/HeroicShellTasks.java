@@ -21,19 +21,28 @@
 
 package com.spotify.heroic;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedMap;
-
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedMap;
+
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -90,6 +99,42 @@ public class HeroicShellTasks {
             }
         }
 
+        if (params.output() == null || "-".equals(params.output())) {
+            return runTaskWithIO(task, io, params);
+        }
+
+        return runWithRedirectedIO(io, task, params);
+    }
+
+    private AsyncFuture<Void> runWithRedirectedIO(ShellIO io, final ShellTask task,
+            final TaskParameters params) throws IOException {
+        final PrintWriter out = new PrintWriter(new OutputStreamWriter(
+                io.newOutputStream(Paths.get(params.output())), Charsets.UTF_8));
+
+        final ShellIO wrapIO = new ShellIO() {
+            @Override
+            public PrintWriter out() {
+                return out;
+            }
+
+            @Override
+            public OutputStream newOutputStream(Path path, StandardOpenOption... options)
+                    throws IOException {
+                return io.newOutputStream(path, options);
+            }
+
+            @Override
+            public InputStream newInputStream(Path path, StandardOpenOption... options)
+                    throws IOException {
+                return io.newInputStream(path, options);
+            }
+        };
+
+        return runTaskWithIO(task, wrapIO, params).onFinished(out::close);
+    }
+
+    private AsyncFuture<Void> runTaskWithIO(final ShellTask task, final ShellIO io,
+            final TaskParameters params) {
         try {
             return task.run(io, params);
         } catch (Exception e) {

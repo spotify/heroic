@@ -21,20 +21,6 @@
 
 package com.spotify.heroic.shell;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.StringUtils;
-import org.joda.time.Chronology;
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeParser;
-import org.joda.time.format.DateTimeParserBucket;
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
@@ -60,7 +46,6 @@ import com.spotify.heroic.shell.task.MetadataEntries;
 import com.spotify.heroic.shell.task.MetadataFetch;
 import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
-import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
@@ -78,6 +63,20 @@ import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
+
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.StringUtils;
+import org.joda.time.Chronology;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeParser;
+import org.joda.time.format.DateTimeParserBucket;
+import org.kohsuke.args4j.Option;
 
 import lombok.Getter;
 
@@ -103,7 +102,6 @@ public final class Tasks {
         available.add(shellTask(MetadataCount.class));
         available.add(shellTask(MetadataEntries.class));
         available.add(shellTask(MetadataMigrate.class));
-        available.add(shellTask(MetadataMigrateSuggestions.class));
         available.add(shellTask(MetadataLoad.class));
         available.add(shellTask(SuggestTag.class));
         available.add(shellTask(SuggestKey.class));

@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.metadata;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -41,7 +40,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @RequiredArgsConstructor
-@ToString(of = { "backends" })
+@ToString(of = {"backends"})
 public class MetadataBackendGroup implements MetadataBackend {
     private final SelectedGroup<MetadataBackend> backends;
     private final AsyncFramework async;
@@ -98,9 +97,14 @@ public class MetadataBackendGroup implements MetadataBackend {
     }
 
     @Override
-    public Iterable<MetadataEntry> entries(final Filter filter, final DateRange range) {
-        final List<Iterable<MetadataEntry>> entries = run(b -> b.entries(filter, range));
-        return Iterables.concat(entries);
+    public AsyncObservable<List<Series>> entries(final RangeFilter filter) {
+        final List<AsyncObservable<List<Series>>> observables = new ArrayList<>();
+
+        for (final MetadataBackend b : backends) {
+            observables.add(b.entries(filter));
+        }
+
+        return AsyncObservable.chain(observables);
     }
 
     @Override

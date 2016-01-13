@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.shell;
 
-import java.util.List;
-
 import com.spotify.heroic.common.DateRange;
+
+import java.util.List;
 
 public interface TaskQueryParameters {
     public List<String> getQuery();

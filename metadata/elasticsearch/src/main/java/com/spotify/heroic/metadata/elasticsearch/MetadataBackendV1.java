@@ -31,51 +31,6 @@ import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.index.IndexRequest.OpType;
-import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.BoolFilterBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.TermFilterBuilder;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
-import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.nested.Nested;
-import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -101,13 +56,52 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTagKeys;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.index.IndexRequest.OpType;
+import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.BoolFilterBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermFilterBuilder;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
+import org.elasticsearch.search.aggregations.bucket.filter.FilterAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.nested.Nested;
+import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
@@ -136,7 +130,8 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
             AsyncFramework async, Managed<Connection> connection,
             RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
             FilterModifier modifier, @Named("configure") boolean configure) {
-        super(async);
+        super(async, ElasticsearchUtils.TYPE_METADATA);
+
         this.groups = groups;
         this.reporter = reporter;
         this.async = async;
@@ -144,6 +139,21 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
         this.writeCache = writeCache;
         this.modifier = modifier;
         this.configure = configure;
+    }
+
+    @Override
+    protected Managed<Connection> connection() {
+        return connection;
+    }
+
+    @Override
+    protected FilterBuilder filter(Filter filter) {
+        return CTX.filter(filter);
+    }
+
+    @Override
+    protected Series toSeries(SearchHit hit) {
+        return ElasticsearchUtils.toSeries(hit.getSource());
     }
 
     @Override
@@ -306,9 +316,8 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return scrollOverSeries(c, request, filter.getLimit(),
-                        h -> ElasticsearchUtils.toSeries(h.getSource()))
-                                .onDone(reporter.reportFindTimeSeries());
+                return scrollOverSeries(c, request, filter.getLimit())
+                        .onDone(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -435,89 +444,6 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 }).onDone(reporter.reportFindKeys());
             }
         });
-    }
-
-    private static final int ENTREIES_SCAN_SIZE = 1000;
-    private static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
-
-    @Override
-    public Iterable<MetadataEntry> entries(Filter filter, DateRange range) {
-        final FilterBuilder f = CTX.filter(filter);
-
-        QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
-
-        final Borrowed<Connection> c = connection.borrow();
-
-        if (!c.isValid()) {
-            throw new IllegalStateException("connection is not available");
-        }
-
-        final SearchRequestBuilder request;
-
-        try {
-            request = c.get().search(range, ElasticsearchUtils.TYPE_METADATA)
-                    .setSize(ENTREIES_SCAN_SIZE).setScroll(ENTRIES_TIMEOUT)
-                    .setSearchType(SearchType.SCAN).setQuery(query);
-        } catch (NoIndexSelectedException e) {
-            throw new IllegalArgumentException("no valid index selected", e);
-        }
-
-        return new Iterable<MetadataEntry>() {
-            @Override
-            public Iterator<MetadataEntry> iterator() {
-                final SearchResponse response = request.get(ENTRIES_TIMEOUT);
-
-                return new Iterator<MetadataEntry>() {
-                    private LinkedList<Series> current;
-                    private String currentId = response.getScrollId();
-
-                    @Override
-                    public boolean hasNext() {
-                        if (current == null || current.isEmpty()) {
-                            current = loadNext();
-                        }
-
-                        final boolean next = current != null && !current.isEmpty();
-
-                        if (!next) {
-                            c.release();
-                        }
-
-                        return next;
-                    }
-
-                    private LinkedList<Series> loadNext() {
-                        final SearchResponse resp = c.get().prepareSearchScroll(currentId)
-                                .setScroll(ENTRIES_TIMEOUT).get();
-
-                        currentId = resp.getScrollId();
-
-                        final SearchHit[] hits = resp.getHits().hits();
-
-                        final LinkedList<Series> results = new LinkedList<>();
-
-                        for (final SearchHit hit : hits) {
-                            results.add(ElasticsearchUtils.toSeries(hit.getSource()));
-                        }
-
-                        return results;
-                    }
-
-                    @Override
-                    public MetadataEntry next() {
-                        if (current == null || current.isEmpty()) {
-                            throw new IllegalStateException("no entries available");
-                        }
-
-                        return new MetadataEntry(current.poll());
-                    }
-
-                    @Override
-                    public void remove() {
-                    }
-                };
-            }
-        };
     }
 
     @Override

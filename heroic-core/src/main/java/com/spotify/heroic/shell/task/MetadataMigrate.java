@@ -21,18 +21,13 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import com.google.inject.Inject;
+import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -41,7 +36,16 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -59,6 +63,9 @@ public class MetadataMigrate implements ShellTask {
 
     @Inject
     private FilterFactory filters;
+
+    @Inject
+    private AsyncFramework async;
 
     @Override
     public TaskParameters params() {
@@ -78,7 +85,7 @@ public class MetadataMigrate implements ShellTask {
         io.out().println("  from: " + group);
         io.out().println("    to: " + target);
 
-        return group.countSeries(filter).directTransform(c -> {
+        return group.countSeries(filter).lazyTransform(c -> {
             final long count = c.getCount();
 
             io.out().println(String.format("Migrating %d entrie(s)", count));
@@ -88,45 +95,52 @@ public class MetadataMigrate implements ShellTask {
                 return null;
             }
 
-            final Iterable<MetadataEntry> entries =
-                    group.entries(filter.getFilter(), filter.getRange());
+            final AtomicInteger index = new AtomicInteger();
 
-            int index = 1;
+            final ResolvableFuture<Void> future = async.future();
 
-            for (final MetadataEntry e : entries) {
-                if (index % DOT_LIMIT == 0) {
-                    io.out().print(".");
-                    io.out().flush();
+            group.entries(filter)
+                    .observe(AsyncObserver.onFinished(AsyncObserver.bind(future, entries -> {
+                for (final Series s : entries) {
+                    final int i = index.getAndIncrement();
+
+                    if (i % DOT_LIMIT == 0) {
+                        io.out().print(".");
+                        io.out().flush();
+                    }
+
+                    if (i % (DOT_LIMIT * LINE_LIMIT) == 0) {
+                        io.out().println(String.format(" %d/%d", i, count));
+                        io.out().flush();
+                    }
+
+                    target.write(s, filter.getRange());
                 }
 
-                if (index % (DOT_LIMIT * LINE_LIMIT) == 0) {
-                    io.out().println(String.format(" %d/%d", index, count));
-                    io.out().flush();
-                }
+                return async.resolved();
+            }), () -> {
+                io.out().println(" " + String.format("%d/%d", index.get(), count) + " ended");
+                io.out().flush();
+            }));
 
-                ++index;
-                target.write(e.getSeries(), filter.getRange());
-            }
-
-            io.out().println(String.format(" %d/%d", index, count));
-            return null;
+            return future;
         });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to migrate from",
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to migrate from",
                 metaVar = "<metadata-group>", required = true)
         private String group;
 
-        @Option(name = "-t", aliases = { "--target" }, usage = "Backend group to migrate to",
+        @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
                 metaVar = "<metadata-group>", required = true)
         private String target;
 
         @Option(name = "--ok", usage = "Verify the migration")
         private boolean ok = false;
 
-        @Option(name = "--limit", aliases = { "--limit" },
+        @Option(name = "--limit", aliases = {"--limit"},
                 usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;

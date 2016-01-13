@@ -28,39 +28,6 @@ import static org.elasticsearch.index.query.FilterBuilders.orFilter;
 import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-
-import javax.inject.Inject;
-
-import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.index.IndexRequest.OpType;
-import org.elasticsearch.action.index.IndexRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
@@ -82,13 +49,41 @@ import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataEntry;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.tuple.Pair;
+import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.index.IndexRequest.OpType;
+import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.index.query.FilterBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedAction;
 import lombok.ToString;
@@ -106,9 +101,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
     static final int MAX_SIZE = 1000;
 
-    static final int ENTREIES_SCAN_SIZE = 1000;
-    static final TimeValue ENTRIES_TIMEOUT = TimeValue.timeValueSeconds(5);
-
     public static final String TEMPLATE_NAME = "heroic";
 
     private final Groups groups;
@@ -123,13 +115,18 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
             AsyncFramework async, Managed<Connection> connection,
             RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
             @Named("configure") boolean configure) {
-        super(async);
+        super(async, TYPE_METADATA);
         this.groups = groups;
         this.reporter = reporter;
         this.async = async;
         this.connection = connection;
         this.writeCache = writeCache;
         this.configure = configure;
+    }
+
+    @Override
+    protected Managed<Connection> connection() {
+        return connection;
     }
 
     @Override
@@ -277,8 +274,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
 
                 request.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                return scrollOverSeries(c, request, filter.getLimit(),
-                        h -> buildSeries(h.getSource())).onDone(reporter.reportFindTimeSeries());
+                return scrollOverSeries(c, request, filter.getLimit())
+                        .onDone(reporter.reportFindTimeSeries());
             }
         });
     }
@@ -357,85 +354,6 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     }
 
     @Override
-    public Iterable<MetadataEntry> entries(Filter filter, DateRange range) {
-        final FilterBuilder f = filter(filter);
-
-        QueryBuilder query = QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f);
-
-        final Borrowed<Connection> c = connection.borrow();
-
-        if (!c.isValid()) {
-            throw new IllegalStateException("connection is not available");
-        }
-
-        final SearchRequestBuilder request;
-
-        try {
-            request = c.get().search(range, TYPE_METADATA).setSize(ENTREIES_SCAN_SIZE)
-                    .setScroll(ENTRIES_TIMEOUT).setSearchType(SearchType.SCAN).setQuery(query);
-        } catch (NoIndexSelectedException e) {
-            throw new IllegalArgumentException("no valid index selected", e);
-        }
-
-        return new Iterable<MetadataEntry>() {
-            @Override
-            public Iterator<MetadataEntry> iterator() {
-                final SearchResponse response = request.get(ENTRIES_TIMEOUT);
-
-                return new Iterator<MetadataEntry>() {
-                    private LinkedList<Series> current;
-                    private String currentId = response.getScrollId();
-
-                    @Override
-                    public boolean hasNext() {
-                        if (current == null || current.isEmpty()) {
-                            current = loadNext();
-                        }
-
-                        final boolean next = current != null && !current.isEmpty();
-
-                        if (!next) {
-                            c.release();
-                        }
-
-                        return next;
-                    }
-
-                    private LinkedList<Series> loadNext() {
-                        final SearchResponse resp = c.get().prepareSearchScroll(currentId)
-                                .setScroll(ENTRIES_TIMEOUT).get();
-
-                        currentId = resp.getScrollId();
-
-                        final SearchHit[] hits = resp.getHits().hits();
-
-                        final LinkedList<Series> results = new LinkedList<>();
-
-                        for (final SearchHit hit : hits) {
-                            results.add(buildSeries(hit.getSource()));
-                        }
-
-                        return results;
-                    }
-
-                    @Override
-                    public MetadataEntry next() {
-                        if (current == null || current.isEmpty()) {
-                            throw new IllegalStateException("no entries available");
-                        }
-
-                        return new MetadataEntry(current.poll());
-                    }
-
-                    @Override
-                    public void remove() {
-                    }
-                };
-            }
-        };
-    }
-
-    @Override
     public AsyncFuture<Void> refresh() {
         return async.resolved(null);
     }
@@ -449,7 +367,9 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         return connection.doto(action);
     }
 
-    private Series buildSeries(Map<String, Object> source) {
+    @Override
+    protected Series toSeries(SearchHit hit) {
+        final Map<String, Object> source = hit.getSource();
         final String key = (String) source.get(KEY);
         final Iterator<Map.Entry<String, String>> tags =
                 ((List<String>) source.get(TAGS)).stream().map(this::buildTag).iterator();
@@ -488,7 +408,8 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         b.endArray();
     }
 
-    static FilterBuilder filter(final Filter filter) {
+    @Override
+    protected FilterBuilder filter(final Filter filter) {
         if (filter instanceof Filter.True) {
             return matchAllFilter();
         }
