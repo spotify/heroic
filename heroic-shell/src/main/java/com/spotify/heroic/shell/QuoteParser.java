@@ -60,7 +60,7 @@ public class QuoteParser {
         int pos = 0;
 
         input = input.trim();
-        
+
         for (final char c : input.toCharArray()) {
             ++pos;
 
