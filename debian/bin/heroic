@@ -1,22 +1,20 @@
 #!/bin/bash
 
-base=$(basename $0)
-base=heroic-${base#*-}
-
-service_type="$1"
+release=$(basename $0)
+service_instance="$1"
 
 shift
 
-if [[ -z $service_type ]]; then
+if [[ -z $service_instance ]]; then
     echo "No service type specified"
     echo "Usage: $0 <service-type> [args]"
     exit 1
 fi
 
 CONFIG_DIR="/etc/heroic"
-HEROIC_JAR="/usr/share/${base}/heroic-full.jar"
-JVMARGS="${CONFIG_DIR}/${base}-${service_type}.jvmargs"
-CONFIG="${CONFIG_DIR}/${base}-${service_type}.yml"
+HEROIC_JAR="/usr/share/${release}/heroic-full.jar"
+JVMARGS="${CONFIG_DIR}/heroic-${service_instance}.jvmargs"
+CONFIG="${CONFIG_DIR}/heroic-${service_instance}.yml"
 
 if [[ -z $HEROIC_JAR ]]; then
     echo "HEROIC_JAR: not specified"
@@ -41,4 +39,4 @@ fi
 JAVA_OPTS=$(grep -v '^\s*#' $JVMARGS)
 
 exec env CLASSPATH="$HEROIC_JAR" java $JAVA_OPTS \
-    com.spotify.heroic.HeroicService --id "${base}-${service_type}" "$CONFIG"
+    com.spotify.heroic.HeroicService --id "${service_instance}" "$CONFIG"
