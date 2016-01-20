@@ -28,20 +28,22 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -53,7 +55,20 @@ import lombok.RequiredArgsConstructor;
 public class HeroicConfig {
     public static final List<ConsumerModule> DEFAULT_CONSUMERS = ImmutableList.of();
     public static final boolean DEFAULT_ENABLE_CORS = true;
+    public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
+    public static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
 
+    /**
+     * The time core will wait for all services (implementing
+     * {@link com.spotify.heroic.common.LifeCycle} to start before giving up.
+     */
+    private final Duration startTimeout;
+
+    /**
+     * The time core will wait for all services (implementing
+     * {@link com.spotify.heroic.common.LifeCycle} to stop before giving up.
+     */
+    private final Duration stopTimeout;
     private final Optional<String> host;
     private final Optional<Integer> port;
     private final Optional<Boolean> disableMetrics;
@@ -75,6 +90,8 @@ public class HeroicConfig {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Builder {
+        private Optional<Duration> startTimeout = empty();
+        private Optional<Duration> stopTimeout = empty();
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
         private Optional<Boolean> disableMetrics = empty();
@@ -90,7 +107,9 @@ public class HeroicConfig {
         private Optional<ShellServerModule.Builder> shellServer = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("host") String host, @JsonProperty("port") Integer port,
+        public Builder(@JsonProperty("startTimeout") Duration startTimeout,
+                @JsonProperty("stopTimeout") Duration stopTimeout,
+                @JsonProperty("host") String host, @JsonProperty("port") Integer port,
                 @JsonProperty("disableMetrics") Boolean disableMetrics,
                 @JsonProperty("enableCors") Boolean enableCors,
                 @JsonProperty("corsAllowOrigin") String corsAllowOrigin,
@@ -102,6 +121,8 @@ public class HeroicConfig {
                 @JsonProperty("ingestion") IngestionModule.Builder ingestion,
                 @JsonProperty("consumers") List<ConsumerModule.Builder> consumers,
                 @JsonProperty("shellServer") ShellServerModule.Builder shellServer) {
+            this.startTimeout = ofNullable(startTimeout);
+            this.stopTimeout = ofNullable(stopTimeout);
             this.host = ofNullable(host);
             this.port = ofNullable(port);
             this.disableMetrics = ofNullable(disableMetrics);
@@ -115,6 +136,16 @@ public class HeroicConfig {
             this.ingestion = ofNullable(ingestion);
             this.consumers = ofNullable(consumers);
             this.shellServer = ofNullable(shellServer);
+        }
+
+        public Builder startTimeout(Duration startTimeout) {
+            this.startTimeout = of(startTimeout);
+            return this;
+        }
+
+        public Builder stopTimeout(Duration stopTimeout) {
+            this.stopTimeout = of(stopTimeout);
+            return this;
         }
 
         public Builder disableMetrics(boolean disableMetrics) {
@@ -175,6 +206,8 @@ public class HeroicConfig {
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
+                pickOptional(startTimeout, o.startTimeout),
+                pickOptional(stopTimeout, o.stopTimeout),
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
                 pickOptional(disableMetrics, o.disableMetrics),
@@ -195,6 +228,8 @@ public class HeroicConfig {
         public HeroicConfig build() {
             // @formatter:off
             return new HeroicConfig(
+                startTimeout.orElse(DEFAULT_START_TIMEOUT),
+                stopTimeout.orElse(DEFAULT_STOP_TIMEOUT),
                 host,
                 port,
                 disableMetrics,

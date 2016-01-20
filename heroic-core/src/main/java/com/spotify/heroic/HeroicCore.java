@@ -25,6 +25,34 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.AbstractModule;
+import com.google.inject.Binder;
+import com.google.inject.Binding;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.Scopes;
+import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
+import com.spotify.heroic.HeroicInternalLifeCycle.Context;
+import com.spotify.heroic.cluster.LocalClusterNode;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Optionals;
+import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.shell.ShellServerModule;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
@@ -51,33 +79,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.tuple.Pair;
-
-import com.fasterxml.jackson.core.JsonLocation;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.AbstractModule;
-import com.google.inject.Binder;
-import com.google.inject.Binding;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Names;
-import com.spotify.heroic.HeroicInternalLifeCycle.Context;
-import com.spotify.heroic.cluster.LocalClusterNode;
-import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.common.Optionals;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.consumer.ConsumerModule;
-import com.spotify.heroic.scheduler.Scheduler;
-import com.spotify.heroic.shell.ShellServerModule;
-import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
@@ -563,7 +564,9 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private void startLifeCycles(Injector primary) throws Exception {
         log.info("Starting life cycles");
 
-        if (!awaitLifeCycles("start", primary, 120, LifeCycle::start)) {
+        final HeroicConfig config = primary.getInstance(HeroicConfig.class);
+
+        if (!awaitLifeCycles("start", primary, config.getStartTimeout(), LifeCycle::start)) {
             throw new Exception("Failed to start all life cycles");
         }
 
@@ -573,7 +576,9 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private void stopLifeCycles(final Injector primary) throws Exception {
         log.info("Stopping life cycles");
 
-        if (!awaitLifeCycles("stop", primary, 10, LifeCycle::stop)) {
+        final HeroicConfig config = primary.getInstance(HeroicConfig.class);
+
+        if (!awaitLifeCycles("stop", primary, config.getStopTimeout(), LifeCycle::stop)) {
             log.warn("Failed to stop all life cycles");
             return;
         }
@@ -581,7 +586,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         log.info("Stopped all life cycles");
     }
 
-    boolean awaitLifeCycles(final String op, final Injector primary, final int awaitSeconds,
+    boolean awaitLifeCycles(final String op, final Injector primary, final Duration await,
             final Function<LifeCycle, AsyncFuture<Void>> fn)
                     throws InterruptedException, ExecutionException {
         final AsyncFramework async = primary.getInstance(AsyncFramework.class);
@@ -624,7 +629,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         }
 
         try {
-            async.collect(futures).get(awaitSeconds, TimeUnit.SECONDS);
+            async.collect(futures).get(await.getDuration(), await.getUnit());
         } catch (TimeoutException e) {
             log.error("Operation timed out");
 
