@@ -1,7 +1,7 @@
 #!/bin/bash
 
 base=$(basename $0)
-base=heroic-${base##*-}
+base=heroic-${base#*-}
 
 HEROIC_JAR="/usr/share/${base}/heroic-full.jar"
 
