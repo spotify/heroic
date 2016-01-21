@@ -21,17 +21,6 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Stack;
-import java.util.concurrent.TimeUnit;
-
-import org.antlr.v4.runtime.CommonToken;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -77,6 +66,17 @@ import com.spotify.heroic.grammar.HeroicQueryParser.SourceRangeRelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
 import com.spotify.heroic.metric.MetricType;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Stack;
+import java.util.concurrent.TimeUnit;
+
+import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -175,7 +175,8 @@ public class QueryListener extends HeroicQueryBaseListener {
             throw c.error("No source clause available");
         }
 
-        push(new Query(aggregation, source, range, where, Optional.empty(), Optional.empty()));
+        push(new Query(Optional.empty(), aggregation, source, range, where, Optional.empty(),
+                Optional.empty()));
     }
 
     @Override

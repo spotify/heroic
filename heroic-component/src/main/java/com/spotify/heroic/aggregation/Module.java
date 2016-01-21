@@ -21,18 +21,18 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.HeroicContext;
+import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.grammar.AggregationValue;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicModule;
-import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.grammar.AggregationValue;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;

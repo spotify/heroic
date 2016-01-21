@@ -21,15 +21,17 @@
 
 package com.spotify.heroic;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.Aggregations;
 import com.spotify.heroic.aggregation.Group;
+import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
+
+import java.util.List;
+import java.util.Optional;
 
 import lombok.Data;
 
@@ -43,7 +45,8 @@ public class Query {
     private final Optional<List<String>> groupBy;
 
     @JsonCreator
-    public Query(@JsonProperty("aggregation") final Optional<Aggregation> aggregation,
+    public Query(@JsonProperty("aggregators") final Optional<List<Aggregation>> aggregators,
+            @JsonProperty("aggregation") final Optional<Aggregation> aggregation,
             @JsonProperty("source") final Optional<MetricType> source,
             @JsonProperty("range") final Optional<QueryDateRange> range,
             @JsonProperty("filter") final Optional<Filter> filter,
@@ -51,7 +54,8 @@ public class Query {
             @JsonProperty("groupBy") final Optional<List<String>> groupBy) {
         this.filter = filter;
         this.range = range;
-        this.aggregation = aggregation;
+        this.aggregation =
+                Optionals.pickOptional(aggregation, aggregators.flatMap(Aggregations::chain));
         this.source = source;
         this.options = options;
         this.groupBy = groupBy;

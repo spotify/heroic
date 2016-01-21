@@ -24,15 +24,15 @@ package com.spotify.heroic;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.metric.MetricType;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 
@@ -140,7 +140,8 @@ public class QueryBuilder {
     }
 
     public Query build() {
-        return new Query(aggregation, source, range, legacyFilter(), options, groupBy);
+        return new Query(Optional.empty(), aggregation, source, range, legacyFilter(), options,
+                groupBy);
     }
 
     /**
