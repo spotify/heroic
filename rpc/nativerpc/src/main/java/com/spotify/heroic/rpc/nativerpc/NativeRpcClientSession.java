@@ -21,17 +21,17 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.Channel;
@@ -118,17 +118,12 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
 
                 throw new IllegalArgumentException("unable to handle type: " + msg);
             }
-        });
-
-        pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
-            @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-            }
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
                     throws Exception {
                 future.fail(cause);
+                ctx.channel().close();
             }
         });
 

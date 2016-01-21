@@ -21,16 +21,16 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.nio.charset.Charset;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.rpc.nativerpc.message.NativeOptions;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
+
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -107,6 +107,13 @@ public class NativeRpcServerSession extends ChannelInitializer<SocketChannel> {
             }
 
             throw new IllegalArgumentException("Invalid request: " + msg);
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            log.error("{}: exception in channel, closing", ctx.channel(), cause);
+            stopCurrentTimeout(heartbeatTimeout);
+            ctx.channel().close();
         }
 
         private void handleRequest(final Channel ch, NativeRpcRequest msg) throws Exception {
