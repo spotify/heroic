@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -38,8 +31,15 @@ import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
 
 @Data
 public class TagValueSuggest {
@@ -67,7 +67,7 @@ public class TagValueSuggest {
             @Override
             public TagValueSuggest collect(Collection<TagValueSuggest> groups) throws Exception {
                 final List<RequestError> errors = new ArrayList<>();
-                final List<String> values = new ArrayList<>();
+                final SortedSet<String> values = new TreeSet<>();
 
                 boolean limited = false;
 
@@ -77,10 +77,10 @@ public class TagValueSuggest {
                     limited = limited || g.limited;
                 }
 
-                Collections.sort(values);
                 limited = limited || values.size() >= limit;
                 return new TagValueSuggest(errors,
-                        values.subList(0, Math.min(values.size(), limit)), limited);
+                        ImmutableList.copyOf(values).subList(0, Math.min(values.size(), limit)),
+                        limited);
             }
         };
     }
