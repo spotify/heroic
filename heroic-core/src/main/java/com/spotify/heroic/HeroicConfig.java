@@ -31,6 +31,7 @@ import static java.util.Optional.ofNullable;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregationcache.AggregationCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
@@ -43,8 +44,10 @@ import com.spotify.heroic.suggest.SuggestManagerModule;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import jersey.repackaged.com.google.common.collect.Sets;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -74,6 +77,7 @@ public class HeroicConfig {
     private final Optional<Boolean> disableMetrics;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
+    private final Set<String> features;
     private final ClusterManagerModule cluster;
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
@@ -97,6 +101,7 @@ public class HeroicConfig {
         private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
+        private Set<String> features = ImmutableSet.of();
         private Optional<ClusterManagerModule.Builder> cluster = empty();
         private Optional<MetricManagerModule.Builder> metric = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
@@ -113,6 +118,7 @@ public class HeroicConfig {
                 @JsonProperty("disableMetrics") Boolean disableMetrics,
                 @JsonProperty("enableCors") Boolean enableCors,
                 @JsonProperty("corsAllowOrigin") String corsAllowOrigin,
+                @JsonProperty("features") Set<String> features,
                 @JsonProperty("cluster") ClusterManagerModule.Builder cluster,
                 @JsonProperty("metrics") MetricManagerModule.Builder metrics,
                 @JsonProperty("metadata") MetadataManagerModule.Builder metadata,
@@ -128,6 +134,7 @@ public class HeroicConfig {
             this.disableMetrics = ofNullable(disableMetrics);
             this.enableCors = ofNullable(enableCors);
             this.corsAllowOrigin = ofNullable(corsAllowOrigin);
+            this.features = ofNullable(features).orElseGet(ImmutableSet::of);
             this.cluster = ofNullable(cluster);
             this.metric = ofNullable(metrics);
             this.metadata = ofNullable(metadata);
@@ -160,6 +167,11 @@ public class HeroicConfig {
 
         public Builder port(Integer port) {
             this.port = of(port);
+            return this;
+        }
+
+        public Builder features(Set<String> features) {
+            this.features = features;
             return this;
         }
 
@@ -213,6 +225,7 @@ public class HeroicConfig {
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
+                ImmutableSet.copyOf(Sets.union(features, o.features)),
                 mergeOptional(cluster, o.cluster, (a, b) -> a.merge(b)),
                 mergeOptional(metric, o.metric, (a, b) -> a.merge(b)),
                 mergeOptional(metadata, o.metadata, (a, b) -> a.merge(b)),
@@ -235,6 +248,7 @@ public class HeroicConfig {
                 disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,
+                features,
                 cluster.orElseGet(ClusterManagerModule::builder).build(),
                 metric.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),

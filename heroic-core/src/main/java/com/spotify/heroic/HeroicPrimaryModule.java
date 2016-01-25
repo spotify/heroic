@@ -21,16 +21,6 @@
 
 package com.spotify.heroic;
 
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -69,6 +59,16 @@ import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.statistics.HeroicReporter;
 
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import eu.toolchain.async.AsyncFramework;
 import lombok.RequiredArgsConstructor;
 
@@ -79,6 +79,7 @@ public class HeroicPrimaryModule extends AbstractModule {
     private final InetSocketAddress bindAddress;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
+    private final Set<String> features;
 
     private final boolean setupService;
     private final HeroicReporter reporter;
@@ -143,6 +144,13 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Named("corsAllowOrigin")
     public Optional<String> corsAllowOrigin() {
         return corsAllowOrigin;
+    }
+
+    @Provides
+    @Singleton
+    @Named("features")
+    public Set<String> features() {
+        return features;
     }
 
     @Provides

@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -48,6 +49,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 
@@ -60,6 +62,10 @@ public class CoreQueryManager implements QueryManager {
             QueryTrace.identifier(CoreQueryManager.class, "query_node");
     public static final QueryTrace.Identifier QUERY =
             QueryTrace.identifier(CoreQueryManager.class, "query");
+
+    @Inject
+    @Named("features")
+    private Set<String> features;
 
     @Inject
     private AsyncFramework async;
