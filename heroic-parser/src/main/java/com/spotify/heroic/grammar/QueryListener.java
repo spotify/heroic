@@ -23,6 +23,7 @@ package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryDateRange;
@@ -176,7 +177,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         }
 
         push(new Query(Optional.empty(), aggregation, source, range, where, Optional.empty(),
-                Optional.empty()));
+                Optional.empty(), ImmutableSet.of()));
     }
 
     @Override

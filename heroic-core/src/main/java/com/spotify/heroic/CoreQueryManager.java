@@ -21,14 +21,6 @@
 
 package com.spotify.heroic;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.SortedSet;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.inject.Inject;
@@ -50,6 +42,14 @@ import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultGroups;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.SortedSet;
+import java.util.concurrent.TimeUnit;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -152,8 +152,16 @@ public class CoreQueryManager implements QueryManager {
             final AggregationContext context = new DefaultAggregationContext(cadence);
             final AggregationInstance root = aggregation.apply(context);
 
-            final AggregationInstance aggregationInstance = root.distributed();
-            final AggregationCombiner combiner = root.combiner(range);
+            final AggregationInstance aggregationInstance;
+            final AggregationCombiner combiner;
+
+            if (q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
+                aggregationInstance = root.distributed();
+                combiner = root.combiner(range);
+            } else {
+                aggregationInstance = root;
+                combiner = AggregationCombiner.DEFAULT;
+            }
 
             for (ClusterNode.Group group : groups) {
                 final ClusterNode c = group.node();

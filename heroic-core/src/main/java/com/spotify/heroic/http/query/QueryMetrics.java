@@ -24,10 +24,6 @@ package com.spotify.heroic.http.query;
 import static com.spotify.heroic.common.Optionals.firstPresent;
 import static java.util.Optional.ofNullable;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
@@ -37,6 +33,12 @@ import com.spotify.heroic.aggregation.Chain;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import jersey.repackaged.com.google.common.collect.ImmutableSet;
 import lombok.Data;
 
 @Data
@@ -52,6 +54,7 @@ public class QueryMetrics {
     private final Optional<String> key;
     private final Optional<Map<String, String>> tags;
     private final Optional<List<String>> groupBy;
+    private final Set<String> features;
 
     public QueryMetrics(Optional<String> query, Optional<Aggregation> aggregation,
             Optional<MetricType> source, Optional<QueryDateRange> range, Optional<Filter> filter,
@@ -66,6 +69,7 @@ public class QueryMetrics {
         this.key = Optional.empty();
         this.tags = Optional.empty();
         this.groupBy = Optional.empty();
+        this.features = ImmutableSet.of();
     }
 
     @JsonCreator
@@ -77,6 +81,7 @@ public class QueryMetrics {
             @JsonProperty("tags") Map<String, String> tags,
             @JsonProperty("groupBy") List<String> groupBy,
             @JsonProperty("options") QueryOptions options,
+            @JsonProperty("features") Set<String> features,
             /* ignored */ @JsonProperty("noCache") Boolean noCache) {
         this.query = ofNullable(query);
         this.aggregation = firstPresent(ofNullable(aggregation),
@@ -89,5 +94,6 @@ public class QueryMetrics {
         this.key = ofNullable(key);
         this.tags = ofNullable(tags);
         this.groupBy = ofNullable(groupBy);
+        this.features = ofNullable(features).orElseGet(ImmutableSet::of);
     }
 }

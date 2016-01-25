@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import lombok.RequiredArgsConstructor;
 
@@ -48,6 +50,7 @@ public class QueryBuilder {
     private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
+    private Set<String> features = ImmutableSet.of();
 
     /**
      * Specify a set of tags that has to match.
@@ -139,9 +142,15 @@ public class QueryBuilder {
         return this;
     }
 
+    public QueryBuilder features(final Set<String> features) {
+        checkNotNull(features, "features");
+        this.features = features;
+        return this;
+    }
+
     public Query build() {
         return new Query(Optional.empty(), aggregation, source, range, legacyFilter(), options,
-                groupBy);
+                groupBy, features);
     }
 
     /**

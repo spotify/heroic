@@ -21,6 +21,16 @@
 
 package com.spotify.heroic.http.query;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import com.spotify.heroic.Query;
+import com.spotify.heroic.QueryBuilder;
+import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.metric.QueryResult;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,16 +52,6 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.lang3.tuple.Pair;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryBuilder;
-import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.metric.QueryResult;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -190,7 +190,8 @@ public class QueryResource {
         };
 
         return q.getQuery().map(query::newQueryFromString).orElseGet(supplier)
-                .rangeIfAbsent(q.getRange()).optionsIfAbsent(q.getOptions());
+                .rangeIfAbsent(q.getRange()).optionsIfAbsent(q.getOptions())
+                .features(q.getFeatures());
     }
 
     @Data
