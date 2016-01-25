@@ -21,14 +21,15 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.List;
-
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
+
+import java.util.List;
 
 import eu.toolchain.async.AsyncFuture;
 
@@ -55,4 +56,8 @@ public interface SuggestBackend extends Grouped, Initializing {
     AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
 
     AsyncFuture<WriteResult> write(Series series, DateRange range);
+
+    default Statistics getStatistics() {
+        return Statistics.empty();
+    }
 }

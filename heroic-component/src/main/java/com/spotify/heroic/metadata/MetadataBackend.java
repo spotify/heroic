@@ -27,6 +27,7 @@ import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 
 import java.util.List;
@@ -65,4 +66,8 @@ public interface MetadataBackend extends Grouped, Initializing {
     AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter);
 
     AsyncFuture<FindKeys> findKeys(RangeFilter filter);
+
+    default Statistics getStatistics() {
+        return Statistics.empty();
+    }
 }

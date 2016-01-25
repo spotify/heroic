@@ -34,6 +34,7 @@ import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
@@ -44,7 +45,6 @@ import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
@@ -121,15 +121,15 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
     private final LocalMetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
-    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final FilterModifier modifier;
     private final boolean configure;
 
     @Inject
     public MetadataBackendV1(Groups groups, LocalMetadataBackendReporter reporter,
             AsyncFramework async, Managed<Connection> connection,
-            RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
-            FilterModifier modifier, @Named("configure") boolean configure) {
+            RateLimitedCache<Pair<String, HashCode>> writeCache, FilterModifier modifier,
+            @Named("configure") boolean configure) {
         super(async, ElasticsearchUtils.TYPE_METADATA);
 
         this.groups = groups;
@@ -221,35 +221,26 @@ public class MetadataBackendV1 extends AbstractElasticsearchMetadataBackend
                 final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
 
                 for (final String index : indices) {
-                    final Pair<String, Series> key = Pair.of(index, series);
-
-                    final Callable<AsyncFuture<WriteResult>> loader =
-                            new Callable<AsyncFuture<WriteResult>>() {
-                        @Override
-                        public AsyncFuture<WriteResult> call() throws Exception {
-                            final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                            source.startObject();
-                            ElasticsearchUtils.buildMetadataDoc(source, series);
-                            source.endObject();
-
-                            final IndexRequestBuilder request =
-                                    c.index(index, ElasticsearchUtils.TYPE_METADATA).setId(id)
-                                            .setSource(source).setOpType(OpType.CREATE);
-
-                            final Stopwatch watch = Stopwatch.createStarted();
-
-                            return bind(request.execute()).directTransform(result -> {
-                                return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
-                            });
-                        }
-                    };
-
-                    try {
-                        futures.add(writeCache.get(key, loader));
-                    } catch (RateLimitExceededException e) {
+                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
                         reporter.reportWriteDroppedByRateLimit();
+                        continue;
                     }
+
+                    final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                    source.startObject();
+                    ElasticsearchUtils.buildMetadataDoc(source, series);
+                    source.endObject();
+
+                    final IndexRequestBuilder request =
+                            c.index(index, ElasticsearchUtils.TYPE_METADATA).setId(id)
+                                    .setSource(source).setOpType(OpType.CREATE);
+
+                    final Stopwatch watch = Stopwatch.createStarted();
+
+                    futures.add(bind(request.execute()).directTransform(result -> {
+                        return WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS));
+                    }));
                 }
 
                 return async.collect(futures, WriteResult.merger());

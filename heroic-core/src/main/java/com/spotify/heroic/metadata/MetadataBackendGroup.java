@@ -28,6 +28,7 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
@@ -131,6 +132,17 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public int size() {
         return backends.size();
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        Statistics s = Statistics.empty();
+
+        for (final MetadataBackend b : backends) {
+            s = s.merge(b.getStatistics());
+        }
+
+        return s;
     }
 
     private <T> List<T> run(InternalOperation<T> op) {

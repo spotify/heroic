@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.Map.Entry;
-import java.util.Set;
-
 import com.google.inject.Inject;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.ingestion.IngestionManager;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -35,6 +34,11 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestManager;
+
+import java.util.Map.Entry;
+import java.util.Set;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -54,6 +58,12 @@ public class Statistics implements ShellTask {
 
     @Inject
     private MetricManager metrics;
+
+    @Inject
+    private MetadataManager metadata;
+
+    @Inject
+    private SuggestManager suggest;
 
     @Override
     public TaskParameters params() {
@@ -86,6 +96,26 @@ public class Statistics implements ShellTask {
             io.out().println("  " + m.toString());
 
             for (final Entry<String, Long> e : m.getStatistics().getCounters().entrySet()) {
+                io.out().println("    " + e.getKey() + "=" + e.getValue());
+            }
+        }
+
+        io.out().println("Metadata:");
+
+        for (final MetadataBackend m : metadata.allMembers()) {
+            io.out().println("  " + m.toString());
+
+            for (final Entry<String, Long> e : m.getStatistics().getCounters().entrySet()) {
+                io.out().println("    " + e.getKey() + "=" + e.getValue());
+            }
+        }
+
+        io.out().println("Suggest:");
+
+        for (final SuggestBackend s : suggest.allMembers()) {
+            io.out().println("  " + s.toString());
+
+            for (final Entry<String, Long> e : s.getStatistics().getCounters().entrySet()) {
                 io.out().println("    " + e.getKey() + "=" + e.getValue());
             }
         }

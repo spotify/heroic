@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-
-public interface RateLimitedCache<K, V> {
+public interface RateLimitedCache<K> {
     /**
-     * Try to get a previously cached value, or load a new value from {@code callable} if the
-     * configured rate limited permits it.
-     *
-     * @throws RateLimitExceededException If the configured rate is at capacity.
-     * @see Cache#get(Object, Callable)
+     * Acquire a permit to perform a piece of work identified by the given key.
      */
-    public V get(K key, final Callable<V> callable)
-            throws ExecutionException, RateLimitExceededException;
+    public boolean acquire(K key);
+
+    /**
+     * Get number of cached entries.
+     *
+     * @return Number of entries cached.
+     */
+    public int size();
 }

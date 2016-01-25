@@ -29,17 +29,18 @@ import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
 import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.elasticsearch.AbstractElasticsearchMetadataBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
@@ -60,8 +61,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
 
@@ -91,6 +90,8 @@ import lombok.ToString;
 @ToString(of = {"connection"})
 public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         implements MetadataBackend, LifeCycle {
+    public static final String WRITE_CACHE_SIZE = "write-cache-size";
+
     static final String KEY = "key";
     static final String TAGS = "tags";
     static final String TAG_KEYS = "tag_keys";
@@ -107,13 +108,13 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     private final LocalMetadataBackendReporter reporter;
     private final AsyncFramework async;
     private final Managed<Connection> connection;
-    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final boolean configure;
 
     @Inject
     public MetadataBackendKV(Groups groups, LocalMetadataBackendReporter reporter,
             AsyncFramework async, Managed<Connection> connection,
-            RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
+            RateLimitedCache<Pair<String, HashCode>> writeCache,
             @Named("configure") boolean configure) {
         super(async, TYPE_METADATA);
         this.groups = groups;
@@ -183,31 +184,25 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
 
                 for (final String index : indices) {
-                    final Pair<String, Series> key = Pair.of(index, series);
-
-                    final Callable<AsyncFuture<WriteResult>> loader = () -> {
-                        final XContentBuilder source = XContentFactory.jsonBuilder();
-
-                        source.startObject();
-                        buildContext(source, series);
-                        source.endObject();
-
-                        final IndexRequestBuilder request = c.index(index, TYPE_METADATA).setId(id)
-                                .setSource(source).setOpType(OpType.CREATE);
-
-                        final long start = System.nanoTime();
-                        return bind(request.execute()).directTransform(
-                                response -> WriteResult.of(System.nanoTime() - start));
-                    };
-
-                    try {
-                        writes.add(writeCache.get(key, loader));
-                    } catch (ExecutionException e) {
-                        return async.failed(e);
-                    } catch (RateLimitExceededException e) {
+                    if (!writeCache.acquire(Pair.of(index, series.getHashCode()))) {
                         reporter.reportWriteDroppedByRateLimit();
                         continue;
                     }
+
+                    final XContentBuilder source = XContentFactory.jsonBuilder();
+
+                    source.startObject();
+                    buildContext(source, series);
+                    source.endObject();
+
+                    final IndexRequestBuilder request = c.index(index, TYPE_METADATA).setId(id)
+                            .setSource(source).setOpType(OpType.CREATE);
+
+                    final long start = System.nanoTime();
+                    AsyncFuture<WriteResult> result = bind(request.execute())
+                            .directTransform(response -> WriteResult.of(System.nanoTime() - start));
+
+                    writes.add(result);
                 }
 
                 return async.collect(writes, WriteResult.merger());
@@ -470,6 +465,11 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
         }
 
         throw new IllegalArgumentException("Invalid filter statement: " + filter);
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        return Statistics.of(WRITE_CACHE_SIZE, writeCache.size());
     }
 
     public static BackendTypeFactory<MetadataBackend> factory() {

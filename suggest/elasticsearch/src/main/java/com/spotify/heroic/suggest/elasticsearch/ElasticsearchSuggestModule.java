@@ -24,6 +24,34 @@ package com.spotify.heroic.suggest.elasticsearch;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.ofNullable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableList;
+import com.google.common.hash.HashCode;
+import com.google.common.util.concurrent.RateLimiter;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.PrivateModule;
+import com.google.inject.Provides;
+import com.google.inject.Scopes;
+import com.google.inject.name.Named;
+import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
+import com.spotify.heroic.elasticsearch.Connection;
+import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
+import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
+import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
+import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestModule;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -34,36 +62,6 @@ import javax.inject.Singleton;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.RateLimiter;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.name.Named;
-import com.spotify.heroic.ExtraParameters;
-import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
-import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
-import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
-import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
-import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.SuggestModule;
-
-import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import lombok.Data;
 
@@ -156,17 +154,17 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
 
             @Provides
             @Singleton
-            public RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache()
-                    throws IOException {
-                final Cache<Pair<String, Series>, AsyncFuture<WriteResult>> cache = CacheBuilder
-                        .newBuilder().concurrencyLevel(4)
+            public RateLimitedCache<Pair<String, HashCode>> writeCache() throws IOException {
+                final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder.newBuilder()
+                        .concurrencyLevel(4)
                         .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
 
                 if (writesPerSecond <= 0d) {
-                    return new DisabledRateLimitedCache<>(cache);
+                    return new DisabledRateLimitedCache<>(cache.asMap());
                 }
 
-                return new DefaultRateLimitedCache<>(cache, RateLimiter.create(writesPerSecond));
+                return new DefaultRateLimitedCache<>(cache.asMap(),
+                        RateLimiter.create(writesPerSecond));
             }
 
             @Override

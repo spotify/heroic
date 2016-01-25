@@ -32,6 +32,35 @@ import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
 import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
 import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.hash.HashCode;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Grouped;
+import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.BackendType;
+import com.spotify.heroic.elasticsearch.BackendTypeFactory;
+import com.spotify.heroic.elasticsearch.Connection;
+import com.spotify.heroic.elasticsearch.RateLimitedCache;
+import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import com.spotify.heroic.suggest.KeySuggest;
+import com.spotify.heroic.suggest.MatchOptions;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.TagKeyCount;
+import com.spotify.heroic.suggest.TagSuggest;
+import com.spotify.heroic.suggest.TagSuggest.Suggestion;
+import com.spotify.heroic.suggest.TagValueSuggest;
+import com.spotify.heroic.suggest.TagValuesSuggest;
+
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
@@ -44,8 +73,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
@@ -86,35 +113,6 @@ import org.elasticsearch.search.aggregations.metrics.max.MaxBuilder;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Grouped;
-import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.elasticsearch.BackendType;
-import com.spotify.heroic.elasticsearch.BackendTypeFactory;
-import com.spotify.heroic.elasticsearch.Connection;
-import com.spotify.heroic.elasticsearch.RateLimitExceededException;
-import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
-import com.spotify.heroic.suggest.KeySuggest;
-import com.spotify.heroic.suggest.MatchOptions;
-import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.TagKeyCount;
-import com.spotify.heroic.suggest.TagSuggest;
-import com.spotify.heroic.suggest.TagSuggest.Suggestion;
-import com.spotify.heroic.suggest.TagValueSuggest;
-import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
@@ -145,15 +143,15 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
      * prevent unnecessary writes if entry is already in cache. Integer is the hashCode of the
      * series.
      */
-    private final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache;
+    private final RateLimitedCache<Pair<String, HashCode>> writeCache;
     private final Groups groups;
     private final boolean configure;
 
     @Inject
     public SuggestBackendV1(final AsyncFramework async, final Managed<Connection> connection,
             final LocalMetadataBackendReporter reporter,
-            final RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache,
-            final Groups groups, @Named("configure") boolean configure) {
+            final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
+            @Named("configure") boolean configure) {
         this.async = async;
         this.connection = connection;
         this.reporter = reporter;
@@ -573,42 +571,35 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
             final List<AsyncFuture<WriteResult>> futures = new ArrayList<>();
 
             for (final String index : indices) {
-                final Pair<String, Series> key = Pair.of(index, series);
+                final Pair<String, HashCode> key = Pair.of(index, series.getHashCode());
 
-                final Callable<AsyncFuture<WriteResult>> loader =
-                        new Callable<AsyncFuture<WriteResult>>() {
-                            @Override
-                            public AsyncFuture<WriteResult> call() throws Exception {
-                                final Stopwatch watch = Stopwatch.createStarted();
+                if (!writeCache.acquire(key)) {
+                    reporter.reportWriteDroppedByRateLimit();
+                    continue;
+                }
 
-                                bulk.add(new IndexRequest(index, Utils.TYPE_SERIES, seriesId)
-                                        .source(xSeries).opType(OpType.CREATE));
+                final Stopwatch watch = Stopwatch.createStarted();
 
-                                for (final Map.Entry<String, String> e : series.getTags()
-                                        .entrySet()) {
-                                    final String suggestId =
-                                            seriesId + ":" + Integer.toHexString(e.hashCode());
-                                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
-
-                                    suggest.startObject();
-                                    Utils.buildTagDoc(suggest, rawSeries, e);
-                                    suggest.endObject();
-
-                                    bulk.add(new IndexRequest(index, Utils.TYPE_TAG, suggestId)
-                                            .source(suggest).opType(OpType.CREATE));
-                                }
-
-                                return async.resolved(
-                                        WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS)));
-                            }
-                        };
+                bulk.add(new IndexRequest(index, Utils.TYPE_SERIES, seriesId).source(xSeries)
+                        .opType(OpType.CREATE));
 
                 try {
-                    futures.add(writeCache.get(key, loader));
-                } catch (ExecutionException e) {
+                    for (final Map.Entry<String, String> e : series.getTags().entrySet()) {
+                        final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
+                        final XContentBuilder suggest = XContentFactory.jsonBuilder();
+
+                        suggest.startObject();
+                        Utils.buildTagDoc(suggest, rawSeries, e);
+                        suggest.endObject();
+
+                        bulk.add(new IndexRequest(index, Utils.TYPE_TAG, suggestId).source(suggest)
+                                .opType(OpType.CREATE));
+                    }
+
+                    futures.add(
+                            async.resolved(WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
+                } catch (final Exception e) {
                     futures.add(async.failed(e));
-                } catch (RateLimitExceededException e) {
-                    reporter.reportWriteDroppedByRateLimit();
                 }
             }
 
