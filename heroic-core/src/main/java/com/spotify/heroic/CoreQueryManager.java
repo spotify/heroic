@@ -161,7 +161,8 @@ public class CoreQueryManager implements QueryManager {
             final AggregationInstance aggregationInstance;
             final AggregationCombiner combiner;
 
-            if (q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
+            if (features.contains(Query.DISTRIBUTED_AGGREGATIONS)
+                    || q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
                 aggregationInstance = root.distributed();
                 combiner = root.combiner(range);
             } else {
