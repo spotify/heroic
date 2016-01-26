@@ -44,6 +44,7 @@ public class SamplingQuery {
             @JsonProperty("extent") Duration extent) {
         final Optional<TimeUnit> u = TimeUtils.parseTimeUnit(unit);
 
+        // XXX: prefer proper durations over unit override.
         if (u.isPresent()) {
             this.size = Optional.ofNullable(size).map(d -> d.withUnit(u.get()));
             this.extent = Optional.ofNullable(extent).map(d -> d.withUnit(u.get()));

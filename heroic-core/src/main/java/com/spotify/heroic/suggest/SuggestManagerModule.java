@@ -26,14 +26,6 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -47,6 +39,15 @@ import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.inject.Named;
+import javax.inject.Singleton;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -88,10 +89,10 @@ public class SuggestManagerModule extends PrivateModule {
         final Multibinder<SuggestBackend> bindings =
                 Multibinder.newSetBinder(binder(), SuggestBackend.class);
 
-        int i = 0;
+        AtomicInteger i = new AtomicInteger();
 
         for (final SuggestModule config : configs) {
-            final String id = config.id() != null ? config.id() : config.buildId(i++);
+            final String id = config.id().orElseGet(() -> config.buildId(i.getAndIncrement()));
 
             final Key<SuggestBackend> key = Key.get(SuggestBackend.class, Names.named(id));
 

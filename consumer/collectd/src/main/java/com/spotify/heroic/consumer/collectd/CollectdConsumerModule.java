@@ -21,12 +21,6 @@
 
 package com.spotify.heroic.consumer.collectd;
 
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Key;
@@ -40,6 +34,12 @@ import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
+
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -81,8 +81,8 @@ public class CollectdConsumerModule implements ConsumerModule {
                             log.warn("No backends are part of the selected ingestion group");
                         }
 
-                        final CollectdChannelHandler handler = new CollectdChannelHandler(async,
-                                ingestion, hostProcessor, types);
+                        final CollectdChannelHandler handler =
+                                new CollectdChannelHandler(async, ingestion, hostProcessor, types);
 
                         final InetAddress h = host.map(host -> {
                             try {
@@ -175,21 +175,6 @@ public class CollectdConsumerModule implements ConsumerModule {
         public Builder types(CollectdTypes types) {
             this.types = Optional.of(types);
             return this;
-        }
-
-        @Override
-        public ConsumerModule.Builder merge(final ConsumerModule.Builder u) {
-            final Builder o = (Builder) u;
-
-            // @formatter:off
-            return new Builder(
-                o.id.isPresent() ? o.id : id,
-                o.host.isPresent() ? o.host : host,
-                o.port.isPresent() ? o.port : port,
-                o.hostProcessor.isPresent() ? o.hostProcessor : hostProcessor,
-                o.types.isPresent() ? o.types : types
-            );
-            // @formatter:on
         }
 
         @Override

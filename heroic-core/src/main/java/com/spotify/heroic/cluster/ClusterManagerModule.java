@@ -24,16 +24,6 @@ package com.spotify.heroic.cluster;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -51,8 +41,16 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicConfiguration;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -128,7 +126,6 @@ public class ClusterManagerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder {
         private Optional<UUID> id = empty();
         private Optional<Map<String, String>> tags = empty();
@@ -139,19 +136,20 @@ public class ClusterManagerModule {
         private Optional<Set<Map<String, String>>> topology = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("id") UUID id, @JsonProperty("tags") Map<String, String> tags,
-                @JsonProperty("topology") Set<Map<String, String>> topology,
-                @JsonProperty("capabilities") Set<NodeCapability> capabilities,
-                @JsonProperty("useLocal") Boolean useLocal,
-                @JsonProperty("discovery") ClusterDiscoveryModule discovery,
-                @JsonProperty("protocols") List<RpcProtocolModule> protocols) {
-            this.id = ofNullable(id);
-            this.tags = ofNullable(tags);
-            this.capabilities = ofNullable(capabilities);
-            this.useLocal = ofNullable(useLocal);
-            this.discovery = ofNullable(discovery);
-            this.protocols = ofNullable(protocols);
-            this.topology = ofNullable(topology);
+        public Builder(@JsonProperty("id") Optional<UUID> id,
+                @JsonProperty("tags") Optional<Map<String, String>> tags,
+                @JsonProperty("capabilities") Optional<Set<NodeCapability>> capabilities,
+                @JsonProperty("useLocal") Optional<Boolean> useLocal,
+                @JsonProperty("discovery") Optional<ClusterDiscoveryModule> discovery,
+                @JsonProperty("protocols") Optional<List<RpcProtocolModule>> protocols,
+                @JsonProperty("topology") Optional<Set<Map<String, String>>> topology) {
+            this.id = id;
+            this.tags = tags;
+            this.capabilities = capabilities;
+            this.useLocal = useLocal;
+            this.discovery = discovery;
+            this.protocols = protocols;
+            this.topology = topology;
         }
 
         public Builder id(UUID id) {

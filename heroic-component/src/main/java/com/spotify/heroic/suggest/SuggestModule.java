@@ -24,10 +24,12 @@ package com.spotify.heroic.suggest;
 import com.google.inject.Key;
 import com.google.inject.Module;
 
-public interface SuggestModule {
-    String buildId(int i);
+import java.util.Optional;
 
-    String id();
+public interface SuggestModule {
+    Optional<String> id();
+
+    String buildId(int i);
 
     Module module(Key<SuggestBackend> key, String id);
 }

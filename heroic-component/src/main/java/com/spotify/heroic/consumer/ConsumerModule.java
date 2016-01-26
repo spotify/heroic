@@ -36,7 +36,5 @@ public interface ConsumerModule {
 
     interface Builder {
         ConsumerModule build();
-
-        Builder merge(Builder o);
     }
 }

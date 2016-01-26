@@ -24,10 +24,12 @@ package com.spotify.heroic.metadata;
 import com.google.inject.Key;
 import com.google.inject.Module;
 
-public interface MetadataModule {
-    String buildId(int i);
+import java.util.Optional;
 
-    String id();
+public interface MetadataModule {
+    Optional<String> id();
+
+    String buildId(int i);
 
     Module module(Key<MetadataBackend> key, String id);
 }

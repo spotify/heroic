@@ -21,17 +21,6 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -49,6 +38,17 @@ import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.statistics.ConsumerReporter;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -57,7 +57,6 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -196,7 +195,6 @@ public class KafkaConsumerModule implements ConsumerModule {
     }
 
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
         private Optional<List<String>> topics = Optional.empty();
@@ -205,16 +203,16 @@ public class KafkaConsumerModule implements ConsumerModule {
         private Optional<ConsumerSchema> schema = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("id") String id, @JsonProperty("schema") String schema,
-                @JsonProperty("topics") List<String> topics,
-                @JsonProperty("threadsPerTopic") Integer threads,
-                @JsonProperty("config") Map<String, String> config) {
-            this.id = Optional.ofNullable(id);
-            this.threads = Optional.ofNullable(threads);
-            this.topics = Optional.ofNullable(topics);
-            this.config = Optional.ofNullable(config);
-            this.schema = Optional.ofNullable(schema)
-                    .map(s -> ReflectionUtils.buildInstance(s, ConsumerSchema.class));
+        public Builder(@JsonProperty("id") Optional<String> id,
+                @JsonProperty("schema") Optional<String> schema,
+                @JsonProperty("topics") Optional<List<String>> topics,
+                @JsonProperty("threadsPerTopic") Optional<Integer> threads,
+                @JsonProperty("config") Optional<Map<String, String>> config) {
+            this.id = id;
+            this.threads = threads;
+            this.topics = topics;
+            this.config = config;
+            this.schema = schema.map(s -> ReflectionUtils.buildInstance(s, ConsumerSchema.class));
         }
 
         public Builder id(String id) {
@@ -237,25 +235,15 @@ public class KafkaConsumerModule implements ConsumerModule {
             return this;
         }
 
+        public Builder schema(Class<ConsumerSchema> schemaClass) {
+            this.schema = Optional.of(ReflectionUtils.buildInstance(schemaClass));
+            return this;
+        }
+
         public Builder schema(String schemaClass) {
             this.schema =
                     Optional.of(ReflectionUtils.buildInstance(schemaClass, ConsumerSchema.class));
             return this;
-        }
-
-        @Override
-        public ConsumerModule.Builder merge(final ConsumerModule.Builder u) {
-            final Builder o = (Builder) u;
-
-            // @formatter:off
-            return new Builder(
-                o.id.isPresent() ? o.id : id,
-                o.topics.isPresent() ? o.topics : topics,
-                o.threads.isPresent() ? o.threads : threads,
-                o.config.isPresent() ? o.config : config,
-                o.schema.isPresent() ? o.schema : schema
-            );
-            // @formatter:on
         }
 
         @Override

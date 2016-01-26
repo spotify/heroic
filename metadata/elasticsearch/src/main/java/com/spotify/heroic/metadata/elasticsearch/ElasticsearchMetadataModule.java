@@ -22,6 +22,8 @@
 package com.spotify.heroic.metadata.elasticsearch;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -53,15 +55,16 @@ import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
-
-import org.apache.commons.lang3.tuple.Pair;
 
 import eu.toolchain.async.Managed;
 import lombok.Data;
@@ -75,13 +78,12 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     public static final String DEFAULT_GROUP = "elasticsearch";
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-metadata";
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
     private final ManagedConnectionFactory connection;
     private final String templateName;
-
-    private final double writesPerSecond;
-    private final long writeCacheDurationMinutes;
+    private final Double writesPerSecond;
+    private final Long writeCacheDurationMinutes;
 
     private static BackendTypeFactory<MetadataBackend> defaultSetup = MetadataBackendKV.factory();
 
@@ -101,21 +103,22 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     private final BackendTypeFactory<MetadataBackend> backendTypeBuilder;
 
     @JsonCreator
-    public ElasticsearchMetadataModule(@JsonProperty("id") String id,
-            @JsonProperty("groups") Groups groups,
-            @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("writesPerSecond") Double writesPerSecond,
-            @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
-            @JsonProperty("templateName") String templateName,
-            @JsonProperty("backendType") String backendType) {
+    public ElasticsearchMetadataModule(@JsonProperty("id") Optional<String> id,
+            @JsonProperty("groups") Optional<Groups> groups,
+            @JsonProperty("connection") Optional<ManagedConnectionFactory> connection,
+            @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
+            @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
+            @JsonProperty("templateName") Optional<String> templateName,
+            @JsonProperty("backendType") Optional<String> backendType) {
         this.id = id;
-        this.groups = ofNullable(groups).orElseGet(Groups::empty).or(DEFAULT_GROUP);
-        this.connection = ofNullable(connection).orElseGet(ManagedConnectionFactory::buildDefault);
-        this.writesPerSecond = ofNullable(writesPerSecond).orElse(DEFAULT_WRITES_PER_SECOND);
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.connection = connection.orElseGet(ManagedConnectionFactory::buildDefault);
+        this.writesPerSecond = writesPerSecond.orElse(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes =
-                ofNullable(writeCacheDurationMinutes).orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
-        this.templateName = ofNullable(templateName).orElse(DEFAULT_TEMPLATE_NAME);
-        this.backendTypeBuilder = ofNullable(backendTypes.get(backendType)).orElse(defaultSetup);
+                writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
+        this.backendTypeBuilder =
+                backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
     }
 
     @Override
@@ -175,7 +178,7 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -189,46 +192,53 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
     }
 
     public static class Builder {
-        private String id;
-        private Groups groups;
-        private ManagedConnectionFactory connection;
-        private Double writesPerSecond;
-        private Long writeCacheDurationMinutes;
-        private String templateName;
-        private String backendType;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<ManagedConnectionFactory> connection = empty();
+        private Optional<Double> writesPerSecond = empty();
+        private Optional<Long> writeCacheDurationMinutes = empty();
+        private Optional<String> templateName = empty();
+        private Optional<String> backendType = empty();
 
         public Builder id(final String id) {
-            this.id = checkNotNull(id, "id");
+            checkNotNull(id, "id");
+            this.id = of(id);
             return this;
         }
 
         public Builder groups(final Groups groups) {
-            this.groups = checkNotNull(groups, "groups");
+            checkNotNull(groups, "groups");
+            this.groups = of(groups);
             return this;
         }
 
         public Builder connection(final ManagedConnectionFactory connection) {
-            this.connection = checkNotNull(connection, "connection");
+            checkNotNull(connection, "connection");
+            this.connection = of(connection);
             return this;
         }
 
         public Builder writesPerSecond(final double writesPerSecond) {
-            this.writesPerSecond = writesPerSecond;
+            checkNotNull(writesPerSecond, "writesPerSecond");
+            this.writesPerSecond = of(writesPerSecond);
             return this;
         }
 
         public Builder writeCacheDurationMinutes(final long writeCacheDurationMinutes) {
-            this.writeCacheDurationMinutes = writeCacheDurationMinutes;
+            checkNotNull(writeCacheDurationMinutes, "writeCacheDurationMinutes");
+            this.writeCacheDurationMinutes = of(writeCacheDurationMinutes);
             return this;
         }
 
         public Builder templateName(final String templateName) {
-            this.templateName = checkNotNull(templateName, "templateName");
+            checkNotNull(templateName, "templateName");
+            this.templateName = of(templateName);
             return this;
         }
 
         public Builder backendType(final String backendType) {
-            this.backendType = checkNotNull(backendType, "backendType");
+            checkNotNull(backendType, "backendType");
+            this.backendType = of(backendType);
             return this;
         }
 

@@ -43,7 +43,10 @@ public final class ReflectionUtils {
 
         @SuppressWarnings("unchecked")
         final Class<T> target = (Class<T>) clazz;
+        return buildInstance(target);
+    }
 
+    public static <T> T buildInstance(final Class<T> target) {
         final Constructor<T> constructor;
 
         try {
