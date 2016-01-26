@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.databind.Module;
+
 public interface FilterJsonDeserializer {
     <T extends Filter> void register(String id, FilterJsonSerialization<T> serializer);
+
+    Module module();
 }

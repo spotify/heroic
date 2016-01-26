@@ -25,8 +25,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
-import com.fasterxml.jackson.core.JsonLocation;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -53,6 +51,8 @@ import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.InetSocketAddress;
@@ -77,8 +77,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-
-import org.apache.commons.lang3.tuple.Pair;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
@@ -654,7 +652,13 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         }
 
         final HeroicConfig.Builder b = builder;
-        return configPath.map(c -> b.merge(loadConfig(earlyInjector, c))).orElse(b).build();
+
+        final ObjectMapper mapper = earlyInjector
+                .getInstance(Key.get(ObjectMapper.class, Names.named(APPLICATION_HEROIC_CONFIG)));
+
+        return configPath.flatMap(path -> {
+            return HeroicConfig.loadConfig(mapper, path).map(c -> b.merge(c));
+        }).orElse(b).build();
     }
 
     /**
@@ -679,23 +683,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             final HeroicModule.Entry entry = module.setup();
             injector.injectMembers(entry);
             entry.setup();
-        }
-    }
-
-    private HeroicConfig.Builder loadConfig(final Injector earlyInjector, final Path path) {
-        final ObjectMapper mapper = earlyInjector
-                .getInstance(Key.get(ObjectMapper.class, Names.named(APPLICATION_HEROIC_CONFIG)));
-
-        try {
-            return mapper.readValue(Files.newInputStream(path), HeroicConfig.Builder.class);
-        } catch (final JsonMappingException e) {
-            final JsonLocation location = e.getLocation();
-            final String message = String.format("%s[%d:%d]: %s", configPath,
-                    location == null ? null : location.getLineNr(),
-                    location == null ? null : location.getColumnNr(), e.getOriginalMessage());
-            throw new RuntimeException(message, e);
-        } catch (final IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

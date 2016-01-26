@@ -21,17 +21,18 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
-
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
 public class FilterJsonSerializerImpl implements FilterJsonSerializer {
     private final Map<Class<? extends Filter>, JsonSerializer<Filter>> impl = new HashMap<>();
@@ -45,11 +46,16 @@ public class FilterJsonSerializerImpl implements FilterJsonSerializer {
         impl.put(type, s);
     }
 
-    public void configure(SimpleModule module) {
+    @Override
+    public Module module() {
+        final SimpleModule m = new SimpleModule("filterSerializer");
+
         for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this.impl
                 .entrySet()) {
-            module.addSerializer(e.getKey(), e.getValue());
+            m.addSerializer(e.getKey(), e.getValue());
         }
+
+        return m;
     }
 
     @RequiredArgsConstructor

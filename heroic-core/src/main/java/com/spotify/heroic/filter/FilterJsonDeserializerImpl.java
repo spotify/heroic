@@ -21,20 +21,21 @@
 
 package com.spotify.heroic.filter;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Inject;
 import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
@@ -50,8 +51,11 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
         impl.put(id, serializer);
     }
 
-    public void configure(SimpleModule module) {
-        module.addDeserializer(Filter.class, this);
+    @Override
+    public Module module() {
+        final SimpleModule m = new SimpleModule("filterDeserializer");
+        m.addDeserializer(Filter.class, this);
+        return m;
     }
 
     @Override

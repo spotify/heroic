@@ -1,31 +1,24 @@
 package com.spotify.heroic.metric;
 
-import static org.junit.Assert.assertEquals;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.HeroicMappers;
+import com.spotify.heroic.common.Statistics;
+
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.HeroicPrimaryModule;
-import com.spotify.heroic.common.Statistics;
+import static org.junit.Assert.assertEquals;
 
 public class BasicSerializationTest {
-    private ObjectMapper mapper;
-
-    @Before
-    public void setup() {
-        mapper = new ObjectMapper();
-        mapper.registerModule(HeroicPrimaryModule.serializerModule());
-    }
+    private ObjectMapper mapper = HeroicMappers.json();
 
     @Test
     public void testEvent() throws Exception {

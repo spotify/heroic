@@ -21,37 +21,19 @@
 
 package com.spotify.heroic;
 
-import java.util.concurrent.ExecutorService;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
-import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
 import com.spotify.heroic.aggregationcache.CacheKey;
 import com.spotify.heroic.aggregationcache.CacheKey_Serializer;
-import com.spotify.heroic.cluster.ClusterDiscoveryModule;
-import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
-import com.spotify.heroic.common.Duration;
-import com.spotify.heroic.common.DurationSerialization;
-import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
-import com.spotify.heroic.common.TypeNameMixin;
-import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.filter.CoreFilterFactory;
 import com.spotify.heroic.filter.CoreFilterModifier;
 import com.spotify.heroic.filter.FilterFactory;
@@ -64,11 +46,13 @@ import com.spotify.heroic.filter.FilterSerializer;
 import com.spotify.heroic.filter.FilterSerializerImpl;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
-import com.spotify.heroic.metadata.MetadataModule;
-import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
-import com.spotify.heroic.suggest.SuggestModule;
+
+import java.util.concurrent.ExecutorService;
+
+import javax.inject.Named;
+import javax.inject.Singleton;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.TinyAsync;
@@ -157,20 +141,7 @@ public class HeroicLoadingModule extends AbstractModule {
     @Singleton
     @Named(HeroicCore.APPLICATION_HEROIC_CONFIG)
     private ObjectMapper configMapper() {
-        final ObjectMapper m = new ObjectMapper(new YAMLFactory());
-
-        m.addMixIn(AggregationCacheBackendModule.class, TypeNameMixin.class);
-        m.addMixIn(ClusterDiscoveryModule.class, TypeNameMixin.class);
-        m.addMixIn(RpcProtocolModule.class, TypeNameMixin.class);
-        m.addMixIn(ConsumerModule.Builder.class, TypeNameMixin.class);
-        m.addMixIn(MetadataModule.class, TypeNameMixin.class);
-        m.addMixIn(SuggestModule.class, TypeNameMixin.class);
-        m.addMixIn(MetricModule.class, TypeNameMixin.class);
-
-        m.registerModule(serialization());
-        m.registerModule(new Jdk8Module());
-
-        return m;
+        return HeroicMappers.config();
     }
 
     @Override
@@ -191,12 +162,5 @@ public class HeroicLoadingModule extends AbstractModule {
         bind(ExecutorService.class).toInstance(executor);
 
         bind(JavaxRestFramework.class).toInstance(new CoreJavaxRestFramework());
-    }
-
-    public static Module serialization() {
-        final SimpleModule serializers = new SimpleModule("serialization");
-        serializers.addDeserializer(Duration.class, new DurationSerialization.Deserializer());
-        serializers.addDeserializer(Groups.class, new GroupsSerialization.Deserializer());
-        return serializers;
     }
 }

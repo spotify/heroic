@@ -1,26 +1,19 @@
 package com.spotify.heroic.common;
 
-import static org.junit.Assert.assertEquals;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.spotify.heroic.HeroicMappers;
+
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Before;
-import org.junit.Test;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.HeroicLoadingModule;
+import static org.junit.Assert.assertEquals;
 
 public class DurationTest {
-    private ObjectMapper mapper;
-
-    @Before
-    public void before() {
-        mapper = new ObjectMapper();
-        mapper.registerModule(HeroicLoadingModule.serialization());
-    }
+    private ObjectMapper mapper = HeroicMappers.json();
 
     @Test
     public void testShorthandDurationSerializer()

@@ -29,6 +29,10 @@ import static java.util.Optional.of;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -42,6 +46,10 @@ import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -89,6 +97,32 @@ public class HeroicConfig {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    static Optional<HeroicConfig.Builder> loadConfig(final ObjectMapper mapper, final Path path) {
+        try (final InputStream in = Files.newInputStream(path)) {
+            return loadConfig(mapper, in);
+        } catch (final JsonMappingException e) {
+            final JsonLocation location = e.getLocation();
+            final String message = String.format("%s[%d:%d]: %s", path,
+                    location == null ? null : location.getLineNr(),
+                    location == null ? null : location.getColumnNr(), e.getOriginalMessage());
+            throw new RuntimeException(message, e);
+        } catch (final Exception e) {
+            final String message = String.format("%s: %s", path, e.getMessage());
+            throw new RuntimeException(message, e);
+        }
+    }
+
+    static Optional<HeroicConfig.Builder> loadConfig(final ObjectMapper mapper,
+            final InputStream in) throws JsonMappingException, IOException {
+        final JsonParser parser = mapper.getFactory().createParser(in);
+
+        if (parser.nextToken() == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(parser.readValueAs(HeroicConfig.Builder.class));
     }
 
     @NoArgsConstructor

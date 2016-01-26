@@ -21,14 +21,15 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -135,13 +136,17 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
         return aggregation;
     }
 
-    public void configure(SimpleModule module) {
+    public Module module() {
+        final SimpleModule m = new SimpleModule("aggregationRegistry");
+
         for (final Map.Entry<Class<? extends AggregationInstance>, String> e : types.entrySet()) {
-            module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
+            m.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
         }
 
         for (final Map.Entry<Class<? extends Aggregation>, String> e : queryTypes.entrySet()) {
-            module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
+            m.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
         }
+
+        return m;
     }
 }
