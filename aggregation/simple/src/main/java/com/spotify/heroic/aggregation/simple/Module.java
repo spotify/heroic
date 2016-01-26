@@ -33,6 +33,8 @@ import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
@@ -43,6 +45,8 @@ import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 
 public class Module implements HeroicModule {
+    // @formatter:off
+
     @Override
     public Entry setup() {
         return new Entry() {
@@ -52,6 +56,9 @@ public class Module implements HeroicModule {
             @Inject
             @Named("common")
             private SerializerFramework s;
+
+            @Inject
+            private AggregationSerializer aggregation;
 
             @Inject
             private AggregationFactory factory;
@@ -124,9 +131,37 @@ public class Module implements HeroicModule {
                         return new Quantile(Optional.empty(), size, extent, q, error);
                     }
                 });
+
+                ctx.aggregation(TopK.NAME, TopKInstance.class, TopK.class,
+                    new FilterKSerializer<TopKInstance>(s, aggregation) {
+                        @Override
+                        protected TopKInstance build(long k, AggregationInstance of) {
+                            return new TopKInstance(k, of);
+                        }
+                    },
+                    new FilterKAggregationBuilder<TopK>(factory) {
+                        @Override
+                        protected TopK buildAggregation(long k, Aggregation of) {
+                            return new TopK(k, of);
+                        }
+                    });
+
+                ctx.aggregation(BottomK.NAME, BottomKInstance.class, BottomK.class,
+                    new FilterKSerializer<BottomKInstance>(s, aggregation) {
+                        @Override
+                        protected BottomKInstance build(long k, AggregationInstance of) {
+                            return new BottomKInstance(k, of);
+                        }
+                    },
+                    new FilterKAggregationBuilder<BottomK>(factory) {
+                        @Override
+                        protected BottomK buildAggregation(long k, Aggregation of) {
+                            return new BottomK(k, of);
+                        }
+                    });
             }
 
-            private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
+            private <T extends BucketAggregationInstance< ?>> Serializer<T> samplingSerializer(
                     BiFunction<Long, Long, T> builder) {
                 final Serializer<Long> fixedLong = s.fixedLong();
 
@@ -158,6 +193,8 @@ public class Module implements HeroicModule {
             }
         };
     }
+
+    // @formatter:on
 
     interface SamplingBuilder<T> {
         T apply(Optional<SamplingQuery> sampling, Optional<Duration> size,
