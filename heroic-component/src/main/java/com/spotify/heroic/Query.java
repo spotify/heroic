@@ -70,7 +70,7 @@ public class Query {
         this.features = Optional.ofNullable(features).orElseGet(ImmutableSet::of);
     }
 
-    public Optional<Aggregation> aggregation() {
+    public Optional<Aggregation> getAggregation() {
         if (groupBy.isPresent()) {
             return aggregation.<Aggregation> map(a -> new Group(groupBy, Optional.of(a)));
         }
