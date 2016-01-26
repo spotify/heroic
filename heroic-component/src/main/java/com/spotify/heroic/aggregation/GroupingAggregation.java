@@ -23,15 +23,6 @@ package com.spotify.heroic.aggregation;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -47,6 +38,15 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
 import com.spotify.heroic.metric.TagValues;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -161,19 +161,22 @@ public abstract class GroupingAggregation implements AggregationInstance {
         return each.reducer(range);
     }
 
+    /**
+     * Grouping aggregations need to recombine the results for each result group.
+     *
+     * Result groups are identified by their tags, and several shards might return groups having the
+     * same id. Because of this, each group must instantiate an
+     * {@link AggregationInstance#reducer(DateRange)}, belonging to the child aggregation to
+     * recombine results that are from different groups.
+     */
     @Override
     public AggregationCombiner combiner(final DateRange range) {
-        return new AggregationCombiner() {
-            @Override
-            public List<ShardedResultGroup> combine(final List<List<ShardedResultGroup>> all) {
-                final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
+        return (all) -> {
+            final Map<Map<String, String>, Reduction> sessions = new HashMap<>();
 
-                // combine all the tags.
-                final Iterator<ShardedResultGroup> step1 =
-                        Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
-
-                while (step1.hasNext()) {
-                    final ShardedResultGroup g = step1.next();
+            /* iterate through all groups and setup, and feed a reducer session for every group */
+            for (List<ShardedResultGroup> groups : all) {
+                for (final ShardedResultGroup g : groups) {
                     final Map<String, String> key = key(TagValues.mapOfSingles(g.getTags()));
 
                     Reduction red = sessions.get(key);
@@ -186,24 +189,25 @@ public abstract class GroupingAggregation implements AggregationInstance {
                     g.getGroup().updateReducer(red.session, key);
                     red.tagValues.add(g.getTags().iterator());
                 }
-
-                final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
-
-                for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
-                    final Reduction red = e.getValue();
-                    final ReducerSession session = red.session;
-                    final List<TagValues> tagValues = TagValues.fromEntries(Iterators
-                            .concat(Iterators.transform(Iterators.concat(red.tagValues.iterator()),
-                                    TagValues::iterator)));
-
-                    for (final MetricCollection metrics : session.result().getResult()) {
-                        groups.add(new ShardedResultGroup(e.getKey(), tagValues, metrics,
-                                each.cadence()));
-                    }
-                }
-
-                return groups.build();
             }
+
+            /* build results from every reducer group into a final result */
+            final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
+
+            for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
+                final Map<String, String> tags = e.getKey();
+                final Reduction red = e.getValue();
+
+                final List<TagValues> tagValues =
+                        TagValues.fromEntries(Iterators.concat(Iterators.transform(
+                                Iterators.concat(red.tagValues.iterator()), TagValues::iterator)));
+
+                for (final MetricCollection metrics : red.session.result().getResult()) {
+                    groups.add(new ShardedResultGroup(tags, tagValues, metrics, each.cadence()));
+                }
+            }
+
+            return groups.build();
         };
     }
 

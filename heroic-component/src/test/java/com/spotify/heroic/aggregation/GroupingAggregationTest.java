@@ -1,16 +1,15 @@
 package com.spotify.heroic.aggregation;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.metric.MetricCollection;
+import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.ShardedResultGroup;
+import com.spotify.heroic.metric.TagValues;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -19,12 +18,20 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.Point;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class GroupingAggregationTest {
@@ -136,4 +143,78 @@ public class GroupingAggregationTest {
             Assert.fail("unexpected group: " + data.getGroup());
         }
     }
+
+    /**
+     * Checks that the distribute aggregation for Grouping aggregations are composed out of the
+     * distributed aggregation for the child clause.
+     */
+    @Test
+    public void testDistributedAggregation() {
+        final AggregationInstance distributed = mock(AggregationInstance.class);
+        final AggregationInstance next = mock(AggregationInstance.class);
+
+        final AggregationInstance each = mock(AggregationInstance.class);
+        final Optional<List<String>> of = Optional.empty();
+        final SimpleGroup g = spy(new SimpleGroup(of, each));
+
+        doReturn(distributed).when(each).distributed();
+        doReturn(next).when(g).newInstance(of, distributed);
+
+        assertEquals(next, g.distributed());
+
+        verify(each).distributed();
+        verify(g).newInstance(of, distributed);
+    }
+
+    @Test
+    public void testCombiner() {
+        final AggregationInstance each = mock(AggregationInstance.class);
+        final Optional<List<String>> of = Optional.empty();
+        final SimpleGroup g = spy(new SimpleGroup(of, each));
+
+        final ReducerSession r = mock(ReducerSession.class);
+        final DateRange range = mock(DateRange.class);
+
+        final ReducerResult result = new ReducerResult(ImmutableList.of(), Statistics.empty());
+
+        doReturn(r).when(each).reducer(range);
+        doReturn(result).when(r).result();
+
+        final AggregationCombiner combiner = g.combiner(range);
+
+        final List<List<ShardedResultGroup>> all = new ArrayList<>();
+
+        final ImmutableMap<String, String> shard = ImmutableMap.of();
+        final MetricCollection empty = MetricCollection.points(ImmutableList.of());
+
+        final ImmutableList<TagValues> g1 = ImmutableList.of(TagValues.of("id", "a"));
+        final ImmutableList<TagValues> g2 = ImmutableList.of(TagValues.of("id", "b"));
+
+        final ShardedResultGroup a = new ShardedResultGroup(shard, g1, empty, 0);
+        final ShardedResultGroup b = new ShardedResultGroup(shard, g1, empty, 0);
+        final ShardedResultGroup c = new ShardedResultGroup(shard, g2, empty, 0);
+
+        all.add(ImmutableList.of(a, b, c));
+
+        assertTrue(combiner.combine(all).isEmpty());
+
+        verify(r, times(2)).updatePoints(ImmutableMap.of("id", "a"), ImmutableList.of());
+        verify(r, times(1)).updatePoints(ImmutableMap.of("id", "b"), ImmutableList.of());
+    }
+
+    public static class SimpleGroup extends GroupingAggregation {
+        public SimpleGroup(final Optional<List<String>> of, final AggregationInstance each) {
+            super(of, each);
+        }
+
+        protected Map<String, String> key(Map<String, String> input) {
+            return input;
+        }
+
+        @Override
+        protected AggregationInstance newInstance(Optional<List<String>> of,
+                AggregationInstance each) {
+            return new SimpleGroup(of, each);
+        }
+    };
 }

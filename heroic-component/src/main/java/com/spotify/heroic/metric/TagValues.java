@@ -21,6 +21,13 @@
 
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -29,12 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import org.apache.commons.lang3.tuple.Pair;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
 
 import lombok.Data;
 
@@ -120,5 +121,8 @@ public class TagValues {
 
         return map.build();
     }
-}
 
+    public static TagValues of(String k, String v1) {
+        return new TagValues(k, ImmutableList.of(v1));
+    }
+}
