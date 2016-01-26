@@ -4,14 +4,13 @@
 A scalable time series database based on Cassandra and Elasticsearch.
 Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
 
+This project adheres to the [Open Code of Conduct](https://github.com/spotify/code-of-conduct/blob/master/code-of-conduct.md).
+By participating, you are expected to honor this code.
+
 **Stability Disclaimer:**
 Heroic is an evolving project, and should in its current state be considered *unstable*.
 Do not use in production unless you are willing to spend time with it, experiment and contribute.
 Not doing so might result in losing your data to goblins. It is currently not on a release schedule and is not versioned. At Spotify we rely on multiple *release forks* that we actively maintain and flip between.
-
-This project adheres to the [Open Code of Conduct][code-of-conduct]. By participating, you are expected to honor this code.
-
-[code-of-conduct]: https://github.com/spotify/code-of-conduct/blob/master/code-of-conduct.md
 
 ## Building
 
