@@ -34,6 +34,7 @@ import static org.elasticsearch.index.query.QueryBuilders.filteredQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.inject.Inject;
@@ -72,6 +73,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.elasticsearch.action.ActionListener;
@@ -368,22 +370,21 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
             public AsyncFuture<TagSuggest> action(final Connection c) throws Exception {
                 final BoolQueryBuilder bool = boolQuery();
 
-                if (key != null && !key.isEmpty()) {
-                    final String l = key.toLowerCase();
-                    final BoolQueryBuilder sub = boolQuery();
-                    sub.should(termQuery(TAG_SKEY, l));
-                    sub.should(termQuery(TAG_SKEY_PREFIX, l).boost(1.5f));
-                    sub.should(termQuery(TAG_SKEY_RAW, l).boost(2.0f));
-                    bool.must(sub);
-                }
+                // special case: key and value are equal, which indicates that _any_ match should be
+                // in effect.
+                // XXX: Enhance API to allow for this to be intentional instead of this by
+                // introducing an 'any' field.
+                if (key != null && value != null && key.equals(value)) {
+                    bool.should(matchTermValue(value));
+                    bool.should(matchTermKey(key));
+                } else {
+                    if (key != null && !key.isEmpty()) {
+                        bool.must(matchTermKey(key).boost(2.0f));
+                    }
 
-                if (value != null && !value.isEmpty()) {
-                    final String l = value.toLowerCase();
-                    final BoolQueryBuilder sub = boolQuery();
-                    sub.should(termQuery(TAG_SVAL, l));
-                    sub.should(termQuery(TAG_SVAL_PREFIX, l).boost(1.5f));
-                    sub.should(termQuery(TAG_SVAL_RAW, l).boost(2.0f));
-                    bool.must(sub);
+                    if (value != null && !value.isEmpty()) {
+                        bool.must(matchTermValue(value));
+                    }
                 }
 
                 QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
@@ -599,6 +600,35 @@ public class SuggestBackendKV implements SuggestBackend, LifeCycle, Grouped {
         });
 
         return future;
+    }
+
+    private static BoolQueryBuilder matchTermKey(final String key) {
+        final String lkey = key.toLowerCase();
+
+        return analyzedTermQuery(TAG_SKEY, lkey)
+                .should(termQuery(TAG_SKEY_PREFIX, lkey).boost(1.5f))
+                .should(termQuery(TAG_SKEY_RAW, key).boost(2f));
+    }
+
+    private static BoolQueryBuilder matchTermValue(final String value) {
+        final String lvalue = value.toLowerCase();
+
+        return analyzedTermQuery(TAG_SVAL, lvalue)
+                .should(termQuery(TAG_SVAL_PREFIX, lvalue).boost(1.5f))
+                .should(termQuery(TAG_SVAL_RAW, value).boost(2.0f));
+    }
+
+    private static final Splitter SPACE_SPLITTER =
+            Splitter.on(Pattern.compile("[ \t]+")).omitEmptyStrings().trimResults();
+
+    static BoolQueryBuilder analyzedTermQuery(final String field, final String value) {
+        final BoolQueryBuilder builder = boolQuery();
+
+        for (final String part : SPACE_SPLITTER.split(value)) {
+            builder.should(termQuery(field, part));
+        }
+
+        return builder;
     }
 
     static void buildContext(final XContentBuilder b, final Series series) throws IOException {
