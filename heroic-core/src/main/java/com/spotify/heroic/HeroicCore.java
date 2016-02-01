@@ -517,6 +517,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             }
         });
 
+        modules.add(config.getAnalytics().module());
+
         // make new injector child of early injector so they can access everything in it.
         return early.createChildInjector(modules);
     }

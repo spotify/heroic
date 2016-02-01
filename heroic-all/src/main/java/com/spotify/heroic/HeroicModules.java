@@ -24,6 +24,7 @@ package com.spotify.heroic;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.profile.BigtableAnalyticsProfile;
 import com.spotify.heroic.profile.BigtableProfile;
 import com.spotify.heroic.profile.CassandraProfile;
 import com.spotify.heroic.profile.ClusterProfile;
@@ -47,6 +48,8 @@ public class HeroicModules {
         new com.spotify.heroic.metric.astyanax.Module(),
         new com.spotify.heroic.metric.datastax.Module(),
         new com.spotify.heroic.metric.generated.Module(),
+
+        new com.spotify.heroic.analytics.bigtable.Module(),
         new com.spotify.heroic.metric.bigtable.Module(),
 
         new com.spotify.heroic.metadata.elasticsearch.Module(),
@@ -71,6 +74,7 @@ public class HeroicModules {
         .put("elasticsearch-suggest", new ElasticsearchSuggestProfile())
         .put("kafka-consumer", new KafkaConsumerProfile())
         .put("bigtable", new BigtableProfile())
+        .put("bigtable-analytics", new BigtableAnalyticsProfile())
         .put("cluster", new ClusterProfile())
         .put("collectd", new CollectdConsumerProfile())
         .put("memory-cache", new MemoryCacheProfile())

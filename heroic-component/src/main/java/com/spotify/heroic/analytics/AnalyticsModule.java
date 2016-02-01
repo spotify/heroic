@@ -19,15 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.analytics;
 
-import lombok.RequiredArgsConstructor;
+import com.google.inject.Module;
 
-@RequiredArgsConstructor
-public class BigtableColumnFamilyBuilder {
-    final String name;
+public interface AnalyticsModule {
+    public Module module();
 
-    public BigtableColumnFamily build() {
-        return new BigtableColumnFamily(name);
+    interface Builder {
+        AnalyticsModule build();
     }
 }

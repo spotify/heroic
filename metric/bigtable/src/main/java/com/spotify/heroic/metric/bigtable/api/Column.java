@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import java.util.List;
+import com.google.protobuf.ByteString;
 
 import lombok.Data;
 
-import com.google.bigtable.v1.Mutation;
-
 @Data
-public class BigtableMutations {
-    final List<Mutation> mutations;
+public class Column {
+    final ByteString qualifier;
+    final ByteString value;
 }

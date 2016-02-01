@@ -21,37 +21,33 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import java.io.IOException;
-import java.util.List;
+import com.google.protobuf.ByteString;
 
-public interface BigtableTableAdminClient {
-    /**
-     * Create the specified table.
-     */
-    public void createTable(BigtableTable table) throws IOException;
+import java.util.Optional;
 
-    /**
-     * Create the specified column family.
-     */
-    public void createColumnFamily(String table, BigtableColumnFamily family) throws IOException;
+import lombok.Data;
+
+@Data
+public class RowRange {
+    private final Optional<ByteString> start;
+    private final Optional<ByteString> end;
 
     /**
-     * Get details about a table.
+     * Build a new row range.
+     *
+     * @param start Start key to start at (inclusive).
+     * @param end End key to stop at (exclusive).
+     * @return A row range with the given parameters.
      */
-    public BigtableTable getTable(String name) throws IOException;
+    public static RowRange rowRange(Optional<ByteString> start, Optional<ByteString> end) {
+        return new RowRange(start, end);
+    }
 
-    /**
-     * High-level API that iterates through all tables, and fetches details.
-     */
-    public List<BigtableTable> listTablesDetails() throws IOException;
-
-    /**
-     * Create a builder for column families.
-     */
-    public BigtableColumnFamilyBuilder columnFamily(String name);
-
-    /**
-     * Create a builder for tables.
-     */
-    public BigtableTableBuilder table(String name);
+    public com.google.bigtable.v1.RowRange toPb() {
+        final com.google.bigtable.v1.RowRange.Builder builder =
+                com.google.bigtable.v1.RowRange.newBuilder();
+        start.ifPresent(builder::setStartKey);
+        end.ifPresent(builder::setEndKey);
+        return builder.build();
+    }
 }

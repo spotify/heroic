@@ -21,12 +21,29 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import lombok.Data;
+import java.util.Optional;
 
-import com.google.protobuf.ByteString;
+public interface TableAdminClient {
+    /**
+     * Get details about a table if it exists.
+     *
+     * @param tableId The id of the table to get details about.
+     *
+     * @return The table, or empty if it does not exist.
+     */
+    public Optional<Table> getTable(String tableId);
 
-@Data
-public class BigtableCell {
-    final ByteString qualifier;
-    final ByteString value;
+    /**
+     * Create the specified table.
+     *
+     * @return The created table.
+     */
+    public Table createTable(String name);
+
+    /**
+     * Create the specified column family.
+     *
+     * @return The created column family.
+     */
+    public ColumnFamily createColumnFamily(Table table, String name);
 }

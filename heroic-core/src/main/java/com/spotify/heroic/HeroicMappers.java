@@ -27,9 +27,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.datatype.jdk7.Jdk7Module;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.analytics.AnalyticsModule;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.Duration;
@@ -76,9 +78,12 @@ public final class HeroicMappers {
         m.addMixIn(SuggestModule.class, TypeNameMixin.class);
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
         m.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
+        m.addMixIn(AnalyticsModule.Builder.class, TypeNameMixin.class);
 
         m.registerModule(commonSerializers());
 
+        /* support Path */
+        m.registerModule(new Jdk7Module());
         /* support Optional */
         m.registerModule(new Jdk8Module());
 
@@ -91,6 +96,7 @@ public final class HeroicMappers {
         mapper.addMixIn(AggregationInstance.class, TypeNameMixin.class);
         mapper.addMixIn(Aggregation.class, TypeNameMixin.class);
 
+        mapper.registerModule(new Jdk7Module());
         mapper.registerModule(new Jdk8Module().configureAbsentsAsNulls(true));
         mapper.registerModule(commonSerializers());
         mapper.registerModule(jsonSerializers());

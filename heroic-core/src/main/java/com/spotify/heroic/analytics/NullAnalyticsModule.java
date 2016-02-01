@@ -19,13 +19,19 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.analytics;
 
-import lombok.Data;
+import com.google.inject.Module;
+import com.google.inject.PrivateModule;
 
-@Data
-public class BigtableLatestColumnFamily {
-    final String name;
-
-    final Iterable<BigtableCell> columns;
+public class NullAnalyticsModule implements AnalyticsModule {
+    public Module module() {
+        return new PrivateModule() {
+            @Override
+            protected void configure() {
+                bind(MetricAnalytics.class).to(NullMetricAnalytics.class);
+                expose(MetricAnalytics.class);
+            }
+        };
+    }
 }

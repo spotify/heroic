@@ -19,21 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.analytics;
 
-import java.util.List;
+import com.spotify.heroic.common.Series;
 
-import com.google.protobuf.ByteString;
+import lombok.Data;
 
-import eu.toolchain.async.AsyncFuture;
-
-public interface BigtableClient {
-    AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, BigtableMutations mutations);
-
-    BigtableMutationsBuilder mutations();
-
-    AsyncFuture<List<BigtableLatestRow>> readRows(String tableName, ByteString rowKey,
-            BigtableRowFilter filter);
-
-    BigtableRowFilter columnFilter(String family, ByteString start, ByteString end);
+@Data
+public class SeriesHit {
+    private final Series series;
+    private final long hits;
 }

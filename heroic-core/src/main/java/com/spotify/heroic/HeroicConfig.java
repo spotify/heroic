@@ -37,6 +37,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.spotify.heroic.analytics.AnalyticsModule;
+import com.spotify.heroic.analytics.NullAnalyticsModule;
 import com.spotify.heroic.cache.CacheModule;
 import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
@@ -105,6 +107,7 @@ public class HeroicConfig {
     private final IngestionModule ingestion;
     private final List<ConsumerModule> consumers;
     private final Optional<ShellServerModule> shellServer;
+    private final AnalyticsModule analytics;
 
     private final String version;
     private final String service;
@@ -163,6 +166,7 @@ public class HeroicConfig {
         private Optional<IngestionModule.Builder> ingestion = empty();
         private List<ConsumerModule.Builder> consumers = ImmutableList.of();
         private Optional<ShellServerModule.Builder> shellServer = empty();
+        private Optional<AnalyticsModule.Builder> analytics = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -185,8 +189,9 @@ public class HeroicConfig {
                 @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
                 @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
                 @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
-                @JsonProperty("service") Optional<String> service,
-                @JsonProperty("version") Optional<String> version) {
+                @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
+                @JsonProperty("version") Optional<String> version,
+                @JsonProperty("service") Optional<String> service) {
             this.startTimeout = startTimeout;
             this.stopTimeout = stopTimeout;
             this.host = host;
@@ -204,8 +209,9 @@ public class HeroicConfig {
             this.ingestion = ingestion;
             this.consumers = consumers.orElseGet(ImmutableList::of);
             this.shellServer = shellServer;
-            this.service = service;
+            this.analytics = analytics;
             this.version = version;
+            this.service = service;
         }
 
         public Builder startTimeout(Duration startTimeout) {
@@ -274,6 +280,11 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder analytics(AnalyticsModule.Builder analytics) {
+            this.analytics = of(analytics);
+            return this;
+        }
+
         public Builder shellServer(ShellServerModule.Builder shellServer) {
             this.shellServer = of(shellServer);
             return this;
@@ -299,6 +310,7 @@ public class HeroicConfig {
                 mergeOptional(ingestion, o.ingestion, (a, b) -> a.merge(b)),
                 ImmutableList.copyOf(Iterables.concat(consumers, o.consumers)),
                 mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
+                pickOptional(analytics, o.analytics),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -331,6 +343,7 @@ public class HeroicConfig {
                 ingestion.orElseGet(IngestionModule::builder).build(),
                 ImmutableList.copyOf(consumers.stream().map(c -> c.build()).iterator()),
                 shellServer.map(ShellServerModule.Builder::build),
+                analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

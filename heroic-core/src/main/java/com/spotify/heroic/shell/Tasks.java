@@ -29,6 +29,8 @@ import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.shell.task.AnalyticsDumpFetchSeries;
+import com.spotify.heroic.shell.task.AnalyticsReportFetchSeries;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
 import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
@@ -117,6 +119,8 @@ public final class Tasks {
         available.add(shellTask(DataMigrate.class));
         available.add(shellTask(ParseQuery.class));
         available.add(shellTask(StringifyQuery.class));
+        available.add(shellTask(AnalyticsReportFetchSeries.class));
+        available.add(shellTask(AnalyticsDumpFetchSeries.class));
     }
 
     public static List<ShellTaskDefinition> available() {

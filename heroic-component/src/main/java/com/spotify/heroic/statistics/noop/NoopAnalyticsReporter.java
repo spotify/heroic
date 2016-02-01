@@ -19,31 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.statistics.noop;
 
-import java.util.Map;
-import java.util.Set;
+import com.spotify.heroic.statistics.AnalyticsReporter;
 
-public interface HeroicReporter {
-    LocalMetricManagerReporter newLocalMetricBackendManager();
+public class NoopAnalyticsReporter implements AnalyticsReporter {
+    @Override
+    public void reportDroppedFetchSeries() {
+    }
 
-    ClusteredMetricManagerReporter newClusteredMetricBackendManager();
+    @Override
+    public void reportFailedFetchSeries() {
+    }
 
-    LocalMetadataManagerReporter newLocalMetadataBackendManager();
+    private static final NoopAnalyticsReporter INSTANCE = new NoopAnalyticsReporter();
 
-    MetricBackendGroupReporter newMetricBackendsReporter();
-
-    ClusteredMetadataManagerReporter newClusteredMetadataBackendManager();
-
-    AggregationCacheReporter newAggregationCache();
-
-    HttpClientManagerReporter newHttpClientManager();
-
-    ConsumerReporter newConsumer(String id);
-
-    IngestionManagerReporter newIngestionManager();
-
-    AnalyticsReporter newAnalyticsReporter();
-
-    void registerShards(Set<Map<String, String>> knownShards);
+    public static NoopAnalyticsReporter get() {
+        return INSTANCE;
+    }
 }

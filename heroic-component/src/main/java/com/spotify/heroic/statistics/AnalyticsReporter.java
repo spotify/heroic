@@ -19,14 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.statistics;
 
-import lombok.Data;
+public interface AnalyticsReporter {
+    /**
+     * Report that a fetch series write has not been recorded by dropping it.
+     */
+    void reportDroppedFetchSeries();
 
-import com.google.bigtable.v1.RowFilter;
-
-@Data
-public class BigtableRowFilter {
-
-    final RowFilter filter;
+    /**
+     * Report that a fetch series write has failed to be recorded.
+     */
+    void reportFailedFetchSeries();
 }

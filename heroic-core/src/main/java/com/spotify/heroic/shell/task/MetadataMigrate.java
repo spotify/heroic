@@ -99,8 +99,7 @@ public class MetadataMigrate implements ShellTask {
 
             final ResolvableFuture<Void> future = async.future();
 
-            group.entries(filter)
-                    .observe(AsyncObserver.onFinished(AsyncObserver.bind(future, entries -> {
+            group.entries(filter).observe(AsyncObserver.<List<Series>> bind(future, entries -> {
                 for (final Series s : entries) {
                     final int i = index.getAndIncrement();
 
@@ -118,7 +117,7 @@ public class MetadataMigrate implements ShellTask {
                 }
 
                 return async.resolved();
-            }), () -> {
+            }).onFinished(() -> {
                 io.out().println(" " + String.format("%d/%d", index.get(), count) + " ended");
                 io.out().flush();
             }));

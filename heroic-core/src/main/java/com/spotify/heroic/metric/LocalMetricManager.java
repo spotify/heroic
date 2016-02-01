@@ -21,19 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-
-import org.apache.commons.lang3.NotImplementedException;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -60,6 +47,17 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -108,17 +106,10 @@ public class LocalMetricManager implements MetricManager {
     private final long dataLimit;
     private final int fetchParallelism;
 
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private BackendGroups<MetricBackend> backends;
-
-    @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private MetricBackendGroupReporter reporter;
+    private final AsyncFramework async;
+    private final BackendGroups<MetricBackend> backends;
+    private final MetadataManager metadata;
+    private final MetricBackendGroupReporter reporter;
 
     /**
      * @param groupLimit The maximum amount of groups this manager will allow to be generated.
@@ -129,12 +120,18 @@ public class LocalMetricManager implements MetricManager {
      * @param fetchParallelism How many fetches that are allowed to be performed in parallel.
      */
     public LocalMetricManager(final int groupLimit, final int seriesLimit,
-            final long aggregationLimit, final long dataLimit, final int fetchParallelism) {
+            final long aggregationLimit, final long dataLimit, final int fetchParallelism,
+            final AsyncFramework async, final BackendGroups<MetricBackend> backends,
+            final MetadataManager metadata, final MetricBackendGroupReporter reporter) {
         this.groupLimit = groupLimit;
         this.seriesLimit = seriesLimit;
         this.aggregationLimit = aggregationLimit;
         this.dataLimit = dataLimit;
         this.fetchParallelism = fetchParallelism;
+        this.async = async;
+        this.backends = backends;
+        this.metadata = metadata;
+        this.reporter = reporter;
     }
 
     @Override

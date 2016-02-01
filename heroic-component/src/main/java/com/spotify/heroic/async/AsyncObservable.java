@@ -21,13 +21,75 @@
 
 package com.spotify.heroic.async;
 
+import com.spotify.heroic.analytics.SeriesHit;
+import com.spotify.heroic.common.Throwing;
+
 import java.util.Iterator;
 import java.util.List;
 
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Transform;
 
 public interface AsyncObservable<T> {
     void observe(AsyncObserver<T> observer) throws Exception;
+
+    /**
+     * Transform this observable to another type.
+     *
+     * @param transform The transformation to perform.
+     * @return A new Observable of the transformed type.
+     */
+    default <S> AsyncObservable<S> transform(final Transform<T, S> transform) {
+        return observer -> {
+            observe(new AsyncObserver<T>() {
+                @Override
+                public AsyncFuture<Void> observe(T value) throws Exception {
+                    return observer.observe(transform.transform(value));
+                }
+
+                @Override
+                public void cancel() throws Exception {
+                    observer.cancel();
+                }
+
+                @Override
+                public void fail(Throwable cause) throws Exception {
+                    observer.fail(cause);
+                }
+
+                @Override
+                public void end() throws Exception {
+                    observer.end();
+                }
+            });
+        };
+    }
+
+    default AsyncObservable<T> onFinished(final ObservableFinished end) {
+        return observer -> {
+            observe(new AsyncObserver<T>() {
+                @Override
+                public AsyncFuture<Void> observe(T value) throws Exception {
+                    return observer.observe(value);
+                };
+
+                @Override
+                public void cancel() throws Exception {
+                    Throwing.call(observer::cancel, end::finished);
+                }
+
+                @Override
+                public void fail(Throwable cause) throws Exception {
+                    Throwing.call(() -> observer.fail(cause), end::finished);
+                }
+
+                @Override
+                public void end() throws Exception {
+                    Throwing.call(observer::end, end::finished);
+                }
+            });
+        };
+    }
 
     static <T> AsyncObservable<T> chain(final List<AsyncObservable<T>> observables) {
         return new AsyncObservable<T>() {
@@ -79,5 +141,12 @@ public interface AsyncObservable<T> {
                 observer.end();
             }
         };
+    }
+
+    /**
+     * Create an observable that will always be immediately failed with the given throwable.
+     */
+    static <T> AsyncObservable<SeriesHit> failed(final Throwable e) {
+        return observer -> observer.fail(e);
     }
 }

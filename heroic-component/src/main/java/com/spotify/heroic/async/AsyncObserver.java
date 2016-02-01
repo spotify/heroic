@@ -21,8 +21,9 @@
 
 package com.spotify.heroic.async;
 
+import com.spotify.heroic.common.Throwing;
+
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureFinished;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 
@@ -77,60 +78,26 @@ public interface AsyncObserver<T> {
         };
     }
 
-    /**
-     * Bind a callback that will be fired if the given observer comes to an end-state.
-     *
-     * The callback will be called _before_ the nested observer's own callbacks will be fired.
-     *
-     * @param observer Observer to bind to.
-     * @param callback Callback to fire.
-     * @return A new observer that will call the given callback for any given end-state.
-     */
-    static <T> AsyncObserver<T> onFinished(final AsyncObserver<T> observer,
-            final FutureFinished callback) {
+    default AsyncObserver<T> onFinished(ObservableFinished finished) {
         return new AsyncObserver<T>() {
             @Override
             public AsyncFuture<Void> observe(T value) throws Exception {
-                return observer.observe(value);
+                return AsyncObserver.this.observe(value);
             }
 
             @Override
             public void cancel() throws Exception {
-                callAfter(() -> observer.cancel());
+                Throwing.call(AsyncObserver.this::cancel, finished::finished);
             }
 
             @Override
-            public void fail(final Throwable cause) throws Exception {
-                callAfter(() -> observer.fail(cause));
+            public void fail(Throwable cause) throws Exception {
+                Throwing.call(() -> AsyncObserver.this.fail(cause), finished::finished);
             }
 
             @Override
             public void end() throws Exception {
-                callAfter(() -> observer.end());
-            }
-
-            private void callAfter(final FutureFinished original) throws Exception {
-                Exception nested = null;
-
-                try {
-                    callback.finished();
-                } catch (final Exception e) {
-                    nested = e;
-                }
-
-                try {
-                    original.finished();
-                } catch (final Exception e) {
-                    if (nested != null) {
-                        e.addSuppressed(nested);
-                    }
-
-                    throw e;
-                }
-
-                if (nested != null) {
-                    throw nested;
-                }
+                Throwing.call(AsyncObserver.this::end, finished::finished);
             }
         };
     }

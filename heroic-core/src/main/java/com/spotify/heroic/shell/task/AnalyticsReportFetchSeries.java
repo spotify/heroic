@@ -21,40 +21,35 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.spotify.heroic.analytics.MetricAnalytics;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.common.Series;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-import com.spotify.heroic.suggest.SuggestManager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDate;
+import java.util.Optional;
 
 import org.kohsuke.args4j.Option;
 
-import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 
-@TaskUsage("Configure the given group of metric backends")
-@TaskName("configure")
-public class Configure implements ShellTask {
+@TaskUsage("Report that a series has been fetched")
+@TaskName("analytics-report-fetch-series")
+public class AnalyticsReportFetchSeries implements ShellTask {
     @Inject
-    private AsyncFramework async;
+    private MetricAnalytics metricAnalytics;
+
     @Inject
-    private MetricManager metrics;
-    @Inject
-    private MetadataManager metadata;
-    @Inject
-    private SuggestManager suggest;
-    @Inject
-    private MetricAnalytics analytics;
+    @Named("application/json")
+    private ObjectMapper mapper;
 
     @Override
     public TaskParameters params() {
@@ -62,29 +57,31 @@ public class Configure implements ShellTask {
     }
 
     @Override
-    public AsyncFuture<Void> run(final ShellIO io, final TaskParameters base) throws Exception {
+    public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
+        final Series series;
 
-        futures.add(analytics.configure());
-
-        if (!params.noData) {
-            futures.add(metrics.useGroup(params.group).configure());
-            futures.add(metadata.useGroup(params.group).configure());
-            futures.add(suggest.useGroup(params.group).configure());
+        if (params.series == null) {
+            series = Series.empty();
+        } else {
+            series = mapper.readValue(params.series, Series.class);
         }
 
-        return async.collectAndDiscard(futures);
+        final LocalDate date =
+                Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
+
+        return metricAnalytics.reportFetchSeries(date, series);
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
-        private String group = null;
+        @Option(name = "-s", aliases = {"--series"}, usage = "Series to report fetch for",
+                metaVar = "<json>")
+        private String series;
 
-        @Option(name = "--no-data", usage = "Do not configure data backends")
-        private boolean noData = false;
+        @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
+                metaVar = "<yyyy-MM-dd>")
+        private String date = null;
     }
 }

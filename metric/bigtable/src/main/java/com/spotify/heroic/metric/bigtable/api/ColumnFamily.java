@@ -21,20 +21,33 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import java.util.List;
+import java.util.regex.Matcher;
 
 import lombok.Data;
 
 @Data
-public class BigtableTable {
+public class ColumnFamily {
+    final String clusterUri;
+    final String tableId;
     final String name;
-    final List<BigtableColumnFamily> columnFamilies;
 
-    public String getName() {
-        return name;
+    public static ColumnFamily fromPb(final com.google.bigtable.admin.table.v1.ColumnFamily value) {
+        final Matcher m = BigtableConstants.COLUMN_FAMILY_NAME_PATTERN.matcher(value.getName());
+
+        if (!m.matches()) {
+            throw new IllegalArgumentException(
+                    "Not a valid column family name: " + value.getName());
+        }
+
+        final String clusterId = m.group(1);
+        final String tableId = m.group(2);
+        final String name = m.group(3);
+
+        return new ColumnFamily(clusterId, tableId, name);
     }
 
-    public List<BigtableColumnFamily> getColumnFamilies() {
-        return columnFamilies;
+    public String toURI() {
+        return String.format(BigtableConstants.COLUMN_FAMILY_NAME_FORMAT, clusterUri, tableId,
+                name);
     }
 }

@@ -19,31 +19,8 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.async;
 
-import java.util.Map;
-import java.util.Set;
-
-public interface HeroicReporter {
-    LocalMetricManagerReporter newLocalMetricBackendManager();
-
-    ClusteredMetricManagerReporter newClusteredMetricBackendManager();
-
-    LocalMetadataManagerReporter newLocalMetadataBackendManager();
-
-    MetricBackendGroupReporter newMetricBackendsReporter();
-
-    ClusteredMetadataManagerReporter newClusteredMetadataBackendManager();
-
-    AggregationCacheReporter newAggregationCache();
-
-    HttpClientManagerReporter newHttpClientManager();
-
-    ConsumerReporter newConsumer(String id);
-
-    IngestionManagerReporter newIngestionManager();
-
-    AnalyticsReporter newAnalyticsReporter();
-
-    void registerShards(Set<Map<String, String>> knownShards);
+public interface ObservableFinished {
+    void finished() throws Exception;
 }

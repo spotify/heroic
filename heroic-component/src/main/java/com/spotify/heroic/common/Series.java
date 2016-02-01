@@ -24,6 +24,7 @@ package com.spotify.heroic.common;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSortedMap;
@@ -73,6 +74,7 @@ public class Series implements Comparable<Series> {
         return tags;
     }
 
+    @JsonIgnore
     public HashCode getHashCode() {
         return hashCode;
     }

@@ -19,31 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.statistics;
+package com.spotify.heroic.metric.bigtable.api;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.regex.Pattern;
 
-public interface HeroicReporter {
-    LocalMetricManagerReporter newLocalMetricBackendManager();
+public interface BigtableConstants {
+    static String NAME_PATTERN = "[_a-zA-Z0-9][-_.a-zA-Z0-9]*";
 
-    ClusteredMetricManagerReporter newClusteredMetricBackendManager();
+    static String COLUMN_FAMILY_NAME_FORMAT = "%s/tables/%s/columnFamilies/%s";
 
-    LocalMetadataManagerReporter newLocalMetadataBackendManager();
-
-    MetricBackendGroupReporter newMetricBackendsReporter();
-
-    ClusteredMetadataManagerReporter newClusteredMetadataBackendManager();
-
-    AggregationCacheReporter newAggregationCache();
-
-    HttpClientManagerReporter newHttpClientManager();
-
-    ConsumerReporter newConsumer(String id);
-
-    IngestionManagerReporter newIngestionManager();
-
-    AnalyticsReporter newAnalyticsReporter();
-
-    void registerShards(Set<Map<String, String>> knownShards);
+    static Pattern COLUMN_FAMILY_NAME_PATTERN =
+            Pattern.compile(String.format("^(.+)\\/tables\\/(%s)\\/columnFamilies\\/(%s)$",
+                    BigtableConstants.NAME_PATTERN, NAME_PATTERN));
 }

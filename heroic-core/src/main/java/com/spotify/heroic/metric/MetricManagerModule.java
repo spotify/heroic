@@ -27,6 +27,24 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Exposed;
+import com.google.inject.Key;
+import com.google.inject.PrivateModule;
+import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
+import com.spotify.heroic.analytics.MetricAnalytics;
+import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -35,20 +53,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Names;
-import com.spotify.heroic.common.BackendGroups;
-import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
-import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
-
+import eu.toolchain.async.AsyncFramework;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -114,16 +119,25 @@ public class MetricManagerModule extends PrivateModule {
     }
 
     @Provides
-    public BackendGroups<MetricBackend> defaultBackends(Set<MetricBackend> configured) {
-        return BackendGroups.build(configured, defaultBackends);
+    public BackendGroups<MetricBackend> defaultBackends(Set<MetricBackend> configured,
+            MetricAnalytics analytics) {
+        return BackendGroups.build(
+                ImmutableSet.copyOf(configured.stream().map(analytics::wrap).iterator()),
+                defaultBackends);
+    }
+
+    @Exposed
+    @Provides
+    public MetricManager metricManager(final AsyncFramework async,
+            final BackendGroups<MetricBackend> backends, final MetadataManager metadata,
+            final MetricBackendGroupReporter reporter) {
+        return new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
+                fetchParallelism, async, backends, metadata, reporter);
     }
 
     @Override
     protected void configure() {
         bindBackends(backends);
-        bind(MetricManager.class).toInstance(new LocalMetricManager(groupLimit, seriesLimit,
-                aggregationLimit, dataLimit, fetchParallelism));
-        expose(MetricManager.class);
     }
 
     private void bindBackends(final Collection<MetricModule> configs) {

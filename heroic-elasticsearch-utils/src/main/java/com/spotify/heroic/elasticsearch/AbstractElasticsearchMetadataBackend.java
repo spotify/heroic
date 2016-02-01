@@ -173,7 +173,7 @@ public abstract class AbstractElasticsearchMetadataBackend implements MetadataBa
                 throw new IllegalArgumentException("no valid index selected", e);
             }
 
-            final AsyncObserver<List<Series>> o = AsyncObserver.onFinished(observer, c::release);
+            final AsyncObserver<List<Series>> o = observer.onFinished(c::release);
 
             bind(request.execute()).onDone(new FutureDone<SearchResponse>() {
                 @Override

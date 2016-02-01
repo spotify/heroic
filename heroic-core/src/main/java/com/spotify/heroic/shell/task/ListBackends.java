@@ -21,15 +21,10 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Set;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -41,6 +36,12 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
+
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Set;
+
+import org.kohsuke.args4j.Option;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -62,6 +63,9 @@ public class ListBackends implements ShellTask {
     private Set<Consumer> consumers;
 
     @Inject
+    private MetricAnalytics metricAnalytics;
+
+    @Inject
     @Named("application/json")
     private ObjectMapper mapper;
 
@@ -81,6 +85,8 @@ public class ListBackends implements ShellTask {
         printBackends(io.out(), "metadata", metadata.use(params.group));
         printBackends(io.out(), "suggest", suggest.use(params.group));
         printConsumers(io.out(), "consumers", consumers);
+
+        io.out().println(String.format("metric-analytics: %s", metricAnalytics));
 
         return async.resolved(null);
     }
@@ -113,7 +119,7 @@ public class ListBackends implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
                 metaVar = "<group>")
         private String group;
     }

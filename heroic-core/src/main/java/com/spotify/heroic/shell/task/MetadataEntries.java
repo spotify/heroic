@@ -40,6 +40,7 @@ import com.spotify.heroic.shell.Tasks;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
@@ -47,11 +48,14 @@ import org.kohsuke.args4j.Option;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
+import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-entries")
+@Slf4j
 public class MetadataEntries implements ShellTask {
     @Inject
     private MetadataManager metadata;
@@ -82,15 +86,34 @@ public class MetadataEntries implements ShellTask {
 
         final MetadataBackend group = metadata.useGroup(params.group);
 
+        final Consumer<Series> printer;
+
+        if (!params.analytics) {
+            printer = series -> {
+                try {
+                    io.out().println(mapper.writeValueAsString(series));
+                    io.out().flush();
+                } catch (final Exception e) {
+                    log.error("Failed to print series: {}", series, e);
+                }
+            };
+        } else {
+            printer = series -> {
+                try {
+                    io.out().println(mapper.writeValueAsString(new AnalyticsSeries(
+                            series.getHashCode().toString(), mapper.writeValueAsString(series))));
+                    io.out().flush();
+                } catch (final Exception e) {
+                    log.error("Failed to print series: {}", series, e);
+                }
+            };
+        }
+
         return group.countSeries(filter).lazyTransform(c -> {
             final ResolvableFuture<Void> future = async.future();
 
             group.entries(filter).observe(AsyncObserver.bind(future, entries -> {
-                for (final Series s : entries) {
-                    io.out().println(mapper.writeValueAsString(s));
-                    io.out().flush();
-                }
-
+                entries.forEach(printer);
                 return async.resolved();
             }));
 
@@ -112,5 +135,14 @@ public class MetadataEntries implements ShellTask {
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+
+        @Option(name = "--analytics", usage = "Format the output according to the analytics schema")
+        private boolean analytics = false;
+    }
+
+    @Data
+    public static class AnalyticsSeries {
+        private final String id;
+        private final String series;
     }
 }

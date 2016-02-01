@@ -19,28 +19,24 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.bigtable.api;
+package com.spotify.heroic.analytics.bigtable;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.spotify.heroic.HeroicConfigurationContext;
+import com.spotify.heroic.HeroicModule;
 
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import javax.inject.Inject;
 
-import com.google.common.collect.ImmutableList;
+public class Module implements HeroicModule {
+    @Override
+    public Entry setup() {
+        return new Entry() {
+            @Inject
+            private HeroicConfigurationContext config;
 
-@RequiredArgsConstructor
-@ToString
-public class BigtableTableBuilder {
-    final String name;
-    final List<BigtableColumnFamily> columnFamilies = new ArrayList<>();
-
-    public BigtableTableBuilder columnFamily(BigtableColumnFamily columnFamily) {
-        columnFamilies.add(columnFamily);
-        return this;
-    }
-
-    public BigtableTable build() {
-        return new BigtableTable(name, ImmutableList.copyOf(columnFamilies));
+            @Override
+            public void setup() {
+                config.registerType("bigtable", BigtableAnalyticsModule.Builder.class);
+            }
+        };
     }
 }
