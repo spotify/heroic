@@ -28,6 +28,8 @@ public interface TaskParameters {
 
     boolean help();
 
+    boolean gzip();
+
     String output();
 
     List<String> profiles();

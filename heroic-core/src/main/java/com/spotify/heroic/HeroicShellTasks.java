@@ -40,6 +40,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.zip.GZIPOutputStream;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -100,16 +101,23 @@ public class HeroicShellTasks {
         }
 
         if (params.output() == null || "-".equals(params.output())) {
+            if (params.gzip()) {
+                io.out().println("--gzip: only works in combination with (-o/--output <file>)");
+                io.out().flush();
+            }
+
             return runTaskWithIO(task, io, params);
         }
 
+        io.out().println("Writing output (-o/--output) to: " + params.output());
+        io.out().flush();
         return runWithRedirectedIO(io, task, params);
     }
 
     private AsyncFuture<Void> runWithRedirectedIO(ShellIO io, final ShellTask task,
             final TaskParameters params) throws IOException {
-        final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-                io.newOutputStream(Paths.get(params.output())), Charsets.UTF_8));
+        final PrintWriter out = new PrintWriter(
+                new OutputStreamWriter(setupOutputStream(io, params), Charsets.UTF_8));
 
         final ShellIO wrapIO = new ShellIO() {
             @Override
@@ -131,6 +139,17 @@ public class HeroicShellTasks {
         };
 
         return runTaskWithIO(task, wrapIO, params).onFinished(out::close);
+    }
+
+    private OutputStream setupOutputStream(final ShellIO io, final TaskParameters params)
+            throws IOException {
+        final OutputStream out = io.newOutputStream(Paths.get(params.output()));
+
+        if (!params.gzip()) {
+            return out;
+        }
+
+        return new GZIPOutputStream(out);
     }
 
     private AsyncFuture<Void> runTaskWithIO(final ShellTask task, final ShellIO io,

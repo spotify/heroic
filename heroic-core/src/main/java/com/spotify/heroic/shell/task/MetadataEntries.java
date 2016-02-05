@@ -92,7 +92,6 @@ public class MetadataEntries implements ShellTask {
             printer = series -> {
                 try {
                     io.out().println(mapper.writeValueAsString(series));
-                    io.out().flush();
                 } catch (final Exception e) {
                     log.error("Failed to print series: {}", series, e);
                 }
@@ -102,7 +101,6 @@ public class MetadataEntries implements ShellTask {
                 try {
                     io.out().println(mapper.writeValueAsString(new AnalyticsSeries(
                             series.getHashCode().toString(), mapper.writeValueAsString(series))));
-                    io.out().flush();
                 } catch (final Exception e) {
                     log.error("Failed to print series: {}", series, e);
                 }
