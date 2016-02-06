@@ -21,6 +21,14 @@
 
 package com.spotify.heroic.http.status;
 
+import com.google.inject.Inject;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.MetricManager;
+
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -29,13 +37,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import com.google.inject.Inject;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricManager;
 
 @Path("/status")
 @Produces(MediaType.APPLICATION_JSON)
@@ -53,6 +54,9 @@ public class StatusResource {
     @Inject
     private ClusterManager cluster;
 
+    @Inject
+    private ServiceInfo service;
+
     @GET
     public Response get() {
         final StatusResponse.Consumer consumers = buildConsumerStatus();
@@ -64,8 +68,8 @@ public class StatusResource {
         final boolean allOk =
                 consumers.isOk() && backends.isOk() && metadataBackends.isOk() && cluster.isOk();
 
-        final StatusResponse response =
-                new StatusResponse(allOk, consumers, backends, metadataBackends, cluster);
+        final StatusResponse response = new StatusResponse(service,
+                allOk, consumers, backends, metadataBackends, cluster);
 
         if (!response.isOk()) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(response).build();

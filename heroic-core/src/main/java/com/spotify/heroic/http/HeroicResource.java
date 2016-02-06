@@ -21,6 +21,16 @@
 
 package com.spotify.heroic.http;
 
+import com.google.inject.Inject;
+import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.suggest.SuggestBackend;
+import com.spotify.heroic.suggest.SuggestManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,15 +40,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import com.google.inject.Inject;
-import com.spotify.heroic.common.GroupMember;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataManager;
-import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.SuggestManager;
+import javax.ws.rs.core.Response.Status;
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
@@ -52,6 +54,14 @@ public class HeroicResource {
 
     @Inject
     private SuggestManager suggest;
+
+    @Inject
+    private ServiceInfo service;
+
+    @GET
+    public Response get() {
+        return Response.status(Status.OK).entity(service).build();
+    }
 
     @GET
     @Path("/backends")

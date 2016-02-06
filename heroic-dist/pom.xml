@@ -19,6 +19,10 @@
     distribution as a shaded jar.
   </description>
 
+  <properties>
+    <heroic.version>${project.version}</heroic.version>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -83,5 +87,22 @@
         <artifactId>maven-shade-plugin</artifactId>
       </plugin>
     </plugins>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>com.spotify.heroic/version</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>com.spotify.heroic/version</exclude>
+        </excludes>
+      </resource>
+    </resources>
   </build>
 </project>

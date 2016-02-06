@@ -30,6 +30,7 @@ import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.common.CollectingTypeListener;
 import com.spotify.heroic.common.IsSubclassOf;
 import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.filter.FilterJsonDeserializer;
 import com.spotify.heroic.filter.FilterJsonSerializer;
 import com.spotify.heroic.jetty.JettyServerConnector;
@@ -64,6 +65,9 @@ public class HeroicPrimaryModule extends AbstractModule {
     private final boolean setupService;
     private final HeroicReporter reporter;
     private final Optional<HeroicStartupPinger> pinger;
+
+    private final String service;
+    private final String version;
 
     @Provides
     @Singleton
@@ -131,6 +135,12 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Named("features")
     public Set<String> features() {
         return features;
+    }
+
+    @Provides
+    @Singleton
+    public ServiceInfo service() {
+        return new ServiceInfo(service, version);
     }
 
     @Provides

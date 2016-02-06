@@ -33,6 +33,7 @@ import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -47,8 +48,10 @@ import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -61,7 +64,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 @Data
 public class HeroicConfig {
@@ -69,6 +74,9 @@ public class HeroicConfig {
     public static final boolean DEFAULT_ENABLE_CORS = true;
     public static final Duration DEFAULT_START_TIMEOUT = Duration.of(5, TimeUnit.MINUTES);
     public static final Duration DEFAULT_STOP_TIMEOUT = Duration.of(1, TimeUnit.MINUTES);
+
+    public static final String DEFAULT_VERSION = "HEAD";
+    public static final String DEFAULT_SERVICE = "The Heroic Time Series Database";
 
     /**
      * The time core will wait for all services (implementing
@@ -96,6 +104,9 @@ public class HeroicConfig {
     private final IngestionModule ingestion;
     private final List<ConsumerModule> consumers;
     private final Optional<ShellServerModule> shellServer;
+
+    private final String version;
+    private final String service;
 
     public static Builder builder() {
         return new Builder();
@@ -152,6 +163,9 @@ public class HeroicConfig {
         private List<ConsumerModule.Builder> consumers = ImmutableList.of();
         private Optional<ShellServerModule.Builder> shellServer = empty();
 
+        private Optional<String> version = empty();
+        private Optional<String> service = empty();
+
         @JsonCreator
         public Builder(@JsonProperty("startTimeout") Optional<Duration> startTimeout,
                 @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
@@ -169,7 +183,9 @@ public class HeroicConfig {
                 @JsonProperty("cache") Optional<AggregationCacheModule.Builder> cache,
                 @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
                 @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
-                @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer) {
+                @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
+                @JsonProperty("service") Optional<String> service,
+                @JsonProperty("version") Optional<String> version) {
             this.startTimeout = startTimeout;
             this.stopTimeout = stopTimeout;
             this.host = host;
@@ -187,6 +203,8 @@ public class HeroicConfig {
             this.ingestion = ingestion;
             this.consumers = consumers.orElseGet(ImmutableList::of);
             this.shellServer = shellServer;
+            this.service = service;
+            this.version = version;
         }
 
         public Builder startTimeout(Duration startTimeout) {
@@ -279,7 +297,9 @@ public class HeroicConfig {
                 mergeOptional(cache, o.cache, (a, b) -> a.merge(b)),
                 mergeOptional(ingestion, o.ingestion, (a, b) -> a.merge(b)),
                 ImmutableList.copyOf(Iterables.concat(consumers, o.consumers)),
-                mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b))
+                mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
+                pickOptional(service, o.service),
+                pickOptional(version, o.version)
             );
             // @formatter:on
         }
@@ -288,6 +308,8 @@ public class HeroicConfig {
             final List<JettyServerConnector> connectors =
                     ImmutableList.copyOf(this.connectors.orElseGet(HeroicConfig::defaultConnectors)
                             .stream().map(JettyServerConnector.Builder::build).iterator());
+
+            final String defaultVersion = loadDefaultVersion().orElse(DEFAULT_VERSION);
 
             // @formatter:off
             return new HeroicConfig(
@@ -307,9 +329,27 @@ public class HeroicConfig {
                 cache.orElseGet(AggregationCacheModule::builder).build(),
                 ingestion.orElseGet(IngestionModule::builder).build(),
                 ImmutableList.copyOf(consumers.stream().map(c -> c.build()).iterator()),
-                shellServer.map(ShellServerModule.Builder::build)
+                shellServer.map(ShellServerModule.Builder::build),
+                version.orElse(defaultVersion),
+                service.orElse(DEFAULT_SERVICE)
             );
             // @formatter:on
+        }
+
+        private Optional<String> loadDefaultVersion() {
+            try (final InputStream in =
+                    getClass().getClassLoader().getResourceAsStream("com.spotify.heroic/version")) {
+                if (in == null) {
+                    return Optional.empty();
+                }
+
+                final BufferedReader reader =
+                        new BufferedReader(new InputStreamReader(in, Charsets.UTF_8));
+                return Optional.of(reader.readLine());
+            } catch (final Exception e) {
+                log.warn("Failed to load version file", e);
+                return Optional.empty();
+            }
         }
     }
 }

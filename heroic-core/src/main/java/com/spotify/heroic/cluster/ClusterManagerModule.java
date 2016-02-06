@@ -40,6 +40,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.spotify.heroic.HeroicConfiguration;
+import com.spotify.heroic.common.ServiceInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -78,8 +79,8 @@ public class ClusterManagerModule {
             @Provides
             @Singleton
             @Exposed
-            public NodeMetadata localMetadata() {
-                return new NodeMetadata(0, id, tags, capabilities);
+            public NodeMetadata localMetadata(final ServiceInfo service) {
+                return new NodeMetadata(0, id, tags, capabilities, service);
             }
 
             @Provides
