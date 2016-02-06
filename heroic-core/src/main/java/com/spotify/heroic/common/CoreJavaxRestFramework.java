@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.common;
 
+import com.spotify.heroic.http.InternalErrorMessage;
+
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;
 import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
-
-import com.spotify.heroic.http.InternalErrorMessage;
 
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;

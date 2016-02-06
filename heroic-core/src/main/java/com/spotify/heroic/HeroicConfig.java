@@ -41,6 +41,7 @@ import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.ingestion.IngestionModule;
+import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
@@ -82,6 +83,7 @@ public class HeroicConfig {
     private final Duration stopTimeout;
     private final Optional<String> host;
     private final Optional<Integer> port;
+    private final List<JettyServerConnector> connectors;
     private final Optional<Boolean> disableMetrics;
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
@@ -125,6 +127,10 @@ public class HeroicConfig {
         return Optional.of(parser.readValueAs(HeroicConfig.Builder.class));
     }
 
+    static List<JettyServerConnector.Builder> defaultConnectors() {
+        return ImmutableList.of(JettyServerConnector.builder());
+    }
+
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Builder {
@@ -132,6 +138,7 @@ public class HeroicConfig {
         private Optional<Duration> stopTimeout = empty();
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
+        private Optional<List<JettyServerConnector.Builder>> connectors = empty();
         private Optional<Boolean> disableMetrics = empty();
         private Optional<Boolean> enableCors = empty();
         private Optional<String> corsAllowOrigin = empty();
@@ -150,6 +157,7 @@ public class HeroicConfig {
                 @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
                 @JsonProperty("host") Optional<String> host,
                 @JsonProperty("port") Optional<Integer> port,
+                @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
                 @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
                 @JsonProperty("enableCors") Optional<Boolean> enableCors,
                 @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
@@ -166,6 +174,7 @@ public class HeroicConfig {
             this.stopTimeout = stopTimeout;
             this.host = host;
             this.port = port;
+            this.connectors = connectors;
             this.disableMetrics = disableMetrics;
             this.enableCors = enableCors;
             this.corsAllowOrigin = corsAllowOrigin;
@@ -258,6 +267,7 @@ public class HeroicConfig {
                 pickOptional(stopTimeout, o.stopTimeout),
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
+                mergeOptional(connectors, o.connectors, (a, b) -> ImmutableList.copyOf(Iterables.concat(a, b))),
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
@@ -275,12 +285,17 @@ public class HeroicConfig {
         }
 
         public HeroicConfig build() {
+            final List<JettyServerConnector> connectors =
+                    ImmutableList.copyOf(this.connectors.orElseGet(HeroicConfig::defaultConnectors)
+                            .stream().map(JettyServerConnector.Builder::build).iterator());
+
             // @formatter:off
             return new HeroicConfig(
                 startTimeout.orElse(DEFAULT_START_TIMEOUT),
                 stopTimeout.orElse(DEFAULT_STOP_TIMEOUT),
                 host,
                 port,
+                connectors,
                 disableMetrics,
                 enableCors.orElse(DEFAULT_ENABLE_CORS),
                 corsAllowOrigin,

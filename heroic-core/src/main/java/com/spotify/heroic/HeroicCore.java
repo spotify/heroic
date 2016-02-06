@@ -132,7 +132,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private static final HeroicModule[] BUILTIN_MODULES = new HeroicModule[] {
         new com.spotify.heroic.aggregation.Module(),
         new com.spotify.heroic.filter.Module(),
-        new com.spotify.heroic.http.Module()
+        new com.spotify.heroic.http.Module(),
+        new com.spotify.heroic.jetty.Module()
     };
     // @formatter:on
 
@@ -479,7 +480,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         // register root components.
         modules.add(new HeroicPrimaryModule(instance, lifeCycles, bindAddress,
                 config.isEnableCors(), config.getCorsAllowOrigin(), config.getFeatures(),
-                setupService, reporter, pinger));
+                config.getConnectors(), setupService, reporter, pinger));
 
         if (!disableBackends) {
             modules.add(new AbstractModule() {

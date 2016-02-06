@@ -32,6 +32,7 @@ import com.spotify.heroic.common.IsSubclassOf;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.filter.FilterJsonDeserializer;
 import com.spotify.heroic.filter.FilterJsonSerializer;
+import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.Tasks;
@@ -58,6 +59,7 @@ public class HeroicPrimaryModule extends AbstractModule {
     private final boolean enableCors;
     private final Optional<String> corsAllowOrigin;
     private final Set<String> features;
+    private final List<JettyServerConnector> connectors;
 
     private final boolean setupService;
     private final HeroicReporter reporter;
@@ -129,6 +131,12 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Named("features")
     public Set<String> features() {
         return features;
+    }
+
+    @Provides
+    @Singleton
+    public List<JettyServerConnector> connectors() {
+        return connectors;
     }
 
     @Provides

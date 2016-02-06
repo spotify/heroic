@@ -21,24 +21,15 @@
 
 package com.spotify.heroic;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.lang.reflect.Constructor;
-import java.net.InetSocketAddress;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Injector;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.http.CorsResponseFilter;
+import com.spotify.heroic.http.InternalErrorMessage;
+import com.spotify.heroic.jetty.JettyServerConnector;
 
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
@@ -59,13 +50,25 @@ import org.eclipse.jetty.util.component.AbstractLifeCycle;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import com.google.common.base.Charsets;
-import com.google.inject.Injector;
-import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.http.CorsResponseFilter;
-import com.spotify.heroic.http.InternalErrorMessage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.lang.reflect.Constructor;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.MessageBodyWriter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -102,6 +105,9 @@ public class HeroicServer implements LifeCycle {
     @Named("corsAllowOrigin")
     private Optional<String> corsAllowOrigin;
 
+    @Inject
+    private List<JettyServerConnector> connectors;
+
     private volatile Server server;
 
     private final Object lock = new Object();
@@ -116,7 +122,9 @@ public class HeroicServer implements LifeCycle {
                         throw new IllegalStateException("Server has already been started");
                     }
 
-                    final Server server = new Server(address);
+                    final Server server = new Server();
+                    setupConnectors(server).forEach(server::addConnector);
+
                     server.setHandler(setupHandler());
 
                     final CountDownLatch latch = new CountDownLatch(1);
@@ -150,6 +158,11 @@ public class HeroicServer implements LifeCycle {
 
             return findServerConnector(server).getLocalPort();
         }
+    }
+
+    private List<Connector> setupConnectors(final Server server) {
+        return ImmutableList
+                .copyOf(connectors.stream().map(c -> c.setup(server, address)).iterator());
     }
 
     private ServerConnector findServerConnector(Server server) {

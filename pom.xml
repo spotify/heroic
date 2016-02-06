@@ -46,7 +46,7 @@
     <jersey.version>2.13</jersey.version>
     <jackson.version>2.6.3</jackson.version>
     <hk2.version>2.3.0</hk2.version>
-    <jetty.version>9.2.2.v20140723</jetty.version>
+    <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
     <astyanax.version>2.0.2</astyanax.version>
     <datastax.version>2.1.9</datastax.version>
@@ -352,6 +352,11 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>3.1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty.http2</groupId>
+        <artifactId>http2-server</artifactId>
+        <version>${jetty.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.ws.rs</groupId>
