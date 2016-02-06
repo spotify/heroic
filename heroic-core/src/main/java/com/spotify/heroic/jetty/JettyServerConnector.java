@@ -94,11 +94,6 @@ public class JettyServerConnector {
             return this;
         }
 
-        @JsonCreator
-        public Builder(@JsonProperty("config") Optional<JettyHttpConfiguration.Builder> config) {
-            this.config = config;
-        }
-
         public JettyServerConnector build() {
             final List<JettyConnectionFactory> factories = ImmutableList
                     .copyOf(this.factories.orElseGet(JettyServerConnector::defaultFactories)

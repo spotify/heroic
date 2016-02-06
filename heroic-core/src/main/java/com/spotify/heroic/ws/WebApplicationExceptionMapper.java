@@ -19,23 +19,20 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.ext.ExceptionMapper;
 
-import lombok.Getter;
-
-public class JsonErrorMessage extends InternalErrorMessage {
-    @Getter
-    private final String path;
-
-    public JsonErrorMessage(final String message, final Response.Status status, final String path) {
-        super(message, status);
-        this.path = path;
-    }
-
+public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplicationException> {
     @Override
-    public String getType() {
-        return "json-error";
+    public Response toResponse(WebApplicationException e) {
+        return Response.fromResponse(e.getResponse())
+                .entity(new ErrorMessage(e.getMessage(),
+                        Status.fromStatusCode(e.getResponse().getStatus())))
+                .type(MediaType.APPLICATION_JSON).build();
     }
 }

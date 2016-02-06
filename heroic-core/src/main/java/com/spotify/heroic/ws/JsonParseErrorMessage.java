@@ -19,29 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
 import javax.ws.rs.core.Response;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
-public class ErrorMessage {
+public class JsonParseErrorMessage extends ErrorMessage {
     @Getter
-    private final String message;
+    private final int line;
     @Getter
-    private final String reason;
-    @Getter
-    private final int status;
+    private final int col;
 
-    public ErrorMessage(final String message, final Response.Status status) {
-        this.message = message;
-        this.reason = status.getReasonPhrase();
-        this.status = status.getStatusCode();
+    public JsonParseErrorMessage(final String message, final Response.Status status, final int line,
+            final int col) {
+        super(message, status);
+        this.line = line;
+        this.col = col;
     }
 
     public String getType() {
-        return "error";
+        return "json-parse-error";
     }
 }

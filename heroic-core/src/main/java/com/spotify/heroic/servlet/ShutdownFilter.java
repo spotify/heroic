@@ -23,7 +23,7 @@ package com.spotify.heroic.servlet;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.spotify.heroic.http.InternalErrorMessage;
+import com.spotify.heroic.ws.InternalErrorMessage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

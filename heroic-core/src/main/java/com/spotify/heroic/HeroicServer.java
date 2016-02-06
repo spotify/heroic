@@ -61,7 +61,6 @@ import javax.ws.rs.ext.MessageBodyWriter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -113,17 +112,16 @@ public class HeroicServer implements LifeCycle {
         newServer.setHandler(setupHandler());
 
         return async.call(() -> {
-            final ResolvableFuture<Void> future = async.future();
+            synchronized (lock) {
+                if (server != null) {
+                    throw new RuntimeException("Server already started");
+                }
 
-            try {
                 newServer.start();
-                setServer(newServer);
-            } catch (final Exception e) {
-                future.fail(e);
-                return null;
+                server = newServer;
             }
 
-            future.resolve(null);
+            log.info("Started HTTP Server on {}", address);
             return null;
         });
     }
@@ -134,18 +132,6 @@ public class HeroicServer implements LifeCycle {
         }
 
         return findServerConnector(server).getLocalPort();
-    }
-
-    private void setServer(final Server s) {
-        synchronized (lock) {
-            if (server != null) {
-                throw new RuntimeException("Server already started");
-            }
-
-            server = s;
-        }
-
-        log.info("Started HTTP Server on {}", address);
     }
 
     private List<Connector> setupConnectors(final Server server) {

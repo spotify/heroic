@@ -19,26 +19,25 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
-import lombok.Getter;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParseException;
 
-public class JsonParseErrorMessage extends ErrorMessage {
-    @Getter
-    private final int line;
-    @Getter
-    private final int col;
+@Provider
+public class JsonParseExceptionMapper implements ExceptionMapper<JsonParseException> {
+    @Override
+    public Response toResponse(JsonParseException e) {
+        final JsonLocation l = e.getLocation();
 
-    public JsonParseErrorMessage(final String message, final Response.Status status, final int line,
-            final int col) {
-        super(message, status);
-        this.line = line;
-        this.col = col;
-    }
-
-    public String getType() {
-        return "json-parse-error";
+        return Response.status(Response.Status.BAD_REQUEST)
+                .entity(new JsonParseErrorMessage(e.getOriginalMessage(),
+                        Response.Status.BAD_REQUEST, l.getLineNr(), l.getColumnNr()))
+                .type(MediaType.APPLICATION_JSON).build();
     }
 }

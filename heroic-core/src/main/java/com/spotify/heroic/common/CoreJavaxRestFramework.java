@@ -21,7 +21,7 @@
 
 package com.spotify.heroic.common;
 
-import com.spotify.heroic.http.InternalErrorMessage;
+import com.spotify.heroic.ws.InternalErrorMessage;
 
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;

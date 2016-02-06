@@ -19,7 +19,7 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;

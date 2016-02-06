@@ -19,32 +19,16 @@
  * under the License.
  */
 
-package com.spotify.heroic.http;
+package com.spotify.heroic.ws;
 
 import javax.ws.rs.core.Response;
 
-import lombok.Getter;
-
-public class ParseErrorMessage extends ErrorMessage {
-    @Getter
-    private final int line;
-    @Getter
-    private final int col;
-    @Getter
-    private final int lineEnd;
-    @Getter
-    private final int colEnd;
-
-    public ParseErrorMessage(final String message, final Response.Status status, final int line,
-            final int col, final int lineEnd, final int colEnd) {
+public class InternalErrorMessage extends ErrorMessage {
+    public InternalErrorMessage(final String message, final Response.Status status) {
         super(message, status);
-        this.line = line;
-        this.col = col;
-        this.lineEnd = lineEnd;
-        this.colEnd = colEnd;
     }
 
     public String getType() {
-        return "parse-error";
+        return "internal-error";
     }
 }
