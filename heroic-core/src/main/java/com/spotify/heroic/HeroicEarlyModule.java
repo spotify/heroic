@@ -21,10 +21,13 @@
 
 package com.spotify.heroic;
 
-import javax.inject.Singleton;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
+
+import java.util.function.Supplier;
+
+import javax.inject.Singleton;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,10 +35,26 @@ import lombok.RequiredArgsConstructor;
 public class HeroicEarlyModule extends AbstractModule {
     private final HeroicConfig config;
 
+    private volatile boolean stopping = false;
+
     @Provides
     @Singleton
     public HeroicConfig config() {
         return config;
+    }
+
+    @Provides
+    @Singleton
+    @Named("stopping")
+    public Supplier<Boolean> stopping() {
+        return () -> stopping;
+    }
+
+    @Provides
+    @Singleton
+    @Named("stopSignal")
+    public Runnable stopSignal() {
+        return () -> stopping = true;
     }
 
     @Override

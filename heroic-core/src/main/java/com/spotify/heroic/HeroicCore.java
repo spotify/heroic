@@ -78,7 +78,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
@@ -237,7 +236,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         // Initialize the instance injector with access to early components.
         final AtomicReference<Injector> injector = new AtomicReference<>(early);
 
-        final HeroicCoreInstance instance = setupInstance(injector);
+        final HeroicCoreInstance instance = setupInstance(injector, early);
 
         final Injector primary = primaryInjector(early, config, instance);
 
@@ -267,7 +266,11 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         }
     }
 
-    private HeroicCoreInstance setupInstance(final AtomicReference<Injector> coreInjector) {
+    private HeroicCoreInstance setupInstance(final AtomicReference<Injector> coreInjector,
+            final Injector early) {
+        final Runnable stopSignal =
+                early.getInstance(Key.get(Runnable.class, Names.named("stopSignal")));
+
         return new HeroicCoreInstance() {
             private final Object lock = new Object();
 
@@ -289,7 +292,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                 return coreInjector.get().getInstance(cls);
             }
 
-            @SuppressFBWarnings("DM_GC")
             @Override
             public void shutdown() {
                 final Injector injector = coreInjector.get();
@@ -298,6 +300,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                     if (stopped) {
                         return;
                     }
+
+                    stopSignal.run();
 
                     final HeroicInternalLifeCycle lifecycle =
                             injector.getInstance(HeroicInternalLifeCycle.class);
@@ -313,14 +317,9 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                     log.info("Stopping internal life cycle");
                     lifecycle.stop();
 
-                    /**
-                     * perform a gc to try to cause any dangling references to be logged through
-                     * their {@link Object#finalize()} method.
-                     */
-                    Runtime.getRuntime().gc();
-
                     log.info("Done shutting down, bye bye!");
                     stopped = true;
+                    lock.notifyAll();
                 }
             }
 

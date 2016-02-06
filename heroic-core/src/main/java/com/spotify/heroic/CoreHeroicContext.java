@@ -21,8 +21,6 @@
 
 package com.spotify.heroic;
 
-import javax.inject.Inject;
-
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationDSL;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -40,6 +38,8 @@ import com.spotify.heroic.filter.MultiArgumentsFilter;
 import com.spotify.heroic.filter.NoArgumentFilter;
 import com.spotify.heroic.filter.OneArgumentFilter;
 import com.spotify.heroic.filter.TwoArgumentsFilter;
+
+import javax.inject.Inject;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
