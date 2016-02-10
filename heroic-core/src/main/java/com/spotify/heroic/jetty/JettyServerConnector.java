@@ -57,7 +57,7 @@ public class JettyServerConnector {
 
         final ServerConnector c = new ServerConnector(server, factories);
 
-        c.setHost(this.address.map(a -> a.getHostName()).orElseGet(address::getHostName));
+        c.setHost(this.address.map(a -> a.getHostString()).orElseGet(address::getHostString));
         c.setPort(this.address.map(a -> a.getPort()).orElseGet(address::getPort));
 
         defaultProtocol.ifPresent(c::setDefaultProtocol);
