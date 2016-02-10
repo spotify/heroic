@@ -2,7 +2,7 @@
 <Configuration status="WARN" shutdownHook="disable">
   <Appenders>
     <Console name="primary" target="SYSTEM_OUT">
-      <PatternLayout alwaysWriteExceptions="false" pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=white, DEBUG=green bold, TRACE=blue}"/>
+      <PatternLayout alwaysWriteExceptions="false" pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}"/>
     </Console>
   </Appenders>
   <Loggers>
