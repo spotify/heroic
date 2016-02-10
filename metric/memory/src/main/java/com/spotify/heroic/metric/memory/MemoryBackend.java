@@ -23,7 +23,6 @@ package com.spotify.heroic.metric.memory;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
@@ -46,9 +45,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 
 import eu.toolchain.async.AsyncFramework;
@@ -66,9 +65,9 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     public static final QueryTrace.Identifier FETCH =
             QueryTrace.identifier(MemoryBackend.class, "fetch");
 
-    private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
+    static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    private static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
+    static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
         @Override
         public int compare(final MemoryKey a, final MemoryKey b) {
             final int t = a.getSource().compareTo(b.getSource());
@@ -81,19 +80,18 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
         }
     };
 
-    private final ConcurrentSkipListMap<MemoryKey, NavigableMap<Long, Metric>> storage =
-            new ConcurrentSkipListMap<>(COMPARATOR);
-
     private final Object createLock = new Object();
 
     private final AsyncFramework async;
     private final Groups groups;
+    private final Map<MemoryKey, NavigableMap<Long, Metric>> storage;
 
-    @Inject
-    public MemoryBackend(final AsyncFramework async, final Groups groups) {
+    public MemoryBackend(final AsyncFramework async, final Groups groups,
+            final Map<MemoryKey, NavigableMap<Long, Metric>> storage) {
         super(async);
         this.async = async;
         this.groups = groups;
+        this.storage = storage;
     }
 
     @Override

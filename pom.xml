@@ -22,6 +22,7 @@
     <module>metric/bigtable</module>
     <module>metric/memory</module>
     <module>metadata/elasticsearch</module>
+    <module>metadata/memory</module>
     <module>suggest/elasticsearch</module>
     <module>discovery/simple</module>
     <module>aggregation/simple</module>
@@ -131,6 +132,11 @@
       <dependency>
         <groupId>com.spotify.heroic.metadata</groupId>
         <artifactId>heroic-metadata-elasticsearch</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.spotify.heroic.metadata</groupId>
+        <artifactId>heroic-metadata-memory</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -19,77 +19,62 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric.memory;
+package com.spotify.heroic.metadata.memory;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
-import com.google.inject.Scopes;
+import com.google.inject.Singleton;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metadata.MetadataModule;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NavigableMap;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListMap;
-
-import javax.inject.Singleton;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import eu.toolchain.async.AsyncFramework;
 import lombok.Data;
 
 @Data
-public final class MemoryMetricModule implements MetricModule {
+public final class MemoryMetadataModule implements MetadataModule {
     public static final String DEFAULT_GROUP = "memory";
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
     private final boolean synchronizedStorage;
 
     @JsonCreator
-    public MemoryMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, Optional<Boolean> synchronizedStorage) {
+    public MemoryMetadataModule(@JsonProperty("id") Optional<String> id,
+            @JsonProperty("groups") Optional<Groups> groups,
+            @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage) {
         this.id = id;
-        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.synchronizedStorage = synchronizedStorage.orElse(false);
     }
 
     @Override
-    public PrivateModule module(final Key<MetricBackend> key, final String id) {
+    public Module module(final Key<MetadataBackend> key, final String id) {
         return new PrivateModule() {
             @Provides
             @Singleton
-            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
-                return reporter.newBackend(id);
-            }
-
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
-            }
-
-            @Provides
-            @Singleton
-            public MetricBackend metricBackend(final AsyncFramework async) {
-                final Map<MemoryBackend.MemoryKey, NavigableMap<Long, Metric>> storage;
+            public MetadataBackend backend(final AsyncFramework async) {
+                final Set<Series> storage;
 
                 if (synchronizedStorage) {
-                    storage = Collections.synchronizedMap(new HashMap<>());
+                    storage = Collections.synchronizedSet(new HashSet<>());
                 } else {
-                    storage = new ConcurrentSkipListMap<>(MemoryBackend.COMPARATOR);
+                    storage = new ConcurrentSkipListSet<>();
                 }
 
                 return new MemoryBackend(async, groups, storage);
@@ -97,14 +82,14 @@ public final class MemoryMetricModule implements MetricModule {
 
             @Override
             protected void configure() {
-                bind(key).to(MetricBackend.class).in(Scopes.SINGLETON);
+                bind(key).to(MetadataBackend.class);
                 expose(key);
             }
         };
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -118,23 +103,19 @@ public final class MemoryMetricModule implements MetricModule {
     }
 
     public static class Builder {
-        private String id;
-        private String group;
-        private Set<String> groups;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
         private Optional<Boolean> synchronizedStorage = empty();
 
-        public Builder id(String id) {
-            this.id = id;
+        public Builder id(final String id) {
+            checkNotNull(id, "id");
+            this.id = of(id);
             return this;
         }
 
-        public Builder group(String group) {
-            this.group = group;
-            return this;
-        }
-
-        public Builder groups(Set<String> groups) {
-            this.groups = groups;
+        public Builder groups(final Groups groups) {
+            checkNotNull(groups, "groups");
+            this.groups = of(groups);
             return this;
         }
 
@@ -143,8 +124,8 @@ public final class MemoryMetricModule implements MetricModule {
             return this;
         }
 
-        public MemoryMetricModule build() {
-            return new MemoryMetricModule(id, group, groups, synchronizedStorage);
+        public MemoryMetadataModule build() {
+            return new MemoryMetadataModule(id, groups, synchronizedStorage);
         }
     }
 }
