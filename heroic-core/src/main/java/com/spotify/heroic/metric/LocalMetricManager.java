@@ -48,6 +48,8 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
 
+import org.apache.commons.lang3.NotImplementedException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -56,8 +58,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.NotImplementedException;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -151,25 +151,26 @@ public class LocalMetricManager implements MetricManager {
 
     @Override
     public MetricBackendGroup useDefaultGroup() {
-        return new MetricBackendGroupImpl(backends.useDefault(), metadata.useDefaultGroup());
+        return new Group(backends.useDefault(), metadata.useDefaultGroup());
     }
 
     @Override
     public MetricBackendGroup useGroup(final String group) {
-        return new MetricBackendGroupImpl(backends.use(group), metadata.useDefaultGroup());
+        return new Group(backends.use(group), metadata.useDefaultGroup());
     }
 
     @Override
     public MetricBackendGroup useGroups(Set<String> groups) {
-        return new MetricBackendGroupImpl(backends.use(groups), metadata.useGroups(groups));
+        return new Group(backends.use(groups), metadata.useGroups(groups));
     }
 
-    private class MetricBackendGroupImpl extends AbstractMetricBackend
+    @ToString
+    private class Group extends AbstractMetricBackend
             implements MetricBackendGroup {
         private final SelectedGroup<MetricBackend> backends;
         private final MetadataBackend metadata;
 
-        public MetricBackendGroupImpl(final SelectedGroup<MetricBackend> backends,
+        public Group(final SelectedGroup<MetricBackend> backends,
                 final MetadataBackend metadata) {
             super(async);
             this.backends = backends;

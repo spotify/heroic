@@ -55,6 +55,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class HeroicPrimaryModule extends AbstractModule {
+    private final Optional<String> id;
     private final HeroicCoreInstance instance;
     private final Set<LifeCycle> lifeCycles;
     private final InetSocketAddress bindAddress;
@@ -141,7 +142,7 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Provides
     @Singleton
     public ServiceInfo service() {
-        return new ServiceInfo(service, version);
+        return new ServiceInfo(service, version, id.orElse("heroic"));
     }
 
     @Provides

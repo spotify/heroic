@@ -151,6 +151,10 @@ public class HeroicService {
             builder.configPath(config);
         }
 
+        if (params.id != null) {
+            builder.id(params.id);
+        }
+
         if (params.port != null) {
             builder.port(params.port);
         }

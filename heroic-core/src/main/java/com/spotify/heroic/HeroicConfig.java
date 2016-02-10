@@ -81,6 +81,8 @@ public class HeroicConfig {
     public static final String DEFAULT_VERSION = "HEAD";
     public static final String DEFAULT_SERVICE = "The Heroic Time Series Database";
 
+    private final Optional<String> id;
+
     /**
      * The time core will wait for all services (implementing
      * {@link com.spotify.heroic.common.LifeCycle} to start before giving up.
@@ -149,6 +151,7 @@ public class HeroicConfig {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Builder {
+        private Optional<String> id = empty();
         private Optional<Duration> startTimeout = empty();
         private Optional<Duration> stopTimeout = empty();
         private Optional<String> host = empty();
@@ -172,7 +175,8 @@ public class HeroicConfig {
         private Optional<String> service = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("startTimeout") Optional<Duration> startTimeout,
+        public Builder(@JsonProperty("id") Optional<String> id,
+                @JsonProperty("startTimeout") Optional<Duration> startTimeout,
                 @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
                 @JsonProperty("host") Optional<String> host,
                 @JsonProperty("port") Optional<Integer> port,
@@ -192,6 +196,7 @@ public class HeroicConfig {
                 @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
                 @JsonProperty("version") Optional<String> version,
                 @JsonProperty("service") Optional<String> service) {
+            this.id = id;
             this.startTimeout = startTimeout;
             this.stopTimeout = stopTimeout;
             this.host = host;
@@ -293,6 +298,7 @@ public class HeroicConfig {
         public Builder merge(Builder o) {
             // @formatter:off
             return new Builder(
+                pickOptional(id, o.id),
                 pickOptional(startTimeout, o.startTimeout),
                 pickOptional(stopTimeout, o.stopTimeout),
                 pickOptional(host, o.host),
@@ -326,6 +332,7 @@ public class HeroicConfig {
 
             // @formatter:off
             return new HeroicConfig(
+                id,
                 startTimeout.orElse(DEFAULT_START_TIMEOUT),
                 stopTimeout.orElse(DEFAULT_STOP_TIMEOUT),
                 host,

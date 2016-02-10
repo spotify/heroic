@@ -21,15 +21,6 @@
 
 package com.spotify.heroic.metric.memory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -51,6 +42,15 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -59,7 +59,7 @@ import lombok.ToString;
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString(exclude = {"storage"})
+@ToString(exclude = {"storage", "async", "createLock"})
 public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     public static final String MEMORY_KEYS = "memory-keys";
 

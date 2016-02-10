@@ -144,6 +144,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
      * @see {@link #start()}
      * @see {@link #shutdown()}
      */
+    private final Optional<String> id;
     private final Optional<String> host;
     private final Optional<Integer> port;
     private final Optional<Path> configPath;
@@ -478,11 +479,13 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         final HeroicReporter reporter = this.reporter.get();
 
+        final Optional<String> id = Optionals.firstPresent(this.id, config.getId());
+
         // register root components.
-        modules.add(
-                new HeroicPrimaryModule(instance, lifeCycles, bindAddress, config.isEnableCors(),
-                        config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(),
-                        setupService, reporter, pinger, config.getService(), config.getVersion()));
+        modules.add(new HeroicPrimaryModule(id, instance, lifeCycles, bindAddress,
+                config.isEnableCors(), config.getCorsAllowOrigin(), config.getFeatures(),
+                config.getConnectors(), setupService, reporter, pinger, config.getService(),
+                config.getVersion()));
 
         modules.add(config.getCache().module());
 
@@ -697,6 +700,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     }
 
     public static final class Builder {
+        private Optional<String> id = empty();
         private Optional<String> host = empty();
         private Optional<Integer> port = empty();
         private Optional<Path> configPath = empty();
@@ -717,6 +721,17 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         private final ImmutableList.Builder<HeroicProfile> profiles = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> early = ImmutableList.builder();
         private final ImmutableList.Builder<HeroicBootstrap> late = ImmutableList.builder();
+
+        /**
+         * Register a specific ID for this heroic instance.
+         *
+         * @param id Id of the instance.
+         * @return This builder.
+         */
+        public Builder id(final String id) {
+            this.id = of(id);
+            return this;
+        }
 
         /**
          * If a shell server is not configured, setup the default shell server.
@@ -861,6 +876,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         public HeroicCore build() {
             // @formatter:off
             return new HeroicCore(
+                id,
                 host,
                 port,
                 configPath,

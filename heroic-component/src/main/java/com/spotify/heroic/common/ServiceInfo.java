@@ -21,10 +21,23 @@
 
 package com.spotify.heroic.common;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 @Data
 public class ServiceInfo {
     private final String name;
     private final String version;
+    private final String id;
+
+    @JsonCreator
+    public ServiceInfo(@JsonProperty("name") final String name,
+            @JsonProperty("version") final String version,
+            @JsonProperty("id") final String id) {
+        this.name = name;
+        this.version = version;
+        this.id = id;
+    }
 }
