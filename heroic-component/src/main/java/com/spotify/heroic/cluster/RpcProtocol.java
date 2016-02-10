@@ -27,4 +27,11 @@ import eu.toolchain.async.AsyncFuture;
 
 public interface RpcProtocol {
     AsyncFuture<ClusterNode> connect(URI uri);
+
+    /**
+     * Gets the current listen URI for this protocol module.
+     *
+     * @return A future that will be resolved when the listen URI becomes available.
+     */
+    AsyncFuture<String> getListenURI();
 }

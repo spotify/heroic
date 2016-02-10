@@ -21,10 +21,12 @@
 
 package com.spotify.heroic.cluster;
 
+import com.spotify.heroic.common.LifeCycle;
+
 import java.net.URI;
 import java.util.List;
-
-import com.spotify.heroic.common.LifeCycle;
+import java.util.Map;
+import java.util.Set;
 
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
@@ -66,4 +68,6 @@ public interface ClusterManager extends LifeCycle {
      * Future that will be resolved, after the cluster manager has been fully initialized.
      */
     AsyncFuture<Void> initialized();
+
+    Set<RpcProtocol> protocols();
 }

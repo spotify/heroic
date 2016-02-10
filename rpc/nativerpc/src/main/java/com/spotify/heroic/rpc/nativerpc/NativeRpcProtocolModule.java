@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.net.InetSocketAddress;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -37,6 +34,11 @@ import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.cluster.RpcProtocol;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 
+import java.net.InetSocketAddress;
+import java.util.Optional;
+
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
@@ -46,7 +48,7 @@ import lombok.Data;
 @Data
 public class NativeRpcProtocolModule implements RpcProtocolModule {
     private static final String DEFAULT_HOST = "0.0.0.0";
-    private static final int DEFAULT_PORT = 1394;
+    private static final int DEFAULT_PORT = 0;
     private static final int DEFAULT_PARENT_THREADS = 2;
     private static final int DEFAULT_CHILD_THREADS = 100;
     private static final int DEFAULT_MAX_FRAME_SIZE = 10 * 1000000;
@@ -84,6 +86,13 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     @Override
     public Module module(final Key<RpcProtocol> key, final HeroicConfiguration options) {
         return new PrivateModule() {
+            @Provides
+            @Singleton
+            @Named("bindFuture")
+            public ResolvableFuture<InetSocketAddress> bindFuture(final AsyncFramework async) {
+                return async.future();
+            }
+
             @Provides
             @Singleton
             @Named("boss")

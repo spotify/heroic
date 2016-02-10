@@ -21,26 +21,29 @@
 
 package com.spotify.heroic;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.HeroicInternalLifeCycle.Context;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.common.LifeCycle;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Collection;
+import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.spotify.heroic.HeroicInternalLifeCycle.Context;
-import com.spotify.heroic.common.LifeCycle;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
 
 /**
  * Component that executes a startup 'ping' after the service has started.
@@ -52,7 +55,7 @@ import eu.toolchain.async.AsyncFuture;
  */
 @Slf4j
 @RequiredArgsConstructor
-@ToString(of = { "ping", "id" })
+@ToString(of = {"ping", "id"})
 public class HeroicStartupPinger implements LifeCycle {
     @Inject
     private HeroicServer server;
@@ -67,21 +70,31 @@ public class HeroicStartupPinger implements LifeCycle {
     @Inject
     private AsyncFramework async;
 
+    @Inject
+    private ClusterManager cluster;
+
     private final URI ping;
     private final String id;
 
     @Override
     public AsyncFuture<Void> start() {
-        lifecycle.register("Startup Ping", new HeroicInternalLifeCycle.StartupHook() {
-            @Override
-            public void onStartup(Context context) throws Exception {
-                log.info("Sending startup ping to {}", ping);
-                final PingMessage ping = new PingMessage(server.getPort(), id);
-                sendStartupPing(ping);
-            }
-        });
+        final AsyncFuture<Collection<String>> protocolFutures = async.collect(ImmutableList
+                .copyOf(cluster.protocols().stream().map(p -> p.getListenURI()).iterator()));
 
-        return async.resolved(null);
+        return protocolFutures.directTransform(uris -> {
+            final ImmutableList<String> protocols = ImmutableList.copyOf(uris);
+
+            lifecycle.register("Startup Ping", new HeroicInternalLifeCycle.StartupHook() {
+                @Override
+                public void onStartup(Context context) throws Exception {
+                    log.info("Sending startup ping to {}", ping);
+                    final PingMessage ping = new PingMessage(server.getPort(), id, protocols);
+                    sendStartupPing(ping);
+                }
+            });
+
+            return null;
+        });
     }
 
     @Override
@@ -123,5 +136,6 @@ public class HeroicStartupPinger implements LifeCycle {
     public static final class PingMessage {
         private final int port;
         private final String id;
+        private final List<String> protocols;
     }
 }

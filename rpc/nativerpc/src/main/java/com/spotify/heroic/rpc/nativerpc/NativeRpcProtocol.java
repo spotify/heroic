@@ -23,12 +23,6 @@ package com.spotify.heroic.rpc.nativerpc;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.List;
-
-import javax.inject.Inject;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,8 +53,16 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.List;
+
+import javax.inject.Inject;
+
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.Timer;
 import lombok.Data;
@@ -102,6 +104,10 @@ public class NativeRpcProtocol implements RpcProtocol {
     @Inject
     private NativeEncoding encoding;
 
+    @Inject
+    @Named("bindFuture")
+    private ResolvableFuture<InetSocketAddress> bindFuture;
+
     private final int defaultPort;
     private final int maxFrameSize;
     private final long sendTimeout;
@@ -116,6 +122,18 @@ public class NativeRpcProtocol implements RpcProtocol {
 
         return client.request(METADATA, NodeMetadata.class)
                 .directTransform(m -> new NativeRpcClusterNode(uri, client, m));
+    }
+
+    @Override
+    public AsyncFuture<String> getListenURI() {
+        return bindFuture.directTransform(s -> {
+            if (s.getAddress() instanceof Inet6Address) {
+                return String.format("nativerpc://[%s]:%d", s.getAddress().getHostAddress(),
+                        s.getPort());
+            }
+
+            return String.format("nativerpc://%s:%d", s.getHostString(), s.getPort());
+        });
     }
 
     @RequiredArgsConstructor

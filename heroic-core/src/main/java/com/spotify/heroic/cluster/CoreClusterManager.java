@@ -21,6 +21,21 @@
 
 package com.spotify.heroic.cluster;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.spotify.heroic.HeroicConfiguration;
+import com.spotify.heroic.HeroicContext;
+import com.spotify.heroic.async.MaybeError;
+import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.scheduler.Scheduler;
+import com.spotify.heroic.scheduler.Task;
+import com.spotify.heroic.statistics.HeroicReporter;
+
+import org.apache.commons.lang3.StringUtils;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,20 +45,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicContext;
-import com.spotify.heroic.HeroicConfiguration;
-import com.spotify.heroic.async.MaybeError;
-import com.spotify.heroic.common.LifeCycle;
-import com.spotify.heroic.scheduler.Scheduler;
-import com.spotify.heroic.scheduler.Task;
-import com.spotify.heroic.statistics.HeroicReporter;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -230,6 +231,11 @@ public class CoreClusterManager implements ClusterManager, LifeCycle {
         }
 
         return new CoreClusterNodeGroup(async, groups);
+    }
+
+    @Override
+    public Set<RpcProtocol> protocols() {
+        return ImmutableSet.copyOf(protocols.values());
     }
 
     private List<Map<String, String>> topologyOf(Collection<NodeRegistryEntry> entries) {

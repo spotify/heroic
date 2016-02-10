@@ -21,14 +21,6 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.inject.Inject;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.name.Named;
@@ -59,6 +51,15 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
+
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.inject.Inject;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -108,6 +109,10 @@ public class NativeRpcProtocolServer implements LifeCycle {
 
     @Inject
     private NativeEncoding encoding;
+
+    @Inject
+    @Named("bindFuture")
+    private ResolvableFuture<InetSocketAddress> bindFuture;
 
     private final SocketAddress address;
     private final int maxFrameSize;
@@ -267,8 +272,6 @@ public class NativeRpcProtocolServer implements LifeCycle {
         s.childHandler(
                 new NativeRpcServerSession(timer, mapper, container, maxFrameSize, encoding));
 
-        final ResolvableFuture<Void> bindFuture = async.future();
-
         final ChannelFuture bind = s.bind(address);
 
         bind.addListener(new ChannelFutureListener() {
@@ -280,11 +283,13 @@ public class NativeRpcProtocolServer implements LifeCycle {
                 }
 
                 serverChannel.set(f.channel());
-                bindFuture.resolve(null);
+                final InetSocketAddress address =
+                        (InetSocketAddress) f.channel().localAddress();
+                bindFuture.resolve(address);
             }
         });
 
-        return bindFuture;
+        return bindFuture.directTransform(a -> null);
     }
 
     private Callable<Void> teardownServer() {
