@@ -23,16 +23,18 @@ package com.spotify.heroic;
 
 import static java.util.Optional.ofNullable;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.metric.QueryTrace;
 
+import java.util.Optional;
+
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
+@EqualsAndHashCode(of = {"tracing", "fetchSize"})
 public class QueryOptions {
     public static final boolean DEFAULT_TRACING = false;
 

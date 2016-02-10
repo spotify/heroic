@@ -23,13 +23,6 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Joiner;
@@ -46,6 +39,13 @@ import com.spotify.heroic.metric.datastax.DatastaxMetricModule;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.legacy.LegacySchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
 
 public class CassandraProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();

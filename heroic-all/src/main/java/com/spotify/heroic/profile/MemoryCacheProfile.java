@@ -19,12 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregationcache;
+package com.spotify.heroic.profile;
 
-public class CacheOperationException extends Exception {
-    private static final long serialVersionUID = 2201862841576041417L;
+import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.cache.memory.MemoryCacheModule;
 
-    public CacheOperationException(String message) {
-        super(message);
+public class MemoryCacheProfile extends HeroicProfileBase {
+    @Override
+    public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
+        // @formatter:off
+        return HeroicConfig.builder()
+            .cache(
+                MemoryCacheModule.builder()
+            );
+        // @formatter:on
+    }
+
+    @Override
+    public String description() {
+        // @formatter:off
+        return "Configures in-memory cache";
+        // @formatter:on
     }
 }

@@ -23,10 +23,6 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
@@ -35,6 +31,10 @@ import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.cluster.discovery.simple.SrvRecordDiscoveryModule;
 import com.spotify.heroic.cluster.discovery.simple.StaticListDiscoveryModule;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolModule;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 
 public class ClusterProfile extends HeroicProfileBase {
     @Override

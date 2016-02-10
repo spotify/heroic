@@ -19,24 +19,27 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregationcache.cassandra2;
+package com.spotify.heroic.cache;
 
-import javax.inject.Inject;
-
+import com.google.inject.Inject;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.cache.memcached.MemcachedCacheModule;
+import com.spotify.heroic.cache.memory.MemoryCacheModule;
+import com.spotify.heroic.cache.noop.NoopCacheModule;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
+    public HeroicModule.Entry setup() {
+        return new HeroicModule.Entry() {
             @Inject
-            private HeroicConfigurationContext configurationContext;
+            HeroicConfigurationContext context;
 
             @Override
             public void setup() {
-                configurationContext.registerType("cassandra2",
-                        Cassandra2AggregationCacheBackendModule.class);
+                context.registerType("noop", NoopCacheModule.Builder.class);
+                context.registerType("memory", MemoryCacheModule.Builder.class);
+                context.registerType("memcached", MemcachedCacheModule.Builder.class);
             }
         };
     }

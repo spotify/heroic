@@ -28,8 +28,6 @@ import com.google.inject.Scopes;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
-import com.spotify.heroic.aggregationcache.CacheKey;
-import com.spotify.heroic.aggregationcache.CacheKey_Serializer;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
@@ -116,13 +114,6 @@ public class HeroicLoadingModule extends AbstractModule {
     @Singleton
     AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
         return registry;
-    }
-
-    @Provides
-    @Singleton
-    Serializer<CacheKey> cacheKeySerializer(@Named("common") SerializerFramework s,
-            FilterSerializer filter, AggregationSerializer aggregation) {
-        return new CacheKey_Serializer(s, filter, aggregation);
     }
 
     @Provides

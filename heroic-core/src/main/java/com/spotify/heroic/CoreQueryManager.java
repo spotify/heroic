@@ -31,6 +31,7 @@ import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.DefaultAggregationContext;
 import com.spotify.heroic.aggregation.Empty;
+import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
@@ -78,6 +79,9 @@ public class CoreQueryManager implements QueryManager {
 
     @Inject
     private QueryParser parser;
+
+    @Inject
+    private QueryCache queryCache;
 
     @Override
     public Group useGroup(String group) {
@@ -170,18 +174,20 @@ public class CoreQueryManager implements QueryManager {
                 combiner = AggregationCombiner.DEFAULT;
             }
 
-            for (ClusterNode.Group group : groups) {
-                final ClusterNode c = group.node();
+            return queryCache.load(source, filter, range, aggregationInstance, options, () -> {
+                for (ClusterNode.Group group : groups) {
+                    final ClusterNode c = group.node();
 
-                final AsyncFuture<QueryResultPart> queryPart =
-                        group.query(source, filter, range, aggregationInstance, options)
-                                .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
-                                .directTransform(QueryResultPart.fromResultGroup(range, c));
+                    final AsyncFuture<QueryResultPart> queryPart =
+                            group.query(source, filter, range, aggregationInstance, options)
+                                    .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
+                                    .directTransform(QueryResultPart.fromResultGroup(range, c));
 
-                futures.add(queryPart);
-            }
+                    futures.add(queryPart);
+                }
 
-            return async.collect(futures, QueryResult.collectParts(QUERY, range, combiner));
+                return async.collect(futures, QueryResult.collectParts(QUERY, range, combiner));
+            });
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {

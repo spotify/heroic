@@ -37,7 +37,8 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.spotify.heroic.aggregationcache.AggregationCacheModule;
+import com.spotify.heroic.cache.CacheModule;
+import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.consumer.ConsumerModule;
@@ -100,7 +101,7 @@ public class HeroicConfig {
     private final MetricManagerModule metric;
     private final MetadataManagerModule metadata;
     private final SuggestManagerModule suggest;
-    private final AggregationCacheModule cache;
+    private final CacheModule cache;
     private final IngestionModule ingestion;
     private final List<ConsumerModule> consumers;
     private final Optional<ShellServerModule> shellServer;
@@ -158,7 +159,7 @@ public class HeroicConfig {
         private Optional<MetricManagerModule.Builder> metric = empty();
         private Optional<MetadataManagerModule.Builder> metadata = empty();
         private Optional<SuggestManagerModule.Builder> suggest = empty();
-        private Optional<AggregationCacheModule.Builder> cache = empty();
+        private Optional<CacheModule.Builder> cache = empty();
         private Optional<IngestionModule.Builder> ingestion = empty();
         private List<ConsumerModule.Builder> consumers = ImmutableList.of();
         private Optional<ShellServerModule.Builder> shellServer = empty();
@@ -180,7 +181,7 @@ public class HeroicConfig {
                 @JsonProperty("metrics") Optional<MetricManagerModule.Builder> metrics,
                 @JsonProperty("metadata") Optional<MetadataManagerModule.Builder> metadata,
                 @JsonProperty("suggest") Optional<SuggestManagerModule.Builder> suggest,
-                @JsonProperty("cache") Optional<AggregationCacheModule.Builder> cache,
+                @JsonProperty("cache") Optional<CacheModule.Builder> cache,
                 @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
                 @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
                 @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
@@ -257,7 +258,7 @@ public class HeroicConfig {
             return this;
         }
 
-        public Builder cache(AggregationCacheModule.Builder cache) {
+        public Builder cache(CacheModule.Builder cache) {
             this.cache = of(cache);
             return this;
         }
@@ -294,7 +295,7 @@ public class HeroicConfig {
                 mergeOptional(metric, o.metric, (a, b) -> a.merge(b)),
                 mergeOptional(metadata, o.metadata, (a, b) -> a.merge(b)),
                 mergeOptional(suggest, o.suggest, (a, b) -> a.merge(b)),
-                mergeOptional(cache, o.cache, (a, b) -> a.merge(b)),
+                pickOptional(cache, o.cache),
                 mergeOptional(ingestion, o.ingestion, (a, b) -> a.merge(b)),
                 ImmutableList.copyOf(Iterables.concat(consumers, o.consumers)),
                 mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
@@ -326,7 +327,7 @@ public class HeroicConfig {
                 metric.orElseGet(MetricManagerModule::builder).build(),
                 metadata.orElseGet(MetadataManagerModule::builder).build(),
                 suggest.orElseGet(SuggestManagerModule::builder).build(),
-                cache.orElseGet(AggregationCacheModule::builder).build(),
+                cache.orElseGet(NoopCacheModule::builder).build(),
                 ingestion.orElseGet(IngestionModule::builder).build(),
                 ImmutableList.copyOf(consumers.stream().map(c -> c.build()).iterator()),
                 shellServer.map(ShellServerModule.Builder::build),

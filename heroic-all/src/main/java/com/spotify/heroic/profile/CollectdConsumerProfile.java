@@ -23,8 +23,6 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.ExtraParameters;
@@ -33,6 +31,8 @@ import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.common.GrokProcessor;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.collectd.CollectdConsumerModule;
+
+import java.util.List;
 
 public class CollectdConsumerProfile extends HeroicProfileBase {
     @Override

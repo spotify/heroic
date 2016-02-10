@@ -19,24 +19,25 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregationcache;
+package com.spotify.heroic.cache.noop;
 
-import java.util.List;
-import java.util.Map;
-
+import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.MetricType;
+import com.spotify.heroic.metric.QueryResult;
+
+import java.util.function.Supplier;
 
 import eu.toolchain.async.AsyncFuture;
 
-public interface AggregationCache {
-    boolean isConfigured();
-
-    AsyncFuture<CacheQueryResult> get(Filter filter, Map<String, String> group,
-            AggregationInstance aggregation, DateRange range) throws CacheOperationException;
-
-    AsyncFuture<CachePutResult> put(Filter filter, Map<String, String> group,
-            AggregationInstance aggregation, List<Point> datapoints) throws CacheOperationException;
+public class NoopQueryCache implements QueryCache {
+    @Override
+    public AsyncFuture<QueryResult> load(MetricType source, Filter filter, DateRange range,
+            AggregationInstance aggregationInstance, QueryOptions options,
+            Supplier<AsyncFuture<QueryResult>> loader) {
+        return loader.get();
+    }
 }

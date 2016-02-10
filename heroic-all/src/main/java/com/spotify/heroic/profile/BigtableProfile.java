@@ -23,9 +23,6 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.nio.file.Paths;
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
@@ -36,6 +33,9 @@ import com.spotify.heroic.metric.bigtable.BigtableMetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.JsonCredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsBuilder;
+
+import java.nio.file.Paths;
+import java.util.List;
 
 public class BigtableProfile extends HeroicProfileBase {
     public static final String DEFAULT_CREDENTIALS = "json";

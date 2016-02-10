@@ -23,16 +23,16 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.util.List;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.kafka.KafkaConsumerModule;
+
+import java.util.List;
 
 public class KafkaConsumerProfile extends HeroicProfileBase {
     private final Splitter splitter = Splitter.on(",").trimResults();

@@ -21,12 +21,6 @@
 
 package com.spotify.heroic;
 
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map;
-
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -38,7 +32,14 @@ import com.spotify.heroic.profile.ElasticsearchMetadataProfile;
 import com.spotify.heroic.profile.ElasticsearchSuggestProfile;
 import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
+import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Map;
 
 public class HeroicModules {
     // @formatter:off
@@ -59,8 +60,6 @@ public class HeroicModules {
 
         new com.spotify.heroic.consumer.collectd.Module(),
 
-        new com.spotify.heroic.aggregationcache.cassandra2.Module(),
-
         new com.spotify.heroic.rpc.nativerpc.Module()
     );
 
@@ -74,6 +73,7 @@ public class HeroicModules {
         .put("bigtable", new BigtableProfile())
         .put("cluster", new ClusterProfile())
         .put("collectd", new CollectdConsumerProfile())
+        .put("memory-cache", new MemoryCacheProfile())
     .build();
     // @formatter:on
 

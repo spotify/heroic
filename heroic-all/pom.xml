@@ -81,12 +81,6 @@
       <artifactId>heroic-consumer-collectd</artifactId>
     </dependency>
 
-    <!-- aggregation caching -->
-    <dependency>
-      <groupId>com.spotify.heroic.aggregationcache</groupId>
-      <artifactId>heroic-aggregationcache-cassandra2</artifactId>
-    </dependency>
-
     <!-- rpc implementations -->
     <dependency>
       <groupId>com.spotify.heroic.rpc</groupId>

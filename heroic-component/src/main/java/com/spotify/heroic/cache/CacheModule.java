@@ -19,30 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.aggregationcache;
+package com.spotify.heroic.cache;
 
-import java.util.List;
+import com.google.inject.Module;
 
-import lombok.Data;
-import lombok.Getter;
+public interface CacheModule {
+    public Module module();
 
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.metric.Point;
-
-@Data
-public class CacheQueryResult {
-    private final CacheBackendKey key;
-
-    private final DateRange range;
-
-    /**
-     * Collected results so far. Should be joined by the result from the above cache misses.
-     */
-    private final List<Point> result;
-
-    /**
-     * Cache misses that has to be queried and aggregated from raw storage.
-     */
-    @Getter
-    private final List<DateRange> misses;
+    interface Builder {
+        CacheModule build();
+    }
 }

@@ -133,7 +133,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         new com.spotify.heroic.filter.Module(),
         new com.spotify.heroic.http.Module(),
         new com.spotify.heroic.jetty.Module(),
-        new com.spotify.heroic.ws.Module()
+        new com.spotify.heroic.ws.Module(),
+        new com.spotify.heroic.cache.Module()
     };
     // @formatter:on
 
@@ -483,6 +484,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                         config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(),
                         setupService, reporter, pinger, config.getService(), config.getVersion()));
 
+        modules.add(config.getCache().module());
+
         if (!disableBackends) {
             modules.add(new AbstractModule() {
                 @Override
@@ -504,7 +507,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         }
 
         modules.add(config.getCluster().make(this));
-        modules.add(config.getCache());
 
         modules.add(new AbstractModule() {
             @Override

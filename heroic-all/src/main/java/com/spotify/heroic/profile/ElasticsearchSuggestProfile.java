@@ -23,19 +23,19 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.util.List;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
+
+import java.util.List;
 
 public class ElasticsearchSuggestProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();

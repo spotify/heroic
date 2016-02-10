@@ -25,8 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.aggregationcache.AggregationCacheModule;
-import com.spotify.heroic.aggregationcache.InMemoryAggregationCacheBackendConfig;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.StandaloneClientSetup;
@@ -94,10 +92,6 @@ public class MemoryProfile extends HeroicProfileBase {
                             )
                             .build()
                     ))
-            )
-            .cache(
-                AggregationCacheModule.builder()
-                    .backend(InMemoryAggregationCacheBackendConfig.builder().build())
             );
         // @formatter:on
     }

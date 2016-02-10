@@ -30,7 +30,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationInstance;
-import com.spotify.heroic.aggregationcache.AggregationCacheBackendModule;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
 import com.spotify.heroic.cluster.RpcProtocolModule;
 import com.spotify.heroic.common.Duration;
@@ -70,7 +69,6 @@ public final class HeroicMappers {
     public static ObjectMapper config() {
         final ObjectMapper m = new ObjectMapper(new YAMLFactory());
 
-        m.addMixIn(AggregationCacheBackendModule.class, TypeNameMixin.class);
         m.addMixIn(ClusterDiscoveryModule.class, TypeNameMixin.class);
         m.addMixIn(RpcProtocolModule.class, TypeNameMixin.class);
         m.addMixIn(ConsumerModule.Builder.class, TypeNameMixin.class);

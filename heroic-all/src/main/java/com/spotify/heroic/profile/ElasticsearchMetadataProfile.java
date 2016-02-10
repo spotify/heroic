@@ -23,20 +23,20 @@ package com.spotify.heroic.profile;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
-import java.util.List;
-
-import org.elasticsearch.common.collect.ImmutableList;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
+
+import org.elasticsearch.common.collect.ImmutableList;
+
+import java.util.List;
 
 public class ElasticsearchMetadataProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
