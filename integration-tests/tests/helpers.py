@@ -11,6 +11,7 @@ import tempfile
 import threading as t
 import yaml
 import sys
+import urlparse
 
 MAIN_CLASS = "com.spotify.heroic.HeroicService"
 DEV_NULL = open("/dev/null")
@@ -19,12 +20,16 @@ PING_PORT = 12021
 
 
 class HeroicAPI(object):
-    def __init__(self, p, port):
+    def __init__(self, p, port, protocols):
         self._p = p
         self._s = requests.Session()
         self._base = "http://localhost:{}".format(port)
+        self._protocols = protocols;
 
-    # Popen API
+    @property
+    def protocols(self):
+        return self._protocols
+
     def terminate(self):
         return self._p.terminate()
 
@@ -108,6 +113,8 @@ def heroic(identifier, *args, **kwargs):
     instance_args = ["--startup-ping", "udp://localhost:{}".format(PING_PORT),
                      "--startup-id", str(identifier),
                      "--port", str(0)] + args
+
+    java_opts += ["-Xmx128m", "-Xmn128m"]
 
     if debug:
         out = sys.stdout
@@ -269,13 +276,14 @@ def read_config(procs, sock):
 
             identifier = int(body["id"])
             port = body["port"]
+            protocols = map(urlparse.urlparse, body["protocols"])
             p = procs[identifier]
 
             if not p:
                 raise Exception("No such instance '{}'".format(identifier))
 
             count += 1
-            yield identifier, HeroicAPI(p, port)
+            yield identifier, HeroicAPI(p, port, protocols)
 
 
 @contextlib.contextmanager
@@ -322,19 +330,24 @@ def managed(*configs, **kwargs):
 def managed_cluster(count, base_port=2000, features=[]):
     configs = list()
 
+    # use in-memory backends, and synchronized storage
+    args = ["-P", "memory"]
+
     ports = range(base_port, base_port + count)
 
     for i, port in enumerate(ports):
+        tags = {"node": str("node-{}".format(i))}
+
         configs.append({
             "id": "heroic-{}".format(i),
             "features": features,
             "cluster": {
-                "protocols": [{"type": "nativerpc", "port": port}],
-                "useLocal": False, "tags": {"foo": "bar"}}})
+                "protocols": [{"type": "nativerpc", "host": "localhost", "port": 0}],
+                "useLocal": False, "tags": tags}})
 
-    peers = ["nativerpc://localhost:{}".format(port) for port in ports]
+    with managed(*configs, args=args) as nodes:
+        peers = sum((map(lambda u: u.geturl(), n.protocols) for n in nodes), [])
 
-    with managed(*configs, args=["-P", "memory"]) as nodes:
         for n in nodes:
             status = n.status()
             assert True == status["ok"], repr(status)
