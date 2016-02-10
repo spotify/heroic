@@ -620,18 +620,18 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             final AsyncFuture<Void> future = fn.apply(l).onDone(new FutureDone<Void>() {
                 @Override
                 public void failed(Throwable cause) throws Exception {
-                    log.info("{}: failed: {} (took {}ms)", op, l, cause,
-                            w.elapsed(TimeUnit.MILLISECONDS));
+                    log.info("[{}] failed: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS),
+                            cause);
                 }
 
                 @Override
                 public void resolved(Void result) throws Exception {
-                    log.info("{}: done: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS));
+                    log.info("[{}] done: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS));
                 }
 
                 @Override
                 public void cancelled() throws Exception {
-                    log.info("{}: cancelled: {} (took {}ms)", op, l,
+                    log.info("[{}] cancelled: {} (took {}ms)", op, l,
                             w.elapsed(TimeUnit.MILLISECONDS));
                 }
             });
