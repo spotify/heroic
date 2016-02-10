@@ -60,7 +60,7 @@ import lombok.Getter;
  * @author udoprog
  */
 @Data
-@EqualsAndHashCode(of = { "size", "extent" })
+@EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements AggregationInstance {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000L;
@@ -224,8 +224,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build,
-                range);
+        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
     }
 
     @Override

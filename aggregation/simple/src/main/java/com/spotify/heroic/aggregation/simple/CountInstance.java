@@ -54,7 +54,7 @@ public class CountInstance extends DistributedBucketInstance<StripedCountBucket>
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<StripedSumBucket>(out, size, extent, StripedSumBucket::new,
+        return new BucketReducerSession<StripedSumBucket>(out, size, StripedSumBucket::new,
                 b -> new Point(b.timestamp(), b.value()), range);
     }
 }

@@ -89,7 +89,6 @@ public abstract class DistributedBucketInstance<B extends Bucket>
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build,
-                range);
+        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
     }
 }
