@@ -26,6 +26,7 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.AbstractModule;
@@ -614,20 +615,24 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         for (final LifeCycle l : lifeCycles) {
             log.info("{}: running {}", op, l);
 
+            final Stopwatch w = Stopwatch.createStarted();
+
             final AsyncFuture<Void> future = fn.apply(l).onDone(new FutureDone<Void>() {
                 @Override
                 public void failed(Throwable cause) throws Exception {
-                    log.info("{}: failed: {}", op, l, cause);
+                    log.info("{}: failed: {} (took {}ms)", op, l, cause,
+                            w.elapsed(TimeUnit.MILLISECONDS));
                 }
 
                 @Override
                 public void resolved(Void result) throws Exception {
-                    log.info("{}: done: {}", op, l);
+                    log.info("{}: done: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS));
                 }
 
                 @Override
                 public void cancelled() throws Exception {
-                    log.info("{}: cancelled: {}", op, l);
+                    log.info("{}: cancelled: {} (took {}ms)", op, l,
+                            w.elapsed(TimeUnit.MILLISECONDS));
                 }
             });
 
