@@ -90,6 +90,7 @@ class Settings(object):
     def __init__(self, **kwargs):
         self.heroic_jar = kwargs.pop('heroic_jar', None)
         self.debug = kwargs.pop('debug', False)
+        self.java_opts = kwargs.pop('java_opts', [])
 
 
 S = Settings()
@@ -102,6 +103,7 @@ def heroic(identifier, *args, **kwargs):
     config = kwargs.pop("config", None)
     debug = kwargs.pop("debug", S.debug)
     args = kwargs.pop("args", [])
+    java_opts = kwargs.pop("java_opts", [])
 
     instance_args = ["--startup-ping", "udp://localhost:{}".format(PING_PORT),
                      "--startup-id", str(identifier),
@@ -116,8 +118,8 @@ def heroic(identifier, *args, **kwargs):
         instance_args += [config]
 
     return sp.Popen(
-        ["java", "-cp", S.heroic_jar, MAIN_CLASS] +
-        instance_args + list(args), stdout=out, stderr=out)
+        ["java", "-cp", S.heroic_jar] + java_opts + [MAIN_CLASS] +
+        instance_args, stdout=out, stderr=out)
 
 
 def setup(**kwargs):
@@ -204,6 +206,7 @@ def setup_apis(configs, sock, **kwargs):
 
     debug = kwargs.pop('debug', S.debug)
     args = kwargs.pop('args', [])
+    java_opts = kwargs.pop('java_opts', S.java_opts)
 
     procs = dict()
     tempfiles = []
@@ -213,7 +216,8 @@ def setup_apis(configs, sock, **kwargs):
             t = tempfile.NamedTemporaryFile(prefix="heroic-config-")
             yaml.dump(c, t)
             tempfiles.append(t)
-            procs[i] = heroic(i, config=t.name, debug=debug, args=args)
+            procs[i] = heroic(i, config=t.name, debug=debug, args=args,
+                              java_opts=java_opts)
 
         apis = dict()
 
@@ -280,6 +284,7 @@ def managed(*configs, **kwargs):
 
     debug = kwargs.pop("debug", S.debug)
     args = kwargs.pop("args", [])
+    java_opts = kwargs.pop('java_opts', S.java_opts)
 
     try:
         sock.bind(('localhost', PING_PORT))
@@ -288,7 +293,8 @@ def managed(*configs, **kwargs):
         raise
 
     try:
-        apis = setup_apis(configs, sock, debug=debug, args=args)
+        apis = setup_apis(configs, sock, debug=debug, args=args,
+                          java_opts=java_opts)
     finally:
         sock.close()
 
@@ -310,3 +316,35 @@ def managed(*configs, **kwargs):
     finally:
         for p in apis:
             p.reap()
+
+
+@contextlib.contextmanager
+def managed_cluster(count, base_port=2000, features=[]):
+    configs = list()
+
+    ports = range(base_port, base_port + count)
+
+    for i, port in enumerate(ports):
+        configs.append({
+            "id": "heroic-{}".format(i),
+            "features": features,
+            "cluster": {
+                "protocols": [{"type": "nativerpc", "port": port}],
+                "useLocal": False, "tags": {"foo": "bar"}}})
+
+    peers = ["nativerpc://localhost:{}".format(port) for port in ports]
+
+    with managed(*configs, args=["-P", "memory"]) as nodes:
+        for n in nodes:
+            status = n.status()
+            assert True == status["ok"], repr(status)
+
+            for peer in peers:
+                n.cluster_add_node(peer)
+
+            cluster_status = n.cluster_status()
+            message = "{} != {}".format(len(peers),
+                                        len(cluster_status["nodes"]))
+            assert len(peers) == len(cluster_status["nodes"]), message
+
+        yield nodes
