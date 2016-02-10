@@ -21,12 +21,9 @@
 
 package com.spotify.heroic.filter;
 
-import java.util.Collection;
-
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.filter.impl.AndFilterImpl;
 import com.spotify.heroic.filter.impl.FalseFilterImpl;
@@ -41,6 +38,8 @@ import com.spotify.heroic.filter.impl.SerializerCommon;
 import com.spotify.heroic.filter.impl.StartsWithFilterImpl;
 import com.spotify.heroic.filter.impl.TrueFilterImpl;
 
+import java.util.Collection;
+
 import eu.toolchain.serializer.SerializerFramework;
 
 public class Module implements HeroicModule {
@@ -48,7 +47,7 @@ public class Module implements HeroicModule {
     public Entry setup() {
         return new Entry() {
             @Inject
-            private HeroicContext ctx;
+            private FilterRegistry c;
 
             @Inject
             @Named("common")
@@ -59,7 +58,7 @@ public class Module implements HeroicModule {
 
             @Override
             public void setup() {
-                ctx.filter(AndFilterImpl.OPERATOR, Filter.And.class, AndFilterImpl.class,
+                c.register(AndFilterImpl.OPERATOR, Filter.And.class,
                         new MultiArgumentsFilterBase<Filter.And, Filter>(SerializerCommon.FILTER) {
                     @Override
                     public Filter.And build(Collection<Filter> filters) {
@@ -67,7 +66,7 @@ public class Module implements HeroicModule {
                     }
                 }, filter);
 
-                ctx.filter(OrFilterImpl.OPERATOR, Filter.Or.class, OrFilterImpl.class,
+                c.register(OrFilterImpl.OPERATOR, Filter.Or.class,
                         new MultiArgumentsFilterBase<Filter.Or, Filter>(SerializerCommon.FILTER) {
                     @Override
                     public Filter.Or build(Collection<Filter> filters) {
@@ -75,7 +74,7 @@ public class Module implements HeroicModule {
                     }
                 }, filter);
 
-                ctx.filter(NotFilterImpl.OPERATOR, Filter.Not.class, NotFilterImpl.class,
+                c.register(NotFilterImpl.OPERATOR, Filter.Not.class,
                         new OneArgumentFilterBase<Filter.Not, Filter>(SerializerCommon.FILTER) {
                     @Override
                     public Filter.Not build(Filter filter) {
@@ -83,8 +82,7 @@ public class Module implements HeroicModule {
                     }
                 }, filter);
 
-                ctx.filter(MatchKeyFilterImpl.OPERATOR, Filter.MatchKey.class,
-                        MatchKeyFilterImpl.class,
+                c.register(MatchKeyFilterImpl.OPERATOR, Filter.MatchKey.class,
                         new OneArgumentFilterBase<Filter.MatchKey, String>(
                                 SerializerCommon.STRING) {
                     @Override
@@ -93,8 +91,7 @@ public class Module implements HeroicModule {
                     }
                 }, s.string());
 
-                ctx.filter(MatchTagFilterImpl.OPERATOR, Filter.MatchTag.class,
-                        MatchTagFilterImpl.class,
+                c.register(MatchTagFilterImpl.OPERATOR, Filter.MatchTag.class,
                         new TwoArgumentsFilterBase<Filter.MatchTag, String, String>(
                                 SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
@@ -103,7 +100,7 @@ public class Module implements HeroicModule {
                     }
                 }, s.string(), s.string());
 
-                ctx.filter(HasTagFilterImpl.OPERATOR, Filter.HasTag.class, HasTagFilterImpl.class,
+                c.register(HasTagFilterImpl.OPERATOR, Filter.HasTag.class,
                         new OneArgumentFilterBase<Filter.HasTag, String>(SerializerCommon.STRING) {
                     @Override
                     public Filter.HasTag build(String first) {
@@ -111,8 +108,7 @@ public class Module implements HeroicModule {
                     }
                 }, s.string());
 
-                ctx.filter(StartsWithFilterImpl.OPERATOR, Filter.StartsWith.class,
-                        StartsWithFilterImpl.class,
+                c.register(StartsWithFilterImpl.OPERATOR, Filter.StartsWith.class,
                         new TwoArgumentsFilterBase<Filter.StartsWith, String, String>(
                                 SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
@@ -121,7 +117,7 @@ public class Module implements HeroicModule {
                     }
                 }, s.string(), s.string());
 
-                ctx.filter(RegexFilterImpl.OPERATOR, Filter.Regex.class, RegexFilterImpl.class,
+                c.register(RegexFilterImpl.OPERATOR, Filter.Regex.class,
                         new TwoArgumentsFilterBase<Filter.Regex, String, String>(
                                 SerializerCommon.STRING, SerializerCommon.STRING) {
                     @Override
@@ -130,7 +126,7 @@ public class Module implements HeroicModule {
                     }
                 }, s.string(), s.string());
 
-                ctx.filter(TrueFilterImpl.OPERATOR, Filter.True.class, TrueFilterImpl.class,
+                c.register(TrueFilterImpl.OPERATOR, Filter.True.class,
                         new NoArgumentFilterBase<Filter.True>() {
                     @Override
                     public Filter.True build() {
@@ -138,7 +134,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.filter(FalseFilterImpl.OPERATOR, Filter.False.class, FalseFilterImpl.class,
+                c.register(FalseFilterImpl.OPERATOR, Filter.False.class,
                         new NoArgumentFilterBase<Filter.False>() {
                     @Override
                     public Filter.False build() {
@@ -146,7 +142,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.filter(RawFilterImpl.OPERATOR, Filter.Raw.class, RawFilterImpl.class,
+                c.register(RawFilterImpl.OPERATOR, Filter.Raw.class,
                         new OneArgumentFilterBase<Filter.Raw, String>(SerializerCommon.STRING) {
                     @Override
                     public Filter.Raw build(String first) {

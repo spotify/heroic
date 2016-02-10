@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.grammar.AggregationValue;
@@ -44,7 +43,7 @@ public class Module implements HeroicModule {
     public Entry setup() {
         return new Entry() {
             @Inject
-            private HeroicContext ctx;
+            private AggregationRegistry c;
 
             @Inject
             private AggregationSerializer aggregation;
@@ -61,7 +60,7 @@ public class Module implements HeroicModule {
                 final Serializer<Optional<List<String>>> list = s.optional(s.list(s.string()));
                 final Serializer<List<AggregationInstance>> aggregations = s.list(aggregation);
 
-                ctx.aggregation(Empty.NAME, EmptyInstance.class, Empty.class,
+                c.register(Empty.NAME, Empty.class, EmptyInstance.class,
                         new Serializer<EmptyInstance>() {
                     @Override
                     public void serialize(SerialWriter buffer, EmptyInstance value)
@@ -74,7 +73,7 @@ public class Module implements HeroicModule {
                     }
                 }, args -> Empty.INSTANCE);
 
-                ctx.aggregation(Group.NAME, GroupInstance.class, Group.class,
+                c.register(Group.NAME, Group.class, GroupInstance.class,
                         new GroupingAggregationSerializer<GroupInstance>(list, aggregation) {
                     @Override
                     protected GroupInstance build(Optional<List<String>> of,
@@ -89,7 +88,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.aggregation(Collapse.NAME, CollapseInstance.class, Collapse.class,
+                c.register(Collapse.NAME, Collapse.class, CollapseInstance.class,
                         new GroupingAggregationSerializer<CollapseInstance>(list, aggregation) {
                     @Override
                     protected CollapseInstance build(Optional<List<String>> of,
@@ -104,7 +103,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.aggregation(Chain.NAME, ChainInstance.class, Chain.class,
+                c.register(Chain.NAME, Chain.class, ChainInstance.class,
                         new Serializer<ChainInstance>() {
                     @Override
                     public void serialize(SerialWriter buffer, ChainInstance value)
@@ -128,7 +127,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.aggregation(Partition.NAME, PartitionInstance.class, Partition.class,
+                c.register(Partition.NAME, Partition.class, PartitionInstance.class,
                         new Serializer<PartitionInstance>() {
                     @Override
                     public void serialize(SerialWriter buffer, PartitionInstance value)
@@ -151,7 +150,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.aggregation(Options.NAME, AggregationInstance.class, Options.class, aggregation,
+                c.register(Options.NAME, Options.class, AggregationInstance.class, aggregation,
                         new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {

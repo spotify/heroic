@@ -21,12 +21,19 @@
 
 package com.spotify.heroic.filter;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.grammar.QueryParser;
+
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -34,33 +41,77 @@ import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Serializes aggregation configurations.
- *
- * Each aggregation configuration is packed into a Composite which has the type of the aggregation
- * as a prefixed short.
- *
- * @author udoprog
- */
 @RequiredArgsConstructor
-public class FilterSerializerImpl implements FilterSerializer {
-    public static final int VERSION = 1;
+public class CoreFilterRegistry implements FilterRegistry {
+    private final Map<String, FilterJsonSerialization<? extends Filter>> deserializers =
+            new HashMap<>();
+
+    private final Map<Class<? extends Filter>, JsonSerializer<Filter>> serializers =
+            new HashMap<>();
 
     private final SerializerFramework s;
+
     private final Serializer<Integer> intNumber;
     private final Serializer<String> string;
 
     private final HashMap<String, Serializer<? extends Filter>> idMapping = new HashMap<>();
     private final HashMap<Class<?>, String> typeMapping = new HashMap<>();
 
-    // lock to prevent duplicate work when looking for an unknown type id.
-    private final Object typeIdLock = new Object();
+    @Override
+    public <T extends Filter.OneArg<A>, A> void register(String id, Class<T> type,
+            OneArgumentFilter<T, A> builder, Serializer<A> first) {
+        registerJson(id, type, builder);
+        register(id, type, new OneTermSerialization<>(builder, first));
+    }
 
-    /**
-     * Caches concrete type implementations to their corresponding id depending on which filter
-     * interface they impement.
-     */
-    private final ConcurrentHashMap<Class<?>, String> typeCache = new ConcurrentHashMap<>();
+    @Override
+    public <T extends Filter.TwoArgs<A, B>, A, B> void register(String id, Class<T> type,
+            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second) {
+        registerJson(id, type, builder);
+        register(id, type, new TwoTermsSerialization<>(builder, first, second));
+    }
+
+    @Override
+    public <T extends Filter.MultiArgs<A>, A> void register(String id, Class<T> type,
+            MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
+        registerJson(id, type, builder);
+        register(id, type, new ManyTermsSerialization<>(builder, s.list(term)));
+    }
+
+    @Override
+    public <T extends Filter.NoArg> void register(String id, Class<T> type,
+            NoArgumentFilter<T> builder) {
+        registerJson(id, type, builder);
+        register(id, type, new NoTermSerialization<>(builder));
+    }
+
+    @Override
+    public Module module(final QueryParser parser) {
+        final SimpleModule m = new SimpleModule("filter");
+
+        for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this.serializers
+                .entrySet()) {
+            m.addSerializer(e.getKey(), e.getValue());
+        }
+
+        final CoreFilterJsonDeserializer deserializer =
+                new CoreFilterJsonDeserializer(ImmutableMap.copyOf(deserializers), parser);
+        m.addDeserializer(Filter.class, deserializer);
+        return m;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends Filter> void registerJson(String id, Class<T> type,
+            FilterJsonSerialization<T> serialization) {
+        serializers.put(type,
+                new JsonSerializerImpl((FilterJsonSerialization<? super Filter>) serialization));
+        deserializers.put(id, serialization);
+    }
+
+    @Override
+    public FilterSerializer newFilterSerializer() {
+        return new CoreFilterSerializer(intNumber, string, idMapping, typeMapping);
+    }
 
     private <T extends Filter> void register(String id, Class<T> type, Serializer<T> serializer) {
         if (idMapping.put(id, serializer) != null) {
@@ -72,121 +123,35 @@ public class FilterSerializerImpl implements FilterSerializer {
         }
     }
 
-    @Override
-    public <T extends Filter.OneArg<A>, A> void register(String id, Class<T> type,
-            OneArgumentFilter<T, A> builder, Serializer<A> first) {
-        register(id, type, new OneTermSerialization<>(builder, first));
-    }
+    @RequiredArgsConstructor
+    private static final class JsonSerializerImpl extends JsonSerializer<Filter> {
+        private final FilterJsonSerialization<? super Filter> serializer;
 
-    @Override
-    public <T extends Filter.TwoArgs<A, B>, A, B> void register(String id, Class<T> type,
-            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second) {
-        register(id, type, new TwoTermsSerialization<>(builder, first, second));
-    }
+        @Override
+        public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
+                throws IOException, JsonProcessingException {
+            g.writeStartArray();
+            g.writeString(value.operator());
 
-    @Override
-    public <T extends Filter.MultiArgs<A>, A> void register(String id, Class<T> type,
-            MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
-        register(id, type, new ManyTermsSerialization<>(builder, s.list(term)));
-    }
-
-    @Override
-    public <T extends Filter.NoArg> void register(String id, Class<T> type,
-            NoArgumentFilter<T> builder) {
-        register(id, type, new NoTermSerialization<>(builder));
-    }
-
-    /**
-     * Scan the type hierarchy of the provided type to find an implementation.
-     *
-     * @param type
-     * @return
-     */
-    private String getTypeId(Class<? extends Filter> type) {
-        final String id = typeCache.get(type);
-
-        if (id != null) {
-            return id;
+            final SerializerImpl s = new SerializerImpl(g);
+            serializer.serialize(s, value);
+            g.writeEndArray();
         }
 
-        synchronized (typeIdLock) {
-            final String checkId = typeCache.get(type);
+        @RequiredArgsConstructor
+        private static final class SerializerImpl implements FilterJsonSerialization.Serializer {
+            private final JsonGenerator generator;
 
-            if (checkId != null) {
-                return checkId;
+            @Override
+            public void string(String string) throws IOException {
+                generator.writeString(string);
             }
 
-            final LinkedList<Class<?>> queue =
-                    new LinkedList<>(Arrays.asList(type.getInterfaces()));
-
-            while (!queue.isEmpty()) {
-                final Class<?> candidateType = queue.pop();
-                queue.addAll(Arrays.asList(candidateType.getInterfaces()));
-
-                if (!Filter.class.isAssignableFrom(candidateType)) {
-                    continue;
-                }
-
-                final String candidateId = typeMapping.get(candidateType);
-
-                if (candidateId == null) {
-                    continue;
-                }
-
-                typeCache.put(type, candidateId);
-                return candidateId;
+            @Override
+            public void filter(Filter filter) throws IOException {
+                generator.writeObject(filter);
             }
         }
-
-        // discourage calling this method again with the given type.
-        throw new RuntimeException("No serializer for type " + type);
-    }
-
-    private Serializer<Filter> getSerializer(String id) {
-        @SuppressWarnings("unchecked")
-        final Serializer<Filter> serializer = (Serializer<Filter>) idMapping.get(id);
-
-        if (serializer == null) {
-            throw new RuntimeException("No serializer for type id " + id);
-        }
-
-        return serializer;
-    }
-
-    @Override
-    public void serialize(SerialWriter buffer, Filter value) throws IOException {
-        final Filter optimized = value.optimize();
-
-        final String typeId = getTypeId(optimized.getClass());
-
-        final Serializer<Filter> serializer = getSerializer(typeId);
-
-        intNumber.serialize(buffer, VERSION);
-        string.serialize(buffer, typeId);
-
-        final SerialWriter.Scope scope = buffer.scope();
-        serializer.serialize(scope, optimized);
-        scope.close();
-    }
-
-    @Override
-    public Filter deserialize(SerialReader buffer) throws IOException {
-        final int version = intNumber.deserialize(buffer);
-        final String typeId = string.deserialize(buffer);
-
-        if (version != VERSION) {
-            buffer.skip();
-            return null;
-        }
-
-        final Serializer<Filter> serializer = getSerializer(typeId);
-
-        if (serializer == null) {
-            buffer.skip();
-            return null;
-        }
-
-        return serializer.deserialize(buffer.scope());
     }
 
     @RequiredArgsConstructor

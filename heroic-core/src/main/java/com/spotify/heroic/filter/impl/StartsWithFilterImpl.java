@@ -29,7 +29,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = { "OPERATOR", "tag", "value" }, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
 public class StartsWithFilterImpl implements Filter.StartsWith {
     public static final String OPERATOR = "^";
 

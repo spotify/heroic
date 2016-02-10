@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.fasterxml.jackson.databind.Module;
-
 import eu.toolchain.serializer.Serializer;
 
 /**
@@ -34,10 +32,4 @@ import eu.toolchain.serializer.Serializer;
  * @author udoprog
  */
 public interface AggregationSerializer extends Serializer<AggregationInstance> {
-    <T extends Aggregation> void registerQuery(String id, Class<T> queryType);
-
-    <T extends AggregationInstance> void register(String id, Class<T> clazz,
-            Serializer<T> serializer, AggregationDSL builder);
-
-    Module module();
 }

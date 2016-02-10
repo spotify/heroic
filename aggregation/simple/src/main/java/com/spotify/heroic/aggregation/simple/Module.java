@@ -21,23 +21,23 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.io.IOException;
-import java.util.Optional;
-import java.util.function.BiFunction;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
+import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
+
+import java.io.IOException;
+import java.util.Optional;
+import java.util.function.BiFunction;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
@@ -51,7 +51,7 @@ public class Module implements HeroicModule {
     public Entry setup() {
         return new Entry() {
             @Inject
-            private HeroicContext ctx;
+            private AggregationRegistry c;
 
             @Inject
             @Named("common")
@@ -66,39 +66,39 @@ public class Module implements HeroicModule {
             @Override
             public void setup() {
                 /* example aggregation, if used only returns zeroes. */
-                ctx.aggregation(Template.NAME, TemplateInstance.class, Template.class,
+                c.register(Template.NAME, Template.class, TemplateInstance.class,
                         samplingSerializer(TemplateInstance::new), samplingBuilder(Template::new));
 
-                ctx.aggregation(Spread.NAME, SpreadInstance.class, Spread.class,
+                c.register(Spread.NAME, Spread.class, SpreadInstance.class,
                         samplingSerializer(SpreadInstance::new), samplingBuilder(Spread::new));
 
-                ctx.aggregation(Sum.NAME, SumInstance.class, Sum.class,
+                c.register(Sum.NAME, Sum.class, SumInstance.class,
                         samplingSerializer(SumInstance::new), samplingBuilder(Sum::new));
 
-                ctx.aggregation(Average.NAME, AverageInstance.class, Average.class,
+                c.register(Average.NAME, Average.class, AverageInstance.class,
                         samplingSerializer(AverageInstance::new), samplingBuilder(Average::new));
 
-                ctx.aggregation(Min.NAME, MinInstance.class, Min.class,
+                c.register(Min.NAME, Min.class, MinInstance.class,
                         samplingSerializer(MinInstance::new), samplingBuilder(Min::new));
 
-                ctx.aggregation(Max.NAME, MaxInstance.class, Max.class,
+                c.register(Max.NAME, Max.class, MaxInstance.class,
                         samplingSerializer(MaxInstance::new), samplingBuilder(Max::new));
 
-                ctx.aggregation(StdDev.NAME, StdDevInstance.class, StdDev.class,
+                c.register(StdDev.NAME, StdDev.class, StdDevInstance.class,
                         samplingSerializer(StdDevInstance::new), samplingBuilder(StdDev::new));
 
-                ctx.aggregation(CountUnique.NAME, CountUniqueInstance.class, CountUnique.class,
+                c.register(CountUnique.NAME, CountUnique.class, CountUniqueInstance.class,
                         samplingSerializer(CountUniqueInstance::new),
                         samplingBuilder(CountUnique::new));
 
-                ctx.aggregation(Count.NAME, CountInstance.class, Count.class,
+                c.register(Count.NAME, Count.class, CountInstance.class,
                         samplingSerializer(CountInstance::new), samplingBuilder(Count::new));
 
-                ctx.aggregation(GroupUnique.NAME, GroupUniqueInstance.class, GroupUnique.class,
+                c.register(GroupUnique.NAME, GroupUnique.class, GroupUniqueInstance.class,
                         samplingSerializer(GroupUniqueInstance::new),
                         samplingBuilder(GroupUnique::new));
 
-                ctx.aggregation(Quantile.NAME, QuantileInstance.class, Quantile.class,
+                c.register(Quantile.NAME, Quantile.class, QuantileInstance.class,
                         new Serializer<QuantileInstance>() {
                     final Serializer<Double> fixedDouble = s.fixedDouble();
                     final Serializer<Long> fixedLong = s.fixedLong();
@@ -132,7 +132,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-                ctx.aggregation(TopK.NAME, TopKInstance.class, TopK.class,
+                c.register(TopK.NAME, TopK.class, TopKInstance.class,
                     new FilterKSerializer<TopKInstance>(s, aggregation) {
                         @Override
                         protected TopKInstance build(long k, AggregationInstance of) {
@@ -146,7 +146,7 @@ public class Module implements HeroicModule {
                         }
                     });
 
-                ctx.aggregation(BottomK.NAME, BottomKInstance.class, BottomK.class,
+                c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
                     new FilterKSerializer<BottomKInstance>(s, aggregation) {
                         @Override
                         protected BottomKInstance build(long k, AggregationInstance of) {

@@ -26,13 +26,14 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.spotify.heroic.aggregation.AggregationSerializer;
+import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.common.CollectingTypeListener;
 import com.spotify.heroic.common.IsSubclassOf;
 import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.filter.FilterJsonDeserializer;
-import com.spotify.heroic.filter.FilterJsonSerializer;
+import com.spotify.heroic.filter.FilterRegistry;
+import com.spotify.heroic.grammar.CoreQueryParser;
+import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
@@ -153,14 +154,13 @@ public class HeroicPrimaryModule extends AbstractModule {
     @Singleton
     @Named(HeroicCore.APPLICATION_JSON_INTERNAL)
     @Inject
-    public ObjectMapper internalMapper(FilterJsonSerializer serializer,
-            FilterJsonDeserializer deserializer, AggregationSerializer aggregationSerializer) {
+    public ObjectMapper internalMapper(FilterRegistry filterRegistry, QueryParser parser,
+            AggregationRegistry aggregation) {
         final ObjectMapper m = HeroicMappers.json();
 
         /* configuration determined at runtime, unsuitable for testing */
-        m.registerModule(serializer.module());
-        m.registerModule(deserializer.module());
-        m.registerModule(aggregationSerializer.module());
+        m.registerModule(filterRegistry.module(parser));
+        m.registerModule(aggregation.module());
 
         return m;
     }
@@ -176,6 +176,7 @@ public class HeroicPrimaryModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(QueryParser.class).to(CoreQueryParser.class).in(Scopes.SINGLETON);
         bind(QueryManager.class).to(CoreQueryManager.class).in(Scopes.SINGLETON);
 
         if (setupService) {

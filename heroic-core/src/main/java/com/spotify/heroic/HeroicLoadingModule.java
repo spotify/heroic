@@ -26,6 +26,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
@@ -34,16 +35,11 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Series_Serializer;
 import com.spotify.heroic.filter.CoreFilterFactory;
 import com.spotify.heroic.filter.CoreFilterModifier;
+import com.spotify.heroic.filter.CoreFilterRegistry;
 import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.filter.FilterJsonDeserializer;
-import com.spotify.heroic.filter.FilterJsonDeserializerImpl;
-import com.spotify.heroic.filter.FilterJsonSerializer;
-import com.spotify.heroic.filter.FilterJsonSerializerImpl;
 import com.spotify.heroic.filter.FilterModifier;
+import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.filter.FilterSerializer;
-import com.spotify.heroic.filter.FilterSerializerImpl;
-import com.spotify.heroic.grammar.CoreQueryParser;
-import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.scheduler.DefaultScheduler;
 import com.spotify.heroic.scheduler.Scheduler;
 
@@ -94,26 +90,32 @@ public class HeroicLoadingModule extends AbstractModule {
 
     @Provides
     @Singleton
-    FilterSerializer filterSerializer(@Named("common") SerializerFramework s) {
-        return new FilterSerializerImpl(s, s.integer(), s.string());
+    FilterRegistry filterRegistry(@Named("common") SerializerFramework s) {
+        return new CoreFilterRegistry(s, s.fixedInteger(), s.string());
     }
 
     @Provides
     @Singleton
-    CoreAggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
+    FilterSerializer filterSerializer(FilterRegistry filterRegistry) {
+        return filterRegistry.newFilterSerializer();
+    }
+
+    @Provides
+    @Singleton
+    AggregationRegistry aggregationRegistry(@Named("common") SerializerFramework s) {
         return new CoreAggregationRegistry(s.string());
     }
 
     @Provides
     @Singleton
-    AggregationSerializer aggregationSerializer(CoreAggregationRegistry registry) {
-        return registry;
+    public AggregationFactory aggregationFactory(AggregationRegistry configuration) {
+        return configuration.newAggregationFactory();
     }
 
     @Provides
     @Singleton
-    AggregationFactory aggregationFactory(CoreAggregationRegistry registry) {
-        return registry;
+    public AggregationSerializer aggregationSerializer(AggregationRegistry configuration) {
+        return configuration.newAggregationSerializer();
     }
 
     @Provides
@@ -137,14 +139,10 @@ public class HeroicLoadingModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(FilterJsonSerializer.class).toInstance(new FilterJsonSerializerImpl());
-        bind(FilterJsonDeserializer.class).toInstance(new FilterJsonDeserializerImpl());
-
         bind(Scheduler.class).toInstance(new DefaultScheduler());
         bind(HeroicInternalLifeCycle.class).toInstance(lifeCycle);
         bind(FilterFactory.class).to(CoreFilterFactory.class).in(Scopes.SINGLETON);
         bind(FilterModifier.class).to(CoreFilterModifier.class).in(Scopes.SINGLETON);
-        bind(QueryParser.class).to(CoreQueryParser.class).in(Scopes.SINGLETON);
 
         bind(HeroicConfigurationContext.class).to(CoreHeroicConfigurationContext.class)
                 .in(Scopes.SINGLETON);

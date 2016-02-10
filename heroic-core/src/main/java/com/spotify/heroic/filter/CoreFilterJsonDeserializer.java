@@ -27,36 +27,18 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.inject.Inject;
 import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 
-public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
-        implements FilterJsonDeserializer {
-    private final Map<String, FilterJsonSerialization<? extends Filter>> impl = new HashMap<>();
-
-    @Inject
-    private QueryParser parser;
-
-    @Override
-    public <T extends Filter> void register(String id, FilterJsonSerialization<T> serializer) {
-        impl.put(id, serializer);
-    }
-
-    @Override
-    public Module module() {
-        final SimpleModule m = new SimpleModule("filterDeserializer");
-        m.addDeserializer(Filter.class, this);
-        return m;
-    }
+@RequiredArgsConstructor
+public class CoreFilterJsonDeserializer extends JsonDeserializer<Filter> {
+    final Map<String, FilterJsonSerialization<? extends Filter>> deserializers;
+    final QueryParser parser;
 
     @Override
     public Filter deserialize(JsonParser p, DeserializationContext c)
@@ -71,7 +53,7 @@ public class FilterJsonDeserializerImpl extends JsonDeserializer<Filter>
 
         final String operator = p.readValueAs(String.class);
 
-        final FilterJsonSerialization<? extends Filter> deserializer = impl.get(operator);
+        final FilterJsonSerialization<? extends Filter> deserializer = deserializers.get(operator);
 
         if (deserializer == null) {
             throw c.mappingException("No such operator: " + operator);

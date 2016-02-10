@@ -19,12 +19,28 @@
  * under the License.
  */
 
-package com.spotify.heroic.filter;
+package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.databind.Module;
 
-public interface FilterJsonSerializer {
-    <T extends Filter> void register(Class<T> type, FilterJsonSerialization<? super T> serializer);
+import eu.toolchain.serializer.Serializer;
+
+public interface AggregationRegistry {
+    /**
+     * Register a new aggregation.
+     *
+     * @param id The id of the new aggregation, will be used in the type field, and in the DSL.
+     * @param type The type of the aggregation.
+     * @param instanceType The type of the instance.
+     * @param instanceSerializer Serializer for the aggregation instance.
+     * @param dsl DSL factory for the aggregation.
+     */
+    <A extends Aggregation, I extends AggregationInstance> void register(String id, Class<A> type,
+            Class<I> instanceType, Serializer<I> instanceSerializer, AggregationDSL dsl);
 
     Module module();
+
+    AggregationFactory newAggregationFactory();
+
+    AggregationSerializer newAggregationSerializer();
 }
