@@ -118,7 +118,7 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
         final AggregationDSL builder = builders.get(name);
 
         if (builder == null) {
-            throw new IllegalArgumentException(String.format("no aggregation named %s", name));
+            throw new MissingAggregation(name);
         }
 
         final AggregationArguments a = new AggregationArguments(args.getList(), keywords);
@@ -128,7 +128,7 @@ public class CoreAggregationRegistry implements AggregationSerializer, Aggregati
         try {
             aggregation = builder.build(a);
         } catch (final Exception e) {
-            throw new IllegalArgumentException(name + ": " + e.getMessage(), e);
+            throw new RuntimeException(name + ": " + e.getMessage(), e);
         }
 
         // throw an exception unless all provided arguments have been consumed.

@@ -29,6 +29,7 @@ import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.MissingAggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByAllContext;
@@ -68,16 +69,16 @@ import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
 import com.spotify.heroic.metric.MetricType;
 
+import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Stack;
 import java.util.concurrent.TimeUnit;
-
-import org.antlr.v4.runtime.CommonToken;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -228,8 +229,19 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitSelectAggregation(final SelectAggregationContext ctx) {
         final Context c = context(ctx);
-        pushOptional(pop(c, Value.class).toOptional()
-                .map(o -> o.cast(AggregationValue.class).build(aggregations)));
+
+        final Optional<Aggregation> aggregation;
+
+        try {
+            aggregation = pop(c, Value.class).toOptional()
+                    .map(o -> o.cast(AggregationValue.class).build(aggregations));
+        } catch (final MissingAggregation e) {
+            throw c.error("Not a valid aggregation: " + e.getName());
+        } catch (final Exception e) {
+            throw c.error(e);
+        }
+
+        pushOptional(aggregation);
         push(SELECT_MARK);
     }
 

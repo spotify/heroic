@@ -53,6 +53,10 @@ public class EmptyValue implements Value {
 
     @Override
     public <T> T cast(Class<T> to) {
+        if (to.equals(Value.class) || to.equals(EmptyValue.class)) {
+            return (T) this;
+        }
+
         throw c.castError(this, to);
     }
 

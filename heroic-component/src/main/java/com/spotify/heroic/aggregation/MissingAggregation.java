@@ -21,27 +21,16 @@
 
 package com.spotify.heroic.aggregation;
 
-import com.spotify.heroic.grammar.ListValue;
-import com.spotify.heroic.grammar.Value;
+import lombok.Getter;
 
-import java.util.Map;
+public class MissingAggregation extends RuntimeException {
+    private static final long serialVersionUID = -6533263351664767350L;
 
-/**
- * Factory to dynamically build aggregations.
- *
- * Used in Query DSL.
- *
- * @author udoprog
- */
-public interface AggregationFactory {
-    /**
-     * Build an aggregation with the given name and arguments.
-     *
-     * @param name The name of the aggregation.
-     * @param args Positional arguments of the aggregation.
-     * @param keywords Keyword arguments of the aggregation.
-     * @throws MissingAggregation If the given name does not reflect an available aggregation.
-     * @return The built aggregation.
-     */
-    public Aggregation build(String name, ListValue args, Map<String, Value> keywords);
+    @Getter
+    private final String name;
+
+    public MissingAggregation(final String name) {
+        super("Missing aggregation " + name);
+        this.name = name;
+    }
 }
