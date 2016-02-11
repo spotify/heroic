@@ -81,7 +81,6 @@ import java.util.function.Function;
 
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -256,7 +255,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         startLifeCycles(primary);
         startInternalLifecycles(primary);
 
-        log.info("Heroic was successfully started!");
+        log.info("Startup finished, hello!");
         return instance;
     }
 
@@ -613,28 +612,17 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         final List<Pair<AsyncFuture<Void>, LifeCycle>> pairs = new ArrayList<>();
 
         for (final LifeCycle l : lifeCycles) {
-            log.info("{}: running {}", op, l);
+            log.trace("[{}]: {}", op, l);
 
-            final Stopwatch w = Stopwatch.createStarted();
+            final AsyncFuture<Void> future = fn.apply(l);
 
-            final AsyncFuture<Void> future = fn.apply(l).onDone(new FutureDone<Void>() {
-                @Override
-                public void failed(Throwable cause) throws Exception {
-                    log.info("[{}] failed: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS),
-                            cause);
-                }
+            if (log.isTraceEnabled()) {
+                final Stopwatch w = Stopwatch.createStarted();
 
-                @Override
-                public void resolved(Void result) throws Exception {
-                    log.info("[{}] done: {} (took {}ms)", op, l, w.elapsed(TimeUnit.MILLISECONDS));
-                }
-
-                @Override
-                public void cancelled() throws Exception {
-                    log.info("[{}] cancelled: {} (took {}ms)", op, l,
-                            w.elapsed(TimeUnit.MILLISECONDS));
-                }
-            });
+                future.onFinished(() -> {
+                    log.trace("[%s] {}, took {}ms", op, l, w.elapsed(TimeUnit.MILLISECONDS));
+                });
+            }
 
             futures.add(future);
             pairs.add(Pair.of(future, l));
@@ -692,12 +680,13 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         modules.addAll(this.modules);
 
         for (final HeroicModule module : modules) {
-            log.info("Loading Module: {}", module.getClass().getPackage().getName());
             // inject members of an entry point and run them.
             final HeroicModule.Entry entry = module.setup();
             injector.injectMembers(entry);
             entry.setup();
         }
+
+        log.info("Loaded {} module(s)", modules.size());
     }
 
     public static Builder builder() {

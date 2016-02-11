@@ -109,7 +109,12 @@ public class HeroicServer implements LifeCycle {
     public AsyncFuture<Void> start() {
         final Server newServer = new Server();
         setupConnectors(newServer).forEach(newServer::addConnector);
-        newServer.setHandler(setupHandler());
+
+        try {
+            newServer.setHandler(setupHandler());
+        } catch (final Exception e) {
+            return async.failed(e);
+        }
 
         return async.call(() -> {
             synchronized (lock) {
@@ -186,7 +191,7 @@ public class HeroicServer implements LifeCycle {
         return server != null;
     }
 
-    private HandlerCollection setupHandler() {
+    private HandlerCollection setupHandler() throws Exception {
         final ResourceConfig resourceConfig = setupResourceConfig();
         final ServletContainer servlet = new ServletContainer(resourceConfig);
 
@@ -247,11 +252,14 @@ public class HeroicServer implements LifeCycle {
         }
     }
 
-    private ResourceConfig setupResourceConfig() {
+    private ResourceConfig setupResourceConfig() throws Exception {
         final ResourceConfig c = new ResourceConfig();
 
         for (final Class<?> resource : config.getResources()) {
-            log.info("Loading Resource: {}", resource.getCanonicalName());
+            if (log.isTraceEnabled()) {
+                log.trace("Loading resource: {}", resource);
+            }
+
             c.register(setupResource(resource));
         }
 
@@ -263,6 +271,7 @@ public class HeroicServer implements LifeCycle {
         c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class,
                 MessageBodyWriter.class);
 
+        log.info("Loaded {} resource(s)", config.getResources().size());
         return c;
     }
 

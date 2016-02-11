@@ -26,7 +26,6 @@ import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.http.cluster.ClusterResource;
 import com.spotify.heroic.http.metadata.MetadataResource;
-import com.spotify.heroic.http.metadata.MetadataResourceModule;
 import com.spotify.heroic.http.parser.ParserResource;
 import com.spotify.heroic.http.query.QueryResource;
 import com.spotify.heroic.http.render.RenderResource;
@@ -50,7 +49,6 @@ public class Module implements HeroicModule {
                 config.resource(RenderResource.class);
                 config.resource(QueryResource.class);
                 config.resource(MetadataResource.class);
-                config.module(new MetadataResourceModule());
                 config.resource(ClusterResource.class);
                 config.resource(ParserResource.class);
             }
