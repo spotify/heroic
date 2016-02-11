@@ -70,6 +70,7 @@ def main(program, args):
 
         with in_dir(build_root):
             sp.call(["mvn", "clean", "package",
+                     "-D", "maven.test.skip=true",
                      "-D", "findbugs.skip=true",
                      "-D", "checkstyle.skip=true"])
 
