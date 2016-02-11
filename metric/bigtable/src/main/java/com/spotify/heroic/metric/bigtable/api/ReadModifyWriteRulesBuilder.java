@@ -24,20 +24,24 @@ package com.spotify.heroic.metric.bigtable.api;
 import com.google.bigtable.v1.ReadModifyWriteRule;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Data;
 
 @Data
 public class ReadModifyWriteRulesBuilder {
     final List<ReadModifyWriteRule> rules = new ArrayList<>();
 
-    public ReadModifyWriteRulesBuilder increment(final String family, final ByteString column,
-            final long value) {
-        rules.add(ReadModifyWriteRule.newBuilder().setFamilyName(family).setColumnQualifier(column)
-                .setIncrementAmount(value).build());
+    public ReadModifyWriteRulesBuilder increment(
+        final String family, final ByteString column, final long value
+    ) {
+        rules.add(ReadModifyWriteRule
+            .newBuilder()
+            .setFamilyName(family)
+            .setColumnQualifier(column)
+            .setIncrementAmount(value)
+            .build());
         return this;
     }
 

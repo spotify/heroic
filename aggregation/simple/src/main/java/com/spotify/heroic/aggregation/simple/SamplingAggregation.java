@@ -21,21 +21,20 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import static com.spotify.heroic.common.Optionals.firstPresent;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.Duration;
-
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static com.spotify.heroic.common.Optionals.firstPresent;
 
 @Data
 public abstract class SamplingAggregation implements Aggregation {
@@ -78,6 +77,7 @@ public abstract class SamplingAggregation implements Aggregation {
         return String.format("%s(%s)", name, params.join(arguments));
     }
 
-    protected abstract AggregationInstance apply(AggregationContext context, long size,
-            long extent);
+    protected abstract AggregationInstance apply(
+        AggregationContext context, long size, long extent
+    );
 }

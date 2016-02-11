@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.List;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import java.util.List;
 
 /**
  * Indicates that a specific shard of the request failed and information on which and why.
@@ -40,8 +39,10 @@ public class SeriesError implements RequestError {
     private final boolean internal;
 
     @JsonCreator
-    public static SeriesError create(@JsonProperty("tags") List<TagValues> tags,
-            @JsonProperty("error") String error, @JsonProperty("internal") Boolean internal) {
+    public static SeriesError create(
+        @JsonProperty("tags") List<TagValues> tags, @JsonProperty("error") String error,
+        @JsonProperty("internal") Boolean internal
+    ) {
         return new SeriesError(tags, error, internal);
     }
 

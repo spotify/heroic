@@ -21,23 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricManager;
@@ -47,26 +35,41 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.StreamCollector;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicLong;
 
 @TaskUsage("Count data for a given set of keys")
 @TaskName("count-data")
 public class CountData implements ShellTask {
     private static final Charset UTF8 = Charsets.UTF_8;
 
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
+    private final ObjectMapper mapper;
+    private final AsyncFramework async;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
+    public CountData(
+        MetricManager metrics, @Named("application/json") ObjectMapper mapper, AsyncFramework async
+    ) {
+        this.metrics = metrics;
+        this.mapper = mapper;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -85,12 +88,12 @@ public class CountData implements ShellTask {
 
         if (params.file != null) {
             try (final BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(io.newInputStream(params.file), UTF8))) {
+                new InputStreamReader(io.newInputStream(params.file), UTF8))) {
                 String line;
 
                 while ((line = reader.readLine()) != null) {
                     keys.add(
-                            mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
+                        mapper.readValue(line.trim(), BackendKeyArgument.class).toBackendKey());
                 }
             }
         }
@@ -137,8 +140,11 @@ public class CountData implements ShellTask {
             @Override
             public Void end(int resolved, int failed, int cancelled) throws Exception {
                 io.out().println();
-                io.out().println("Finished (resolved: " + resolved + ", failed: " + failed
-                        + ", cancelled: " + cancelled + ")");
+                io
+                    .out()
+                    .println(
+                        "Finished (resolved: " + resolved + ", failed: " + failed + ", cancelled:" +
+                            " " + cancelled + ")");
                 io.out().println("Total Count: " + count.get());
                 io.out().flush();
                 return null;
@@ -162,21 +168,30 @@ public class CountData implements ShellTask {
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
-                metaVar = "<file>")
+            metaVar = "<file>")
         private Path file;
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
         private List<String> keys = new ArrayList<>();
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
 
         @Option(name = "--parallelism", usage = "Configure how many deletes to perform in parallel",
-                metaVar = "<number>")
+            metaVar = "<number>")
         private int parallelism = 20;
+    }
+
+    public static CountData setup(final CoreComponent core) {
+        return DaggerCountData_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        CountData task();
     }
 }

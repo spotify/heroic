@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Optional;
-
 import com.spotify.heroic.common.Series;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 
 @Data
 @RequiredArgsConstructor

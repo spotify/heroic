@@ -35,7 +35,10 @@ import com.spotify.heroic.metadata.FindSeries;
 import com.spotify.heroic.metadata.FindTags;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metric.WriteResult;
-
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import org.elasticsearch.common.collect.ImmutableList;
 
 import java.util.HashMap;
@@ -44,11 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 @RequiredArgsConstructor
 @ToString(exclude = {"async", "storage"})
@@ -119,22 +117,23 @@ public class MemoryBackend implements MetadataBackend {
     @Override
     public AsyncFuture<DeleteSeries> deleteSeries(RangeFilter filter) {
         final int deletes =
-                (int) filter(filter.getFilter()).map(storage::remove).filter(b -> b).count();
+            (int) filter(filter.getFilter()).map(storage::remove).filter(b -> b).count();
         return async.resolved(new DeleteSeries(deletes, 0));
     }
 
     @Override
     public AsyncFuture<FindKeys> findKeys(RangeFilter filter) {
         final Set<String> keys =
-                ImmutableSet.copyOf(filter(filter.getFilter()).map(Series::getKey).iterator());
+            ImmutableSet.copyOf(filter(filter.getFilter()).map(Series::getKey).iterator());
         return async.resolved(new FindKeys(keys, keys.size(), 0));
     }
 
     @Override
     public AsyncObservable<List<Series>> entries(RangeFilter filter) {
         return observer -> {
-            observer.observe(ImmutableList.copyOf(filter(filter.getFilter()).iterator()))
-                    .onFinished(observer::end);
+            observer
+                .observe(ImmutableList.copyOf(filter(filter.getFilter()).iterator()))
+                .onFinished(observer::end);
         };
     }
 

@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
- *
+ * <p>
  * Take care to not blindly trust {@link #value()} since it is initialized to 0 for simplicity.
  * Always check {@link #count()}, which if zero indicates that the {@link #value()} is undefined
  * (e.g. NaN).

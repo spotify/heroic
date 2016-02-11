@@ -21,10 +21,15 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+import com.google.common.base.Joiner;
+import com.spotify.heroic.Query;
+import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.metric.MetricType;
+import lombok.Data;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -34,17 +39,10 @@ import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import com.google.common.base.Joiner;
-import com.google.inject.Inject;
-import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.metric.MetricType;
-
-import lombok.Data;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class CoreQueryParser implements QueryParser {
     public static final Operation<Value> EXPRESSION = new Operation<Value>() {
@@ -55,7 +53,7 @@ public class CoreQueryParser implements QueryParser {
 
         public Value convert(QueryListener listener) {
             return listener.pop(Value.class);
-        };
+        }
     };
 
     public static final Operation<Query> QUERY = new Operation<Query>() {
@@ -67,7 +65,7 @@ public class CoreQueryParser implements QueryParser {
         @Override
         public Query convert(QueryListener listener) {
             return listener.pop(Query.class);
-        };
+        }
     };
 
     public static final Operation<Filter> FILTER = new Operation<Filter>() {
@@ -79,35 +77,35 @@ public class CoreQueryParser implements QueryParser {
         @Override
         public Filter convert(QueryListener listener) {
             return listener.pop(Filter.class).optimize();
-        };
+        }
     };
 
     public static final Operation<AggregationValue> AGGREGATION =
-            new Operation<AggregationValue>() {
-                @Override
-                public ParserRuleContext context(HeroicQueryParser parser) {
-                    return parser.expressionOnly();
-                }
+        new Operation<AggregationValue>() {
+            @Override
+            public ParserRuleContext context(HeroicQueryParser parser) {
+                return parser.expressionOnly();
+            }
 
-                @Override
-                public AggregationValue convert(QueryListener listener) {
-                    return listener.pop(AggregationValue.class);
-                };
-            };
+            @Override
+            public AggregationValue convert(QueryListener listener) {
+                return listener.pop(AggregationValue.class);
+            }
+        };
 
     public static final Operation<Optional<Aggregation>> SELECT =
-            new Operation<Optional<Aggregation>>() {
-                @Override
-                public ParserRuleContext context(HeroicQueryParser parser) {
-                    return parser.select();
-                }
+        new Operation<Optional<Aggregation>>() {
+            @Override
+            public ParserRuleContext context(HeroicQueryParser parser) {
+                return parser.select();
+            }
 
-                @Override
-                public Optional<Aggregation> convert(QueryListener listener) {
-                    listener.popMark(QueryListener.SELECT_MARK);
-                    return listener.popOptional(Aggregation.class);
-                };
-            };
+            @Override
+            public Optional<Aggregation> convert(QueryListener listener) {
+                listener.popMark(QueryListener.SELECT_MARK);
+                return listener.popOptional(Aggregation.class);
+            }
+        };
 
     public static final Operation<FromDSL> FROM = new Operation<FromDSL>() {
         @Override
@@ -121,7 +119,7 @@ public class CoreQueryParser implements QueryParser {
             final MetricType source = listener.pop(MetricType.class);
             final Optional<QueryDateRange> range = listener.popOptional(QueryDateRange.class);
             return new FromDSL(source, range);
-        };
+        }
     };
 
     private final FilterFactory filters;
@@ -202,8 +200,8 @@ public class CoreQueryParser implements QueryParser {
 
         if (last.getType() != Token.EOF) {
             throw new ParseException(
-                    String.format("garbage at end of string: '%s'", last.getText()), null,
-                    last.getLine(), last.getCharPositionInLine());
+                String.format("garbage at end of string: '%s'", last.getText()), null,
+                last.getLine(), last.getCharPositionInLine());
         }
 
         return op.convert(listener);
@@ -214,11 +212,11 @@ public class CoreQueryParser implements QueryParser {
 
         if (token.getType() == HeroicQueryLexer.UnterminatedQutoedString) {
             return new ParseException(String.format("unterminated string: %s", token.getText()),
-                    null, token.getLine(), token.getCharPositionInLine());
+                null, token.getLine(), token.getCharPositionInLine());
         }
 
         return new ParseException("unexpected token: " + token.getText(), null, token.getLine(),
-                token.getCharPositionInLine());
+            token.getCharPositionInLine());
     }
 
     public static interface Operation<T> {

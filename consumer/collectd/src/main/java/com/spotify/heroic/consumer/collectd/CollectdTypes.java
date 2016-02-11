@@ -21,12 +21,6 @@
 
 package com.spotify.heroic.consumer.collectd;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -36,8 +30,13 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
-
 import lombok.Data;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class CollectdTypes {
     private static final Map<String, Mapping> mappings = new HashMap<>();
@@ -61,11 +60,13 @@ public class CollectdTypes {
     private final String typeInstanceTag;
 
     @JsonCreator
-    public CollectdTypes(@JsonProperty("key") Optional<String> key,
-            @JsonProperty("pluginTag") Optional<String> pluginTag,
-            @JsonProperty("pluginInstanceTag") Optional<String> pluginInstanceTag,
-            @JsonProperty("typeTag") Optional<String> typeTag,
-            @JsonProperty("typeInstanceTag") Optional<String> typeInstanceTag) {
+    public CollectdTypes(
+        @JsonProperty("key") Optional<String> key,
+        @JsonProperty("pluginTag") Optional<String> pluginTag,
+        @JsonProperty("pluginInstanceTag") Optional<String> pluginInstanceTag,
+        @JsonProperty("typeTag") Optional<String> typeTag,
+        @JsonProperty("typeInstanceTag") Optional<String> typeInstanceTag
+    ) {
         this.key = key.orElse(DEFAULT_KEY);
         this.pluginTag = pluginTag.orElse(DEFAULT_PLUGIN_TAG);
         this.pluginInstanceTag = pluginInstanceTag.orElse(DEFAULT_PLUGIN_INSTANCE_TAG);
@@ -75,11 +76,12 @@ public class CollectdTypes {
 
     public static CollectdTypes supplyDefault() {
         return new CollectdTypes(Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty());
+            Optional.empty(), Optional.empty());
     }
 
-    public List<WriteMetric> convert(final CollectdSample sample,
-            final Iterable<Map.Entry<String, String>> tags) {
+    public List<WriteMetric> convert(
+        final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
+    ) {
         final Mapping mapping = mappings.get(sample.getPlugin());
 
         if (mapping == null) {
@@ -91,11 +93,12 @@ public class CollectdTypes {
 
     /**
      * Default conversion of collectd samples.
-     *
+     * <p>
      * This
      */
-    private List<WriteMetric> convertDefault(final CollectdSample sample,
-            final Iterable<Map.Entry<String, String>> tags) {
+    private List<WriteMetric> convertDefault(
+        final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
+    ) {
         final long time = sample.getTime() * 1000;
 
         final Iterator<CollectdValue> values = sample.getValues().iterator();
@@ -142,8 +145,9 @@ public class CollectdTypes {
     private class Mapping {
         private final List<Field> fields;
 
-        public List<WriteMetric> convert(final CollectdSample sample,
-                final Iterable<Map.Entry<String, String>> tags) {
+        public List<WriteMetric> convert(
+            final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
+        ) {
             final long time = sample.getTime() * 1000;
 
             final Iterator<Field> fields = this.fields.iterator();
@@ -160,7 +164,7 @@ public class CollectdTypes {
                 final CollectdValue value = values.next();
 
                 final Series series = Series.of(key,
-                        Iterables.concat(tags, field.tags(sample, value).entrySet()).iterator());
+                    Iterables.concat(tags, field.tags(sample, value).entrySet()).iterator());
                 final Point point = new Point(time, value.convert(field));
 
                 final MetricCollection data = MetricCollection.points(ImmutableList.of(point));

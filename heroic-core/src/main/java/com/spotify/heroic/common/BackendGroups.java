@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.common;
 
+import com.google.common.collect.ImmutableList;
+import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,15 +33,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
-
-import lombok.Data;
-
 /**
  * Helper class to manage and query groups of backends.
  *
- * @author udoprog
  * @param <T>
+ * @author udoprog
  */
 @Data
 public class BackendGroups<T extends Initializing & Grouped> {
@@ -81,7 +80,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
         for (final Map.Entry<String, List<T>> entry : groups.entrySet()) {
             for (final T e : entry.getValue()) {
                 result.add(
-                        new GroupMember<>(entry.getKey(), e, e.getGroups(), defaults.contains(e)));
+                    new GroupMember<>(entry.getKey(), e, e.getGroups(), defaults.contains(e)));
             }
         }
 
@@ -93,7 +92,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
         if (results.isEmpty()) {
             throw new IllegalArgumentException(
-                    "Could not find one member of group '" + group + "'");
+                "Could not find one member of group '" + group + "'");
         }
 
         return results.iterator().next();
@@ -133,7 +132,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
         for (final T backend : backends) {
             if (backend.getGroups().isEmpty()) {
                 throw new IllegalStateException(
-                        "Backend " + backend + " does not belong to any groups");
+                    "Backend " + backend + " does not belong to any groups");
             }
 
             for (final String name : backend.getGroups()) {
@@ -151,8 +150,9 @@ public class BackendGroups<T extends Initializing & Grouped> {
         return groups;
     }
 
-    private static <T extends Grouped> Set<T> buildDefaults(final Map<String, List<T>> backends,
-            Optional<List<String>> defaultBackends) {
+    private static <T extends Grouped> Set<T> buildDefaults(
+        final Map<String, List<T>> backends, Optional<List<String>> defaultBackends
+    ) {
         final Set<T> defaults = new HashSet<>();
 
         // add all as defaults.
@@ -169,7 +169,7 @@ public class BackendGroups<T extends Initializing & Grouped> {
 
             if (someResult == null) {
                 throw new IllegalArgumentException(
-                        "No backend(s) available with group: " + defaultBackend);
+                    "No backend(s) available with group: " + defaultBackend);
             }
 
             defaults.addAll(someResult);
@@ -179,10 +179,11 @@ public class BackendGroups<T extends Initializing & Grouped> {
     }
 
     public static <T extends Grouped & Initializing> BackendGroups<T> build(
-            Collection<T> configured, Optional<List<String>> defaultBackends) {
+        Collection<T> configured, Optional<List<String>> defaultBackends
+    ) {
         final Map<String, List<T>> mappings = buildBackends(configured);
         final Set<T> defaults = buildDefaults(mappings, defaultBackends);
         return new BackendGroups<T>(ImmutableList.copyOf(configured), mappings,
-                ImmutableList.copyOf(defaults));
+            ImmutableList.copyOf(defaults));
     }
 }

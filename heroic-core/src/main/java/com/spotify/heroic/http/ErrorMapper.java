@@ -21,15 +21,20 @@
 
 package com.spotify.heroic.http;
 
+import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Inject;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import lombok.extern.slf4j.Slf4j;
-
 @Provider
 @Slf4j
 public class ErrorMapper implements ExceptionMapper<Error> {
+    @Inject
+    public ErrorMapper() {
+    }
+
     @Override
     public Response toResponse(Error e) {
         log.error("Fatal exception thrown in handler", e);

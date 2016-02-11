@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.grammar;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 public interface Value {
     default Value sub(Value other) {
@@ -55,8 +55,9 @@ public interface Value {
         return aggregation(name, arguments, ImmutableMap.of());
     }
 
-    static AggregationValue aggregation(String name, ListValue arguments,
-            Map<String, Value> keywords) {
+    static AggregationValue aggregation(
+        String name, ListValue arguments, Map<String, Value> keywords
+    ) {
         return new AggregationValue(name, arguments, keywords, Context.empty());
     }
 

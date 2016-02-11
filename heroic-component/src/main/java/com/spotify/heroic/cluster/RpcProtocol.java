@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.cluster;
 
-import java.net.URI;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.net.URI;
 
 public interface RpcProtocol {
     AsyncFuture<ClusterNode> connect(URI uri);

@@ -32,14 +32,13 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class BucketReducerSession<B extends Bucket> implements ReducerSession {
@@ -52,8 +51,10 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
 
     private final LongAdder sampleSize = new LongAdder();
 
-    public BucketReducerSession(MetricType out, long size, Function<Long, B> bucketBuilder,
-            Function<B, Metric> bucketConverter, DateRange range) {
+    public BucketReducerSession(
+        MetricType out, long size, Function<Long, B> bucketBuilder,
+        Function<B, Metric> bucketConverter, DateRange range
+    ) {
         this.out = out;
         this.size = size;
         this.buckets = buildBuckets(range, size, bucketBuilder);
@@ -80,8 +81,9 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
         feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(group, m));
     }
 
-    private <T extends Metric> void feed(final MetricType type, List<T> values,
-            final BucketConsumer<B, T> consumer) {
+    private <T extends Metric> void feed(
+        final MetricType type, List<T> values, final BucketConsumer<B, T> consumer
+    ) {
         int sampleSize = 0;
 
         for (final T m : values) {
@@ -118,7 +120,7 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
 
         final MetricCollection metrics = MetricCollection.build(out, result);
         final Statistics statistics =
-                new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
+            new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
         return new ReducerResult(ImmutableList.of(metrics), statistics);
     }
 

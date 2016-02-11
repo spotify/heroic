@@ -1,14 +1,14 @@
 package com.spotify.heroic.common;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.verify;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ThrowingTest {
@@ -25,7 +25,7 @@ public class ThrowingTest {
 
         Throwing.call(() -> {
             throw new Exception("a");
-        } , () -> {
+        }, () -> {
             throw new Exception("b");
         });
     }
@@ -38,7 +38,7 @@ public class ThrowingTest {
         try {
             Throwing.call(() -> {
                 throw new Exception("a");
-            } , runnable::run);
+            }, runnable::run);
         } catch (final Exception e) {
             verify(runnable).run();
             throw e;

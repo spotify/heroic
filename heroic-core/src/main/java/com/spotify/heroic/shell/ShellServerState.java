@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.shell;
 
-import java.net.ServerSocket;
-
 import lombok.Data;
+
+import java.net.ServerSocket;
 
 @Data
 class ShellServerState {

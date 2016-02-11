@@ -28,7 +28,7 @@ import java.util.Map;
 
 /**
  * Factory to dynamically build aggregations.
- *
+ * <p>
  * Used in Query DSL.
  *
  * @author udoprog
@@ -40,8 +40,8 @@ public interface AggregationFactory {
      * @param name The name of the aggregation.
      * @param args Positional arguments of the aggregation.
      * @param keywords Keyword arguments of the aggregation.
-     * @throws MissingAggregation If the given name does not reflect an available aggregation.
      * @return The built aggregation.
+     * @throws MissingAggregation If the given name does not reflect an available aggregation.
      */
     public Aggregation build(String name, ListValue args, Map<String, Value> keywords);
 }

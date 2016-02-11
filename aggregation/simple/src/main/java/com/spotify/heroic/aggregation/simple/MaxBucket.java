@@ -21,15 +21,14 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-
 import com.google.common.util.concurrent.AtomicDouble;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
 
 /**
  * A bucket implementation that retains the largest (max) value seen.

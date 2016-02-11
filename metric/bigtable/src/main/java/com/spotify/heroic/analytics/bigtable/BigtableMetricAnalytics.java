@@ -22,13 +22,13 @@
 package com.spotify.heroic.analytics.bigtable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.analytics.SeriesHit;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.MetricBackend;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import com.spotify.heroic.metric.bigtable.api.Column;
@@ -37,35 +37,27 @@ import com.spotify.heroic.metric.bigtable.api.Row;
 import com.spotify.heroic.metric.bigtable.api.RowRange;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.statistics.AnalyticsReporter;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
+import eu.toolchain.async.Managed;
+import lombok.ToString;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.Managed;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
-@ToString(of = {"connection"})
-public class BigtableMetricAnalytics implements MetricAnalytics {
-    @Inject
-    Managed<BigtableConnection> connection;
-
-    @Inject
-    AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    ObjectMapper mapper;
-
-    @Inject
-    AnalyticsReporter reporter;
+@BigtableScope
+@ToString(exclude = {"async", "mapper", "reporter"})
+public class BigtableMetricAnalytics implements MetricAnalytics, LifeCycles {
+    final Managed<BigtableConnection> connection;
+    final AsyncFramework async;
+    final ObjectMapper mapper;
+    final AnalyticsReporter reporter;
 
     final String hitsTableName;
     final String hitsColumnFamily;
@@ -73,26 +65,28 @@ public class BigtableMetricAnalytics implements MetricAnalytics {
 
     final SeriesKeyEncoding fetchSeries = new SeriesKeyEncoding("fetch");
 
-    public BigtableMetricAnalytics(final String hitsTableName, final String hitsColumnFamily,
-            final int maxPendingReports) {
+    @Inject
+    public BigtableMetricAnalytics(
+        final Managed<BigtableConnection> connection, final AsyncFramework async,
+        @Named("application/json") final ObjectMapper mapper, final AnalyticsReporter reporter,
+        @Named("hitsTableName") final String hitsTableName,
+        @Named("hitsColumnFamily") final String hitsColumnFamily,
+        @Named("maxPendingReports") final int maxPendingReports
+    ) {
+        this.connection = connection;
+        this.async = async;
+        this.mapper = mapper;
+        this.reporter = reporter;
+
         this.hitsTableName = hitsTableName;
         this.hitsColumnFamily = hitsColumnFamily;
         this.pendingReports = new Semaphore(maxPendingReports);
     }
 
     @Override
-    public AsyncFuture<Void> start() {
-        return connection.start();
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return connection.stop();
-    }
-
-    @Override
-    public boolean isReady() {
-        return connection.isReady();
+    public void register(LifeCycleRegistry registry) {
+        registry.start(this::start);
+        registry.stop(this::stop);
     }
 
     @Override
@@ -130,22 +124,24 @@ public class BigtableMetricAnalytics implements MetricAnalytics {
 
         final RowRange range = RowRange.rowRange(Optional.of(start), Optional.of(end));
 
-        return c.client()
-                .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
-                .transform(row -> {
-                    final ByteString rowKey = row.getKey();
-                    final SeriesKeyEncoding.SeriesKey k =
-                            fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
+        return c
+            .client()
+            .readRowsObserved(hitsTableName, ReadRowsRequest.builder().range(range).build())
+            .transform(row -> {
+                final ByteString rowKey = row.getKey();
+                final SeriesKeyEncoding.SeriesKey k =
+                    fetchSeries.decode(rowKey, s -> mapper.readValue(s, Series.class));
 
-                    final long value = row.getFamily(hitsColumnFamily).map(family -> {
-                        final Column col = family.getColumns().iterator().next();
-                        final ByteBuffer buf = ByteBuffer.wrap(col.getValue().toByteArray());
-                        buf.order(ByteOrder.BIG_ENDIAN);
-                        return buf.getLong();
-                    }).orElse(0L);
+                final long value = row.getFamily(hitsColumnFamily).map(family -> {
+                    final Column col = family.getColumns().iterator().next();
+                    final ByteBuffer buf = ByteBuffer.wrap(col.getValue().toByteArray());
+                    buf.order(ByteOrder.BIG_ENDIAN);
+                    return buf.getLong();
+                }).orElse(0L);
 
-                    return new SeriesHit(k.getSeries(), value);
-                }).onFinished(b::release);
+                return new SeriesHit(k.getSeries(), value);
+            })
+            .onFinished(b::release);
     }
 
     @Override
@@ -159,15 +155,27 @@ public class BigtableMetricAnalytics implements MetricAnalytics {
 
         return connection.doto(c -> {
             final ByteString key = fetchSeries.encode(new SeriesKeyEncoding.SeriesKey(date, series),
-                    mapper::writeValueAsString);
+                mapper::writeValueAsString);
 
-            final AsyncFuture<Row> request = c.client().readModifyWriteRow(hitsTableName, key,
-                    c.client().readModifyWriteRules()
-                            .increment(hitsColumnFamily, ByteString.EMPTY, 1L).build());
+            final AsyncFuture<Row> request = c
+                .client()
+                .readModifyWriteRow(hitsTableName, key, c
+                    .client()
+                    .readModifyWriteRules()
+                    .increment(hitsColumnFamily, ByteString.EMPTY, 1L)
+                    .build());
 
-            return request.<Void> directTransform(d -> null).onFailed(e -> {
+            return request.<Void>directTransform(d -> null).onFailed(e -> {
                 reporter.reportFailedFetchSeries();
             });
         }).onFinished(pendingReports::release);
+    }
+
+    private AsyncFuture<Void> start() {
+        return connection.start();
+    }
+
+    private AsyncFuture<Void> stop() {
+        return connection.stop();
     }
 }

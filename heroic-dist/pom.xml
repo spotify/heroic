@@ -55,11 +55,6 @@
       <artifactId>heroic-shell</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.spotify.heroic</groupId>
-      <artifactId>heroic-coalesce</artifactId>
-    </dependency>
-
     <!-- argument parsing -->
     <dependency>
       <groupId>args4j</groupId>
@@ -85,6 +80,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
 

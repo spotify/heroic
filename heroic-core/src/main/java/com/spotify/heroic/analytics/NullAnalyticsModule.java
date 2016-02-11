@@ -21,17 +21,29 @@
 
 package com.spotify.heroic.analytics;
 
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 
 public class NullAnalyticsModule implements AnalyticsModule {
-    public Module module() {
-        return new PrivateModule() {
-            @Override
-            protected void configure() {
-                bind(MetricAnalytics.class).to(NullMetricAnalytics.class);
-                expose(MetricAnalytics.class);
-            }
-        };
+    public AnalyticsComponent module(PrimaryComponent primary) {
+        return DaggerNullAnalyticsModule_C.builder().primaryComponent(primary).build();
+    }
+
+    @NullScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends AnalyticsComponent {
+        @Override
+        MetricAnalytics metricAnalytics();
+    }
+
+    @Module
+    public static class M {
+        @NullScope
+        @Provides
+        public MetricAnalytics metricAnalytics(NullMetricAnalytics metricAnalytics) {
+            return metricAnalytics;
+        }
     }
 }

@@ -21,21 +21,29 @@
 
 package com.spotify.heroic.ws;
 
+import com.spotify.heroic.grammar.ParseException;
+
+import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.spotify.heroic.grammar.ParseException;
-
 @Provider
 public class ParseExceptionMapper implements ExceptionMapper<ParseException> {
+    @Inject
+    public ParseExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(ParseException e) {
         final ParseErrorMessage entity =
-                new ParseErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST, e.getLine(),
-                        e.getCol(), e.getLineEnd(), e.getColEnd());
-        return Response.status(Response.Status.BAD_REQUEST).entity(entity)
-                .type(MediaType.APPLICATION_JSON).build();
+            new ParseErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST, e.getLine(),
+                e.getCol(), e.getLineEnd(), e.getColEnd());
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(entity)
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

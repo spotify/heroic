@@ -21,22 +21,29 @@
 
 package com.spotify.heroic.ws;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+
+import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
-
 @Provider
 public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingException> {
+    @Inject
+    public JsonMappingExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(JsonMappingException e) {
         final String path = constructPath(e);
 
-        return Response.status(Response.Status.BAD_REQUEST).entity(
-                new JsonErrorMessage(e.getOriginalMessage(), Response.Status.BAD_REQUEST, path))
-                .type(MediaType.APPLICATION_JSON).build();
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(new JsonErrorMessage(e.getOriginalMessage(), Response.Status.BAD_REQUEST, path))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 
     private String constructPath(final JsonMappingException e) {

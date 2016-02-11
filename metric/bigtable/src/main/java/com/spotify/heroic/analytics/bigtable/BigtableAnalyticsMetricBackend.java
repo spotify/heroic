@@ -38,14 +38,13 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
+import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
-
-import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 @ToString
 @RequiredArgsConstructor
@@ -84,8 +83,10 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(MetricType type, Series series, DateRange range,
-            FetchQuotaWatcher watcher, QueryOptions options) {
+    public AsyncFuture<FetchData> fetch(
+        MetricType type, Series series, DateRange range, FetchQuotaWatcher watcher,
+        QueryOptions options
+    ) {
         analytics.reportFetchSeries(LocalDate.now(), series);
         return backend.fetch(type, series, range, watcher, options);
     }
@@ -96,14 +97,16 @@ class BigtableAnalyticsMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<BackendKeySet> streamKeys(BackendKeyFilter filter,
-            QueryOptions options) {
+    public AsyncObservable<BackendKeySet> streamKeys(
+        BackendKeyFilter filter, QueryOptions options
+    ) {
         return backend.streamKeys(filter, options);
     }
 
     @Override
-    public AsyncObservable<BackendKeySet> streamKeysPaged(BackendKeyFilter filter,
-            QueryOptions options, int pageSize) {
+    public AsyncObservable<BackendKeySet> streamKeysPaged(
+        BackendKeyFilter filter, QueryOptions options, int pageSize
+    ) {
         return backend.streamKeysPaged(filter, options, pageSize);
     }
 

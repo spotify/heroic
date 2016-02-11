@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.http.cluster;
 
-import java.util.List;
-
+import com.spotify.heroic.cluster.ClusterManager;
 import lombok.Data;
 
-import com.spotify.heroic.cluster.ClusterManager;
+import java.util.List;
 
 @Data
 public class ClusterStatus {

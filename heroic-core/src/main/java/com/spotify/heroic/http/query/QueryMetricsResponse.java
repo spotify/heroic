@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.http.query;
 
-import java.io.IOException;
-import java.util.List;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -38,9 +35,11 @@ import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardLatency;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import java.io.IOException;
+import java.util.List;
 
 @RequiredArgsConstructor
 public class QueryMetricsResponse {
@@ -70,8 +69,9 @@ public class QueryMetricsResponse {
 
     public static class ResultSerializer extends JsonSerializer<List<ShardedResultGroup>> {
         @Override
-        public void serialize(List<ShardedResultGroup> result, JsonGenerator g,
-                SerializerProvider provider) throws IOException, JsonProcessingException {
+        public void serialize(
+            List<ShardedResultGroup> result, JsonGenerator g, SerializerProvider provider
+        ) throws IOException, JsonProcessingException {
             g.writeStartArray();
 
             for (final ShardedResultGroup group : result) {

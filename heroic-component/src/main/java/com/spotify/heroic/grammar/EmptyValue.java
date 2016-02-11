@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.Optional;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.Optional;
 
 @Data
 @EqualsAndHashCode(exclude = {"c"})

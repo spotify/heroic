@@ -31,8 +31,9 @@ import com.spotify.heroic.metric.Point;
 
 public class StdDevInstance extends BucketAggregationInstance<StripedStdDevBucket> {
     @JsonCreator
-    public StdDevInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public StdDevInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 

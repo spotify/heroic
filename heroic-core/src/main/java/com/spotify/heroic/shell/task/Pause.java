@@ -21,33 +21,36 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.Set;
-
-import org.kohsuke.args4j.Option;
-
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.util.Set;
 
 @TaskUsage("Pause operation of local components")
 @TaskName("pause")
 public class Pause implements ShellTask {
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final Set<Consumer> consumers;
 
     @Inject
-    private Set<Consumer> consumers;
+    public Pause(AsyncFramework async, Set<Consumer> consumers) {
+        this.async = async;
+        this.consumers = consumers;
+    }
 
     @Override
     public TaskParameters params() {
@@ -76,5 +79,14 @@ public class Pause implements ShellTask {
         @Option(name = "--skip-consumers", usage = "Do not pause consumers")
         @Getter
         private boolean skipConsumers = false;
+    }
+
+    public static Pause setup(final CoreComponent core) {
+        return DaggerPause_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Pause task();
     }
 }

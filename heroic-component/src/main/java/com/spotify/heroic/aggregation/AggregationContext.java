@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Optional;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Duration;
+
+import java.util.Optional;
+import java.util.Set;
 
 public interface AggregationContext {
     /**
@@ -50,8 +50,9 @@ public interface AggregationContext {
         return ImmutableSet.of();
     }
 
-    static AggregationContext withRequiredTags(final AggregationContext context,
-            final Set<String> tags) {
+    static AggregationContext withRequiredTags(
+        final AggregationContext context, final Set<String> tags
+    ) {
         return new AggregationContext() {
             @Override
             public Optional<Duration> size() {

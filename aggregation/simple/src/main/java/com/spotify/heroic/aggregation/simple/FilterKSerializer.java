@@ -30,7 +30,7 @@ import eu.toolchain.serializer.SerializerFramework;
 
 import java.io.IOException;
 
-public abstract class  FilterKSerializer<T extends FilterKInstance> implements Serializer<T> {
+public abstract class FilterKSerializer<T extends FilterKInstance> implements Serializer<T> {
     private final Serializer<Long> fixedLong;
     private final AggregationSerializer serializer;
 

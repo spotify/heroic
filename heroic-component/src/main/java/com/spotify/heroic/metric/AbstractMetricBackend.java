@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.Statistics;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 public abstract class AbstractMetricBackend implements MetricBackend {
@@ -53,8 +52,9 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<BackendKeySet> streamKeys(BackendKeyFilter filter,
-            QueryOptions options) {
+    public AsyncObservable<BackendKeySet> streamKeys(
+        BackendKeyFilter filter, QueryOptions options
+    ) {
         return AsyncObservable.empty();
     }
 
@@ -81,16 +81,18 @@ public abstract class AbstractMetricBackend implements MetricBackend {
     }
 
     @Override
-    public AsyncObservable<BackendKeySet> streamKeysPaged(BackendKeyFilter filter,
-            final QueryOptions options, final int pageSize) {
+    public AsyncObservable<BackendKeySet> streamKeysPaged(
+        BackendKeyFilter filter, final QueryOptions options, final int pageSize
+    ) {
         return observer -> {
             streamKeysNextPage(observer, filter, options, pageSize, null);
         };
     }
 
-    private void streamKeysNextPage(final AsyncObserver<BackendKeySet> observer,
-            final BackendKeyFilter filter, final QueryOptions options, final int pageSize,
-            final BackendKey key) throws Exception {
+    private void streamKeysNextPage(
+        final AsyncObserver<BackendKeySet> observer, final BackendKeyFilter filter,
+        final QueryOptions options, final int pageSize, final BackendKey key
+    ) throws Exception {
         BackendKeyFilter partial = filter;
 
         if (key != null) {

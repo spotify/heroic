@@ -21,16 +21,6 @@
 
 package com.spotify.heroic.metadata;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -40,9 +30,17 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Data
 public class FindTags {
@@ -59,8 +57,9 @@ public class FindTags {
      * Handle that tags is a deeply nested structure and copy it up until the closest immutable
      * type.
      */
-    private static void updateTags(final Map<String, Set<String>> data,
-            final Map<String, Set<String>> add) {
+    private static void updateTags(
+        final Map<String, Set<String>> data, final Map<String, Set<String>> add
+    ) {
         for (final Map.Entry<String, Set<String>> entry : add.entrySet()) {
             Set<String> entries = data.get(entry.getKey());
 
@@ -97,8 +96,10 @@ public class FindTags {
     }
 
     @JsonCreator
-    public FindTags(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("tags") Map<String, Set<String>> tags, @JsonProperty("size") int size) {
+    public FindTags(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("tags") Map<String, Set<String>> tags, @JsonProperty("size") int size
+    ) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.tags = tags;
         this.size = size;
@@ -114,21 +115,21 @@ public class FindTags {
             public FindTags transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new FindTags(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_TAGS, 0);
+                return new FindTags(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_TAGS,
+                    0);
             }
         };
     }
 
     public static Transform<Throwable, ? extends FindTags> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, FindTags>() {
             @Override
             public FindTags transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new FindTags(errors, EMPTY_TAGS, 0);
             }
         };

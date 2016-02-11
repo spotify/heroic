@@ -21,12 +21,6 @@
 
 package com.spotify.heroic.metadata;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -36,9 +30,13 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 @Data
 public class CountSeries {
@@ -64,7 +62,7 @@ public class CountSeries {
 
             return new CountSeries(errors, count, limited);
         }
-    };
+    }
 
     private static final SelfReducer reducer = new SelfReducer();
 
@@ -73,8 +71,10 @@ public class CountSeries {
     }
 
     @JsonCreator
-    public CountSeries(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("count") long count, @JsonProperty("limited") boolean limited) {
+    public CountSeries(
+        @JsonProperty("errors") List<RequestError> errors, @JsonProperty("count") long count,
+        @JsonProperty("limited") boolean limited
+    ) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.count = count;
         this.limited = limited;
@@ -85,27 +85,27 @@ public class CountSeries {
     }
 
     public static Transform<Throwable, ? extends CountSeries> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, CountSeries>() {
             @Override
             public CountSeries transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new CountSeries(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        0, false);
+                return new CountSeries(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), 0, false);
             }
         };
     }
 
     public static Transform<Throwable, ? extends CountSeries> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, CountSeries>() {
             @Override
             public CountSeries transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new CountSeries(errors, 0, false);
             }
         };

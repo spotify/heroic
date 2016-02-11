@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.common.DateRange;
-
 import eu.toolchain.async.Collector;
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Data
 public class QueryResult {
@@ -42,7 +41,7 @@ public class QueryResult {
 
     /**
      * Groups of results.
-     *
+     * <p>
      * Failed groups are omitted from here, {@link #errors} for these.
      */
     private final List<ShardedResultGroup> groups;
@@ -69,8 +68,8 @@ public class QueryResult {
      * @return A complete QueryResult.
      */
     public static Collector<QueryResultPart, QueryResult> collectParts(
-            final QueryTrace.Identifier what, final DateRange range,
-            final AggregationCombiner combiner) {
+        final QueryTrace.Identifier what, final DateRange range, final AggregationCombiner combiner
+    ) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return parts -> {
@@ -93,7 +92,7 @@ public class QueryResult {
 
             final List<ShardedResultGroup> groups = combiner.combine(all);
             return new QueryResult(range, groups, errors, traces,
-                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
+                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), queryTraces.build()));
         };
     }
 }

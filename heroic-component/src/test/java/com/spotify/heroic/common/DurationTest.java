@@ -1,10 +1,10 @@
 package com.spotify.heroic.common;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 public class DurationTest {
     @Test

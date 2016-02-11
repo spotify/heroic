@@ -21,17 +21,10 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
@@ -39,23 +32,33 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
 
 @TaskUsage("Parse a given expression as a query and print their structure")
 @TaskName("parse-query")
 public class ParseQuery implements ShellTask {
-    @Inject
-    private QueryParser parser;
+    private final QueryParser parser;
+    private final AsyncFramework async;
+    private final ObjectMapper mapper;
 
     @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public ParseQuery(
+        QueryParser parser, AsyncFramework async, @Named("application/json") ObjectMapper mapper
+    ) {
+        this.parser = parser;
+        this.async = async;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -71,8 +74,9 @@ public class ParseQuery implements ShellTask {
             m.enable(SerializationFeature.INDENT_OUTPUT);
         }
 
-        io.out().println(
-                m.writeValueAsString(parser.parseQuery(Joiner.on(" ").join(params.query))));
+        io
+            .out()
+            .println(m.writeValueAsString(parser.parseQuery(Joiner.on(" ").join(params.query))));
         return async.resolved();
     }
 
@@ -83,5 +87,14 @@ public class ParseQuery implements ShellTask {
 
         @Argument(usage = "Query to parse")
         private List<String> query = new ArrayList<>();
+    }
+
+    public static ParseQuery setup(final CoreComponent core) {
+        return DaggerParseQuery_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        ParseQuery task();
     }
 }

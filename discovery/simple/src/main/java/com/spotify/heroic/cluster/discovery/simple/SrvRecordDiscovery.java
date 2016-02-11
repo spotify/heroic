@@ -21,49 +21,47 @@
 
 package com.spotify.heroic.cluster.discovery.simple;
 
-import java.net.URI;
-import java.util.List;
-import java.util.Optional;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterDiscovery;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Lookup;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SRVRecord;
 import org.xbill.DNS.Type;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterDiscovery;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
-@RequiredArgsConstructor
 @ToString
 @Slf4j
 public class SrvRecordDiscovery implements ClusterDiscovery {
     public static final String DEFAULT_PROTOCOL = "nativerpc";
     public static final int DEFAULT_PORT = 1394;
 
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final List<String> records;
+    private final Optional<String> protocol;
+    private final Optional<Integer> port;
 
     @Inject
-    @Named("records")
-    private List<String> records;
+    public SrvRecordDiscovery(
+        AsyncFramework async, @Named("records") List<String> records,
+        @Named("protocol") Optional<String> protocol,
 
-    @Inject
-    @Named("protocol")
-    private Optional<String> protocol;
-
-    @Inject
-    @Named("port")
-    private Optional<Integer> port;
+        @Named("port") Optional<Integer> port
+    ) {
+        this.async = async;
+        this.records = records;
+        this.protocol = protocol;
+        this.port = port;
+    }
 
     @Override
     public AsyncFuture<List<URI>> find() {
@@ -79,7 +77,7 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
 
                 if (lookup.getResult() != Lookup.SUCCESSFUL) {
                     log.error("Failed to lookup record: {}: {}", record, lookup.getErrorString());
-                    return ImmutableList.<URI> of();
+                    return ImmutableList.<URI>of();
                 }
 
                 final ImmutableList.Builder<URI> results = ImmutableList.builder();
@@ -87,9 +85,8 @@ public class SrvRecordDiscovery implements ClusterDiscovery {
                 if (result != null) {
                     for (final Record a : result) {
                         final SRVRecord srv = (SRVRecord) a;
-                        results.add(new URI(protocol.orElse(DEFAULT_PROTOCOL) + "://"
-                                + srv.getTarget().canonicalize() + ":"
-                                + port.orElse(DEFAULT_PORT)));
+                        results.add(new URI(protocol.orElse(DEFAULT_PROTOCOL) + "://" +
+                            srv.getTarget().canonicalize() + ":" + port.orElse(DEFAULT_PORT)));
                     }
                 }
 

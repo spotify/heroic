@@ -22,7 +22,6 @@
 package com.spotify.heroic.http.status;
 
 import com.spotify.heroic.common.ServiceInfo;
-
 import lombok.Data;
 
 @Data

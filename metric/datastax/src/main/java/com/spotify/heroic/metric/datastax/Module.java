@@ -21,36 +21,50 @@
 
 package com.spotify.heroic.metric.datastax;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
-import java.util.List;
-
-import javax.inject.Inject;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.dagger.LoadingComponent;
+import dagger.Component;
+
+import javax.inject.Inject;
+import java.util.List;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
-            @Inject
-            private HeroicConfigurationContext config;
-
-            public void setup() {
-                config.registerType("datastax", DatastaxMetricModule.class);
-            };
-        };
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
     }
 
     @Override
     public List<ParameterSpecification> parameters() {
         // @formatter:off
         return ImmutableList.of(
-            parameter(DatastaxMetricModule.DATASTAX_CONFIGURE, "Automatically configure the datastax backend")
+            parameter(DatastaxMetricModule.DATASTAX_CONFIGURE, "Automatically configure the " +
+                    "datastax backend")
         );
         // @formatter:on
+    }
+
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.registerType("datastax", DatastaxMetricModule.class);
+        }
     }
 }

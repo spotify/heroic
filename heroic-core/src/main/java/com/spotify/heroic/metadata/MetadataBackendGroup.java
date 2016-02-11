@@ -31,14 +31,13 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RequiredArgsConstructor
 @ToString(of = {"backends"})
@@ -69,8 +68,9 @@ public class MetadataBackendGroup implements MetadataBackend {
     @Override
     public AsyncFuture<FindSeries> findSeries(final RangeFilter filter) {
         final List<AsyncFuture<FindSeries>> callbacks = run(v -> v.findSeries(filter));
-        return async.collect(callbacks, FindSeries.reduce(filter.getLimit()))
-                .onDone(reporter.reportFindTimeSeries());
+        return async
+            .collect(callbacks, FindSeries.reduce(filter.getLimit()))
+            .onDone(reporter.reportFindTimeSeries());
     }
 
     @Override

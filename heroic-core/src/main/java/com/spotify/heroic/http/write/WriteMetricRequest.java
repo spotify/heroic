@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.http.write;
 
-import static java.util.Optional.ofNullable;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.WriteMetric;
-
 import lombok.Data;
+
+import static java.util.Optional.ofNullable;
 
 @Data
 public class WriteMetricRequest {
@@ -38,8 +37,9 @@ public class WriteMetricRequest {
     final MetricCollection data;
 
     @JsonCreator
-    public WriteMetricRequest(@JsonProperty("series") Series series,
-            @JsonProperty("data") MetricCollection data) {
+    public WriteMetricRequest(
+        @JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data
+    ) {
         this.series = ofNullable(series).orElseGet(Series::empty);
         this.data = ofNullable(data).orElseGet(MetricCollection::empty);
     }

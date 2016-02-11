@@ -22,11 +22,10 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
+import lombok.Data;
 
 import java.util.Map;
 import java.util.Optional;
-
-import lombok.Data;
 
 @Data
 public class Row {

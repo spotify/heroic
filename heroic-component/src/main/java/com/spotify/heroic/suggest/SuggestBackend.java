@@ -28,10 +28,9 @@ import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
+import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
-
-import eu.toolchain.async.AsyncFuture;
 
 public interface SuggestBackend extends Grouped, Initializing {
     AsyncFuture<Void> configure();
@@ -40,16 +39,18 @@ public interface SuggestBackend extends Grouped, Initializing {
      * Return a set of suggestions for the most relevant tag values (given the number of tags
      * available).
      */
-    AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
-            int groupLimit);
+    AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+        RangeFilter filter, List<String> exclude, int groupLimit
+    );
 
     /**
      * Return an estimated count of the given tags.
      */
     AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
-    AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
-            String value);
+    AsyncFuture<TagSuggest> tagSuggest(
+        RangeFilter filter, MatchOptions options, String key, String value
+    );
 
     AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
 

@@ -21,14 +21,16 @@
 
 package com.spotify.heroic.consumer;
 
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.ingestion.IngestionComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.ConsumerReporter;
+import lombok.Data;
+
 import java.util.Optional;
 
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.spotify.heroic.statistics.ConsumerReporter;
-
 public interface ConsumerModule {
-    Module module(Key<Consumer> key, ConsumerReporter consumerReporter);
+    Out module(PrimaryComponent primary, IngestionComponent ingestion, In in, String id);
 
     Optional<String> id();
 
@@ -36,5 +38,18 @@ public interface ConsumerModule {
 
     interface Builder {
         ConsumerModule build();
+    }
+
+    @Data
+    public static class In {
+        private final ConsumerReporter consumerReporter;
+    }
+
+    public interface Out {
+        Consumer consumer();
+
+        default LifeCycle consumerLife() {
+            return LifeCycle.empty();
+        }
     }
 }

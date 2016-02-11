@@ -1,5 +1,6 @@
 package com.spotify.heroic.aggregation;
 
+import eu.toolchain.serializer.Serializer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -7,8 +8,6 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
-
-import eu.toolchain.serializer.Serializer;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreAggregationRegistryTest {

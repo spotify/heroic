@@ -29,25 +29,24 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.grammar.QueryParser;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.RequiredArgsConstructor;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @RequiredArgsConstructor
 public class CoreFilterRegistry implements FilterRegistry {
     private final Map<String, FilterJsonSerialization<? extends Filter>> deserializers =
-            new HashMap<>();
+        new HashMap<>();
 
     private final Map<Class<? extends Filter>, JsonSerializer<Filter>> serializers =
-            new HashMap<>();
+        new HashMap<>();
 
     private final SerializerFramework s;
 
@@ -58,29 +57,34 @@ public class CoreFilterRegistry implements FilterRegistry {
     private final HashMap<Class<?>, String> typeMapping = new HashMap<>();
 
     @Override
-    public <T extends Filter.OneArg<A>, A> void register(String id, Class<T> type,
-            OneArgumentFilter<T, A> builder, Serializer<A> first) {
+    public <T extends Filter.OneArg<A>, A> void register(
+        String id, Class<T> type, OneArgumentFilter<T, A> builder, Serializer<A> first
+    ) {
         registerJson(id, type, builder);
         register(id, type, new OneTermSerialization<>(builder, first));
     }
 
     @Override
-    public <T extends Filter.TwoArgs<A, B>, A, B> void register(String id, Class<T> type,
-            TwoArgumentsFilter<T, A, B> builder, Serializer<A> first, Serializer<B> second) {
+    public <T extends Filter.TwoArgs<A, B>, A, B> void register(
+        String id, Class<T> type, TwoArgumentsFilter<T, A, B> builder, Serializer<A> first,
+        Serializer<B> second
+    ) {
         registerJson(id, type, builder);
         register(id, type, new TwoTermsSerialization<>(builder, first, second));
     }
 
     @Override
-    public <T extends Filter.MultiArgs<A>, A> void register(String id, Class<T> type,
-            MultiArgumentsFilter<T, A> builder, Serializer<A> term) {
+    public <T extends Filter.MultiArgs<A>, A> void register(
+        String id, Class<T> type, MultiArgumentsFilter<T, A> builder, Serializer<A> term
+    ) {
         registerJson(id, type, builder);
         register(id, type, new ManyTermsSerialization<>(builder, s.list(term)));
     }
 
     @Override
-    public <T extends Filter.NoArg> void register(String id, Class<T> type,
-            NoArgumentFilter<T> builder) {
+    public <T extends Filter.NoArg> void register(
+        String id, Class<T> type, NoArgumentFilter<T> builder
+    ) {
         registerJson(id, type, builder);
         register(id, type, new NoTermSerialization<>(builder));
     }
@@ -89,22 +93,23 @@ public class CoreFilterRegistry implements FilterRegistry {
     public Module module(final QueryParser parser) {
         final SimpleModule m = new SimpleModule("filter");
 
-        for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this.serializers
-                .entrySet()) {
+        for (final Map.Entry<Class<? extends Filter>, JsonSerializer<Filter>> e : this
+            .serializers.entrySet()) {
             m.addSerializer(e.getKey(), e.getValue());
         }
 
         final CoreFilterJsonDeserializer deserializer =
-                new CoreFilterJsonDeserializer(ImmutableMap.copyOf(deserializers), parser);
+            new CoreFilterJsonDeserializer(ImmutableMap.copyOf(deserializers), parser);
         m.addDeserializer(Filter.class, deserializer);
         return m;
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Filter> void registerJson(String id, Class<T> type,
-            FilterJsonSerialization<T> serialization) {
+    private <T extends Filter> void registerJson(
+        String id, Class<T> type, FilterJsonSerialization<T> serialization
+    ) {
         serializers.put(type,
-                new JsonSerializerImpl((FilterJsonSerialization<? super Filter>) serialization));
+            new JsonSerializerImpl((FilterJsonSerialization<? super Filter>) serialization));
         deserializers.put(id, serialization);
     }
 
@@ -129,7 +134,7 @@ public class CoreFilterRegistry implements FilterRegistry {
 
         @Override
         public void serialize(Filter value, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeString(value.operator());
 
@@ -156,7 +161,7 @@ public class CoreFilterRegistry implements FilterRegistry {
 
     @RequiredArgsConstructor
     private static class ManyTermsSerialization<T extends Filter.MultiArgs<A>, A>
-            implements Serializer<T> {
+        implements Serializer<T> {
         private final MultiArgumentsFilter<T, A> builder;
         private final Serializer<List<A>> list;
 
@@ -188,7 +193,7 @@ public class CoreFilterRegistry implements FilterRegistry {
 
     @RequiredArgsConstructor
     private static class OneTermSerialization<T extends Filter.OneArg<A>, A>
-            implements Serializer<T> {
+        implements Serializer<T> {
         private final OneArgumentFilter<T, A> builder;
         private final Serializer<A> first;
 
@@ -206,7 +211,7 @@ public class CoreFilterRegistry implements FilterRegistry {
 
     @RequiredArgsConstructor
     private static final class TwoTermsSerialization<T extends Filter.TwoArgs<A, B>, A, B>
-            implements Serializer<T> {
+        implements Serializer<T> {
         private final TwoArgumentsFilter<T, A, B> builder;
         private final Serializer<A> first;
         private final Serializer<B> second;

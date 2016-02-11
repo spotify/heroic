@@ -1,20 +1,18 @@
 package com.spotify.heroic.analytics.bigtable;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-
 import com.google.api.client.util.Charsets;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.Series;
-
-import java.time.LocalDate;
-
+import eu.toolchain.async.Transform;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import eu.toolchain.async.Transform;
+import java.time.LocalDate;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SeriesKeyEncodingTest {
@@ -36,7 +34,7 @@ public class SeriesKeyEncodingTest {
         doReturn("series").when(toString).transform(series);
 
         final ByteString bytes =
-                foo.encode(new SeriesKeyEncoding.SeriesKey(date, series), toString);
+            foo.encode(new SeriesKeyEncoding.SeriesKey(date, series), toString);
 
         assertEquals(ByteString.copyFrom("foo/2016-01-31/series", Charsets.UTF_8), bytes);
 
@@ -47,6 +45,6 @@ public class SeriesKeyEncodingTest {
         assertEquals(series, k.getSeries());
 
         assertEquals(ByteString.copyFrom("foo/2016-02-01", Charsets.UTF_8),
-                foo.rangeKey(date.plusDays(1)));
+            foo.rangeKey(date.plusDays(1)));
     }
 }

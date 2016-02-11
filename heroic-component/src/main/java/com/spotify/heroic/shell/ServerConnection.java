@@ -21,6 +21,17 @@
 
 package com.spotify.heroic.shell;
 
+import com.spotify.heroic.shell.protocol.Acknowledge;
+import com.spotify.heroic.shell.protocol.FileClose;
+import com.spotify.heroic.shell.protocol.FileFlush;
+import com.spotify.heroic.shell.protocol.FileNewInputStream;
+import com.spotify.heroic.shell.protocol.FileNewOutputStream;
+import com.spotify.heroic.shell.protocol.FileOpened;
+import com.spotify.heroic.shell.protocol.FileRead;
+import com.spotify.heroic.shell.protocol.FileReadResult;
+import com.spotify.heroic.shell.protocol.FileWrite;
+import eu.toolchain.serializer.SerializerFramework;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -31,29 +42,18 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
-import com.spotify.heroic.shell.protocol.Acknowledge;
-import com.spotify.heroic.shell.protocol.FileClose;
-import com.spotify.heroic.shell.protocol.FileFlush;
-import com.spotify.heroic.shell.protocol.FileNewInputStream;
-import com.spotify.heroic.shell.protocol.FileNewOutputStream;
-import com.spotify.heroic.shell.protocol.FileOpened;
-import com.spotify.heroic.shell.protocol.FileRead;
-import com.spotify.heroic.shell.protocol.FileReadResult;
-import com.spotify.heroic.shell.protocol.FileWrite;
-
-import eu.toolchain.serializer.SerializerFramework;
-
 final class ServerConnection extends ShellConnection {
     public static final int BUFFER_SIZE = (1 << 16);
 
     public ServerConnection(final SerializerFramework framework, final Socket socket)
-            throws IOException {
+        throws IOException {
         super(framework, socket);
     }
 
     public InputStream newInputStream(Path path, StandardOpenOption... options) throws IOException {
-        final FileOpened result = request(
-                new FileNewInputStream(path.toString(), Arrays.asList(options)), FileOpened.class);
+        final FileOpened result =
+            request(new FileNewInputStream(path.toString(), Arrays.asList(options)),
+                FileOpened.class);
 
         final int handle = result.getHandle();
 
@@ -69,7 +69,7 @@ final class ServerConnection extends ShellConnection {
             @Override
             public int read(byte[] b, int off, int len) throws IOException {
                 final FileReadResult data =
-                        request(new FileRead(handle, len), FileReadResult.class);
+                    request(new FileRead(handle, len), FileReadResult.class);
                 final byte[] bytes = data.getData();
                 System.arraycopy(bytes, 0, b, off, bytes.length);
                 return bytes.length;
@@ -80,13 +80,13 @@ final class ServerConnection extends ShellConnection {
                 request(new FileClose(handle), Acknowledge.class);
             }
         }, BUFFER_SIZE);
-
     }
 
     public OutputStream newOutputStream(Path path, StandardOpenOption... options)
-            throws IOException {
-        final FileOpened result = request(
-                new FileNewOutputStream(path.toString(), Arrays.asList(options)), FileOpened.class);
+        throws IOException {
+        final FileOpened result =
+            request(new FileNewOutputStream(path.toString(), Arrays.asList(options)),
+                FileOpened.class);
 
         final int handle = result.getHandle();
 

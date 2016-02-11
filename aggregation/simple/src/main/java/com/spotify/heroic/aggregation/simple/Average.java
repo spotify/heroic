@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.Optional;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -39,16 +38,19 @@ public class Average extends SamplingAggregation {
     public static final String NAME = "average";
 
     @JsonCreator
-    public Average(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
-            @JsonProperty("size") Optional<Duration> size,
-            @JsonProperty("extent") Optional<Duration> extent) {
+    public Average(
+        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
+        @JsonProperty("size") Optional<Duration> size,
+        @JsonProperty("extent") Optional<Duration> extent
+    ) {
         super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
-                Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
+            Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
     }
 
     @Override
-    public AverageInstance apply(final AggregationContext context, final long size,
-            final long extent) {
+    public AverageInstance apply(
+        final AggregationContext context, final long size, final long extent
+    ) {
         return new AverageInstance(size, extent);
     }
 

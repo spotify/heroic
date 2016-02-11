@@ -21,19 +21,26 @@
 
 package com.spotify.heroic.ws;
 
+import com.spotify.heroic.QueryStateException;
+
+import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.spotify.heroic.QueryStateException;
-
 @Provider
 public class QueryStateExceptionMapper implements ExceptionMapper<QueryStateException> {
+    @Inject
+    public QueryStateExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(final QueryStateException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new ErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST))
-                .type(MediaType.APPLICATION_JSON).build();
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(new ErrorMessage(e.getMessage(), Response.Status.BAD_REQUEST))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

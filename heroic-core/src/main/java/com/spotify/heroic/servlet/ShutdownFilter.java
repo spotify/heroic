@@ -24,11 +24,7 @@ package com.spotify.heroic.servlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.spotify.heroic.ws.InternalErrorMessage;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -38,11 +34,11 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response.Status;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.function.Supplier;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @RequiredArgsConstructor
 public class ShutdownFilter implements Filter {
     private static final String CONTENT_TYPE = "application/json; charset=UTF-8";
@@ -52,12 +48,12 @@ public class ShutdownFilter implements Filter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        log.info("Filter initialized");
     }
 
     @Override
-    public void doFilter(final ServletRequest request, final ServletResponse response,
-            final FilterChain chain) throws IOException, ServletException {
+    public void doFilter(
+        final ServletRequest request, final ServletResponse response, final FilterChain chain
+    ) throws IOException, ServletException {
         if (!stopping.get()) {
             chain.doFilter(request, response);
             return;
@@ -66,7 +62,7 @@ public class ShutdownFilter implements Filter {
         final HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         final InternalErrorMessage info =
-                new InternalErrorMessage("Heroic is shutting down", Status.SERVICE_UNAVAILABLE);
+            new InternalErrorMessage("Heroic is shutting down", Status.SERVICE_UNAVAILABLE);
 
         httpResponse.setStatus(Status.SERVICE_UNAVAILABLE.getStatusCode());
         httpResponse.setContentType(CONTENT_TYPE);
@@ -82,6 +78,5 @@ public class ShutdownFilter implements Filter {
 
     @Override
     public void destroy() {
-        log.info("Filter destroyed");
     }
 };

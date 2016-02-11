@@ -21,31 +21,24 @@
 
 package com.spotify.heroic.cache.memcached;
 
-import com.google.inject.Exposed;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
+import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cache.CacheModule;
-import com.spotify.heroic.cache.QueryCache;
+import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.memory.MemoryQueryCache;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
 
 public class MemcachedCacheModule implements CacheModule {
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            @Exposed
-            public QueryCache queryCache() {
-                // XXX: build one for real.
-                return new MemoryQueryCache();
-            }
+    public CacheComponent module(PrimaryComponent primary) {
+        return DaggerMemcachedCacheModule_C.builder().primaryComponent(primary).build();
+    }
 
-            @Override
-            protected void configure() {
-            };
-        };
+    @CacheScope
+    @Component(dependencies = PrimaryComponent.class)
+    interface C extends CacheComponent {
+        @Override
+        MemoryQueryCache queryCache();
     }
 
     public static Builder builder() {

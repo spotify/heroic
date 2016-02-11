@@ -21,10 +21,9 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import lombok.RequiredArgsConstructor;
-
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Keyspace;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public final class Context {

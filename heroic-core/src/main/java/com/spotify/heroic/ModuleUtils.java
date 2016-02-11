@@ -21,6 +21,8 @@
 
 package com.spotify.heroic;
 
+import com.google.common.base.Charsets;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,8 +32,6 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.common.base.Charsets;
 
 public class ModuleUtils {
     public static final Charset UTF8 = Charsets.UTF_8;
@@ -45,8 +45,8 @@ public class ModuleUtils {
         for (final URL input : moduleLocations) {
             final InputStream inputStream = input.openStream();
 
-            try (final BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(inputStream, UTF8))) {
+            try (final BufferedReader reader = new BufferedReader(
+                new InputStreamReader(inputStream, UTF8))) {
                 modules.addAll(loadModule(reader, loader));
             }
         }
@@ -54,8 +54,9 @@ public class ModuleUtils {
         return modules;
     }
 
-    private static List<HeroicModule> loadModule(final BufferedReader reader,
-            final ClassLoader loader) throws IOException {
+    private static List<HeroicModule> loadModule(
+        final BufferedReader reader, final ClassLoader loader
+    ) throws IOException {
         final List<HeroicModule> children = new ArrayList<>();
 
         while (true) {
@@ -91,8 +92,7 @@ public class ModuleUtils {
             clazz = loader.loadClass(className);
         } catch (final ClassNotFoundException e) {
             throw new RuntimeException(
-                    "Class '" + className + "' cannot be found for package '" + packageName + "'",
-                    e);
+                "Class '" + className + "' cannot be found for package '" + packageName + "'", e);
         }
 
         return loadModule(clazz);
@@ -111,7 +111,7 @@ public class ModuleUtils {
             throw new RuntimeException("Expected empty constructor: " + clazz.toString(), e);
         } catch (final SecurityException e) {
             throw new RuntimeException(
-                    "Security exception when getting constructor for: " + clazz.toString(), e);
+                "Security exception when getting constructor for: " + clazz.toString(), e);
         }
 
         try {

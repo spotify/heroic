@@ -85,7 +85,7 @@ public class NoopLocalMetadataManagerReporter implements LocalMetadataManagerRep
     }
 
     private static final NoopLocalMetadataManagerReporter instance =
-            new NoopLocalMetadataManagerReporter();
+        new NoopLocalMetadataManagerReporter();
 
     public static NoopLocalMetadataManagerReporter get() {
         return instance;

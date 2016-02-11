@@ -29,7 +29,7 @@ public interface HeroicConfiguration {
 
     /**
      * Is the current heroic instance a oneshot instance.
-     *
+     * <p>
      * Oneshot instances are where configuration and refreshing only happens once.
      */
     boolean isOneshot();

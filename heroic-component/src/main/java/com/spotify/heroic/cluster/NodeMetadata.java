@@ -24,12 +24,11 @@ package com.spotify.heroic.cluster;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.ServiceInfo;
+import lombok.Data;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import lombok.Data;
 
 @Data
 public class NodeMetadata {
@@ -40,10 +39,12 @@ public class NodeMetadata {
     private final ServiceInfo service;
 
     @JsonCreator
-    public NodeMetadata(@JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
-            @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities,
-            @JsonProperty("service") ServiceInfo service) {
+    public NodeMetadata(
+        @JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
+        @JsonProperty("tags") Map<String, String> tags,
+        @JsonProperty("capabilities") Set<NodeCapability> capabilities,
+        @JsonProperty("service") ServiceInfo service
+    ) {
         this.version = version;
         this.id = id;
         this.tags = tags;

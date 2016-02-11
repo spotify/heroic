@@ -21,18 +21,6 @@
 
 package com.spotify.heroic.ingestion;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import javax.inject.Inject;
-
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -42,25 +30,26 @@ import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class IngestionManagerImpl implements IngestionManager {
-    @Inject
-    protected AsyncFramework async;
-
-    @Inject
-    protected MetadataManager metadata;
-
-    @Inject
-    protected MetricManager metric;
-
-    @Inject
-    protected SuggestManager suggest;
-
-    @Inject
-    protected IngestionManagerReporter reporter;
+    final AsyncFramework async;
+    final MetadataManager metadata;
+    final MetricManager metric;
+    final SuggestManager suggest;
+    final IngestionManagerReporter reporter;
 
     private final boolean updateMetrics;
     private final boolean updateMetadata;
@@ -79,16 +68,26 @@ public class IngestionManagerImpl implements IngestionManager {
      * @param maxConcurrentWrites Limit the number of concurrent writes, 0 means no limit at all
      */
     @Inject
-    public IngestionManagerImpl(@Named("updateMetrics") final boolean updateMetrics,
-            @Named("updateMetadata") final boolean updateMetadata,
-            @Named("updateSuggestions") final boolean updateSuggestions,
-            @Named("maxConcurrentWrites") final int maxConcurrentWrites, final Filter filter) {
+    public IngestionManagerImpl(
+        final AsyncFramework async, final MetadataManager metadata, final MetricManager metric,
+        final SuggestManager suggest, final IngestionManagerReporter reporter,
+        @Named("updateMetrics") final boolean updateMetrics,
+        @Named("updateMetadata") final boolean updateMetadata,
+        @Named("updateSuggestions") final boolean updateSuggestions,
+        @Named("maxConcurrentWrites") final int maxConcurrentWrites, final Filter filter
+    ) {
+        this.async = async;
+        this.metadata = metadata;
+        this.metric = metric;
+        this.suggest = suggest;
+        this.reporter = reporter;
+
         this.updateMetrics = updateMetrics;
         this.updateMetadata = updateMetadata;
         this.updateSuggestions = updateSuggestions;
         this.filter = filter;
 
-        writePermits = new Semaphore(maxConcurrentWrites);
+        this.writePermits = new Semaphore(maxConcurrentWrites);
     }
 
     @Override
@@ -104,14 +103,14 @@ public class IngestionManagerImpl implements IngestionManager {
     @Override
     public IngestionGroup useDefaultGroup() {
         return supplyGroup(metric::useDefaultGroup, metadata::useDefaultGroup,
-                suggest::useDefaultGroup);
+            suggest::useDefaultGroup);
     }
 
     @Override
     public AsyncFuture<Void> setFilter(Filter filter) {
         this.filter = checkNotNull(filter, "filter");
         return async.resolved();
-    };
+    }
 
     @Override
     public AsyncFuture<Filter> getFilter() {
@@ -121,11 +120,13 @@ public class IngestionManagerImpl implements IngestionManager {
     @Override
     public Statistics getStatistics() {
         return Statistics.of(INGESTED, ingested.sum(), AVAILABLE_WRITE_PERMITS,
-                writePermits.availablePermits());
+            writePermits.availablePermits());
     }
 
-    private <I> IngestionGroup supplyGroup(Supplier<MetricBackend> metric,
-            Supplier<MetadataBackend> metadata, Supplier<SuggestBackend> suggest) {
+    private <I> IngestionGroup supplyGroup(
+        Supplier<MetricBackend> metric, Supplier<MetadataBackend> metadata,
+        Supplier<SuggestBackend> suggest
+    ) {
         // @formatter:off
         return new CoreIngestionGroup(
             async,
@@ -141,8 +142,10 @@ public class IngestionManagerImpl implements IngestionManager {
         // @formatter:on
     }
 
-    private <I> IngestionGroup buildGroup(final I input, Function<I, MetricBackend> metric,
-            Function<I, MetadataBackend> metadata, Function<I, SuggestBackend> suggest) {
+    private <I> IngestionGroup buildGroup(
+        final I input, Function<I, MetricBackend> metric, Function<I, MetadataBackend> metadata,
+        Function<I, SuggestBackend> suggest
+    ) {
         // @formatter:off
         return new CoreIngestionGroup(
             async,

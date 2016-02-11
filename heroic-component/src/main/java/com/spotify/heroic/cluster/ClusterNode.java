@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import java.util.List;
-
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
@@ -44,8 +42,9 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.util.List;
 
 public interface ClusterNode {
     NodeMetadata metadata();
@@ -57,8 +56,10 @@ public interface ClusterNode {
     public interface Group {
         ClusterNode node();
 
-        AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
-                AggregationInstance aggregation, QueryOptions options);
+        AsyncFuture<ResultGroups> query(
+            MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
+            QueryOptions options
+        );
 
         AsyncFuture<FindTags> findTags(RangeFilter filter);
 
@@ -72,13 +73,15 @@ public interface ClusterNode {
 
         AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
-        AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
-                String value);
+        AsyncFuture<TagSuggest> tagSuggest(
+            RangeFilter filter, MatchOptions options, String key, String value
+        );
 
         AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
 
-        AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
-                int groupLimit);
+        AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+            RangeFilter filter, List<String> exclude, int groupLimit
+        );
 
         AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
 

@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.ws;
 
-import javax.ws.rs.core.Response;
-
 import lombok.Getter;
+
+import javax.ws.rs.core.Response;
 
 public class JsonErrorMessage extends InternalErrorMessage {
     @Getter

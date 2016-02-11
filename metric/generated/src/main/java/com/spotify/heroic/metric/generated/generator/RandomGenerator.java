@@ -21,14 +21,6 @@
 
 package com.spotify.heroic.metric.generated.generator;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -36,13 +28,19 @@ import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
-
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * A generator that generates pseudo random numbers depending on which serie and time range is
  * required.
- *
+ * <p>
  * The same series and time range should always return the same values, making this usable across
  * restarts for troubleshooting.
  *
@@ -51,21 +49,21 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 public class RandomGenerator implements Generator {
     private static final Map<String, Object> PAYLOAD = ImmutableMap.of();
 
-    @Inject
-    @Named("min")
-    private double min;
+    private final double min;
+    private final double max;
+    private final double range;
+    private final long step;
 
     @Inject
-    @Named("max")
-    private double max;
-
-    @Inject
-    @Named("range")
-    private double range;
-
-    @Inject
-    @Named("step")
-    private long step;
+    public RandomGenerator(
+        @Named("min") double min, @Named("max") double max, @Named("range") double range,
+        @Named("step") long step
+    ) {
+        this.min = min;
+        this.max = max;
+        this.range = range;
+        this.step = step;
+    }
 
     @Override
     public List<Point> generatePoints(Series series, DateRange range, FetchQuotaWatcher watcher) {

@@ -21,21 +21,20 @@
 
 package com.spotify.heroic.metric.bigtable.credentials;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.cloud.bigtable.config.CredentialOptions;
+import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
+import lombok.ToString;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.cloud.bigtable.config.CredentialOptions;
-import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-import lombok.ToString;
-
-@ToString(of = { "path" })
+@ToString(of = {"path"})
 public class JsonCredentialsBuilder implements CredentialsBuilder {
     public static final String DEFAULT_PATH = "./credentials.json";
 

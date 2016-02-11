@@ -21,14 +21,8 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.base.Optional;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -36,8 +30,13 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class StandaloneClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "heroic-standalone";
@@ -49,11 +48,12 @@ public class StandaloneClientSetup implements ClientSetup {
     private final AtomicReference<Node> node = new AtomicReference<>();
 
     @JsonCreator
-    public StandaloneClientSetup(@JsonProperty("clusterName") String clusterName,
-            @JsonProperty("root") String root) throws IOException {
+    public StandaloneClientSetup(
+        @JsonProperty("clusterName") String clusterName, @JsonProperty("root") String root
+    ) throws IOException {
         this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
         this.root = checkDataDirectory(
-                Paths.get(Optional.fromNullable(root).or(temporaryDirectory())).toAbsolutePath());
+            Paths.get(Optional.fromNullable(root).or(temporaryDirectory())).toAbsolutePath());
     }
 
     private Path checkDataDirectory(Path path) throws IOException {
@@ -66,7 +66,7 @@ public class StandaloneClientSetup implements ClientSetup {
 
     private String temporaryDirectory() throws IOException {
         final File temp =
-                File.createTempFile("heroic-elasticsearch", Long.toString(System.nanoTime()));
+            File.createTempFile("heroic-elasticsearch", Long.toString(System.nanoTime()));
 
         if (!temp.delete()) {
             throw new IOException("Could not delete temp file: " + temp.getAbsolutePath());
@@ -86,16 +86,20 @@ public class StandaloneClientSetup implements ClientSetup {
                 throw new IllegalStateException("node already started");
             }
 
-            final Settings settings = ImmutableSettings.builder()
-                    .put("path.logs", root.resolve("logs")).put("path.data", root.resolve("data"))
-                    .put("node.name", InetAddress.getLocalHost().getHostName())
-                    .put("script.inline", "on")
-                    // .put("script.disable_dynamic", false)
-                    // .put("script.groovy.sandbox.enabled", true)
-                    .put("discovery.zen.ping.multicast.enabled", false).build();
+            final Settings settings = ImmutableSettings
+                .builder()
+                .put("path.logs", root.resolve("logs"))
+                .put("path.data", root.resolve("data"))
+                .put("node.name", InetAddress.getLocalHost().getHostName())
+                .put("script.inline", "on")
+                // .put("script.disable_dynamic", false)
+                // .put("script.groovy.sandbox.enabled",
+                // true)
+                .put("discovery.zen.ping.multicast.enabled", false)
+                .build();
 
             final Node node =
-                    NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
+                NodeBuilder.nodeBuilder().settings(settings).clusterName(clusterName).node();
 
             StandaloneClientSetup.this.node.set(node);
             return node.client();

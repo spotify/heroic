@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
-import java.nio.ByteBuffer;
-
 import com.spotify.heroic.metric.datastax.TypeSerializer;
+
+import java.nio.ByteBuffer;
 
 public class LongSerializer implements TypeSerializer<Long> {
     @Override

@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.ws;
 
-import javax.ws.rs.core.Response;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+
+import javax.ws.rs.core.Response;
 
 @RequiredArgsConstructor
 public class ErrorMessage {

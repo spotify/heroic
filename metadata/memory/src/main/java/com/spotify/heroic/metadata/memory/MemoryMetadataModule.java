@@ -21,21 +21,19 @@
 
 package com.spotify.heroic.metadata.memory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataModule;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -43,8 +41,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-import eu.toolchain.async.AsyncFramework;
-import lombok.Data;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Data
 public final class MemoryMetadataModule implements MetadataModule {
@@ -55,37 +54,51 @@ public final class MemoryMetadataModule implements MetadataModule {
     private final boolean synchronizedStorage;
 
     @JsonCreator
-    public MemoryMetadataModule(@JsonProperty("id") Optional<String> id,
-            @JsonProperty("groups") Optional<Groups> groups,
-            @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage) {
+    public MemoryMetadataModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage
+    ) {
         this.id = id;
         this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
         this.synchronizedStorage = synchronizedStorage.orElse(false);
     }
 
     @Override
-    public Module module(final Key<MetadataBackend> key, final String id) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public MetadataBackend backend(final AsyncFramework async) {
-                final Set<Series> storage;
+    public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
+        return DaggerMemoryMetadataModule_C
+            .builder()
+            .primaryComponent(primary)
+            .depends(depends)
+            .m(new M(synchronizedStorage, groups))
+            .build();
+    }
 
-                if (synchronizedStorage) {
-                    storage = Collections.synchronizedSet(new HashSet<>());
-                } else {
-                    storage = new ConcurrentSkipListSet<>();
-                }
+    @MemoryScope
+    @Component(modules = M.class, dependencies = {PrimaryComponent.class, Depends.class})
+    interface C extends Exposed {
+        @Override
+        MetadataBackend backend();
+    }
 
-                return new MemoryBackend(async, groups, storage);
+    @RequiredArgsConstructor
+    @Module
+    class M {
+        private final boolean synchronizedStorage;
+        private final Groups groups;
+
+        @MemoryScope
+        @Provides
+        public MetadataBackend backend(AsyncFramework async) {
+            final Set<Series> storage;
+
+            if (synchronizedStorage) {
+                storage = Collections.synchronizedSet(new HashSet<>());
+            } else {
+                storage = new ConcurrentSkipListSet<>();
             }
 
-            @Override
-            protected void configure() {
-                bind(key).to(MetadataBackend.class);
-                expose(key);
-            }
-        };
+            return new MemoryBackend(async, groups, storage);
+        }
     }
 
     @Override

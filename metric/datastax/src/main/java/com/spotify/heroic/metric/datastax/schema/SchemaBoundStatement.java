@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
-import java.util.List;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
 
 /**
  * Represents a CQL statement with a list of bindings that should be applied.

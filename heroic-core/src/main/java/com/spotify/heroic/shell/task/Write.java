@@ -24,9 +24,8 @@ package com.spotify.heroic.shell.task;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.Event;
@@ -42,36 +41,41 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
+import dagger.Component;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Transform;
+import lombok.ToString;
 import org.kohsuke.args4j.Option;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
-import lombok.ToString;
-
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
 public class Write implements ShellTask {
     private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
-            new TypeReference<Map<String, Object>>() {
-            };
+        new TypeReference<Map<String, Object>>() {
+        };
+
+    private final IngestionManager ingestion;
+    private final AsyncFramework async;
+    private final ObjectMapper json;
 
     @Inject
-    private IngestionManager ingestion;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper json;
+    public Write(
+        IngestionManager ingestion, AsyncFramework async,
+        @Named("application/json") ObjectMapper json
+    ) {
+        this.ingestion = ingestion;
+        this.async = async;
+        this.json = json;
+    }
 
     @Override
     public TaskParameters params() {
@@ -130,8 +134,9 @@ public class Write implements ShellTask {
         List<AsyncFuture<Void>> writes = new ArrayList<>();
 
         for (final MetricCollection group : groups.build()) {
-            writes.add(g.write(new WriteMetric(series, group))
-                    .directTransform(reportResult("metrics", io.out())));
+            writes.add(g
+                .write(new WriteMetric(series, group))
+                .directTransform(reportResult("metrics", io.out())));
         }
 
         return async.collectAndDiscard(writes);
@@ -207,15 +212,24 @@ public class Write implements ShellTask {
         private String series;
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String group = null;
 
         @Option(name = "-p", aliases = {"--point"}, usage = "Point to write",
-                metaVar = "<time>=<value>")
+            metaVar = "<time>=<value>")
         private List<String> points = new ArrayList<>();
 
         @Option(name = "-e", aliases = {"--event"}, usage = "Event to write",
-                metaVar = "<time>=<payload>")
+            metaVar = "<time>=<payload>")
         private List<String> events = new ArrayList<>();
+    }
+
+    public static Write setup(final CoreComponent core) {
+        return DaggerWrite_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Write task();
     }
 }

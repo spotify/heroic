@@ -21,27 +21,26 @@
 
 /**
  * Copyright 2010-2013 Coda Hale and Yammer, Inc., 2014-2015 Dropwizard Team
- *
+ * <p>
  * It is licensed under the Apache 2.0 license.
- *
+ * <p>
  * The below link is a snapshot of the commit that this code was copied from, it includes licensing
- * information.
- * https://github.com/dropwizard/metrics/tree/e45597d00b972e530b0a79b95190615b4e031ec9
+ * information. https://github.com/dropwizard/metrics/tree/e45597d00b972e530b0a79b95190615b4e031ec9
  */
 package com.spotify.heroic.metrics;
 
-import static java.lang.Math.exp;
-
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
+
+import static java.lang.Math.exp;
 
 /**
  * An exponentially-weighted moving average.
  *
  * @see <a href="http://www.teamquest.com/pdfs/whitepaper/ldavg1.pdf">UNIX Load Average Part 1: How
- *      It Works</a>
+ * It Works</a>
  * @see <a href="http://www.teamquest.com/pdfs/whitepaper/ldavg2.pdf">UNIX Load Average Part 2: Not
- *      Your Average Average</a>
+ * Your Average Average</a>
  * @see <a href="http://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average">EMA</a>
  */
 public class EWMA {
@@ -53,7 +52,7 @@ public class EWMA {
     private static final double M1_ALPHA = 1 - exp(-INTERVAL / SECONDS_PER_MINUTE / ONE_MINUTE);
     private static final double M5_ALPHA = 1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIVE_MINUTES);
     private static final double M15_ALPHA =
-            1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIFTEEN_MINUTES);
+        1 - exp(-INTERVAL / SECONDS_PER_MINUTE / FIFTEEN_MINUTES);
 
     private volatile boolean initialized = false;
     private volatile double rate = 0.0;

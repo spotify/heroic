@@ -21,20 +21,19 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Comparator;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Data
-@EqualsAndHashCode(exclude = { "valueHash" })
+@EqualsAndHashCode(exclude = {"valueHash"})
 public class MetricGroup implements Metric {
     static final List<MetricCollection> EMPTY_GROUPS = ImmutableList.of();
 
@@ -44,8 +43,10 @@ public class MetricGroup implements Metric {
     private final int valueHash;
 
     @JsonCreator
-    public MetricGroup(@JsonProperty("timestamp") long timestamp,
-            @JsonProperty("groups") List<MetricCollection> groups) {
+    public MetricGroup(
+        @JsonProperty("timestamp") long timestamp,
+        @JsonProperty("groups") List<MetricCollection> groups
+    ) {
         this.timestamp = timestamp;
         this.groups = Optional.fromNullable(groups).or(EMPTY_GROUPS);
         this.valueHash = calculateValueHash(this.groups);

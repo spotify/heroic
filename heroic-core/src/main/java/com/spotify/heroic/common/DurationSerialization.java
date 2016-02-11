@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.common;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
@@ -33,11 +30,14 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.node.ValueNode;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 public class DurationSerialization {
     public static class Deserializer extends JsonDeserializer<Duration> {
         @Override
         public Duration deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             /* fallback to default parser if object */
             if (p.getCurrentToken() == JsonToken.START_OBJECT) {
                 return deserializeObject(p.readValueAsTree(), c);
@@ -59,7 +59,7 @@ public class DurationSerialization {
         }
 
         private Duration deserializeObject(TreeNode tree, DeserializationContext c)
-                throws JsonMappingException {
+            throws JsonMappingException {
             if (tree == null) {
                 throw c.mappingException("expected object");
             }
@@ -70,15 +70,15 @@ public class DurationSerialization {
             final long duration;
             final TimeUnit unit;
 
-            if ((node = tree.get("duration")) != null && node.isValueNode()
-                    && (valueNode = (ValueNode) node).isNumber()) {
+            if ((node = tree.get("duration")) != null && node.isValueNode() &&
+                (valueNode = (ValueNode) node).isNumber()) {
                 duration = valueNode.asLong();
             } else {
                 throw c.mappingException("duration is not a numeric field");
             }
 
-            if ((node = tree.get("unit")) != null && node.isValueNode()
-                    && (valueNode = (ValueNode) node).isTextual()) {
+            if ((node = tree.get("unit")) != null && node.isValueNode() &&
+                (valueNode = (ValueNode) node).isTextual()) {
                 unit = TimeUnit.valueOf(valueNode.asText().toUpperCase());
             } else {
                 unit = Duration.DEFAULT_UNIT;

@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+import lombok.RequiredArgsConstructor;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import com.spotify.heroic.metric.datastax.TypeSerializer;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CompositeStream {

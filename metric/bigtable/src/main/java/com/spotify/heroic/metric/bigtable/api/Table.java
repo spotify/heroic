@@ -22,15 +22,14 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.common.collect.ImmutableMap;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 @Data
 @RequiredArgsConstructor
@@ -44,7 +43,7 @@ public class Table {
     }
 
     private static final Pattern TABLE_NAME_PATTERN =
-            Pattern.compile("^(.+)\\/tables\\/([_a-zA-Z0-9][-_.a-zA-Z0-9]*)$");
+        Pattern.compile("^(.+)\\/tables\\/([_a-zA-Z0-9][-_.a-zA-Z0-9]*)$");
 
     private static final String TABLE_NAME_FORMAT = "%s/tables/%s";
 
@@ -69,7 +68,8 @@ public class Table {
         final ImmutableMap.Builder<String, ColumnFamily> columnFamilies = ImmutableMap.builder();
 
         for (final Entry<String, com.google.bigtable.admin.table.v1.ColumnFamily> e : table
-                .getColumnFamilies().entrySet()) {
+            .getColumnFamilies()
+            .entrySet()) {
             final ColumnFamily columnFamily = ColumnFamily.fromPb(e.getValue());
             columnFamilies.put(columnFamily.getName(), columnFamily);
         }

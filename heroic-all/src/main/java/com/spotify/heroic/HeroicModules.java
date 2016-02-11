@@ -48,6 +48,7 @@ public class HeroicModules {
         new com.spotify.heroic.metric.astyanax.Module(),
         new com.spotify.heroic.metric.datastax.Module(),
         new com.spotify.heroic.metric.generated.Module(),
+        new com.spotify.heroic.metric.memory.Module(),
 
         new com.spotify.heroic.analytics.bigtable.Module(),
         new com.spotify.heroic.metric.bigtable.Module(),
@@ -68,7 +69,8 @@ public class HeroicModules {
         new com.spotify.heroic.rpc.nativerpc.Module()
     );
 
-    public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String, HeroicProfile>builder()
+    public static final Map<String, HeroicProfile> PROFILES = ImmutableMap.<String,
+            HeroicProfile>builder()
         .put("generated", new GeneratedProfile())
         .put("memory", new MemoryProfile())
         .put("cassandra", new CassandraProfile())
@@ -106,7 +108,7 @@ public class HeroicModules {
 
         for (final Map.Entry<String, HeroicProfile> entry : PROFILES.entrySet()) {
             ParameterSpecification.printWrapped(out, "  ", 80,
-                    entry.getKey() + " - " + entry.getValue().description());
+                entry.getKey() + " - " + entry.getValue().description());
 
             for (final ParameterSpecification o : entry.getValue().options()) {
                 o.printHelp(out, "    ", 80);

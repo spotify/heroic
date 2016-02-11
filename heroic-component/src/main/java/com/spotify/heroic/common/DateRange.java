@@ -21,26 +21,24 @@
 
 package com.spotify.heroic.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import java.sql.Date;
-
-import org.apache.commons.lang3.time.FastDateFormat;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.time.FastDateFormat;
+
+import java.sql.Date;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 @AutoSerialize
 @Data
-@EqualsAndHashCode(of = { "start", "end" })
+@EqualsAndHashCode(of = {"start", "end"})
 public class DateRange implements Comparable<DateRange> {
     private static final FastDateFormat FORMAT =
-            FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");
+        FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.SSS");
 
     private final long start;
     private final long end;
@@ -50,7 +48,7 @@ public class DateRange implements Comparable<DateRange> {
 
         if (end < start) {
             throw new IllegalArgumentException(
-                    String.format("start (%d) must come before end (%d)", start, end));
+                String.format("start (%d) must come before end (%d)", start, end));
         }
 
         this.start = start;
@@ -122,7 +120,7 @@ public class DateRange implements Comparable<DateRange> {
 
     /**
      * Modify this range with another range.
-     *
+     * <p>
      * A modification asserts that the new range is a subset of the current range. Any span which
      * would cause the new range to become out of bounds will be cropped.
      *
@@ -164,8 +162,10 @@ public class DateRange implements Comparable<DateRange> {
     }
 
     @JsonCreator
-    public static DateRange create(@JsonProperty(value = "start", required = true) Long start,
-            @JsonProperty(value = "end", required = true) Long end) {
+    public static DateRange create(
+        @JsonProperty(value = "start", required = true) Long start,
+        @JsonProperty(value = "end", required = true) Long end
+    ) {
         return new DateRange(start, end);
     }
 

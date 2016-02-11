@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.grammar.AggregationValue;
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
+
+import java.util.List;
+import java.util.Optional;
 
 public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL {
     public GroupingAggregationBuilder(AggregationFactory factory) {
@@ -39,14 +39,18 @@ public abstract class GroupingAggregationBuilder extends AbstractAggregationDSL 
     @Override
     public Aggregation build(final AggregationArguments args) {
         final Optional<List<String>> of =
-                args.getNext("of", Value.class).flatMap(Value::toOptional).map(this::convertOf);
+            args.getNext("of", Value.class).flatMap(Value::toOptional).map(this::convertOf);
         final Optional<Aggregation> each =
-                args.getNext("each", AggregationValue.class).map(this::asAggregation);
+            args.getNext("each", AggregationValue.class).map(this::asAggregation);
         return build(of, each);
     }
 
     private List<String> convertOf(final Value list) {
-        return ImmutableList.copyOf(list.cast(ListValue.class).getList().stream()
-                .map(v -> v.cast(String.class)).iterator());
+        return ImmutableList.copyOf(list
+            .cast(ListValue.class)
+            .getList()
+            .stream()
+            .map(v -> v.cast(String.class))
+            .iterator());
     }
 }

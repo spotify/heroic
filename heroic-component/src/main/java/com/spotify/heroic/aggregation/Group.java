@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.aggregation;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.grammar.QueryParser;
+import lombok.Data;
 
 import java.util.List;
 import java.util.Optional;
 
-import lombok.Data;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class Group implements Aggregation {
@@ -48,8 +47,10 @@ public class Group implements Aggregation {
     }
 
     @JsonCreator
-    public static Group create(@JsonProperty("of") Optional<List<String>> of,
-            @JsonProperty("each") Optional<AggregationOrList> each) {
+    public static Group create(
+        @JsonProperty("of") Optional<List<String>> of,
+        @JsonProperty("each") Optional<AggregationOrList> each
+    ) {
         return new Group(of, each.flatMap(AggregationOrList::toAggregation));
     }
 

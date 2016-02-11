@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.ws;
 
+import javax.inject.Inject;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -28,11 +29,17 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.ext.ExceptionMapper;
 
 public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplicationException> {
+    @Inject
+    public WebApplicationExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(WebApplicationException e) {
-        return Response.fromResponse(e.getResponse())
-                .entity(new ErrorMessage(e.getMessage(),
-                        Status.fromStatusCode(e.getResponse().getStatus())))
-                .type(MediaType.APPLICATION_JSON).build();
+        return Response
+            .fromResponse(e.getResponse())
+            .entity(new ErrorMessage(e.getMessage(),
+                Status.fromStatusCode(e.getResponse().getStatus())))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

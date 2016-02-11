@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -42,13 +37,18 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.TagValues;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 public abstract class DistributedBucketInstance<B extends Bucket>
-        extends BucketAggregationInstance<B> {
-    public DistributedBucketInstance(final long size, final long extent,
-            final Set<MetricType> input, final MetricType out) {
+    extends BucketAggregationInstance<B> {
+    public DistributedBucketInstance(
+        final long size, final long extent, final Set<MetricType> input, final MetricType out
+    ) {
         super(size, extent,
-                ImmutableSet.<MetricType> builder().addAll(input).add(MetricType.SPREAD).build(),
-                out);
+            ImmutableSet.<MetricType>builder().addAll(input).add(MetricType.SPREAD).build(), out);
     }
 
     @Override
@@ -66,7 +66,7 @@ public abstract class DistributedBucketInstance<B extends Bucket>
 
                 // combine all the tags.
                 final Iterator<ShardedResultGroup> step1 =
-                        Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
+                    Iterators.concat(Iterators.transform(all.iterator(), Iterable::iterator));
 
                 final Iterator<TagValues> step2 = Iterators.concat(Iterators.transform(step1, g -> {
                     g.getGroup().updateReducer(session, tags);
@@ -74,7 +74,7 @@ public abstract class DistributedBucketInstance<B extends Bucket>
                 }));
 
                 final List<TagValues> tagValues = TagValues.fromEntries(
-                        Iterators.concat(Iterators.transform(step2, TagValues::iterator)));
+                    Iterators.concat(Iterators.transform(step2, TagValues::iterator)));
 
                 final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
 

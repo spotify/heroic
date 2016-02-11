@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Comparator;
-import java.util.Map;
-
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
+import java.util.Comparator;
+import java.util.Map;
 
 @Data
-@EqualsAndHashCode(exclude = { "valueHash" })
+@EqualsAndHashCode(exclude = {"valueHash"})
 public class Event implements Metric {
     private static final Map<String, Object> EMPTY_PAYLOAD = ImmutableMap.of();
 

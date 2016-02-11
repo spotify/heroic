@@ -22,34 +22,38 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
-import java.time.LocalDate;
-import java.util.Optional;
-
-import org.kohsuke.args4j.Option;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.time.LocalDate;
+import java.util.Optional;
 
 @TaskUsage("Report that a series has been fetched")
 @TaskName("analytics-report-fetch-series")
 public class AnalyticsReportFetchSeries implements ShellTask {
-    @Inject
-    private MetricAnalytics metricAnalytics;
+    private final MetricAnalytics metricAnalytics;
+    private final ObjectMapper mapper;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public AnalyticsReportFetchSeries(
+        MetricAnalytics metricAnalytics, @Named("application/json") ObjectMapper mapper
+    ) {
+        this.metricAnalytics = metricAnalytics;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -69,7 +73,7 @@ public class AnalyticsReportFetchSeries implements ShellTask {
         }
 
         final LocalDate date =
-                Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
+            Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
 
         return metricAnalytics.reportFetchSeries(date, series);
     }
@@ -77,11 +81,20 @@ public class AnalyticsReportFetchSeries implements ShellTask {
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-s", aliases = {"--series"}, usage = "Series to report fetch for",
-                metaVar = "<json>")
+            metaVar = "<json>")
         private String series;
 
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
-                metaVar = "<yyyy-MM-dd>")
+            metaVar = "<yyyy-MM-dd>")
         private String date = null;
+    }
+
+    public static AnalyticsReportFetchSeries setup(final CoreComponent core) {
+        return DaggerAnalyticsReportFetchSeries_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        AnalyticsReportFetchSeries task();
     }
 }

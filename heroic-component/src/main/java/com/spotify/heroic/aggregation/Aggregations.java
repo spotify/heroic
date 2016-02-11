@@ -30,7 +30,7 @@ import java.util.Optional;
 public abstract class Aggregations {
     /**
      * Creates an aggregation chain.
-     *
+     * <p>
      * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single
      * entry will return that single item. More than one entry will construct a new instance of
      * {@link AggregationChain}.

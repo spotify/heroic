@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.spotify.heroic.metric.datastax.TypeSerializer;
 
 public class CompositeComposer {
     private static final byte EQ = 0x0;

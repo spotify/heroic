@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.spotify.heroic.aggregation.AbstractAnyBucket;
 import com.spotify.heroic.metric.Metric;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Bucket that counts the number of seen samples.

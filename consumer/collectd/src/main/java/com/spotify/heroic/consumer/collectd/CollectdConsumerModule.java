@@ -23,24 +23,17 @@ package com.spotify.heroic.consumer.collectd;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.spotify.heroic.common.GrokProcessor;
-import com.spotify.heroic.consumer.Consumer;
 import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.ingestion.IngestionManager;
-import com.spotify.heroic.statistics.ConsumerReporter;
-
-import java.net.InetAddress;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
-
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -49,6 +42,13 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import javax.inject.Named;
+import java.net.InetAddress;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 @Slf4j
 @Data
@@ -62,59 +62,14 @@ public class CollectdConsumerModule implements ConsumerModule {
     private final CollectdTypes types;
 
     @Override
-    public Module module(final Key<Consumer> key, final ConsumerReporter reporter) {
-        final AtomicInteger consuming = new AtomicInteger();
-        final AtomicInteger total = new AtomicInteger();
-        final AtomicLong errors = new AtomicLong();
-        final LongAdder consumed = new LongAdder();
-
-        return new PrivateModule() {
-            @Provides
-            public Managed<Server> connection(final AsyncFramework async, final Consumer consumer,
-                    final IngestionManager ingestionManager) {
-                return async.managed(new ManagedSetup<Server>() {
-                    @Override
-                    public AsyncFuture<Server> construct() {
-                        final IngestionGroup ingestion = ingestionManager.useDefaultGroup();
-
-                        if (ingestion.isEmpty()) {
-                            log.warn("No backends are part of the selected ingestion group");
-                        }
-
-                        final CollectdChannelHandler handler =
-                                new CollectdChannelHandler(async, ingestion, hostProcessor, types);
-
-                        final InetAddress h = host.map(host -> {
-                            try {
-                                return InetAddress.getByName(host);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        }).orElseGet(InetAddress::getLoopbackAddress);
-
-                        final int p = port.orElse(DEFAULT_PORT);
-
-                        log.info("Setting up on {}:{}", h, p);
-                        return Server.setup(async, handler, h, p);
-                    }
-
-                    @Override
-                    public AsyncFuture<Void> destruct(final Server value) {
-                        log.info("Shutting down");
-                        return value.shutdown();
-                    }
-                });
-            }
-
-            @Override
-            protected void configure() {
-                bind(ConsumerReporter.class).toInstance(reporter);
-                bind(Consumer.class)
-                        .toInstance(new CollectdConsumer(consuming, total, errors, consumed));
-                bind(key).to(Consumer.class).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+    public Out module(PrimaryComponent primary, IngestionComponent ingestion, In in, String id) {
+        return DaggerCollectdConsumerModule_C
+            .builder()
+            .primaryComponent(primary)
+            .ingestionComponent(ingestion)
+            .in(in)
+            .m(new M())
+            .build();
     }
 
     @Override
@@ -131,6 +86,92 @@ public class CollectdConsumerModule implements ConsumerModule {
         return new Builder();
     }
 
+    @CollectdScope
+    @Component(modules = M.class,
+        dependencies = {PrimaryComponent.class, IngestionComponent.class, ConsumerModule.In.class})
+    interface C extends ConsumerModule.Out {
+        @Override
+        CollectdConsumer consumer();
+
+        @Override
+        LifeCycle consumerLife();
+    }
+
+    @Module
+    class M {
+        @Provides
+        LifeCycle consumerLife(LifeCycleManager manager, CollectdConsumer consumer) {
+            return manager.build(consumer);
+        }
+
+        @Provides
+        @Named("consuming")
+        @CollectdScope
+        AtomicInteger consuming() {
+            return new AtomicInteger();
+        }
+
+        @Provides
+        @Named("total")
+        @CollectdScope
+        AtomicInteger total() {
+            return new AtomicInteger();
+        }
+
+        @Provides
+        @Named("errors")
+        @CollectdScope
+        AtomicLong errors() {
+            return new AtomicLong();
+        }
+
+        @Provides
+        @Named("consumed")
+        @CollectdScope
+        LongAdder consumed() {
+            return new LongAdder();
+        }
+
+        @Provides
+        @CollectdScope
+        Managed<Server> connection(
+            final AsyncFramework async, final IngestionManager ingestionManager
+        ) {
+            return async.managed(new ManagedSetup<Server>() {
+                @Override
+                public AsyncFuture<Server> construct() {
+                    final IngestionGroup ingestion = ingestionManager.useDefaultGroup();
+
+                    if (ingestion.isEmpty()) {
+                        log.warn("No backends are part of the selected ingestion group");
+                    }
+
+                    final CollectdChannelHandler handler =
+                        new CollectdChannelHandler(async, ingestion, hostProcessor, types);
+
+                    final InetAddress h = host.map(host -> {
+                        try {
+                            return InetAddress.getByName(host);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).orElseGet(InetAddress::getLoopbackAddress);
+
+                    final int p = port.orElse(DEFAULT_PORT);
+
+                    log.info("Setting up on {}:{}", h, p);
+                    return Server.setup(async, handler, h, p);
+                }
+
+                @Override
+                public AsyncFuture<Void> destruct(final Server value) {
+                    log.info("Shutting down");
+                    return value.shutdown();
+                }
+            });
+        }
+    }
+
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     public static class Builder implements ConsumerModule.Builder {
         private Optional<String> id = Optional.empty();
@@ -140,11 +181,12 @@ public class CollectdConsumerModule implements ConsumerModule {
         private Optional<CollectdTypes> types = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("id") Optional<String> id,
-                @JsonProperty("host") Optional<String> host,
-                @JsonProperty("port") Optional<Integer> port,
-                @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern,
-                @JsonProperty("types") Optional<CollectdTypes> types) {
+        public Builder(
+            @JsonProperty("id") Optional<String> id, @JsonProperty("host") Optional<String> host,
+            @JsonProperty("port") Optional<Integer> port,
+            @JsonProperty("hostPattern") Optional<GrokProcessor> hostPattern,
+            @JsonProperty("types") Optional<CollectdTypes> types
+        ) {
             this.id = id;
             this.host = host;
             this.port = port;

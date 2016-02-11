@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
-
 import lombok.Data;
+
+import java.util.Optional;
 
 @Data
 public class Empty implements Aggregation {

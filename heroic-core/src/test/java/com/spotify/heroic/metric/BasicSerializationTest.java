@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.common.Statistics;
-
 import org.junit.Test;
 
 import java.io.IOException;
@@ -23,7 +22,7 @@ public class BasicSerializationTest {
     @Test
     public void testEvent() throws Exception {
         final Event expected = new Event(1024L,
-                ImmutableMap.<String, Object> of("int", 1234, "float", 0.25d, "string", "foo"));
+            ImmutableMap.<String, Object>of("int", 1234, "float", 0.25d, "string", "foo"));
         assertSerialization("Event.json", expected, Event.class);
     }
 
@@ -35,8 +34,8 @@ public class BasicSerializationTest {
 
     @Test
     public void testMetricCollection() throws Exception {
-        final MetricCollection expected = MetricCollection
-                .points(ImmutableList.of(new Point(1000, 10.0d), new Point(2000, 20.0d)));
+        final MetricCollection expected = MetricCollection.points(
+            ImmutableList.of(new Point(1000, 10.0d), new Point(2000, 20.0d)));
         assertSerialization("MetricCollection.json", expected, MetricCollection.class);
     }
 
@@ -44,7 +43,7 @@ public class BasicSerializationTest {
     public void testResultGroup() throws Exception {
         final List<TagValues> tags = new ArrayList<>();
         final ResultGroup expected =
-                new ResultGroup(tags, MetricCollection.points(new ArrayList<>()), 0L);
+            new ResultGroup(tags, MetricCollection.points(new ArrayList<>()), 0L);
         assertSerialization("ResultGroup.json", expected, ResultGroup.class);
     }
 
@@ -53,13 +52,13 @@ public class BasicSerializationTest {
         final List<ResultGroup> groups = new ArrayList<>();
         final List<RequestError> errors = new ArrayList<>();
         final ResultGroups expected = new ResultGroups(groups, errors, Statistics.empty(),
-                new QueryTrace(QueryTrace.identifier("test")));
+            new QueryTrace(QueryTrace.identifier("test")));
 
         assertSerialization("ResultGroups.json", expected, ResultGroups.class);
     }
 
     private <T> void assertSerialization(final String json, final T expected, final Class<T> type)
-            throws IOException, JsonParseException, JsonMappingException {
+        throws IOException, JsonParseException, JsonMappingException {
         // verify that it is equal to the local file.
         try (InputStream in = openResource(json)) {
             assertEquals(expected, mapper.readValue(in, type));

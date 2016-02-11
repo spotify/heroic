@@ -21,14 +21,14 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.io.IOException;
-import java.util.Map;
-
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -44,16 +44,15 @@ public class CoreAggregationSerializer implements AggregationSerializer {
 
         if (id == null) {
             throw new IllegalArgumentException(
-                    "Type is not a serializable aggergation: " + value.getClass());
+                "Type is not a serializable aggergation: " + value.getClass());
         }
 
         string.serialize(buffer, id);
 
         final SerialWriter.Scope scope = buffer.scope();
 
-        @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer =
-                (Serializer<AggregationInstance>) serializerMap.get(id);
+        @SuppressWarnings("unchecked") final Serializer<AggregationInstance> serializer =
+            (Serializer<AggregationInstance>) serializerMap.get(id);
 
         serializer.serialize(scope, value);
     }
@@ -62,9 +61,8 @@ public class CoreAggregationSerializer implements AggregationSerializer {
     public AggregationInstance deserialize(SerialReader buffer) throws IOException {
         final String id = string.deserialize(buffer);
 
-        @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer =
-                (Serializer<AggregationInstance>) serializerMap.get(id);
+        @SuppressWarnings("unchecked") final Serializer<AggregationInstance> serializer =
+            (Serializer<AggregationInstance>) serializerMap.get(id);
 
         if (serializer == null) {
             buffer.skip();

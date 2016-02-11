@@ -130,9 +130,9 @@ public final class HeroicMappers {
         module.addDeserializer(MetricGroup.class, new MetricGroupSerialization.Deserializer());
 
         module.addSerializer(MetricCollection.class,
-                new MetricCollectionSerialization.Serializer());
+            new MetricCollectionSerialization.Serializer());
         module.addDeserializer(MetricCollection.class,
-                new MetricCollectionSerialization.Deserializer());
+            new MetricCollectionSerialization.Deserializer());
 
         module.addSerializer(MetricType.class, new MetricTypeSerialization.Serializer());
         module.addDeserializer(MetricType.class, new MetricTypeSerialization.Deserializer());

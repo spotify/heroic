@@ -21,20 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
-import org.apache.commons.lang3.tuple.Pair;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -43,9 +29,20 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagSuggest {
@@ -56,8 +53,10 @@ public class TagSuggest {
     private final List<Suggestion> suggestions;
 
     @JsonCreator
-    public TagSuggest(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("suggestions") List<Suggestion> suggestions) {
+    public TagSuggest(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("suggestions") List<Suggestion> suggestions
+    ) {
         this.errors = checkNotNull(errors, "errors");
         this.suggestions = checkNotNull(suggestions, "suggestions");
     }
@@ -101,30 +100,32 @@ public class TagSuggest {
     }
 
     public static Transform<Throwable, ? extends TagSuggest> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, TagSuggest>() {
             @Override
             public TagSuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagSuggest(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_SUGGESTIONS);
+                return new TagSuggest(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                    EMPTY_SUGGESTIONS);
             }
         };
     }
 
     @Data
-    @EqualsAndHashCode(of = { "key", "value" })
+    @EqualsAndHashCode(of = {"key", "value"})
     public static final class Suggestion {
         private final float score;
         private final String key;
         private final String value;
 
         @JsonCreator
-        public Suggestion(@JsonProperty("score") Float score, @JsonProperty("key") String key,
-                @JsonProperty("value") String value) {
+        public Suggestion(
+            @JsonProperty("score") Float score, @JsonProperty("key") String key,
+            @JsonProperty("value") String value
+        ) {
             this.score = checkNotNull(score, "score");
             this.key = checkNotNull(key, "key");
             this.value = value;
@@ -162,12 +163,13 @@ public class TagSuggest {
     }
 
     public static Transform<Throwable, ? extends TagSuggest> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, TagSuggest>() {
             @Override
             public TagSuggest transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new TagSuggest(errors, EMPTY_SUGGESTIONS);
             }
         };

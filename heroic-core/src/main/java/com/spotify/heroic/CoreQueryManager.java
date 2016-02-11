@@ -23,8 +23,6 @@ package com.spotify.heroic;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationCombiner;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -44,7 +42,12 @@ import com.spotify.heroic.metric.QueryResult;
 import com.spotify.heroic.metric.QueryResultPart;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.ResultGroups;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.RequiredArgsConstructor;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -54,34 +57,32 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
-
 public class CoreQueryManager implements QueryManager {
     public static final QueryTrace.Identifier QUERY_NODE =
-            QueryTrace.identifier(CoreQueryManager.class, "query_node");
+        QueryTrace.identifier(CoreQueryManager.class, "query_node");
     public static final QueryTrace.Identifier QUERY =
-            QueryTrace.identifier(CoreQueryManager.class, "query");
+        QueryTrace.identifier(CoreQueryManager.class, "query");
+
+    private final Set<String> features;
+    private final AsyncFramework async;
+    private final ClusterManager cluster;
+    private final FilterFactory filters;
+    private final QueryParser parser;
+    private final QueryCache queryCache;
 
     @Inject
-    @Named("features")
-    private Set<String> features;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private ClusterManager cluster;
-
-    @Inject
-    private FilterFactory filters;
-
-    @Inject
-    private QueryParser parser;
-
-    @Inject
-    private QueryCache queryCache;
+    public CoreQueryManager(
+        @Named("features") final Set<String> features, final AsyncFramework async,
+        final ClusterManager cluster, final FilterFactory filters, final QueryParser parser,
+        final QueryCache queryCache
+    ) {
+        this.features = features;
+        this.async = async;
+        this.cluster = cluster;
+        this.filters = filters;
+        this.parser = parser;
+        this.queryCache = queryCache;
+    }
 
     @Override
     public Group useGroup(String group) {
@@ -127,8 +128,11 @@ public class CoreQueryManager implements QueryManager {
         /* get aggregation that is part of statement, if any */
         final Optional<Aggregation> aggregation = q.getAggregation();
 
-        return newQuery().source(q.getSource()).range(q.getRange()).aggregation(aggregation)
-                .filter(q.getFilter());
+        return newQuery()
+            .source(q.getSource())
+            .range(q.getRange())
+            .aggregation(aggregation)
+            .filter(q.getFilter());
     }
 
     @Override
@@ -165,8 +169,8 @@ public class CoreQueryManager implements QueryManager {
             final AggregationInstance aggregationInstance;
             final AggregationCombiner combiner;
 
-            if (features.contains(Query.DISTRIBUTED_AGGREGATIONS)
-                    || q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
+            if (features.contains(Query.DISTRIBUTED_AGGREGATIONS) ||
+                q.hasFeature(Query.DISTRIBUTED_AGGREGATIONS)) {
                 aggregationInstance = root.distributed();
                 combiner = root.combiner(range);
             } else {
@@ -178,10 +182,10 @@ public class CoreQueryManager implements QueryManager {
                 for (ClusterNode.Group group : groups) {
                     final ClusterNode c = group.node();
 
-                    final AsyncFuture<QueryResultPart> queryPart =
-                            group.query(source, filter, range, aggregationInstance, options)
-                                    .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
-                                    .directTransform(QueryResultPart.fromResultGroup(range, c));
+                    final AsyncFuture<QueryResultPart> queryPart = group
+                        .query(source, filter, range, aggregationInstance, options)
+                        .catchFailed(ResultGroups.nodeError(QUERY_NODE, group))
+                        .directTransform(QueryResultPart.fromResultGroup(range, c));
 
                     futures.add(queryPart);
                 }
@@ -191,15 +195,19 @@ public class CoreQueryManager implements QueryManager {
         }
 
         private Duration buildCadence(final Aggregation aggregation, final DateRange rawRange) {
-            return aggregation.size().map(Duration::ofMilliseconds)
-                    .orElseGet(() -> cadenceFromRange(rawRange));
+            return aggregation
+                .size()
+                .map(Duration::ofMilliseconds)
+                .orElseGet(() -> cadenceFromRange(rawRange));
         }
 
         private DateRange buildRange(Query q) {
             final long now = System.currentTimeMillis();
 
-            return q.getRange().map(r -> r.buildDateRange(now))
-                    .orElseThrow(() -> new QueryStateException("Range must be present"));
+            return q
+                .getRange()
+                .map(r -> r.buildDateRange(now))
+                .orElseThrow(() -> new QueryStateException("Range must be present"));
         }
 
         @Override
@@ -214,32 +222,32 @@ public class CoreQueryManager implements QueryManager {
     }
 
     private static final SortedSet<Long> INTERVAL_FACTORS =
-            ImmutableSortedSet.of(TimeUnit.MILLISECONDS.convert(1, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(50, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(250, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(500, TimeUnit.MILLISECONDS),
-                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS),
-                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS),
-                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS),
-                    TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS),
-                    TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
-                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES),
-                    TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES),
-                    TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES),
-                    TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES),
-                    TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES),
-                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS),
-                    TimeUnit.MILLISECONDS.convert(3, TimeUnit.HOURS),
-                    TimeUnit.MILLISECONDS.convert(6, TimeUnit.HOURS),
-                    TimeUnit.MILLISECONDS.convert(12, TimeUnit.HOURS),
-                    TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS),
-                    TimeUnit.MILLISECONDS.convert(2, TimeUnit.DAYS),
-                    TimeUnit.MILLISECONDS.convert(3, TimeUnit.DAYS),
-                    TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS),
-                    TimeUnit.MILLISECONDS.convert(14, TimeUnit.DAYS));
+        ImmutableSortedSet.of(TimeUnit.MILLISECONDS.convert(1, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(5, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(10, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(50, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(100, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(250, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(500, TimeUnit.MILLISECONDS),
+            TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS),
+            TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS),
+            TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS),
+            TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS),
+            TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
+            TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES),
+            TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES),
+            TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES),
+            TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES),
+            TimeUnit.MILLISECONDS.convert(30, TimeUnit.MINUTES),
+            TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS),
+            TimeUnit.MILLISECONDS.convert(3, TimeUnit.HOURS),
+            TimeUnit.MILLISECONDS.convert(6, TimeUnit.HOURS),
+            TimeUnit.MILLISECONDS.convert(12, TimeUnit.HOURS),
+            TimeUnit.MILLISECONDS.convert(1, TimeUnit.DAYS),
+            TimeUnit.MILLISECONDS.convert(2, TimeUnit.DAYS),
+            TimeUnit.MILLISECONDS.convert(3, TimeUnit.DAYS),
+            TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS),
+            TimeUnit.MILLISECONDS.convert(14, TimeUnit.DAYS));
 
     public static final long INTERVAL_GOAL = 240;
 

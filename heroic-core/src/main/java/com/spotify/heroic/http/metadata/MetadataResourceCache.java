@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.http.metadata;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -33,26 +28,37 @@ import com.spotify.heroic.cluster.ClusterManager;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.metadata.FindKeys;
 import com.spotify.heroic.metadata.FindTags;
-
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import lombok.Data;
 
-public class MetadataResourceCache {
-    @Inject
-    private ClusterManager cluster;
+import javax.inject.Inject;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
-    private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags =
-            CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES)
-                    .build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
-                        @Override
-                        public AsyncFuture<FindTags> load(Entry e) {
-                            return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
-                        }
-                    });
+public class MetadataResourceCache {
+    private final ClusterManager cluster;
+
+    @Inject
+    public MetadataResourceCache(final ClusterManager cluster) {
+        this.cluster = cluster;
+    }
+
+    private final LoadingCache<Entry, AsyncFuture<FindTags>> findTags = CacheBuilder
+        .newBuilder()
+        .maximumSize(10000)
+        .expireAfterWrite(30, TimeUnit.MINUTES)
+        .build(new CacheLoader<Entry, AsyncFuture<FindTags>>() {
+            @Override
+            public AsyncFuture<FindTags> load(
+                Entry e
+            ) {
+                return cluster.useGroup(e.getGroup()).findTags(e.getFilter());
+            }
+        });
 
     public AsyncFuture<FindTags> findTags(final String group, final RangeFilter filter)
-            throws ExecutionException {
+        throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
         return findTags.get(e).onDone(new FutureDone<FindTags>() {
@@ -72,17 +78,21 @@ public class MetadataResourceCache {
         });
     }
 
-    private final LoadingCache<Entry, AsyncFuture<FindKeys>> findKeys =
-            CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES)
-                    .build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
-                        @Override
-                        public AsyncFuture<FindKeys> load(Entry e) {
-                            return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
-                        }
-                    });
+    private final LoadingCache<Entry, AsyncFuture<FindKeys>> findKeys = CacheBuilder
+        .newBuilder()
+        .maximumSize(10000)
+        .expireAfterWrite(30, TimeUnit.MINUTES)
+        .build(new CacheLoader<Entry, AsyncFuture<FindKeys>>() {
+            @Override
+            public AsyncFuture<FindKeys> load(
+                Entry e
+            ) {
+                return cluster.useGroup(e.getGroup()).findKeys(e.getFilter());
+            }
+        });
 
     public AsyncFuture<FindKeys> findKeys(final String group, final RangeFilter filter)
-            throws ExecutionException {
+        throws ExecutionException {
         final Entry e = new Entry(group, filter);
 
         return findKeys.get(e).onDone(new FutureDone<FindKeys>() {

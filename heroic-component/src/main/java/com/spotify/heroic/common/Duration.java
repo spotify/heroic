@@ -21,29 +21,25 @@
 
 package com.spotify.heroic.common;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
+import lombok.Data;
+
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
-
-import lombok.Data;
-
 /**
  * A helper type that represents a duration as the canonical duration/unit.
- *
+ * <p>
  * This is provided so that we can implement a parser for it to simplify configurations that require
  * durations.
- *
+ * <p>
  * This type is intended to be conveniently de-serialize from a short-hand string type, like the
  * following examples.
- *
- * <ul>
- * <li>1H - 1 Hour</li>
- * <li>5m - 5 minutes</li>
- * </ul>
+ * <p>
+ * <ul> <li>1H - 1 Hour</li> <li>5m - 5 minutes</li> </ul>
  *
  * @author udoprog
  */
@@ -118,7 +114,7 @@ public class Duration {
 
         if (unit == null) {
             throw new IllegalArgumentException(
-                    "Invalid unit (" + unitString + ") in duration: " + string);
+                "Invalid unit (" + unitString + ") in duration: " + string);
         }
 
         return new Duration(duration, unit);
@@ -126,18 +122,18 @@ public class Duration {
 
     public static String unitSuffix(TimeUnit unit) {
         switch (unit) {
-        case MILLISECONDS:
-            return "ms";
-        case SECONDS:
-            return "s";
-        case MINUTES:
-            return "m";
-        case HOURS:
-            return "h";
-        case DAYS:
-            return "d";
-        default:
-            throw new IllegalStateException("Unit not supported for serialization: " + unit);
+            case MILLISECONDS:
+                return "ms";
+            case SECONDS:
+                return "s";
+            case MINUTES:
+                return "m";
+            case HOURS:
+                return "h";
+            case DAYS:
+                return "d";
+            default:
+                throw new IllegalStateException("Unit not supported for serialization: " + unit);
         }
     }
 }

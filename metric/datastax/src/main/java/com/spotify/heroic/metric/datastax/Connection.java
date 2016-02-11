@@ -23,7 +23,6 @@ package com.spotify.heroic.metric.datastax;
 
 import com.datastax.driver.core.Session;
 import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

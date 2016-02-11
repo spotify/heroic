@@ -1,5 +1,32 @@
 package com.spotify.heroic.ingestion;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.metadata.MetadataBackend;
+import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.metric.WriteResult;
+import com.spotify.heroic.statistics.IngestionManagerReporter;
+import com.spotify.heroic.suggest.SuggestBackend;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureFinished;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.stubbing.Answer;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
+
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.junit.Assert.assertEquals;
@@ -12,35 +39,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Supplier;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.runners.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
-
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metric.MetricBackend;
-import com.spotify.heroic.metric.WriteMetric;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.IngestionManagerReporter;
-import com.spotify.heroic.suggest.SuggestBackend;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureFinished;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoreIngestionGroupTest {
@@ -82,7 +80,7 @@ public class CoreIngestionGroupTest {
         doAnswer(new Answer<AsyncFuture<WriteResult>>() {
             @Override
             public AsyncFuture<WriteResult> answer(final InvocationOnMock invocation)
-                    throws Throwable {
+                throws Throwable {
                 ((FutureFinished) invocation.getArguments()[0]).finished();
                 return expected;
             }
@@ -93,8 +91,10 @@ public class CoreIngestionGroupTest {
         doReturn(range).when(rangeSupplier).get();
     }
 
-    private CoreIngestionGroup setupIngestionGroup(final Optional<MetricBackend> metric,
-            final Optional<MetadataBackend> metadata, final Optional<SuggestBackend> suggest) {
+    private CoreIngestionGroup setupIngestionGroup(
+        final Optional<MetricBackend> metric, final Optional<MetadataBackend> metadata,
+        final Optional<SuggestBackend> suggest
+    ) {
         // @formatter:off
         final CoreIngestionGroup group = new CoreIngestionGroup(
             async, filterSupplier, writePermits, reporter, ingested,

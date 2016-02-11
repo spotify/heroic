@@ -22,10 +22,9 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
+import lombok.Data;
 
 import java.util.Optional;
-
-import lombok.Data;
 
 @Data
 public class RowRange {
@@ -45,7 +44,7 @@ public class RowRange {
 
     public com.google.bigtable.v1.RowRange toPb() {
         final com.google.bigtable.v1.RowRange.Builder builder =
-                com.google.bigtable.v1.RowRange.newBuilder();
+            com.google.bigtable.v1.RowRange.newBuilder();
         start.ifPresent(builder::setStartKey);
         end.ifPresent(builder::setEndKey);
         return builder.build();

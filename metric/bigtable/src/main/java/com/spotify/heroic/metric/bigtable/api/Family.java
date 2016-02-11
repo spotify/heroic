@@ -22,10 +22,9 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
+import lombok.Data;
 
 import java.util.Iterator;
-
-import lombok.Data;
 
 @Data
 public class Family {
@@ -37,7 +36,7 @@ public class Family {
             @Override
             public Iterator<Column> iterator() {
                 final Iterator<com.google.bigtable.v1.Column> iterator =
-                        family.getColumnsList().iterator();
+                    family.getColumnsList().iterator();
 
                 return new Iterator<Column>() {
 

@@ -36,7 +36,7 @@ import java.util.Optional;
 
 /**
  * Backwards compatibility from the dark ages, where group aggregations 'each' field took a list.
- *
+ * <p>
  * XXX: remove when deprecated.
  *
  * @author udoprog
@@ -56,20 +56,20 @@ public class AggregationOrList {
 
     public static final class Deserializer extends JsonDeserializer<AggregationOrList> {
         private static final TypeReference<List<Aggregation>> LIST_OF_AGGREGATIONS =
-                new TypeReference<List<Aggregation>>() {
-                };
+            new TypeReference<List<Aggregation>>() {
+            };
 
         @Override
         public AggregationOrList deserialize(final JsonParser p, final DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             switch (p.getCurrentToken()) {
-            case START_ARRAY:
-                final List<Aggregation> chain = p.readValueAs(LIST_OF_AGGREGATIONS);
-                return new AggregationOrList(Aggregations.chain(chain));
-            case START_OBJECT:
-                return new AggregationOrList(Optional.of(p.readValueAs(Aggregation.class)));
-            default:
-                throw c.wrongTokenException(p, JsonToken.START_OBJECT, null);
+                case START_ARRAY:
+                    final List<Aggregation> chain = p.readValueAs(LIST_OF_AGGREGATIONS);
+                    return new AggregationOrList(Aggregations.chain(chain));
+                case START_OBJECT:
+                    return new AggregationOrList(Optional.of(p.readValueAs(Aggregation.class)));
+                default:
+                    throw c.wrongTokenException(p, JsonToken.START_OBJECT, null);
             }
         }
     }

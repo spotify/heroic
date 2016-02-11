@@ -67,6 +67,7 @@ $ env DH_VERBOSE=1 dpkg-buildpackage -uc -us
 
 ## Hacking
 
+* [A Guide to Dagger 2](docs/guide-to-dagger2.md)
 * [Using IDEA](idea)
 * [Using Eclipse](eclipse)
 

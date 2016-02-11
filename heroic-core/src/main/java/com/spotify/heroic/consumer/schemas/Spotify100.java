@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.consumer.schemas;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -47,9 +42,13 @@ import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
-
 import lombok.Data;
 import lombok.ToString;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @ToString
 public class Spotify100 implements ConsumerSchema {
@@ -73,10 +72,12 @@ public class Spotify100 implements ConsumerSchema {
         private final Double value;
 
         @JsonCreator
-        public JsonMetric(@JsonProperty("version") String version, @JsonProperty("key") String key,
-                @JsonProperty("host") String host, @JsonProperty("time") Long time,
-                @JsonProperty("attributes") Map<String, String> attributes,
-                @JsonProperty("value") Double value) {
+        public JsonMetric(
+            @JsonProperty("version") String version, @JsonProperty("key") String key,
+            @JsonProperty("host") String host, @JsonProperty("time") Long time,
+            @JsonProperty("attributes") Map<String, String> attributes,
+            @JsonProperty("value") Double value
+        ) {
             this.version = version;
             this.key = key;
             this.host = host;
@@ -88,7 +89,7 @@ public class Spotify100 implements ConsumerSchema {
         public static final class TagsDeserializer extends JsonDeserializer<Map<String, String>> {
             @Override
             public Map<String, String> deserialize(JsonParser p, DeserializationContext ctxt)
-                    throws IOException, JsonProcessingException {
+                throws IOException, JsonProcessingException {
                 final ImmutableMap.Builder<String, String> tags = ImmutableMap.builder();
 
                 if (p.getCurrentToken() != JsonToken.START_OBJECT) {
@@ -117,7 +118,7 @@ public class Spotify100 implements ConsumerSchema {
 
     @Override
     public void consume(final IngestionGroup ingestion, final byte[] message)
-            throws ConsumerSchemaException {
+        throws ConsumerSchemaException {
         final JsonMetric metric;
 
         try {
@@ -128,22 +129,23 @@ public class Spotify100 implements ConsumerSchema {
 
         if (metric.getValue() == null) {
             throw new ConsumerSchemaValidationException(
-                    "Metric must have a value but this metric has a null value: " + metric);
+                "Metric must have a value but this metric has a null value: " + metric);
         }
 
         if (metric.getVersion() == null || !SCHEMA_VERSION.equals(metric.getVersion())) {
-            throw new ConsumerSchemaValidationException(String.format(
-                    "Invalid version %s, expected %s", metric.getVersion(), SCHEMA_VERSION));
+            throw new ConsumerSchemaValidationException(
+                String.format("Invalid version %s, expected %s", metric.getVersion(),
+                    SCHEMA_VERSION));
         }
 
         if (metric.getTime() == null) {
             throw new ConsumerSchemaValidationException(
-                    "'" + TIME + "' field must be defined: " + message);
+                "'" + TIME + "' field must be defined: " + message);
         }
 
         if (metric.getKey() == null) {
             throw new ConsumerSchemaValidationException(
-                    "'" + KEY + "' field must be defined: " + message);
+                "'" + KEY + "' field must be defined: " + message);
         }
 
         final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());

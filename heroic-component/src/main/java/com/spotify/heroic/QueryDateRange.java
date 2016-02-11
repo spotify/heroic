@@ -21,10 +21,6 @@
 
 package com.spotify.heroic;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -34,13 +30,18 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.TimeUtils;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(QueryDateRange.Absolute.class),
-        @JsonSubTypes.Type(QueryDateRange.Relative.class) })
+@JsonSubTypes({
+    @JsonSubTypes.Type(QueryDateRange.Absolute.class), @JsonSubTypes.Type(
+    QueryDateRange.Relative.class)
+})
 public interface QueryDateRange {
     @Data
     @RequiredArgsConstructor

@@ -21,12 +21,16 @@
 
 package com.spotify.heroic.cluster;
 
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.spotify.heroic.HeroicConfiguration;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.suggest.SuggestComponent;
 
 public interface RpcProtocolModule {
-    public Module module(final Key<RpcProtocol> key, final HeroicConfiguration options);
+    RpcProtocolComponent module(
+        PrimaryComponent primary, MetricComponent metric, MetadataComponent metadata,
+        SuggestComponent suggest, NodeMetadata nodeMetadata
+    );
 
-    public String scheme();
+    String scheme();
 }

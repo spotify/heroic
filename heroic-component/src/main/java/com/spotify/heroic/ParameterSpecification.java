@@ -21,12 +21,12 @@
 
 package com.spotify.heroic;
 
+import lombok.Data;
+
 import java.io.PrintWriter;
 import java.text.BreakIterator;
 import java.util.Locale;
 import java.util.Optional;
-
-import lombok.Data;
 
 @Data
 public class ParameterSpecification {
@@ -38,8 +38,9 @@ public class ParameterSpecification {
         return new ParameterSpecification(name, description, Optional.empty());
     }
 
-    public static ParameterSpecification parameter(String name, String description,
-            String metavar) {
+    public static ParameterSpecification parameter(
+        String name, String description, String metavar
+    ) {
         return new ParameterSpecification(name, description, Optional.of(metavar));
     }
 
@@ -53,8 +54,9 @@ public class ParameterSpecification {
         printWrapped(out, prefix + "    ", width, description);
     }
 
-    public static void printWrapped(final PrintWriter out, final String prefix, final int width,
-            final String doc) {
+    public static void printWrapped(
+        final PrintWriter out, final String prefix, final int width, final String doc
+    ) {
         final BreakIterator boundary = BreakIterator.getLineInstance(Locale.US);
         boundary.setText(doc);
 

@@ -21,24 +21,23 @@
 
 package com.spotify.heroic;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-
 import lombok.Data;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 @Data
 public class ExtraParameters {
     public static final ParameterSpecification CONFIGURE =
-            ParameterSpecification.parameter("configure", "Automatically configure all backends.");
+        ParameterSpecification.parameter("configure", "Automatically configure all backends.");
 
     private final Multimap<String, String> parameters;
 
@@ -67,7 +66,7 @@ public class ExtraParameters {
             return Optional.of(Integer.parseInt(values.iterator().next()));
         } catch (NumberFormatException e) {
             throw new IllegalStateException(
-                    "Key " + key + " exists, but does not contain a valid numeric value");
+                "Key " + key + " exists, but does not contain a valid numeric value");
         }
     }
 
@@ -106,8 +105,8 @@ public class ExtraParameters {
     }
 
     public String require(final String key) {
-        return get(key)
-                .orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
+        return get(key).orElseThrow(
+            () -> new IllegalStateException(key + ": is a required parameter"));
     }
 
     public boolean contains(ParameterSpecification parameter) {

@@ -28,7 +28,6 @@ import com.spotify.heroic.aggregation.BucketAggregationInstance;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -41,9 +40,10 @@ public class QuantileInstance extends BucketAggregationInstance<QuantileBucket> 
     private final double error;
 
     @JsonCreator
-    public QuantileInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent, @JsonProperty("q") final double q,
-            @JsonProperty("error") double error) {
+    public QuantileInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent,
+        @JsonProperty("q") final double q, @JsonProperty("error") double error
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
         this.q = q;
         this.error = error;

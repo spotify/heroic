@@ -21,28 +21,27 @@
 
 package com.spotify.heroic.cluster;
 
-import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Initializing;
+import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-
 /**
  * Handles management of cluster state.
- *
+ * <p>
  * The primary responsibility is to receive refresh requests through {@link #refresh()} that should
  * cause the cluster state to be updated.
- *
+ * <p>
  * It also provides an interface for looking up nodes through {@link #findNode(Map, NodeCapability)}
  * .
  *
  * @author udoprog
  */
-public interface ClusterManager extends LifeCycle {
+public interface ClusterManager extends Initializing {
     @Data
     class Statistics {
         private final int onlineNodes;

@@ -28,7 +28,6 @@ public interface TableAdminClient {
      * Get details about a table if it exists.
      *
      * @param tableId The id of the table to get details about.
-     *
      * @return The table, or empty if it does not exist.
      */
     public Optional<Table> getTable(String tableId);

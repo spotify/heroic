@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Optional;
-
 import com.spotify.heroic.common.Duration;
+
+import java.util.Optional;
 
 public class DefaultAggregationContext implements AggregationContext {
     final Duration defaultSize;

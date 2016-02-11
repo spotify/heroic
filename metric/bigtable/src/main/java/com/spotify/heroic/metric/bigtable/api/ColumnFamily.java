@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import java.util.regex.Matcher;
-
 import lombok.Data;
+
+import java.util.regex.Matcher;
 
 @Data
 public class ColumnFamily {
@@ -36,7 +36,7 @@ public class ColumnFamily {
 
         if (!m.matches()) {
             throw new IllegalArgumentException(
-                    "Not a valid column family name: " + value.getName());
+                "Not a valid column family name: " + value.getName());
         }
 
         final String clusterId = m.group(1);
@@ -48,6 +48,6 @@ public class ColumnFamily {
 
     public String toURI() {
         return String.format(BigtableConstants.COLUMN_FAMILY_NAME_FORMAT, clusterUri, tableId,
-                name);
+            name);
     }
 }

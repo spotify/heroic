@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,6 +29,8 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+
+import java.io.IOException;
 
 public class SpreadSerialization {
     private static final String COUNT = "count";
@@ -42,19 +42,19 @@ public class SpreadSerialization {
     public static class Deserializer extends JsonDeserializer<Spread> {
         @Override
         public Spread deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException(
-                        String.format("Expected start of array, not %s", p.getCurrentToken()));
+                    String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
             final long timestamp;
 
             {
                 if (!p.nextToken().isNumeric()) {
-                    throw c.mappingException(String.format("Expected timestamp (number), not %s",
-                            p.getCurrentToken()));
+                    throw c.mappingException(
+                        String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
                 }
 
                 timestamp = p.getLongValue();
@@ -105,12 +105,12 @@ public class SpreadSerialization {
 
             if (p.getCurrentToken() != JsonToken.END_OBJECT) {
                 throw c.mappingException(
-                        String.format("Expected end of object, not %s", p.getCurrentToken()));
+                    String.format("Expected end of object, not %s", p.getCurrentToken()));
             }
 
             if (p.nextToken() != JsonToken.END_ARRAY) {
                 throw c.mappingException(
-                        String.format("Expected end of array, not %s", p.getCurrentToken()));
+                    String.format("Expected end of array, not %s", p.getCurrentToken()));
             }
 
             return new Spread(timestamp, count, sum, sumx2, min, max);
@@ -119,7 +119,7 @@ public class SpreadSerialization {
         private long nextLong(JsonParser p, DeserializationContext c) throws IOException {
             if (!p.nextToken().isNumeric()) {
                 throw c.mappingException(
-                        String.format("Expected numeric, not %s", p.getCurrentToken()));
+                    String.format("Expected numeric, not %s", p.getCurrentToken()));
             }
 
             return p.getLongValue();
@@ -143,7 +143,7 @@ public class SpreadSerialization {
     public static class Serializer extends JsonSerializer<Spread> {
         @Override
         public void serialize(Spread d, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

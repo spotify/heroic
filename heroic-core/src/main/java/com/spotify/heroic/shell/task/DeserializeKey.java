@@ -21,12 +21,7 @@
 
 package com.spotify.heroic.shell.task;
 
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -35,19 +30,23 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
 
 @TaskUsage("Deserialize the given backend key")
 @TaskName("deserialize-key")
 public class DeserializeKey implements ShellTask {
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public DeserializeKey(MetricManager metrics) {
+        this.metrics = metrics;
+    }
 
     @Override
     public TaskParameters params() {
@@ -58,16 +57,18 @@ public class DeserializeKey implements ShellTask {
     public AsyncFuture<Void> run(final ShellIO io, TaskParameters base) throws Exception {
         final Parameters params = (Parameters) base;
 
-        return metrics.useGroup(params.group).deserializeKeyFromHex(params.key)
-                .directTransform(result -> {
-                    int i = 0;
+        return metrics
+            .useGroup(params.group)
+            .deserializeKeyFromHex(params.key)
+            .directTransform(result -> {
+                int i = 0;
 
-                    for (final BackendKey key : result) {
-                        io.out().println(String.format("%d: %s", i++, key));
-                    }
+                for (final BackendKey key : result) {
+                    io.out().println(String.format("%d: %s", i++, key));
+                }
 
-                    return null;
-                });
+                return null;
+            });
     }
 
     @ToString
@@ -77,5 +78,14 @@ public class DeserializeKey implements ShellTask {
 
         @Argument(metaVar = "<hex>", usage = "Key to deserialize (in hex)")
         private String key;
+    }
+
+    public static DeserializeKey setup(final CoreComponent core) {
+        return DaggerDeserializeKey_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        DeserializeKey task();
     }
 }

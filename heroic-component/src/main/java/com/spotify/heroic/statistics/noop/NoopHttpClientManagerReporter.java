@@ -34,7 +34,7 @@ public class NoopHttpClientManagerReporter implements HttpClientManagerReporter 
     }
 
     private static final NoopHttpClientManagerReporter instance =
-            new NoopHttpClientManagerReporter();
+        new NoopHttpClientManagerReporter();
 
     public static NoopHttpClientManagerReporter get() {
         return instance;

@@ -20,10 +20,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -32,12 +29,12 @@ public class FilterKAggregationTest {
 
     @Test
     public void testFilterKSession() {
-        final GroupingAggregation g1 = new GroupInstance(
-            Optional.of(ImmutableList.of("site", "host")), EmptyInstance.INSTANCE);
+        final GroupingAggregation g1 =
+            new GroupInstance(Optional.of(ImmutableList.of("site", "host")),
+                EmptyInstance.INSTANCE);
         final GroupingAggregation g2 =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
-        final ChainInstance chain = new ChainInstance(
-            Optional.of(ImmutableList.of(g1, g2)));
+        final ChainInstance chain = new ChainInstance(Optional.of(ImmutableList.of(g1, g2)));
 
         final TopKInstance t1 = new TopKInstance(2, chain);
         final BottomKInstance b1 = new BottomKInstance(1, t1);
@@ -54,8 +51,7 @@ public class FilterKAggregationTest {
         states.add(AggregationState.forSeries(s3));
         states.add(AggregationState.forSeries(s4));
 
-        final AggregationSession session =
-            b1.session(states, new DateRange(0, 10000)).getSession();
+        final AggregationSession session = b1.session(states, new DateRange(0, 10000)).getSession();
 
         session.updatePoints(s4.getTags(), ImmutableSet.of(s4),
             ImmutableList.of(new Point(1, 1.0)));

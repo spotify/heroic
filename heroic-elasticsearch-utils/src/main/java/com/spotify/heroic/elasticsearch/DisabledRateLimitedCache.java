@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.concurrent.ConcurrentMap;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.concurrent.ConcurrentMap;
 
 @RequiredArgsConstructor
 public class DisabledRateLimitedCache<K> implements RateLimitedCache<K> {

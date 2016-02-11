@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
 import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -47,12 +46,14 @@ public class Quantile extends SamplingAggregation {
     private final Optional<Double> error;
 
     @JsonCreator
-    public Quantile(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
-            @JsonProperty("size") Optional<Duration> size,
-            @JsonProperty("extent") Optional<Duration> extent,
-            @JsonProperty("q") Optional<Double> q, @JsonProperty("error") Optional<Double> error) {
+    public Quantile(
+        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
+        @JsonProperty("size") Optional<Duration> size,
+        @JsonProperty("extent") Optional<Duration> extent, @JsonProperty("q") Optional<Double> q,
+        @JsonProperty("error") Optional<Double> error
+    ) {
         super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
-                Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
+            Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
         this.q = q;
         this.error = error;
     }
@@ -60,7 +61,7 @@ public class Quantile extends SamplingAggregation {
     @Override
     public QuantileInstance apply(AggregationContext context, final long size, final long extent) {
         return new QuantileInstance(size, extent, q.orElse(DEFAULT_QUANTILE),
-                error.orElse(DEFAULT_ERROR));
+            error.orElse(DEFAULT_ERROR));
     }
 
     @Override

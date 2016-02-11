@@ -21,23 +21,21 @@
 
 package com.spotify.heroic.cluster.discovery.simple;
 
-import java.net.URI;
-import java.util.List;
-import java.util.Optional;
-
-import javax.inject.Named;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.spotify.heroic.cluster.ClusterDiscovery;
+import com.spotify.heroic.cluster.ClusterDiscoveryComponent;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
-
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.Data;
+
+import javax.inject.Named;
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
 
 @Data
 public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
@@ -49,20 +47,29 @@ public class StaticListDiscoveryModule implements ClusterDiscoveryModule {
     }
 
     @Override
-    public Module module(final Key<ClusterDiscovery> key) {
-        return new PrivateModule() {
-            @Provides
-            @Named("nodes")
-            public List<URI> nodes() {
-                return nodes;
-            }
+    public ClusterDiscoveryComponent module(PrimaryComponent primary) {
+        return DaggerStaticListDiscoveryModule_C
+            .builder()
+            .primaryComponent(primary)
+            .m(new M())
+            .build();
+    }
 
-            @Override
-            protected void configure() {
-                bind(key).to(StaticListDiscovery.class);
-                expose(key);
-            }
-        };
+    @DiscoveryScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends ClusterDiscoveryComponent {
+        @Override
+        StaticListDiscovery clusterDiscovery();
+    }
+
+    @Module
+    class M {
+        @Provides
+        @Named("nodes")
+        @DiscoveryScope
+        public List<URI> nodes() {
+            return nodes;
+        }
     }
 
     public static ClusterDiscoveryModule createDefault() {

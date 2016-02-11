@@ -1,15 +1,12 @@
 package com.spotify.heroic.grammar;
 
-import static com.spotify.heroic.grammar.Value.list;
-import static com.spotify.heroic.grammar.Value.string;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyList;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.grammar.CoreQueryParser.FromDSL;
+import com.spotify.heroic.metric.MetricType;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -19,13 +16,15 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.aggregation.AggregationFactory;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.grammar.CoreQueryParser.FromDSL;
-import com.spotify.heroic.metric.MetricType;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static com.spotify.heroic.grammar.Value.list;
+import static com.spotify.heroic.grammar.Value.string;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyList;
 
 @RunWith(MockitoJUnitRunner.class)
 public class QueryParserTest {
@@ -50,8 +49,9 @@ public class QueryParserTest {
         filters = Mockito.mock(FilterFactory.class);
         aggregations = Mockito.mock(AggregationFactory.class);
 
-        Mockito.when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class)))
-                .thenReturn(matchTag);
+        Mockito
+            .when(filters.matchTag(Mockito.any(String.class), Mockito.any(String.class)))
+            .thenReturn(matchTag);
         Mockito.when(filters.and(anyFilter(), anyFilter())).thenReturn(and);
         Mockito.when(filters.or(anyFilter(), anyFilter())).thenReturn(or);
         Mockito.when(filters.and((List<Filter>) anyList())).thenReturn(and);
@@ -65,7 +65,7 @@ public class QueryParserTest {
     @Test
     public void testList() {
         assertEquals(Value.list(Value.number(1), Value.number(2), Value.number(3)),
-                expr("[1, 2, 3]"));
+            expr("[1, 2, 3]"));
         assertEquals(expr("[1, 2, 3]"), expr("{1, 2, 3}"));
     }
 
@@ -76,8 +76,8 @@ public class QueryParserTest {
         assertEquals(a("average", d), aggregation("average(30H)"));
         assertEquals(a("sum", d), aggregation("sum(30H)"));
 
-        final AggregationValue chain = a("chain",
-                a("group", Value.list(Value.string("host")), a("average", d)), a("sum", d));
+        final AggregationValue chain =
+            a("chain", a("group", Value.list(Value.string("host")), a("average", d)), a("sum", d));
 
         assertEquals(chain, aggregation("chain(group([host], average(30H)), sum(30H))"));
         assertEquals(chain, aggregation("average(30H) by host | sum(30H)"));
@@ -105,7 +105,7 @@ public class QueryParserTest {
     @Test
     public void testByAll() {
         final AggregationValue reference =
-                Value.aggregation("group", Value.list(Value.empty(), Value.aggregation("average")));
+            Value.aggregation("group", Value.list(Value.empty(), Value.aggregation("average")));
         assertEquals(reference, parser.parse(CoreQueryParser.AGGREGATION, "average by *"));
     }
 
@@ -136,21 +136,22 @@ public class QueryParserTest {
 
         // absolute
         checkFrom(MetricType.POINT, Optional.of(new QueryDateRange.Absolute(0, 1234 + 4321)),
-                from("from points(0, 1234 + 4321)"));
+            from("from points(0, 1234 + 4321)"));
 
         // relative
         checkFrom(MetricType.POINT,
-                Optional.of(new QueryDateRange.Relative(TimeUnit.MILLISECONDS, 1000)),
-                from("from points(1000ms)"));
+            Optional.of(new QueryDateRange.Relative(TimeUnit.MILLISECONDS, 1000)),
+            from("from points(1000ms)"));
     }
 
     @Test
     public void testFilter1() {
         assertEquals(optimized,
-                parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in {foo, bar}"));
+            parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in {foo, bar}"));
 
-        Mockito.verify(filters, Mockito.times(4)).matchTag(Mockito.any(String.class),
-                Mockito.any(String.class));
+        Mockito
+            .verify(filters, Mockito.times(4))
+            .matchTag(Mockito.any(String.class), Mockito.any(String.class));
         Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
         Mockito.verify(and).optimize();
     }
@@ -158,10 +159,11 @@ public class QueryParserTest {
     @Test
     public void testFilter2() {
         assertEquals(optimized,
-                parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in [foo, bar]"));
+            parser.parse(CoreQueryParser.FILTER, "a=b and c=d and d in [foo, bar]"));
 
-        Mockito.verify(filters, Mockito.times(4)).matchTag(Mockito.any(String.class),
-                Mockito.any(String.class));
+        Mockito
+            .verify(filters, Mockito.times(4))
+            .matchTag(Mockito.any(String.class), Mockito.any(String.class));
         Mockito.verify(filters, Mockito.times(2)).and(anyFilter(), anyFilter());
         Mockito.verify(and).optimize();
     }
@@ -195,11 +197,12 @@ public class QueryParserTest {
 
     public static AggregationValue a(final String name, final Value... values) {
         return Value.aggregation(name,
-                new ListValue(ImmutableList.copyOf(values), Context.empty()));
+            new ListValue(ImmutableList.copyOf(values), Context.empty()));
     }
 
-    void checkFrom(MetricType source, Optional<QueryDateRange> range,
-            CoreQueryParser.FromDSL result) {
+    void checkFrom(
+        MetricType source, Optional<QueryDateRange> range, CoreQueryParser.FromDSL result
+    ) {
         assertEquals(source, result.getSource());
         assertEquals(range, result.getRange());
     }

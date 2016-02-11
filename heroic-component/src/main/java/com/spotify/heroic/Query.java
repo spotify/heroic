@@ -30,17 +30,16 @@ import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.Optionals;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
+import lombok.Data;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import lombok.Data;
-
 @Data
 public class Query {
     public static final String DISTRIBUTED_AGGREGATIONS =
-            "com.spotify.heroic.distributed_aggregations";
+        "com.spotify.heroic.distributed_aggregations";
 
     private final Optional<Aggregation> aggregation;
     private final Optional<MetricType> source;
@@ -52,18 +51,20 @@ public class Query {
     private final Set<String> features;
 
     @JsonCreator
-    public Query(@JsonProperty("aggregators") final Optional<List<Aggregation>> aggregators,
-            @JsonProperty("aggregation") final Optional<Aggregation> aggregation,
-            @JsonProperty("source") final Optional<MetricType> source,
-            @JsonProperty("range") final Optional<QueryDateRange> range,
-            @JsonProperty("filter") final Optional<Filter> filter,
-            @JsonProperty("options") final Optional<QueryOptions> options,
-            @JsonProperty("groupBy") final Optional<List<String>> groupBy,
-            @JsonProperty("features") final Set<String> features) {
+    public Query(
+        @JsonProperty("aggregators") final Optional<List<Aggregation>> aggregators,
+        @JsonProperty("aggregation") final Optional<Aggregation> aggregation,
+        @JsonProperty("source") final Optional<MetricType> source,
+        @JsonProperty("range") final Optional<QueryDateRange> range,
+        @JsonProperty("filter") final Optional<Filter> filter,
+        @JsonProperty("options") final Optional<QueryOptions> options,
+        @JsonProperty("groupBy") final Optional<List<String>> groupBy,
+        @JsonProperty("features") final Set<String> features
+    ) {
         this.filter = filter;
         this.range = range;
         this.aggregation =
-                Optionals.pickOptional(aggregation, aggregators.flatMap(Aggregations::chain));
+            Optionals.pickOptional(aggregation, aggregators.flatMap(Aggregations::chain));
         this.source = source;
         this.options = options;
         this.groupBy = groupBy;
@@ -72,7 +73,7 @@ public class Query {
 
     public Optional<Aggregation> getAggregation() {
         if (groupBy.isPresent()) {
-            return aggregation.<Aggregation> map(a -> new Group(groupBy, Optional.of(a)));
+            return aggregation.<Aggregation>map(a -> new Group(groupBy, Optional.of(a)));
         }
 
         return aggregation;

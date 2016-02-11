@@ -23,7 +23,6 @@ package com.spotify.heroic.profile;
 
 import com.spotify.heroic.HeroicProfile;
 import com.spotify.heroic.ParameterSpecification;
-
 import org.elasticsearch.common.collect.ImmutableList;
 
 import java.util.List;

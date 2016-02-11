@@ -24,20 +24,17 @@ package com.spotify.heroic.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.spotify.heroic.ws.InternalErrorMessage;
-
+import lombok.RequiredArgsConstructor;
 import org.eclipse.jetty.server.Dispatcher;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.handler.ErrorHandler;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class JettyJSONErrorHandler extends ErrorHandler {
@@ -46,8 +43,9 @@ public class JettyJSONErrorHandler extends ErrorHandler {
     private final ObjectMapper mapper;
 
     @Override
-    public void handle(String target, Request baseRequest, HttpServletRequest request,
-            HttpServletResponse response) throws IOException {
+    public void handle(
+        String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response
+    ) throws IOException {
         baseRequest.setHandled(true);
         response.setContentType(CONTENT_TYPE);
 

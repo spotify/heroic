@@ -22,15 +22,13 @@
 package com.spotify.heroic.analytics;
 
 import com.spotify.heroic.async.AsyncObservable;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
+import eu.toolchain.async.AsyncFuture;
 
 import java.time.LocalDate;
 
-import eu.toolchain.async.AsyncFuture;
-
-public interface MetricAnalytics extends LifeCycle {
+public interface MetricAnalytics {
     /**
      * Wrap and instrument the given metric backend.
      *

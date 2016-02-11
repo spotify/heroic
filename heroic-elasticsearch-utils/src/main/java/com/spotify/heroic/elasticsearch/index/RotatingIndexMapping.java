@@ -21,26 +21,24 @@
 
 package com.spotify.heroic.elasticsearch.index;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.support.IndicesOptions;
-import org.elasticsearch.client.Client;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
-
 import lombok.ToString;
+import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.client.Client;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @ToString
 public class RotatingIndexMapping implements IndexMapping {
@@ -55,17 +53,19 @@ public class RotatingIndexMapping implements IndexMapping {
     private final String pattern;
 
     @JsonCreator
-    public RotatingIndexMapping(@JsonProperty("interval") Duration interval,
-            @JsonProperty("maxReadIndices") Integer maxReadIndices,
-            @JsonProperty("maxWriteIndices") Integer maxWriteIndices,
-            @JsonProperty("pattern") String pattern) {
+    public RotatingIndexMapping(
+        @JsonProperty("interval") Duration interval,
+        @JsonProperty("maxReadIndices") Integer maxReadIndices,
+        @JsonProperty("maxWriteIndices") Integer maxWriteIndices,
+        @JsonProperty("pattern") String pattern
+    ) {
         this.interval =
-                Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
-        this.maxReadIndices = verifyPositiveInt(
-                Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
+            Optional.fromNullable(interval).or(DEFAULT_INTERVAL).convert(TimeUnit.MILLISECONDS);
+        this.maxReadIndices =
+            verifyPositiveInt(Optional.fromNullable(maxReadIndices).or(DEFAULT_MAX_READ_INDICES),
                 "maxReadIndices");
-        this.maxWriteIndices = verifyPositiveInt(
-                Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
+        this.maxWriteIndices =
+            verifyPositiveInt(Optional.fromNullable(maxWriteIndices).or(DEFAULT_MAX_WRITE_INDICES),
                 "maxWriteIndices");
         this.pattern = verifyPattern(Optional.fromNullable(pattern).or(DEFAULT_PATTERN));
     }
@@ -73,7 +73,7 @@ public class RotatingIndexMapping implements IndexMapping {
     private String verifyPattern(String pattern) {
         if (!pattern.contains("%s")) {
             throw new IllegalArgumentException(
-                    "pattern '" + pattern + "' does not contain a string substitude '%s'");
+                "pattern '" + pattern + "' does not contain a string substitude '%s'");
         }
 
         return pattern;
@@ -134,21 +134,25 @@ public class RotatingIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, final DateRange range,
-            final String type) throws NoIndexSelectedException {
-        return client.prepareDeleteByQuery(readIndices(range)).setIndicesOptions(options())
-                .setTypes(type);
+    public DeleteByQueryRequestBuilder deleteByQuery(
+        final Client client, final DateRange range, final String type
+    ) throws NoIndexSelectedException {
+        return client
+            .prepareDeleteByQuery(readIndices(range))
+            .setIndicesOptions(options())
+            .setTypes(type);
     }
 
     @Override
-    public SearchRequestBuilder search(final Client client, final DateRange range,
-            final String type) throws NoIndexSelectedException {
+    public SearchRequestBuilder search(
+        final Client client, final DateRange range, final String type
+    ) throws NoIndexSelectedException {
         return client.prepareSearch(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 
     @Override
     public CountRequestBuilder count(final Client client, final DateRange range, final String type)
-            throws NoIndexSelectedException {
+        throws NoIndexSelectedException {
         return client.prepareCount(readIndices(range)).setIndicesOptions(options()).setTypes(type);
     }
 

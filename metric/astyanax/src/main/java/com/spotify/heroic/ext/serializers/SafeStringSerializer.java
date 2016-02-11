@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.ext.serializers;
 
-import java.nio.ByteBuffer;
-
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.spotify.heroic.ext.marshal.SafeUTF8Type;
+
+import java.nio.ByteBuffer;
 
 /**
  * A StringSerializer that correctly handles null and empty values.

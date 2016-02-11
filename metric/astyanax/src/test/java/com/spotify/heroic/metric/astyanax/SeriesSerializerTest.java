@@ -1,13 +1,12 @@
 package com.spotify.heroic.metric.astyanax;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.spotify.heroic.common.Series;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.common.Series;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SeriesSerializerTest {
     private static final SeriesSerializer serializer = SeriesSerializer.get();

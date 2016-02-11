@@ -22,7 +22,6 @@
 package com.spotify.heroic.analytics;
 
 import com.spotify.heroic.common.Series;
-
 import lombok.Data;
 
 @Data

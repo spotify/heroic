@@ -22,7 +22,6 @@
 package com.spotify.heroic.consumer.collectd;
 
 import com.spotify.heroic.consumer.collectd.CollectdTypes.Field;
-
 import lombok.Data;
 
 public interface CollectdValue {

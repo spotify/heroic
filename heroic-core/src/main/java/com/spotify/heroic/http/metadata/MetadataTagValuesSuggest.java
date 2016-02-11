@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.http.metadata;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.Optional;
 
 @Data
 @RequiredArgsConstructor(access = AccessLevel.NONE)
@@ -67,10 +66,11 @@ public class MetadataTagValuesSuggest {
     private final int groupLimit;
 
     @JsonCreator
-    public MetadataTagValuesSuggest(@JsonProperty("filter") Filter filter,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit,
-            @JsonProperty("exclude") List<String> exclude,
-            @JsonProperty("groupLimimt") Integer groupLimit) {
+    public MetadataTagValuesSuggest(
+        @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
+        @JsonProperty("limit") Integer limit, @JsonProperty("exclude") List<String> exclude,
+        @JsonProperty("groupLimimt") Integer groupLimit
+    ) {
         this.filter = Optional.ofNullable(filter);
         this.range = Optional.ofNullable(range);
         this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);

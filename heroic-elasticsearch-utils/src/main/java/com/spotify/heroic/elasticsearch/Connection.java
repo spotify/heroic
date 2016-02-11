@@ -21,11 +21,15 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.elasticsearch.index.IndexMapping;
+import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.admin.indices.template.put.PutIndexTemplateRequestBuilder;
@@ -39,23 +43,17 @@ import org.elasticsearch.action.search.SearchScrollRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.IndicesAdminClient;
 
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.elasticsearch.index.IndexMapping;
-import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.ResolvableFuture;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 /**
  * Common connection abstraction between Node and TransportClient.
  */
 @Slf4j
 @RequiredArgsConstructor
-@ToString(of = { "index", "client" })
+@ToString(of = {"index", "client"})
 public class Connection {
     private final AsyncFramework async;
     private final IndexMapping index;
@@ -136,7 +134,7 @@ public class Connection {
     }
 
     public SearchRequestBuilder search(DateRange range, String type)
-            throws NoIndexSelectedException {
+        throws NoIndexSelectedException {
         return index.search(client, range, type);
     }
 
@@ -145,7 +143,7 @@ public class Connection {
     }
 
     public DeleteByQueryRequestBuilder deleteByQuery(DateRange range, String type)
-            throws NoIndexSelectedException {
+        throws NoIndexSelectedException {
         return index.deleteByQuery(client, range, type);
     }
 

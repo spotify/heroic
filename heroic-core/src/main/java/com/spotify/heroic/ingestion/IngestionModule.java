@@ -21,35 +21,37 @@
 
 package com.spotify.heroic.ingestion;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Optionals;
+import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
-
+import com.spotify.heroic.suggest.SuggestComponent;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
+import javax.inject.Named;
+import java.util.Optional;
+
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 @RequiredArgsConstructor
-public class IngestionModule extends PrivateModule {
+public class IngestionModule {
     private static final String INGESTION_FILTER_PARAM = "ingestion.filter";
 
     public static final boolean DEFAULT_UPDATE_METRICS = true;
@@ -63,48 +65,77 @@ public class IngestionModule extends PrivateModule {
     private final int maxConcurrentWrites;
     private final Optional<String> filter;
 
-    @Provides
-    @Singleton
-    public IngestionManagerReporter reporter(HeroicReporter reporter) {
-        return reporter.newIngestionManager();
+    public IngestionComponent module(
+        PrimaryComponent primary, SuggestComponent suggest, MetadataComponent metadata,
+        MetricComponent metric
+    ) {
+        return DaggerIngestionModule_C
+            .builder()
+            .primaryComponent(primary)
+            .suggestComponent(suggest)
+            .metadataComponent(metadata)
+            .metricComponent(metric)
+            .m(new M())
+            .build();
     }
 
-    @Provides
-    @Named("updateMetadata")
-    public boolean updateMetadata() {
-        return updateMetadata;
+    @IngestionScope
+    @Component(modules = M.class,
+        dependencies = {
+            PrimaryComponent.class, SuggestComponent.class, MetadataComponent.class,
+            MetricComponent.class
+        })
+    interface C extends IngestionComponent {
+        @Override
+        IngestionManagerImpl ingestionManager();
     }
 
-    @Provides
-    @Named("updateMetrics")
-    public boolean updateMetrics() {
-        return updateMetrics;
-    }
+    @Module
+    class M {
+        @Provides
+        @IngestionScope
+        public IngestionManagerReporter reporter(HeroicReporter reporter) {
+            return reporter.newIngestionManager();
+        }
 
-    @Provides
-    @Named("updateSuggestions")
-    public boolean updateSuggestions() {
-        return updateSuggestions;
-    }
+        @Provides
+        @Named("updateMetadata")
+        @IngestionScope
+        public boolean updateMetadata() {
+            return updateMetadata;
+        }
 
-    @Provides
-    @Named("maxConcurrentWrites")
-    public int maxConcurrentWrites() {
-        return maxConcurrentWrites;
-    }
+        @Provides
+        @Named("updateMetrics")
+        @IngestionScope
+        public boolean updateMetrics() {
+            return updateMetrics;
+        }
 
-    @Provides
-    @Singleton
-    public Filter filter(final QueryParser parser, final FilterFactory filters,
-            final ExtraParameters params) {
-        return Optionals.pickOptional(filter.map(parser::parseFilter),
-                params.getFilter(INGESTION_FILTER_PARAM, parser)).orElseGet(filters::t);
-    }
+        @Provides
+        @Named("updateSuggestions")
+        @IngestionScope
+        public boolean updateSuggestions() {
+            return updateSuggestions;
+        }
 
-    @Override
-    protected void configure() {
-        bind(IngestionManager.class).to(IngestionManagerImpl.class).in(Scopes.SINGLETON);
-        expose(IngestionManager.class);
+        @Provides
+        @Named("maxConcurrentWrites")
+        @IngestionScope
+        public int maxConcurrentWrites() {
+            return maxConcurrentWrites;
+        }
+
+        @Provides
+        @IngestionScope
+        public Filter filter(
+            final QueryParser parser, final FilterFactory filters, final ExtraParameters params
+        ) {
+            return Optionals
+                .pickOptional(filter.map(parser::parseFilter),
+                    params.getFilter(INGESTION_FILTER_PARAM, parser))
+                .orElseGet(filters::t);
+        }
     }
 
     public static Builder builder() {
@@ -121,11 +152,13 @@ public class IngestionModule extends PrivateModule {
         private Optional<String> filter = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("updateMetrics") Boolean updateMetrics,
-                @JsonProperty("updateMetadata") Boolean updateMetadata,
-                @JsonProperty("updateSuggestions") Boolean updateSuggestions,
-                @JsonProperty("maxConcurrentWrites") Integer maxConcurrentWrites,
-                @JsonProperty("filter") String filter) {
+        public Builder(
+            @JsonProperty("updateMetrics") Boolean updateMetrics,
+            @JsonProperty("updateMetadata") Boolean updateMetadata,
+            @JsonProperty("updateSuggestions") Boolean updateSuggestions,
+            @JsonProperty("maxConcurrentWrites") Integer maxConcurrentWrites,
+            @JsonProperty("filter") String filter
+        ) {
             this.updateMetadata = ofNullable(updateMetadata);
             this.updateMetrics = ofNullable(updateMetrics);
             this.updateSuggestions = ofNullable(updateSuggestions);
@@ -161,7 +194,7 @@ public class IngestionModule extends PrivateModule {
         }
 
         public Builder merge(final Builder o) {
-         // @formatter:off
+            // @formatter:off
             return new Builder(
                 pickOptional(updateMetrics, o.updateMetrics),
                 pickOptional(updateMetadata, o.updateMetadata),

@@ -30,8 +30,9 @@ import com.spotify.heroic.metric.Point;
 
 public class AverageInstance extends DistributedBucketInstance<StripedAverageBucket> {
     @JsonCreator
-    public AverageInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public AverageInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
     }
 

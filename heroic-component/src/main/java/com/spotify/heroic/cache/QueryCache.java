@@ -27,13 +27,13 @@ import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
+import eu.toolchain.async.AsyncFuture;
 
 import java.util.function.Supplier;
 
-import eu.toolchain.async.AsyncFuture;
-
 public interface QueryCache {
-    public AsyncFuture<QueryResult> load(MetricType source, Filter filter, DateRange range,
-            AggregationInstance aggregationInstance, QueryOptions options,
-            Supplier<AsyncFuture<QueryResult>> loader);
+    public AsyncFuture<QueryResult> load(
+        MetricType source, Filter filter, DateRange range, AggregationInstance aggregationInstance,
+        QueryOptions options, Supplier<AsyncFuture<QueryResult>> loader
+    );
 }

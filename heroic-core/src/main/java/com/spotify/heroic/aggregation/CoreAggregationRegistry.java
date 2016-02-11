@@ -24,16 +24,15 @@ package com.spotify.heroic.aggregation;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import eu.toolchain.serializer.Serializer;
+import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
-
 /**
  * Serializes aggregation configurations.
- *
+ * <p>
  * Each aggregation configuration is packed into a Composite which has the type of the aggregation
  * as a prefixed short.
  *
@@ -51,23 +50,25 @@ public class CoreAggregationRegistry implements AggregationRegistry {
     private final Object lock = new Object();
 
     @Override
-    public <A extends Aggregation, I extends AggregationInstance> void register(final String id,
-            final Class<A> type, final Class<I> instanceType,
-            final Serializer<I> instanceSerializer, final AggregationDSL dsl) {
+    public <A extends Aggregation, I extends AggregationInstance> void register(
+        final String id, final Class<A> type, final Class<I> instanceType,
+        final Serializer<I> instanceSerializer, final AggregationDSL dsl
+    ) {
         synchronized (lock) {
             if (serializerMap.containsKey(id)) {
                 throw new IllegalArgumentException(
-                        "An aggregation with the same id (" + id + ") is already registered");
+                    "An aggregation with the same id (" + id + ") is already registered");
             }
 
             if (definitionMap.containsKey(type)) {
-                throw new IllegalArgumentException("An aggregation with the same type ("
-                        + type.getCanonicalName() + ") is already registered");
+                throw new IllegalArgumentException(
+                    "An aggregation with the same type (" + type.getCanonicalName() +
+                        ") is already registered");
             }
 
             if (instanceMap.containsKey(instanceType)) {
-                throw new IllegalArgumentException("An aggregation instance with the same type ("
-                        + instanceType.getCanonicalName() + ") is already registered");
+                throw new IllegalArgumentException("An aggregation instance with the same type (" +
+                    instanceType.getCanonicalName() + ") is already registered");
             }
 
             definitionMap.put(type, id);
@@ -81,7 +82,7 @@ public class CoreAggregationRegistry implements AggregationRegistry {
         final SimpleModule m = new SimpleModule("aggregationRegistry");
 
         for (final Map.Entry<Class<? extends AggregationInstance>, String> e : instanceMap
-                .entrySet()) {
+            .entrySet()) {
             m.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
         }
 

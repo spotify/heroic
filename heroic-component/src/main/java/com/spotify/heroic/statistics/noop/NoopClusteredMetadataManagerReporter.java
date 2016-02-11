@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import java.util.Map;
-import java.util.Set;
-
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.FutureReporter.Context;
+
+import java.util.Map;
+import java.util.Set;
 
 public class NoopClusteredMetadataManagerReporter implements ClusteredMetadataManagerReporter {
     private NoopClusteredMetadataManagerReporter() {
@@ -111,7 +111,7 @@ public class NoopClusteredMetadataManagerReporter implements ClusteredMetadataMa
     }
 
     private static final NoopClusteredMetadataManagerReporter instance =
-            new NoopClusteredMetadataManagerReporter();
+        new NoopClusteredMetadataManagerReporter();
 
     public static NoopClusteredMetadataManagerReporter get() {
         return instance;

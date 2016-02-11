@@ -24,12 +24,11 @@ package com.spotify.heroic.filter.impl;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(of = { "OPERATOR", "value" }, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "value"}, doNotUseGetters = true)
 public class MatchKeyFilterImpl implements Filter.MatchKey {
     public static final String OPERATOR = "key";
 

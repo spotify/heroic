@@ -22,40 +22,44 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
-import java.time.LocalDate;
-import java.util.Optional;
-
-import org.kohsuke.args4j.Option;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.Data;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.time.LocalDate;
+import java.util.Optional;
 
 @TaskUsage("Dump all fetch series values")
 @TaskName("analytics-dump-fetch-series")
 public class AnalyticsDumpFetchSeries implements ShellTask {
-    @Inject
-    MetricAnalytics metricAnalytics;
+    private final MetricAnalytics metricAnalytics;
+    private final ObjectMapper mapper;
+    private final AsyncFramework async;
 
     @Inject
-    @Named("application/json")
-    ObjectMapper mapper;
-
-    @Inject
-    AsyncFramework async;
+    public AnalyticsDumpFetchSeries(
+        MetricAnalytics metricAnalytics, @Named("application/json") ObjectMapper mapper,
+        AsyncFramework async
+    ) {
+        this.metricAnalytics = metricAnalytics;
+        this.mapper = mapper;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -69,11 +73,14 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
         final ResolvableFuture<Void> future = async.future();
 
         final LocalDate date =
-                Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
+            Optional.ofNullable(params.date).map(LocalDate::parse).orElseGet(LocalDate::now);
 
         metricAnalytics.seriesHits(date).observe(AsyncObserver.bind(future, series -> {
-            io.out().println(mapper.writeValueAsString(new AnalyticsHits(
-                    series.getSeries().getHashCode().toString(), series.getHits())));
+            io
+                .out()
+                .println(mapper.writeValueAsString(
+                    new AnalyticsHits(series.getSeries().getHashCode().toString(),
+                        series.getHits())));
             io.out().flush();
             return async.resolved();
         }));
@@ -84,7 +91,7 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-d", aliases = {"--date"}, usage = "Date to fetch data for",
-                metaVar = "<yyyy-MM-dd>")
+            metaVar = "<yyyy-MM-dd>")
         private String date = null;
     }
 
@@ -92,5 +99,14 @@ public class AnalyticsDumpFetchSeries implements ShellTask {
     public static class AnalyticsHits {
         private final String id;
         private final long hits;
+    }
+
+    public static AnalyticsDumpFetchSeries setup(final CoreComponent core) {
+        return DaggerAnalyticsDumpFetchSeries_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        AnalyticsDumpFetchSeries task();
     }
 }

@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.ws;
 
+import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -28,11 +29,16 @@ import javax.ws.rs.ext.Provider;
 
 @Provider
 public class ThrowableExceptionMapper implements ExceptionMapper<Throwable> {
+    @Inject
+    public ThrowableExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(Throwable e) {
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new InternalErrorMessage(e.getMessage(),
-                        Response.Status.INTERNAL_SERVER_ERROR))
-                .type(MediaType.APPLICATION_JSON).build();
+        return Response
+            .status(Response.Status.INTERNAL_SERVER_ERROR)
+            .entity(new InternalErrorMessage(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

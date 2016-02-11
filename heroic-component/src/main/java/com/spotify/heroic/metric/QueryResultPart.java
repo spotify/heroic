@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.DateRange;
-
 import eu.toolchain.async.Transform;
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Data
 public class QueryResultPart {
@@ -40,7 +39,7 @@ public class QueryResultPart {
 
     /**
      * Groups of results.
-     *
+     * <p>
      * Failed groups are omitted from here, {@link #errors} for these.
      */
     private final List<ShardedResultGroup> groups;
@@ -60,16 +59,18 @@ public class QueryResultPart {
      */
     private final QueryTrace queryTrace;
 
-    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(final DateRange range,
-            final ClusterNode c) {
+    public static Transform<ResultGroups, QueryResultPart> fromResultGroup(
+        final DateRange range, final ClusterNode c
+    ) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return result -> {
-            final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(result.getGroups()
-                    .stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
+            final ImmutableList<ShardedResultGroup> groups = ImmutableList.copyOf(
+                result.getGroups().stream().map(ResultGroup.toShardedResultGroup(c)).iterator());
 
-            final ShardTrace shardTrace = ShardTrace.of(c.toString(), c.metadata(),
-                    w.elapsed(TimeUnit.MILLISECONDS), result.getStatistics(), Optional.empty());
+            final ShardTrace shardTrace =
+                ShardTrace.of(c.toString(), c.metadata(), w.elapsed(TimeUnit.MILLISECONDS),
+                    result.getStatistics(), Optional.empty());
 
             return new QueryResultPart(groups, result.getErrors(), shardTrace, result.getTrace());
         };

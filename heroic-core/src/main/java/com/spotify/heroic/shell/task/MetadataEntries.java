@@ -22,11 +22,10 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -37,14 +36,7 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -52,26 +44,36 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-entries")
 @Slf4j
 public class MetadataEntries implements ShellTask {
-    @Inject
-    private MetadataManager metadata;
+    private final MetadataManager metadata;
+    private final QueryParser parser;
+    private final FilterFactory filters;
+    private final ObjectMapper mapper;
+    private final AsyncFramework async;
 
     @Inject
-    private QueryParser parser;
-
-    @Inject
-    private FilterFactory filters;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
+    public MetadataEntries(
+        MetadataManager metadata, QueryParser parser, FilterFactory filters,
+        @Named("application/json") ObjectMapper mapper, AsyncFramework async
+    ) {
+        this.metadata = metadata;
+        this.parser = parser;
+        this.filters = filters;
+        this.mapper = mapper;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -99,8 +101,11 @@ public class MetadataEntries implements ShellTask {
         } else {
             printer = series -> {
                 try {
-                    io.out().println(mapper.writeValueAsString(new AnalyticsSeries(
-                            series.getHashCode().toString(), mapper.writeValueAsString(series))));
+                    io
+                        .out()
+                        .println(mapper.writeValueAsString(
+                            new AnalyticsSeries(series.getHashCode().toString(),
+                                mapper.writeValueAsString(series))));
                 } catch (final Exception e) {
                     log.error("Failed to print series: {}", series, e);
                 }
@@ -122,11 +127,11 @@ public class MetadataEntries implements ShellTask {
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String group;
 
         @Option(name = "--limit", aliases = {"--limit"},
-                usage = "Limit the number of printed entries")
+            usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 
@@ -142,5 +147,14 @@ public class MetadataEntries implements ShellTask {
     public static class AnalyticsSeries {
         private final String id;
         private final String series;
+    }
+
+    public static MetadataEntries setup(final CoreComponent core) {
+        return DaggerMetadataEntries_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        MetadataEntries task();
     }
 }

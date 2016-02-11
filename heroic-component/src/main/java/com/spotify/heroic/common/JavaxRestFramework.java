@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.common;
 
-import javax.ws.rs.container.AsyncResponse;
-
 import eu.toolchain.async.AsyncFuture;
+
+import javax.ws.rs.container.AsyncResponse;
 
 public interface JavaxRestFramework {
     interface Resume<T, R> {
@@ -39,8 +39,9 @@ public interface JavaxRestFramework {
      * @param callback Callback for the pending request.
      * @param resume The resume implementation.
      */
-    <T, R> void bind(final AsyncResponse response, final AsyncFuture<T> callback,
-            final Resume<T, R> resume);
+    <T, R> void bind(
+        final AsyncResponse response, final AsyncFuture<T> callback, final Resume<T, R> resume
+    );
 
     <T> Resume<T, T> passthrough();
 }

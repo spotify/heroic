@@ -1,11 +1,10 @@
 package com.spotify.heroic.shell;
 
-import java.util.List;
-
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableList;
+import java.util.List;
 
 public class QuoteParserTest {
     private void test(final Case c) throws QuoteParserException {

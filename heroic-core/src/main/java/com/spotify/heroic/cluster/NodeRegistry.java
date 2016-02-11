@@ -21,6 +21,14 @@
 
 package com.spotify.heroic.cluster;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,15 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
+import java.util.Set;
 
 @Data
 public class NodeRegistry {
@@ -47,7 +47,8 @@ public class NodeRegistry {
     private final int totalNodes;
 
     private Multimap<Map<String, String>, NodeRegistryEntry> buildShards(
-            List<NodeRegistryEntry> entries, NodeCapability capability) {
+        List<NodeRegistryEntry> entries, NodeCapability capability
+    ) {
         final Multimap<Map<String, String>, NodeRegistryEntry> shards = LinkedListMultimap.create();
 
         for (final NodeRegistryEntry e : entries) {
@@ -103,10 +104,12 @@ public class NodeRegistry {
         final List<NodeRegistryEntry> result = Lists.newArrayList();
 
         final Multimap<Map<String, String>, NodeRegistryEntry> shards =
-                buildShards(entries, capability);
+            buildShards(entries, capability);
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap()
-                .entrySet()) {
+        final Set<Entry<Map<String, String>, Collection<NodeRegistryEntry>>> entries =
+            shards.asMap().entrySet();
+
+        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : entries) {
             final NodeRegistryEntry one = pickOne(e.getValue());
 
             if (one == null) {
@@ -127,14 +130,17 @@ public class NodeRegistry {
      * @return An iterable of iterables, containing all found entries.
      */
     public Collection<Collection<NodeRegistryEntry>> findMultipleFromAllShards(
-            NodeCapability capability, int n) {
+        NodeCapability capability, int n
+    ) {
         final Collection<Collection<NodeRegistryEntry>> result = Lists.newArrayList();
 
         final Multimap<Map<String, String>, NodeRegistryEntry> shards =
-                buildShards(entries, capability);
+            buildShards(entries, capability);
 
-        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : shards.asMap()
-                .entrySet()) {
+        final Set<Entry<Map<String, String>, Collection<NodeRegistryEntry>>> entries =
+            shards.asMap().entrySet();
+
+        for (final Entry<Map<String, String>, Collection<NodeRegistryEntry>> e : entries) {
             final Collection<NodeRegistryEntry> many = pickN(e.getValue(), n);
 
             if (many.isEmpty()) {

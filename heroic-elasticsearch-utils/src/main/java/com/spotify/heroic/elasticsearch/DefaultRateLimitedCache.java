@@ -22,17 +22,15 @@
 package com.spotify.heroic.elasticsearch;
 
 import com.google.common.util.concurrent.RateLimiter;
+import lombok.RequiredArgsConstructor;
 
 import java.util.concurrent.ConcurrentMap;
-
-import lombok.RequiredArgsConstructor;
 
 /**
  * A cache that does not allow to be called more than a specific rate.
  *
  * @param <K>
  * @param <V>
- *
  * @author mehrdad
  */
 @RequiredArgsConstructor

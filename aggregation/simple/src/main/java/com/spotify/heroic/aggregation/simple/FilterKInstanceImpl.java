@@ -56,9 +56,11 @@ public class FilterKInstanceImpl implements FilterKInstance {
         TOP,
         BOTTOM
     }
+
     private final long k;
 
     private final FilterType filterType;
+
     public FilterKInstanceImpl(long k, FilterType filterType, final AggregationInstance of) {
         this.k = k;
         this.filterType = checkNotNull(filterType, "filterType");
@@ -99,12 +101,12 @@ public class FilterKInstanceImpl implements FilterKInstance {
     @Override
     public AggregationCombiner combiner(DateRange range) {
         return all -> {
-            final List<FilterableKMetrics<ShardedResultGroup>> filterableMetrics =
-                of.combiner(range)
-                    .combine(all)
-                    .stream()
-                    .map(s -> new FilterableKMetrics<>(s, s::getGroup))
-                    .collect(Collectors.toList());
+            final List<FilterableKMetrics<ShardedResultGroup>> filterableMetrics = of
+                .combiner(range)
+                .combine(all)
+                .stream()
+                .map(s -> new FilterableKMetrics<>(s, s::getGroup))
+                .collect(Collectors.toList());
 
             return FilterK.filter(filterableMetrics, filterType, k);
         };
@@ -115,48 +117,52 @@ public class FilterKInstanceImpl implements FilterKInstance {
         private final FilterType filterType;
         private final AggregationSession childSession;
 
-        public Session(long k,
-                       FilterType filterType,
-                       AggregationSession childSession) {
+        public Session(long k, FilterType filterType, AggregationSession childSession) {
             this.k = k;
             this.filterType = filterType;
             this.childSession = childSession;
         }
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series,
-                                 List<Point> values) {
+        public void updatePoints(
+            Map<String, String> group, Set<Series> series, List<Point> values
+        ) {
             childSession.updatePoints(group, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series,
-                                 List<Event> values) {
+        public void updateEvents(
+            Map<String, String> group, Set<Series> series, List<Event> values
+        ) {
             childSession.updateEvents(group, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series,
-                                  List<Spread> values) {
+        public void updateSpreads(
+            Map<String, String> group, Set<Series> series, List<Spread> values
+        ) {
             childSession.updateSpreads(group, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series,
-                                List<MetricGroup> values) {
+        public void updateGroup(
+            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+        ) {
             childSession.updateGroup(group, series, values);
         }
 
         @Override
         public AggregationResult result() {
-            final List<AggregationData> result = FilterK.filter(getFilterableAggregationData(),
-                filterType, k);
+            final List<AggregationData> result =
+                FilterK.filter(getFilterableAggregationData(), filterType, k);
 
             return new AggregationResult(result, childSession.result().getStatistics());
         }
 
         private List<FilterableKMetrics<AggregationData>> getFilterableAggregationData() {
-            return childSession.result().getResult()
+            return childSession
+                .result()
+                .getResult()
                 .stream()
                 .map(a -> new AggregationData(a.getGroup(), a.getSeries(), a.getMetrics()))
                 .map(a -> new FilterableKMetrics<>(a, a::getMetrics))
@@ -197,12 +203,12 @@ public class FilterKInstanceImpl implements FilterKInstance {
 
         @Override
         public ReducerResult result() {
-            final List<FilterableKMetrics<MetricCollection>> filterableKMetrics =
-                childReducer.result()
-                    .getResult()
-                    .stream()
-                    .map(m -> new FilterableKMetrics<>(m, () -> m))
-                    .collect(Collectors.toList());
+            final List<FilterableKMetrics<MetricCollection>> filterableKMetrics = childReducer
+                .result()
+                .getResult()
+                .stream()
+                .map(m -> new FilterableKMetrics<>(m, () -> m))
+                .collect(Collectors.toList());
 
             return new ReducerResult(FilterK.filter(filterableKMetrics, filterType, k),
                 childReducer.result().getStatistics());
@@ -220,8 +226,9 @@ public class FilterKInstanceImpl implements FilterKInstance {
         private final FilterType filterType;
         private final long k;
 
-        public static <T> List<T> filter(List<FilterableKMetrics<T>> metrics,
-                                         FilterType filterType, long k) {
+        public static <T> List<T> filter(
+            List<FilterableKMetrics<T>> metrics, FilterType filterType, long k
+        ) {
             return new FilterK<>(metrics, filterType, k).apply();
         }
 
@@ -232,7 +239,8 @@ public class FilterKInstanceImpl implements FilterKInstance {
         }
 
         private List<T> apply() {
-            return metrics.stream()
+            return metrics
+                .stream()
                 .map(Area::new)
                 .sorted(buildCompare(filterType))
                 .limit(k)
@@ -264,12 +272,12 @@ public class FilterKInstanceImpl implements FilterKInstance {
             }
 
             private Double computeArea(MetricCollection metrics) {
-                return metrics.getDataAs(Point.class)
+                return metrics
+                    .getDataAs(Point.class)
                     .stream()
                     .map(Point::getValue)
                     .reduce(0D, (a, b) -> a + b);
             }
         }
     }
-
 }

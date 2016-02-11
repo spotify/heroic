@@ -24,22 +24,28 @@ package com.spotify.heroic;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
-
+import com.spotify.heroic.dagger.CoreComponent;
 import org.eclipse.jetty.util.ConcurrentArrayQueue;
-
-import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.util.List;
+import java.util.function.Function;
 
 public class CoreHeroicConfigurationContext implements HeroicConfigurationContext {
-    @Inject
-    @Named("application/heroic-config")
-    private ObjectMapper mapper;
+    private final ObjectMapper mapper;
 
-    private final ConcurrentArrayQueue<Class<?>> resources = new ConcurrentArrayQueue<>();
+    private final ConcurrentArrayQueue<Function<CoreComponent, List<Object>>> resources =
+        new ConcurrentArrayQueue<>();
 
     private final Object lock = new Object();
+
+    @Inject
+    public CoreHeroicConfigurationContext(
+        @Named("application/heroic-config") final ObjectMapper mapper
+    ) {
+        this.mapper = mapper;
+    }
 
     @Override
     public void registerType(String name, Class<?> type) {
@@ -49,12 +55,12 @@ public class CoreHeroicConfigurationContext implements HeroicConfigurationContex
     }
 
     @Override
-    public void resource(Class<?> type) {
+    public void resources(Function<CoreComponent, List<Object>> type) {
         resources.add(type);
     }
 
     @Override
-    public List<Class<?>> getResources() {
+    public List<Function<CoreComponent, List<Object>>> getResources() {
         return ImmutableList.copyOf(resources);
     }
 }

@@ -1,7 +1,5 @@
 package com.spotify.heroic;
 
-import static org.junit.Assert.assertEquals;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -9,16 +7,18 @@ import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.Empty;
 import com.spotify.heroic.aggregation.Group;
 import com.spotify.heroic.common.TypeNameMixin;
-
-import java.io.InputStream;
-
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.InputStream;
+
+import static org.junit.Assert.assertEquals;
+
 public class QueryTest {
     public InputStream resource(final String name) {
-        return getClass().getClassLoader().getResourceAsStream(
-                getClass().getPackage().getName().replace('.', '/') + '/' + name);
+        return getClass()
+            .getClassLoader()
+            .getResourceAsStream(getClass().getPackage().getName().replace('.', '/') + '/' + name);
     }
 
     private ObjectMapper mapper;

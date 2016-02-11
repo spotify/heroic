@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
-
 import lombok.Data;
 
 @Data

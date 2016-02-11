@@ -23,21 +23,28 @@ package com.spotify.heroic.cache.noop;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
-
-import java.util.function.Supplier;
-
 import eu.toolchain.async.AsyncFuture;
 
+import javax.inject.Inject;
+import java.util.function.Supplier;
+
+@CacheScope
 public class NoopQueryCache implements QueryCache {
+    @Inject
+    public NoopQueryCache() {
+    }
+
     @Override
-    public AsyncFuture<QueryResult> load(MetricType source, Filter filter, DateRange range,
-            AggregationInstance aggregationInstance, QueryOptions options,
-            Supplier<AsyncFuture<QueryResult>> loader) {
+    public AsyncFuture<QueryResult> load(
+        MetricType source, Filter filter, DateRange range, AggregationInstance aggregationInstance,
+        QueryOptions options, Supplier<AsyncFuture<QueryResult>> loader
+    ) {
         return loader.get();
     }
 }

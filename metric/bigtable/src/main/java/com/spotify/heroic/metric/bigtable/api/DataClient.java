@@ -23,10 +23,9 @@ package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.async.AsyncObservable;
+import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
-
-import eu.toolchain.async.AsyncFuture;
 
 public interface DataClient {
     AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, Mutations mutations);
@@ -53,6 +52,7 @@ public interface DataClient {
      */
     AsyncObservable<Row> readRowsObserved(String tableName, ReadRowsRequest request);
 
-    AsyncFuture<Row> readModifyWriteRow(String tableName, ByteString rowKey,
-            ReadModifyWriteRules rules);
+    AsyncFuture<Row> readModifyWriteRow(
+        String tableName, ByteString rowKey, ReadModifyWriteRules rules
+    );
 }

@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
-import java.util.List;
-
+import com.google.bigtable.v1.Mutation;
 import lombok.Data;
 
-import com.google.bigtable.v1.Mutation;
+import java.util.List;
 
 @Data
 public class Mutations {

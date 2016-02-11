@@ -23,7 +23,8 @@ package com.spotify.heroic.jetty;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -31,9 +32,6 @@ import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import java.util.Optional;
-
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class TLSJettyConnectionFactory implements JettyConnectionFactory {
@@ -101,7 +99,7 @@ public class TLSJettyConnectionFactory implements JettyConnectionFactory {
         public JettyConnectionFactory build() {
             final String nextProtocol = this.nextProtocol.orElse(HttpVersion.HTTP_1_1.toString());
             return new TLSJettyConnectionFactory(keyStorePath, keyStorePassword, keyManagerPassword,
-                    trustAll, nextProtocol);
+                trustAll, nextProtocol);
         }
     }
 }

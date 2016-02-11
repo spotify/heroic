@@ -22,11 +22,10 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
-
-import java.util.Optional;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 
 @Data
 public class ReadRowsRequest {
@@ -36,7 +35,7 @@ public class ReadRowsRequest {
 
     public com.google.bigtable.v1.ReadRowsRequest toPb(final String tableName) {
         final com.google.bigtable.v1.ReadRowsRequest.Builder builder =
-                com.google.bigtable.v1.ReadRowsRequest.newBuilder();
+            com.google.bigtable.v1.ReadRowsRequest.newBuilder();
 
         builder.setTableName(tableName);
         range.map(RowRange::toPb).ifPresent(builder::setRowRange);

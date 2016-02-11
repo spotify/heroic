@@ -25,12 +25,11 @@ import com.google.api.client.util.Charsets;
 import com.google.common.base.Splitter;
 import com.google.protobuf.ByteString;
 import com.spotify.heroic.common.Series;
+import eu.toolchain.async.Transform;
+import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
-
-import eu.toolchain.async.Transform;
-import lombok.Data;
 
 @Data
 public class SeriesKeyEncoding {
@@ -50,7 +49,7 @@ public class SeriesKeyEncoding {
 
         if (!this.category.equals(category)) {
             throw new IllegalArgumentException(
-                    "Key is in the wrong category (expected " + this.category + "): " + string);
+                "Key is in the wrong category (expected " + this.category + "): " + string);
         }
 
         final LocalDate date = LocalDate.parse(parts.get(1));
@@ -59,8 +58,9 @@ public class SeriesKeyEncoding {
     }
 
     public ByteString encode(SeriesKey key, Transform<Series, String> transform) throws Exception {
-        return ByteString.copyFrom(category + "/" + key.getDate().toString() + "/"
-                + transform.transform(key.getSeries()), Charsets.UTF_8);
+        return ByteString.copyFrom(
+            category + "/" + key.getDate().toString() + "/" + transform.transform(key.getSeries()),
+            Charsets.UTF_8);
     }
 
     public ByteString rangeKey(final LocalDate date) {

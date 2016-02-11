@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricCollection;
-
 import lombok.Data;
+
+import java.util.Map;
+import java.util.Set;
 
 @Data
 public final class AggregationData {

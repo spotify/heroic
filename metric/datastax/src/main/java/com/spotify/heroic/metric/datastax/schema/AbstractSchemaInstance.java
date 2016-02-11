@@ -21,15 +21,14 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
-import java.util.Optional;
-
 import com.datastax.driver.core.Row;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
-
 import eu.toolchain.async.Transform;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public abstract class AbstractSchemaInstance implements SchemaInstance {
@@ -40,7 +39,7 @@ public abstract class AbstractSchemaInstance implements SchemaInstance {
         return row -> {
             final MetricsRowKey key = rowKey().deserialize(row.getBytes(this.key));
             return new BackendKey(key.getSeries(), key.getBase(), MetricType.POINT,
-                    Optional.of(row.getLong(1)));
+                Optional.of(row.getLong(1)));
         };
     }
 }

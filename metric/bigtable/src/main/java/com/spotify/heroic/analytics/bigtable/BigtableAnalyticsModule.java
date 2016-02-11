@@ -23,24 +23,20 @@ package com.spotify.heroic.analytics.bigtable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
+import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.analytics.AnalyticsModule;
-import com.spotify.heroic.analytics.MetricAnalytics;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.bigtable.BigtableConnection;
 import com.spotify.heroic.metric.bigtable.BigtableConnectionBuilder;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
 import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
-
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-
-import javax.inject.Singleton;
-
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -49,12 +45,17 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import javax.inject.Named;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+
 @ToString
 @RequiredArgsConstructor
 public class BigtableAnalyticsModule implements AnalyticsModule {
     public static final String DEFAULT_CLUSTER = "heroic";
     public static final CredentialsBuilder DEFAULT_CREDENTIALS =
-            new ComputeEngineCredentialsBuilder();
+        new ComputeEngineCredentialsBuilder();
     public static final String HITS_TABLE = "hits";
     public static final String HITS_COLUMN_FAMILY = "hits";
     public static final int DEFAULT_MAX_PENDING_REPORTS = 1000;
@@ -66,46 +67,86 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
     private final int maxPendingReports;
 
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public AnalyticsReporter reporter(final HeroicReporter reporter) {
-                return reporter.newAnalyticsReporter();
-            }
+    public AnalyticsComponent module(PrimaryComponent primary) {
+        return DaggerBigtableAnalyticsModule_C
+            .builder()
+            .primaryComponent(primary)
+            .m(new M())
+            .build();
+    }
 
-            @Provides
-            @Singleton
-            public Managed<BigtableConnection> connection(final AsyncFramework async,
-                    final ExecutorService executorService) {
-                return async.managed(new ManagedSetup<BigtableConnection>() {
-                    @Override
-                    public AsyncFuture<BigtableConnection> construct() throws Exception {
-                        return async.call(new BigtableConnectionBuilder(project, zone, cluster,
-                                credentials, async, executorService));
-                    }
+    @BigtableScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends AnalyticsComponent {
+        @Override
+        BigtableMetricAnalytics metricAnalytics();
 
-                    @Override
-                    public AsyncFuture<Void> destruct(final BigtableConnection value)
-                            throws Exception {
-                        return async.call(new Callable<Void>() {
-                            @Override
-                            public Void call() throws Exception {
-                                value.close();
-                                return null;
-                            }
-                        });
-                    }
-                });
-            }
+        @Override
+        @Named("analytics")
+        LifeCycle analyticsLife();
+    }
 
-            @Override
-            protected void configure() {
-                bind(MetricAnalytics.class).toInstance(new BigtableMetricAnalytics(HITS_TABLE,
-                        HITS_COLUMN_FAMILY, maxPendingReports));
-                expose(MetricAnalytics.class);
-            }
-        };
+    @Module
+    class M {
+        @Provides
+        @BigtableScope
+        public AnalyticsReporter reporter(final HeroicReporter reporter) {
+            return reporter.newAnalyticsReporter();
+        }
+
+        @Provides
+        @BigtableScope
+        public Managed<BigtableConnection> connection(
+            final AsyncFramework async, final ExecutorService executorService
+        ) {
+            return async.managed(new ManagedSetup<BigtableConnection>() {
+                @Override
+                public AsyncFuture<BigtableConnection> construct() throws Exception {
+                    return async.call(
+                        new BigtableConnectionBuilder(project, zone, cluster, credentials, async,
+                            executorService));
+                }
+
+                @Override
+                public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
+                    return async.call(new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            value.close();
+                            return null;
+                        }
+                    });
+                }
+            });
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("hitsTableName")
+        String hitsTableName() {
+            return HITS_TABLE;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("hitsColumnFamily")
+        String hitsColumnFamily() {
+            return HITS_COLUMN_FAMILY;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("maxPendingReports")
+        int maxPendingReports() {
+            return maxPendingReports;
+        }
+
+        @Provides
+        @BigtableScope
+        @Named("analytics")
+        LifeCycle analyticsLife(LifeCycleManager manager, BigtableMetricAnalytics backend) {
+            return manager.build(backend);
+        }
     }
 
     public static Builder builder() {
@@ -121,11 +162,13 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
         private Optional<Integer> maxPendingReports = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("project") Optional<String> project,
-                @JsonProperty("zone") Optional<String> zone,
-                @JsonProperty("cluster") Optional<String> cluster,
-                @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
-                @JsonProperty("maxPendingReports") Optional<Integer> maxPendingReports) {
+        public Builder(
+            @JsonProperty("project") Optional<String> project,
+            @JsonProperty("zone") Optional<String> zone,
+            @JsonProperty("cluster") Optional<String> cluster,
+            @JsonProperty("credentials") Optional<CredentialsBuilder> credentials,
+            @JsonProperty("maxPendingReports") Optional<Integer> maxPendingReports
+        ) {
             this.project = project;
             this.zone = zone;
             this.cluster = cluster;
@@ -160,14 +203,14 @@ public class BigtableAnalyticsModule implements AnalyticsModule {
 
         public BigtableAnalyticsModule build() {
             final String project = this.project.orElseThrow(
-                    () -> new IllegalStateException("'project' configuration is required"));
+                () -> new IllegalStateException("'project' configuration is required"));
 
             final String zone = this.zone.orElseThrow(
-                    () -> new IllegalStateException("'zone' configuration is required"));
+                () -> new IllegalStateException("'zone' configuration is required"));
 
             return new BigtableAnalyticsModule(project, zone, cluster.orElse(DEFAULT_CLUSTER),
-                    credentials.orElse(DEFAULT_CREDENTIALS),
-                    maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS));
+                credentials.orElse(DEFAULT_CREDENTIALS),
+                maxPendingReports.orElse(DEFAULT_MAX_PENDING_REPORTS));
         }
     }
 }

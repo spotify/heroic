@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.List;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.concurrent.ConcurrentSkipListSet;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.Bucket;
@@ -35,17 +30,21 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 @RequiredArgsConstructor
 public class GroupUniqueBucket extends AbstractBucket implements Bucket {
     final SortedSet<Point> points = new ConcurrentSkipListSet<Point>(MetricType.POINT.comparator());
     final SortedSet<Event> events = new ConcurrentSkipListSet<Event>(MetricType.EVENT.comparator());
     final SortedSet<Spread> spreads =
-            new ConcurrentSkipListSet<Spread>(MetricType.SPREAD.comparator());
+        new ConcurrentSkipListSet<Spread>(MetricType.SPREAD.comparator());
     final SortedSet<MetricGroup> groups =
-            new ConcurrentSkipListSet<MetricGroup>(MetricType.GROUP.comparator());
+        new ConcurrentSkipListSet<MetricGroup>(MetricType.GROUP.comparator());
 
     final long timestamp;
 

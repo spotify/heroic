@@ -29,11 +29,10 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.spotify.heroic.filter.Filter.Raw;
 import com.spotify.heroic.grammar.QueryParser;
+import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 import java.util.Map;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreFilterJsonDeserializer extends JsonDeserializer<Filter> {
@@ -42,7 +41,7 @@ public class CoreFilterJsonDeserializer extends JsonDeserializer<Filter> {
 
     @Override
     public Filter deserialize(JsonParser p, DeserializationContext c)
-            throws IOException, JsonProcessingException {
+        throws IOException, JsonProcessingException {
         if (p.getCurrentToken() != JsonToken.START_ARRAY) {
             throw c.mappingException("Expected start of array");
         }

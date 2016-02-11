@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.filter;
 
-import java.io.IOException;
-
 import lombok.RequiredArgsConstructor;
+
+import java.io.IOException;
 
 @RequiredArgsConstructor
 public abstract class OneArgumentFilterBase<T extends Filter.OneArg<A>, A>
-        implements OneArgumentFilter<T, A>, FilterJsonSerialization<T> {
+    implements OneArgumentFilter<T, A>, FilterJsonSerialization<T> {
     private final FilterJsonSerialization<A> argument;
 
     @Override
@@ -37,7 +37,7 @@ public abstract class OneArgumentFilterBase<T extends Filter.OneArg<A>, A>
     }
 
     public void serialize(FilterJsonSerialization.Serializer serializer, T filter)
-            throws IOException {
+        throws IOException {
         argument.serialize(serializer, filter.first());
     }
 

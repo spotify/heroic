@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.common;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Map;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import lombok.Data;
+
+import java.util.Map;
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class Statistics {
@@ -46,8 +45,10 @@ public class Statistics {
 
     public Statistics merge(Statistics other) {
         final ImmutableMap.Builder<String, Long> counters = ImmutableMap.builder();
-        final Set<String> keys = ImmutableSet.<String> builder().addAll(this.counters.keySet())
-                .addAll(other.counters.keySet()).build();
+        final Set<String> keys = ImmutableSet.<String>builder()
+            .addAll(this.counters.keySet())
+            .addAll(other.counters.keySet())
+            .build();
 
         for (final String k : keys) {
             counters.put(k, this.counters.getOrDefault(k, 0L) + other.counters.getOrDefault(k, 0L));

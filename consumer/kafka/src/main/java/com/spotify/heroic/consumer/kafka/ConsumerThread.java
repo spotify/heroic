@@ -21,24 +21,23 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.statistics.ConsumerReporter;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import kafka.consumer.KafkaStream;
 import kafka.message.MessageAndMetadata;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 
 @Slf4j
 public final class ConsumerThread extends Thread {
@@ -63,10 +62,12 @@ public final class ConsumerThread extends Thread {
 
     private volatile AtomicReference<CountDownLatch> paused = new AtomicReference<>();
 
-    public ConsumerThread(final AsyncFramework async, final IngestionGroup ingestion,
-            final String name, final ConsumerReporter reporter,
-            final KafkaStream<byte[], byte[]> stream, final ConsumerSchema schema,
-            final AtomicInteger active, final AtomicLong errors, final LongAdder consumed) {
+    public ConsumerThread(
+        final AsyncFramework async, final IngestionGroup ingestion, final String name,
+        final ConsumerReporter reporter, final KafkaStream<byte[], byte[]> stream,
+        final ConsumerSchema schema, final AtomicInteger active, final AtomicLong errors,
+        final LongAdder consumed
+    ) {
         super(String.format("%s: %s", ConsumerThread.class.getCanonicalName(), name));
 
         this.async = async;

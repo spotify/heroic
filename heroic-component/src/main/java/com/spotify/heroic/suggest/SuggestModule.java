@@ -21,8 +21,10 @@
 
 package com.spotify.heroic.suggest;
 
-import com.google.inject.Key;
-import com.google.inject.Module;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
+import lombok.Data;
 
 import java.util.Optional;
 
@@ -31,5 +33,24 @@ public interface SuggestModule {
 
     String buildId(int i);
 
-    Module module(Key<SuggestBackend> key, String id);
+    Exposed module(PrimaryComponent primary, Depends depends, String id);
+
+    /**
+     * Dependencies for suggestion modules.
+     */
+    @Data
+    class Depends {
+        private final LocalMetadataBackendReporter backendReporter;
+    }
+
+    /**
+     * Exposed for suggestion modules.
+     */
+    interface Exposed {
+        SuggestBackend backend();
+
+        default LifeCycle life() {
+            return LifeCycle.empty();
+        }
+    }
 }

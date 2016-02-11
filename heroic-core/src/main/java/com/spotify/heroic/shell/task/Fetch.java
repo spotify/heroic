@@ -21,20 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
@@ -47,19 +38,30 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @TaskUsage("Fetch a range of data points")
 @TaskName("fetch")
 public class Fetch implements ShellTask {
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
+    private final ObjectMapper mapper;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public Fetch(MetricManager metrics, @Named("application/json") ObjectMapper mapper) {
+        this.metrics = metrics;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -81,7 +83,7 @@ public class Fetch implements ShellTask {
 
         final long start = params.start == null ? now : Tasks.parseInstant(params.start, now);
         final long end =
-                params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
+            params.end == null ? defaultEnd(start) : Tasks.parseInstant(params.end, now);
 
         final DateRange range = new DateRange(start, end);
         final int limit = Math.max(1, params.limit);
@@ -110,7 +112,9 @@ public class Fetch implements ShellTask {
                         io.out().println(flip.format(current.getTime()));
                     }
 
-                    io.out().println(
+                    io
+                        .out()
+                        .println(
                             String.format("  %s: %s", point.format(new Date(d.getTimestamp())), d));
 
                     if (i++ >= limit) {
@@ -159,12 +163,11 @@ public class Fetch implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch",
-                metaVar = "<json>")
+        @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 
-        @Option(name = "--source", aliases = { "--source" }, usage = "Source to fetch",
-                metaVar = "<events|points>")
+        @Option(name = "--source", aliases = {"--source"}, usage = "Source to fetch",
+            metaVar = "<events|points>")
         private String source = MetricType.POINT.identifier();
 
         @Option(name = "--start", usage = "Start date", metaVar = "<datetime>")
@@ -174,14 +177,23 @@ public class Fetch implements ShellTask {
         private String end;
 
         @Option(name = "--limit", usage = "Maximum number of datapoints to fetch",
-                metaVar = "<int>")
+            metaVar = "<int>")
         private int limit = 1000;
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+    }
+
+    public static Fetch setup(final CoreComponent core) {
+        return DaggerFetch_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Fetch task();
     }
 }

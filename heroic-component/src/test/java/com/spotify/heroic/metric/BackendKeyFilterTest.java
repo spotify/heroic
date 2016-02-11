@@ -1,12 +1,12 @@
 package com.spotify.heroic.metric;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Optional;
 
-import org.junit.Test;
-import org.mockito.Mockito;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class BackendKeyFilterTest {
     @Test

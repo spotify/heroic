@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.consumer;
 
-import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.common.Initializing;
 import com.spotify.heroic.common.Statistics;
-
 import eu.toolchain.async.AsyncFuture;
 
-public interface Consumer extends LifeCycle {
+public interface Consumer extends Initializing {
     String CONSUMING = "consuming";
     String TOTAL = "total";
     String ERRORS = "errors";

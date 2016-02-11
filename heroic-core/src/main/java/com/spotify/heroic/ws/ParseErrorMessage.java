@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.ws;
 
-import javax.ws.rs.core.Response;
-
 import lombok.Getter;
+
+import javax.ws.rs.core.Response;
 
 public class ParseErrorMessage extends ErrorMessage {
     @Getter
@@ -35,8 +35,10 @@ public class ParseErrorMessage extends ErrorMessage {
     @Getter
     private final int colEnd;
 
-    public ParseErrorMessage(final String message, final Response.Status status, final int line,
-            final int col, final int lineEnd, final int colEnd) {
+    public ParseErrorMessage(
+        final String message, final Response.Status status, final int line, final int col,
+        final int lineEnd, final int colEnd
+    ) {
         super(message, status);
         this.line = line;
         this.col = col;

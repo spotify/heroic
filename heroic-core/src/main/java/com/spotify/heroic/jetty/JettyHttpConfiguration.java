@@ -23,13 +23,11 @@ package com.spotify.heroic.jetty;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.eclipse.jetty.server.HttpConfiguration;
 
 import java.util.Optional;
-
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class JettyHttpConfiguration {
@@ -58,7 +56,7 @@ public class JettyHttpConfiguration {
 
         public JettyHttpConfiguration build() {
             return new JettyHttpConfiguration(
-                    sendServerVersion.orElse(DEFAULT_SEND_SERVER_VERSION));
+                sendServerVersion.orElse(DEFAULT_SEND_SERVER_VERSION));
         }
     }
 }

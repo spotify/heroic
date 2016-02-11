@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.profile;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.google.common.base.Joiner;
@@ -46,6 +44,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class CassandraProfile extends HeroicProfileBase {
     private static final Splitter splitter = Splitter.on(',').trimResults();
@@ -77,15 +77,21 @@ public class CassandraProfile extends HeroicProfileBase {
             module.schema(LegacySchemaModule.builder().build());
         }
 
-        module.seeds(params.get("cassandra.seeds").map(s -> ImmutableSet.copyOf(splitter.split(s)))
-                .orElseGet(() -> ImmutableSet.of("localhost")));
+        module.seeds(params
+            .get("cassandra.seeds")
+            .map(s -> ImmutableSet.copyOf(splitter.split(s)))
+            .orElseGet(() -> ImmutableSet.of("localhost")));
 
         params.getInteger("cassandra.fetchSize").ifPresent(module::fetchSize);
         params.getDuration("cassandra.readTimeout").ifPresent(module::readTimeout);
-        params.get("cassandra.consistencyLevel").map(ConsistencyLevel::valueOf)
-                .ifPresent(module::consistencyLevel);
-        params.get("cassandra.retryPolicy").map(policy -> this.convertRetryPolicy(policy, params))
-                .ifPresent(module::retryPolicy);
+        params
+            .get("cassandra.consistencyLevel")
+            .map(ConsistencyLevel::valueOf)
+            .ifPresent(module::consistencyLevel);
+        params
+            .get("cassandra.retryPolicy")
+            .map(policy -> this.convertRetryPolicy(policy, params))
+            .ifPresent(module::retryPolicy);
 
         // @formatter:off
         return HeroicConfig.builder()
@@ -109,9 +115,9 @@ public class CassandraProfile extends HeroicProfileBase {
     private RetryPolicy convertRetryPolicy(final String policyName, final ExtraParameters params) {
         if ("aggressive".equals(policyName)) {
             final int numRetries =
-                    params.getInteger("cassandra.numRetries").orElse(DEFAULT_NUM_RETRIES);
+                params.getInteger("cassandra.numRetries").orElse(DEFAULT_NUM_RETRIES);
             final int rotateHost =
-                    params.getInteger("cassandra.rotateHost").orElse(DEFAULT_ROTATE_HOST);
+                params.getInteger("cassandra.rotateHost").orElse(DEFAULT_ROTATE_HOST);
             return new AggressiveRetryPolicy(numRetries, rotateHost);
         }
 
@@ -124,15 +130,22 @@ public class CassandraProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("cassandra.configure", "If set, will cause the cluster to be automatically configured"),
-            parameter("cassandra.type", "Type of backend to use, valid values are: " + parameters.join(types.keySet()), "<type>"),
-            parameter("cassandra.seeds", "Seeds to use when configuring backend", "<host>[:<port>][,..]"),
+            parameter("cassandra.configure", "If set, will cause the cluster to be automatically " +
+                    "configured"),
+            parameter("cassandra.type", "Type of backend to use, valid values are: " + parameters
+                    .join(types.keySet()), "<type>"),
+            parameter("cassandra.seeds", "Seeds to use when configuring backend",
+                    "<host>[:<port>][,..]"),
             parameter("cassandra.fetchSize", "The number of results to fetch per batch", "<int>"),
             parameter("cassandra.consistencyLevel", "The default consistency level to use",
-                    parameters.join(Arrays.stream(ConsistencyLevel.values()).map(cl -> cl.name()).iterator())),
-            parameter("cassandra.retryPolicy", "The retry policy to use (useful when migrating data)", "aggressive"),
-            parameter("cassandra.numRetries", "The number of retries to attempt for the current retry policy", "<int>"),
-            parameter("cassandra.rotateHost", "The number of retries to attempt before rotating host for the current retry policy", "<int>")
+                    parameters.join(Arrays.stream(ConsistencyLevel.values()).map(cl -> cl.name())
+                            .iterator())),
+            parameter("cassandra.retryPolicy", "The retry policy to use (useful when migrating " +
+                    "data)", "aggressive"),
+            parameter("cassandra.numRetries", "The number of retries to attempt for the current " +
+                    "retry policy", "<int>"),
+            parameter("cassandra.rotateHost", "The number of retries to attempt before rotating " +
+                    "host for the current retry policy", "<int>")
         );
         // @formatter:on
     }

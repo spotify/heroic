@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.common;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.filter.Filter;
+import lombok.Data;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.filter.Filter;
-
-import lombok.Data;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class RangeFilter {
@@ -39,8 +38,10 @@ public class RangeFilter {
     private final int limit;
 
     @JsonCreator
-    public RangeFilter(@JsonProperty("filter") Filter filter,
-            @JsonProperty("range") DateRange range, @JsonProperty("limit") int limit) {
+    public RangeFilter(
+        @JsonProperty("filter") Filter filter, @JsonProperty("range") DateRange range,
+        @JsonProperty("limit") int limit
+    ) {
         this.filter = checkNotNull(filter);
         this.range = checkNotNull(range);
         this.limit = checkNotNull(limit);
@@ -48,11 +49,12 @@ public class RangeFilter {
 
     public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, final long now) {
         return new RangeFilter(filter, range.orElseGet(() -> defaultDateRange(now)),
-                Integer.MAX_VALUE);
+            Integer.MAX_VALUE);
     }
 
-    public static RangeFilter filterFor(Filter filter, Optional<DateRange> range, final long now,
-            int limit) {
+    public static RangeFilter filterFor(
+        Filter filter, Optional<DateRange> range, final long now, int limit
+    ) {
         return new RangeFilter(filter, range.orElseGet(() -> defaultDateRange(now)), limit);
     }
 

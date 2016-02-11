@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.metric.datastax.schema.ng;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Exposed;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.spotify.heroic.metric.datastax.schema.Schema;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.metric.datastax.schema.SchemaComponent;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
+import com.spotify.heroic.metric.datastax.schema.SchemaScope;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 
-import eu.toolchain.async.AsyncFramework;
+import javax.inject.Named;
+import java.util.Optional;
 
 public class NextGenSchemaModule implements SchemaModule {
     public static final String DEFAULT_KEYSPACE = "heroic";
@@ -46,19 +45,25 @@ public class NextGenSchemaModule implements SchemaModule {
     }
 
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            @Exposed
-            public Schema schema(final AsyncFramework async) {
-                return new NextGenSchema(async, keyspace);
-            }
+    public SchemaComponent module(PrimaryComponent primary) {
+        return DaggerNextGenSchemaModule_C.builder().primaryComponent(primary).m(new M()).build();
+    }
 
-            @Override
-            protected void configure() {
-            };
-        };
+    @SchemaScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends SchemaComponent {
+        @Override
+        NextGenSchema schema();
+    }
+
+    @Module
+    class M {
+        @Provides
+        @SchemaScope
+        @Named("keyspace")
+        public String keyspace() {
+            return keyspace;
+        }
     }
 
     public static Builder builder() {

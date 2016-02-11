@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.shell.task;
 
-import com.google.inject.Inject;
 import com.spotify.heroic.async.AsyncObserver;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataBackend;
@@ -35,19 +35,19 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("metadata-migrate")
@@ -55,17 +55,20 @@ public class MetadataMigrate implements ShellTask {
     public static final int DOT_LIMIT = 10000;
     public static final int LINE_LIMIT = 20;
 
-    @Inject
-    private MetadataManager metadata;
+    private final MetadataManager metadata;
+    private final QueryParser parser;
+    private final FilterFactory filters;
+    private final AsyncFramework async;
 
     @Inject
-    private QueryParser parser;
-
-    @Inject
-    private FilterFactory filters;
-
-    @Inject
-    private AsyncFramework async;
+    public MetadataMigrate(
+        MetadataManager metadata, QueryParser parser, FilterFactory filters, AsyncFramework async
+    ) {
+        this.metadata = metadata;
+        this.parser = parser;
+        this.filters = filters;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -99,7 +102,7 @@ public class MetadataMigrate implements ShellTask {
 
             final ResolvableFuture<Void> future = async.future();
 
-            group.entries(filter).observe(AsyncObserver.<List<Series>> bind(future, entries -> {
+            group.entries(filter).observe(AsyncObserver.<List<Series>>bind(future, entries -> {
                 for (final Series s : entries) {
                     final int i = index.getAndIncrement();
 
@@ -129,23 +132,32 @@ public class MetadataMigrate implements ShellTask {
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to migrate from",
-                metaVar = "<metadata-group>", required = true)
+            metaVar = "<metadata-group>", required = true)
         private String group;
 
         @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
-                metaVar = "<metadata-group>", required = true)
+            metaVar = "<metadata-group>", required = true)
         private String target;
 
         @Option(name = "--ok", usage = "Verify the migration")
         private boolean ok = false;
 
         @Option(name = "--limit", aliases = {"--limit"},
-                usage = "Limit the number of printed entries")
+            usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+    }
+
+    public static MetadataMigrate setup(final CoreComponent core) {
+        return DaggerMetadataMigrate_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        MetadataMigrate task();
     }
 }

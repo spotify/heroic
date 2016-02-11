@@ -33,8 +33,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Optional;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({@JsonSubTypes.Type(DatastaxAuthentication.None.class),
-        @JsonSubTypes.Type(DatastaxAuthentication.Plain.class)})
+@JsonSubTypes({
+    @JsonSubTypes.Type(DatastaxAuthentication.None.class), @JsonSubTypes.Type(
+    DatastaxAuthentication.Plain.class)
+})
 public interface DatastaxAuthentication {
     void accept(final Cluster.Builder builder);
 
@@ -62,11 +64,13 @@ public interface DatastaxAuthentication {
         private final String password;
 
         @JsonCreator
-        public Plain(@JsonProperty("username") Optional<String> username,
-                @JsonProperty("password") Optional<String> password) {
+        public Plain(
+            @JsonProperty("username") Optional<String> username,
+            @JsonProperty("password") Optional<String> password
+        ) {
             this.username = username.orElse(DEFAULT_USERNAME);
-            this.password = password
-                    .orElseThrow(() -> new IllegalArgumentException("password is required"));
+            this.password =
+                password.orElseThrow(() -> new IllegalArgumentException("password is required"));
         }
 
         @Override

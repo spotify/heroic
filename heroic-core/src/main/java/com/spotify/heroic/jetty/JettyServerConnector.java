@@ -24,7 +24,8 @@ package com.spotify.heroic.jetty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.Server;
@@ -33,9 +34,6 @@ import org.eclipse.jetty.server.ServerConnector;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
-
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class JettyServerConnector {
@@ -46,14 +44,16 @@ public class JettyServerConnector {
 
     public static List<JettyConnectionFactory.Builder> defaultFactories() {
         return ImmutableList.of(HttpJettyConnectionFactory.builder(),
-                Http2CJettyConnectionFactory.builder());
+            Http2CJettyConnectionFactory.builder());
     }
 
     public ServerConnector setup(final Server server, final InetSocketAddress address) {
         final HttpConfiguration config = this.config.build();
 
-        final ConnectionFactory[] factories = this.factories.stream().map(f -> f.setup(config))
-                .toArray(size -> new ConnectionFactory[size]);
+        final ConnectionFactory[] factories = this.factories
+            .stream()
+            .map(f -> f.setup(config))
+            .toArray(size -> new ConnectionFactory[size]);
 
         final ServerConnector c = new ServerConnector(server, factories);
 
@@ -76,9 +76,11 @@ public class JettyServerConnector {
         private Optional<JettyHttpConfiguration.Builder> config = Optional.empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("address") Optional<InetSocketAddress> address,
-                @JsonProperty("factories") Optional<List<JettyConnectionFactory.Builder>> facts,
-                @JsonProperty("defaultProtocol") Optional<String> defaultProtocol) {
+        public Builder(
+            @JsonProperty("address") Optional<InetSocketAddress> address,
+            @JsonProperty("factories") Optional<List<JettyConnectionFactory.Builder>> facts,
+            @JsonProperty("defaultProtocol") Optional<String> defaultProtocol
+        ) {
             this.address = address;
             this.factories = facts;
             this.defaultProtocol = defaultProtocol;
@@ -95,12 +97,14 @@ public class JettyServerConnector {
         }
 
         public JettyServerConnector build() {
-            final List<JettyConnectionFactory> factories = ImmutableList
-                    .copyOf(this.factories.orElseGet(JettyServerConnector::defaultFactories)
-                            .stream().map(f -> f.build()).iterator());
+            final List<JettyConnectionFactory> factories = ImmutableList.copyOf(this.factories
+                .orElseGet(JettyServerConnector::defaultFactories)
+                .stream()
+                .map(f -> f.build())
+                .iterator());
 
             return new JettyServerConnector(address, factories, defaultProtocol,
-                    config.orElseGet(JettyHttpConfiguration::builder).build());
+                config.orElseGet(JettyHttpConfiguration::builder).build());
         }
     }
 }

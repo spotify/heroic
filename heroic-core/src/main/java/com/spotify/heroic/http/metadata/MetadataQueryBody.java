@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.http.metadata;
 
-import static java.util.Optional.empty;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import lombok.Data;
+import static java.util.Optional.empty;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -79,8 +78,10 @@ public class MetadataQueryBody {
         }
 
         if (matchTags.isPresent()) {
-            matchTags.get().entrySet()
-                    .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
+            matchTags
+                .get()
+                .entrySet()
+                .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
         }
 
         if (hasTags.isPresent()) {
@@ -103,12 +104,14 @@ public class MetadataQueryBody {
     }
 
     @JsonCreator
-    public MetadataQueryBody(@JsonProperty("matchKey") Optional<String> matchKey,
-            @JsonProperty("matchTags") Optional<Map<String, String>> matchTags,
-            @JsonProperty("hasTags") Optional<Set<String>> hasTags,
-            @JsonProperty("filter") Optional<Filter> filter,
-            @JsonProperty("range") Optional<QueryDateRange> range,
-            @JsonProperty("limit") Optional<Integer> limit) {
+    public MetadataQueryBody(
+        @JsonProperty("matchKey") Optional<String> matchKey,
+        @JsonProperty("matchTags") Optional<Map<String, String>> matchTags,
+        @JsonProperty("hasTags") Optional<Set<String>> hasTags,
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("limit") Optional<Integer> limit
+    ) {
         this.matchKey = matchKey;
         this.matchTags = matchTags;
         this.hasTags = hasTags;

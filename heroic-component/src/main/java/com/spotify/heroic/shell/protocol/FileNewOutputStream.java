@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.shell.protocol;
 
-import java.nio.file.StandardOpenOption;
-import java.util.List;
-
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
+
+import java.nio.file.StandardOpenOption;
+import java.util.List;
 
 @AutoSerialize
 @Data

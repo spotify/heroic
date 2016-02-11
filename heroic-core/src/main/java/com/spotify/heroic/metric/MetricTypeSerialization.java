@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,11 +30,13 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
+import java.io.IOException;
+
 public class MetricTypeSerialization {
     public static class Deserializer extends JsonDeserializer<MetricType> {
         @Override
         public MetricType deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             if (p.getCurrentToken() != JsonToken.VALUE_STRING) {
                 throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
             }
@@ -47,15 +47,16 @@ public class MetricTypeSerialization {
                 throw c.mappingException("No identifier specified");
             }
 
-            return MetricType.fromIdentifier(identifier).orElseThrow(
-                    () -> c.mappingException("Not a valid metric source: " + identifier));
+            return MetricType
+                .fromIdentifier(identifier)
+                .orElseThrow(() -> c.mappingException("Not a valid metric source: " + identifier));
         }
     }
 
     public static class Serializer extends JsonSerializer<MetricType> {
         @Override
         public void serialize(MetricType s, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             g.writeString(s.identifier());
         }
     }

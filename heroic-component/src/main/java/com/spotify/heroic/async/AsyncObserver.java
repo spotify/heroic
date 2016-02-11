@@ -22,7 +22,6 @@
 package com.spotify.heroic.async;
 
 import com.spotify.heroic.common.Throwing;
-
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
@@ -30,8 +29,8 @@ import eu.toolchain.async.Transform;
 /**
  * XXX: consider replacing with RxJava at some point.
  *
- * @author udoprog
  * @param <T>
+ * @author udoprog
  */
 public interface AsyncObserver<T> {
     AsyncFuture<Void> observe(final T value) throws Exception;
@@ -45,16 +44,17 @@ public interface AsyncObserver<T> {
     /**
      * Bind a given future as an observeable. It can also be considered as converting a future into
      * an observable.
-     *
+     * <p>
      * The end states of the observable will be passed on to the future.
      *
      * @param future
      * @param transform Transforms each observed action into a future. This is equivalent to the
-     *            {@link #observe(Object)} method.
+     * {@link #observe(Object)} method.
      * @return An observer bound to the given future.
      */
-    static <T> AsyncObserver<T> bind(final ResolvableFuture<Void> future,
-            final Transform<T, AsyncFuture<Void>> transform) {
+    static <T> AsyncObserver<T> bind(
+        final ResolvableFuture<Void> future, final Transform<T, AsyncFuture<Void>> transform
+    ) {
         return new AsyncObserver<T>() {
             @Override
             public AsyncFuture<Void> observe(T value) throws Exception {

@@ -21,27 +21,13 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
-import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
-import static org.elasticsearch.index.query.FilterBuilders.andFilter;
-import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
-import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
-import static org.elasticsearch.index.query.FilterBuilders.nestedFilter;
-import static org.elasticsearch.index.query.FilterBuilders.notFilter;
-import static org.elasticsearch.index.query.FilterBuilders.orFilter;
-import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
-import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
-import static org.elasticsearch.index.query.FilterBuilders.termFilter;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.elasticsearch.BackendType;
@@ -50,6 +36,8 @@ import com.spotify.heroic.elasticsearch.Connection;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
 import com.spotify.heroic.elasticsearch.index.NoIndexSelectedException;
 import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.suggest.KeySuggest;
@@ -60,21 +48,14 @@ import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagSuggest.Suggestion;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
+import eu.toolchain.async.Managed;
+import eu.toolchain.async.ManagedAction;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.Transform;
+import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
@@ -113,17 +94,36 @@ import org.elasticsearch.search.aggregations.metrics.max.MaxBuilder;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.Managed;
-import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.Transform;
-import lombok.ToString;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
+import static com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestUtils.loadJsonResource;
+import static org.elasticsearch.index.query.FilterBuilders.andFilter;
+import static org.elasticsearch.index.query.FilterBuilders.boolFilter;
+import static org.elasticsearch.index.query.FilterBuilders.matchAllFilter;
+import static org.elasticsearch.index.query.FilterBuilders.nestedFilter;
+import static org.elasticsearch.index.query.FilterBuilders.notFilter;
+import static org.elasticsearch.index.query.FilterBuilders.orFilter;
+import static org.elasticsearch.index.query.FilterBuilders.prefixFilter;
+import static org.elasticsearch.index.query.FilterBuilders.regexpFilter;
+import static org.elasticsearch.index.query.FilterBuilders.termFilter;
+
+@ElasticsearchScope
 @ToString(of = {"connection"})
-public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
+public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
     private static final StandardAnalyzer analyzer = new StandardAnalyzer();
     public static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
 
@@ -131,10 +131,10 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     private static final Utils.FilterContext SERIES_CTX = Utils.context();
     private static final Utils.FilterContext TAG_CTX = Utils.context(Utils.TAG_SERIES);
 
-    private static final String[] KEY_SUGGEST_SOURCES = new String[] {Utils.SERIES_KEY_RAW};
+    private static final String[] KEY_SUGGEST_SOURCES = new String[]{Utils.SERIES_KEY_RAW};
 
     private static final String[] TAG_SUGGEST_SOURCES =
-            new String[] {Utils.TAG_KEY, Utils.TAG_VALUE};
+        new String[]{Utils.TAG_KEY, Utils.TAG_VALUE};
 
     private final AsyncFramework async;
     private final Managed<Connection> connection;
@@ -148,10 +148,12 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     private final boolean configure;
 
     @Inject
-    public SuggestBackendV1(final AsyncFramework async, final Managed<Connection> connection,
-            final LocalMetadataBackendReporter reporter,
-            final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
-            @Named("configure") boolean configure) {
+    public SuggestBackendV1(
+        final AsyncFramework async, final Managed<Connection> connection,
+        final LocalMetadataBackendReporter reporter,
+        final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
+        @Named("configure") boolean configure
+    ) {
         this.async = async;
         this.connection = connection;
         this.reporter = reporter;
@@ -161,24 +163,14 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
+    public void register(LifeCycleRegistry registry) {
+        registry.start(this::start);
+        registry.stop(this::stop);
+    }
+
+    @Override
     public AsyncFuture<Void> configure() {
         return doto(c -> c.configure());
-    }
-
-    @Override
-    public AsyncFuture<Void> start() {
-        final AsyncFuture<Void> future = connection.start();
-
-        if (!configure) {
-            return future;
-        }
-
-        return future.lazyTransform(v -> configure());
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return connection.stop();
     }
 
     @Override
@@ -196,8 +188,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter,
-            final List<String> exclude, final int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+        final RangeFilter filter, final List<String> exclude, final int groupLimit
+    ) {
         return doto(new ManagedAction<Connection, TagValuesSuggest>() {
             @Override
             public AsyncFuture<TagValuesSuggest> action(final Connection c) throws Exception {
@@ -215,20 +208,26 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), Utils.TYPE_TAG)
-                            .setSearchType(SearchType.COUNT).setQuery(root);
+                    request = c
+                        .search(filter.getRange(), Utils.TYPE_TAG)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(root);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
 
                 {
-                    final TermsBuilder terms = AggregationBuilders.terms("keys")
-                            .field(Utils.TAG_KEY_RAW).size(filter.getLimit() + 1);
+                    final TermsBuilder terms = AggregationBuilders
+                        .terms("keys")
+                        .field(Utils.TAG_KEY_RAW)
+                        .size(filter.getLimit() + 1);
                     request.addAggregation(terms);
                     // make value bucket one entry larger than necessary to figure out when limiting
                     // is applied.
-                    final TermsBuilder cardinality = AggregationBuilders.terms("values")
-                            .field(Utils.TAG_VALUE_RAW).size(groupLimit + 1);
+                    final TermsBuilder cardinality = AggregationBuilders
+                        .terms("values")
+                        .field(Utils.TAG_VALUE_RAW)
+                        .size(groupLimit + 1);
                     terms.subAggregation(cardinality);
                 }
 
@@ -242,7 +241,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                         final List<Bucket> suggestionBuckets = terms.getBuckets();
 
                         for (final Terms.Bucket bucket : suggestionBuckets.subList(0,
-                                Math.min(suggestionBuckets.size(), filter.getLimit()))) {
+                            Math.min(suggestionBuckets.size(), filter.getLimit()))) {
                             final Terms valueTerms = bucket.getAggregations().get("values");
 
                             final List<Bucket> valueBuckets = valueTerms.getBuckets();
@@ -255,15 +254,16 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
                             final boolean limited = valueBuckets.size() > groupLimit;
 
-                            final ImmutableList<String> values = ImmutableList.copyOf(result)
-                                    .subList(0, Math.min(groupLimit, result.size()));
+                            final ImmutableList<String> values = ImmutableList
+                                .copyOf(result)
+                                .subList(0, Math.min(groupLimit, result.size()));
 
-                            suggestions.add(new TagValuesSuggest.Suggestion(bucket.getKey(), values,
-                                    limited));
+                            suggestions.add(
+                                new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
                         }
 
                         return new TagValuesSuggest(new ArrayList<>(suggestions),
-                                suggestionBuckets.size() > filter.getLimit());
+                            suggestionBuckets.size() > filter.getLimit());
                     }
                 });
             }
@@ -271,8 +271,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(final RangeFilter filter,
-            final String key) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(
+        final RangeFilter filter, final String key
+    ) {
         return doto(new ManagedAction<Connection, TagValueSuggest>() {
             @Override
             public AsyncFuture<TagValueSuggest> action(final Connection c) throws Exception {
@@ -283,21 +284,25 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 }
 
                 root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(),
-                        TAG_CTX.filter(filter.getFilter())));
+                    TAG_CTX.filter(filter.getFilter())));
 
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), Utils.TYPE_TAG)
-                            .setSearchType(SearchType.COUNT).setQuery(root);
+                    request = c
+                        .search(filter.getRange(), Utils.TYPE_TAG)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(root);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
 
                 {
-                    final TermsBuilder terms =
-                            AggregationBuilders.terms("values").field(Utils.TAG_VALUE_RAW)
-                                    .size(filter.getLimit() + 1).order(Order.term(true));
+                    final TermsBuilder terms = AggregationBuilders
+                        .terms("values")
+                        .field(Utils.TAG_VALUE_RAW)
+                        .size(filter.getLimit() + 1)
+                        .order(Order.term(true));
                     request.addAggregation(terms);
                 }
 
@@ -311,7 +316,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                         final List<Bucket> all = terms.getBuckets();
 
                         final List<Bucket> buckets =
-                                all.subList(0, Math.min(all.size(), filter.getLimit()));
+                            all.subList(0, Math.min(all.size(), filter.getLimit()));
 
                         for (final Terms.Bucket bucket : buckets) {
                             suggestions.add(bucket.getKey());
@@ -338,18 +343,22 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), Utils.TYPE_TAG)
-                            .setSearchType(SearchType.COUNT).setQuery(root);
+                    request = c
+                        .search(filter.getRange(), Utils.TYPE_TAG)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(root);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
 
                 {
-                    final TermsBuilder terms = AggregationBuilders.terms("keys")
-                            .field(Utils.TAG_KEY_RAW).size(filter.getLimit());
+                    final TermsBuilder terms = AggregationBuilders
+                        .terms("keys")
+                        .field(Utils.TAG_KEY_RAW)
+                        .size(filter.getLimit());
                     request.addAggregation(terms);
-                    final CardinalityBuilder cardinality = AggregationBuilders
-                            .cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
+                    final CardinalityBuilder cardinality =
+                        AggregationBuilders.cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
                     terms.subAggregation(cardinality);
                 }
 
@@ -362,9 +371,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
                         for (final Terms.Bucket bucket : terms.getBuckets()) {
                             final Cardinality cardinality =
-                                    bucket.getAggregations().get("cardinality");
+                                bucket.getAggregations().get("cardinality");
                             suggestions.add(new TagKeyCount.Suggestion(bucket.getKey(),
-                                    cardinality.getValue()));
+                                cardinality.getValue()));
                         }
 
                         return new TagKeyCount(new ArrayList<>(suggestions), false);
@@ -375,8 +384,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(final RangeFilter filter, final MatchOptions options,
-            final String key, final String value) {
+    public AsyncFuture<TagSuggest> tagSuggest(
+        final RangeFilter filter, final MatchOptions options, final String key, final String value
+    ) {
         return doto(new ManagedAction<Connection, TagSuggest>() {
             @Override
             public AsyncFuture<TagSuggest> action(final Connection c) throws Exception {
@@ -409,8 +419,10 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), Utils.TYPE_TAG)
-                            .setSearchType(SearchType.COUNT).setQuery(query);
+                    request = c
+                        .search(filter.getRange(), Utils.TYPE_TAG)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(query);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
@@ -418,12 +430,18 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 // aggregation
                 {
                     final MaxBuilder topHit = AggregationBuilders.max("topHit").script("_score");
-                    final TopHitsBuilder hits = AggregationBuilders.topHits("hits").setSize(1)
-                            .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
+                    final TopHitsBuilder hits = AggregationBuilders
+                        .topHits("hits")
+                        .setSize(1)
+                        .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
 
-                    final TermsBuilder kvs = AggregationBuilders.terms("kvs").field(Utils.TAG_KV)
-                            .size(filter.getLimit()).order(Order.aggregation("topHit", false))
-                            .subAggregation(hits).subAggregation(topHit);
+                    final TermsBuilder kvs = AggregationBuilders
+                        .terms("kvs")
+                        .field(Utils.TAG_KV)
+                        .size(filter.getLimit())
+                        .order(Order.aggregation("topHit", false))
+                        .subAggregation(hits)
+                        .subAggregation(topHit);
 
                     request.addAggregation(kvs);
                 }
@@ -454,8 +472,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(final RangeFilter filter, final MatchOptions options,
-            final String key) {
+    public AsyncFuture<KeySuggest> keySuggest(
+        final RangeFilter filter, final MatchOptions options, final String key
+    ) {
         return doto(new ManagedAction<Connection, KeySuggest>() {
             @Override
             public AsyncFuture<KeySuggest> action(final Connection c) throws Exception {
@@ -474,15 +493,17 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 if (filter instanceof Filter.True) {
                     query = fuzzy;
                 } else {
-                    query = QueryBuilders.filteredQuery(fuzzy,
-                            SERIES_CTX.filter(filter.getFilter()));
+                    query =
+                        QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(filter.getFilter()));
                 }
 
                 final SearchRequestBuilder request;
 
                 try {
-                    request = c.search(filter.getRange(), Utils.TYPE_SERIES)
-                            .setSearchType(SearchType.COUNT).setQuery(query);
+                    request = c
+                        .search(filter.getRange(), Utils.TYPE_SERIES)
+                        .setSearchType(SearchType.COUNT)
+                        .setQuery(query);
                 } catch (NoIndexSelectedException e) {
                     return async.failed(e);
                 }
@@ -490,13 +511,18 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                 // aggregation
                 {
                     final MaxBuilder topHit = AggregationBuilders.max("top_hit").script("_score");
-                    final TopHitsBuilder hits = AggregationBuilders.topHits("hits").setSize(1)
-                            .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
+                    final TopHitsBuilder hits = AggregationBuilders
+                        .topHits("hits")
+                        .setSize(1)
+                        .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
 
-                    final TermsBuilder keys = AggregationBuilders.terms("keys")
-                            .field(Utils.SERIES_KEY_RAW).size(filter.getLimit())
-                            .order(Order.aggregation("top_hit", false)).subAggregation(hits)
-                            .subAggregation(topHit);
+                    final TermsBuilder keys = AggregationBuilders
+                        .terms("keys")
+                        .field(Utils.SERIES_KEY_RAW)
+                        .size(filter.getLimit())
+                        .order(Order.aggregation("top_hit", false))
+                        .subAggregation(hits)
+                        .subAggregation(topHit);
 
                     request.addAggregation(keys);
                 }
@@ -507,13 +533,13 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                         final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
 
                         final StringTerms keys =
-                                (StringTerms) response.getAggregations().get("keys");
+                            (StringTerms) response.getAggregations().get("keys");
 
                         for (final Terms.Bucket bucket : keys.getBuckets()) {
                             final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
                             final SearchHits hits = topHits.getHits();
                             suggestions.add(
-                                    new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
+                                new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
                         }
 
                         return new KeySuggest(new ArrayList<>(suggestions));
@@ -580,8 +606,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
                 final Stopwatch watch = Stopwatch.createStarted();
 
-                bulk.add(new IndexRequest(index, Utils.TYPE_SERIES, seriesId).source(xSeries)
-                        .opType(OpType.CREATE));
+                bulk.add(new IndexRequest(index, Utils.TYPE_SERIES, seriesId)
+                    .source(xSeries)
+                    .opType(OpType.CREATE));
 
                 try {
                     for (final Map.Entry<String, String> e : series.getTags().entrySet()) {
@@ -592,12 +619,13 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                         Utils.buildTagDoc(suggest, rawSeries, e);
                         suggest.endObject();
 
-                        bulk.add(new IndexRequest(index, Utils.TYPE_TAG, suggestId).source(suggest)
-                                .opType(OpType.CREATE));
+                        bulk.add(new IndexRequest(index, Utils.TYPE_TAG, suggestId)
+                            .source(suggest)
+                            .opType(OpType.CREATE));
                     }
 
                     futures.add(
-                            async.resolved(WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
+                        async.resolved(WriteResult.of(watch.elapsed(TimeUnit.NANOSECONDS))));
                 } catch (final Exception e) {
                     futures.add(async.failed(e));
                 }
@@ -607,8 +635,23 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
         }
     }
 
-    private <S, T> AsyncFuture<T> bind(final ListenableActionFuture<S> actionFuture,
-            final Transform<S, T> transform) {
+    private AsyncFuture<Void> start() {
+        final AsyncFuture<Void> future = connection.start();
+
+        if (!configure) {
+            return future;
+        }
+
+        return future.lazyTransform(v -> configure());
+    }
+
+    private AsyncFuture<Void> stop() {
+        return connection.stop();
+    }
+
+    private <S, T> AsyncFuture<T> bind(
+        final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform
+    ) {
         final ResolvableFuture<T> future = async.future();
 
         actionFuture.addListener(new ActionListener<S>() {
@@ -636,7 +679,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
     }
 
     private QueryBuilder match(String field, String value, MatchOptions options)
-            throws IOException {
+        throws IOException {
         final BoolQueryBuilder bool = QueryBuilders.boolQuery();
 
         // exact match
@@ -661,9 +704,10 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
         // optionall match fuzzy
         if (options.isFuzzy()) {
-            bool.should(QueryBuilders.fuzzyQuery(field, value)
-                    .prefixLength(options.getFuzzyPrefixLength())
-                    .maxExpansions(options.getFuzzyMaxExpansions()));
+            bool.should(QueryBuilders
+                .fuzzyQuery(field, value)
+                .prefixLength(options.getFuzzyPrefixLength())
+                .maxExpansions(options.getFuzzyMaxExpansions()));
         }
 
         return bool;
@@ -708,7 +752,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
         public static final String TAGS_VALUE_RAW = "value.raw";
 
         public static void buildMetadataDoc(final XContentBuilder b, Series series)
-                throws IOException {
+            throws IOException {
             b.field(METADATA_KEY, series.getKey());
 
             b.startArray(METADATA_TAGS);
@@ -725,8 +769,9 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
             b.endArray();
         }
 
-        public static void buildTagDoc(final XContentBuilder b, BytesReference series,
-                Entry<String, String> e) throws IOException {
+        public static void buildTagDoc(
+            final XContentBuilder b, BytesReference series, Entry<String, String> e
+        ) throws IOException {
             b.rawField(TAG_SERIES, series);
             b.field(TAG_KEY, e.getKey());
             b.field(TAG_VALUE, e.getValue());
@@ -734,7 +779,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
         }
 
         public static List<String> tokenize(Analyzer analyzer, String field, String keywords)
-                throws IOException {
+            throws IOException {
             final List<String> terms = new ArrayList<String>();
 
             try (final Reader reader = new StringReader(keywords)) {
@@ -777,7 +822,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
             private final String tagsValue;
 
             private FilterContext(String... path) {
-                this(ImmutableList.<String> builder().add(path).build());
+                this(ImmutableList.<String>builder().add(path).build());
             }
 
             private FilterContext(List<String> path) {
@@ -789,12 +834,12 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
 
             private String path(List<String> path, String tail) {
                 return StringUtils.join(ImmutableList.builder().addAll(path).add(tail).build(),
-                        '.');
+                    '.');
             }
 
             private String path(List<String> path, String tailN, String tail) {
                 return StringUtils.join(
-                        ImmutableList.builder().addAll(path).add(tailN).add(tail).build(), '.');
+                    ImmutableList.builder().addAll(path).add(tailN).add(tail).build(), '.');
             }
 
             public FilterBuilder filter(final Filter filter) {
@@ -882,7 +927,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
             public BackendType<SuggestBackend> setup() {
                 return new BackendType<SuggestBackend>() {
                     @Override
-                    public Map<String, Map<String, Object>> mappings() throws IOException {
+                    public Map<String, Map<String, Object>> mappings() {
                         final Map<String, Map<String, Object>> mappings = new HashMap<>();
                         mappings.put("tag", loadJsonResource("v1/tag.json"));
                         mappings.put("series", loadJsonResource("v1/series.json"));
@@ -890,7 +935,7 @@ public class SuggestBackendV1 implements SuggestBackend, LifeCycle, Grouped {
                     }
 
                     @Override
-                    public Map<String, Object> settings() throws IOException {
+                    public Map<String, Object> settings() {
                         return ImmutableMap.of();
                     }
 

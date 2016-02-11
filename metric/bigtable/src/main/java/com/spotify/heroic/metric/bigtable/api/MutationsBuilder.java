@@ -24,20 +24,21 @@ package com.spotify.heroic.metric.bigtable.api;
 import com.google.bigtable.v1.Mutation;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import lombok.Data;
 
 @Data
 public class MutationsBuilder {
     final List<Mutation> mutations = new ArrayList<>();
 
-    public MutationsBuilder setCell(String family, ByteString columnQualifier,
-            ByteString value) {
-        final Mutation.SetCell.Builder setCell = Mutation.SetCell.newBuilder().setFamilyName(family)
-                .setColumnQualifier(columnQualifier).setValue(value);
+    public MutationsBuilder setCell(String family, ByteString columnQualifier, ByteString value) {
+        final Mutation.SetCell.Builder setCell = Mutation.SetCell
+            .newBuilder()
+            .setFamilyName(family)
+            .setColumnQualifier(columnQualifier)
+            .setValue(value);
 
         mutations.add(Mutation.newBuilder().setSetCell(setCell).build());
         return this;

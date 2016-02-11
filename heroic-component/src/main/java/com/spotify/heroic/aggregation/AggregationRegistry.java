@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.databind.Module;
-
 import eu.toolchain.serializer.Serializer;
 
 public interface AggregationRegistry {
@@ -35,8 +34,10 @@ public interface AggregationRegistry {
      * @param instanceSerializer Serializer for the aggregation instance.
      * @param dsl DSL factory for the aggregation.
      */
-    <A extends Aggregation, I extends AggregationInstance> void register(String id, Class<A> type,
-            Class<I> instanceType, Serializer<I> instanceSerializer, AggregationDSL dsl);
+    <A extends Aggregation, I extends AggregationInstance> void register(
+        String id, Class<A> type, Class<I> instanceType, Serializer<I> instanceSerializer,
+        AggregationDSL dsl
+    );
 
     Module module();
 

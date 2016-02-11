@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -35,11 +30,15 @@ import com.google.common.collect.Lists;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.QueryTrace.Identifier;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Data
@@ -53,10 +52,11 @@ public final class ResultGroups {
     private final QueryTrace trace;
 
     @JsonCreator
-    public ResultGroups(@JsonProperty("groups") List<ResultGroup> groups,
-            @JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("statistics") Statistics statistics,
-            @JsonProperty("trace") QueryTrace trace) {
+    public ResultGroups(
+        @JsonProperty("groups") List<ResultGroup> groups,
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("statistics") Statistics statistics, @JsonProperty("trace") QueryTrace trace
+    ) {
         this.groups = groups;
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.statistics = Objects.requireNonNull(statistics, "statistics");
@@ -65,7 +65,7 @@ public final class ResultGroups {
 
     public static ResultGroups empty(final QueryTrace.Identifier what) {
         return new ResultGroups(ImmutableList.of(), ImmutableList.of(), Statistics.empty(),
-                new QueryTrace(what));
+            new QueryTrace(what));
     }
 
     public static Collector<ResultGroups, ResultGroups> collect(final QueryTrace.Identifier what) {
@@ -86,31 +86,33 @@ public final class ResultGroups {
             }
 
             return new ResultGroups(groups.build(), errors.build(), statistics,
-                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
+                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
         };
     }
 
     public static final Transform<ResultGroups, ResultGroups> identity =
-            new Transform<ResultGroups, ResultGroups>() {
-                @Override
-                public ResultGroups transform(ResultGroups result) throws Exception {
-                    return result;
-                }
-            };
+        new Transform<ResultGroups, ResultGroups>() {
+            @Override
+            public ResultGroups transform(ResultGroups result) throws Exception {
+                return result;
+            }
+        };
 
     public static Transform<ResultGroups, ResultGroups> identity() {
         return identity;
     }
 
-    public static ResultGroups seriesError(final QueryTrace.Identifier what,
-            final List<TagValues> tags, final Throwable e) {
+    public static ResultGroups seriesError(
+        final QueryTrace.Identifier what, final List<TagValues> tags, final Throwable e
+    ) {
         final List<RequestError> errors = Lists.newArrayList();
         errors.add(SeriesError.fromThrowable(tags, e));
         return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
     }
 
-    public static Transform<Throwable, ResultGroups> seriesError(final QueryTrace.Identifier what,
-            final List<TagValues> tags) {
+    public static Transform<Throwable, ResultGroups> seriesError(
+        final QueryTrace.Identifier what, final List<TagValues> tags
+    ) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
@@ -120,15 +122,16 @@ public final class ResultGroups {
         };
     }
 
-    public static Transform<Throwable, ResultGroups> nodeError(final QueryTrace.Identifier what,
-            final ClusterNode.Group group) {
+    public static Transform<Throwable, ResultGroups> nodeError(
+        final QueryTrace.Identifier what, final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, ResultGroups>() {
             @Override
             public ResultGroups transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(),
-                        new QueryTrace(what));
+                    new QueryTrace(what));
             }
         };
     }
@@ -137,6 +140,6 @@ public final class ResultGroups {
         final Stopwatch w = Stopwatch.createStarted();
 
         return r -> new ResultGroups(r.groups, r.errors, r.statistics,
-                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.of(r.trace)));
+            new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), ImmutableList.of(r.trace)));
     }
 }

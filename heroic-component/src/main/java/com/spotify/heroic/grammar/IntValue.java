@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.concurrent.TimeUnit;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * int's are represented internally as longs.
@@ -67,7 +67,7 @@ public final class IntValue implements Value {
         if (to instanceof DurationValue) {
             final DurationValue o = (DurationValue) to;
             return (T) new DurationValue(o.getUnit(),
-                    o.getUnit().convert(value, TimeUnit.MILLISECONDS), c);
+                o.getUnit().convert(value, TimeUnit.MILLISECONDS), c);
         }
 
         throw c.castError(this, to);

@@ -21,12 +21,6 @@
 
 package com.spotify.heroic;
 
-import static com.spotify.heroic.common.Optionals.mergeOptional;
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Objects.requireNonNull;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonLocation;
@@ -50,6 +44,12 @@ import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
+import jersey.repackaged.com.google.common.collect.Sets;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -62,12 +62,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import jersey.repackaged.com.google.common.collect.Sets;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import static com.spotify.heroic.common.Optionals.mergeOptional;
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Objects.requireNonNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -85,13 +84,15 @@ public class HeroicConfig {
 
     /**
      * The time core will wait for all services (implementing
-     * {@link com.spotify.heroic.common.LifeCycle} to start before giving up.
+     * {@link com.spotify.heroic.lifecycle.LifeCycle}
+     * to start before giving up.
      */
     private final Duration startTimeout;
 
     /**
      * The time core will wait for all services (implementing
-     * {@link com.spotify.heroic.common.LifeCycle} to stop before giving up.
+     * {@link com.spotify.heroic.lifecycle.LifeCycle}
+     * to stop before giving up.
      */
     private final Duration stopTimeout;
     private final Optional<String> host;
@@ -123,8 +124,8 @@ public class HeroicConfig {
             return loadConfig(mapper, in);
         } catch (final JsonMappingException e) {
             final JsonLocation location = e.getLocation();
-            final String message = String.format("%s[%d:%d]: %s", path,
-                    location == null ? null : location.getLineNr(),
+            final String message =
+                String.format("%s[%d:%d]: %s", path, location == null ? null : location.getLineNr(),
                     location == null ? null : location.getColumnNr(), e.getOriginalMessage());
             throw new RuntimeException(message, e);
         } catch (final Exception e) {
@@ -133,8 +134,25 @@ public class HeroicConfig {
         }
     }
 
-    static Optional<HeroicConfig.Builder> loadConfig(final ObjectMapper mapper,
-            final InputStream in) throws JsonMappingException, IOException {
+    static Optional<HeroicConfig.Builder> loadConfigStream(
+        final ObjectMapper mapper, final InputStream in
+    ) {
+        try {
+            return loadConfig(mapper, in);
+        } catch (final JsonMappingException e) {
+            final JsonLocation location = e.getLocation();
+            final String message =
+                String.format("[%d:%d]: %s", location == null ? null : location.getLineNr(),
+                    location == null ? null : location.getColumnNr(), e.getOriginalMessage());
+            throw new RuntimeException(message, e);
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    static Optional<HeroicConfig.Builder> loadConfig(
+        final ObjectMapper mapper, final InputStream in
+    ) throws JsonMappingException, IOException {
         final JsonParser parser = mapper.getFactory().createParser(in);
 
         if (parser.nextToken() == null) {
@@ -175,27 +193,29 @@ public class HeroicConfig {
         private Optional<String> service = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("id") Optional<String> id,
-                @JsonProperty("startTimeout") Optional<Duration> startTimeout,
-                @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
-                @JsonProperty("host") Optional<String> host,
-                @JsonProperty("port") Optional<Integer> port,
-                @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
-                @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
-                @JsonProperty("enableCors") Optional<Boolean> enableCors,
-                @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
-                @JsonProperty("features") Optional<Set<String>> features,
-                @JsonProperty("cluster") Optional<ClusterManagerModule.Builder> cluster,
-                @JsonProperty("metrics") Optional<MetricManagerModule.Builder> metrics,
-                @JsonProperty("metadata") Optional<MetadataManagerModule.Builder> metadata,
-                @JsonProperty("suggest") Optional<SuggestManagerModule.Builder> suggest,
-                @JsonProperty("cache") Optional<CacheModule.Builder> cache,
-                @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
-                @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
-                @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
-                @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
-                @JsonProperty("version") Optional<String> version,
-                @JsonProperty("service") Optional<String> service) {
+        public Builder(
+            @JsonProperty("id") Optional<String> id,
+            @JsonProperty("startTimeout") Optional<Duration> startTimeout,
+            @JsonProperty("stopTimeout") Optional<Duration> stopTimeout,
+            @JsonProperty("host") Optional<String> host,
+            @JsonProperty("port") Optional<Integer> port,
+            @JsonProperty("connectors") Optional<List<JettyServerConnector.Builder>> connectors,
+            @JsonProperty("disableMetrics") Optional<Boolean> disableMetrics,
+            @JsonProperty("enableCors") Optional<Boolean> enableCors,
+            @JsonProperty("corsAllowOrigin") Optional<String> corsAllowOrigin,
+            @JsonProperty("features") Optional<Set<String>> features,
+            @JsonProperty("cluster") Optional<ClusterManagerModule.Builder> cluster,
+            @JsonProperty("metrics") Optional<MetricManagerModule.Builder> metrics,
+            @JsonProperty("metadata") Optional<MetadataManagerModule.Builder> metadata,
+            @JsonProperty("suggest") Optional<SuggestManagerModule.Builder> suggest,
+            @JsonProperty("cache") Optional<CacheModule.Builder> cache,
+            @JsonProperty("ingestion") Optional<IngestionModule.Builder> ingestion,
+            @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
+            @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
+            @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
+            @JsonProperty("version") Optional<String> version,
+            @JsonProperty("service") Optional<String> service
+        ) {
             this.id = id;
             this.startTimeout = startTimeout;
             this.stopTimeout = stopTimeout;
@@ -303,7 +323,8 @@ public class HeroicConfig {
                 pickOptional(stopTimeout, o.stopTimeout),
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
-                mergeOptional(connectors, o.connectors, (a, b) -> ImmutableList.copyOf(Iterables.concat(a, b))),
+                mergeOptional(connectors, o.connectors, (a, b) -> ImmutableList.copyOf(Iterables
+                        .concat(a, b))),
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
@@ -324,9 +345,11 @@ public class HeroicConfig {
         }
 
         public HeroicConfig build() {
-            final List<JettyServerConnector> connectors =
-                    ImmutableList.copyOf(this.connectors.orElseGet(HeroicConfig::defaultConnectors)
-                            .stream().map(JettyServerConnector.Builder::build).iterator());
+            final List<JettyServerConnector> connectors = ImmutableList.copyOf(this.connectors
+                .orElseGet(HeroicConfig::defaultConnectors)
+                .stream()
+                .map(JettyServerConnector.Builder::build)
+                .iterator());
 
             final String defaultVersion = loadDefaultVersion().orElse(DEFAULT_VERSION);
 
@@ -358,14 +381,15 @@ public class HeroicConfig {
         }
 
         private Optional<String> loadDefaultVersion() {
-            try (final InputStream in =
-                    getClass().getClassLoader().getResourceAsStream("com.spotify.heroic/version")) {
+            try (final InputStream in = getClass()
+                .getClassLoader()
+                .getResourceAsStream("com.spotify.heroic/version")) {
                 if (in == null) {
                     return Optional.empty();
                 }
 
                 final BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(in, Charsets.UTF_8));
+                    new BufferedReader(new InputStreamReader(in, Charsets.UTF_8));
                 return Optional.of(reader.readLine());
             } catch (final Exception e) {
                 log.warn("Failed to load version file", e);

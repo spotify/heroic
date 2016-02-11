@@ -21,19 +21,19 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.datastax.TypeSerializer;
-
 public class SeriesSerializer implements TypeSerializer<Series> {
     private final TypeSerializer<String> key = new StringSerializer();
     private final TypeSerializer<Map<String, String>> tags =
-            new MapSerializer<>(new StringSerializer(), new StringSerializer());
+        new MapSerializer<>(new StringSerializer(), new StringSerializer());
 
     private static final Comparator<String> COMPARATOR = new Comparator<String>() {
         public int compare(String a, String b) {

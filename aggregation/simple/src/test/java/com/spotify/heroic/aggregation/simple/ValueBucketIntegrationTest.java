@@ -3,7 +3,7 @@ package com.spotify.heroic.aggregation.simple;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
-
+import lombok.RequiredArgsConstructor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,8 +21,6 @@ import java.util.concurrent.Future;
 import java.util.function.DoubleBinaryOperator;
 
 import static org.junit.Assert.assertEquals;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class ValueBucketIntegrationTest {
@@ -99,7 +97,7 @@ public abstract class ValueBucketIntegrationTest {
             }
 
             assertEquals(bucket.getClass().getSimpleName(), Double.doubleToLongBits(expected),
-                    Double.doubleToLongBits(bucket.value()));
+                Double.doubleToLongBits(bucket.value()));
         }
     }
 }

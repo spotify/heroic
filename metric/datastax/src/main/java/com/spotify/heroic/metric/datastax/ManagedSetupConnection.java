@@ -32,16 +32,15 @@ import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.policies.TokenAwarePolicy;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.metric.datastax.schema.Schema;
-
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.concurrent.Callable;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ManagedSetup;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.concurrent.Callable;
 
 @RequiredArgsConstructor
 @ToString(of = {"seeds"})

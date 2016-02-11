@@ -38,11 +38,10 @@ public final class ReflectionUtils {
 
         if (!expectedType.isAssignableFrom(clazz)) {
             throw new IllegalArgumentException(
-                    "Class is not subtype of: " + expectedType.getCanonicalName());
+                "Class is not subtype of: " + expectedType.getCanonicalName());
         }
 
-        @SuppressWarnings("unchecked")
-        final Class<T> target = (Class<T>) clazz;
+        @SuppressWarnings("unchecked") final Class<T> target = (Class<T>) clazz;
         return buildInstance(target);
     }
 
@@ -53,14 +52,14 @@ public final class ReflectionUtils {
             constructor = target.getConstructor();
         } catch (NoSuchMethodException | SecurityException e) {
             throw new IllegalArgumentException(
-                    "Cannot find empty constructor for class: " + target.getCanonicalName(), e);
+                "Cannot find empty constructor for class: " + target.getCanonicalName(), e);
         }
 
         try {
             return constructor.newInstance();
         } catch (IllegalArgumentException | ReflectiveOperationException e) {
             throw new IllegalArgumentException(
-                    "Failed to create instance of class: " + target.getCanonicalName(), e);
+                "Failed to create instance of class: " + target.getCanonicalName(), e);
         }
     }
 }

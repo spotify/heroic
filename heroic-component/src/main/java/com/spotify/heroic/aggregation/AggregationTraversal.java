@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * Hold on to intermediate traverse states, and a session.

@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.consumer.collectd;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.consumer.collectd.CollectdValue.Counter;
+import io.netty.buffer.ByteBuf;
+import lombok.extern.slf4j.Slf4j;
+
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.consumer.collectd.CollectdValue.Counter;
-
-import io.netty.buffer.ByteBuf;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CollectdParser {
@@ -75,44 +74,44 @@ public class CollectdParser {
                     final int size = frame.readUnsignedShort();
 
                     switch (type) {
-                    case HOST:
-                        decoded.host = parseString(frame, size);
-                        break;
-                    case TIME:
-                        decoded.time = frame.readLong();
-                        break;
-                    case TIME_HR:
-                        decoded.time = (long) (((double) frame.readLong()) / FACTOR_HR);
-                        break;
-                    case PLUGIN:
-                        decoded.plugin = parseString(frame, size);
-                        break;
-                    case PLUGIN_INSTANCE:
-                        decoded.pluginInstance = parseString(frame, size);
-                        break;
-                    case TYPE:
-                        decoded.type = parseString(frame, size);
-                        break;
-                    case TYPE_INSTANCE:
-                        decoded.typeInstance = parseString(frame, size);
-                        break;
-                    case INTERVAL:
-                        decoded.interval = frame.readLong();
-                        break;
-                    case INTERVAL_HR:
-                        decoded.interval = (long) (((double) frame.readLong()) / FACTOR_HR);
-                        break;
-                    case MESSAGE:
-                        decoded.message = parseString(frame, size);
-                        break;
-                    case SEVERITY:
-                        decoded.severity = frame.readLong();
-                        break;
-                    case VALUES:
-                        return decoded.toSample(parseValues(frame, size));
-                    default:
-                        log.warn("unhandled type: " + type);
-                        break;
+                        case HOST:
+                            decoded.host = parseString(frame, size);
+                            break;
+                        case TIME:
+                            decoded.time = frame.readLong();
+                            break;
+                        case TIME_HR:
+                            decoded.time = (long) (((double) frame.readLong()) / FACTOR_HR);
+                            break;
+                        case PLUGIN:
+                            decoded.plugin = parseString(frame, size);
+                            break;
+                        case PLUGIN_INSTANCE:
+                            decoded.pluginInstance = parseString(frame, size);
+                            break;
+                        case TYPE:
+                            decoded.type = parseString(frame, size);
+                            break;
+                        case TYPE_INSTANCE:
+                            decoded.typeInstance = parseString(frame, size);
+                            break;
+                        case INTERVAL:
+                            decoded.interval = frame.readLong();
+                            break;
+                        case INTERVAL_HR:
+                            decoded.interval = (long) (((double) frame.readLong()) / FACTOR_HR);
+                            break;
+                        case MESSAGE:
+                            decoded.message = parseString(frame, size);
+                            break;
+                        case SEVERITY:
+                            decoded.severity = frame.readLong();
+                            break;
+                        case VALUES:
+                            return decoded.toSample(parseValues(frame, size));
+                        default:
+                            log.warn("unhandled type: " + type);
+                            break;
                     }
                 }
             }
@@ -141,34 +140,34 @@ public class CollectdParser {
 
         for (final int type : types) {
             switch (type) {
-            case CollectdSample.COUNTER:
-                final long c = frame.readLong();
+                case CollectdSample.COUNTER:
+                    final long c = frame.readLong();
 
-                if (c < 0) {
-                    throw new IllegalArgumentException("value too large for signed type");
-                }
+                    if (c < 0) {
+                        throw new IllegalArgumentException("value too large for signed type");
+                    }
 
-                values.add(new Counter(c));
-                break;
-            case CollectdSample.GAUGE:
-                frame.order(ByteOrder.LITTLE_ENDIAN);
-                values.add(new CollectdValue.Gauge(frame.readDouble()));
-                frame.order(ByteOrder.BIG_ENDIAN);
-                break;
-            case CollectdSample.DERIVE:
-                values.add(new CollectdValue.Derive(frame.readLong()));
-                break;
-            case CollectdSample.ABSOLUTE:
-                final long a = frame.readLong();
+                    values.add(new Counter(c));
+                    break;
+                case CollectdSample.GAUGE:
+                    frame.order(ByteOrder.LITTLE_ENDIAN);
+                    values.add(new CollectdValue.Gauge(frame.readDouble()));
+                    frame.order(ByteOrder.BIG_ENDIAN);
+                    break;
+                case CollectdSample.DERIVE:
+                    values.add(new CollectdValue.Derive(frame.readLong()));
+                    break;
+                case CollectdSample.ABSOLUTE:
+                    final long a = frame.readLong();
 
-                if (a < 0) {
-                    throw new IllegalArgumentException("value too large for signed type");
-                }
+                    if (a < 0) {
+                        throw new IllegalArgumentException("value too large for signed type");
+                    }
 
-                values.add(new CollectdValue.Absolute(a));
-                break;
-            default:
-                throw new IllegalArgumentException("invalid sample type: " + type);
+                    values.add(new CollectdValue.Absolute(a));
+                    break;
+                default:
+                    throw new IllegalArgumentException("invalid sample type: " + type);
             }
         }
 
@@ -188,7 +187,7 @@ public class CollectdParser {
 
         public CollectdSample toSample(final List<CollectdValue> values) {
             return new CollectdSample(host, time, plugin, pluginInstance, type, typeInstance,
-                    values, interval, message, severity);
+                values, interval, message, severity);
         }
     }
 }

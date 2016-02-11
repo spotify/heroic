@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.profile;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.ExtraParameters;
@@ -34,6 +32,8 @@ import com.spotify.heroic.consumer.collectd.CollectdConsumerModule;
 
 import java.util.List;
 
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 public class CollectdConsumerProfile extends HeroicProfileBase {
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
@@ -41,8 +41,10 @@ public class CollectdConsumerProfile extends HeroicProfileBase {
 
         params.get("collectd.host").ifPresent(module::host);
         params.getInteger("collectd.port").ifPresent(module::port);
-        params.get("collectd.pattern").map(p -> new GrokProcessor(ImmutableMap.of(), p))
-                .ifPresent(module::hostProcessor);
+        params
+            .get("collectd.pattern")
+            .map(p -> new GrokProcessor(ImmutableMap.of(), p))
+            .ifPresent(module::hostProcessor);
 
         // @formatter:off
         return HeroicConfig.builder()

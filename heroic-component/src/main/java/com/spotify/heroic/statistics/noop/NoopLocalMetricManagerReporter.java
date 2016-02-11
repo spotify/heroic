@@ -34,7 +34,7 @@ public class NoopLocalMetricManagerReporter implements LocalMetricManagerReporte
     }
 
     private static final NoopLocalMetricManagerReporter instance =
-            new NoopLocalMetricManagerReporter();
+        new NoopLocalMetricManagerReporter();
 
     public static NoopLocalMetricManagerReporter get() {
         return instance;

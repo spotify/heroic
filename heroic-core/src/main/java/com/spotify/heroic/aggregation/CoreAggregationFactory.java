@@ -23,10 +23,9 @@ package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreAggregationFactory implements AggregationFactory {

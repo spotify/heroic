@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.metric.datastax.schema.ng;
 
-import java.io.IOException;
-import java.util.Map;
-
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.google.common.collect.ImmutableList;
@@ -32,25 +29,31 @@ import com.spotify.heroic.metric.datastax.Async;
 import com.spotify.heroic.metric.datastax.schema.AbstractCassandraSchema;
 import com.spotify.heroic.metric.datastax.schema.Schema;
 import com.spotify.heroic.metric.datastax.schema.SchemaInstance;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.util.Map;
+
 @Slf4j
 public class NextGenSchema extends AbstractCassandraSchema implements Schema {
     public static final String CREATE_KEYSPACE_CQL =
-            NextGenSchema.class.getPackage().getName() + "/keyspace.cql";
+        NextGenSchema.class.getPackage().getName() + "/keyspace.cql";
     public static final String CREATE_TABLES_CQL =
-            NextGenSchema.class.getPackage().getName() + "/tables.cql";
+        NextGenSchema.class.getPackage().getName() + "/tables.cql";
 
     public static final String POINTS_TABLE = "metrics";
 
     // @formatter:off
     private static final String WRITE_METRICS_CQL =
-            "INSERT INTO {{keyspace}}.metrics (metric_key, data_timestamp_offset, data_value) VALUES (?, ?, ?)";
+            "INSERT INTO {{keyspace}}.metrics (metric_key, data_timestamp_offset, data_value) " +
+                    "VALUES (?, ?, ?)";
     private static final String FETCH_METRICS_CQL =
-            "SELECT data_timestamp_offset, data_value FROM {{keyspace}}.metrics WHERE metric_key = ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?";
+            "SELECT data_timestamp_offset, data_value FROM {{keyspace}}.metrics WHERE metric_key " +
+                    "= ? and data_timestamp_offset >= ? and data_timestamp_offset <= ? LIMIT ?";
     private static final String DELETE_METRICS_CQL =
             "DELETE FROM {{keyspace}}.metrics WHERE metric_key = ?";
     private static final String COUNT_METRICS_CQL =
@@ -59,7 +62,8 @@ public class NextGenSchema extends AbstractCassandraSchema implements Schema {
 
     private final String keyspace;
 
-    public NextGenSchema(final AsyncFramework async, final String keyspace) {
+    @Inject
+    public NextGenSchema(final AsyncFramework async, @Named("keyspace") final String keyspace) {
         super(async);
         this.keyspace = keyspace;
     }
@@ -79,17 +83,19 @@ public class NextGenSchema extends AbstractCassandraSchema implements Schema {
         return createKeyspace.lazyTransform(createKeyspaceStmt -> {
             log.info("Creating keyspace {}", keyspace);
 
-            return Async.bind(async, s.executeAsync(createKeyspaceStmt.bind()))
-                    .lazyTransform(ign -> {
-                final AsyncFuture<PreparedStatement> createTables =
+            return Async
+                .bind(async, s.executeAsync(createKeyspaceStmt.bind()))
+                .lazyTransform(ign -> {
+                    final AsyncFuture<PreparedStatement> createTables =
                         prepareTemplate(values, s, CREATE_TABLES_CQL);
 
-                return createTables.lazyTransform(createTablesStmt -> {
-                    log.info("Creating tables for keyspace {}", keyspace);
-                    return Async.bind(async, s.executeAsync(createTablesStmt.bind()))
+                    return createTables.lazyTransform(createTablesStmt -> {
+                        log.info("Creating tables for keyspace {}", keyspace);
+                        return Async
+                            .bind(async, s.executeAsync(createTablesStmt.bind()))
                             .directTransform(ign2 -> null);
+                    });
                 });
-            });
         });
     }
 
@@ -102,10 +108,11 @@ public class NextGenSchema extends AbstractCassandraSchema implements Schema {
         final AsyncFuture<PreparedStatement> delete = prepareAsync(values, s, DELETE_METRICS_CQL);
         final AsyncFuture<PreparedStatement> count = prepareAsync(values, s, COUNT_METRICS_CQL);
 
-        return async.collectAndDiscard(ImmutableList.of(write, fetch, delete, count))
-                .directTransform(r -> {
-                    return new NextGenSchemaInstance(keyspace, POINTS_TABLE, write.getNow(),
-                            fetch.getNow(), delete.getNow(), count.get());
-                });
+        return async
+            .collectAndDiscard(ImmutableList.of(write, fetch, delete, count))
+            .directTransform(r -> {
+                return new NextGenSchemaInstance(keyspace, POINTS_TABLE, write.getNow(),
+                    fetch.getNow(), delete.getNow(), count.get());
+            });
     }
 }

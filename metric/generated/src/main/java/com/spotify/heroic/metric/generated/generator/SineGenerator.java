@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.metric.generated.generator;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -36,26 +29,35 @@ import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.generated.Generator;
 
-public class SineGenerator implements Generator {
-    private static final Map<String, Object> PAYLOAD = ImmutableMap.<String, Object> of();
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-    @Inject
-    @Named("magnitude")
-    private double magnitude;
+public class SineGenerator implements Generator {
+    private static final Map<String, Object> PAYLOAD = ImmutableMap.<String, Object>of();
+
+    private final double magnitude;
 
     /**
      * How many milliseconds should be a full period (2 * PI).
      */
-    @Inject
-    @Named("period")
-    private long period;
+    private final long period;
 
     /**
      * Frequency of data points in hertz.
      */
+    private final long step;
+
     @Inject
-    @Named("step")
-    private long step;
+    public SineGenerator(
+        @Named("magnitude") double magnitude, @Named("period") long period, @Named("step") long step
+    ) {
+        this.magnitude = magnitude;
+        this.period = period;
+        this.step = step;
+    }
 
     @Override
     public List<Point> generatePoints(Series series, DateRange range, FetchQuotaWatcher watcher) {

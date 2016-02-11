@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.metric;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
-
 import lombok.Data;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class WriteMetric {
@@ -35,8 +34,9 @@ public class WriteMetric {
     final MetricCollection data;
 
     @JsonCreator
-    public WriteMetric(@JsonProperty("series") Series series,
-            @JsonProperty("data") MetricCollection data) {
+    public WriteMetric(
+        @JsonProperty("series") Series series, @JsonProperty("data") MetricCollection data
+    ) {
         this.series = checkNotNull(series, "series");
         this.data = checkNotNull(data, "data");
     }

@@ -49,14 +49,6 @@ import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.Row;
 import com.spotify.heroic.metric.bigtable.api.Table;
 import com.spotify.heroic.metric.bigtable.api.TableAdminClient;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -64,6 +56,13 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 
 @ToString(of = {"project", "zone", "cluster", "credentials"})
 @RequiredArgsConstructor
@@ -83,14 +82,19 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
     public BigtableConnection call() throws Exception {
         final CredentialOptions credentials = this.credentials.build();
 
-        final BigtableOptions options = new BigtableOptions.Builder().setProjectId(project)
-                .setZoneId(zone).setClusterId(cluster).setUserAgent(USER_AGENT)
-                .setDataChannelCount(64).setCredentialOptions(credentials).build();
+        final BigtableOptions options = new BigtableOptions.Builder()
+            .setProjectId(project)
+            .setZoneId(zone)
+            .setClusterId(cluster)
+            .setUserAgent(USER_AGENT)
+            .setDataChannelCount(64)
+            .setCredentialOptions(credentials)
+            .build();
 
         final BigtableSession session = new BigtableSession(options, executorService);
 
         final TableAdminClient adminClient =
-                new BigtableAdminClientImpl(session.getTableAdminClient());
+            new BigtableAdminClientImpl(session.getTableAdminClient());
         final DataClient client = new BigtableClientImpl(session.getDataClient());
 
         return new GrpcBigtableConnection(project, zone, cluster, session, adminClient, client);
@@ -129,14 +133,16 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final com.google.cloud.bigtable.grpc.BigtableTableAdminClient client;
 
         final String clusterUri =
-                String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+            String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
 
         @Override
         public Optional<Table> getTable(String name) {
             try {
-                return Optional.of(Table
-                        .fromPb(client.getTable(com.google.bigtable.admin.table.v1.GetTableRequest
-                                .newBuilder().setName(Table.toURI(clusterUri, name)).build())));
+                return Optional.of(Table.fromPb(client.getTable(
+                    com.google.bigtable.admin.table.v1.GetTableRequest
+                        .newBuilder()
+                        .setName(Table.toURI(clusterUri, name))
+                        .build())));
             } catch (final UncheckedExecutionException e) {
                 if (e.getCause() instanceof StatusRuntimeException) {
                     final StatusRuntimeException s = (StatusRuntimeException) e.getCause();
@@ -152,8 +158,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
         @Override
         public Table createTable(String tableId) {
-            client.createTable(com.google.bigtable.admin.table.v1.CreateTableRequest.newBuilder()
-                    .setName(clusterUri).setTableId(tableId).build());
+            client.createTable(com.google.bigtable.admin.table.v1.CreateTableRequest
+                .newBuilder()
+                .setName(clusterUri)
+                .setTableId(tableId)
+                .build());
             return new Table(clusterUri, tableId);
         }
 
@@ -161,11 +170,14 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         public ColumnFamily createColumnFamily(Table table, String name) {
             // name MUST be empty during creation, do not set it.
             final com.google.bigtable.admin.table.v1.ColumnFamily cf =
-                    com.google.bigtable.admin.table.v1.ColumnFamily.newBuilder().build();
+                com.google.bigtable.admin.table.v1.ColumnFamily.newBuilder().build();
 
             client.createColumnFamily(com.google.bigtable.admin.table.v1.CreateColumnFamilyRequest
-                    .newBuilder().setName(table.toURI()).setColumnFamilyId(name).setColumnFamily(cf)
-                    .build());
+                .newBuilder()
+                .setName(table.toURI())
+                .setColumnFamilyId(name)
+                .setColumnFamily(cf)
+                .build());
 
             return new ColumnFamily(clusterUri, table.getName(), name);
         }
@@ -177,14 +189,18 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         final BigtableDataClient client;
 
         final String clusterUri =
-                String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
+            String.format("projects/%s/zones/%s/clusters/%s", project, zone, cluster);
 
         @Override
-        public AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey,
-                Mutations mutations) {
-            return convertEmpty(client
-                    .mutateRowAsync(MutateRowRequest.newBuilder().setTableName(tableName(tableName))
-                            .setRowKey(rowKey).addAllMutations(mutations.getMutations()).build()));
+        public AsyncFuture<Void> mutateRow(
+            String tableName, ByteString rowKey, Mutations mutations
+        ) {
+            return convertEmpty(client.mutateRowAsync(MutateRowRequest
+                .newBuilder()
+                .setTableName(tableName(tableName))
+                .setRowKey(rowKey)
+                .addAllMutations(mutations.getMutations())
+                .build()));
         }
 
         @Override
@@ -195,30 +211,35 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         @Override
         public ReadModifyWriteRulesBuilder readModifyWriteRules() {
             return new ReadModifyWriteRulesBuilder();
-        };
+        }
 
         @Override
-        public AsyncFuture<List<Row>> readRows(final String tableName,
-                final ReadRowsRequest request) {
+        public AsyncFuture<List<Row>> readRows(
+            final String tableName, final ReadRowsRequest request
+        ) {
             return convertRows(
-                    client.readRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
+                client.readRowsAsync(request.toPb(Table.toURI(clusterUri, tableName))));
         }
 
         @Override
-        public AsyncFuture<Row> readModifyWriteRow(String tableName, ByteString rowKey,
-                ReadModifyWriteRules rules) {
-            return convert(client.readModifyWriteRowAsync(
-                    ReadModifyWriteRowRequest.newBuilder().setTableName(tableName(tableName))
-                            .setRowKey(rowKey).addAllRules(rules.getRules()).build()))
-                                    .directTransform(r -> convertRow(r));
+        public AsyncFuture<Row> readModifyWriteRow(
+            String tableName, ByteString rowKey, ReadModifyWriteRules rules
+        ) {
+            return convert(client.readModifyWriteRowAsync(ReadModifyWriteRowRequest
+                .newBuilder()
+                .setTableName(tableName(tableName))
+                .setRowKey(rowKey)
+                .addAllRules(rules.getRules())
+                .build())).directTransform(r -> convertRow(r));
         }
 
         @Override
-        public AsyncObservable<Row> readRowsObserved(final String tableName,
-                final ReadRowsRequest request) {
+        public AsyncObservable<Row> readRowsObserved(
+            final String tableName, final ReadRowsRequest request
+        ) {
             return observer -> {
                 final ResultScanner<com.google.bigtable.v1.Row> s =
-                        client.readRows(request.toPb(Table.toURI(clusterUri, tableName)));
+                    client.readRows(request.toPb(Table.toURI(clusterUri, tableName)));
 
                 final ResultScanner<Row> scanner = new ResultScanner<Row>() {
                     @Override
@@ -253,15 +274,15 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
                 scanAsync(scanner, observer);
             };
-        };
+        }
 
         String columnFamilyUriToName(String tableName, String name) {
             final String tableUri = tableNameToUri(tableName);
 
             if (!name.startsWith(tableUri)) {
                 throw new IllegalArgumentException(String.format(
-                        "Somehow you are converting a table (%s) from a different cluster (%s)",
-                        name, tableUri));
+                    "Somehow you are converting a table (%s) from a different cluster (%s)", name,
+                    tableUri));
             }
 
             return name.substring(tableUri.length() + "/columnFamilies/".length(), name.length());
@@ -276,7 +297,8 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
         }
 
         AsyncFuture<List<Row>> convertRows(
-                final ListenableFuture<List<com.google.bigtable.v1.Row>> readRowsAsync) {
+            final ListenableFuture<List<com.google.bigtable.v1.Row>> readRowsAsync
+        ) {
             return convert(readRowsAsync).directTransform(result -> {
                 final List<Row> rows = new ArrayList<>();
 
@@ -333,8 +355,10 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
                     continue;
                 }
 
-                f.onResolved(ign -> scanAsync(scanner, observer)).onFailed(observer::fail)
-                        .onCancelled(observer::cancel);
+                f
+                    .onResolved(ign -> scanAsync(scanner, observer))
+                    .onFailed(observer::fail)
+                    .onCancelled(observer::cancel);
             }
         }
     }

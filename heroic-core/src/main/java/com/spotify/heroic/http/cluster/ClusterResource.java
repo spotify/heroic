@@ -21,9 +21,16 @@
 
 package com.spotify.heroic.http.cluster;
 
-import java.net.URI;
-import java.util.List;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.JavaxRestFramework.Resume;
+import com.spotify.heroic.http.DataResponse;
+import eu.toolchain.async.AsyncFuture;
 
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -33,27 +40,21 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.common.JavaxRestFramework.Resume;
-import com.spotify.heroic.http.DataResponse;
-
-import eu.toolchain.async.AsyncFuture;
+import java.net.URI;
+import java.util.List;
 
 @Path("/cluster")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class ClusterResource {
-    @Inject
-    private JavaxRestFramework httpAsync;
+    private final JavaxRestFramework httpAsync;
+    private final ClusterManager cluster;
 
     @Inject
-    private ClusterManager cluster;
+    public ClusterResource(final JavaxRestFramework httpAsync, final ClusterManager cluster) {
+        this.httpAsync = httpAsync;
+        this.cluster = cluster;
+    }
 
     /**
      * Encode/Decode functions, helpful when interacting with cassandra through cqlsh.
@@ -74,16 +75,16 @@ public class ClusterResource {
         final NodeMetadata m = e.getMetadata();
 
         return new ClusterNodeStatus(e.getClusterNode().toString(), m.getId(), m.getVersion(),
-                m.getTags(), m.getCapabilities());
+            m.getTags(), m.getCapabilities());
     }
 
     private static final Resume<Void, DataResponse<Boolean>> ADD_NODE =
-            new Resume<Void, DataResponse<Boolean>>() {
-                @Override
-                public DataResponse<Boolean> resume(Void value) throws Exception {
-                    return new DataResponse<>(true);
-                }
-            };
+        new Resume<Void, DataResponse<Boolean>>() {
+            @Override
+            public DataResponse<Boolean> resume(Void value) throws Exception {
+                return new DataResponse<>(true);
+            }
+        };
 
     @POST
     @Path("/nodes")

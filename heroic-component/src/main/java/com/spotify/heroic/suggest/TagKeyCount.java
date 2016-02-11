@@ -21,18 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
@@ -41,9 +29,19 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagKeyCount {
@@ -55,9 +53,11 @@ public class TagKeyCount {
     private final boolean limited;
 
     @JsonCreator
-    public TagKeyCount(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("suggestions") List<Suggestion> suggestions,
-            @JsonProperty("limited") boolean limited) {
+    public TagKeyCount(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("suggestions") List<Suggestion> suggestions,
+        @JsonProperty("limited") boolean limited
+    ) {
         this.errors = checkNotNull(errors, "errors");
         this.suggestions = checkNotNull(suggestions, "suggestions");
         this.limited = checkNotNull(limited, "limited");
@@ -96,28 +96,28 @@ public class TagKeyCount {
 
                 limited = limited || list.size() >= limit;
                 return new TagKeyCount(errors, list.subList(0, Math.min(list.size(), limit)),
-                        limited);
+                    limited);
             }
         };
     }
 
     public static Transform<Throwable, ? extends TagKeyCount> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, TagKeyCount>() {
             @Override
             public TagKeyCount transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagKeyCount(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_SUGGESTIONS, false);
+                return new TagKeyCount(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                    EMPTY_SUGGESTIONS, false);
             }
         };
     }
 
     @Data
-    @EqualsAndHashCode(of = { "key" })
+    @EqualsAndHashCode(of = {"key"})
     public static final class Suggestion {
         private final String key;
         private final long count;
@@ -160,12 +160,13 @@ public class TagKeyCount {
     }
 
     public static Transform<Throwable, ? extends TagKeyCount> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, TagKeyCount>() {
             @Override
             public TagKeyCount transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new TagKeyCount(errors, EMPTY_SUGGESTIONS, false);
             }
         };

@@ -23,12 +23,11 @@ package com.spotify.heroic.rpc.nativerpc;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.spotify.heroic.rpc.nativerpc.NativeRpcContainer.EndpointSpec;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public abstract class NativeRpcEndpoint<Q, R> extends TypeReference<Q>
-        implements EndpointSpec<Q, R> {
+    implements EndpointSpec<Q, R> {
     public TypeReference<Q> requestType() {
         return this;
     }

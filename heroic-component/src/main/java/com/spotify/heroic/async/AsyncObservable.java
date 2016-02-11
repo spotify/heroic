@@ -23,12 +23,11 @@ package com.spotify.heroic.async;
 
 import com.spotify.heroic.analytics.SeriesHit;
 import com.spotify.heroic.common.Throwing;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Transform;
 
 import java.util.Iterator;
 import java.util.List;
-
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Transform;
 
 public interface AsyncObservable<T> {
     void observe(AsyncObserver<T> observer) throws Exception;
@@ -71,7 +70,7 @@ public interface AsyncObservable<T> {
                 @Override
                 public AsyncFuture<Void> observe(T value) throws Exception {
                     return observer.observe(value);
-                };
+                }
 
                 @Override
                 public void cancel() throws Exception {

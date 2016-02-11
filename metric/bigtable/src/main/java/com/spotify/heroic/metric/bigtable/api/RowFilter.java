@@ -22,11 +22,10 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.protobuf.ByteString;
-
-import java.util.Optional;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
 
 public interface RowFilter {
     static ColumnRange.Builder newColumnRangeBuilder(String family) {
@@ -61,7 +60,7 @@ public interface RowFilter {
         @Override
         public com.google.bigtable.v1.RowFilter toPb() {
             final com.google.bigtable.v1.RowFilter.Chain.Builder chain =
-                    com.google.bigtable.v1.RowFilter.Chain.newBuilder();
+                com.google.bigtable.v1.RowFilter.Chain.newBuilder();
             this.chain.forEach(f -> chain.addFilters(f.toPb()));
             return com.google.bigtable.v1.RowFilter.newBuilder().setChain(chain.build()).build();
         }
@@ -79,15 +78,17 @@ public interface RowFilter {
         @Override
         public com.google.bigtable.v1.RowFilter toPb() {
             final com.google.bigtable.v1.ColumnRange.Builder builder =
-                    com.google.bigtable.v1.ColumnRange.newBuilder().setFamilyName(family);
+                com.google.bigtable.v1.ColumnRange.newBuilder().setFamilyName(family);
 
             startQualifierInclusive.ifPresent(builder::setStartQualifierInclusive);
             startQualifierExclusive.ifPresent(builder::setStartQualifierExclusive);
             endQualifierInclusive.ifPresent(builder::setEndQualifierInclusive);
             endQualifierExclusive.ifPresent(builder::setEndQualifierExclusive);
 
-            return com.google.bigtable.v1.RowFilter.newBuilder()
-                    .setColumnRangeFilter(builder.build()).build();
+            return com.google.bigtable.v1.RowFilter
+                .newBuilder()
+                .setColumnRangeFilter(builder.build())
+                .build();
         }
 
         @RequiredArgsConstructor
@@ -121,7 +122,7 @@ public interface RowFilter {
 
             public ColumnRange build() {
                 return new ColumnRange(family, startQualifierInclusive, startQualifierExclusive,
-                        endQualifierInclusive, endQualifierExclusive);
+                    endQualifierInclusive, endQualifierExclusive);
             }
         }
     }

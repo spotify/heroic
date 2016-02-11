@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
+import lombok.Data;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-
-import lombok.Data;
 
 @Data
 public class TagValues {

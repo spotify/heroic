@@ -1,8 +1,8 @@
 package com.spotify.heroic.aggregation;
 
-import java.io.IOException;
-
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class ChainAggregationTest {
     @Test

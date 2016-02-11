@@ -23,10 +23,17 @@ package com.spotify.heroic;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.HeroicInternalLifeCycle.Context;
 import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -35,85 +42,68 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Component that executes a startup 'ping' after the service has started.
- *
+ * <p>
  * This is used primarally to hook into integration tests to assert that the service has been
  * configured before tests are being executed.
  *
  * @author udoprog
  */
 @Slf4j
-@RequiredArgsConstructor
 @ToString(of = {"ping", "id"})
-public class HeroicStartupPinger implements LifeCycle {
-    @Inject
-    private HeroicServer server;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
-
-    @Inject
-    private HeroicInternalLifeCycle lifecycle;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private ClusterManager cluster;
-
+public class HeroicStartupPinger implements LifeCycles {
+    private final HeroicServer server;
+    private final ObjectMapper mapper;
+    private final HeroicContext context;
+    private final AsyncFramework async;
+    private final ClusterManager cluster;
     private final URI ping;
     private final String id;
 
+    @Inject
+    public HeroicStartupPinger(
+        final HeroicServer server, @Named("application/json") final ObjectMapper mapper,
+        final HeroicContext context, final AsyncFramework async, final ClusterManager cluster,
+        @Named("pingURI") final URI ping, @Named("pingId") final String id
+    ) {
+        this.server = server;
+        this.mapper = mapper;
+        this.context = context;
+        this.async = async;
+        this.cluster = cluster;
+        this.ping = ping;
+        this.id = id;
+    }
+
     @Override
-    public AsyncFuture<Void> start() {
-        final AsyncFuture<Collection<String>> protocolFutures = async.collect(ImmutableList
-                .copyOf(cluster.protocols().stream().map(p -> p.getListenURI()).iterator()));
+    public void register(LifeCycleRegistry registry) {
+        registry.start(this::start);
+    }
+
+    private AsyncFuture<Void> start() {
+        final AsyncFuture<Collection<String>> protocolFutures = async.collect(ImmutableList.copyOf(
+            cluster.protocols().stream().map(p -> p.getListenURI()).iterator()));
 
         return protocolFutures.directTransform(uris -> {
             final ImmutableList<String> protocols = ImmutableList.copyOf(uris);
 
-            lifecycle.register("Startup Ping", new HeroicInternalLifeCycle.StartupHook() {
-                @Override
-                public void onStartup(Context context) throws Exception {
-                    log.info("Sending startup ping to {}", ping);
-                    final PingMessage ping = new PingMessage(server.getPort(), id, protocols);
-                    sendStartupPing(ping);
-                }
+            context.startedFuture().onResolved(n -> {
+                log.info("Sending startup ping to {}", ping);
+                sendStartupPing(new PingMessage(server.getPort(), id, protocols));
             });
 
             return null;
         });
     }
 
-    @Override
-    public AsyncFuture<Void> stop() {
-        return async.resolved(null);
-    }
-
-    @Override
-    public boolean isReady() {
-        return true;
-    }
-
     private void sendStartupPing(PingMessage p) throws IOException {
         switch (ping.getScheme()) {
-        case "udp":
-            sendUDP(p);
-            break;
-        default:
-            throw new IllegalArgumentException("Startup URL scheme: " + ping.getScheme());
+            case "udp":
+                sendUDP(p);
+                break;
+            default:
+                throw new IllegalArgumentException("Startup URL scheme: " + ping.getScheme());
         }
     }
 

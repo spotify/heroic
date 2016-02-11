@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.netflix.astyanax.model.Column;
 import com.netflix.astyanax.model.ColumnList;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Point;
-
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 class MetricsRowKey {
@@ -52,16 +51,17 @@ class MetricsRowKey {
 
         for (final Column<Integer> column : result) {
             points.add(new Point(
-                    MetricsRowKeySerializer.calculateAbsoluteTimestamp(base, column.getName()),
-                    column.getDoubleValue()));
+                MetricsRowKeySerializer.calculateAbsoluteTimestamp(base, column.getName()),
+                column.getDoubleValue()));
         }
 
         return points;
     }
 
     @JsonCreator
-    public static MetricsRowKey create(@JsonProperty("series") Series series,
-            @JsonProperty("base") Long base) {
+    public static MetricsRowKey create(
+        @JsonProperty("series") Series series, @JsonProperty("base") Long base
+    ) {
         return new MetricsRowKey(series, base);
     }
 }

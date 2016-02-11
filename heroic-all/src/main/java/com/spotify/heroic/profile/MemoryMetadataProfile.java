@@ -26,7 +26,6 @@ import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metadata.memory.MemoryMetadataModule;
-
 import org.elasticsearch.common.collect.ImmutableList;
 
 public class MemoryMetadataProfile extends HeroicProfileBase {
@@ -34,8 +33,11 @@ public class MemoryMetadataProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final MemoryMetadataModule.Builder module = MemoryMetadataModule.builder();
 
-        return HeroicConfig.builder().metadata(MetadataManagerModule.builder()
-                .backends(ImmutableList.<MetadataModule> of(module.build())));
+        return HeroicConfig
+            .builder()
+            .metadata(MetadataManagerModule
+                .builder()
+                .backends(ImmutableList.<MetadataModule>of(module.build())));
     }
 
     @Override

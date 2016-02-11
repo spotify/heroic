@@ -21,23 +21,30 @@
 
 package com.spotify.heroic.ws;
 
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParseException;
+
+import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import com.fasterxml.jackson.core.JsonLocation;
-import com.fasterxml.jackson.core.JsonParseException;
-
 @Provider
 public class JsonParseExceptionMapper implements ExceptionMapper<JsonParseException> {
+    @Inject
+    public JsonParseExceptionMapper() {
+    }
+
     @Override
     public Response toResponse(JsonParseException e) {
         final JsonLocation l = e.getLocation();
 
-        return Response.status(Response.Status.BAD_REQUEST)
-                .entity(new JsonParseErrorMessage(e.getOriginalMessage(),
-                        Response.Status.BAD_REQUEST, l.getLineNr(), l.getColumnNr()))
-                .type(MediaType.APPLICATION_JSON).build();
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(new JsonParseErrorMessage(e.getOriginalMessage(), Response.Status.BAD_REQUEST,
+                l.getLineNr(), l.getColumnNr()))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

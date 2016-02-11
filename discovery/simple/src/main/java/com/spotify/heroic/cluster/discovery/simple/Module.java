@@ -21,23 +21,36 @@
 
 package com.spotify.heroic.cluster.discovery.simple;
 
-import javax.inject.Inject;
-
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.dagger.LoadingComponent;
+import dagger.Component;
+
+import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
-            @Inject
-            private HeroicConfigurationContext context;
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
+    }
 
-            @Override
-            public void setup() {
-                context.registerType("static", StaticListDiscoveryModule.class);
-                context.registerType("srv", SrvRecordDiscoveryModule.class);
-            }
-        };
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.registerType("static", StaticListDiscoveryModule.class);
+            config.registerType("srv", SrvRecordDiscoveryModule.class);
+        }
     }
 }

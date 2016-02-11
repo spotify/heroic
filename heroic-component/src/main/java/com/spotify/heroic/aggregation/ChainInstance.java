@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
@@ -39,10 +32,16 @@ import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * A special aggregation method that is a chain of other aggregation methods.
@@ -56,7 +55,9 @@ public class ChainInstance implements AggregationInstance {
 
     @JsonCreator
     public ChainInstance(@JsonProperty("chain") Optional<List<AggregationInstance>> chain) {
-        this.chain = chain.filter(c -> !c.isEmpty()).orElseThrow(
+        this.chain = chain
+            .filter(c -> !c.isEmpty())
+            .orElseThrow(
                 () -> new IllegalArgumentException("chain must be specified and non-empty"));
     }
 
@@ -138,26 +139,30 @@ public class ChainInstance implements AggregationInstance {
         private final Iterable<AggregationSession> rest;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series,
-                List<Point> values) {
+        public void updatePoints(
+            Map<String, String> group, Set<Series> series, List<Point> values
+        ) {
             first.updatePoints(group, series, values);
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series,
-                List<Event> values) {
+        public void updateEvents(
+            Map<String, String> group, Set<Series> series, List<Event> values
+        ) {
             first.updateEvents(group, series, values);
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series,
-                List<Spread> values) {
+        public void updateSpreads(
+            Map<String, String> group, Set<Series> series, List<Spread> values
+        ) {
             first.updateSpreads(group, series, values);
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series,
-                List<MetricGroup> values) {
+        public void updateGroup(
+            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+        ) {
             first.updateGroup(group, series, values);
         }
 

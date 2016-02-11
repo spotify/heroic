@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.consumer.collectd;
 
-import java.net.InetAddress;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -35,6 +33,8 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import lombok.Data;
+
+import java.net.InetAddress;
 
 @Data
 public class Server {
@@ -49,13 +49,18 @@ public class Server {
         return async.resolved();
     }
 
-    public static AsyncFuture<Server> setup(final AsyncFramework async,
-            final CollectdChannelHandler handler, final InetAddress host, final int port) {
+    public static AsyncFuture<Server> setup(
+        final AsyncFramework async, final CollectdChannelHandler handler, final InetAddress host,
+        final int port
+    ) {
         final EventLoopGroup group = new NioEventLoopGroup();
         final Bootstrap b = new Bootstrap();
 
-        b.group(group).channel(NioDatagramChannel.class).option(ChannelOption.SO_BROADCAST, true)
-                .handler(handler);
+        b
+            .group(group)
+            .channel(NioDatagramChannel.class)
+            .option(ChannelOption.SO_BROADCAST, true)
+            .handler(handler);
 
         final ResolvableFuture<Server> future = async.future();
 
@@ -66,7 +71,7 @@ public class Server {
                     future.resolve(new Server(async, f.channel()));
                 } else {
                     future.fail(
-                            f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
+                        f.cause() != null ? f.cause() : new RuntimeException("Failed to bind"));
                 }
             }
         });

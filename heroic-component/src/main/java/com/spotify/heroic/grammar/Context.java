@@ -40,18 +40,18 @@ public class Context {
 
     public ParseException castError(final Object from, final Class<?> to) {
         return new ParseException(String.format("%s cannot be cast to %s", from, name(to)), null,
-                line, col, lineEnd, colEnd);
+            line, col, lineEnd, colEnd);
     }
 
     public ParseException castError(final Object from, final Object to) {
         return new ParseException(
-                String.format("%s cannot be cast to a compatible type of %s", from, to), null, line,
-                col, lineEnd, colEnd);
+            String.format("%s cannot be cast to a compatible type of %s", from, to), null, line,
+            col, lineEnd, colEnd);
     }
 
     public Context join(final Context o) {
         return new Context(Math.min(getLine(), o.getLine()), Math.min(getCol(), o.getCol()),
-                Math.max(getLineEnd(), o.getLineEnd()), Math.max(getColEnd(), o.getColEnd()));
+            Math.max(getLineEnd(), o.getLineEnd()), Math.max(getColEnd(), o.getColEnd()));
     }
 
     public static Context empty() {

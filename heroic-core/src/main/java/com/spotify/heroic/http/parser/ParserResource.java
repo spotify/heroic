@@ -21,6 +21,11 @@
 
 package com.spotify.heroic.http.parser;
 
+import com.spotify.heroic.Query;
+import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.grammar.QueryParser;
+
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -30,18 +35,16 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.google.inject.Inject;
-import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.grammar.QueryParser;
-
 @Path("/parser")
 public class ParserResource {
-    @Inject
-    private QueryParser parser;
+    private final QueryParser parser;
+    private final QueryManager query;
 
     @Inject
-    private QueryManager query;
+    public ParserResource(QueryParser parser, QueryManager query) {
+        this.parser = parser;
+        this.query = query;
+    }
 
     @GET
     @Consumes(MediaType.TEXT_PLAIN)

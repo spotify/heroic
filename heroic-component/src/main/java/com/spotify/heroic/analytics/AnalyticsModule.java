@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.analytics;
 
-import com.google.inject.Module;
+import com.spotify.heroic.dagger.PrimaryComponent;
 
 public interface AnalyticsModule {
-    public Module module();
+    public AnalyticsComponent module(PrimaryComponent primary);
 
     interface Builder {
         AnalyticsModule build();

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,8 +32,9 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.collect.ImmutableList;
-
 import lombok.RequiredArgsConstructor;
+
+import java.io.IOException;
 
 public class MetricCollectionSerialization {
     private static final String TYPE = "type";
@@ -45,7 +44,7 @@ public class MetricCollectionSerialization {
     public static class Deserializer extends JsonDeserializer<MetricCollection> {
         @Override
         public MetricCollection deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             if (p.getCurrentToken() != JsonToken.START_OBJECT) {
                 throw c.wrongTokenException(p, JsonToken.START_OBJECT, null);
             }
@@ -61,25 +60,25 @@ public class MetricCollectionSerialization {
                 }
 
                 switch (name) {
-                case TYPE:
-                    if (p.nextToken() != JsonToken.VALUE_STRING) {
-                        throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
-                    }
+                    case TYPE:
+                        if (p.nextToken() != JsonToken.VALUE_STRING) {
+                            throw c.wrongTokenException(p, JsonToken.VALUE_STRING, null);
+                        }
 
-                    type = p.readValueAs(MetricType.class);
-                    break;
-                case DATA:
-                    if (p.nextToken() != JsonToken.START_ARRAY) {
-                        throw c.wrongTokenException(p, JsonToken.START_ARRAY,
+                        type = p.readValueAs(MetricType.class);
+                        break;
+                    case DATA:
+                        if (p.nextToken() != JsonToken.START_ARRAY) {
+                            throw c.wrongTokenException(p, JsonToken.START_ARRAY,
                                 "expected array for data");
-                    }
+                        }
 
-                    data = p.readValueAsTree();
-                    break;
-                default:
-                    // skip unknown
-                    p.skipChildren();
-                    continue;
+                        data = p.readValueAsTree();
+                        break;
+                    default:
+                        // skip unknown
+                        p.skipChildren();
+                        continue;
                 }
             }
 
@@ -108,7 +107,7 @@ public class MetricCollectionSerialization {
     public static class Serializer extends JsonSerializer<MetricCollection> {
         @Override
         public void serialize(MetricCollection group, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             g.writeStartObject();
             g.writeObjectField(TYPE, group.getType());
             g.writeObjectField(DATA, group.getData());

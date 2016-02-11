@@ -21,26 +21,40 @@
 
 package com.spotify.heroic.cache;
 
-import com.google.inject.Inject;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.cache.memcached.MemcachedCacheModule;
 import com.spotify.heroic.cache.memory.MemoryCacheModule;
 import com.spotify.heroic.cache.noop.NoopCacheModule;
+import com.spotify.heroic.dagger.LoadingComponent;
+import dagger.Component;
+
+import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public HeroicModule.Entry setup() {
-        return new HeroicModule.Entry() {
-            @Inject
-            HeroicConfigurationContext context;
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
+    }
 
-            @Override
-            public void setup() {
-                context.registerType("noop", NoopCacheModule.Builder.class);
-                context.registerType("memory", MemoryCacheModule.Builder.class);
-                context.registerType("memcached", MemcachedCacheModule.Builder.class);
-            }
-        };
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.registerType("noop", NoopCacheModule.Builder.class);
+            config.registerType("memory", MemoryCacheModule.Builder.class);
+            config.registerType("memcached", MemcachedCacheModule.Builder.class);
+        }
     }
 }

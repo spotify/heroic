@@ -21,22 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
@@ -53,13 +42,24 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.Data;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 @TaskUsage("Migrate data from one backend to another")
 @TaskName("data-migrate")
@@ -69,21 +69,23 @@ public class DataMigrate implements ShellTask {
     public static final long ALLOWED_ERRORS = 5;
     public static final long ALLOWED_FAILED_KEYS = 100;
 
-    @Inject
-    private FilterFactory filters;
+    private final FilterFactory filters;
+    private final QueryParser parser;
+    private final MetricManager metric;
+    private final AsyncFramework async;
+    private final ObjectMapper mapper;
 
     @Inject
-    private QueryParser parser;
-
-    @Inject
-    private MetricManager metric;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public DataMigrate(
+        FilterFactory filters, QueryParser parser, MetricManager metric, AsyncFramework async,
+        @Named("application/json") ObjectMapper mapper
+    ) {
+        this.filters = filters;
+        this.parser = parser;
+        this.metric = metric;
+        this.async = async;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -150,7 +152,9 @@ public class DataMigrate implements ShellTask {
 
         final Object lock = new Object();
 
-        /** must synchronize access with {@link #lock} */
+        /**
+         * must synchronize access with {@link #lock}
+         */
         volatile boolean done = false;
 
         int pending = 0;
@@ -227,8 +231,9 @@ public class DataMigrate implements ShellTask {
                 return;
             }
 
-            from.streamRow(key).observe(
-                    new RowObserver(errors, to, future, key, () -> done, this::endOneRuntime));
+            from
+                .streamRow(key)
+                .observe(new RowObserver(errors, to, future, key, () -> done, this::endOneRuntime));
         }
 
         void endOneRuntime(final BackendKey key) {
@@ -300,8 +305,8 @@ public class DataMigrate implements ShellTask {
         void streamDot(final ShellIO io, final BackendKey key, final long n) throws Exception {
             if (n % LINES == 0) {
                 synchronized (io) {
-                    io.out().println(" failedKeys: " + failedKeys.get() + ", last: "
-                            + mapper.writeValueAsString(key));
+                    io.out().println(" failedKeys: " + failedKeys.get() + ", last: " +
+                        mapper.writeValueAsString(key));
                     io.out().flush();
                 }
             } else if (n % DOTS == 0) {
@@ -329,7 +334,7 @@ public class DataMigrate implements ShellTask {
             }
 
             final AsyncFuture<Void> write =
-                    to.write(new WriteMetric(key.getSeries(), value)).directTransform(v -> null);
+                to.write(new WriteMetric(key.getSeries(), value)).directTransform(v -> null);
 
             future.bind(write);
             return write;
@@ -355,20 +360,20 @@ public class DataMigrate implements ShellTask {
     @ToString
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-f", aliases = {"--from"}, usage = "Backend group to load data from",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String from;
 
         @Option(name = "-t", aliases = {"--to"}, usage = "Backend group to load data to",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String to;
 
         @Option(name = "--page-limit",
-                usage = "Limit the number metadata entries to fetch per page (default: 100)")
+            usage = "Limit the number metadata entries to fetch per page (default: 100)")
         @Getter
         private int pageLimit = 100;
 
         @Option(name = "--keys-paged",
-                usage = "Use the high-level paging mechanism when streaming keys")
+            usage = "Use the high-level paging mechanism when streaming keys")
         private boolean keysPaged = false;
 
         @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
@@ -378,16 +383,25 @@ public class DataMigrate implements ShellTask {
         private Integer fetchSize = null;
 
         @Option(name = "--tracing",
-                usage = "Trace the queries for more debugging when things go wrong")
+            usage = "Trace the queries for more debugging when things go wrong")
         private boolean tracing = false;
 
         @Option(name = "--parallelism",
-                usage = "The number of migration requests to send in parallel (default: 100)",
-                metaVar = "<number>")
+            usage = "The number of migration requests to send in parallel (default: 100)",
+            metaVar = "<number>")
         private int parallelism = Runtime.getRuntime().availableProcessors() * 4;
 
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+    }
+
+    public static DataMigrate setup(final CoreComponent core) {
+        return DaggerDataMigrate_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        DataMigrate task();
     }
 }

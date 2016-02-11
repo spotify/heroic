@@ -26,37 +26,37 @@ import com.datastax.driver.core.policies.DefaultRetryPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.name.Named;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.datastax.schema.Schema;
+import com.spotify.heroic.metric.datastax.schema.SchemaComponent;
 import com.spotify.heroic.metric.datastax.schema.SchemaModule;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchemaModule;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.Managed;
+import lombok.Data;
 
+import javax.inject.Named;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.inject.Singleton;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.Managed;
-import lombok.Data;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Data
 public final class DatastaxMetricModule implements MetricModule {
@@ -70,7 +70,7 @@ public final class DatastaxMetricModule implements MetricModule {
     public static final Duration DEFAULT_READ_TIMEOUT = new Duration(30, TimeUnit.SECONDS);
 
     /* id of backend (defualt will be generated) */
-    private final String id;
+    private final Optional<String> id;
     /* groups for this backend */
     private final Groups groups;
     /* database seeds */
@@ -91,26 +91,27 @@ public final class DatastaxMetricModule implements MetricModule {
     private final DatastaxAuthentication authentication;
 
     @JsonCreator
-    public DatastaxMetricModule(@JsonProperty("id") String id,
-            @JsonProperty("groups") Groups groups, @JsonProperty("seeds") Set<String> seeds,
-            @JsonProperty("schema") SchemaModule schema,
-            @JsonProperty("configure") Boolean configure,
-            @JsonProperty("fetchSize") Integer fetchSize,
-            @JsonProperty("readTimeout") Duration readTimeout,
-            @JsonProperty("consistencyLevel") ConsistencyLevel consistencyLevel,
-            @JsonProperty("retryPolicy") RetryPolicy retryPolicy,
-            @JsonProperty("authentication") DatastaxAuthentication authentication) {
+    public DatastaxMetricModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("seeds") Optional<Set<String>> seeds,
+        @JsonProperty("schema") Optional<SchemaModule> schema,
+        @JsonProperty("configure") Optional<Boolean> configure,
+        @JsonProperty("fetchSize") Optional<Integer> fetchSize,
+        @JsonProperty("readTimeout") Optional<Duration> readTimeout,
+        @JsonProperty("consistencyLevel") Optional<ConsistencyLevel> consistencyLevel,
+        @JsonProperty("retryPolicy") Optional<RetryPolicy> retryPolicy,
+        @JsonProperty("authentication") Optional<DatastaxAuthentication> authentication
+    ) {
         this.id = id;
-        this.groups = Optional.fromNullable(groups).or(Groups::empty).or("heroic");
-        this.seeds = convert(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
-        this.schema = Optional.fromNullable(schema).or(NextGenSchemaModule.builder()::build);
-        this.configure = Optional.fromNullable(configure).or(DEFAULT_CONFIGURE);
-        this.fetchSize = Optional.fromNullable(fetchSize).or(DEFAULT_FETCH_SIZE);
-        this.readTimeout = Optional.fromNullable(readTimeout).or(DEFAULT_READ_TIMEOUT);
-        this.consistencyLevel = Optional.fromNullable(consistencyLevel).or(ConsistencyLevel.ONE);
-        this.retryPolicy = Optional.fromNullable(retryPolicy).or(DefaultRetryPolicy.INSTANCE);
-        this.authentication =
-                Optional.fromNullable(authentication).or(DatastaxAuthentication.None::new);
+        this.groups = groups.orElseGet(Groups::empty).or("heroic");
+        this.seeds = convert(seeds.orElse(DEFAULT_SEEDS));
+        this.schema = schema.orElseGet(NextGenSchemaModule.builder()::build);
+        this.configure = configure.orElse(DEFAULT_CONFIGURE);
+        this.fetchSize = fetchSize.orElse(DEFAULT_FETCH_SIZE);
+        this.readTimeout = readTimeout.orElse(DEFAULT_READ_TIMEOUT);
+        this.consistencyLevel = consistencyLevel.orElse(ConsistencyLevel.ONE);
+        this.retryPolicy = retryPolicy.orElse(DefaultRetryPolicy.INSTANCE);
+        this.authentication = authentication.orElseGet(DatastaxAuthentication.None::new);
     }
 
     private static List<InetSocketAddress> convert(Set<String> source) {
@@ -141,54 +142,72 @@ public final class DatastaxMetricModule implements MetricModule {
 
         if (host == null) {
             throw new IllegalArgumentException(
-                    "invalid seed address '" + s + "', no host specified");
+                "invalid seed address '" + s + "', no host specified");
         }
 
         return new InetSocketAddress(host, port);
     }
 
     @Override
-    public PrivateModule module(final Key<MetricBackend> key, final String id) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
-                return reporter.newBackend(id);
-            }
+    public Exposed module(PrimaryComponent primary, Depends depends, String id) {
+        final SchemaComponent schema = this.schema.module(primary);
 
-            @Provides
-            @Singleton
-            @Named("configure")
-            public boolean configure(final ExtraParameters params) {
-                return params.containsAny(ExtraParameters.CONFIGURE.getName(), DATASTAX_CONFIGURE)
-                        || configure;
-            }
+        return DaggerDatastaxMetricModule_C
+            .builder()
+            .primaryComponent(primary)
+            .schemaComponent(schema)
+            .depends(depends)
+            .m(new M())
+            .build();
+    }
 
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
-            }
+    @DatastaxScope
+    @Component(modules = M.class,
+        dependencies = {PrimaryComponent.class, Depends.class, SchemaComponent.class})
+    interface C extends Exposed {
+        @Override
+        DatastaxBackend backend();
 
-            @Provides
-            @Singleton
-            public Managed<Connection> connection(final AsyncFramework async,
-                    @Named("configure") final boolean configure, final Schema schema) {
-                return async.managed(new ManagedSetupConnection(async, seeds, schema, configure,
-                        fetchSize, readTimeout, consistencyLevel, retryPolicy, authentication));
-            }
+        @Override
+        LifeCycle life();
+    }
 
-            @Override
-            protected void configure() {
-                install(schema.module());
-                bind(key).to(DatastaxBackend.class).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+    @Module
+    class M {
+        @Provides
+        @DatastaxScope
+        @Named("configure")
+        public boolean configure(final ExtraParameters params) {
+            return params.containsAny(ExtraParameters.CONFIGURE.getName(), DATASTAX_CONFIGURE) ||
+                configure;
+        }
+
+        @Provides
+        @DatastaxScope
+        public Groups groups() {
+            return groups;
+        }
+
+        @Provides
+        @DatastaxScope
+        public Managed<Connection> connection(
+            final AsyncFramework async, @Named("configure") final boolean configure,
+            final Schema schema
+        ) {
+            return async.managed(
+                new ManagedSetupConnection(async, seeds, schema, configure, fetchSize, readTimeout,
+                    consistencyLevel, retryPolicy, authentication));
+        }
+
+        @Provides
+        @DatastaxScope
+        LifeCycle life(LifeCycleManager manager, DatastaxBackend backend) {
+            return manager.build(backend);
+        }
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -202,70 +221,70 @@ public final class DatastaxMetricModule implements MetricModule {
     }
 
     public static class Builder {
-        private String id;
-        private Groups groups;
-        private Set<String> seeds;
-        private SchemaModule schema;
-        private boolean configure = DEFAULT_CONFIGURE;
-        private int fetchSize = DEFAULT_FETCH_SIZE;
-        private Duration readTimeout;
-        private ConsistencyLevel consistencyLevel;
-        private RetryPolicy retryPolicy;
-        private DatastaxAuthentication authentication;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<Set<String>> seeds = empty();
+        private Optional<SchemaModule> schema = empty();
+        private Optional<Boolean> configure = empty();
+        private Optional<Integer> fetchSize = empty();
+        private Optional<Duration> readTimeout = empty();
+        private Optional<ConsistencyLevel> consistencyLevel = empty();
+        private Optional<RetryPolicy> retryPolicy = empty();
+        private Optional<DatastaxAuthentication> authentication = empty();
 
         public Builder id(String id) {
-            this.id = id;
+            this.id = of(id);
             return this;
         }
 
         public Builder groups(Groups groups) {
-            this.groups = groups;
+            this.groups = of(groups);
             return this;
         }
 
         public Builder seeds(Set<String> seeds) {
-            this.seeds = seeds;
+            this.seeds = of(seeds);
             return this;
         }
 
         public Builder schema(SchemaModule schema) {
-            this.schema = schema;
+            this.schema = of(schema);
             return this;
         }
 
         public Builder configure(boolean configure) {
-            this.configure = configure;
+            this.configure = of(configure);
             return this;
         }
 
         public Builder fetchSize(int fetchSize) {
-            this.fetchSize = fetchSize;
+            this.fetchSize = of(fetchSize);
             return this;
         }
 
         public Builder readTimeout(Duration readTimeout) {
-            this.readTimeout = readTimeout;
+            this.readTimeout = of(readTimeout);
             return this;
         }
 
         public Builder consistencyLevel(ConsistencyLevel consistencyLevel) {
-            this.consistencyLevel = consistencyLevel;
+            this.consistencyLevel = of(consistencyLevel);
             return this;
         }
 
         public Builder retryPolicy(RetryPolicy retryPolicy) {
-            this.retryPolicy = retryPolicy;
+            this.retryPolicy = of(retryPolicy);
             return this;
         }
 
         public Builder authentication(DatastaxAuthentication authentication) {
-            this.authentication = authentication;
+            this.authentication = of(authentication);
             return this;
         }
 
         public DatastaxMetricModule build() {
             return new DatastaxMetricModule(id, groups, seeds, schema, configure, fetchSize,
-                    readTimeout, consistencyLevel, retryPolicy, authentication);
+                readTimeout, consistencyLevel, retryPolicy, authentication);
         }
     }
 }

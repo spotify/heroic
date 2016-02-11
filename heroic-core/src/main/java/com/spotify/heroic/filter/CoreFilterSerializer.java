@@ -21,16 +21,16 @@
 
 package com.spotify.heroic.filter;
 
+import eu.toolchain.serializer.SerialReader;
+import eu.toolchain.serializer.SerialWriter;
+import eu.toolchain.serializer.Serializer;
+import lombok.RequiredArgsConstructor;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
-
-import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.SerialWriter;
-import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class CoreFilterSerializer implements FilterSerializer {
@@ -108,7 +108,7 @@ public class CoreFilterSerializer implements FilterSerializer {
             }
 
             final LinkedList<Class<?>> queue =
-                    new LinkedList<>(Arrays.asList(type.getInterfaces()));
+                new LinkedList<>(Arrays.asList(type.getInterfaces()));
 
             while (!queue.isEmpty()) {
                 final Class<?> candidateType = queue.pop();
@@ -134,8 +134,8 @@ public class CoreFilterSerializer implements FilterSerializer {
     }
 
     private Serializer<Filter> getSerializer(String id) {
-        @SuppressWarnings("unchecked")
-        final Serializer<Filter> serializer = (Serializer<Filter>) idMapping.get(id);
+        @SuppressWarnings("unchecked") final Serializer<Filter> serializer =
+            (Serializer<Filter>) idMapping.get(id);
 
         if (serializer == null) {
             throw new RuntimeException("No serializer for type id " + id);

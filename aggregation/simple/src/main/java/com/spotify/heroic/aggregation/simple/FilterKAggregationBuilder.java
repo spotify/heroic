@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-
 import com.spotify.heroic.aggregation.AbstractAggregationDSL;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
@@ -37,13 +36,15 @@ public abstract class FilterKAggregationBuilder<T extends Aggregation>
 
     @Override
     public Aggregation build(AggregationArguments args) {
-        final int k = args.positional(Long.class)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "missing required argument 'k'")).intValue();
+        final int k = args
+            .positional(Long.class)
+            .orElseThrow(() -> new IllegalArgumentException("missing required argument 'k'"))
+            .intValue();
 
-        final AggregationValue of = args.positional(AggregationValue.class)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "missing required child aggregation 'of'"));
+        final AggregationValue of = args
+            .positional(AggregationValue.class)
+            .orElseThrow(
+                () -> new IllegalArgumentException("missing required child aggregation 'of'"));
 
         return buildAggregation(k, asAggregation(of));
     }

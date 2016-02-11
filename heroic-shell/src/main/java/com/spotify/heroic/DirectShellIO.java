@@ -21,6 +21,9 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.shell.ShellIO;
+import lombok.Data;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,10 +31,6 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-
-import com.spotify.heroic.shell.ShellIO;
-
-import lombok.Data;
 
 @Data
 public class DirectShellIO implements ShellIO {
@@ -43,7 +42,7 @@ public class DirectShellIO implements ShellIO {
 
     @Override
     public OutputStream newOutputStream(Path path, StandardOpenOption... options)
-            throws IOException {
+        throws IOException {
         return Files.newOutputStream(path, options);
     }
 

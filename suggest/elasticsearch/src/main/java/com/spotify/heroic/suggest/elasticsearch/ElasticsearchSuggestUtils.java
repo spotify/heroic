@@ -21,26 +21,28 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
+import com.google.common.collect.ImmutableMap;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-
-import com.google.common.collect.ImmutableMap;
-
 public class ElasticsearchSuggestUtils {
-    public static Map<String, Object> loadJsonResource(String path) throws IOException {
-        final String fullPath = ElasticsearchSuggestModule.class.getPackage().getName() + "/"
-                + path;
+    public static Map<String, Object> loadJsonResource(String path) {
+        final String fullPath =
+            ElasticsearchSuggestModule.class.getPackage().getName() + "/" + path;
 
-        try (final InputStream input = ElasticsearchSuggestModule.class.getClassLoader()
-                .getResourceAsStream(fullPath)) {
+        try (final InputStream input = ElasticsearchSuggestModule.class
+            .getClassLoader()
+            .getResourceAsStream(fullPath)) {
             if (input == null) {
                 return ImmutableMap.of();
             }
 
             return JsonXContent.jsonXContent.createParser(input).map();
+        } catch (final IOException e) {
+            throw new RuntimeException("Failed to load json resource: " + path);
         }
     }
 }

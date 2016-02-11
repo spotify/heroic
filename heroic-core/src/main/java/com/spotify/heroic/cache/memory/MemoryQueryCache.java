@@ -23,33 +23,37 @@ package com.spotify.heroic.cache.memory;
 
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.cache.CacheScope;
 import com.spotify.heroic.cache.QueryCache;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryResult;
-
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
 
+import javax.inject.Inject;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
+@CacheScope
 public class MemoryQueryCache implements QueryCache {
     private final ExpiringMap<Key, AsyncFuture<QueryResult>> cache;
 
     private final Object lock = new Object();
 
+    @Inject
     public MemoryQueryCache() {
         this.cache = ExpiringMap.builder().variableExpiration().build();
     }
 
     @Override
-    public AsyncFuture<QueryResult> load(MetricType source, Filter filter, DateRange range,
-            AggregationInstance aggregationInstance, QueryOptions options,
-            Supplier<AsyncFuture<QueryResult>> loader) {
+    public AsyncFuture<QueryResult> load(
+        MetricType source, Filter filter, DateRange range, AggregationInstance aggregationInstance,
+        QueryOptions options, Supplier<AsyncFuture<QueryResult>> loader
+    ) {
         /* can't be cached :( */
         if (aggregationInstance.cadence() <= 0) {
             return loader.get();
@@ -72,7 +76,7 @@ public class MemoryQueryCache implements QueryCache {
 
             final AsyncFuture<QueryResult> next = loader.get();
             cache.put(k, next, ExpirationPolicy.ACCESSED, aggregationInstance.cadence(),
-                    TimeUnit.MILLISECONDS);
+                TimeUnit.MILLISECONDS);
             return next;
         }
     }

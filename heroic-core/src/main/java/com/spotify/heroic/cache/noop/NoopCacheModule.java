@@ -21,29 +21,23 @@
 
 package com.spotify.heroic.cache.noop;
 
-import com.google.inject.Exposed;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
+import com.spotify.heroic.cache.CacheComponent;
 import com.spotify.heroic.cache.CacheModule;
-import com.spotify.heroic.cache.QueryCache;
+import com.spotify.heroic.cache.CacheScope;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
 
 public class NoopCacheModule implements CacheModule {
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            @Exposed
-            public QueryCache queryCache() {
-                return new NoopQueryCache();
-            }
+    public CacheComponent module(PrimaryComponent primary) {
+        return DaggerNoopCacheModule_C.builder().primaryComponent(primary).build();
+    }
 
-            @Override
-            protected void configure() {
-            };
-        };
+    @CacheScope
+    @Component(dependencies = PrimaryComponent.class)
+    interface C extends CacheComponent {
+        @Override
+        NoopQueryCache queryCache();
     }
 
     public static Builder builder() {

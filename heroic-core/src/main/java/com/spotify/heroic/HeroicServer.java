@@ -24,13 +24,18 @@ package com.spotify.heroic;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import com.spotify.heroic.common.LifeCycle;
+import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.dagger.PrimaryScope;
 import com.spotify.heroic.http.CorsResponseFilter;
 import com.spotify.heroic.jetty.JettyJSONErrorHandler;
 import com.spotify.heroic.jetty.JettyServerConnector;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.servlet.ShutdownFilter;
-
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.rewrite.handler.RewritePatternRule;
 import org.eclipse.jetty.server.Connector;
@@ -46,67 +51,96 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 
-import java.lang.reflect.Constructor;
-import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.function.Supplier;
-
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.MessageBodyReader;
 import javax.ws.rs.ext.MessageBodyWriter;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
-
+@PrimaryScope
 @Slf4j
 @ToString(of = {"address"})
-public class HeroicServer implements LifeCycle {
+public class HeroicServer implements LifeCycles {
     public static final String DEFAULT_CORS_ALLOW_ORIGIN = "*";
 
-    @Inject
-    @Named("bindAddress")
-    private InetSocketAddress address;
+    private final InetSocketAddress address;
+    private final HeroicCoreInstance instance;
+    private final HeroicConfigurationContext config;
+    private final ObjectMapper mapper;
+    private final AsyncFramework async;
+    private final boolean enableCors;
+    private final Optional<String> corsAllowOrigin;
+    private final List<JettyServerConnector> connectors;
+    private final Supplier<Boolean> stopping;
 
-    @Inject
-    private Injector injector;
-
-    @Inject
-    private HeroicConfigurationContext config;
-
-    @Inject
-    @Named(MediaType.APPLICATION_JSON)
-    private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("enableCors")
-    private boolean enableCors;
-
-    @Inject
-    @Named("corsAllowOrigin")
-    private Optional<String> corsAllowOrigin;
-
-    @Inject
-    private List<JettyServerConnector> connectors;
-
-    @Inject
-    @Named("stopping")
-    private Supplier<Boolean> stopping;
-
-    private volatile Server server;
-
+    private volatile Server server = null;
     private final Object lock = new Object();
 
+    @Inject
+    public HeroicServer(
+        @Named("bindAddress") final InetSocketAddress address, final HeroicCoreInstance instance,
+        final HeroicConfigurationContext config,
+        @Named(MediaType.APPLICATION_JSON) final ObjectMapper mapper, final AsyncFramework async,
+        @Named("enableCors") final boolean enableCors,
+        @Named("corsAllowOrigin") final Optional<String> corsAllowOrigin,
+        final List<JettyServerConnector> connectors,
+        @Named("stopping") final Supplier<Boolean> stopping
+    ) {
+        this.address = address;
+        this.instance = instance;
+        this.config = config;
+        this.mapper = mapper;
+        this.async = async;
+        this.enableCors = enableCors;
+        this.corsAllowOrigin = corsAllowOrigin;
+        this.connectors = connectors;
+        this.stopping = stopping;
+    }
+
     @Override
-    public AsyncFuture<Void> start() {
+    public void register(final LifeCycleRegistry registry) {
+        registry.start(this::start);
+        registry.stop(this::stop);
+    }
+
+    public int getPort() {
+        if (server == null) {
+            throw new IllegalStateException("Server is not running");
+        }
+
+        return findServerConnector(server).getLocalPort();
+    }
+
+    private List<Connector> setupConnectors(final Server server) {
+        return ImmutableList.copyOf(
+            connectors.stream().map(c -> c.setup(server, address)).iterator());
+    }
+
+    private ServerConnector findServerConnector(Server server) {
+        final Connector[] connectors = server.getConnectors();
+
+        if (connectors.length == 0) {
+            throw new IllegalStateException("server has no connectors");
+        }
+
+        for (final Connector c : connectors) {
+            if (!(c instanceof ServerConnector)) {
+                continue;
+            }
+
+            return (ServerConnector) c;
+        }
+
+        throw new IllegalStateException("Server has no associated ServerConnector");
+    }
+
+    private AsyncFuture<Void> start() {
         final Server newServer = new Server();
         setupConnectors(newServer).forEach(newServer::addConnector);
 
@@ -131,39 +165,7 @@ public class HeroicServer implements LifeCycle {
         });
     }
 
-    public int getPort() {
-        if (server == null) {
-            throw new IllegalStateException("Server is not running");
-        }
-
-        return findServerConnector(server).getLocalPort();
-    }
-
-    private List<Connector> setupConnectors(final Server server) {
-        return ImmutableList
-                .copyOf(connectors.stream().map(c -> c.setup(server, address)).iterator());
-    }
-
-    private ServerConnector findServerConnector(Server server) {
-        final Connector[] connectors = server.getConnectors();
-
-        if (connectors.length == 0) {
-            throw new IllegalStateException("server has no connectors");
-        }
-
-        for (final Connector c : connectors) {
-            if (!(c instanceof ServerConnector)) {
-                continue;
-            }
-
-            return (ServerConnector) c;
-        }
-
-        throw new IllegalStateException("Server has no associated ServerConnector");
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
+    private AsyncFuture<Void> stop() {
         return async.call(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
@@ -186,11 +188,6 @@ public class HeroicServer implements LifeCycle {
         });
     }
 
-    @Override
-    public boolean isReady() {
-        return server != null;
-    }
-
     private HandlerCollection setupHandler() throws Exception {
         final ResourceConfig resourceConfig = setupResourceConfig();
         final ServletContainer servlet = new ServletContainer(resourceConfig);
@@ -202,7 +199,7 @@ public class HeroicServer implements LifeCycle {
 
         // statically provide injector to jersey application.
         final ServletContextHandler context =
-                new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
+            new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         context.setContextPath("/");
 
         context.addServlet(jerseyServlet, "/*");
@@ -217,7 +214,7 @@ public class HeroicServer implements LifeCycle {
         makeRewriteRules(rewrite);
 
         final HandlerCollection handlers = new HandlerCollection();
-        handlers.setHandlers(new Handler[] {rewrite, context, requestLogHandler});
+        handlers.setHandlers(new Handler[]{rewrite, context, requestLogHandler});
 
         return handlers;
     }
@@ -255,12 +252,20 @@ public class HeroicServer implements LifeCycle {
     private ResourceConfig setupResourceConfig() throws Exception {
         final ResourceConfig c = new ResourceConfig();
 
-        for (final Class<?> resource : config.getResources()) {
+        int count = 0;
+
+        for (final Function<CoreComponent, List<Object>> resource : config.getResources()) {
             if (log.isTraceEnabled()) {
                 log.trace("Loading resource: {}", resource);
             }
 
-            c.register(setupResource(resource));
+            final List<Object> resources = instance.inject(resource::apply);
+
+            for (final Object r : resources) {
+                c.register(r);
+            }
+
+            count += resources.size();
         }
 
         // Resources.
@@ -269,31 +274,9 @@ public class HeroicServer implements LifeCycle {
         }
 
         c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class,
-                MessageBodyWriter.class);
+            MessageBodyWriter.class);
 
-        log.info("Loaded {} resource(s)", config.getResources().size());
+        log.info("Loaded {} resource(s)", count);
         return c;
-    }
-
-    private Object setupResource(Class<?> resource) {
-        final Constructor<?> constructor;
-
-        try {
-            constructor = resource.getConstructor();
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalArgumentException(resource + ": does not have an empty constructor");
-        }
-
-        final Object instance;
-
-        try {
-            instance = constructor.newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(resource + ": failed to call constructor", e);
-        }
-
-        injector.injectMembers(instance);
-
-        return instance;
     }
 }

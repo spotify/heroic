@@ -21,15 +21,14 @@
 
 package com.spotify.heroic.analytics;
 
-import com.google.inject.Inject;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricBackend;
-
-import java.time.LocalDate;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+
+import javax.inject.Inject;
+import java.time.LocalDate;
 
 public class NullMetricAnalytics implements MetricAnalytics {
     private final AsyncFramework async;
@@ -47,21 +46,6 @@ public class NullMetricAnalytics implements MetricAnalytics {
     @Override
     public AsyncObservable<SeriesHit> seriesHits(LocalDate date) {
         return AsyncObservable.empty();
-    }
-
-    @Override
-    public AsyncFuture<Void> start() {
-        return async.resolved();
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return async.resolved();
-    }
-
-    @Override
-    public boolean isReady() {
-        return true;
     }
 
     @Override

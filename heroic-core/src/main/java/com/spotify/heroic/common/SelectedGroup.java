@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.common;
 
+import com.google.common.collect.ImmutableSet;
+import lombok.Data;
+
 import java.util.Iterator;
 import java.util.List;
-
-import com.google.common.collect.ImmutableSet;
-
-import lombok.Data;
 
 @Data
 public class SelectedGroup<T extends Grouped> implements Iterable<T> {

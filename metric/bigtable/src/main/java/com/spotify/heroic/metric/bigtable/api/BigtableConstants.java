@@ -28,7 +28,7 @@ public interface BigtableConstants {
 
     static String COLUMN_FAMILY_NAME_FORMAT = "%s/tables/%s/columnFamilies/%s";
 
-    static Pattern COLUMN_FAMILY_NAME_PATTERN =
-            Pattern.compile(String.format("^(.+)\\/tables\\/(%s)\\/columnFamilies\\/(%s)$",
-                    BigtableConstants.NAME_PATTERN, NAME_PATTERN));
+    static Pattern COLUMN_FAMILY_NAME_PATTERN = Pattern.compile(
+        String.format("^(.+)\\/tables\\/(%s)\\/columnFamilies\\/(%s)$",
+            BigtableConstants.NAME_PATTERN, NAME_PATTERN));
 }

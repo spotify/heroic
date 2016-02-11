@@ -21,17 +21,11 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.rpc.nativerpc.message.NativeOptions;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcEmptyBody;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -45,6 +39,11 @@ import io.netty.util.Timeout;
 import io.netty.util.Timer;
 import io.netty.util.TimerTask;
 import lombok.RequiredArgsConstructor;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RequiredArgsConstructor
 public class NativeRpcClient {
@@ -60,8 +59,9 @@ public class NativeRpcClient {
 
     private static final NativeRpcEmptyBody EMPTY = new NativeRpcEmptyBody();
 
-    public <Q, R> AsyncFuture<R> request(final String endpoint, final Q entity,
-            final Class<R> expected) {
+    public <Q, R> AsyncFuture<R> request(
+        final String endpoint, final Q entity, final Class<R> expected
+    ) {
         byte[] body;
 
         try {
@@ -81,7 +81,7 @@ public class NativeRpcClient {
         }
 
         final NativeRpcRequest request =
-                new NativeRpcRequest(endpoint, heartbeatInterval, options, size, body);
+            new NativeRpcRequest(endpoint, heartbeatInterval, options, size, body);
 
         return sendRequest(expected, request);
     }
@@ -92,20 +92,22 @@ public class NativeRpcClient {
 
     @Override
     public String toString() {
-        return "nativerpc://" + address.getHostString()
-                + (address.getPort() != -1 ? ":" + address.getPort() : "");
+        return "nativerpc://" + address.getHostString() +
+            (address.getPort() != -1 ? ":" + address.getPort() : "");
     }
 
-    private <R> AsyncFuture<R> sendRequest(final Class<R> expected,
-            final NativeRpcRequest request) {
+    private <R> AsyncFuture<R> sendRequest(
+        final Class<R> expected, final NativeRpcRequest request
+    ) {
         final ResolvableFuture<R> future = async.future();
         final AtomicReference<Timeout> heartbeatTimeout = new AtomicReference<>();
 
         final Bootstrap b = new Bootstrap();
         b.channel(NioSocketChannel.class);
         b.group(group);
-        b.handler(new NativeRpcClientSession<R>(mapper, timer, heartbeatInterval, maxFrameSize,
-                address, heartbeatTimeout, future, expected));
+        b.handler(
+            new NativeRpcClientSession<R>(mapper, timer, heartbeatInterval, maxFrameSize, address,
+                heartbeatTimeout, future, expected));
 
         // timeout for how long we are allowed to spend attempting to send a request.
         final Timeout sendTimeout = timer.newTimeout(new TimerTask() {
@@ -115,15 +117,17 @@ public class NativeRpcClient {
             }
         }, this.sendTimeout, TimeUnit.MILLISECONDS);
 
-        b.connect(address)
-                .addListener(handleConnect(request, future, heartbeatTimeout, sendTimeout));
+        b
+            .connect(address)
+            .addListener(handleConnect(request, future, heartbeatTimeout, sendTimeout));
 
         return future;
     }
 
-    private <R> ChannelFutureListener handleConnect(final NativeRpcRequest request,
-            final ResolvableFuture<R> future, final AtomicReference<Timeout> heartbeatTimeout,
-            final Timeout requestTimeout) {
+    private <R> ChannelFutureListener handleConnect(
+        final NativeRpcRequest request, final ResolvableFuture<R> future,
+        final AtomicReference<Timeout> heartbeatTimeout, final Timeout requestTimeout
+    ) {
         return new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
@@ -132,14 +136,18 @@ public class NativeRpcClient {
                     return;
                 }
 
-                f.channel().writeAndFlush(request)
-                        .addListener(handleRequestSent(future, heartbeatTimeout, requestTimeout));
+                f
+                    .channel()
+                    .writeAndFlush(request)
+                    .addListener(handleRequestSent(future, heartbeatTimeout, requestTimeout));
             }
         };
     }
 
-    private <R> ChannelFutureListener handleRequestSent(final ResolvableFuture<R> future,
-            final AtomicReference<Timeout> heartbeatTimeout, final Timeout requestTimeout) {
+    private <R> ChannelFutureListener handleRequestSent(
+        final ResolvableFuture<R> future, final AtomicReference<Timeout> heartbeatTimeout,
+        final Timeout requestTimeout
+    ) {
         return new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture f) throws Exception {
@@ -150,8 +158,9 @@ public class NativeRpcClient {
                     return;
                 }
 
-                final Timeout timeout = timer.newTimeout(heartbeatTimeout(f.channel(), future),
-                        heartbeatInterval, TimeUnit.MILLISECONDS);
+                final Timeout timeout =
+                    timer.newTimeout(heartbeatTimeout(f.channel(), future), heartbeatInterval,
+                        TimeUnit.MILLISECONDS);
 
                 heartbeatTimeout.set(timeout);
             }

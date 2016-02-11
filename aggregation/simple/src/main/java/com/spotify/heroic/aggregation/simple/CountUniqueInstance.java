@@ -29,8 +29,9 @@ import com.spotify.heroic.metric.Point;
 
 public class CountUniqueInstance extends BucketAggregationInstance<CountUniqueBucket> {
     @JsonCreator
-    public CountUniqueInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public CountUniqueInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ALL_TYPES, MetricType.POINT);
     }
 

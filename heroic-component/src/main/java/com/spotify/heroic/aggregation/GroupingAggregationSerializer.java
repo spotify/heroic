@@ -21,18 +21,18 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.SerialWriter;
 import eu.toolchain.serializer.Serializer;
 import lombok.RequiredArgsConstructor;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
 @RequiredArgsConstructor
 public abstract class GroupingAggregationSerializer<T extends GroupingAggregation>
-        implements Serializer<T> {
+    implements Serializer<T> {
     private final Serializer<Optional<List<String>>> list;
     private final Serializer<AggregationInstance> aggregation;
 

@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.profile;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
@@ -34,6 +32,8 @@ import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsB
 
 import java.nio.file.Paths;
 import java.util.List;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class BigtableAnalyticsProfile extends HeroicProfileBase {
     public static final String DEFAULT_CREDENTIALS = "json";
@@ -47,26 +47,26 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
         params.get("bigtable-analytics.cluster").map(module::cluster);
 
         final String credentials =
-                params.get("bigtable-analytics.credential").orElse(DEFAULT_CREDENTIALS);
+            params.get("bigtable-analytics.credential").orElse(DEFAULT_CREDENTIALS);
 
         switch (credentials) {
-        case "json":
-            final JsonCredentialsBuilder.Builder j = JsonCredentialsBuilder.builder();
-            params.get("bigtable-analytics.json").map(Paths::get).ifPresent(j::path);
-            module.credentials(j.build());
-            break;
-        case "service-account":
-            final ServiceAccountCredentialsBuilder.Builder sa =
+            case "json":
+                final JsonCredentialsBuilder.Builder j = JsonCredentialsBuilder.builder();
+                params.get("bigtable-analytics.json").map(Paths::get).ifPresent(j::path);
+                module.credentials(j.build());
+                break;
+            case "service-account":
+                final ServiceAccountCredentialsBuilder.Builder sa =
                     ServiceAccountCredentialsBuilder.builder();
-            params.get("bigtable-analytics.serviceAccount").ifPresent(sa::serviceAccount);
-            params.get("bigtable-analytics.keyFile").ifPresent(sa::keyFile);
-            module.credentials(sa.build());
-            break;
-        case "compute-engine":
-            module.credentials(new ComputeEngineCredentialsBuilder());
-            break;
-        default:
-            throw new IllegalArgumentException(
+                params.get("bigtable-analytics.serviceAccount").ifPresent(sa::serviceAccount);
+                params.get("bigtable-analytics.keyFile").ifPresent(sa::keyFile);
+                module.credentials(sa.build());
+                break;
+            case "compute-engine":
+                module.credentials(new ComputeEngineCredentialsBuilder());
+                break;
+            default:
+                throw new IllegalArgumentException(
                     "bigtable-analytics.credentials: invalid value: " + credentials);
         }
 
@@ -82,14 +82,19 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("bigtable-analytics.configure", "If set, will cause the cluster to be automatically configured"),
+            parameter("bigtable-analytics.configure", "If set, will cause the cluster to be " +
+                    "automatically configured"),
             parameter("bigtable-analytics.project", "Bigtable project to use", "<project>"),
             parameter("bigtable-analytics.zone", "Bigtable zone to use", "<zone>"),
             parameter("bigtable-analytics.cluster", "Bigtable cluster to use", "<cluster>"),
-            parameter("bigtable-analytics.credentials", "Credentials implementation to use, must be one of: compute-engine (default), json, service-account", "<credentials>"),
-            parameter("bigtable-analytics.json", "Json file to use when using json credentials", "<file>"),
-            parameter("bigtable-analytics.serviceAccount", "Service account to use when using service-account credentials", "<account>"),
-            parameter("bigtable-analytics.keyFile", "Key file to use when using service-account credentials", "<file>")
+            parameter("bigtable-analytics.credentials", "Credentials implementation to use, must " +
+                    "be one of: compute-engine (default), json, service-account", "<credentials>"),
+            parameter("bigtable-analytics.json", "Json file to use when using json credentials",
+                    "<file>"),
+            parameter("bigtable-analytics.serviceAccount", "Service account to use when using " +
+                    "service-account credentials", "<account>"),
+            parameter("bigtable-analytics.keyFile", "Key file to use when using service-account " +
+                "credentials", "<file>")
         );
         // @formatter:on
     }

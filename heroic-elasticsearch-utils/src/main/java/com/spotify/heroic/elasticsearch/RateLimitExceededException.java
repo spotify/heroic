@@ -32,5 +32,4 @@ public class RateLimitExceededException extends Exception {
     public RateLimitExceededException() {
         super();
     }
-
 }

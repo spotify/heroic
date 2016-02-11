@@ -21,24 +21,38 @@
 
 package com.spotify.heroic.jetty;
 
-import com.google.inject.Inject;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.dagger.LoadingComponent;
+import dagger.Component;
+
+import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
-            @Inject
-            private HeroicConfigurationContext config;
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
+    }
 
-            @Override
-            public void setup() {
-                config.registerType("http", HttpJettyConnectionFactory.Builder.class);
-                config.registerType("h2c", Http2CJettyConnectionFactory.Builder.class);
-                config.registerType("h2", Http2JettyConnectionFactory.Builder.class);
-                config.registerType("tls", TLSJettyConnectionFactory.Builder.class);
-            }
-        };
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.registerType("http", HttpJettyConnectionFactory.Builder.class);
+            config.registerType("h2c", Http2CJettyConnectionFactory.Builder.class);
+            config.registerType("h2", Http2JettyConnectionFactory.Builder.class);
+            config.registerType("tls", TLSJettyConnectionFactory.Builder.class);
+        }
     }
 }

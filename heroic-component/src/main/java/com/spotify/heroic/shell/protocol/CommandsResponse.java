@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.shell.protocol;
 
-import java.util.List;
-
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
+
+import java.util.List;
 
 @AutoSerialize
 @Data

@@ -21,23 +21,6 @@
 
 package com.spotify.heroic.shell;
 
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.spotify.heroic.shell.protocol.Acknowledge;
 import com.spotify.heroic.shell.protocol.CommandDefinition;
 import com.spotify.heroic.shell.protocol.CommandDone;
@@ -55,11 +38,27 @@ import com.spotify.heroic.shell.protocol.FileReadResult;
 import com.spotify.heroic.shell.protocol.FileWrite;
 import com.spotify.heroic.shell.protocol.Message;
 import com.spotify.heroic.shell.protocol.SimpleMessageVisitor;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Slf4j
 public class RemoteCoreInterface implements CoreInterface {
@@ -69,8 +68,9 @@ public class RemoteCoreInterface implements CoreInterface {
     final AsyncFramework async;
     final SerializerFramework serializer;
 
-    public RemoteCoreInterface(InetSocketAddress address, AsyncFramework async,
-            SerializerFramework serializer) throws IOException {
+    public RemoteCoreInterface(
+        InetSocketAddress address, AsyncFramework async, SerializerFramework serializer
+    ) throws IOException {
         this.address = address;
         this.async = async;
         this.serializer = serializer;
@@ -78,7 +78,7 @@ public class RemoteCoreInterface implements CoreInterface {
 
     @Override
     public AsyncFuture<Void> evaluate(final List<String> command, final ShellIO io)
-            throws Exception {
+        throws Exception {
         return async.call(() -> {
             final AtomicBoolean running = new AtomicBoolean(true);
             final AtomicInteger fileCounter = new AtomicInteger();
@@ -91,7 +91,7 @@ public class RemoteCoreInterface implements CoreInterface {
                 c.send(new EvaluateRequest(command));
 
                 final Message.Visitor<Optional<Message>> visitor =
-                        setupVisitor(io, running, fileCounter, reading, writing, closers);
+                    setupVisitor(io, running, fileCounter, reading, writing, closers);
 
                 while (true) {
                     final Message in = c.receive();
@@ -118,10 +118,11 @@ public class RemoteCoreInterface implements CoreInterface {
         });
     }
 
-    private SimpleMessageVisitor<Optional<Message>> setupVisitor(final ShellIO io,
-            final AtomicBoolean running, final AtomicInteger fileCounter,
-            final Map<Integer, InputStream> reading, final Map<Integer, OutputStream> writing,
-            final Map<Integer, Callable<Void>> closers) {
+    private SimpleMessageVisitor<Optional<Message>> setupVisitor(
+        final ShellIO io, final AtomicBoolean running, final AtomicInteger fileCounter,
+        final Map<Integer, InputStream> reading, final Map<Integer, OutputStream> writing,
+        final Map<Integer, Callable<Void>> closers
+    ) {
         return new SimpleMessageVisitor<Optional<Message>>() {
             public Optional<Message> visitCommandDone(CommandDone m) {
                 running.set(false);
@@ -137,9 +138,9 @@ public class RemoteCoreInterface implements CoreInterface {
 
             @Override
             public Optional<Message> visitFileNewInputStream(FileNewInputStream m)
-                    throws Exception {
+                throws Exception {
                 final InputStream in =
-                        io.newInputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
+                    io.newInputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
 
                 final int h = fileCounter.incrementAndGet();
 
@@ -158,9 +159,9 @@ public class RemoteCoreInterface implements CoreInterface {
 
             @Override
             public Optional<Message> visitFileNewOutputStream(FileNewOutputStream m)
-                    throws Exception {
+                throws Exception {
                 final OutputStream out =
-                        io.newOutputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
+                    io.newOutputStream(Paths.get(m.getPath()), m.getOptionsAsArray());
 
                 final int h = fileCounter.incrementAndGet();
 
@@ -251,8 +252,9 @@ public class RemoteCoreInterface implements CoreInterface {
     public void shutdown() throws Exception {
     }
 
-    public static RemoteCoreInterface fromConnectString(String connect, AsyncFramework async,
-            SerializerFramework serializer) throws IOException {
+    public static RemoteCoreInterface fromConnectString(
+        String connect, AsyncFramework async, SerializerFramework serializer
+    ) throws IOException {
         final String host;
         final int port;
 

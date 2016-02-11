@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
-
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class ReducerResult {

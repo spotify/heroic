@@ -1,14 +1,13 @@
 package com.spotify.heroic.filter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeSet;
-
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.ImmutableList;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeSet;
 
 public class FilterOptimizerTest {
     private static final FilterFactory f = new CoreFilterFactory();
@@ -50,8 +49,9 @@ public class FilterOptimizerTest {
 
     @Test
     public void testSortOrder() {
-        final List<List<Filter>> inputs = ImmutableList.<List<Filter>> of(ImmutableList.of(a, b, c),
-                ImmutableList.of(c, b, a), ImmutableList.of(c, b, a));
+        final List<List<Filter>> inputs =
+            ImmutableList.<List<Filter>>of(ImmutableList.of(a, b, c), ImmutableList.of(c, b, a),
+                ImmutableList.of(c, b, a));
 
         final List<Filter> reference = ImmutableList.of(a, b, c);
 

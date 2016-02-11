@@ -1,22 +1,21 @@
 package com.spotify.heroic.aggregation.simple;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.aggregation.DoubleBucket;
+import com.spotify.heroic.metric.Point;
+import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
 
-import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.Point;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StdDevBucketTest {
     public Collection<? extends DoubleBucket> buckets() {
-        return ImmutableList.<DoubleBucket> of(new StdDevBucket(0L), new StripedStdDevBucket(0L));
+        return ImmutableList.<DoubleBucket>of(new StdDevBucket(0L), new StripedStdDevBucket(0L));
     }
 
     @Test

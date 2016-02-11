@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @ValueName("list")
 @Data

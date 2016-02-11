@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.cache;
 
-import com.google.inject.Module;
+import com.spotify.heroic.dagger.PrimaryComponent;
 
 public interface CacheModule {
-    public Module module();
+    public CacheComponent module(PrimaryComponent primary);
 
     interface Builder {
         CacheModule build();

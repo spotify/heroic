@@ -21,22 +21,19 @@
 
 package com.spotify.heroic.concurrrency;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
+import com.spotify.heroic.statistics.ThreadPoolReporter;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.spotify.heroic.statistics.ThreadPoolReporter;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * An abstraction for the concept of having separate thread pools dedicated towards reading vs.
@@ -55,37 +52,30 @@ public class ReadWriteThreadPools {
         private final int writeQueueSize;
 
         @JsonCreator
-        public Config(@JsonProperty("readThreads") Integer readThreads,
-                @JsonProperty("readQueueSize") Integer readQueueSize,
-                @JsonProperty("writeThreads") Integer writeThreads,
-                @JsonProperty("writeQueueSize") Integer writeQueueSize) {
+        public Config(
+            @JsonProperty("readThreads") Integer readThreads,
+            @JsonProperty("readQueueSize") Integer readQueueSize,
+            @JsonProperty("writeThreads") Integer writeThreads,
+            @JsonProperty("writeQueueSize") Integer writeQueueSize
+        ) {
             this.readThreads = Optional.fromNullable(readThreads).or(ThreadPool.DEFAULT_THREADS);
             this.readQueueSize =
-                    Optional.fromNullable(readQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
+                Optional.fromNullable(readQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
             this.writeThreads = Optional.fromNullable(writeThreads).or(ThreadPool.DEFAULT_THREADS);
             this.writeQueueSize =
-                    Optional.fromNullable(writeQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
+                Optional.fromNullable(writeQueueSize).or(ThreadPool.DEFAULT_QUEUE_SIZE);
         }
 
         public static Config buildDefault() {
             return new Config(null, null, null, null);
         }
 
-        public static Supplier<Config> provideDefault() {
-            return new Supplier<Config>() {
-                @Override
-                public Config get() {
-                    return buildDefault();
-                }
-            };
-        }
-
         public ReadWriteThreadPools construct(AsyncFramework async, ThreadPoolReporter reporter) {
             final ThreadPool read =
-                    ThreadPool.create(async, "read", reporter, readThreads, readQueueSize);
+                ThreadPool.create(async, "read", reporter, readThreads, readQueueSize);
 
             final ThreadPool write =
-                    ThreadPool.create(async, "write", reporter, writeThreads, writeQueueSize);
+                ThreadPool.create(async, "write", reporter, writeThreads, writeQueueSize);
 
             return new ReadWriteThreadPools(async, read, write);
         }

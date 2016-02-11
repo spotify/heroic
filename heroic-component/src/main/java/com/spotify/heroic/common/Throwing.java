@@ -25,7 +25,7 @@ public class Throwing {
     /**
      * Guarantee that both clauses are called, in the given order. Combine any thrown exceptions by
      * adding any prior exceptions as suppressed.
-     *
+     * <p>
      * This is useful if you want to have multiple potentially throwing blocks of code, and
      * guarantee that all have been called at least once.
      *
