@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
@@ -32,7 +34,8 @@ import java.util.List;
 public class BottomKInstance implements FilterKInstance {
     private final FilterKInstanceImpl filterK;
 
-    public BottomKInstance(long k, AggregationInstance of) {
+    @JsonCreator
+    public BottomKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
         filterK = new FilterKInstanceImpl(k, FilterKInstanceImpl.FilterType.BOTTOM, of);
     }
 
