@@ -91,9 +91,9 @@ implementation of `LifeCycle`.
 
 For backend components, this means implementing one of the following:
 
-* [`LifeCycle MetricModule.Out#life()`](/heroic-component/src/main/java/com/spotify/heroic/metric/MetricModule.java)
-* [`LifeCycle MetadataModule.Out#life()`](/heroic-component/src/main/java/com/spotify/heroic/metadata/MetadataModule.java)
-* [`LifeCycle SuggestModule.Out#life()`](/heroic-component/src/main/java/com/spotify/heroic/suggest/SuggestModule.java)
+* [`LifeCycle MetricModule.Exposed#life()`](/heroic-component/src/main/java/com/spotify/heroic/metric/MetricModule.java)
+* [`LifeCycle MetadataModule.Exposed#life()`](/heroic-component/src/main/java/com/spotify/heroic/metadata/MetadataModule.java)
+* [`LifeCycle SuggestModule.Exposed#life()`](/heroic-component/src/main/java/com/spotify/heroic/suggest/SuggestModule.java)
 
 The default LifeCycle is simply `LifeCycle#empty()`, which means _do nothing_.
 
@@ -105,7 +105,7 @@ public class MyMetricModule implements MetricModule {
     ...
 
     @Override
-    public MetricModule.Out module(PrimaryComponent primary, MetricModule.Depends depends, String id) {
+    public MetricModule.Exposed module(PrimaryComponent primary, MetricModule.Depends depends, String id) {
         return DaggerMyMetricModule_C
             .builder()
             .primaryComponent(primary)
@@ -116,7 +116,7 @@ public class MyMetricModule implements MetricModule {
 
     @PrivateScope
     @Component(modules = M.class, dependencies = {PrimaryComponent.class, MetricModule.Depends.class})
-    public static interface C extends MetricModule.Out {
+    public static interface C extends MetricModule.Exposed {
         @Override
         MyBackend backend();
     }
