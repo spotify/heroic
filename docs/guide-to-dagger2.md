@@ -84,7 +84,7 @@ public class Example {
 }
 ```
 
-## LifeCycle's in Dagger 2
+## LifeCycle in Dagger 2
 
 Each that may interact with lifecycles is reponsible for `exporting` an
 implementation of `LifeCycle`.
