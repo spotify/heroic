@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractShellTaskParams implements TaskParameters {
-    @Option(name = "-c", aliases = {"--config"},
+    @Option(name = "-C", aliases = {"--config"},
         usage = "Path to configuration (only used in standalone)", metaVar = "<config>")
     public String config;
 

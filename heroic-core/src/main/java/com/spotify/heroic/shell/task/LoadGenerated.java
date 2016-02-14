@@ -116,16 +116,16 @@ public class LoadGenerated implements ShellTask {
             metaVar = "<group>")
         private String group;
 
-        @Option(name = "--series-count",
-            usage = "The number of series to generate")
+        @Option(name = "-c", aliases = {"--count"},
+            usage = "The number of series to generate (default: 100)")
         @Getter
-        private int seriesCount = 10;
+        private int seriesCount = 100;
 
         @Option(name = "--generator", usage = "Generator to use")
         private String generator = "sine";
 
         @Option(name = "-d", usage = "Duration to generate data for")
-        private Duration duration = Duration.of(1, TimeUnit.DAYS);
+        private Duration duration = Duration.of(7, TimeUnit.DAYS);
     }
 
     public static LoadGenerated setup(final CoreComponent core) {

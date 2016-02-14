@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.QueryTrace.Identifier;
@@ -100,26 +99,6 @@ public final class ResultGroups {
 
     public static Transform<ResultGroups, ResultGroups> identity() {
         return identity;
-    }
-
-    public static ResultGroups seriesError(
-        final QueryTrace.Identifier what, final List<TagValues> tags, final Throwable e
-    ) {
-        final List<RequestError> errors = Lists.newArrayList();
-        errors.add(SeriesError.fromThrowable(tags, e));
-        return new ResultGroups(EMPTY_GROUPS, errors, Statistics.empty(), new QueryTrace(what));
-    }
-
-    public static Transform<Throwable, ResultGroups> seriesError(
-        final QueryTrace.Identifier what, final List<TagValues> tags
-    ) {
-        return new Transform<Throwable, ResultGroups>() {
-            @Override
-            public ResultGroups transform(Throwable e) throws Exception {
-                log.error("Encountered error in transform", e);
-                return ResultGroups.seriesError(what, tags, e);
-            }
-        };
     }
 
     public static Transform<Throwable, ResultGroups> nodeError(

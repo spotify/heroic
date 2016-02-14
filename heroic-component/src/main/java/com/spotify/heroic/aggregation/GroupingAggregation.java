@@ -22,8 +22,8 @@
 package com.spotify.heroic.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
@@ -33,9 +33,9 @@ import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.SeriesValues;
 import com.spotify.heroic.metric.ShardedResultGroup;
 import com.spotify.heroic.metric.Spread;
-import com.spotify.heroic.metric.TagValues;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +44,6 @@ import lombok.ToString;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -179,7 +178,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
             /* iterate through all groups and setup, and feed a reducer session for every group */
             for (List<ShardedResultGroup> groups : all) {
                 for (final ShardedResultGroup g : groups) {
-                    final Map<String, String> key = key(TagValues.mapOfSingles(g.getTags()));
+                    final Map<String, String> key = g.getKey();
 
                     Reduction red = sessions.get(key);
 
@@ -189,7 +188,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
                     }
 
                     g.getGroup().updateReducer(red.session, key);
-                    red.tagValues.add(g.getTags().iterator());
+                    red.series.addSeriesValues(g.getSeries());
                 }
             }
 
@@ -197,15 +196,14 @@ public abstract class GroupingAggregation implements AggregationInstance {
             final ImmutableList.Builder<ShardedResultGroup> groups = ImmutableList.builder();
 
             for (final Map.Entry<Map<String, String>, Reduction> e : sessions.entrySet()) {
-                final Map<String, String> tags = e.getKey();
+                final Map<String, String> key = e.getKey();
                 final Reduction red = e.getValue();
 
-                final List<TagValues> tagValues = TagValues.fromEntries(Iterators.concat(
-                    Iterators.transform(Iterators.concat(red.tagValues.iterator()),
-                        TagValues::iterator)));
+                final SeriesValues series = red.series.build();
 
                 for (final MetricCollection metrics : red.session.result().getResult()) {
-                    groups.add(new ShardedResultGroup(tags, tagValues, metrics, each.cadence()));
+                    groups.add(new ShardedResultGroup(ImmutableMap.of(), key, series, metrics,
+                        each.cadence()));
                 }
             }
 
@@ -221,7 +219,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
     @Data
     private final class Reduction {
         private final ReducerSession session;
-        private final List<Iterator<TagValues>> tagValues = new ArrayList<>();
+        private final SeriesValues.Builder series = SeriesValues.builder();
     }
 
     @ToString

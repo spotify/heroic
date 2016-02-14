@@ -38,6 +38,7 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -138,20 +139,31 @@ public class CoreQueryParser implements QueryParser {
 
     @Override
     public String stringifyQuery(final Query q) {
-        final Joiner joiner = Joiner.on(" ");
+        return stringifyQuery(q, Optional.empty());
+    }
+
+    @Override
+    public String stringifyQuery(final Query q, Optional<Integer> indent) {
+        final String prefix = indent.map(i -> StringUtils.repeat(' ', i)).orElse("");
+
+        final Joiner joiner =
+            indent.map(i -> Joiner.on("\n" + prefix)).orElseGet(() -> Joiner.on(" "));
 
         final List<String> parts = new ArrayList<>();
 
         parts.add(q.getAggregation().map(Aggregation::toDSL).orElse("*"));
 
         q.getSource().ifPresent(source -> {
-            parts.add("from " + q.getRange().map(range -> {
+            parts.add("from");
+
+            parts.add(prefix + q.getRange().map(range -> {
                 return source.identifier() + range.toDSL();
             }).orElseGet(source::identifier));
         });
 
         q.getFilter().ifPresent(filter -> {
-            parts.add("where " + filter.toDSL());
+            parts.add("where");
+            parts.add(prefix + filter.toDSL());
         });
 
         return joiner.join(parts);

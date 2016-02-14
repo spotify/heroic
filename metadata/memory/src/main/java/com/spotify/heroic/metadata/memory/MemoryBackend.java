@@ -111,7 +111,8 @@ public class MemoryBackend implements MetadataBackend {
 
     @Override
     public AsyncFuture<CountSeries> countSeries(RangeFilter filter) {
-        return async.resolved(new CountSeries(ImmutableList.of(), storage.size(), false));
+        final long count = filter(filter.getFilter()).count();
+        return async.resolved(new CountSeries(ImmutableList.of(), count, false));
     }
 
     @Override

@@ -34,6 +34,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Optional;
 
 @Path("/parser")
 public class ParserResource {
@@ -66,8 +67,8 @@ public class ParserResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     @Path("stringify-query")
-    public Response stringifyQuery(Query query) {
-        return Response.ok(this.query.queryToString(query)).build();
+    public Response stringifyQuery(@QueryParam("indent") Integer indent, Query query) {
+        return Response.ok(this.query.queryToString(query, Optional.ofNullable(indent))).build();
     }
 
     @POST

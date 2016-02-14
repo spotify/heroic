@@ -56,7 +56,5 @@ public interface MetricGeneratorModule {
         default LifeCycle life() {
             return LifeCycle.empty();
         }
-
-        ;
     }
 }

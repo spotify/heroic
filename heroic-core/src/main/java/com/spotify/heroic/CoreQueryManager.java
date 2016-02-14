@@ -141,6 +141,11 @@ public class CoreQueryManager implements QueryManager {
     }
 
     @Override
+    public String queryToString(final Query q, final Optional<Integer> indent) {
+        return parser.stringifyQuery(q, indent);
+    }
+
+    @Override
     public AsyncFuture<Void> initialized() {
         return cluster.initialized();
     }

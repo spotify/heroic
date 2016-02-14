@@ -90,7 +90,7 @@ public class Query implements ShellTask {
                     io
                         .out()
                         .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
-                            resultGroup.getTags()));
+                            indent.writeValueAsString(resultGroup.getSeries())));
                     io.out().println(indent.writeValueAsString(group.getData()));
                     io.out().flush();
                 }

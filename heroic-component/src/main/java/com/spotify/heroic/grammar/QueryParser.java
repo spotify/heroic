@@ -58,6 +58,8 @@ public interface QueryParser {
 
     String stringifyQuery(Query query);
 
+    String stringifyQuery(Query query, Optional<Integer> indent);
+
     static String escapeList(List<String> input) {
         if (input.size() == 1) {
             return escapeString(input.iterator().next());

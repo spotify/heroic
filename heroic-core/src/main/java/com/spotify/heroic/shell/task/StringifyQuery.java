@@ -36,11 +36,13 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Parse a given expression as a query and print their structure")
 @TaskName("stringify-query")
@@ -69,13 +71,17 @@ public class StringifyQuery implements ShellTask {
         final com.spotify.heroic.Query q =
             mapper.readValue(Joiner.on(" ").join(params.query), com.spotify.heroic.Query.class);
 
-        io.out().println(parser.stringifyQuery(q));
+        io.out().println(parser.stringifyQuery(q, Optional.of(params.indent)));
 
         return async.resolved();
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
+        @Option(name = "-i", aliases = {"--indent"}, usage = "Indent output",
+            metaVar = "<indent>")
+        public int indent = 2;
+
         @Argument(usage = "Query to parse")
         private List<String> query = new ArrayList<>();
     }

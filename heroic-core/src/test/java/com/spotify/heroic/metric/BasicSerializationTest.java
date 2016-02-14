@@ -41,9 +41,10 @@ public class BasicSerializationTest {
 
     @Test
     public void testResultGroup() throws Exception {
-        final List<TagValues> tags = new ArrayList<>();
+        final SeriesValues series = SeriesValues.empty();
         final ResultGroup expected =
-            new ResultGroup(tags, MetricCollection.points(new ArrayList<>()), 0L);
+            new ResultGroup(ImmutableMap.of(), series, MetricCollection.points(new ArrayList<>()),
+                0L);
         assertSerialization("ResultGroup.json", expected, ResultGroup.class);
     }
 

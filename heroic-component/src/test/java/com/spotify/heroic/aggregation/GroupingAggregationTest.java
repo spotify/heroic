@@ -8,8 +8,8 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
+import com.spotify.heroic.metric.SeriesValues;
 import com.spotify.heroic.metric.ShardedResultGroup;
-import com.spotify.heroic.metric.TagValues;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -188,12 +188,14 @@ public class GroupingAggregationTest {
         final ImmutableMap<String, String> shard = ImmutableMap.of();
         final MetricCollection empty = MetricCollection.points(ImmutableList.of());
 
-        final ImmutableList<TagValues> g1 = ImmutableList.of(TagValues.of("id", "a"));
-        final ImmutableList<TagValues> g2 = ImmutableList.of(TagValues.of("id", "b"));
+        final Map<String, String> k1 = ImmutableMap.of("id", "a");
+        final SeriesValues g1 = SeriesValues.of("id", "a");
+        final Map<String, String> k2 = ImmutableMap.of("id", "b");
+        final SeriesValues g2 = SeriesValues.of("id", "b");
 
-        final ShardedResultGroup a = new ShardedResultGroup(shard, g1, empty, 0);
-        final ShardedResultGroup b = new ShardedResultGroup(shard, g1, empty, 0);
-        final ShardedResultGroup c = new ShardedResultGroup(shard, g2, empty, 0);
+        final ShardedResultGroup a = new ShardedResultGroup(shard, k1, g1, empty, 0);
+        final ShardedResultGroup b = new ShardedResultGroup(shard, k1, g1, empty, 0);
+        final ShardedResultGroup c = new ShardedResultGroup(shard, k2, g2, empty, 0);
 
         all.add(ImmutableList.of(a, b, c));
 

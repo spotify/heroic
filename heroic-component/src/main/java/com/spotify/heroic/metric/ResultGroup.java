@@ -26,16 +26,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.cluster.ClusterNode;
 import lombok.Data;
 
-import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class ResultGroup {
-    final List<TagValues> tags;
+    final Map<String, String> key;
+    final SeriesValues series;
     final MetricCollection group;
-
     /**
      * The interval in milliseconds for which a sample can be expected. A cadence of 0 indicates
      * that this value is unknown.
@@ -44,10 +44,11 @@ public class ResultGroup {
 
     @JsonCreator
     public ResultGroup(
-        @JsonProperty("tags") List<TagValues> tags, @JsonProperty("group") MetricCollection group,
-        @JsonProperty("cadence") Long cadence
+        @JsonProperty("key") Map<String, String> key, @JsonProperty("series") SeriesValues series,
+        @JsonProperty("group") MetricCollection group, @JsonProperty("cadence") Long cadence
     ) {
-        this.tags = checkNotNull(tags, "tags");
+        this.key = checkNotNull(key, "key");
+        this.series = checkNotNull(series, "series");
         this.group = checkNotNull(group, "group");
         this.cadence = checkNotNull(cadence, "cadence");
     }
@@ -55,7 +56,7 @@ public class ResultGroup {
     public static Function<? super ResultGroup, ? extends ShardedResultGroup> toShardedResultGroup(
         final ClusterNode c
     ) {
-        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getTags(), g.getGroup(),
-            g.getCadence());
+        return (g) -> new ShardedResultGroup(c.metadata().getTags(), g.getKey(), g.getSeries(),
+            g.getGroup(), g.getCadence());
     }
 }

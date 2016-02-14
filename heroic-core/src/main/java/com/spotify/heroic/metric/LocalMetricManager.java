@@ -25,7 +25,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationInstance;
@@ -346,8 +345,6 @@ public class LocalMetricManager implements MetricManager {
          *
          * @param writes Batch of writes to perform.
          * @return A callback indicating how the writes went.
-         * @throws MetricBackendException
-         * @throws BackendGroupException
          */
         @Override
         public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
@@ -528,11 +525,10 @@ public class LocalMetricManager implements MetricManager {
                     continue;
                 }
 
-                final List<TagValues> g = TagValues.fromEntries(Iterators.concat(
-                    Iterators.transform(group.getSeries().iterator(),
-                        s -> s.getTags().entrySet().iterator())));
+                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
 
-                groups.add(new ResultGroup(g, group.getMetrics(), aggregation.cadence()));
+                groups.add(new ResultGroup(group.getGroup(), series, group.getMetrics(),
+                    aggregation.cadence()));
             }
 
             final Statistics stat = result

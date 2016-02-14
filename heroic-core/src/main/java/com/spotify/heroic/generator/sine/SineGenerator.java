@@ -63,7 +63,7 @@ public class SineGenerator implements Generator {
         final Series series, final DateRange range
     ) {
         // calculate a consistent drift depending on which series is being fetched.
-        double drift = Math.abs((double) series.hashCode() / (double) Integer.MAX_VALUE);
+        double drift = Math.abs((double) series.hashCode() / (double) Integer.MAX_VALUE) * period;
 
         final ImmutableList.Builder<Point> data = ImmutableList.builder();
 
