@@ -48,6 +48,7 @@ import com.spotify.heroic.dagger.LoadingModule;
 import com.spotify.heroic.dagger.PrimaryModule;
 import com.spotify.heroic.dagger.StartupPingerComponent;
 import com.spotify.heroic.dagger.StartupPingerModule;
+import com.spotify.heroic.generator.GeneratorComponent;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -137,7 +138,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
         new com.spotify.heroic.http.Module(),
         new com.spotify.heroic.jetty.Module(),
         new com.spotify.heroic.ws.Module(),
-        new com.spotify.heroic.cache.Module()
+        new com.spotify.heroic.cache.Module(),
+        new com.spotify.heroic.generator.Module()
     };
     // @formatter:on
 
@@ -411,6 +413,9 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             .build();
         life.add(query.queryLife());
 
+        final GeneratorComponent generator = config.getGenerator().module(primary);
+        life.add(generator.generatorLife());
+
         // install all lifecycles
         final LifeCycle combined = LifeCycle.combined(life);
 
@@ -427,6 +432,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
             .queryComponent(query)
             .ingestionComponent(ingestion)
             .clusterComponent(cluster)
+            .generatorComponent(generator)
             .build();
     }
 

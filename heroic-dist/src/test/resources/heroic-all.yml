@@ -33,3 +33,9 @@ analytics:
   type: bigtable
   project: project
   zone: zone
+
+generator:
+  metadata:
+    type: random
+  metrics:
+    - type: sine

@@ -40,6 +40,8 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.GroupsSerialization;
 import com.spotify.heroic.common.TypeNameMixin;
 import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.generator.MetadataGenerator;
+import com.spotify.heroic.generator.MetricGeneratorModule;
 import com.spotify.heroic.jetty.JettyConnectionFactory;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metric.Event;
@@ -77,6 +79,8 @@ public final class HeroicMappers {
         m.addMixIn(MetadataModule.class, TypeNameMixin.class);
         m.addMixIn(SuggestModule.class, TypeNameMixin.class);
         m.addMixIn(MetricModule.class, TypeNameMixin.class);
+        m.addMixIn(MetricGeneratorModule.class, TypeNameMixin.class);
+        m.addMixIn(MetadataGenerator.class, TypeNameMixin.class);
         m.addMixIn(JettyConnectionFactory.Builder.class, TypeNameMixin.class);
         m.addMixIn(AnalyticsModule.Builder.class, TypeNameMixin.class);
 

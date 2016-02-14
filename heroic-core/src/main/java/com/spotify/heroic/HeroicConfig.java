@@ -38,6 +38,7 @@ import com.spotify.heroic.cache.noop.NoopCacheModule;
 import com.spotify.heroic.cluster.ClusterManagerModule;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.consumer.ConsumerModule;
+import com.spotify.heroic.generator.CoreGeneratorModule;
 import com.spotify.heroic.ingestion.IngestionModule;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.metadata.MetadataManagerModule;
@@ -63,6 +64,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.spotify.heroic.common.Optionals.mergeOptional;
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.empty;
@@ -111,6 +113,7 @@ public class HeroicConfig {
     private final List<ConsumerModule> consumers;
     private final Optional<ShellServerModule> shellServer;
     private final AnalyticsModule analytics;
+    private final CoreGeneratorModule generator;
 
     private final String version;
     private final String service;
@@ -188,6 +191,7 @@ public class HeroicConfig {
         private List<ConsumerModule.Builder> consumers = ImmutableList.of();
         private Optional<ShellServerModule.Builder> shellServer = empty();
         private Optional<AnalyticsModule.Builder> analytics = empty();
+        private Optional<CoreGeneratorModule.Builder> generator = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -213,6 +217,7 @@ public class HeroicConfig {
             @JsonProperty("consumers") Optional<List<ConsumerModule.Builder>> consumers,
             @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
             @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
+            @JsonProperty("generator") Optional<CoreGeneratorModule.Builder> generator,
             @JsonProperty("version") Optional<String> version,
             @JsonProperty("service") Optional<String> service
         ) {
@@ -235,6 +240,7 @@ public class HeroicConfig {
             this.consumers = consumers.orElseGet(ImmutableList::of);
             this.shellServer = shellServer;
             this.analytics = analytics;
+            this.generator = generator;
             this.version = version;
             this.service = service;
         }
@@ -323,8 +329,7 @@ public class HeroicConfig {
                 pickOptional(stopTimeout, o.stopTimeout),
                 pickOptional(host, o.host),
                 pickOptional(port, o.port),
-                mergeOptional(connectors, o.connectors, (a, b) -> ImmutableList.copyOf(Iterables
-                        .concat(a, b))),
+                mergeOptionalList(connectors, o.connectors),
                 pickOptional(disableMetrics, o.disableMetrics),
                 pickOptional(enableCors, o.enableCors),
                 pickOptional(corsAllowOrigin, o.corsAllowOrigin),
@@ -338,6 +343,7 @@ public class HeroicConfig {
                 ImmutableList.copyOf(Iterables.concat(consumers, o.consumers)),
                 mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
                 pickOptional(analytics, o.analytics),
+                mergeOptional(generator, o.generator, (a, b) -> a.merge(b)),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -374,6 +380,7 @@ public class HeroicConfig {
                 ImmutableList.copyOf(consumers.stream().map(c -> c.build()).iterator()),
                 shellServer.map(ShellServerModule.Builder::build),
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
+                generator.orElseGet(CoreGeneratorModule::builder).build(),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

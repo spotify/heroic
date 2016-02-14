@@ -25,6 +25,7 @@ import com.spotify.heroic.QueryComponent;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.cluster.ClusterComponent;
 import com.spotify.heroic.consumer.ConsumersComponent;
+import com.spotify.heroic.generator.GeneratorComponent;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
@@ -35,9 +36,11 @@ import dagger.Component;
     dependencies = {
         PrimaryComponent.class, MetadataComponent.class, MetricComponent.class,
         AnalyticsComponent.class, SuggestComponent.class, ConsumersComponent.class,
-        QueryComponent.class, IngestionComponent.class, ClusterComponent.class
+        QueryComponent.class, IngestionComponent.class, ClusterComponent.class,
+        GeneratorComponent.class
     })
 public interface CoreComponent
     extends PrimaryComponent, MetadataComponent, MetricComponent, AnalyticsComponent,
-    SuggestComponent, ConsumersComponent, QueryComponent, IngestionComponent, ClusterComponent {
+    SuggestComponent, ConsumersComponent, QueryComponent, IngestionComponent, ClusterComponent,
+    GeneratorComponent {
 }

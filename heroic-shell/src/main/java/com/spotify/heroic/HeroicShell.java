@@ -24,6 +24,8 @@ package com.spotify.heroic;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicCore.Builder;
+import com.spotify.heroic.args4j.DurationOptionHandler;
+import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.CoreInterface;
 import com.spotify.heroic.shell.RemoteCoreInterface;
@@ -81,7 +83,7 @@ public class HeroicShell {
         });
 
         final Parameters params = new Parameters();
-        final CmdLineParser parser = new CmdLineParser(params);
+        final CmdLineParser parser = setupParser(params);
         final ParsedArguments parsed = ParsedArguments.parse(args);
 
         try {
@@ -231,7 +233,7 @@ public class HeroicShell {
 
         final TaskParameters params = task.params();
 
-        final CmdLineParser parser = new CmdLineParser(params);
+        final CmdLineParser parser = setupParser(params);
 
         try {
             parser.parseArgument(rest);
@@ -352,6 +354,16 @@ public class HeroicShell {
         builder.setupShellServer(params.shellServer);
 
         return builder;
+    }
+
+    /**
+     * Setup a {@link org.kohsuke.args4j.CmdLineParser} with some useful handlers associated with
+     * it.
+     */
+    private static CmdLineParser setupParser(final TaskParameters params) {
+        final CmdLineParser parser = new CmdLineParser(params);
+        parser.registerHandler(Duration.class, DurationOptionHandler.class);
+        return parser;
     }
 
     @ToString

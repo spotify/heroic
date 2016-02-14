@@ -42,6 +42,7 @@ import com.spotify.heroic.shell.task.Fetch;
 import com.spotify.heroic.shell.task.IngestionFilter;
 import com.spotify.heroic.shell.task.Keys;
 import com.spotify.heroic.shell.task.ListBackends;
+import com.spotify.heroic.shell.task.LoadGenerated;
 import com.spotify.heroic.shell.task.MetadataCount;
 import com.spotify.heroic.shell.task.MetadataDelete;
 import com.spotify.heroic.shell.task.MetadataEntries;
@@ -121,6 +122,7 @@ public final class Tasks {
         shellTask(StringifyQuery::setup, StringifyQuery.class);
         shellTask(AnalyticsReportFetchSeries::setup, AnalyticsReportFetchSeries.class);
         shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
+        shellTask(LoadGenerated::setup, LoadGenerated.class);
     }
 
     public static List<ShellTaskDefinition> available() {
