@@ -29,7 +29,7 @@ import lombok.Data;
 
 import java.util.Optional;
 
-import static java.util.Optional.ofNullable;
+import static java.util.Optional.empty;
 
 @Data
 public class MetadataCount {
@@ -38,13 +38,10 @@ public class MetadataCount {
 
     @JsonCreator
     public MetadataCount(
-        @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range
     ) {
-        this.filter = ofNullable(filter);
-        this.range = ofNullable(range);
-    }
-
-    public static MetadataCount createDefault() {
-        return new MetadataCount(null, null);
+        this.filter = filter;
+        this.range = range;
     }
 }

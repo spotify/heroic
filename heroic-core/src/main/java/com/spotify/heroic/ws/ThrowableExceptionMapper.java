@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.ws;
 
+import lombok.extern.slf4j.Slf4j;
+
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -28,6 +30,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 @Provider
+@Slf4j
 public class ThrowableExceptionMapper implements ExceptionMapper<Throwable> {
     @Inject
     public ThrowableExceptionMapper() {
@@ -35,6 +38,8 @@ public class ThrowableExceptionMapper implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable e) {
+        log.error("Internal Error", e);
+
         return Response
             .status(Response.Status.INTERNAL_SERVER_ERROR)
             .entity(new InternalErrorMessage(e.getMessage(), Response.Status.INTERNAL_SERVER_ERROR))

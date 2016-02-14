@@ -45,6 +45,7 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ClusterNode {
     NodeMetadata metadata();
@@ -53,7 +54,7 @@ public interface ClusterNode {
 
     Group useGroup(String group);
 
-    public interface Group {
+    interface Group {
         ClusterNode node();
 
         AsyncFuture<ResultGroups> query(
@@ -74,16 +75,18 @@ public interface ClusterNode {
         AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
         AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, String key, String value
+            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
         );
 
-        AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
+        AsyncFuture<KeySuggest> keySuggest(
+            RangeFilter filter, MatchOptions options, Optional<String> key
+        );
 
         AsyncFuture<TagValuesSuggest> tagValuesSuggest(
             RangeFilter filter, List<String> exclude, int groupLimit
         );
 
-        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
+        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
 
         AsyncFuture<WriteResult> writeSeries(DateRange range, Series series);
 

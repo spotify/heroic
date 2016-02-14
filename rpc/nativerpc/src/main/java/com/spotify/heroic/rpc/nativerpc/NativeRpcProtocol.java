@@ -64,6 +64,7 @@ import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -161,7 +162,8 @@ public class NativeRpcProtocol implements RpcProtocol {
 
         @Override
         public ClusterNode.Group useGroup(String group) {
-            return new TracingClusterNodeGroup(uri.toString(), new Group(group));
+            return new TracingClusterNodeGroup(uri.toString(),
+                new Group(Optional.ofNullable(group)));
         }
 
         @Override
@@ -171,7 +173,7 @@ public class NativeRpcProtocol implements RpcProtocol {
 
         @RequiredArgsConstructor
         private class Group implements ClusterNode.Group {
-            private final String group;
+            private final Optional<String> group;
 
             @Override
             public ClusterNode node() {
@@ -230,7 +232,7 @@ public class NativeRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<TagSuggest> tagSuggest(
-                RangeFilter filter, MatchOptions match, String key, String value
+                RangeFilter filter, MatchOptions match, Optional<String> key, Optional<String> value
             ) {
                 return request(SUGGEST_TAG, new RpcTagSuggest(filter, match, key, value),
                     TagSuggest.class);
@@ -238,7 +240,7 @@ public class NativeRpcProtocol implements RpcProtocol {
 
             @Override
             public AsyncFuture<KeySuggest> keySuggest(
-                RangeFilter filter, MatchOptions match, String key
+                RangeFilter filter, MatchOptions match, Optional<String> key
             ) {
                 return request(SUGGEST_KEY, new RpcKeySuggest(filter, match, key),
                     KeySuggest.class);
@@ -253,7 +255,9 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+            public AsyncFuture<TagValueSuggest> tagValueSuggest(
+                RangeFilter filter, Optional<String> key
+            ) {
                 return request(SUGGEST_TAG_VALUE, new RpcSuggestTagValue(filter, key),
                     TagValueSuggest.class);
             }
@@ -267,13 +271,15 @@ public class NativeRpcProtocol implements RpcProtocol {
 
     @Data
     public static class GroupedQuery<T> {
-        private final String group;
+        private final Optional<String> group;
         private final T query;
 
         @JsonCreator
-        public GroupedQuery(@JsonProperty("group") String group, @JsonProperty("query") T query) {
+        public GroupedQuery(
+            @JsonProperty("group") Optional<String> group, @JsonProperty("query") T query
+        ) {
             this.group = group;
-            this.query = query;
+            this.query = checkNotNull(query, "query");
         }
     }
 
@@ -305,16 +311,17 @@ public class NativeRpcProtocol implements RpcProtocol {
     public static class RpcTagSuggest {
         private final RangeFilter filter;
         private final MatchOptions match;
-        private final String key;
-        private final String value;
+        private final Optional<String> key;
+        private final Optional<String> value;
 
         public RpcTagSuggest(
             @JsonProperty("range") final RangeFilter filter,
-            @JsonProperty("match") final MatchOptions match, @JsonProperty("key") final String key,
-            @JsonProperty("value") final String value
+            @JsonProperty("match") final MatchOptions match,
+            @JsonProperty("key") final Optional<String> key,
+            @JsonProperty("value") final Optional<String> value
         ) {
             this.filter = filter;
-            this.match = checkNotNull(match, "match options must not be null");
+            this.match = checkNotNull(match, "match");
             this.key = key;
             this.value = value;
         }
@@ -332,21 +339,22 @@ public class NativeRpcProtocol implements RpcProtocol {
             @JsonProperty("groupLimit") final Integer groupLimit
         ) {
             this.filter = filter;
-            this.exclude = checkNotNull(exclude, "exclude must not be null");
-            this.groupLimit = checkNotNull(groupLimit, "groupLimit must not be null");
+            this.exclude = checkNotNull(exclude, "exclude");
+            this.groupLimit = checkNotNull(groupLimit, "groupLimit");
         }
     }
 
     @Data
     public static class RpcSuggestTagValue {
         private final RangeFilter filter;
-        private final String key;
+        private final Optional<String> key;
 
         public RpcSuggestTagValue(
-            @JsonProperty("range") final RangeFilter filter, @JsonProperty("key") final String key
+            @JsonProperty("range") final RangeFilter filter,
+            @JsonProperty("key") final Optional<String> key
         ) {
-            this.filter = filter;
-            this.key = checkNotNull(key, "key must not be null");
+            this.filter = checkNotNull(filter, "filter");
+            this.key = key;
         }
     }
 
@@ -354,14 +362,15 @@ public class NativeRpcProtocol implements RpcProtocol {
     public static class RpcKeySuggest {
         private final RangeFilter filter;
         private final MatchOptions match;
-        private final String key;
+        private final Optional<String> key;
 
         public RpcKeySuggest(
             @JsonProperty("range") final RangeFilter filter,
-            @JsonProperty("match") final MatchOptions match, @JsonProperty("key") final String key
+            @JsonProperty("match") final MatchOptions match,
+            @JsonProperty("key") final Optional<String> key
         ) {
-            this.filter = filter;
-            this.match = checkNotNull(match, "match options must not be null");
+            this.filter = checkNotNull(filter, "filter");
+            this.match = checkNotNull(match, "match");
             this.key = key;
         }
     }

@@ -42,6 +42,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Get value suggestions for a given key")
 @TaskName("suggest-tag-value")
@@ -70,7 +71,7 @@ public class SuggestTagValue implements ShellTask {
 
         return suggest
             .useGroup(params.group)
-            .tagValueSuggest(filter, params.key)
+            .tagValueSuggest(filter, Optional.ofNullable(params.key))
             .directTransform(result -> {
                 int i = 0;
 

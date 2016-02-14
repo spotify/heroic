@@ -30,6 +30,8 @@ import lombok.Data;
 
 import java.util.Optional;
 
+import static java.util.Optional.empty;
+
 @Data
 public class MetadataKeySuggest {
     private static final int DEFAULT_LIMIT = 10;
@@ -39,22 +41,19 @@ public class MetadataKeySuggest {
     private final Optional<QueryDateRange> range;
     private final int limit;
     private final MatchOptions match;
-    private final String key;
+    private final Optional<String> key;
 
     @JsonCreator
     public MetadataKeySuggest(
-        @JsonProperty("filter") Filter filter, @JsonProperty("key") String key,
-        @JsonProperty("limit") Integer limit, @JsonProperty("range") QueryDateRange range,
-        @JsonProperty("match") MatchOptions fuzzy
+        @JsonProperty("filter") Optional<Filter> filter, @JsonProperty("key") Optional<String> key,
+        @JsonProperty("limit") Optional<Integer> limit,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("match") Optional<MatchOptions> match
     ) {
-        this.filter = Optional.ofNullable(filter);
-        this.range = Optional.ofNullable(range);
-        this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-        this.match = Optional.ofNullable(fuzzy).orElse(DEFAULT_MATCH);
+        this.filter = filter;
+        this.range = range;
+        this.limit = limit.orElse(DEFAULT_LIMIT);
+        this.match = match.orElse(DEFAULT_MATCH);
         this.key = key;
-    }
-
-    public static MetadataKeySuggest createDefault() {
-        return new MetadataKeySuggest(null, null, null, null, null);
     }
 }

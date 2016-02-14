@@ -35,9 +35,6 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ResolvableFuture;
-import lombok.RequiredArgsConstructor;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -55,36 +52,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-@RequiredArgsConstructor
-public abstract class AbstractElasticsearchMetadataBackend implements MetadataBackend {
+public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
+    implements MetadataBackend {
     public static final TimeValue SCROLL_TIME = TimeValue.timeValueSeconds(5);
 
-    private final AsyncFramework async;
     private final String type;
+
+    public AbstractElasticsearchMetadataBackend(final AsyncFramework async, final String type) {
+        super(async);
+        this.type = type;
+    }
 
     protected abstract Managed<Connection> connection();
 
     protected abstract FilterBuilder filter(Filter filter);
 
     protected abstract Series toSeries(SearchHit hit);
-
-    protected <T> AsyncFuture<T> bind(final ListenableActionFuture<T> actionFuture) {
-        final ResolvableFuture<T> future = async.future();
-
-        actionFuture.addListener(new ActionListener<T>() {
-            @Override
-            public void onResponse(T result) {
-                future.resolve(result);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                future.fail(e);
-            }
-        });
-
-        return future;
-    }
 
     protected AsyncFuture<FindSeries> scrollOverSeries(
         final Connection c, final SearchRequestBuilder request, final long limit

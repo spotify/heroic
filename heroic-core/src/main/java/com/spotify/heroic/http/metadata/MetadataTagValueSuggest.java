@@ -23,7 +23,6 @@ package com.spotify.heroic.http.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 import lombok.AccessLevel;
@@ -55,22 +54,17 @@ public class MetadataTagValueSuggest {
     /**
      * Exclude the given tags from the result.
      */
-    private final String key;
+    private final Optional<String> key;
 
     @JsonCreator
     public MetadataTagValueSuggest(
         @JsonProperty("filter") Optional<Filter> filter,
         @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("limit") Optional<Integer> limit, @JsonProperty("key") String key
+        @JsonProperty("limit") Optional<Integer> limit, @JsonProperty("key") Optional<String> key
     ) {
         this.filter = filter;
         this.range = range;
         this.limit = limit.orElse(DEFAULT_LIMIT);
-        this.key = Preconditions.checkNotNull(key, "key must not be null");
-    }
-
-    public static MetadataTagValueSuggest createDefault() {
-        return new MetadataTagValueSuggest(Optional.empty(), Optional.empty(), Optional.empty(),
-            "");
+        this.key = key;
     }
 }

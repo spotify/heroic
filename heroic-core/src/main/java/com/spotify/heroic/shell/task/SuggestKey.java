@@ -44,6 +44,7 @@ import org.kohsuke.args4j.Option;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("suggest-key")
@@ -74,7 +75,7 @@ public class SuggestKey implements ShellTask {
 
         return suggest
             .useGroup(params.group)
-            .keySuggest(filter, fuzzyOptions, params.key)
+            .keySuggest(filter, fuzzyOptions, Optional.ofNullable(params.key))
             .directTransform(result -> {
                 int i = 0;
 

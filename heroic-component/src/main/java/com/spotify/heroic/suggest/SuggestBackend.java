@@ -31,6 +31,7 @@ import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface SuggestBackend extends Grouped, Initializing {
     AsyncFuture<Void> configure();
@@ -49,12 +50,14 @@ public interface SuggestBackend extends Grouped, Initializing {
     AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
     AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, String key, String value
+        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
     );
 
-    AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
+    AsyncFuture<KeySuggest> keySuggest(
+        RangeFilter filter, MatchOptions options, Optional<String> key
+    );
 
-    AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
+    AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
 
     AsyncFuture<WriteResult> write(Series series, DateRange range);
 

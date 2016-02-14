@@ -22,12 +22,14 @@
 package com.spotify.heroic.ws;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.spotify.heroic.common.Validation;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
+import java.util.function.Consumer;
 
 @Provider
 public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingException> {
@@ -49,17 +51,25 @@ public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingEx
     private String constructPath(final JsonMappingException e) {
         final StringBuilder builder = new StringBuilder();
 
-        for (final JsonMappingException.Reference reference : e.getPath()) {
-            if (reference.getIndex() >= 0) {
-                builder.append("[" + reference.getIndex() + "]");
-                continue;
-            }
-
+        final Consumer<String> field = name -> {
             if (builder.length() > 0) {
                 builder.append(".");
             }
 
-            builder.append(reference.getFieldName());
+            builder.append(name);
+        };
+
+        for (final JsonMappingException.Reference reference : e.getPath()) {
+            if (reference.getIndex() >= 0) {
+                builder.append("[" + reference.getIndex() + "]");
+            } else {
+                field.accept(reference.getFieldName());
+            }
+        }
+
+        if (e.getCause() instanceof Validation.FieldError) {
+            final Validation.FieldError f = (Validation.FieldError) e.getCause();
+            field.accept(f.getName());
         }
 
         return builder.toString();

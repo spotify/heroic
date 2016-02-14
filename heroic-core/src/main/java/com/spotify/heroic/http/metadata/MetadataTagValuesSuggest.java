@@ -33,6 +33,8 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Optional.empty;
+
 @Data
 @RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValuesSuggest {
@@ -67,18 +69,16 @@ public class MetadataTagValuesSuggest {
 
     @JsonCreator
     public MetadataTagValuesSuggest(
-        @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
-        @JsonProperty("limit") Integer limit, @JsonProperty("exclude") List<String> exclude,
-        @JsonProperty("groupLimimt") Integer groupLimit
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("limit") Optional<Integer> limit,
+        @JsonProperty("exclude") Optional<List<String>> exclude,
+        @JsonProperty("groupLimimt") Optional<Integer> groupLimit
     ) {
-        this.filter = Optional.ofNullable(filter);
-        this.range = Optional.ofNullable(range);
-        this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-        this.exclude = Optional.ofNullable(exclude).orElse(DEFAULT_EXCLUDE);
-        this.groupLimit = Optional.ofNullable(groupLimit).orElse(DEFAULT_GROUP_LIMIT);
-    }
-
-    public static MetadataTagValuesSuggest createDefault() {
-        return new MetadataTagValuesSuggest(null, null, null, null, null);
+        this.filter = filter;
+        this.range = range;
+        this.limit = limit.orElse(DEFAULT_LIMIT);
+        this.exclude = exclude.orElse(DEFAULT_EXCLUDE);
+        this.groupLimit = groupLimit.orElse(DEFAULT_GROUP_LIMIT);
     }
 }

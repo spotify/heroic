@@ -30,6 +30,7 @@ import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
@@ -50,11 +51,7 @@ import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
-import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -62,8 +59,6 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.bulk.BulkProcessor;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
@@ -71,7 +66,6 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.BoolFilterBuilder;
@@ -105,6 +99,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -123,9 +118,9 @@ import static org.elasticsearch.index.query.FilterBuilders.termFilter;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
-public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
+public class SuggestBackendV1 extends AbstractElasticsearchBackend
+    implements SuggestBackend, Grouped, LifeCycles {
     private static final StandardAnalyzer analyzer = new StandardAnalyzer();
-    public static final TimeValue TIMEOUT = TimeValue.timeValueMillis(10000);
 
     // different locations for the series used in filtering.
     private static final Utils.FilterContext SERIES_CTX = Utils.context();
@@ -136,7 +131,6 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
     private static final String[] TAG_SUGGEST_SOURCES =
         new String[]{Utils.TAG_KEY, Utils.TAG_VALUE};
 
-    private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final LocalMetadataBackendReporter reporter;
     /**
@@ -154,7 +148,7 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
         final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
         @Named("configure") boolean configure
     ) {
-        this.async = async;
+        super(async);
         this.connection = connection;
         this.reporter = reporter;
         this.writeCache = writeCache;
@@ -170,7 +164,7 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(c -> c.configure());
+        return connection.doto(Connection::configure);
     }
 
     @Override
@@ -183,381 +177,334 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
         return connection.isReady();
     }
 
-    private <R> AsyncFuture<R> doto(ManagedAction<Connection, R> action) {
-        return connection.doto(action);
-    }
-
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
         final RangeFilter filter, final List<String> exclude, final int groupLimit
     ) {
-        return doto(new ManagedAction<Connection, TagValuesSuggest>() {
-            @Override
-            public AsyncFuture<TagValuesSuggest> action(final Connection c) throws Exception {
-                final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
+        return connection.doto((final Connection c) -> {
+            final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
 
-                final BoolQueryBuilder root = QueryBuilders.boolQuery();
-                root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            final BoolQueryBuilder root = QueryBuilders.boolQuery();
+            root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                if (!exclude.isEmpty()) {
-                    for (final String e : exclude) {
-                        root.mustNot(QueryBuilders.matchQuery(Utils.TAG_KEY_RAW, e));
-                    }
+            if (!exclude.isEmpty()) {
+                for (final String e : exclude) {
+                    root.mustNot(QueryBuilders.matchQuery(Utils.TAG_KEY_RAW, e));
                 }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), Utils.TYPE_TAG)
-                        .setSearchType(SearchType.COUNT)
-                        .setQuery(root);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                {
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("keys")
-                        .field(Utils.TAG_KEY_RAW)
-                        .size(filter.getLimit() + 1);
-                    request.addAggregation(terms);
-                    // make value bucket one entry larger than necessary to figure out when limiting
-                    // is applied.
-                    final TermsBuilder cardinality = AggregationBuilders
-                        .terms("values")
-                        .field(Utils.TAG_VALUE_RAW)
-                        .size(groupLimit + 1);
-                    terms.subAggregation(cardinality);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagValuesSuggest>() {
-                    @Override
-                    public TagValuesSuggest transform(SearchResponse response) throws Exception {
-                        final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("keys");
-
-                        final List<Bucket> suggestionBuckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : suggestionBuckets.subList(0,
-                            Math.min(suggestionBuckets.size(), filter.getLimit()))) {
-                            final Terms valueTerms = bucket.getAggregations().get("values");
-
-                            final List<Bucket> valueBuckets = valueTerms.getBuckets();
-
-                            final SortedSet<String> result = new TreeSet<>();
-
-                            for (final Terms.Bucket valueBucket : valueBuckets) {
-                                result.add(valueBucket.getKey());
-                            }
-
-                            final boolean limited = valueBuckets.size() > groupLimit;
-
-                            final ImmutableList<String> values = ImmutableList
-                                .copyOf(result)
-                                .subList(0, Math.min(groupLimit, result.size()));
-
-                            suggestions.add(
-                                new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
-                        }
-
-                        return new TagValuesSuggest(new ArrayList<>(suggestions),
-                            suggestionBuckets.size() > filter.getLimit());
-                    }
-                });
             }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), Utils.TYPE_TAG)
+                    .setSearchType(SearchType.COUNT)
+                    .setQuery(root);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            {
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("keys")
+                    .field(Utils.TAG_KEY_RAW)
+                    .size(filter.getLimit() + 1);
+                request.addAggregation(terms);
+                // make value bucket one entry larger than necessary to figure out when limiting
+                // is applied.
+                final TermsBuilder cardinality = AggregationBuilders
+                    .terms("values")
+                    .field(Utils.TAG_VALUE_RAW)
+                    .size(groupLimit + 1);
+                terms.subAggregation(cardinality);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
+
+                final Terms terms = response.getAggregations().get("keys");
+
+                final List<Bucket> suggestionBuckets = terms.getBuckets();
+
+                for (final Terms.Bucket bucket : suggestionBuckets.subList(0,
+                    Math.min(suggestionBuckets.size(), filter.getLimit()))) {
+                    final Terms valueTerms = bucket.getAggregations().get("values");
+
+                    final List<Bucket> valueBuckets = valueTerms.getBuckets();
+
+                    final SortedSet<String> result = new TreeSet<>();
+
+                    for (final Terms.Bucket valueBucket : valueBuckets) {
+                        result.add(valueBucket.getKey());
+                    }
+
+                    final boolean limited = valueBuckets.size() > groupLimit;
+
+                    final ImmutableList<String> values = ImmutableList
+                        .copyOf(result)
+                        .subList(0, Math.min(groupLimit, result.size()));
+
+                    suggestions.add(
+                        new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
+                }
+
+                return new TagValuesSuggest(new ArrayList<>(suggestions),
+                    suggestionBuckets.size() > filter.getLimit());
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final String key
+        final RangeFilter filter, final Optional<String> key
     ) {
-        return doto(new ManagedAction<Connection, TagValueSuggest>() {
-            @Override
-            public AsyncFuture<TagValueSuggest> action(final Connection c) throws Exception {
-                final BoolQueryBuilder root = QueryBuilders.boolQuery();
+        return connection.doto((final Connection c) -> {
+            final BoolQueryBuilder root = QueryBuilders.boolQuery();
 
-                if (key != null && !key.isEmpty()) {
-                    root.must(QueryBuilders.termQuery(Utils.TAG_KEY_RAW, key));
+            key.ifPresent(k -> {
+                if (!k.isEmpty()) {
+                    root.must(QueryBuilders.termQuery(Utils.TAG_KEY_RAW, k));
                 }
+            });
 
-                root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(),
-                    TAG_CTX.filter(filter.getFilter())));
+            root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(),
+                TAG_CTX.filter(filter.getFilter())));
 
-                final SearchRequestBuilder request;
+            final SearchRequestBuilder request;
 
-                try {
-                    request = c
-                        .search(filter.getRange(), Utils.TYPE_TAG)
-                        .setSearchType(SearchType.COUNT)
-                        .setQuery(root);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                {
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("values")
-                        .field(Utils.TAG_VALUE_RAW)
-                        .size(filter.getLimit() + 1)
-                        .order(Order.term(true));
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagValueSuggest>() {
-                    @Override
-                    public TagValueSuggest transform(SearchResponse response) throws Exception {
-                        final List<String> suggestions = new ArrayList<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("values");
-
-                        final List<Bucket> all = terms.getBuckets();
-
-                        final List<Bucket> buckets =
-                            all.subList(0, Math.min(all.size(), filter.getLimit()));
-
-                        for (final Terms.Bucket bucket : buckets) {
-                            suggestions.add(bucket.getKey());
-                        }
-
-                        boolean limited = all.size() > filter.getLimit();
-                        return new TagValueSuggest(new ArrayList<>(suggestions), limited);
-                    }
-                });
+            try {
+                request = c
+                    .search(filter.getRange(), Utils.TYPE_TAG)
+                    .setSearchType(SearchType.COUNT)
+                    .setQuery(root);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
             }
+
+            {
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("values")
+                    .field(Utils.TAG_VALUE_RAW)
+                    .size(filter.getLimit() + 1)
+                    .order(Order.term(true));
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final List<String> suggestions = new ArrayList<>();
+
+                final Terms terms = response.getAggregations().get("values");
+
+                final List<Bucket> all = terms.getBuckets();
+
+                final List<Bucket> buckets =
+                    all.subList(0, Math.min(all.size(), filter.getLimit()));
+
+                for (final Terms.Bucket bucket : buckets) {
+                    suggestions.add(bucket.getKey());
+                }
+
+                boolean limited = all.size() > filter.getLimit();
+                return new TagValueSuggest(new ArrayList<>(suggestions), limited);
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, TagKeyCount>() {
-            @Override
-            public AsyncFuture<TagKeyCount> action(final Connection c) throws Exception {
-                final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
+        return connection.doto((final Connection c) -> {
+            final FilterBuilder f = TAG_CTX.filter(filter.getFilter());
 
-                final BoolQueryBuilder root = QueryBuilders.boolQuery();
-                root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
+            final BoolQueryBuilder root = QueryBuilders.boolQuery();
+            root.must(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), f));
 
-                final SearchRequestBuilder request;
+            final SearchRequestBuilder request;
 
-                try {
-                    request = c
-                        .search(filter.getRange(), Utils.TYPE_TAG)
-                        .setSearchType(SearchType.COUNT)
-                        .setQuery(root);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                {
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("keys")
-                        .field(Utils.TAG_KEY_RAW)
-                        .size(filter.getLimit());
-                    request.addAggregation(terms);
-                    final CardinalityBuilder cardinality =
-                        AggregationBuilders.cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
-                    terms.subAggregation(cardinality);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagKeyCount>() {
-                    @Override
-                    public TagKeyCount transform(SearchResponse response) throws Exception {
-                        final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("keys");
-
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            final Cardinality cardinality =
-                                bucket.getAggregations().get("cardinality");
-                            suggestions.add(new TagKeyCount.Suggestion(bucket.getKey(),
-                                cardinality.getValue()));
-                        }
-
-                        return new TagKeyCount(new ArrayList<>(suggestions), false);
-                    }
-                });
+            try {
+                request = c
+                    .search(filter.getRange(), Utils.TYPE_TAG)
+                    .setSearchType(SearchType.COUNT)
+                    .setQuery(root);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
             }
+
+            {
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("keys")
+                    .field(Utils.TAG_KEY_RAW)
+                    .size(filter.getLimit());
+                request.addAggregation(terms);
+                final CardinalityBuilder cardinality =
+                    AggregationBuilders.cardinality("cardinality").field(Utils.TAG_VALUE_RAW);
+                terms.subAggregation(cardinality);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
+
+                final Terms terms = response.getAggregations().get("keys");
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    final Cardinality cardinality = bucket.getAggregations().get("cardinality");
+                    suggestions.add(
+                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
+                }
+
+                return new TagKeyCount(new ArrayList<>(suggestions), false);
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final String key, final String value
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
+        final Optional<String> value
     ) {
-        return doto(new ManagedAction<Connection, TagSuggest>() {
-            @Override
-            public AsyncFuture<TagSuggest> action(final Connection c) throws Exception {
-                final QueryBuilder query;
+        return connection.doto((Connection c) -> {
+            final QueryBuilder query;
 
-                final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
+            final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
 
-                if (key != null && !key.isEmpty()) {
-                    try {
-                        fuzzy.should(match(Utils.TAG_KEY, key, options));
-                    } catch (IOException e) {
-                        return async.failed(e);
-                    }
+            key.ifPresent(k -> {
+                if (!k.isEmpty()) {
+                    fuzzy.should(match(Utils.TAG_KEY, k, options));
                 }
+            });
 
-                if (value != null && !value.isEmpty()) {
-                    try {
-                        fuzzy.should(match(Utils.TAG_VALUE, value, options));
-                    } catch (IOException e) {
-                        return async.failed(e);
-                    }
+            value.ifPresent(v -> {
+                if (!v.isEmpty()) {
+                    fuzzy.should(match(Utils.TAG_VALUE, v, options));
                 }
+            });
 
-                if (filter.getFilter() instanceof Filter.True) {
-                    query = fuzzy;
-                } else {
-                    query = QueryBuilders.filteredQuery(fuzzy, TAG_CTX.filter(filter.getFilter()));
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), Utils.TYPE_TAG)
-                        .setSearchType(SearchType.COUNT)
-                        .setQuery(query);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                // aggregation
-                {
-                    final MaxBuilder topHit = AggregationBuilders.max("topHit").script("_score");
-                    final TopHitsBuilder hits = AggregationBuilders
-                        .topHits("hits")
-                        .setSize(1)
-                        .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsBuilder kvs = AggregationBuilders
-                        .terms("kvs")
-                        .field(Utils.TAG_KV)
-                        .size(filter.getLimit())
-                        .order(Order.aggregation("topHit", false))
-                        .subAggregation(hits)
-                        .subAggregation(topHit);
-
-                    request.addAggregation(kvs);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagSuggest>() {
-                    @Override
-                    public TagSuggest transform(SearchResponse response) throws Exception {
-                        final Set<Suggestion> suggestions = new LinkedHashSet<>();
-
-                        final StringTerms kvs = (StringTerms) response.getAggregations().get("kvs");
-
-                        for (final Terms.Bucket bucket : kvs.getBuckets()) {
-                            final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
-                            final SearchHit hit = hits.getAt(0);
-                            final Map<String, Object> doc = hit.getSource();
-
-                            final String key = (String) doc.get(Utils.TAG_KEY);
-                            final String value = (String) doc.get(Utils.TAG_VALUE);
-                            suggestions.add(new Suggestion(hits.getMaxScore(), key, value));
-                        }
-
-                        return new TagSuggest(new ArrayList<>(suggestions));
-                    }
-                });
+            if (filter.getFilter() instanceof Filter.True) {
+                query = fuzzy;
+            } else {
+                query = QueryBuilders.filteredQuery(fuzzy, TAG_CTX.filter(filter.getFilter()));
             }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), Utils.TYPE_TAG)
+                    .setSearchType(SearchType.COUNT)
+                    .setQuery(query);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            // aggregation
+            {
+                final MaxBuilder topHit = AggregationBuilders.max("topHit").script("_score");
+                final TopHitsBuilder hits = AggregationBuilders
+                    .topHits("hits")
+                    .setSize(1)
+                    .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
+
+                final TermsBuilder kvs = AggregationBuilders
+                    .terms("kvs")
+                    .field(Utils.TAG_KV)
+                    .size(filter.getLimit())
+                    .order(Order.aggregation("topHit", false))
+                    .subAggregation(hits)
+                    .subAggregation(topHit);
+
+                request.addAggregation(kvs);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<Suggestion> suggestions = new LinkedHashSet<>();
+
+                final StringTerms kvs = response.getAggregations().get("kvs");
+
+                for (final Terms.Bucket bucket : kvs.getBuckets()) {
+                    final TopHits topHits = bucket.getAggregations().get("hits");
+                    final SearchHits hits = topHits.getHits();
+                    final SearchHit hit = hits.getAt(0);
+                    final Map<String, Object> doc = hit.getSource();
+
+                    final String k = (String) doc.get(Utils.TAG_KEY);
+                    final String v = (String) doc.get(Utils.TAG_VALUE);
+                    suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
+                }
+
+                return new TagSuggest(new ArrayList<>(suggestions));
+            });
         });
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final String key
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key
     ) {
-        return doto(new ManagedAction<Connection, KeySuggest>() {
-            @Override
-            public AsyncFuture<KeySuggest> action(final Connection c) throws Exception {
-                final QueryBuilder query;
+        return connection.doto((final Connection c) -> {
+            final QueryBuilder query;
 
-                final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
+            final BoolQueryBuilder fuzzy = QueryBuilders.boolQuery();
 
-                if (key != null && !key.isEmpty()) {
-                    try {
-                        fuzzy.should(match(Utils.SERIES_KEY, key, options));
-                    } catch (IOException e) {
-                        return async.failed(e);
-                    }
+            key.ifPresent(k -> {
+                if (!k.isEmpty()) {
+                    fuzzy.should(match(Utils.SERIES_KEY, k, options));
                 }
+            });
 
-                if (filter instanceof Filter.True) {
-                    query = fuzzy;
-                } else {
-                    query =
-                        QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(filter.getFilter()));
-                }
-
-                final SearchRequestBuilder request;
-
-                try {
-                    request = c
-                        .search(filter.getRange(), Utils.TYPE_SERIES)
-                        .setSearchType(SearchType.COUNT)
-                        .setQuery(query);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
-                }
-
-                // aggregation
-                {
-                    final MaxBuilder topHit = AggregationBuilders.max("top_hit").script("_score");
-                    final TopHitsBuilder hits = AggregationBuilders
-                        .topHits("hits")
-                        .setSize(1)
-                        .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsBuilder keys = AggregationBuilders
-                        .terms("keys")
-                        .field(Utils.SERIES_KEY_RAW)
-                        .size(filter.getLimit())
-                        .order(Order.aggregation("top_hit", false))
-                        .subAggregation(hits)
-                        .subAggregation(topHit);
-
-                    request.addAggregation(keys);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, KeySuggest>() {
-                    @Override
-                    public KeySuggest transform(SearchResponse response) throws Exception {
-                        final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
-
-                        final StringTerms keys =
-                            (StringTerms) response.getAggregations().get("keys");
-
-                        for (final Terms.Bucket bucket : keys.getBuckets()) {
-                            final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
-                            suggestions.add(
-                                new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
-                        }
-
-                        return new KeySuggest(new ArrayList<>(suggestions));
-                    }
-                });
+            if (filter instanceof Filter.True) {
+                query = fuzzy;
+            } else {
+                query = QueryBuilders.filteredQuery(fuzzy, SERIES_CTX.filter(filter.getFilter()));
             }
+
+            final SearchRequestBuilder request;
+
+            try {
+                request = c
+                    .search(filter.getRange(), Utils.TYPE_SERIES)
+                    .setSearchType(SearchType.COUNT)
+                    .setQuery(query);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            // aggregation
+            {
+                final MaxBuilder topHit = AggregationBuilders.max("top_hit").script("_score");
+                final TopHitsBuilder hits = AggregationBuilders
+                    .topHits("hits")
+                    .setSize(1)
+                    .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
+
+                final TermsBuilder keys = AggregationBuilders
+                    .terms("keys")
+                    .field(Utils.SERIES_KEY_RAW)
+                    .size(filter.getLimit())
+                    .order(Order.aggregation("top_hit", false))
+                    .subAggregation(hits)
+                    .subAggregation(topHit);
+
+                request.addAggregation(keys);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
+
+                final StringTerms keys = response.getAggregations().get("keys");
+
+                for (final Terms.Bucket bucket : keys.getBuckets()) {
+                    final TopHits topHits = bucket.getAggregations().get("hits");
+                    final SearchHits hits = topHits.getHits();
+                    suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
+                }
+
+                return new KeySuggest(new ArrayList<>(suggestions));
+            });
         });
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series series, final DateRange range) {
-        try (final Borrowed<Connection> b = connection.borrow()) {
-            if (!b.isValid()) {
-                return async.cancelled();
-            }
-
-            final Connection c = b.get();
-
+        return connection.doto((final Connection c) -> {
             final String[] indices;
 
             try {
@@ -632,7 +579,7 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
             }
 
             return async.collect(futures, WriteResult.merger());
-        }
+        });
     }
 
     private AsyncFuture<Void> start() {
@@ -649,37 +596,7 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
         return connection.stop();
     }
 
-    private <S, T> AsyncFuture<T> bind(
-        final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform
-    ) {
-        final ResolvableFuture<T> future = async.future();
-
-        actionFuture.addListener(new ActionListener<S>() {
-            @Override
-            public void onResponse(S response) {
-                final T result;
-
-                try {
-                    result = transform.transform(response);
-                } catch (Exception e) {
-                    future.fail(e);
-                    return;
-                }
-
-                future.resolve(result);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                future.fail(e);
-            }
-        });
-
-        return future;
-    }
-
-    private QueryBuilder match(String field, String value, MatchOptions options)
-        throws IOException {
+    private QueryBuilder match(String field, String value, MatchOptions options) {
         final BoolQueryBuilder bool = QueryBuilders.boolQuery();
 
         // exact match
@@ -689,8 +606,8 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
 
         try {
             terms = Utils.tokenize(analyzer, field, value);
-        } catch (IOException e) {
-            throw new IOException("failed to tokenize query", e);
+        } catch (final IOException e) {
+            throw new RuntimeException("failed to tokenize query", e);
         }
 
         for (final String term : terms) {
@@ -922,28 +839,23 @@ public class SuggestBackendV1 implements SuggestBackend, Grouped, LifeCycles {
     }
 
     public static BackendTypeFactory<SuggestBackend> factory() {
-        return new BackendTypeFactory<SuggestBackend>() {
+        return () -> new BackendType<SuggestBackend>() {
             @Override
-            public BackendType<SuggestBackend> setup() {
-                return new BackendType<SuggestBackend>() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("tag", loadJsonResource("v1/tag.json"));
-                        mappings.put("series", loadJsonResource("v1/series.json"));
-                        return mappings;
-                    }
+            public Map<String, Map<String, Object>> mappings() {
+                final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                mappings.put("tag", loadJsonResource("v1/tag.json"));
+                mappings.put("series", loadJsonResource("v1/series.json"));
+                return mappings;
+            }
 
-                    @Override
-                    public Map<String, Object> settings() {
-                        return ImmutableMap.of();
-                    }
+            @Override
+            public Map<String, Object> settings() {
+                return ImmutableMap.of();
+            }
 
-                    @Override
-                    public Class<? extends SuggestBackend> type() {
-                        return SuggestBackendV1.class;
-                    }
-                };
+            @Override
+            public Class<? extends SuggestBackend> type() {
+                return SuggestBackendV1.class;
             }
         };
     }

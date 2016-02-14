@@ -46,6 +46,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Get tag suggestions")
 @TaskName("suggest-tag")
@@ -81,7 +82,8 @@ public class SuggestTag implements ShellTask {
 
         return suggest
             .useGroup(params.group)
-            .tagSuggest(filter, fuzzyOptions, params.key, params.value)
+            .tagSuggest(filter, fuzzyOptions, Optional.ofNullable(params.key),
+                Optional.ofNullable(params.value))
             .directTransform(result -> {
                 int i = 0;
 

@@ -46,6 +46,7 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
+import java.util.Optional;
 
 public class TracingClusterNodeGroup implements ClusterNode.Group {
     private final ClusterNode.Group delegate;
@@ -107,14 +108,14 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, String key, String value
+        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
     ) {
         return delegate.tagSuggest(filter, options, key, value);
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
-        RangeFilter filter, MatchOptions options, String key
+        RangeFilter filter, MatchOptions options, Optional<String> key
     ) {
         return delegate.keySuggest(filter, options, key);
     }
@@ -127,7 +128,7 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key) {
         return delegate.tagValueSuggest(filter, key);
     }
 

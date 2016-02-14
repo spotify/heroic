@@ -55,6 +55,7 @@ import lombok.ToString;
 
 import javax.inject.Inject;
 import java.util.List;
+import java.util.Optional;
 
 @ToString(exclude = {"async", "metrics", "metadata", "suggest"})
 public class LocalClusterNode implements ClusterNode {
@@ -140,14 +141,14 @@ public class LocalClusterNode implements ClusterNode {
 
         @Override
         public AsyncFuture<TagSuggest> tagSuggest(
-            RangeFilter filter, MatchOptions options, String key, String value
+            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
         ) {
             return suggest().tagSuggest(filter, options, key, value);
         }
 
         @Override
         public AsyncFuture<KeySuggest> keySuggest(
-            RangeFilter filter, MatchOptions options, String key
+            RangeFilter filter, MatchOptions options, Optional<String> key
         ) {
             return suggest().keySuggest(filter, options, key);
         }
@@ -160,7 +161,9 @@ public class LocalClusterNode implements ClusterNode {
         }
 
         @Override
-        public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+        public AsyncFuture<TagValueSuggest> tagValueSuggest(
+            RangeFilter filter, Optional<String> key
+        ) {
             return suggest().tagValueSuggest(filter, key);
         }
 

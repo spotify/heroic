@@ -30,6 +30,7 @@ import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.elasticsearch.AbstractElasticsearchBackend;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
@@ -51,13 +52,8 @@ import com.spotify.heroic.suggest.TagValuesSuggest;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
-import eu.toolchain.async.ManagedAction;
-import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.Transform;
 import lombok.ToString;
 import org.apache.commons.lang3.tuple.Pair;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.index.IndexRequest.OpType;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -90,6 +86,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -110,7 +107,8 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @ElasticsearchScope
 @ToString(of = {"connection"})
-public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
+public class SuggestBackendKV extends AbstractElasticsearchBackend
+    implements SuggestBackend, Grouped, LifeCycles {
     public static final String WRITE_CACHE_SIZE = "write-cache-size";
 
     private static final String TAG_DELIMITER = "\0";
@@ -138,7 +136,6 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
     private static final String[] KEY_SUGGEST_SOURCES = new String[]{KEY};
     private static final String[] TAG_SUGGEST_SOURCES = new String[]{TAG_SKEY, TAG_SVAL};
 
-    private final AsyncFramework async;
     private final Managed<Connection> connection;
     private final LocalMetadataBackendReporter reporter;
 
@@ -157,7 +154,7 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
         final RateLimitedCache<Pair<String, HashCode>> writeCache, final Groups groups,
         @Named("configure") boolean configure
     ) {
-        this.async = async;
+        super(async);
         this.connection = connection;
         this.reporter = reporter;
         this.writeCache = writeCache;
@@ -173,7 +170,7 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
 
     @Override
     public AsyncFuture<Void> configure() {
-        return doto(c -> c.configure());
+        return connection.doto(Connection::configure);
     }
 
     @Override
@@ -186,408 +183,377 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
         return connection.isReady();
     }
 
-    private <R> AsyncFuture<R> doto(ManagedAction<Connection, R> action) {
-        return connection.doto(action);
-    }
-
     @Override
     public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
         final RangeFilter filter, final List<String> exclude, final int groupLimit
     ) {
-        return doto(new ManagedAction<Connection, TagValuesSuggest>() {
-            @Override
-            public AsyncFuture<TagValuesSuggest> action(final Connection c) throws Exception {
-                final BoolFilterBuilder bool = boolFilter();
+        return connection.doto((final Connection c) -> {
+            final BoolFilterBuilder bool = boolFilter();
 
-                if (!(filter.getFilter() instanceof Filter.True)) {
-                    bool.must(filter(filter.getFilter()));
-                }
-
-                for (final String e : exclude) {
-                    bool.mustNot(termFilter(TAG_SKEY_RAW, e));
-                }
-
-                final QueryBuilder query =
-                    bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
-
-                final SearchRequestBuilder request = c
-                    .search(filter.getRange(), TAG_TYPE)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query)
-                    .setTimeout(TIMEOUT);
-
-                {
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("keys")
-                        .field(TAG_SKEY_RAW)
-                        .size(filter.getLimit() + 1);
-                    request.addAggregation(terms);
-                    // make value bucket one entry larger than necessary to figure out when limiting
-                    // is applied.
-                    final TermsBuilder cardinality = AggregationBuilders
-                        .terms("values")
-                        .field(TAG_SVAL_RAW)
-                        .size(groupLimit + 1);
-                    terms.subAggregation(cardinality);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagValuesSuggest>() {
-                    @Override
-                    public TagValuesSuggest transform(SearchResponse response) {
-                        final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("keys");
-
-                        final List<Bucket> buckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : buckets.subList(0,
-                            Math.min(buckets.size(), filter.getLimit()))) {
-                            final Terms valueTerms = bucket.getAggregations().get("values");
-
-                            final List<Bucket> valueBuckets = valueTerms.getBuckets();
-
-                            final SortedSet<String> result = new TreeSet<>();
-
-                            for (final Terms.Bucket valueBucket : valueBuckets) {
-                                result.add(valueBucket.getKey());
-                            }
-
-                            final boolean limited = valueBuckets.size() > groupLimit;
-
-                            final ImmutableList<String> values = ImmutableList
-                                .copyOf(result)
-                                .subList(0, Math.min(result.size(), groupLimit));
-
-                            suggestions.add(
-                                new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
-                        }
-
-                        return new TagValuesSuggest(new ArrayList<>(suggestions),
-                            buckets.size() > filter.getLimit());
-                    }
-                });
+            if (!(filter.getFilter() instanceof Filter.True)) {
+                bool.must(filter(filter.getFilter()));
             }
+
+            for (final String e : exclude) {
+                bool.mustNot(termFilter(TAG_SKEY_RAW, e));
+            }
+
+            final QueryBuilder query =
+                bool.hasClauses() ? filteredQuery(matchAllQuery(), bool) : matchAllQuery();
+
+            final SearchRequestBuilder request = c
+                .search(filter.getRange(), TAG_TYPE)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query)
+                .setTimeout(TIMEOUT);
+
+            {
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("keys")
+                    .field(TAG_SKEY_RAW)
+                    .size(filter.getLimit() + 1);
+                request.addAggregation(terms);
+                // make value bucket one entry larger than necessary to figure out when limiting
+                // is applied.
+                final TermsBuilder cardinality =
+                    AggregationBuilders.terms("values").field(TAG_SVAL_RAW).size(groupLimit + 1);
+                terms.subAggregation(cardinality);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final List<TagValuesSuggest.Suggestion> suggestions = new ArrayList<>();
+
+                final Terms terms = response.getAggregations().get("keys");
+
+                final List<Bucket> buckets = terms.getBuckets();
+
+                for (final Terms.Bucket bucket : buckets.subList(0,
+                    Math.min(buckets.size(), filter.getLimit()))) {
+                    final Terms valueTerms = bucket.getAggregations().get("values");
+
+                    final List<Bucket> valueBuckets = valueTerms.getBuckets();
+
+                    final SortedSet<String> result = new TreeSet<>();
+
+                    for (final Terms.Bucket valueBucket : valueBuckets) {
+                        result.add(valueBucket.getKey());
+                    }
+
+                    final boolean limited = valueBuckets.size() > groupLimit;
+
+                    final ImmutableList<String> values = ImmutableList
+                        .copyOf(result)
+                        .subList(0, Math.min(result.size(), groupLimit));
+
+                    suggestions.add(
+                        new TagValuesSuggest.Suggestion(bucket.getKey(), values, limited));
+                }
+
+                return new TagValuesSuggest(new ArrayList<>(suggestions),
+                    buckets.size() > filter.getLimit());
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final String key
+        final RangeFilter filter, final Optional<String> key
     ) {
-        return doto(new ManagedAction<Connection, TagValueSuggest>() {
-            @Override
-            public AsyncFuture<TagValueSuggest> action(final Connection c) throws Exception {
-                final BoolQueryBuilder bool = boolQuery();
+        return connection.doto((final Connection c) -> {
+            final BoolQueryBuilder bool = boolQuery();
 
-                if (key != null && !key.isEmpty()) {
+            key.ifPresent(k -> {
+                if (!k.isEmpty()) {
                     bool.must(termQuery(TAG_SKEY_RAW, key));
                 }
+            });
 
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
+            QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-                if (!(filter.getFilter() instanceof Filter.True)) {
-                    query = filteredQuery(query, filter(filter.getFilter()));
-                }
-
-                final SearchRequestBuilder request = c
-                    .search(filter.getRange(), TAG_TYPE)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query);
-
-                {
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("values")
-                        .field(TAG_SVAL_RAW)
-                        .size(filter.getLimit() + 1)
-                        .order(Order.term(true));
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagValueSuggest>() {
-                    @Override
-                    public TagValueSuggest transform(SearchResponse response) {
-                        final List<String> suggestions = new ArrayList<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("values");
-
-                        final List<Bucket> buckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : buckets.subList(0,
-                            Math.min(buckets.size(), filter.getLimit()))) {
-                            suggestions.add(bucket.getKey());
-                        }
-
-                        boolean limited = buckets.size() > filter.getLimit();
-
-                        return new TagValueSuggest(new ArrayList<>(suggestions), limited);
-                    }
-                });
+            if (!(filter.getFilter() instanceof Filter.True)) {
+                query = filteredQuery(query, filter(filter.getFilter()));
             }
+
+            final SearchRequestBuilder request = c
+                .search(filter.getRange(), TAG_TYPE)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query);
+
+            {
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("values")
+                    .field(TAG_SVAL_RAW)
+                    .size(filter.getLimit() + 1)
+                    .order(Order.term(true));
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final List<String> suggestions = new ArrayList<>();
+
+                final Terms terms = response.getAggregations().get("values");
+
+                final List<Bucket> buckets = terms.getBuckets();
+
+                for (final Terms.Bucket bucket : buckets.subList(0,
+                    Math.min(buckets.size(), filter.getLimit()))) {
+                    suggestions.add(bucket.getKey());
+                }
+
+                boolean limited = buckets.size() > filter.getLimit();
+
+                return new TagValueSuggest(new ArrayList<>(suggestions), limited);
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-        return doto(new ManagedAction<Connection, TagKeyCount>() {
-            @Override
-            public AsyncFuture<TagKeyCount> action(final Connection c) throws Exception {
-                final QueryBuilder root =
-                    filteredQuery(matchAllQuery(), filter(filter.getFilter()));
+        return connection.doto((final Connection c) -> {
+            final QueryBuilder root = filteredQuery(matchAllQuery(), filter(filter.getFilter()));
 
-                final SearchRequestBuilder request = c
-                    .search(filter.getRange(), TAG_TYPE)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(root);
+            final SearchRequestBuilder request = c
+                .search(filter.getRange(), TAG_TYPE)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(root);
 
-                final int limit = filter.getLimit();
+            final int limit = filter.getLimit();
 
-                {
-                    final TermsBuilder terms =
-                        AggregationBuilders.terms("keys").field(TAG_SKEY_RAW).size(limit + 1);
-                    request.addAggregation(terms);
+            {
+                final TermsBuilder terms =
+                    AggregationBuilders.terms("keys").field(TAG_SKEY_RAW).size(limit + 1);
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
+
+                final Terms terms = response.getAggregations().get("keys");
+
+                final List<Bucket> buckets = terms.getBuckets();
+
+                for (final Terms.Bucket bucket : buckets.subList(0,
+                    Math.min(buckets.size(), limit))) {
+                    suggestions.add(
+                        new TagKeyCount.Suggestion(bucket.getKey(), bucket.getDocCount()));
                 }
 
-                return bind(request.execute(), new Transform<SearchResponse, TagKeyCount>() {
-                    @Override
-                    public TagKeyCount transform(SearchResponse response) {
-                        final Set<TagKeyCount.Suggestion> suggestions = new LinkedHashSet<>();
-
-                        final Terms terms = (Terms) response.getAggregations().get("keys");
-
-                        final List<Bucket> buckets = terms.getBuckets();
-
-                        for (final Terms.Bucket bucket : buckets.subList(0,
-                            Math.min(buckets.size(), limit))) {
-                            suggestions.add(
-                                new TagKeyCount.Suggestion(bucket.getKey(), bucket.getDocCount()));
-                        }
-
-                        return new TagKeyCount(new ArrayList<>(suggestions),
-                            terms.getBuckets().size() < limit);
-                    }
-                });
-            }
+                return new TagKeyCount(new ArrayList<>(suggestions),
+                    terms.getBuckets().size() < limit);
+            });
         });
     }
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final String key, final String value
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
+        final Optional<String> value
     ) {
-        return doto(new ManagedAction<Connection, TagSuggest>() {
-            @Override
-            public AsyncFuture<TagSuggest> action(final Connection c) throws Exception {
-                final BoolQueryBuilder bool = boolQuery();
+        return connection.doto((final Connection c) -> {
+            final BoolQueryBuilder bool = boolQuery();
 
-                // special case: key and value are equal, which indicates that _any_ match should be
-                // in effect.
-                // XXX: Enhance API to allow for this to be intentional instead of this by
-                // introducing an 'any' field.
-                if (key != null && value != null && key.equals(value)) {
-                    bool.should(matchTermValue(value));
-                    bool.should(matchTermKey(key));
-                } else {
-                    if (key != null && !key.isEmpty()) {
-                        bool.must(matchTermKey(key).boost(2.0f));
+            // special case: key and value are equal, which indicates that _any_ match should be
+            // in effect.
+            // XXX: Enhance API to allow for this to be intentional instead of this by
+            // introducing an 'any' field.
+            if (key.isPresent() && value.isPresent() && key.equals(value)) {
+                bool.should(matchTermValue(value.get()));
+                bool.should(matchTermKey(key.get()));
+            } else {
+                key.ifPresent(k -> {
+                    if (!k.isEmpty()) {
+                        bool.must(matchTermKey(k).boost(2.0f));
                     }
+                });
 
-                    if (value != null && !value.isEmpty()) {
-                        bool.must(matchTermValue(value));
-                    }
-                }
-
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
-
-                if (!(filter.getFilter() instanceof Filter.True)) {
-                    query = filteredQuery(query, filter(filter.getFilter()));
-                }
-
-                final SearchRequestBuilder request = c
-                    .search(filter.getRange(), TAG_TYPE)
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query)
-                    .setTimeout(TIMEOUT);
-
-                // aggregation
-                {
-                    final TopHitsBuilder hits = AggregationBuilders
-                        .topHits("hits")
-                        .setSize(1)
-                        .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("terms")
-                        .field(TAG_KV)
-                        .size(filter.getLimit())
-                        .subAggregation(hits);
-
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, TagSuggest>() {
-                    @Override
-                    public TagSuggest transform(SearchResponse response) throws Exception {
-                        final Set<Suggestion> suggestions = new LinkedHashSet<>();
-
-                        Aggregations aggregations = response.getAggregations();
-
-                        if (aggregations == null) {
-                            return TagSuggest.empty();
-                        }
-
-                        final StringTerms terms = (StringTerms) aggregations.get("terms");
-
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
-                            final SearchHit hit = hits.getAt(0);
-                            final Map<String, Object> doc = hit.getSource();
-
-                            final String key = (String) doc.get(TAG_SKEY);
-                            final String value = (String) doc.get(TAG_SVAL);
-
-                            suggestions.add(new Suggestion(hits.getMaxScore(), key, value));
-                        }
-
-                        return new TagSuggest(new ArrayList<>(suggestions));
+                value.ifPresent(v -> {
+                    if (!v.isEmpty()) {
+                        bool.must(matchTermValue(v));
                     }
                 });
             }
+
+            QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
+
+            if (!(filter.getFilter() instanceof Filter.True)) {
+                query = filteredQuery(query, filter(filter.getFilter()));
+            }
+
+            final SearchRequestBuilder request = c
+                .search(filter.getRange(), TAG_TYPE)
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query)
+                .setTimeout(TIMEOUT);
+
+            // aggregation
+            {
+                final TopHitsBuilder hits = AggregationBuilders
+                    .topHits("hits")
+                    .setSize(1)
+                    .setFetchSource(TAG_SUGGEST_SOURCES, new String[0]);
+
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("terms")
+                    .field(TAG_KV)
+                    .size(filter.getLimit())
+                    .subAggregation(hits);
+
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<Suggestion> suggestions = new LinkedHashSet<>();
+
+                Aggregations aggregations = response.getAggregations();
+
+                if (aggregations == null) {
+                    return TagSuggest.empty();
+                }
+
+                final StringTerms terms = aggregations.get("terms");
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    final TopHits topHits = bucket.getAggregations().get("hits");
+                    final SearchHits hits = topHits.getHits();
+                    final SearchHit hit = hits.getAt(0);
+                    final Map<String, Object> doc = hit.getSource();
+
+                    final String k = (String) doc.get(TAG_SKEY);
+                    final String v = (String) doc.get(TAG_SVAL);
+
+                    suggestions.add(new Suggestion(hits.getMaxScore(), k, v));
+                }
+
+                return new TagSuggest(new ArrayList<>(suggestions));
+            });
         });
     }
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final String key
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key
     ) {
-        return doto(new ManagedAction<Connection, KeySuggest>() {
-            @Override
-            public AsyncFuture<KeySuggest> action(final Connection c) throws Exception {
-                BoolQueryBuilder bool = boolQuery();
+        return connection.doto((final Connection c) -> {
+            BoolQueryBuilder bool = boolQuery();
 
-                if (key != null && !key.isEmpty()) {
-                    final String l = key.toLowerCase();
+            key.ifPresent(k -> {
+                if (!k.isEmpty()) {
+                    final String l = k.toLowerCase();
                     final BoolQueryBuilder b = boolQuery();
                     b.should(termQuery(SERIES_KEY_ANALYZED, l));
                     b.should(termQuery(SERIES_KEY_PREFIX, l).boost(1.5f));
                     b.should(termQuery(SERIES_KEY, l).boost(2.0f));
                     bool.must(b);
                 }
+            });
 
-                QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
+            QueryBuilder query = bool.hasClauses() ? bool : matchAllQuery();
 
-                if (!(filter.getFilter() instanceof Filter.True)) {
-                    query = filteredQuery(query, filter(filter.getFilter()));
-                }
-
-                final SearchRequestBuilder request = c
-                    .search(filter.getRange(), "series")
-                    .setSearchType(SearchType.COUNT)
-                    .setQuery(query);
-
-                // aggregation
-                {
-                    final TopHitsBuilder hits = AggregationBuilders
-                        .topHits("hits")
-                        .setSize(1)
-                        .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
-
-                    final TermsBuilder terms = AggregationBuilders
-                        .terms("terms")
-                        .field(KEY)
-                        .size(filter.getLimit())
-                        .subAggregation(hits);
-
-                    request.addAggregation(terms);
-                }
-
-                return bind(request.execute(), new Transform<SearchResponse, KeySuggest>() {
-                    @Override
-                    public KeySuggest transform(SearchResponse response) throws Exception {
-                        final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
-
-                        final StringTerms terms =
-                            (StringTerms) response.getAggregations().get("terms");
-
-                        for (final Terms.Bucket bucket : terms.getBuckets()) {
-                            final TopHits topHits = (TopHits) bucket.getAggregations().get("hits");
-                            final SearchHits hits = topHits.getHits();
-                            suggestions.add(
-                                new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
-                        }
-
-                        return new KeySuggest(new ArrayList<>(suggestions));
-                    }
-                });
+            if (!(filter.getFilter() instanceof Filter.True)) {
+                query = filteredQuery(query, filter(filter.getFilter()));
             }
+
+            final SearchRequestBuilder request = c
+                .search(filter.getRange(), "series")
+                .setSearchType(SearchType.COUNT)
+                .setQuery(query);
+
+            // aggregation
+            {
+                final TopHitsBuilder hits = AggregationBuilders
+                    .topHits("hits")
+                    .setSize(1)
+                    .setFetchSource(KEY_SUGGEST_SOURCES, new String[0]);
+
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("terms")
+                    .field(KEY)
+                    .size(filter.getLimit())
+                    .subAggregation(hits);
+
+                request.addAggregation(terms);
+            }
+
+            return bind(request.execute()).directTransform((SearchResponse response) -> {
+                final Set<KeySuggest.Suggestion> suggestions = new LinkedHashSet<>();
+
+                final StringTerms terms = response.getAggregations().get("terms");
+
+                for (final Terms.Bucket bucket : terms.getBuckets()) {
+                    final TopHits topHits = bucket.getAggregations().get("hits");
+                    final SearchHits hits = topHits.getHits();
+                    suggestions.add(new KeySuggest.Suggestion(hits.getMaxScore(), bucket.getKey()));
+                }
+
+                return new KeySuggest(new ArrayList<>(suggestions));
+            });
         });
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Series s, final DateRange range) {
-        return doto(new ManagedAction<Connection, WriteResult>() {
-            @Override
-            public AsyncFuture<WriteResult> action(final Connection c) throws Exception {
-                final String[] indices;
+        return connection.doto((final Connection c) -> {
+            final String[] indices;
 
-                try {
-                    indices = c.writeIndices(range);
-                } catch (NoIndexSelectedException e) {
-                    return async.failed(e);
+            try {
+                indices = c.writeIndices(range);
+            } catch (NoIndexSelectedException e) {
+                return async.failed(e);
+            }
+
+            final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+
+            for (final String index : indices) {
+                final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
+
+                if (!writeCache.acquire(key)) {
+                    reporter.reportWriteDroppedByRateLimit();
+                    continue;
                 }
 
-                final List<AsyncFuture<WriteResult>> writes = new ArrayList<>();
+                final String seriesId = s.hash();
 
-                for (final String index : indices) {
-                    final Pair<String, HashCode> key = Pair.of(index, s.getHashCode());
+                final List<AsyncFuture<WriteResult>> w = new ArrayList<>();
 
-                    if (!writeCache.acquire(key)) {
-                        reporter.reportWriteDroppedByRateLimit();
-                        continue;
-                    }
+                final XContentBuilder series = XContentFactory.jsonBuilder();
 
-                    final String seriesId = s.hash();
+                series.startObject();
+                buildContext(series, s);
+                series.endObject();
 
-                    final List<AsyncFuture<WriteResult>> w = new ArrayList<>();
+                final long start = System.nanoTime();
 
-                    final XContentBuilder series = XContentFactory.jsonBuilder();
+                w.add(bind(c
+                    .index(index, SERIES_TYPE)
+                    .setId(seriesId)
+                    .setSource(series)
+                    .setOpType(OpType.CREATE)
+                    .execute()).directTransform(
+                    (response) -> WriteResult.of(System.nanoTime() - start)));
 
-                    series.startObject();
-                    buildContext(series, s);
-                    series.endObject();
+                for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
+                    final XContentBuilder suggest = XContentFactory.jsonBuilder();
 
-                    final long start = System.nanoTime();
+                    suggest.startObject();
+                    buildContext(suggest, s);
+                    buildTag(suggest, e);
+                    suggest.endObject();
+
+                    final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
 
                     w.add(bind(c
-                        .index(index, SERIES_TYPE)
-                        .setId(seriesId)
-                        .setSource(series)
+                        .index(index, TAG_TYPE)
+                        .setId(suggestId)
+                        .setSource(suggest)
                         .setOpType(OpType.CREATE)
-                        .execute(), (response) -> WriteResult.of(System.nanoTime() - start)));
-
-                    for (final Map.Entry<String, String> e : s.getTags().entrySet()) {
-                        final XContentBuilder suggest = XContentFactory.jsonBuilder();
-
-                        suggest.startObject();
-                        buildContext(suggest, s);
-                        buildTag(suggest, e);
-                        suggest.endObject();
-
-                        final String suggestId = seriesId + ":" + Integer.toHexString(e.hashCode());
-
-                        w.add(bind(c
-                            .index(index, TAG_TYPE)
-                            .setId(suggestId)
-                            .setSource(suggest)
-                            .setOpType(OpType.CREATE)
-                            .execute(), (response) -> WriteResult.of(System.nanoTime() - start)));
-                    }
-
-                    writes.add(async.collect(w, WriteResult.merger()));
+                        .execute()).directTransform(
+                        (response) -> WriteResult.of(System.nanoTime() - start)));
                 }
 
-                return async.collect(writes, WriteResult.merger());
+                writes.add(async.collect(w, WriteResult.merger()));
             }
+
+            return async.collect(writes, WriteResult.merger());
         });
     }
 
@@ -608,42 +574,6 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
 
     private AsyncFuture<Void> stop() {
         return connection.stop();
-    }
-
-    /**
-     * Bind a {@code ListenableActionFuture} to an {@code AsyncFuture}.
-     *
-     * @param actionFuture
-     * @param transform
-     * @return
-     */
-    private <S, T> AsyncFuture<T> bind(
-        final ListenableActionFuture<S> actionFuture, final Transform<S, T> transform
-    ) {
-        final ResolvableFuture<T> future = async.future();
-
-        actionFuture.addListener(new ActionListener<S>() {
-            @Override
-            public void onResponse(S response) {
-                final T result;
-
-                try {
-                    result = transform.transform(response);
-                } catch (Exception e) {
-                    future.fail(e);
-                    return;
-                }
-
-                future.resolve(result);
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                future.fail(e);
-            }
-        });
-
-        return future;
     }
 
     private static BoolQueryBuilder matchTermKey(final String key) {
@@ -767,28 +697,23 @@ public class SuggestBackendKV implements SuggestBackend, Grouped, LifeCycles {
     }
 
     public static BackendTypeFactory<SuggestBackend> factory() {
-        return new BackendTypeFactory<SuggestBackend>() {
+        return () -> new BackendType<SuggestBackend>() {
             @Override
-            public BackendType<SuggestBackend> setup() {
-                return new BackendType<SuggestBackend>() {
-                    @Override
-                    public Map<String, Map<String, Object>> mappings() {
-                        final Map<String, Map<String, Object>> mappings = new HashMap<>();
-                        mappings.put("tag", loadJsonResource("kv/tag.json"));
-                        mappings.put("series", loadJsonResource("kv/series.json"));
-                        return mappings;
-                    }
+            public Map<String, Map<String, Object>> mappings() {
+                final Map<String, Map<String, Object>> mappings = new HashMap<>();
+                mappings.put("tag", loadJsonResource("kv/tag.json"));
+                mappings.put("series", loadJsonResource("kv/series.json"));
+                return mappings;
+            }
 
-                    @Override
-                    public Map<String, Object> settings() {
-                        return loadJsonResource("kv/settings.json");
-                    }
+            @Override
+            public Map<String, Object> settings() {
+                return loadJsonResource("kv/settings.json");
+            }
 
-                    @Override
-                    public Class<? extends SuggestBackend> type() {
-                        return SuggestBackendKV.class;
-                    }
-                };
+            @Override
+            public Class<? extends SuggestBackend> type() {
+                return SuggestBackendKV.class;
             }
         };
     }

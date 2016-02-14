@@ -62,6 +62,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -225,7 +226,8 @@ public class SuggestPerformance implements ShellTask {
                     }
 
                     for (TagSuggest.Suggestion s : result.getSuggestions()) {
-                        expect.remove(new Suggestion(s.getKey(), s.getValue()));
+                        expect.remove(
+                            new Suggestion(Optional.of(s.getKey()), Optional.of(s.getValue())));
 
                         if (expect.isEmpty()) {
                             break;
@@ -351,15 +353,15 @@ public class SuggestPerformance implements ShellTask {
     @Data
     @RequiredArgsConstructor
     public static class Suggestion {
-        private final String key;
-        private final String value;
+        private final Optional<String> key;
+        private final Optional<String> value;
 
         @JsonCreator
         public Suggestion(JsonNode node) {
             final String text = node.asText();
             final String[] split = text.split(":", 2);
-            this.key = split[0];
-            this.value = split.length > 1 ? split[1] : "";
+            this.key = Optional.of(split[0]);
+            this.value = split.length > 1 ? Optional.of(split[1]) : Optional.empty();
         }
     }
 

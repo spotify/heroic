@@ -36,6 +36,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import java.util.List;
+import java.util.Optional;
 
 @Data
 @ToString(of = {"backends"})
@@ -61,7 +62,7 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<TagValueSuggest> tagValueSuggest(
-        final RangeFilter filter, final String key
+        final RangeFilter filter, final Optional<String> key
     ) {
         return async
             .collect(run(b -> b.tagValueSuggest(filter, key)),
@@ -78,7 +79,8 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(
-        final RangeFilter filter, final MatchOptions options, final String key, final String value
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
+        final Optional<String> value
     ) {
         return async
             .collect(run(b -> b.tagSuggest(filter, options, key, value)),
@@ -88,7 +90,7 @@ public class SuggestBackendGroup implements SuggestBackend {
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
-        final RangeFilter filter, final MatchOptions options, final String key
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key
     ) {
         return async
             .collect(run(b -> b.keySuggest(filter, options, key)),

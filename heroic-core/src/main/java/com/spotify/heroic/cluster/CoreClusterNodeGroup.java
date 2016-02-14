@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public class CoreClusterNodeGroup implements ClusterNodeGroup {
@@ -157,7 +158,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
 
     @Override
     public AsyncFuture<TagSuggest> tagSuggest(
-        RangeFilter filter, MatchOptions options, String key, String value
+        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
     ) {
         final List<AsyncFuture<TagSuggest>> futures = new ArrayList<>(entries.size());
 
@@ -171,7 +172,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
 
     @Override
     public AsyncFuture<KeySuggest> keySuggest(
-        RangeFilter filter, MatchOptions options, String key
+        RangeFilter filter, MatchOptions options, Optional<String> key
     ) {
         final List<AsyncFuture<KeySuggest>> futures = new ArrayList<>(entries.size());
 
@@ -198,7 +199,7 @@ public class CoreClusterNodeGroup implements ClusterNodeGroup {
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key) {
         final List<AsyncFuture<TagValueSuggest>> futures = new ArrayList<>(entries.size());
 
         for (final ClusterNode.Group g : entries) {

@@ -119,8 +119,4 @@ public class MetadataQueryBody {
         this.range = range;
         this.limit = limit.orElse(DEFAULT_LIMIT);
     }
-
-    public static MetadataQueryBody createDefault() {
-        return new MetadataQueryBody(empty(), empty(), empty(), empty(), empty(), empty());
-    }
 }

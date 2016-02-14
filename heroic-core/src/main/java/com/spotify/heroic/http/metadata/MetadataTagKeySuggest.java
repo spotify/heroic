@@ -29,6 +29,8 @@ import lombok.Data;
 
 import java.util.Optional;
 
+import static java.util.Optional.empty;
+
 @Data
 public class MetadataTagKeySuggest {
     private static final int DEFAULT_LIMIT = 10;
@@ -39,15 +41,12 @@ public class MetadataTagKeySuggest {
 
     @JsonCreator
     public MetadataTagKeySuggest(
-        @JsonProperty("filter") Filter filter, @JsonProperty("range") QueryDateRange range,
-        @JsonProperty("limit") Integer limit
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("limit") Optional<Integer> limit
     ) {
-        this.filter = Optional.ofNullable(filter);
-        this.range = Optional.ofNullable(range);
-        this.limit = Optional.ofNullable(limit).orElse(DEFAULT_LIMIT);
-    }
-
-    public static MetadataTagKeySuggest createDefault() {
-        return new MetadataTagKeySuggest(null, null, null);
+        this.filter = filter;
+        this.range = range;
+        this.limit = limit.orElse(DEFAULT_LIMIT);
     }
 }

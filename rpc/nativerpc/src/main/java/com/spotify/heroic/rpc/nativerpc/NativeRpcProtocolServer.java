@@ -140,7 +140,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                     final RpcQuery query = grouped.getQuery();
 
                     return metrics
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .query(query.getSource(), query.getFilter(), query.getRange(),
                             query.getAggregation(), query.getOptions());
                 }
@@ -152,7 +152,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 public AsyncFuture<WriteResult> handle(final GroupedQuery<WriteMetric> grouped)
                     throws Exception {
                     final WriteMetric query = grouped.getQuery();
-                    return metrics.useGroup(grouped.getGroup()).write(query);
+                    return metrics.useGroup(grouped.getGroup().orElse(null)).write(query);
                 }
             });
 
@@ -161,7 +161,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<FindTags> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return metadata.useGroup(grouped.getGroup()).findTags(grouped.getQuery());
+                    return metadata
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .findTags(grouped.getQuery());
                 }
             });
 
@@ -170,7 +172,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<FindKeys> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return metadata.useGroup(grouped.getGroup()).findKeys(grouped.getQuery());
+                    return metadata
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .findKeys(grouped.getQuery());
                 }
             });
 
@@ -179,7 +183,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<FindSeries> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return metadata.useGroup(grouped.getGroup()).findSeries(grouped.getQuery());
+                    return metadata
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .findSeries(grouped.getQuery());
                 }
             });
 
@@ -188,7 +194,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<CountSeries> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return metadata.useGroup(grouped.getGroup()).countSeries(grouped.getQuery());
+                    return metadata
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .countSeries(grouped.getQuery());
                 }
             });
 
@@ -199,7 +207,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                     throws Exception {
                     final RpcWriteSeries query = grouped.getQuery();
                     return metadata
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .write(query.getSeries(), query.getRange());
                 }
             });
@@ -209,7 +217,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<DeleteSeries> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return metadata.useGroup(grouped.getGroup()).deleteSeries(grouped.getQuery());
+                    return metadata
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .deleteSeries(grouped.getQuery());
                 }
             });
 
@@ -218,7 +228,9 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 @Override
                 public AsyncFuture<TagKeyCount> handle(final GroupedQuery<RangeFilter> grouped)
                     throws Exception {
-                    return suggest.useGroup(grouped.getGroup()).tagKeyCount(grouped.getQuery());
+                    return suggest
+                        .useGroup(grouped.getGroup().orElse(null))
+                        .tagKeyCount(grouped.getQuery());
                 }
             });
 
@@ -229,7 +241,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                     throws Exception {
                     final RpcTagSuggest query = grouped.getQuery();
                     return suggest
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .tagSuggest(query.getFilter(), query.getMatch(), query.getKey(),
                             query.getValue());
                 }
@@ -242,7 +254,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                     throws Exception {
                     final RpcKeySuggest query = grouped.getQuery();
                     return suggest
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .keySuggest(query.getFilter(), query.getMatch(), query.getKey());
                 }
             });
@@ -255,7 +267,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 ) throws Exception {
                     final RpcSuggestTagValues query = grouped.getQuery();
                     return suggest
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .tagValuesSuggest(query.getFilter(), query.getExclude(),
                             query.getGroupLimit());
                 }
@@ -269,7 +281,7 @@ public class NativeRpcProtocolServer implements LifeCycles {
                 ) throws Exception {
                     final RpcSuggestTagValue query = grouped.getQuery();
                     return suggest
-                        .useGroup(grouped.getGroup())
+                        .useGroup(grouped.getGroup().orElse(null))
                         .tagValueSuggest(query.getFilter(), query.getKey());
                 }
             });
