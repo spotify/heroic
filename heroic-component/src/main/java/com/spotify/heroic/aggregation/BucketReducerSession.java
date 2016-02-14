@@ -46,6 +46,7 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
 
     private final MetricType out;
     private final long size;
+    private final long offset;
     private final List<B> buckets;
     private final Function<B, Metric> bucketConverter;
 
@@ -57,6 +58,7 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
     ) {
         this.out = out;
         this.size = size;
+        this.offset = range.getStart();
         this.buckets = buildBuckets(range, size, bucketBuilder);
         this.bucketConverter = bucketConverter;
     }
@@ -91,7 +93,7 @@ public class BucketReducerSession<B extends Bucket> implements ReducerSession {
                 continue;
             }
 
-            long i = m.getTimestamp() / size;
+            long i = (m.getTimestamp() - offset) / size;
 
             if (i < 0 || i >= buckets.size()) {
                 continue;
