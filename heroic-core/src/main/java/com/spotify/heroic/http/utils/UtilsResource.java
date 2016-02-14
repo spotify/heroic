@@ -42,11 +42,8 @@ public class UtilsResource {
     @GET
     @Path("wait")
     public void wait(@Suspended final AsyncResponse response) {
-        lifecycle.register("client wait", new HeroicLifeCycle.StartupHook() {
-            @Override
-            public void onStartup(HeroicLifeCycle.Context context) throws Exception {
-                response.resume(Response.status(Response.Status.OK).entity("started").build());
-            }
+        lifecycle.register("client wait", (HeroicLifeCycle.Context context) -> {
+            response.resume(Response.status(Response.Status.OK).entity("started").build());
         });
     }
 }

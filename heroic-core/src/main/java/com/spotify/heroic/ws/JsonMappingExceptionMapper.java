@@ -28,10 +28,8 @@ import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 import java.util.function.Consumer;
 
-@Provider
 public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingException> {
     @Inject
     public JsonMappingExceptionMapper() {
@@ -67,8 +65,8 @@ public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingEx
             }
         }
 
-        if (e.getCause() instanceof Validation.FieldError) {
-            final Validation.FieldError f = (Validation.FieldError) e.getCause();
+        if (e.getCause() instanceof Validation.MissingField) {
+            final Validation.MissingField f = (Validation.MissingField) e.getCause();
             field.accept(f.getName());
         }
 

@@ -30,8 +30,6 @@ import lombok.Data;
 
 import java.util.Optional;
 
-import static java.util.Optional.empty;
-
 @Data
 public class MetadataKeySuggest {
     private static final int DEFAULT_LIMIT = 10;

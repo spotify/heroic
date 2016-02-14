@@ -22,7 +22,6 @@
 package com.spotify.heroic;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.dagger.PrimaryScope;
@@ -54,8 +53,6 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
@@ -272,9 +269,6 @@ public class HeroicServer implements LifeCycles {
         if (enableCors) {
             c.register(new CorsResponseFilter(corsAllowOrigin.orElse(DEFAULT_CORS_ALLOW_ORIGIN)));
         }
-
-        c.register(new JacksonJsonProvider(mapper), MessageBodyReader.class,
-            MessageBodyWriter.class);
 
         log.info("Loaded {} resource(s)", count);
         return c;

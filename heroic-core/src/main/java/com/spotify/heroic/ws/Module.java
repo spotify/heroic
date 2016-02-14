@@ -57,6 +57,12 @@ public class Module implements HeroicModule {
         JsonParseExceptionMapper jsonParseExceptionMapper();
 
         WebApplicationExceptionMapper webApplicationExceptionMapper();
+
+        ValidationBodyErrorMapper validationBodyErrorMapper();
+
+        JacksonMessageBodyReader jacksonMessageBodyReader();
+
+        JacksonMessageBodyWriter jacksonMessageBodyWriter();
     }
 
     static class E implements HeroicModule.Entry {
@@ -79,7 +85,10 @@ public class Module implements HeroicModule {
                     w.queryStateExceptionMapper(),
                     w.jsonMappingExceptionMapper(),
                     w.jsonParseExceptionMapper(),
-                    w.webApplicationExceptionMapper()
+                    w.webApplicationExceptionMapper(),
+                    w.validationBodyErrorMapper(),
+                    w.jacksonMessageBodyReader(),
+                    w.jacksonMessageBodyWriter()
                 );
                 // @formatter:on
             });

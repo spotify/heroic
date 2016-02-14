@@ -19,32 +19,26 @@
  * under the License.
  */
 
-package com.spotify.heroic.http.metadata;
+package com.spotify.heroic.ws;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.filter.Filter;
-import lombok.Data;
+import com.spotify.heroic.common.Validation;
 
-import java.util.Optional;
+import javax.inject.Inject;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
 
-@Data
-public class MetadataTagKeySuggest {
-    private static final int DEFAULT_LIMIT = 10;
+public class ValidationBodyErrorMapper implements ExceptionMapper<Validation.MissingBody> {
+    @Inject
+    public ValidationBodyErrorMapper() {
+    }
 
-    private final Optional<Filter> filter;
-    private final Optional<QueryDateRange> range;
-    private final int limit;
-
-    @JsonCreator
-    public MetadataTagKeySuggest(
-        @JsonProperty("filter") Optional<Filter> filter,
-        @JsonProperty("range") Optional<QueryDateRange> range,
-        @JsonProperty("limit") Optional<Integer> limit
-    ) {
-        this.filter = filter;
-        this.range = range;
-        this.limit = limit.orElse(DEFAULT_LIMIT);
+    @Override
+    public Response toResponse(Validation.MissingBody e) {
+        return Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(new JsonErrorMessage("missing request body", Response.Status.BAD_REQUEST, ""))
+            .type(MediaType.APPLICATION_JSON)
+            .build();
     }
 }

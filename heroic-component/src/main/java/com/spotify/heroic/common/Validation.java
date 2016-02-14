@@ -27,50 +27,34 @@ import java.util.Optional;
 
 public interface Validation {
     /**
-     * Check that the given field is non-null.
-     *
-     * @param object The field value to check.
-     * @param <T> The type of the field
-     * @return The object, if non null.
-     * @throws com.spotify.heroic.common.Validation.BodyError if field is null.
-     */
-    static <T> T bodyNotNull(T object) {
-        if (object == null) {
-            throw new BodyError("body must be present");
-        }
-
-        return object;
-    }
-
-    /**
      * Check that the given field is present.
      *
      * @param object The field value to check.
      * @param name The name of the field.
      * @param <T> The type of the field
      * @return The object, if present.
-     * @throws com.spotify.heroic.common.Validation.FieldError if field is not present.
+     * @throws com.spotify.heroic.common.Validation.MissingField if field is not present.
      */
     static <T> T fieldIsPresent(Optional<T> object, String name) {
         if (!object.isPresent()) {
-            throw new FieldError(name, "must be present");
+            throw new MissingField(name, "must be present");
         }
 
         return object.get();
     }
 
     @Data
-    class BodyError extends RuntimeException {
-        public BodyError(final String message) {
+    class MissingBody extends RuntimeException {
+        public MissingBody(final String message) {
             super(message);
         }
     }
 
     @Data
-    class FieldError extends RuntimeException {
+    class MissingField extends RuntimeException {
         private final String name;
 
-        public FieldError(final String name, final String message) {
+        public MissingField(final String name, final String message) {
             super(message);
             this.name = name;
         }

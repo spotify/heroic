@@ -60,7 +60,7 @@ public class ClusterResource {
      * Encode/Decode functions, helpful when interacting with cassandra through cqlsh.
      */
     @GET
-    @Path("/status")
+    @Path("status")
     public Response status() {
         final List<ClusterNodeStatus> nodes = convert(cluster.getNodes());
         final ClusterStatus status = new ClusterStatus(nodes, cluster.getStatistics());
@@ -79,15 +79,10 @@ public class ClusterResource {
     }
 
     private static final Resume<Void, DataResponse<Boolean>> ADD_NODE =
-        new Resume<Void, DataResponse<Boolean>>() {
-            @Override
-            public DataResponse<Boolean> resume(Void value) throws Exception {
-                return new DataResponse<>(true);
-            }
-        };
+        (Void value) -> new DataResponse<>(true);
 
     @POST
-    @Path("/nodes")
+    @Path("nodes")
     public void addNode(@Suspended AsyncResponse response, URI uri) {
         AsyncFuture<Void> callback = cluster.addStaticNode(uri);
         httpAsync.bind(response, callback, ADD_NODE);

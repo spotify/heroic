@@ -54,7 +54,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-@Path("/query")
+@Path("query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
@@ -73,7 +73,7 @@ public class QueryResource {
         CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery>build();
 
     @POST
-    @Path("/metrics/stream")
+    @Path("metrics/stream")
     public List<StreamId> metricsStream(
         @QueryParam("backend") String backendGroup, QueryMetrics query
     ) {
@@ -93,7 +93,7 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics/stream/{id}")
+    @Path("metrics/stream/{id}")
     public void metricsStreamId(
         @Suspended final AsyncResponse response, @PathParam("id") final UUID id
     ) {
@@ -117,7 +117,7 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics")
+    @Path("metrics")
     @Consumes(MediaType.TEXT_PLAIN)
     public void metricsText(
         @Suspended final AsyncResponse response, @QueryParam("group") String group, String query
@@ -131,7 +131,7 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics")
+    @Path("metrics")
     @Consumes(MediaType.APPLICATION_JSON)
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("group") String group,
@@ -146,7 +146,7 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/batch")
+    @Path("batch")
     public void metrics(
         @Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
         final QueryBatch query

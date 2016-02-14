@@ -29,8 +29,6 @@ import lombok.Data;
 
 import java.util.Optional;
 
-import static java.util.Optional.empty;
-
 @Data
 public class MetadataCount {
     private final Optional<Filter> filter;

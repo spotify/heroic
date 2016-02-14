@@ -33,8 +33,6 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
-import static java.util.Optional.empty;
-
 @Data
 @RequiredArgsConstructor(access = AccessLevel.NONE)
 public class MetadataTagValuesSuggest {
