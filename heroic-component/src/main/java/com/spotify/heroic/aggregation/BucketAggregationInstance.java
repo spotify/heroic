@@ -82,36 +82,34 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     private final class Session implements AggregationSession {
         private final LongAdder sampleSize = new LongAdder();
 
-        private final Set<Series> series;
-
         private final List<B> buckets;
 
         private final long offset;
 
         @Override
         public void updatePoints(
-            Map<String, String> group, Set<Series> series, List<Point> values
+            Map<String, String> group, List<Point> values
         ) {
             feed(MetricType.POINT, values, (bucket, m) -> bucket.updatePoint(group, m));
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, Set<Series> series, List<Event> values
+            Map<String, String> group, List<Event> values
         ) {
             feed(MetricType.EVENT, values, (bucket, m) -> bucket.updateEvent(group, m));
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, Set<Series> series, List<Spread> values
+            Map<String, String> group, List<Spread> values
         ) {
             feed(MetricType.SPREAD, values, (bucket, m) -> bucket.updateSpread(group, m));
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+            Map<String, String> group, List<MetricGroup> values
         ) {
             feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(group, m));
         }
@@ -194,7 +192,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
             final Statistics statistics =
                 new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
             final List<AggregationData> updates =
-                ImmutableList.of(new AggregationData(EMPTY_GROUP, series, metrics));
+                ImmutableList.of(new AggregationData(EMPTY_GROUP, metrics));
             return new AggregationResult(updates, statistics);
         }
     }
@@ -217,8 +215,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         }
 
         final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
-
-        return new AggregationTraversal(out, session(range, series));
+        return new AggregationTraversal(out, session(range));
     }
 
     @Override
@@ -236,9 +233,9 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    public Session session(final DateRange range, final Set<Series> series) {
+    public Session session(final DateRange range) {
         final List<B> buckets = buildBuckets(range, size);
-        return new Session(series, buckets, range.start());
+        return new Session(buckets, range.start());
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {

@@ -31,7 +31,6 @@ import com.spotify.heroic.aggregation.AggregationTraversal;
 import com.spotify.heroic.aggregation.ReducerResult;
 import com.spotify.heroic.aggregation.ReducerSession;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
@@ -43,7 +42,6 @@ import lombok.Data;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -89,8 +87,9 @@ public class FilterKInstanceImpl implements FilterKInstance {
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        final AggregationSession child = of.session(states, range).getSession();
-        return new AggregationTraversal(states, new Session(k, filterType, child));
+        final AggregationTraversal traversal = of.session(states, range);
+        return new AggregationTraversal(traversal.getStates(),
+            new Session(k, filterType, traversal.getSession()));
     }
 
     @Override
@@ -125,30 +124,30 @@ public class FilterKInstanceImpl implements FilterKInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, Set<Series> series, List<Point> values
+            Map<String, String> group, List<Point> values
         ) {
-            childSession.updatePoints(group, series, values);
+            childSession.updatePoints(group, values);
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, Set<Series> series, List<Event> values
+            Map<String, String> group, List<Event> values
         ) {
-            childSession.updateEvents(group, series, values);
+            childSession.updateEvents(group, values);
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, Set<Series> series, List<Spread> values
+            Map<String, String> group, List<Spread> values
         ) {
-            childSession.updateSpreads(group, series, values);
+            childSession.updateSpreads(group, values);
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+            Map<String, String> group, List<MetricGroup> values
         ) {
-            childSession.updateGroup(group, series, values);
+            childSession.updateGroup(group, values);
         }
 
         @Override
@@ -164,7 +163,7 @@ public class FilterKInstanceImpl implements FilterKInstance {
                 .result()
                 .getResult()
                 .stream()
-                .map(a -> new AggregationData(a.getGroup(), a.getSeries(), a.getMetrics()))
+                .map(a -> new AggregationData(a.getGroup(), a.getMetrics()))
                 .map(a -> new FilterableKMetrics<>(a, a::getMetrics))
                 .collect(Collectors.toList());
         }

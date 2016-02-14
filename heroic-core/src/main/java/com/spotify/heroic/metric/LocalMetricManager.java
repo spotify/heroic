@@ -58,7 +58,9 @@ import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -236,10 +238,13 @@ public class LocalMetricManager implements MetricManager {
 
                 final List<Callable<AsyncFuture<FetchData>>> fetches = new ArrayList<>();
 
+                final Map<Map<String, String>, Set<Series>> lookup = new HashMap<>();
+
                 /* setup fetches */
 
                 for (final AggregationState state : traversal.getStates()) {
                     final Set<Series> series = state.getSeries();
+                    lookup.put(state.getKey(), series);
 
                     if (series.isEmpty()) {
                         continue;
@@ -268,7 +273,7 @@ public class LocalMetricManager implements MetricManager {
 
                 if (options.isTracing()) {
                     // tracing enabled, keeps track of each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session) {
+                    collector = new ResultCollector(watcher, aggregation, session, lookup) {
                         final ConcurrentLinkedQueue<QueryTrace> traces =
                             new ConcurrentLinkedQueue<>();
 
@@ -286,7 +291,7 @@ public class LocalMetricManager implements MetricManager {
                     };
                 } else {
                     // very limited tracing, does not collected each individual FetchData trace.
-                    collector = new ResultCollector(watcher, aggregation, session) {
+                    collector = new ResultCollector(watcher, aggregation, session, lookup) {
                         @Override
                         public QueryTrace buildTrace() {
                             return new QueryTrace(QUERY, w.elapsed(TimeUnit.NANOSECONDS));
@@ -475,12 +480,12 @@ public class LocalMetricManager implements MetricManager {
         final FetchQuotaWatcher watcher;
         final AggregationInstance aggregation;
         final AggregationSession session;
+        final Map<Map<String, String>, Set<Series>> lookup;
 
         @Override
         public void resolved(FetchData result) throws Exception {
             for (final MetricCollection g : result.getGroups()) {
-                g.updateAggregation(session, result.getSeries().getTags(),
-                    ImmutableSet.of(result.getSeries()));
+                g.updateAggregation(session, result.getSeries().getTags());
             }
         }
 
@@ -525,7 +530,14 @@ public class LocalMetricManager implements MetricManager {
                     continue;
                 }
 
-                final SeriesValues series = SeriesValues.fromSeries(group.getSeries().iterator());
+                final Set<Series> s = lookup.get(group.getGroup());
+
+                if (s == null) {
+                    throw new IllegalStateException(
+                        "Series not available for result group: " + group.getGroup());
+                }
+
+                final SeriesValues series = SeriesValues.fromSeries(s.iterator());
 
                 groups.add(new ResultGroup(group.getGroup(), series, group.getMetrics(),
                     aggregation.cadence()));

@@ -2,7 +2,6 @@ package com.spotify.heroic.aggregation.simple;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
@@ -53,14 +52,10 @@ public class FilterKAggregationTest {
 
         final AggregationSession session = b1.session(states, new DateRange(0, 10000)).getSession();
 
-        session.updatePoints(s4.getTags(), ImmutableSet.of(s4),
-            ImmutableList.of(new Point(1, 1.0)));
-        session.updatePoints(s3.getTags(), ImmutableSet.of(s3),
-            ImmutableList.of(new Point(2, 2.0)));
-        session.updatePoints(s2.getTags(), ImmutableSet.of(s2),
-            ImmutableList.of(new Point(3, 3.0)));
-        session.updatePoints(s1.getTags(), ImmutableSet.of(s1),
-            ImmutableList.of(new Point(4, 4.0)));
+        session.updatePoints(s4.getTags(), ImmutableList.of(new Point(1, 1.0)));
+        session.updatePoints(s3.getTags(), ImmutableList.of(new Point(2, 2.0)));
+        session.updatePoints(s2.getTags(), ImmutableList.of(new Point(3, 3.0)));
+        session.updatePoints(s1.getTags(), ImmutableList.of(new Point(4, 4.0)));
 
         /* Before the time series reach the bottomk/topk aggregation, the aggregated areas should be
            {empty: 1, lon: 2, sto: 7}. And we apply topk(2) | bottomk(1) so we expect lon to be

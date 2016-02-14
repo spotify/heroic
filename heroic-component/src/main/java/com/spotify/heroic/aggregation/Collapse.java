@@ -62,7 +62,7 @@ public class Collapse implements Aggregation {
 
         final Optional<List<String>> of = this.of.map(o -> {
             final ImmutableSet.Builder<String> b = ImmutableSet.builder();
-            b.addAll(o).addAll(context.requiredTags()).addAll(instance.requiredTags());
+            b.addAll(o).addAll(context.requiredTags());
             return ImmutableList.copyOf(b.build());
         });
 

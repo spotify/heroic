@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import lombok.Data;
@@ -16,7 +15,6 @@ import org.mockito.Mockito;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class BucketAggregationTest {
     public final class IterableBuilder {
@@ -73,7 +71,6 @@ public class BucketAggregationTest {
     }
 
     final Map<String, String> group = ImmutableMap.of();
-    final Set<Series> series = ImmutableSet.of();
     final List<AggregationState> states = ImmutableList.of();
 
     @Test
@@ -105,7 +102,7 @@ public class BucketAggregationTest {
         final BucketAggregationInstance<TestBucket> a = setup(1000, extent);
         final AggregationSession session =
             a.session(states, new DateRange(1000, 3000)).getSession();
-        session.updatePoints(group, series, input);
+        session.updatePoints(group, input);
 
         final AggregationResult result = session.result();
 
@@ -117,7 +114,7 @@ public class BucketAggregationTest {
         final BucketAggregationInstance<TestBucket> a = setup(999, 499);
         final AggregationSession session =
             a.session(states, new DateRange(1000, 2998)).getSession();
-        session.updatePoints(group, series,
+        session.updatePoints(group,
             build().add(501, 1.0).add(502, 1.0).add(1000, 1.0).add(1001, 1.0).result());
 
         final AggregationResult result = session.result();

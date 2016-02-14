@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricGroup;
@@ -140,30 +139,30 @@ public class ChainInstance implements AggregationInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, Set<Series> series, List<Point> values
+            Map<String, String> group, List<Point> values
         ) {
-            first.updatePoints(group, series, values);
+            first.updatePoints(group, values);
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, Set<Series> series, List<Event> values
+            Map<String, String> group, List<Event> values
         ) {
-            first.updateEvents(group, series, values);
+            first.updateEvents(group, values);
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, Set<Series> series, List<Spread> values
+            Map<String, String> group, List<Spread> values
         ) {
-            first.updateSpreads(group, series, values);
+            first.updateSpreads(group, values);
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+            Map<String, String> group, List<MetricGroup> values
         ) {
-            first.updateGroup(group, series, values);
+            first.updateGroup(group, values);
         }
 
         @Override
@@ -174,7 +173,7 @@ public class ChainInstance implements AggregationInstance {
 
             for (final AggregationSession session : rest) {
                 for (final AggregationData u : current) {
-                    u.getMetrics().updateAggregation(session, u.getGroup(), u.getSeries());
+                    u.getMetrics().updateAggregation(session, u.getGroup());
                 }
 
                 final AggregationResult next = session.result();

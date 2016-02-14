@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
@@ -38,7 +37,6 @@ import lombok.ToString;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -106,37 +104,37 @@ public class PartitionInstance implements AggregationInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, Set<Series> series, List<Point> values
+            Map<String, String> group, List<Point> values
         ) {
             for (final AggregationSession s : sessions) {
-                s.updatePoints(group, series, values);
+                s.updatePoints(group, values);
             }
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, Set<Series> series, List<Event> values
+            Map<String, String> group, List<Event> values
         ) {
             for (final AggregationSession s : sessions) {
-                s.updateEvents(group, series, values);
+                s.updateEvents(group, values);
             }
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, Set<Series> series, List<Spread> values
+            Map<String, String> group, List<Spread> values
         ) {
             for (final AggregationSession s : sessions) {
-                s.updateSpreads(group, series, values);
+                s.updateSpreads(group, values);
             }
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+            Map<String, String> group, List<MetricGroup> values
         ) {
             for (final AggregationSession s : sessions) {
-                s.updateGroup(group, series, values);
+                s.updateGroup(group, values);
             }
         }
 

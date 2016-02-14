@@ -102,10 +102,10 @@ public class QueryMetricsResponse {
         void writeKey(JsonGenerator g, final SortedSet<String> keys) throws IOException {
             g.writeFieldName("key");
 
-            if (keys.size() > 1) {
-                g.writeNull();
-            } else {
+            if (keys.size() == 1) {
                 g.writeString(keys.iterator().next());
+            } else {
+                g.writeNull();
             }
         }
 

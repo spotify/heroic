@@ -96,16 +96,18 @@ public abstract class GroupingAggregation implements AggregationInstance {
         final Map<Map<String, String>, Set<Series>> output = new HashMap<>();
 
         for (final AggregationState state : states) {
-            final Map<String, String> k = key(state.getKey());
+            for (final Series s : state.getSeries()) {
+                final Map<String, String> k = key(s.getTags());
 
-            Set<Series> series = output.get(k);
+                Set<Series> series = output.get(k);
 
-            if (series == null) {
-                series = new HashSet<Series>();
-                output.put(k, series);
+                if (series == null) {
+                    series = new HashSet<Series>();
+                    output.put(k, series);
+                }
+
+                series.add(s);
             }
-
-            series.addAll(state.getSeries());
         }
 
         return output;
@@ -229,30 +231,30 @@ public abstract class GroupingAggregation implements AggregationInstance {
 
         @Override
         public void updatePoints(
-            Map<String, String> group, Set<Series> series, List<Point> values
+            Map<String, String> group, List<Point> values
         ) {
-            session(group).updatePoints(group, series, values);
+            session(group).updatePoints(group, values);
         }
 
         @Override
         public void updateEvents(
-            Map<String, String> group, Set<Series> series, List<Event> values
+            Map<String, String> group, List<Event> values
         ) {
-            session(group).updateEvents(group, series, values);
+            session(group).updateEvents(group, values);
         }
 
         @Override
         public void updateSpreads(
-            Map<String, String> group, Set<Series> series, List<Spread> values
+            Map<String, String> group, List<Spread> values
         ) {
-            session(group).updateSpreads(group, series, values);
+            session(group).updateSpreads(group, values);
         }
 
         @Override
         public void updateGroup(
-            Map<String, String> group, Set<Series> series, List<MetricGroup> values
+            Map<String, String> group, List<MetricGroup> values
         ) {
-            session(group).updateGroup(group, series, values);
+            session(group).updateGroup(group, values);
         }
 
         private AggregationSession session(final Map<String, String> group) {
@@ -289,7 +291,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
                         groups.put(key, result);
                     }
 
-                    result.series.addAll(data.getSeries());
                     result.values.add(metrics.getData());
                 }
             }
@@ -300,7 +301,7 @@ public abstract class GroupingAggregation implements AggregationInstance {
                 final ResultKey k = e.getKey();
                 final ResultValues v = e.getValue();
                 final MetricCollection metrics = MetricCollection.mergeSorted(k.type, v.values);
-                data.add(new AggregationData(k.group, v.series, metrics));
+                data.add(new AggregationData(k.group, metrics));
             }
 
             return new AggregationResult(data, statistics);
@@ -314,7 +315,6 @@ public abstract class GroupingAggregation implements AggregationInstance {
     }
 
     private static class ResultValues {
-        final Set<Series> series = new HashSet<>();
         final List<List<? extends Metric>> values = new ArrayList<>();
     }
 }

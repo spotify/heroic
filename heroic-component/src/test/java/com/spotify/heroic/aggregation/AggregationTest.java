@@ -47,8 +47,9 @@ public class AggregationTest {
     @Test
     public void testTagElision() {
         final Aggregation g1 = new Group(Optional.of(ImmutableList.of("foo")), Optional.of(a));
-        final Aggregation g2 = new Group(Optional.of(ImmutableList.of("bar")), Optional.of(
-            new Chain(ImmutableList.of(
+        final Aggregation g2 =
+            new Group(Optional.of(ImmutableList.of("bar")), Optional.of(new Chain(ImmutableList.of(
+                // inner groups should _not_ force tags elision
                 new Group(Optional.of(ImmutableList.of("baz")), Optional.of(a))))));
 
         final AggregationInstance instance =
@@ -62,10 +63,9 @@ public class AggregationTest {
                 .getChain()
                 .get(0);
 
-        assertEquals(Optional.of(ImmutableSet.of("foo", "bar", "baz")),
+        assertEquals(Optional.of(ImmutableSet.of("foo", "bar")),
             g1i.getOf().map(ImmutableSet::copyOf));
-        assertEquals(Optional.of(ImmutableSet.of("bar", "baz")),
-            g2i.getOf().map(ImmutableSet::copyOf));
+        assertEquals(Optional.of(ImmutableSet.of("bar")), g2i.getOf().map(ImmutableSet::copyOf));
         assertEquals(Optional.of(ImmutableSet.of("baz")), g2i1i.getOf().map(ImmutableSet::copyOf));
     }
 }

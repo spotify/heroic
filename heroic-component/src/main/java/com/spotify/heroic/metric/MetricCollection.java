@@ -27,14 +27,12 @@ import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.ReducerSession;
-import com.spotify.heroic.common.Series;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -95,7 +93,7 @@ public abstract class MetricCollection {
      * Update the given aggregation with the content of this collection.
      */
     public abstract void updateAggregation(
-        final AggregationSession session, final Map<String, String> tags, final Set<Series> series
+        final AggregationSession session, final Map<String, String> tags
     );
 
     /**
@@ -178,9 +176,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> tags
         ) {
-            session.updatePoints(tags, series, adapt());
+            session.updatePoints(tags, adapt());
         }
 
         @Override
@@ -206,9 +204,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> tags
         ) {
-            session.updateEvents(tags, series, adapt());
+            session.updateEvents(tags, adapt());
         }
 
         @Override
@@ -234,9 +232,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> tags
         ) {
-            session.updateSpreads(tags, series, adapt());
+            session.updateSpreads(tags, adapt());
         }
 
         @Override
@@ -262,9 +260,9 @@ public abstract class MetricCollection {
 
         @Override
         public void updateAggregation(
-            AggregationSession session, Map<String, String> tags, Set<Series> series
+            AggregationSession session, Map<String, String> tags
         ) {
-            session.updateGroup(tags, series, adapt());
+            session.updateGroup(tags, adapt());
         }
 
         @Override
