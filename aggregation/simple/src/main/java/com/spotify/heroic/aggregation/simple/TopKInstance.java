@@ -32,40 +32,41 @@ import com.spotify.heroic.common.DateRange;
 import java.util.List;
 
 public class TopKInstance implements FilterKInstance {
-    private final FilterKInstanceImpl filterK;
+    private final FilterKAreaStrategy strategy;
+    private final FilterAggregation aggregation;
 
     @JsonCreator
     public TopKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
-        filterK = new FilterKInstanceImpl(k, FilterKInstanceImpl.FilterType.TOP, of);
+        strategy = new FilterKAreaStrategy(FilterKAreaType.TOP, k);
+        aggregation = new FilterAggregation(strategy, of);
     }
 
     @Override
     public long estimate(DateRange range) {
-        return filterK.estimate(range);
+        return aggregation.estimate(range);
     }
 
     @Override
     public long cadence() {
-        return filterK.cadence();
+        return aggregation.cadence();
     }
 
     @Override
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
-        return filterK.session(states, range);
+        return aggregation.session(states, range);
     }
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return filterK.reducer(range);
-    }
-
-    @Override
-    public long getK() {
-        return filterK.getK();
+        return aggregation.reducer(range);
     }
 
     @Override
     public AggregationInstance getOf() {
-        return filterK.getOf();
+        return aggregation.getOf();
+    }
+
+    public long getK() {
+        return strategy.getK();
     }
 }

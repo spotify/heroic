@@ -21,8 +21,21 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
+import java.util.Comparator;
 
-public interface FilterKInstance extends AggregationInstance {
-    AggregationInstance getOf();
+public enum FilterKAreaType {
+    // @formatter:off
+    TOP(((Comparator<Double>) Double::compare).reversed()),
+    BOTTOM(Double::compare);
+    // @formatter:on
+
+    private final Comparator<Double> comparator;
+
+    FilterKAreaType(Comparator<Double> comparator) {
+        this.comparator = comparator;
+    }
+
+    public int compare(double a, double b) {
+        return comparator.compare(a, b);
+    }
 }

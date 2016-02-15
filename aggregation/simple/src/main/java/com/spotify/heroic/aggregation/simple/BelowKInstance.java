@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
@@ -31,13 +29,12 @@ import com.spotify.heroic.common.DateRange;
 
 import java.util.List;
 
-public class BottomKInstance implements FilterKInstance {
-    private final FilterKAreaStrategy strategy;
+public class BelowKInstance implements FilterKInstance {
+    private final FilterKThresholdStrategy strategy;
     private final FilterAggregation aggregation;
 
-    @JsonCreator
-    public BottomKInstance(@JsonProperty("k") long k, @JsonProperty("of") AggregationInstance of) {
-        strategy = new FilterKAreaStrategy(FilterKAreaType.BOTTOM, k);
+    public BelowKInstance(double k, AggregationInstance of) {
+        strategy = new FilterKThresholdStrategy(FilterKThresholdType.BELOW, k);
         aggregation = new FilterAggregation(strategy, of);
     }
 
@@ -66,7 +63,7 @@ public class BottomKInstance implements FilterKInstance {
         return aggregation.getOf();
     }
 
-    public long getK() {
+    public double getK() {
         return strategy.getK();
     }
 }

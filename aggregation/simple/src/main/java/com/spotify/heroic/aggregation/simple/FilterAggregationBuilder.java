@@ -27,27 +27,21 @@ import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.grammar.AggregationValue;
 
-public abstract class FilterKAggregationBuilder<T extends Aggregation>
+public abstract class FilterAggregationBuilder<T extends Aggregation>
     extends AbstractAggregationDSL {
 
-    public FilterKAggregationBuilder(AggregationFactory factory) {
+    public FilterAggregationBuilder(AggregationFactory factory) {
         super(factory);
     }
 
     @Override
     public Aggregation build(AggregationArguments args) {
-        final int k = args
-            .positional(Long.class)
-            .orElseThrow(() -> new IllegalArgumentException("missing required argument 'k'"))
-            .intValue();
+        final AggregationValue of = args.keyword("of", AggregationValue.class)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "missing required child aggregation 'of'"));
 
-        final AggregationValue of = args
-            .positional(AggregationValue.class)
-            .orElseThrow(
-                () -> new IllegalArgumentException("missing required child aggregation 'of'"));
-
-        return buildAggregation(k, asAggregation(of));
+        return buildAggregation(args, asAggregation(of));
     }
 
-    protected abstract T buildAggregation(long k, Aggregation of);
+    protected abstract T buildAggregation(AggregationArguments args, Aggregation of);
 }
