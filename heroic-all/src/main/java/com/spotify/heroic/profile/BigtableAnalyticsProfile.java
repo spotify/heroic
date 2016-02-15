@@ -32,6 +32,7 @@ import com.spotify.heroic.metric.bigtable.credentials.ServiceAccountCredentialsB
 
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
@@ -42,24 +43,23 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final BigtableAnalyticsModule.Builder module = BigtableAnalyticsModule.builder();
 
-        params.get("bigtable-analytics.project").map(module::project);
-        params.get("bigtable-analytics.zone").map(module::zone);
-        params.get("bigtable-analytics.cluster").map(module::cluster);
+        params.get("project").map(module::project);
+        params.get("zone").map(module::zone);
+        params.get("cluster").map(module::cluster);
 
-        final String credentials =
-            params.get("bigtable-analytics.credential").orElse(DEFAULT_CREDENTIALS);
+        final String credentials = params.get("credential").orElse(DEFAULT_CREDENTIALS);
 
         switch (credentials) {
             case "json":
                 final JsonCredentialsBuilder.Builder j = JsonCredentialsBuilder.builder();
-                params.get("bigtable-analytics.json").map(Paths::get).ifPresent(j::path);
+                params.get("json").map(Paths::get).ifPresent(j::path);
                 module.credentials(j.build());
                 break;
             case "service-account":
                 final ServiceAccountCredentialsBuilder.Builder sa =
                     ServiceAccountCredentialsBuilder.builder();
-                params.get("bigtable-analytics.serviceAccount").ifPresent(sa::serviceAccount);
-                params.get("bigtable-analytics.keyFile").ifPresent(sa::keyFile);
+                params.get("serviceAccount").ifPresent(sa::serviceAccount);
+                params.get("keyFile").ifPresent(sa::keyFile);
                 module.credentials(sa.build());
                 break;
             case "compute-engine":
@@ -79,21 +79,26 @@ public class BigtableAnalyticsProfile extends HeroicProfileBase {
     }
 
     @Override
+    public Optional<String> scope() {
+        return Optional.of("bigtable-analytics");
+    }
+
+    @Override
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("bigtable-analytics.configure", "If set, will cause the cluster to be " +
+            parameter("configure", "If set, will cause the cluster to be " +
                     "automatically configured"),
-            parameter("bigtable-analytics.project", "Bigtable project to use", "<project>"),
-            parameter("bigtable-analytics.zone", "Bigtable zone to use", "<zone>"),
-            parameter("bigtable-analytics.cluster", "Bigtable cluster to use", "<cluster>"),
-            parameter("bigtable-analytics.credentials", "Credentials implementation to use, must " +
+            parameter("project", "Bigtable project to use", "<project>"),
+            parameter("zone", "Bigtable zone to use", "<zone>"),
+            parameter("cluster", "Bigtable cluster to use", "<cluster>"),
+            parameter("credentials", "Credentials implementation to use, must " +
                     "be one of: compute-engine (default), json, service-account", "<credentials>"),
-            parameter("bigtable-analytics.json", "Json file to use when using json credentials",
+            parameter("json", "Json file to use when using json credentials",
                     "<file>"),
-            parameter("bigtable-analytics.serviceAccount", "Service account to use when using " +
+            parameter("serviceAccount", "Service account to use when using " +
                     "service-account credentials", "<account>"),
-            parameter("bigtable-analytics.keyFile", "Key file to use when using service-account " +
+            parameter("keyFile", "Key file to use when using service-account " +
                 "credentials", "<file>")
         );
         // @formatter:on

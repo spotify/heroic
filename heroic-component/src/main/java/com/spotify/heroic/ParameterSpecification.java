@@ -44,11 +44,21 @@ public class ParameterSpecification {
         return new ParameterSpecification(name, description, Optional.of(metavar));
     }
 
-    public void printHelp(final PrintWriter out, final String prefix, final int width) {
+    public void printHelp(
+        final PrintWriter out, final String prefix, final int width
+    ) {
+        printHelp(out, prefix, width, Optional.empty());
+    }
+
+    public void printHelp(
+        final PrintWriter out, final String prefix, final int width, final Optional<String> scope
+    ) {
+        final String p = prefix + scope.map(s -> s + ".").orElse("");
+
         if (metavar.isPresent()) {
-            out.println(prefix + name + "=" + metavar.get());
+            out.println(p + name + "=" + metavar.get());
         } else {
-            out.println(prefix + name);
+            out.println(p + name);
         }
 
         printWrapped(out, prefix + "    ", width, description);

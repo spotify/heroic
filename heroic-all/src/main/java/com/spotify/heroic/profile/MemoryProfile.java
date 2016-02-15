@@ -42,6 +42,7 @@ import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
@@ -50,9 +51,8 @@ public class MemoryProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final HeroicConfig.Builder builder = HeroicConfig.builder();
 
-        final boolean elasticsearch = params.getBoolean("memory.elasticsearch").orElse(false);
-        final boolean synchronizedStorage =
-            params.getBoolean("memory.synchronizedStorage").orElse(false);
+        final boolean elasticsearch = params.getBoolean("elasticsearch").orElse(false);
+        final boolean synchronizedStorage = params.getBoolean("synchronizedStorage").orElse(false);
 
         if (!elasticsearch) {
             builder.metadata(MetadataManagerModule
@@ -109,6 +109,11 @@ public class MemoryProfile extends HeroicProfileBase {
     }
 
     @Override
+    public Optional<String> scope() {
+        return Optional.of("memory");
+    }
+
+    @Override
     public String description() {
         // @formatter:off
         return "Configures in-memory backends for everything (useful for integration/performance " +
@@ -120,8 +125,8 @@ public class MemoryProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("memory.elasticsearch", "If set, use real elasticsearch backends"),
-            parameter("memory.synchronized", "If set, synchronized storage for happens-before " +
+            parameter("elasticsearch", "If set, use real elasticsearch backends"),
+            parameter("synchronized", "If set, synchronized storage for happens-before " +
                     "behavior")
         );
         // @formatter:on

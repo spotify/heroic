@@ -31,6 +31,7 @@ import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.collectd.CollectdConsumerModule;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
@@ -39,10 +40,10 @@ public class CollectdConsumerProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final CollectdConsumerModule.Builder module = CollectdConsumerModule.builder();
 
-        params.get("collectd.host").ifPresent(module::host);
-        params.getInteger("collectd.port").ifPresent(module::port);
+        params.get("host").ifPresent(module::host);
+        params.getInteger("port").ifPresent(module::port);
         params
-            .get("collectd.pattern")
+            .get("pattern")
             .map(p -> new GrokProcessor(ImmutableMap.of(), p))
             .ifPresent(module::hostProcessor);
 
@@ -50,6 +51,11 @@ public class CollectdConsumerProfile extends HeroicProfileBase {
         return HeroicConfig.builder()
             .consumers(ImmutableList.<ConsumerModule.Builder>builder().add(module).build());
         // @formatter:on
+    }
+
+    @Override
+    public Optional<String> scope() {
+        return Optional.of("collectd");
     }
 
     @Override
@@ -61,8 +67,8 @@ public class CollectdConsumerProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("collectd.host", "Host to bind to", "<host>"),
-            parameter("collectd.port", "Port to bind to", "<port>")
+            parameter("host", "Host to bind to", "<host>"),
+            parameter("port", "Port to bind to", "<port>")
         );
         // @formatter:on
     }

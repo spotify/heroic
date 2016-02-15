@@ -33,6 +33,7 @@ import com.spotify.heroic.rpc.nativerpc.NativeRpcProtocolModule;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Optional;
 
 import static com.spotify.heroic.ParameterSpecification.parameter;
 
@@ -43,14 +44,14 @@ public class ClusterProfile extends HeroicProfileBase {
 
         module.protocols(ImmutableList.of(NativeRpcProtocolModule.builder().build()));
 
-        switch (params.get("cluster.discovery").orElse("static")) {
+        switch (params.get("discovery").orElse("static")) {
             case "static":
                 final List<URI> nodes = ImmutableList.copyOf(
-                    params.getAsList("cluster.host").stream().map(this::buildUri).iterator());
+                    params.getAsList("host").stream().map(this::buildUri).iterator());
                 module.discovery(new StaticListDiscoveryModule(nodes));
                 break;
             case "srv":
-                final List<String> records = params.getAsList("cluster.record");
+                final List<String> records = params.getAsList("record");
                 final SrvRecordDiscoveryModule.Builder sd =
                     SrvRecordDiscoveryModule.builder().records(records);
                 params.get("protocol").ifPresent(sd::protocol);
@@ -58,10 +59,10 @@ public class ClusterProfile extends HeroicProfileBase {
                 module.discovery(sd.build());
                 break;
             default:
-                throw new IllegalArgumentException("illegal value for cluster.discovery");
+                throw new IllegalArgumentException("illegal value for discovery");
         }
 
-        params.getBoolean("cluster.useLocal").ifPresent(module::useLocal);
+        params.getBoolean("useLocal").ifPresent(module::useLocal);
 
         // @formatter:off
         return HeroicConfig.builder().cluster(module);
@@ -77,6 +78,11 @@ public class ClusterProfile extends HeroicProfileBase {
     }
 
     @Override
+    public Optional<String> scope() {
+        return Optional.of("cluster");
+    }
+
+    @Override
     public String description() {
         return "Configured cluster and discovery method";
     }
@@ -85,15 +91,15 @@ public class ClusterProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("cluster.discovery", "Discovery method to use, valid are: static, srv",
+            parameter("discovery", "Discovery method to use, valid are: static, srv",
                     "<type>"),
-            parameter("cluster.host", "Host to add to list of static nodes to discover, can be " +
+            parameter("host", "Host to add to list of static nodes to discover, can be " +
                     "used multiple times", "<uri>"),
-            parameter("cluster.record", "Record to add to lookup through SRV, can be used " +
+            parameter("record", "Record to add to lookup through SRV, can be used " +
                     "multiple times", "<srv>"),
-            parameter("cluster.protocol", "Protocol to use for looked up SRV records, default: " +
+            parameter("protocol", "Protocol to use for looked up SRV records, default: " +
                     "nativerpc", "<protocol>"),
-            parameter("cluster.port", "Port to use for looked up SRV records, default: 1394",
+            parameter("port", "Port to use for looked up SRV records, default: 1394",
                 "<port>")
         );
         // @formatter:on

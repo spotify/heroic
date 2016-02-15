@@ -111,7 +111,7 @@ public class HeroicModules {
                 entry.getKey() + " - " + entry.getValue().description());
 
             for (final ParameterSpecification o : entry.getValue().options()) {
-                o.printHelp(out, "    ", 80);
+                o.printHelp(out, "    ", 80, entry.getValue().scope());
             }
 
             out.println();

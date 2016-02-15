@@ -535,7 +535,8 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         for (final HeroicProfile profile : profiles) {
             log.info("Loading profile '{}' (params: {})", profile.description(), params);
-            builder = builder.merge(profile.build(params));
+            final ExtraParameters p = profile.scope().map(params::scope).orElse(params);
+            builder = builder.merge(profile.build(p));
         }
 
         final ObjectMapper mapper = loading.configMapper();
