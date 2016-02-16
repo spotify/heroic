@@ -61,6 +61,6 @@ public class BottomK implements Aggregation {
 
     @Override
     public String toDSL() {
-        return String.format("%s(%d, %s)", NAME, k, of.toDSL());
+        return String.format("%s(%s, %d)", NAME, of.toDSL(), k);
     }
 }

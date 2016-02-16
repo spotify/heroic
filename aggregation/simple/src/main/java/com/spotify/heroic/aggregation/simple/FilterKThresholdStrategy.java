@@ -26,6 +26,7 @@ import com.spotify.heroic.metric.Point;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,8 +44,7 @@ public class FilterKThresholdStrategy implements FilterStrategy {
         return metrics
             .stream()
             .map(m -> new Extreme<>(m, filterType))
-            .filter(m -> m.getValue() != null)
-            .filter(m -> filterType.predicate(m.getValue(), k))
+            .filter(m -> m.getValue().map(v -> filterType.predicate(v, k)).orElse(false))
             .map(Extreme::getFilterableMetrics)
             .map(FilterableMetrics::getData)
             .collect(Collectors.toList());
@@ -57,14 +57,16 @@ public class FilterKThresholdStrategy implements FilterStrategy {
     @Data
     private static class Extreme<T> {
         private final FilterableMetrics<T> filterableMetrics;
-        private final Double value;
+        private final Optional<Double> value;
 
         public Extreme(FilterableMetrics<T> filterableMetrics, FilterKThresholdType filterType) {
             this.filterableMetrics = filterableMetrics;
             this.value = findExtreme(filterType, filterableMetrics.getMetricSupplier().get());
         }
 
-        private Double findExtreme(FilterKThresholdType filterType, MetricCollection metrics) {
+        private Optional<Double> findExtreme(
+            FilterKThresholdType filterType, MetricCollection metrics
+        ) {
             final Stream<Double> stream =
                 metrics.getDataAs(Point.class).stream().map(Point::getValue);
 

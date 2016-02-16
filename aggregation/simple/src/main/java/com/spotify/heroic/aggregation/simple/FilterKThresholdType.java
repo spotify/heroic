@@ -22,6 +22,7 @@
 package com.spotify.heroic.aggregation.simple;
 
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
@@ -44,8 +45,8 @@ public enum FilterKThresholdType {
         return predicate.apply(v, k);
     }
 
-    public Double findExtreme(Stream<Double> metrics) {
-        return metrics.min(comparator).get();
+    public Optional<Double> findExtreme(Stream<Double> metrics) {
+        return metrics.min(comparator);
     }
 }
 
