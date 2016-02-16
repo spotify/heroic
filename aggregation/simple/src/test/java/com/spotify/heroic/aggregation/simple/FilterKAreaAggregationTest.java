@@ -24,13 +24,12 @@ import java.util.Optional;
 import static org.junit.Assert.assertEquals;
 
 @RunWith(MockitoJUnitRunner.class)
-public class FilterKAggregationTest {
+public class FilterKAreaAggregationTest {
 
     @Test
-    public void testFilterKSession() {
-        final GroupingAggregation g1 =
-            new GroupInstance(Optional.of(ImmutableList.of("site", "host")),
-                EmptyInstance.INSTANCE);
+    public void testFilterKAreaSession() {
+        final GroupingAggregation g1 = new GroupInstance(
+            Optional.of(ImmutableList.of("site", "host")), EmptyInstance.INSTANCE);
         final GroupingAggregation g2 =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
         final ChainInstance chain = new ChainInstance(Optional.of(ImmutableList.of(g1, g2)));

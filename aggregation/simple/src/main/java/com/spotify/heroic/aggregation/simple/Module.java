@@ -72,6 +72,7 @@ public class Module implements HeroicModule {
             this.factory = factory;
         }
 
+        // @formatter:off
         @Override
         public void setup() {
             /* example aggregation, if used only returns zeroes. */
@@ -142,33 +143,115 @@ public class Module implements HeroicModule {
                 });
 
             c.register(TopK.NAME, TopK.class, TopKInstance.class,
-                new FilterKSerializer<TopKInstance>(s, aggregation) {
+                new FilterSerializer<TopKInstance>(aggregation) {
+                    final Serializer<Long> fixedLong = s.fixedLong();
+
                     @Override
-                    protected TopKInstance build(long k, AggregationInstance of) {
-                        return new TopKInstance(k, of);
+                    protected void serializeNext(SerialWriter buffer, TopKInstance value)
+                        throws IOException {
+                        fixedLong.serialize(buffer, value.getK());
                     }
-                }, new FilterKAggregationBuilder<TopK>(factory) {
+
                     @Override
-                    protected TopK buildAggregation(long k, Aggregation of) {
-                        return new TopK(k, of);
+                    protected TopKInstance deserializeNext(SerialReader buffer,
+                                                           AggregationInstance of)
+                        throws IOException {
+                        return new TopKInstance(fixedLong.deserialize(buffer), of);
+                    }
+                },
+                new FilterAggregationBuilder<TopK>(factory) {
+                    @Override
+                    protected TopK buildAggregation(AggregationArguments args, Aggregation of) {
+                        return new TopK(fetchK(args, Long.class), of);
+
                     }
                 });
 
             c.register(BottomK.NAME, BottomK.class, BottomKInstance.class,
-                new FilterKSerializer<BottomKInstance>(s, aggregation) {
+                new FilterSerializer<BottomKInstance>(aggregation) {
+                    final Serializer<Long> fixedLong = s.fixedLong();
+
                     @Override
-                    protected BottomKInstance build(long k, AggregationInstance of) {
-                        return new BottomKInstance(k, of);
+                    protected void serializeNext(SerialWriter buffer, BottomKInstance value)
+                        throws IOException {
+                        fixedLong.serialize(buffer, value.getK());
                     }
-                }, new FilterKAggregationBuilder<BottomK>(factory) {
+
                     @Override
-                    protected BottomK buildAggregation(long k, Aggregation of) {
-                        return new BottomK(k, of);
+                    protected BottomKInstance deserializeNext(SerialReader buffer,
+                                                              AggregationInstance of)
+                        throws IOException {
+                        return new BottomKInstance(fixedLong.deserialize(buffer), of);
+                    }
+                },
+                new FilterAggregationBuilder<BottomK>(factory) {
+                    @Override
+                    protected BottomK buildAggregation(AggregationArguments args,
+                                                       Aggregation of) {
+                        return new BottomK(fetchK(args, Long.class), of);
+
                     }
                 });
-        }
 
-        private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
+            c.register(AboveK.NAME, AboveK.class, AboveKInstance.class,
+                new FilterSerializer<AboveKInstance>(aggregation) {
+                    final Serializer<Double> fixedDouble = s.fixedDouble();
+
+                    @Override
+                    protected void serializeNext(SerialWriter buffer, AboveKInstance value)
+                        throws IOException {
+                        fixedDouble.serialize(buffer, value.getK());
+                    }
+
+                    @Override
+                    protected AboveKInstance deserializeNext(SerialReader buffer,
+                                                             AggregationInstance of)
+                        throws IOException {
+                        return new AboveKInstance(fixedDouble.deserialize(buffer), of);
+                    }
+                },
+                new FilterAggregationBuilder<AboveK>(factory) {
+                    @Override
+                    protected AboveK buildAggregation(AggregationArguments args,
+                                                      Aggregation of) {
+                        return new AboveK(fetchK(args, Double.class), of);
+                    }
+                });
+
+            c.register(BelowK.NAME, BelowK.class, BelowKInstance.class,
+                new FilterSerializer<BelowKInstance>(aggregation) {
+                    final Serializer<Double> fixedDouble = s.fixedDouble();
+
+                    @Override
+                    protected void serializeNext(SerialWriter buffer, BelowKInstance value)
+                        throws IOException {
+                        fixedDouble.serialize(buffer, value.getK());
+                    }
+
+                    @Override
+                    protected BelowKInstance deserializeNext(SerialReader buffer,
+                                                             AggregationInstance of)
+                        throws IOException {
+                        return new BelowKInstance(fixedDouble.deserialize(buffer), of);
+                    }
+                },
+                new FilterAggregationBuilder<BelowK>(factory) {
+                    @Override
+                    protected BelowK buildAggregation(AggregationArguments args,
+                                                      Aggregation of) {
+                        return new BelowK(fetchK(args, Double.class), of);
+                    }
+                });
+            }
+        // @formatter:on
+
+        private <T extends Number> T fetchK(AggregationArguments args, Class<T> doubleClass) {
+                return args.keyword("k", doubleClass)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "missing required argument 'k'"));
+            }
+
+            private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
             BiFunction<Long, Long, T> builder
         ) {
             final Serializer<Long> fixedLong = s.fixedLong();

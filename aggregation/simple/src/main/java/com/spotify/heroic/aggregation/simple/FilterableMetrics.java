@@ -21,8 +21,13 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
+import com.spotify.heroic.metric.MetricCollection;
+import lombok.Data;
 
-public interface FilterKInstance extends AggregationInstance {
-    AggregationInstance getOf();
+import java.util.function.Supplier;
+
+@Data
+public class FilterableMetrics<T> {
+    private final T data;
+    private final Supplier<MetricCollection> metricSupplier;
 }

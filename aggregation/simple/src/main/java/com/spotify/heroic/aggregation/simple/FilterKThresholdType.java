@@ -21,8 +21,31 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
+import java.util.Comparator;
+import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
-public interface FilterKInstance extends AggregationInstance {
-    AggregationInstance getOf();
+public enum FilterKThresholdType {
+    // @formatter:off
+    ABOVE((v, k) -> (v > k), ((Comparator<Double>) Double::compare).reversed()),
+    BELOW((v, k) -> (v < k), Double::compare);
+    // @formatter:off
+
+    private final Comparator<Double> comparator;
+    private final BiFunction<Double, Double, Boolean> predicate;
+
+    FilterKThresholdType(BiFunction<Double, Double, Boolean> predicate,
+                         Comparator<Double> comparator) {
+        this.predicate = predicate;
+        this.comparator = comparator;
+    }
+
+    public boolean predicate(double v, double k) {
+        return predicate.apply(v, k);
+    }
+
+    public Double findExtreme(Stream<Double> metrics) {
+        return metrics.min(comparator).get();
+    }
 }
+

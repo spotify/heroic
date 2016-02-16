@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import com.spotify.heroic.aggregation.AggregationInstance;
+import java.util.List;
 
-public interface FilterKInstance extends AggregationInstance {
-    AggregationInstance getOf();
+public interface FilterStrategy {
+     <T> List<T> filter(List<FilterableMetrics<T>> metrics);
 }
