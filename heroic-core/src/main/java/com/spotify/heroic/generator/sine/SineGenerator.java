@@ -31,9 +31,11 @@ import com.spotify.heroic.metric.Point;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.util.List;
+import java.util.Random;
 
 public class SineGenerator implements Generator {
+    final Random random = new Random();
+
     /**
      * The magnitude (height) of the sine-wave.
      */
@@ -49,14 +51,20 @@ public class SineGenerator implements Generator {
      */
     private final long step;
 
+    private final double jitter;
+
+    private final double offset;
+
     @Inject
     public SineGenerator(
         @Named("magnitude") double magnitude, @Named("period") Duration period,
-        @Named("step") Duration step
+        @Named("step") Duration step, @Named("jitter") double jitter, @Named("offset") double offset
     ) {
         this.magnitude = magnitude;
         this.period = period.toMilliseconds();
         this.step = step.toMilliseconds();
+        this.jitter = jitter;
+        this.offset = offset;
     }
 
     @Override
@@ -70,9 +78,20 @@ public class SineGenerator implements Generator {
 
         final DateRange rounded = range.rounded(1000);
 
+        final double fixed = random.nextDouble() * this.offset;
+
         for (long time = rounded.getStart(); time < rounded.getEnd(); time += step) {
             double offset = ((double) (time % period)) / (double) period;
-            double value = Math.sin(Math.PI * 2 * (offset + drift)) * magnitude;
+
+            final double jitter;
+
+            if (this.jitter != 0D) {
+                jitter = random.nextDouble() * this.jitter;
+            } else {
+                jitter = 0D;
+            }
+
+            double value = fixed + jitter + Math.sin(Math.PI * 2 * (offset + drift)) * magnitude;
             data.add(new Point(time, value));
         }
 

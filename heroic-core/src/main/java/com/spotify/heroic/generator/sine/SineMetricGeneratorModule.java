@@ -37,26 +37,34 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Optional.empty;
 
 public class SineMetricGeneratorModule implements MetricGeneratorModule {
-    public static final double DEFAULT_MAGNITUDE = 100.0D;
+    public static final double DEFAULT_MAGNITUDE = 100D;
     public static final Duration DEFAULT_PERIOD = Duration.of(1, TimeUnit.DAYS);
+    public static final double DEFAULT_JITTER = 50D;
+    public static final double DEFAULT_OFFSET = 1000D;
 
     private final Optional<String> id;
     private final double magnitude;
     private final Duration period;
     private final Duration step;
+    private final double jitter;
+    private final double offset;
 
     @JsonCreator
     public SineMetricGeneratorModule(
         @JsonProperty("id") Optional<String> id,
         @JsonProperty("magnitude") Optional<Double> magnitude,
         @JsonProperty("period") Optional<Duration> period,
-        @JsonProperty("step") Optional<Duration> step
+        @JsonProperty("step") Optional<Duration> step,
+        @JsonProperty("jitter") Optional<Double> jitter,
+        @JsonProperty("offset") Optional<Double> offset
     ) {
         this.id = id;
         this.magnitude = magnitude.orElse(DEFAULT_MAGNITUDE);
         this.period = period.orElse(DEFAULT_PERIOD);
         this.step = step.orElseGet(
             () -> Duration.of(this.period.toMilliseconds() / 100, TimeUnit.MILLISECONDS));
+        this.jitter = jitter.orElse(DEFAULT_JITTER);
+        this.offset = offset.orElse(DEFAULT_OFFSET);
     }
 
     @Override
@@ -107,9 +115,21 @@ public class SineMetricGeneratorModule implements MetricGeneratorModule {
         Duration step() {
             return step;
         }
+
+        @Provides
+        @Named("jitter")
+        double jitter() {
+            return jitter;
+        }
+
+        @Provides
+        @Named("offset")
+        double offset() {
+            return offset;
+        }
     }
 
     public static SineMetricGeneratorModule defaultInstance() {
-        return new SineMetricGeneratorModule(empty(), empty(), empty(), empty());
+        return new SineMetricGeneratorModule(empty(), empty(), empty(), empty(), empty(), empty());
     }
 }

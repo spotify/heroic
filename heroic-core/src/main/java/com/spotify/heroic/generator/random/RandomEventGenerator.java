@@ -29,7 +29,6 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.generator.Generator;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.Point;
 
 import javax.inject.Inject;
 import javax.inject.Named;
