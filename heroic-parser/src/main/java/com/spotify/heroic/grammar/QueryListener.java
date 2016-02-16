@@ -37,6 +37,7 @@ import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationPipeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionDurationContext;
+import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionFloatContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionIntegerContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionListContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionMinusContext;
@@ -345,6 +346,11 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitExpressionInteger(ExpressionIntegerContext ctx) {
         push(new IntValue(Long.parseLong(ctx.getText()), context(ctx)));
+    }
+
+    @Override
+    public void exitExpressionFloat(ExpressionFloatContext ctx) {
+        push(new DoubleValue(Double.parseDouble(ctx.getText()), context(ctx)));
     }
 
     @Override

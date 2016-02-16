@@ -70,6 +70,7 @@ expr
     | SNow                                                                #ExpressionNow
     | Duration                                                            #ExpressionDuration
     | Integer                                                             #ExpressionInteger
+    | Float                                                               #ExpressionFloat
     | string                                                              #ExpressionString
     | expr By expr                                                        #AggregationBy
     | expr By All                                                         #AggregationByAll
@@ -150,25 +151,17 @@ SKey : '$key' ;
 
 SNow : '$now' ;
 
-fragment
-Unit
-    : 'ms'
-    | 's'
-    | 'm'
-    | 'H' | 'h'
-    | 'd'
-    | 'w'
-    | 'M'
-    | 'y'
-    ;
-
 Duration
     : Integer Unit
     ;
 
 Integer
-    : '0'
-    | [1-9] [0-9]*
+    : Digits
+    ;
+
+Float
+    : Digits '.' Digits?
+    | '.' Digits
     ;
 
 fragment
@@ -185,6 +178,23 @@ StringCharacter
 fragment
 EscapeSequence
     : '\\' [btnfr"'\\]
+    ;
+
+fragment
+Unit
+    : 'ms'
+    | 's'
+    | 'm'
+    | 'H' | 'h'
+    | 'd'
+    | 'w'
+    | 'M'
+    | 'y'
+    ;
+
+fragment
+Digits
+    : [0-9]+
     ;
 
 WS : [ \t\n]+ -> skip ;
