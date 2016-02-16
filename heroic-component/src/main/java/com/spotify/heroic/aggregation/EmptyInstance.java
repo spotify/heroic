@@ -37,6 +37,7 @@ import lombok.Data;
 import lombok.ToString;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,13 @@ public class EmptyInstance implements AggregationInstance {
     public AggregationTraversal session(
         final List<AggregationState> states, final DateRange range
     ) {
-        return new AggregationTraversal(states, new CollectorSession());
+        final Map<Map<String, String>, SubSession> sessions = new HashMap<>(states.size());
+
+        for (final AggregationState s : states) {
+            sessions.put(s.getKey(), new SubSession());
+        }
+
+        return new AggregationTraversal(states, new CollectorSession(sessions));
     }
 
     @Override
@@ -76,84 +83,82 @@ public class EmptyInstance implements AggregationInstance {
     @Data
     @ToString(of = {})
     private static final class CollectorSession implements AggregationSession {
-        private final ConcurrentLinkedQueue<Collected<Point>> points =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<Event>> events =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<Spread>> spreads =
-            new ConcurrentLinkedQueue<>();
-        private final ConcurrentLinkedQueue<Collected<MetricGroup>> groups =
-            new ConcurrentLinkedQueue<>();
+        final Map<Map<String, String>, SubSession> sessions;
 
         @Override
         public void updatePoints(
             Map<String, String> group, List<Point> values
         ) {
-            points.add(new Collected<Point>(group, values));
+            sessions.get(group).points.add(values);
         }
 
         @Override
         public void updateEvents(
             Map<String, String> group, List<Event> values
         ) {
-            events.add(new Collected<Event>(group, values));
+            sessions.get(group).events.add(values);
         }
 
         @Override
         public void updateSpreads(
             Map<String, String> group, List<Spread> values
         ) {
-            spreads.add(new Collected<Spread>(group, values));
+            sessions.get(group).spreads.add(values);
         }
 
         @Override
         public void updateGroup(
             Map<String, String> group, List<MetricGroup> values
         ) {
-            groups.add(new Collected<MetricGroup>(group, values));
+            sessions.get(group).groups.add(values);
         }
 
         @Override
         public AggregationResult result() {
             final ImmutableList.Builder<AggregationData> groups = ImmutableList.builder();
 
-            if (!this.groups.isEmpty()) {
-                groups.add(collectGroup(this.groups, MetricType.GROUP.comparator(),
-                    MetricCollection::groups));
-            }
+            for (final Map.Entry<Map<String, String>, SubSession> e : sessions.entrySet()) {
+                final Map<String, String> group = e.getKey();
+                final SubSession sub = e.getValue();
 
-            if (!this.points.isEmpty()) {
-                groups.add(collectGroup(this.points, MetricType.POINT.comparator(),
-                    MetricCollection::points));
-            }
+                if (!sub.groups.isEmpty()) {
+                    groups.add(collectGroup(group, sub.groups, MetricType.GROUP.comparator(),
+                        MetricCollection::groups));
+                }
 
-            if (!this.events.isEmpty()) {
-                groups.add(collectGroup(this.events, MetricType.EVENT.comparator(),
-                    MetricCollection::events));
-            }
+                if (!sub.points.isEmpty()) {
+                    groups.add(collectGroup(group, sub.points, MetricType.POINT.comparator(),
+                        MetricCollection::points));
+                }
 
-            if (!this.spreads.isEmpty()) {
-                groups.add(collectGroup(this.spreads, MetricType.SPREAD.comparator(),
-                    MetricCollection::spreads));
+                if (!sub.events.isEmpty()) {
+                    groups.add(collectGroup(group, sub.events, MetricType.EVENT.comparator(),
+                        MetricCollection::events));
+                }
+
+                if (!sub.spreads.isEmpty()) {
+                    groups.add(collectGroup(group, sub.spreads, MetricType.SPREAD.comparator(),
+                        MetricCollection::spreads));
+                }
             }
 
             return new AggregationResult(groups.build(), Statistics.empty());
         }
 
         private <T extends Metric> AggregationData collectGroup(
-            final ConcurrentLinkedQueue<Collected<T>> collected,
+            final Map<String, String> group, final ConcurrentLinkedQueue<List<T>> collected,
             final Comparator<? super T> comparator,
             final Function<List<T>, MetricCollection> builder
         ) {
             final ImmutableList.Builder<List<T>> iterables = ImmutableList.builder();
 
-            for (final Collected<T> d : collected) {
-                iterables.add(d.getValues());
+            for (final List<T> d : collected) {
+                iterables.add(d);
             }
 
             /* no need to merge, single results are already sorted */
             if (collected.size() == 1) {
-                return new AggregationData(EMPTY_GROUP,
+                return new AggregationData(group,
                     builder.apply(iterables.build().iterator().next()));
             }
 
@@ -161,13 +166,7 @@ public class EmptyInstance implements AggregationInstance {
                 ImmutableList.copyOf(iterables.build().stream().map(Iterable::iterator).iterator());
             final Iterator<T> metrics = Iterators.mergeSorted(iterators, comparator);
 
-            return new AggregationData(EMPTY_GROUP, builder.apply(ImmutableList.copyOf(metrics)));
-        }
-
-        @Data
-        private static final class Collected<T extends Metric> {
-            private final Map<String, String> group;
-            private final List<T> values;
+            return new AggregationData(group, builder.apply(ImmutableList.copyOf(metrics)));
         }
     }
 
@@ -257,5 +256,13 @@ public class EmptyInstance implements AggregationInstance {
             private final Map<String, String> group;
             private final List<T> values;
         }
+    }
+
+    static class SubSession {
+        private final ConcurrentLinkedQueue<List<Point>> points = new ConcurrentLinkedQueue<>();
+        private final ConcurrentLinkedQueue<List<Event>> events = new ConcurrentLinkedQueue<>();
+        private final ConcurrentLinkedQueue<List<Spread>> spreads = new ConcurrentLinkedQueue<>();
+        private final ConcurrentLinkedQueue<List<MetricGroup>> groups =
+            new ConcurrentLinkedQueue<>();
     }
 }

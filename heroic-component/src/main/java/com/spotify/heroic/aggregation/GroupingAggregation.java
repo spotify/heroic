@@ -233,32 +233,37 @@ public abstract class GroupingAggregation implements AggregationInstance {
         public void updatePoints(
             Map<String, String> group, List<Point> values
         ) {
-            session(group).updatePoints(group, values);
+            final Map<String, String> key = key(group);
+            session(group, key).updatePoints(key, values);
         }
 
         @Override
         public void updateEvents(
             Map<String, String> group, List<Event> values
         ) {
-            session(group).updateEvents(group, values);
+            final Map<String, String> key = key(group);
+            session(group, key).updateEvents(key, values);
         }
 
         @Override
         public void updateSpreads(
             Map<String, String> group, List<Spread> values
         ) {
-            session(group).updateSpreads(group, values);
+            final Map<String, String> key = key(group);
+            session(group, key).updateSpreads(key, values);
         }
 
         @Override
         public void updateGroup(
             Map<String, String> group, List<MetricGroup> values
         ) {
-            session(group).updateGroup(group, values);
+            final Map<String, String> key = key(group);
+            session(group, key).updateGroup(key, values);
         }
 
-        private AggregationSession session(final Map<String, String> group) {
-            final Map<String, String> key = key(group);
+        private AggregationSession session(
+            final Map<String, String> group, final Map<String, String> key
+        ) {
             final AggregationSession session = sessions.get(key);
 
             if (session == null) {
