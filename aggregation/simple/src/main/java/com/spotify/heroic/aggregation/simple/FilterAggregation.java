@@ -82,12 +82,12 @@ public class FilterAggregation implements AggregationInstance {
     @Override
     public AggregationCombiner combiner(DateRange range) {
         return all -> {
-            final List<FilterableMetrics<ShardedResultGroup>> filterableMetrics =
-                of.combiner(range)
-                    .combine(all)
-                    .stream()
-                    .map(s -> new FilterableMetrics<>(s, s::getGroup))
-                    .collect(Collectors.toList());
+            final List<FilterableMetrics<ShardedResultGroup>> filterableMetrics = of
+                .combiner(range)
+                .combine(all)
+                .stream()
+                .map(s -> new FilterableMetrics<>(s, s::getGroup))
+                .collect(Collectors.toList());
 
             return filterStrategy.filter(filterableMetrics);
         };
@@ -171,12 +171,12 @@ public class FilterAggregation implements AggregationInstance {
 
         @Override
         public ReducerResult result() {
-            final List<FilterableMetrics<MetricCollection>> filterableMetrics =
-                childReducer.result()
-                    .getResult()
-                    .stream()
-                    .map(m -> new FilterableMetrics<>(m, () -> m))
-                    .collect(Collectors.toList());
+            final List<FilterableMetrics<MetricCollection>> filterableMetrics = childReducer
+                .result()
+                .getResult()
+                .stream()
+                .map(m -> new FilterableMetrics<>(m, () -> m))
+                .collect(Collectors.toList());
 
             return new ReducerResult(filterStrategy.filter(filterableMetrics),
                 childReducer.result().getStatistics());

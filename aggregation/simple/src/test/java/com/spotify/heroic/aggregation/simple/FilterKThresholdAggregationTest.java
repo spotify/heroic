@@ -43,8 +43,7 @@ public class FilterKThresholdAggregationTest {
         states.add(AggregationState.forSeries(s2));
         states.add(AggregationState.forSeries(s3));
 
-        final AggregationSession session =
-            b1.session(states, new DateRange(0, 10000)).getSession();
+        final AggregationSession session = b1.session(states, new DateRange(0, 10000)).getSession();
 
         session.updatePoints(s1.getTags(), ImmutableList.of(new Point(2, 2.0), new Point(3, 2.0)));
 
@@ -59,7 +58,8 @@ public class FilterKThresholdAggregationTest {
         AggregationData first = result.get(0);
 
         if (first.getGroup().equals(ImmutableMap.of("site", "sto"))) {
-            assertEquals(ImmutableList.of(new Point(2, 2.0), new Point(3, 2.0)), first.getMetrics().getData());
+            assertEquals(ImmutableList.of(new Point(2, 2.0), new Point(3, 2.0)),
+                first.getMetrics().getData());
         } else {
             Assert.fail("unexpected group: " + first.getGroup());
         }

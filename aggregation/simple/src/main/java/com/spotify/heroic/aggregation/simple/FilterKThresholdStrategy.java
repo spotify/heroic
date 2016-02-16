@@ -40,7 +40,8 @@ public class FilterKThresholdStrategy implements FilterStrategy {
 
     @Override
     public <T> List<T> filter(List<FilterableMetrics<T>> metrics) {
-        return metrics.stream()
+        return metrics
+            .stream()
             .map(m -> new Extreme<>(m, filterType))
             .filter(m -> m.getValue() != null)
             .filter(m -> filterType.predicate(m.getValue(), k))
@@ -64,9 +65,8 @@ public class FilterKThresholdStrategy implements FilterStrategy {
         }
 
         private Double findExtreme(FilterKThresholdType filterType, MetricCollection metrics) {
-            final Stream<Double> stream = metrics.getDataAs(Point.class)
-                .stream()
-                .map(Point::getValue);
+            final Stream<Double> stream =
+                metrics.getDataAs(Point.class).stream().map(Point::getValue);
 
             return filterType.findExtreme(stream);
         }

@@ -40,7 +40,8 @@ public class FilterKAreaStrategy implements FilterStrategy {
 
     @Override
     public <T> List<T> filter(List<FilterableMetrics<T>> metrics) {
-        return metrics.stream()
+        return metrics
+            .stream()
             .map(Area<T>::new)
             .sorted((a, b) -> filterType.compare(a.getValue(), b.getValue()))
             .limit(k)
@@ -64,7 +65,8 @@ public class FilterKAreaStrategy implements FilterStrategy {
         }
 
         private Double computeArea(MetricCollection metrics) {
-            return metrics.getDataAs(Point.class)
+            return metrics
+                .getDataAs(Point.class)
                 .stream()
                 .map(Point::getValue)
                 .reduce(0D, (a, b) -> a + b);

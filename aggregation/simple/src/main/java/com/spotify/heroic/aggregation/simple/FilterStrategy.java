@@ -24,5 +24,5 @@ package com.spotify.heroic.aggregation.simple;
 import java.util.List;
 
 public interface FilterStrategy {
-     <T> List<T> filter(List<FilterableMetrics<T>> metrics);
+    <T> List<T> filter(List<FilterableMetrics<T>> metrics);
 }

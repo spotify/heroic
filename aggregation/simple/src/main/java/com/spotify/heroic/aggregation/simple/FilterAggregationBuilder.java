@@ -36,9 +36,10 @@ public abstract class FilterAggregationBuilder<T extends Aggregation>
 
     @Override
     public Aggregation build(AggregationArguments args) {
-        final AggregationValue of = args.keyword("of", AggregationValue.class)
-            .orElseThrow(() -> new IllegalArgumentException(
-                "missing required child aggregation 'of'"));
+        final AggregationValue of = args
+            .positional(AggregationValue.class)
+            .orElseThrow(
+                () -> new IllegalArgumentException("missing required child aggregation 'of'"));
 
         return buildAggregation(args, asAggregation(of));
     }

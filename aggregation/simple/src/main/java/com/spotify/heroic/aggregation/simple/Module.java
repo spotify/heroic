@@ -246,12 +246,12 @@ public class Module implements HeroicModule {
         // @formatter:on
 
         private <T extends Number> T fetchK(AggregationArguments args, Class<T> doubleClass) {
-                return args.keyword("k", doubleClass)
-                    .orElseThrow(() -> new IllegalArgumentException(
-                        "missing required argument 'k'"));
-            }
+            return args
+                .positional(doubleClass)
+                .orElseThrow(() -> new IllegalArgumentException("missing required argument 'k'"));
+        }
 
-            private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
+        private <T extends BucketAggregationInstance<?>> Serializer<T> samplingSerializer(
             BiFunction<Long, Long, T> builder
         ) {
             final Serializer<Long> fixedLong = s.fixedLong();

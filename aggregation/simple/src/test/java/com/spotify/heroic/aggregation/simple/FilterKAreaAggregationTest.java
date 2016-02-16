@@ -28,8 +28,9 @@ public class FilterKAreaAggregationTest {
 
     @Test
     public void testFilterKAreaSession() {
-        final GroupingAggregation g1 = new GroupInstance(
-            Optional.of(ImmutableList.of("site", "host")), EmptyInstance.INSTANCE);
+        final GroupingAggregation g1 =
+            new GroupInstance(Optional.of(ImmutableList.of("site", "host")),
+                EmptyInstance.INSTANCE);
         final GroupingAggregation g2 =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
         final ChainInstance chain = new ChainInstance(Optional.of(ImmutableList.of(g1, g2)));

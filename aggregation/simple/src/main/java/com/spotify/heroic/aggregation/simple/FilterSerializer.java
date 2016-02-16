@@ -29,8 +29,7 @@ import eu.toolchain.serializer.Serializer;
 
 import java.io.IOException;
 
-public abstract class FilterSerializer<T extends FilterKInstance>
-    implements Serializer<T> {
+public abstract class FilterSerializer<T extends FilterKInstance> implements Serializer<T> {
     private final AggregationSerializer serializer;
 
     public FilterSerializer(AggregationSerializer serializer) {
@@ -50,8 +49,8 @@ public abstract class FilterSerializer<T extends FilterKInstance>
     }
 
     /**
-     * This method needs to be implemented to complete the serialization of the
-     * specialization of T.
+     * This method needs to be implemented to complete the serialization of the specialization of
+     * T.
      *
      * @param buffer buffer to serialize values into
      * @param value specialization of T
@@ -60,8 +59,8 @@ public abstract class FilterSerializer<T extends FilterKInstance>
     protected abstract void serializeNext(SerialWriter buffer, T value) throws IOException;
 
     /**
-     * This method needs to be implemented to complete the deserialization of the specialization
-     * of T.
+     * This method needs to be implemented to complete the deserialization of the specialization of
+     * T.
      *
      * @param buffer buffer to read from to deserialize
      * @param of deserialization of field "of"

@@ -84,6 +84,10 @@ public final class IntValue implements Value {
             return (T) value;
         }
 
+        if (to.isAssignableFrom(Double.class)) {
+            return (T) (Double) value.doubleValue();
+        }
+
         throw c.castError(this, to);
     }
 }
