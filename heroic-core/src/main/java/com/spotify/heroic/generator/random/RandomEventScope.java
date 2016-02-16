@@ -19,12 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.generator;
+package com.spotify.heroic.generator.random;
 
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.MetricCollection;
+import javax.inject.Scope;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-public interface Generator {
-    MetricCollection generate(Series series, DateRange range);
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RandomEventScope {
 }

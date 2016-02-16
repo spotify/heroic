@@ -22,6 +22,7 @@
 package com.spotify.heroic.shell.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Series;
@@ -50,6 +51,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @TaskUsage("Load generated metrics into backends")
@@ -84,27 +86,31 @@ public class LoadGenerated implements ShellTask {
 
         final List<AsyncFuture<Void>> writes = new ArrayList<>();
 
-        final Generator generator = this.generator
-            .findGenerator(params.generator)
-            .orElseThrow(
-                () -> new IllegalArgumentException("No such generator: " + params.generator));
-        final IngestionGroup group = ingestion.useGroup(params.group);
+        final List<Generator> generators = ImmutableList.copyOf(
+            params.generators.stream().<Generator>map(name -> generator
+                .findGenerator(name)
+                .orElseThrow(
+                    () -> new IllegalArgumentException("No such generator: " + name))).iterator());
 
-        final long now = System.currentTimeMillis();
-        final long start = now - params.duration.toMilliseconds();
+        for (final Generator generator : generators) {
+            final IngestionGroup group = ingestion.useGroup(params.group);
 
-        final DateRange range = new DateRange(Math.max(start, 0), now);
+            final long now = System.currentTimeMillis();
+            final long start = now - params.duration.toMilliseconds();
 
-        for (final Series s : metadataGenerator.generate(params.seriesCount)) {
-            final MetricCollection c = MetricCollection.points(generator.generate(s, range));
+            final DateRange range = new DateRange(Math.max(start, 0), now);
 
-            writes.add(group.write(new WriteMetric(s, c)).directTransform(n -> {
-                synchronized (io) {
-                    io.out().println("Wrote: " + s);
-                }
+            for (final Series s : metadataGenerator.generate(params.seriesCount)) {
+                final MetricCollection c = generator.generate(s, range);
 
-                return null;
-            }));
+                writes.add(group.write(new WriteMetric(s, c)).directTransform(n -> {
+                    synchronized (io) {
+                        io.out().println("Wrote: " + s);
+                    }
+
+                    return null;
+                }));
+            }
         }
 
         return async.collectAndDiscard(writes);
@@ -122,7 +128,7 @@ public class LoadGenerated implements ShellTask {
         private int seriesCount = 100;
 
         @Option(name = "--generator", usage = "Generator to use")
-        private String generator = "sine";
+        private List<String> generators = ImmutableList.of("sine", "random-events");
 
         @Option(name = "-d", usage = "Duration to generate data for")
         private Duration duration = Duration.of(7, TimeUnit.DAYS);

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.generator.random.RandomEventMetricGeneratorModule;
 import com.spotify.heroic.generator.sine.SineMetricGeneratorModule;
 import dagger.Component;
 import dagger.Module;
@@ -89,7 +90,8 @@ public class CoreGeneratorModule {
     }
 
     public static List<MetricGeneratorModule> defaultMetrics() {
-        return ImmutableList.of(SineMetricGeneratorModule.defaultInstance());
+        return ImmutableList.of(SineMetricGeneratorModule.defaultInstance(),
+            RandomEventMetricGeneratorModule.defaultInstance());
     }
 
     public static Builder builder() {
