@@ -27,5 +27,5 @@ import com.spotify.heroic.dagger.CoreEarlyComponent;
  * A bootstrapper, that is run immediately after the primary injector is ready.
  */
 public interface HeroicBootstrap {
-    public void run(CoreEarlyComponent early) throws Exception;
+    void run(CoreEarlyComponent early) throws Exception;
 }

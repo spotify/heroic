@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicContext;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.ShellTasks;
-import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.lifecycle.LifeCycleRegistry;
@@ -52,8 +51,6 @@ public interface PrimaryComponent extends EarlyComponent {
 
     @Named("features")
     Set<String> features();
-
-    ServiceInfo service();
 
     @Named("application/json+internal")
     ObjectMapper internalMapper();

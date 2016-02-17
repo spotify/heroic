@@ -22,19 +22,28 @@
 package com.spotify.heroic.dagger;
 
 import com.spotify.heroic.HeroicConfig;
+import com.spotify.heroic.common.ServiceInfo;
 import dagger.Module;
 import dagger.Provides;
 import lombok.RequiredArgsConstructor;
 
 import javax.inject.Named;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 @Module
 public class EarlyModule {
     private final HeroicConfig config;
+    private final Optional<String> id;
 
     private volatile boolean stopping = false;
+
+    @Provides
+    @EarlyScope
+    ServiceInfo service() {
+        return new ServiceInfo(config.getService(), config.getVersion(), id.orElse("heroic"));
+    }
 
     @Provides
     @EarlyScope

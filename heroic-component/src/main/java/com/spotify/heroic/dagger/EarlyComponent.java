@@ -21,10 +21,14 @@
 
 package com.spotify.heroic.dagger;
 
+import com.spotify.heroic.common.ServiceInfo;
+
 import javax.inject.Named;
 import java.util.function.Supplier;
 
 public interface EarlyComponent extends LoadingComponent {
+    ServiceInfo service();
+
     @Named("stopping")
     Supplier<Boolean> stopping();
 

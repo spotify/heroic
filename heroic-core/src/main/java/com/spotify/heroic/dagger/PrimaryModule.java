@@ -33,7 +33,6 @@ import com.spotify.heroic.HeroicServer;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.filter.FilterRegistry;
 import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
@@ -63,7 +62,6 @@ import java.util.TreeMap;
 @RequiredArgsConstructor
 @Module
 public class PrimaryModule {
-    private final Optional<String> id;
     private final HeroicCoreInstance instance;
     private final InetSocketAddress bindAddress;
     private final boolean enableCors;
@@ -72,9 +70,6 @@ public class PrimaryModule {
     private final List<JettyServerConnector> connectors;
 
     private final HeroicReporter reporter;
-
-    private final String service;
-    private final String version;
 
     @Provides
     @PrimaryScope
@@ -138,12 +133,6 @@ public class PrimaryModule {
     @PrimaryScope
     Set<String> features() {
         return features;
-    }
-
-    @Provides
-    @PrimaryScope
-    ServiceInfo service() {
-        return new ServiceInfo(service, version, id.orElse("heroic"));
     }
 
     @Provides

@@ -278,10 +278,12 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private CoreEarlyComponent earlyInjector(
         final CoreLoadingComponent loading, final HeroicConfig config
     ) {
+        final Optional<String> id = Optionals.firstPresent(this.id, config.getId());
+
         return DaggerCoreEarlyComponent
             .builder()
             .coreLoadingComponent(loading)
-            .earlyModule(new EarlyModule(config))
+            .earlyModule(new EarlyModule(config, id))
             .build();
     }
 
@@ -341,15 +343,13 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         final HeroicReporter reporter = this.reporter.get();
 
-        final Optional<String> id = Optionals.firstPresent(this.id, config.getId());
-
         // Register root components.
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
             .builder()
             .coreEarlyComponent(early)
-            .primaryModule(new PrimaryModule(id, instance, bindAddress, config.isEnableCors(),
-                config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(), reporter,
-                config.getService(), config.getVersion()))
+            .primaryModule(new PrimaryModule(instance, bindAddress, config.isEnableCors(),
+                config.getCorsAllowOrigin(), config.getFeatures(), config.getConnectors(),
+                reporter))
             .build();
 
         if (setupService) {
