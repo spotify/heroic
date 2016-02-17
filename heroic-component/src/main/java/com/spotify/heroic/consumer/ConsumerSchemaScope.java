@@ -21,35 +21,11 @@
 
 package com.spotify.heroic.consumer;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.ingestion.IngestionComponent;
-import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.ConsumerReporter;
+import javax.inject.Scope;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-import java.util.Optional;
-
-public interface ConsumerModule {
-    Exposed module(
-        PrimaryComponent primary, IngestionComponent ingestion, Depends depends, String id
-    );
-
-    Optional<String> id();
-
-    String buildId(int i);
-
-    interface Builder {
-        ConsumerModule build();
-    }
-
-    interface Depends {
-        ConsumerReporter consumerReporter();
-    }
-
-    interface Exposed {
-        Consumer consumer();
-
-        default LifeCycle consumerLife() {
-            return LifeCycle.empty();
-        }
-    }
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ConsumerSchemaScope {
 }

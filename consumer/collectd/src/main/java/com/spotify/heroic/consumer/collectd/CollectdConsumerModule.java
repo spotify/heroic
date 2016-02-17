@@ -62,12 +62,14 @@ public class CollectdConsumerModule implements ConsumerModule {
     private final CollectdTypes types;
 
     @Override
-    public Out module(PrimaryComponent primary, IngestionComponent ingestion, In in, String id) {
+    public Exposed module(
+        PrimaryComponent primary, IngestionComponent ingestion, Depends depends, String id
+    ) {
         return DaggerCollectdConsumerModule_C
             .builder()
             .primaryComponent(primary)
             .ingestionComponent(ingestion)
-            .in(in)
+            .depends(depends)
             .m(new M())
             .build();
     }
@@ -88,8 +90,10 @@ public class CollectdConsumerModule implements ConsumerModule {
 
     @CollectdScope
     @Component(modules = M.class,
-        dependencies = {PrimaryComponent.class, IngestionComponent.class, ConsumerModule.In.class})
-    interface C extends ConsumerModule.Out {
+        dependencies = {
+            PrimaryComponent.class, IngestionComponent.class, ConsumerModule.Depends.class
+        })
+    interface C extends ConsumerModule.Exposed {
         @Override
         CollectdConsumer consumer();
 

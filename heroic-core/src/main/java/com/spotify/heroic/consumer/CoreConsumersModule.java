@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.consumer;
 
-import com.spotify.heroic.consumer.ConsumerModule.Out;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.ConsumerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import dagger.Module;
 import dagger.Provides;
@@ -47,28 +47,38 @@ public class CoreConsumersModule {
 
     @Provides
     @ConsumersScope
-    List<ConsumerModule.Out> components() {
-        final List<ConsumerModule.Out> consumers = new ArrayList<>();
+    List<ConsumerModule.Exposed> components() {
+        final List<ConsumerModule.Exposed> consumers = new ArrayList<>();
 
         final AtomicInteger i = new AtomicInteger();
 
         for (final ConsumerModule m : this.consumers) {
             final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
 
-            final ConsumerModule.In in = new ConsumerModule.In(reporter.newConsumer(id));
+            final ConsumerModule.Depends depends = new Depends(reporter.newConsumer(id));
 
-            consumers.add(m.module(primary, ingestion, in, id));
+            consumers.add(m.module(primary, ingestion, depends, id));
         }
 
         return consumers;
     }
 
+    @RequiredArgsConstructor
+    public static class Depends implements ConsumerModule.Depends {
+        private final ConsumerReporter consumerReporter;
+
+        @Override
+        public ConsumerReporter consumerReporter() {
+            return consumerReporter;
+        }
+    }
+
     @Provides
     @ConsumersScope
-    Set<Consumer> consumers(List<ConsumerModule.Out> components) {
+    Set<Consumer> consumers(List<ConsumerModule.Exposed> components) {
         final Set<Consumer> consumers = new HashSet<>();
 
-        for (final ConsumerModule.Out m : components) {
+        for (final ConsumerModule.Exposed m : components) {
             consumers.add(m.consumer());
         }
 
@@ -78,7 +88,7 @@ public class CoreConsumersModule {
     @Provides
     @ConsumersScope
     @Named("consumers")
-    LifeCycle consumersLife(List<ConsumerModule.Out> components) {
-        return LifeCycle.combined(components.stream().map(Out::consumerLife));
+    LifeCycle consumersLife(List<ConsumerModule.Exposed> components) {
+        return LifeCycle.combined(components.stream().map(ConsumerModule.Exposed::consumerLife));
     }
 }

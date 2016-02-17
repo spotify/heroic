@@ -38,13 +38,17 @@ import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaException;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
 import com.spotify.heroic.consumer.FatalSchemaException;
+import com.spotify.heroic.consumer.SchemaScope;
 import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
+import com.spotify.heroic.statistics.ConsumerReporter;
+import dagger.Component;
 import lombok.Data;
 import lombok.ToString;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -116,48 +120,74 @@ public class Spotify100 implements ConsumerSchema {
         }
     }
 
+    @SchemaScope
+    public static class Consumer implements ConsumerSchema.Consumer {
+        private final IngestionGroup ingestion;
+        private final ConsumerReporter reporter;
+
+        @Inject
+        public Consumer(IngestionGroup ingestion, ConsumerReporter reporter) {
+            this.ingestion = ingestion;
+            this.reporter = reporter;
+        }
+
+        @Override
+        public void consume(final byte[] message) throws ConsumerSchemaException {
+            final JsonMetric metric;
+
+            try {
+                metric = mapper.readValue(message, JsonMetric.class);
+            } catch (final Exception e) {
+                throw new ConsumerSchemaValidationException("Received invalid metric", e);
+            }
+
+            if (metric.getValue() == null) {
+                throw new ConsumerSchemaValidationException(
+                    "Metric must have a value but this metric has a null value: " + metric);
+            }
+
+            if (metric.getVersion() == null || !SCHEMA_VERSION.equals(metric.getVersion())) {
+                throw new ConsumerSchemaValidationException(
+                    String.format("Invalid version %s, expected %s", metric.getVersion(),
+                        SCHEMA_VERSION));
+            }
+
+            if (metric.getTime() == null) {
+                throw new ConsumerSchemaValidationException(
+                    "'" + TIME + "' field must be defined: " + message);
+            }
+
+            if (metric.getKey() == null) {
+                throw new ConsumerSchemaValidationException(
+                    "'" + KEY + "' field must be defined: " + message);
+            }
+
+            final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());
+            tags.put(HOST, metric.getHost());
+
+            final Series series = Series.of(metric.getKey(), tags);
+            final Point p = new Point(metric.getTime(), metric.getValue());
+            final List<Point> points = ImmutableList.of(p);
+
+            reporter.reportMessageDrift(System.currentTimeMillis() - p.getTimestamp());
+
+            try {
+                ingestion.write(new WriteMetric(series, MetricCollection.points(points)));
+            } catch (final Exception e) {
+                throw new FatalSchemaException("Write failed", e);
+            }
+        }
+    }
+
     @Override
-    public void consume(final IngestionGroup ingestion, final byte[] message)
-        throws ConsumerSchemaException {
-        final JsonMetric metric;
+    public Exposed setup(final ConsumerSchema.Depends depends) {
+        return DaggerSpotify100_C.builder().depends(depends).build();
+    }
 
-        try {
-            metric = mapper.readValue(message, JsonMetric.class);
-        } catch (final Exception e) {
-            throw new ConsumerSchemaValidationException("Received invalid metric", e);
-        }
-
-        if (metric.getValue() == null) {
-            throw new ConsumerSchemaValidationException(
-                "Metric must have a value but this metric has a null value: " + metric);
-        }
-
-        if (metric.getVersion() == null || !SCHEMA_VERSION.equals(metric.getVersion())) {
-            throw new ConsumerSchemaValidationException(
-                String.format("Invalid version %s, expected %s", metric.getVersion(),
-                    SCHEMA_VERSION));
-        }
-
-        if (metric.getTime() == null) {
-            throw new ConsumerSchemaValidationException(
-                "'" + TIME + "' field must be defined: " + message);
-        }
-
-        if (metric.getKey() == null) {
-            throw new ConsumerSchemaValidationException(
-                "'" + KEY + "' field must be defined: " + message);
-        }
-
-        final Map<String, String> tags = new HashMap<String, String>(metric.getAttributes());
-        tags.put(HOST, metric.getHost());
-
-        final Series series = Series.of(metric.getKey(), tags);
-        final List<Point> points = ImmutableList.of(new Point(metric.getTime(), metric.getValue()));
-
-        try {
-            ingestion.write(new WriteMetric(series, MetricCollection.points(points)));
-        } catch (final Exception e) {
-            throw new FatalSchemaException("Write failed", e);
-        }
+    @SchemaScope
+    @Component(dependencies = ConsumerSchema.Depends.class)
+    interface C extends ConsumerSchema.Exposed {
+        @Override
+        Consumer consumer();
     }
 }

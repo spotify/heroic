@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.common.ReflectionUtils;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.ConsumerSchema;
+import com.spotify.heroic.consumer.DaggerConsumerSchema_Depends;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.ingestion.IngestionComponent;
 import com.spotify.heroic.ingestion.IngestionGroup;
@@ -48,6 +49,7 @@ import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.inject.Named;
@@ -75,20 +77,24 @@ public class KafkaConsumerModule implements ConsumerModule {
     private final ConsumerSchema schema;
 
     @Override
-    public Out module(PrimaryComponent primary, IngestionComponent ingestion, In in, String id) {
+    public Exposed module(
+        PrimaryComponent primary, IngestionComponent ingestion, Depends depends, String id
+    ) {
         return DaggerKafkaConsumerModule_C
             .builder()
             .primaryComponent(primary)
             .ingestionComponent(ingestion)
-            .in(in)
-            .m(new M())
+            .depends(depends)
+            .m(new M(primary, depends))
             .build();
     }
 
     @KafkaScope
     @Component(modules = M.class,
-        dependencies = {PrimaryComponent.class, IngestionComponent.class, ConsumerModule.In.class})
-    interface C extends ConsumerModule.Out {
+        dependencies = {
+            PrimaryComponent.class, IngestionComponent.class, ConsumerModule.Depends.class
+        })
+    interface C extends ConsumerModule.Exposed {
         @Override
         KafkaConsumer consumer();
 
@@ -96,8 +102,12 @@ public class KafkaConsumerModule implements ConsumerModule {
         LifeCycle consumerLife();
     }
 
+    @RequiredArgsConstructor
     @Module
     class M {
+        private final PrimaryComponent primary;
+        private final ConsumerModule.Depends depends;
+
         @Provides
         @Named("consuming")
         @KafkaScope
@@ -142,23 +152,36 @@ public class KafkaConsumerModule implements ConsumerModule {
 
         @Provides
         @KafkaScope
+        ConsumerSchema.Consumer consumer(final IngestionManager ingestionManager) {
+            // XXX: make target group configurable?
+            final IngestionGroup ingestion = ingestionManager.useDefaultGroup();
+
+            if (ingestion.isEmpty()) {
+                throw new IllegalStateException("No backends are part of the ingestion group");
+            }
+
+            final ConsumerSchema.Depends d = DaggerConsumerSchema_Depends
+                .builder()
+                .primaryComponent(primary)
+                .depends(depends)
+                .dependsModule(new ConsumerSchema.DependsModule(ingestion))
+                .build();
+
+            final ConsumerSchema.Exposed exposed = schema.setup(d);
+            return exposed.consumer();
+        }
+
+        @Provides
+        @KafkaScope
         public Managed<Connection> connection(
-            final AsyncFramework async, final IngestionManager ingestionManager,
-            final ConsumerReporter reporter, @Named("consuming") AtomicInteger consuming,
+            final AsyncFramework async, final ConsumerReporter reporter,
+            final ConsumerSchema.Consumer consumer, @Named("consuming") AtomicInteger consuming,
             @Named("total") AtomicInteger total, @Named("errors") AtomicLong errors,
             @Named("consumed") LongAdder consumed
         ) {
             return async.managed(new ManagedSetup<Connection>() {
                 @Override
                 public AsyncFuture<Connection> construct() {
-                    // XXX: make target group configurable?
-                    final IngestionGroup ingestion = ingestionManager.useDefaultGroup();
-
-                    if (ingestion.isEmpty()) {
-                        throw new IllegalStateException(
-                            "No backends are part of the ingestion group");
-                    }
-
                     return async.call(() -> {
                         log.info("Starting");
                         final Properties properties = new Properties();
@@ -174,7 +197,7 @@ public class KafkaConsumerModule implements ConsumerModule {
                             connector.createMessageStreams(streamsMap);
 
                         final List<ConsumerThread> threads =
-                            buildThreads(async, reporter, ingestion, streams, consuming, errors,
+                            buildThreads(async, reporter, streams, consumer, consuming, errors,
                                 consumed);
 
                         for (final ConsumerThread t : threads) {
@@ -220,9 +243,10 @@ public class KafkaConsumerModule implements ConsumerModule {
     }
 
     private List<ConsumerThread> buildThreads(
-        final AsyncFramework async, final ConsumerReporter reporter, final IngestionGroup ingestion,
-        final Map<String, List<KafkaStream<byte[], byte[]>>> streams, AtomicInteger consuming,
-        AtomicLong errors, LongAdder consumed
+        final AsyncFramework async, final ConsumerReporter reporter,
+        final Map<String, List<KafkaStream<byte[], byte[]>>> streams,
+        ConsumerSchema.Consumer consumer, AtomicInteger consuming, AtomicLong errors,
+        LongAdder consumed
     ) {
         final List<ConsumerThread> threads = new ArrayList<>();
 
@@ -239,8 +263,8 @@ public class KafkaConsumerModule implements ConsumerModule {
                 final String name = String.format("%s:%d", topic, count++);
 
                 threads.add(
-                    new ConsumerThread(async, ingestion, name, reporter, stream, schema, consuming,
-                        errors, consumed));
+                    new ConsumerThread(async, name, reporter, stream, consumer, consuming, errors,
+                        consumed));
             }
         }
 
