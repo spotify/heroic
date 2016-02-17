@@ -270,6 +270,11 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
 
                         return results;
                     }
+
+                    @Override
+                    public int available() {
+                        return s.available();
+                    }
                 };
 
                 scanAsync(scanner, observer);

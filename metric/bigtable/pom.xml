@@ -21,7 +21,7 @@
   </description>
 
   <properties>
-    <bigtable.version>0.2.1</bigtable.version>
+    <bigtable.version>0.2.3</bigtable.version>
     <alpn-boot.version>8.1.5.v20150921</alpn-boot.version>
   </properties>
 
