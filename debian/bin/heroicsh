@@ -15,4 +15,4 @@ if [[ ! -f $HEROIC_JAR ]]; then
     exit 1
 fi
 
-exec env CLASSPATH="$HEROIC_JAR" java com.spotify.heroic.HeroicShell -c "$CONFIG" "$@"
+exec env CLASSPATH="$HEROIC_JAR" java com.spotify.heroic.HeroicShell -C "$CONFIG" "$@"
