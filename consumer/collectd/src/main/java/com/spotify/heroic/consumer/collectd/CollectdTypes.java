@@ -30,7 +30,8 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
-import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -38,12 +39,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 public class CollectdTypes {
-    private static final Map<String, Mapping> mappings = new HashMap<>();
+    private static final Map<String, Mapping> MAPPINGS = new HashMap<>();
 
-    {
-        mappings.put("cpu", new Mapping(ImmutableList.of(new CPU())));
-        mappings.put("aggregation", new Mapping(ImmutableList.of(new Aggregation())));
+    public static final Plugin DISK = s -> ImmutableMap.of("disk", s.getPluginInstance());
+    public static final Plugin DF_COMPLEX =
+        s -> ImmutableMap.of("what", String.format("df-complex-%s", s.getTypeInstance()), "disk",
+            s.getPluginInstance());
+
+    public static final Plugin INTERFACE = s -> ImmutableMap.of("interface", s.getPluginInstance());
+
+    public static final Plugin LOAD = s -> ImmutableMap.of("interface", s.getPluginInstance());
+
+    static {
+        type("disk_latency", mapping(DISK, what("disk-latency-read"), what("disk-latency-write")));
+        type("disk_merged", mapping(DISK, what("disk-merged-read"), what("disk-merged-write")));
+        type("disk_ops", mapping(DISK, what("disk-ops-read"), what("disk-ops-write")));
+        type("disk_octets", mapping(DISK, what("disk-octets-read"), what("disk-octets-write")));
+        type("disk_time", mapping(DISK, what("disk-time-read"), what("disk-time-write")));
+        type("disk_io_time", mapping(DISK, what("disk-io-time-read"), what("disk-io-time-write")));
+        type("pending_operations", mapping(DISK, what("disk-pending-operations")));
+
+        type("df_complex", mapping(DF_COMPLEX, empty()));
+
+        type("if_octets", mapping(INTERFACE, what("if-octets-rx"), what("if-octets-tx")));
+        type("if_packets", mapping(INTERFACE, what("if-packets-rx"), what("if-packets-tx")));
+        type("if_errors", mapping(INTERFACE, what("if-errors-rx"), what("if-errors-tx")));
+
+        type("load",
+            mapping(LOAD, what("load-shortterm"), what("load-midterm"), what("load-longterm")));
+    }
+
+    private static void type(final String type, final Mapping mapping) {
+        MAPPINGS.put(type, mapping);
     }
 
     public static final String DEFAULT_KEY = "collectd";
@@ -53,6 +82,7 @@ public class CollectdTypes {
     private static final String DEFAULT_TYPE_TAG = "type";
     private static final String DEFAULT_TYPE_INSTANCE_TAG = "type_instance";
 
+    private final Map<String, Mapper> mappings;
     private final String key;
     private final String pluginTag;
     private final String pluginInstanceTag;
@@ -72,6 +102,17 @@ public class CollectdTypes {
         this.pluginInstanceTag = pluginInstanceTag.orElse(DEFAULT_PLUGIN_INSTANCE_TAG);
         this.typeTag = typeTag.orElse(DEFAULT_TYPE_TAG);
         this.typeInstanceTag = typeInstanceTag.orElse(DEFAULT_TYPE_INSTANCE_TAG);
+        this.mappings = setupMappings();
+    }
+
+    private Map<String, Mapper> setupMappings() {
+        final ImmutableMap.Builder<String, Mapper> builder = ImmutableMap.builder();
+
+        for (final Map.Entry<String, Mapping> m : MAPPINGS.entrySet()) {
+            builder.put(m.getKey(), m.getValue().setup(this));
+        }
+
+        return builder.build();
     }
 
     public static CollectdTypes supplyDefault() {
@@ -82,9 +123,10 @@ public class CollectdTypes {
     public List<WriteMetric> convert(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
     ) {
-        final Mapping mapping = mappings.get(sample.getPlugin());
+        final Mapper mapping = mappings.get(sample.getType());
 
         if (mapping == null) {
+            log.info("No mapping found for sample {} {}", sample, tags);
             return convertDefault(sample, tags);
         }
 
@@ -93,8 +135,6 @@ public class CollectdTypes {
 
     /**
      * Default conversion of collectd samples.
-     * <p>
-     * This
      */
     private List<WriteMetric> convertDefault(
         final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
@@ -141,53 +181,82 @@ public class CollectdTypes {
         return builder.build().entrySet();
     }
 
-    @Data
-    private class Mapping {
+    public static Mapping mapping(final Plugin plugin, final Field... fields) {
+        return new Mapping(plugin, fields);
+    }
+
+    public static Field empty() {
+        return new Field(0, Double.POSITIVE_INFINITY);
+    }
+
+    public static Field what(final String what) {
+        return new WhatField(what, 0, Double.POSITIVE_INFINITY);
+    }
+
+    public static Field what(final String what, final double low, final double high) {
+        return new WhatField(what, low, high);
+    }
+
+    interface Plugin {
+        Map<String, String> tags(CollectdSample sample);
+    }
+
+    interface Mapper {
+        List<WriteMetric> convert(
+            final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
+        );
+    }
+
+    static class Mapping {
+        private final Plugin plugin;
         private final List<Field> fields;
 
-        public List<WriteMetric> convert(
-            final CollectdSample sample, final Iterable<Map.Entry<String, String>> tags
-        ) {
-            final long time = sample.getTime() * 1000;
+        public Mapping(final Plugin plugin, final Field... fields) {
+            this.plugin = plugin;
+            this.fields = ImmutableList.copyOf(fields);
+        }
 
-            final Iterator<Field> fields = this.fields.iterator();
-            final Iterator<CollectdValue> values = sample.getValues().iterator();
+        public Mapper setup(CollectdTypes types) {
+            return (sample, tags) -> {
+                final long time = sample.getTime() * 1000;
 
-            final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+                final Iterator<Field> fields = this.fields.iterator();
+                final Iterator<CollectdValue> values = sample.getValues().iterator();
 
-            while (fields.hasNext()) {
-                if (!values.hasNext()) {
-                    throw new IllegalArgumentException("too few values for mapping");
+                final ImmutableList.Builder<WriteMetric> writes = ImmutableList.builder();
+
+                final Map<String, String> base = plugin.tags(sample);
+
+                while (fields.hasNext()) {
+                    if (!values.hasNext()) {
+                        throw new IllegalArgumentException("too few values for mapping");
+                    }
+
+                    final Field field = fields.next();
+                    final CollectdValue value = values.next();
+
+                    final Series series = Series.of(types.key, Iterables
+                        .concat(tags, base.entrySet(), field.tags(sample, value).entrySet())
+                        .iterator());
+                    final Point point = new Point(time, value.convert(field));
+
+                    final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
+
+                    writes.add(new WriteMetric(series, data));
                 }
 
-                final Field field = fields.next();
-                final CollectdValue value = values.next();
-
-                final Series series = Series.of(key,
-                    Iterables.concat(tags, field.tags(sample, value).entrySet()).iterator());
-                final Point point = new Point(time, value.convert(field));
-
-                final MetricCollection data = MetricCollection.points(ImmutableList.of(point));
-
-                writes.add(new WriteMetric(series, data));
-            }
-
-            return writes.build();
+                return writes.build();
+            };
         }
     }
 
-    @Data
-    public static class Field {
-        private final String name;
+    @RequiredArgsConstructor
+    static class Field {
         private final double lower;
         private final double upper;
 
         public double convertCounter(long counter) {
             return Long.valueOf(counter).doubleValue();
-        }
-
-        public Map<String, String> tags(final CollectdSample s, final CollectdValue v) {
-            return ImmutableMap.of();
         }
 
         public double convertGauge(double gauge) {
@@ -201,46 +270,24 @@ public class CollectdTypes {
         public double convertAbsolute(long absolute) {
             return Long.valueOf(absolute).doubleValue();
         }
+
+        public Map<String, String> tags(final CollectdSample s, final CollectdValue v) {
+            return ImmutableMap.of();
+        }
     }
 
-    public static class CPU extends Field {
-        public static final String CPU_ID = "cpu_id";
-        public static final String WHAT_FORMAT = "cpu-jiffies-%s";
+    static class WhatField extends Field {
+        private final String what;
 
-        public CPU() {
-            super("value", 0D, Double.POSITIVE_INFINITY);
+        public WhatField(final String what, final double lower, final double upper) {
+            super(lower, upper);
+            this.what = what;
         }
 
         @Override
         public Map<String, String> tags(final CollectdSample s, final CollectdValue v) {
             final ImmutableMap.Builder<String, String> tags = ImmutableMap.builder();
-
-            tags.put("what", String.format(WHAT_FORMAT, s.getTypeInstance()));
-            tags.put(CPU_ID, s.getPluginInstance());
-
-            return tags.build();
-        }
-    }
-
-    public static class Aggregation extends Field {
-        public Aggregation() {
-            super("value", Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
-        }
-
-        @Override
-        public Map<String, String> tags(final CollectdSample s, final CollectdValue v) {
-            final ImmutableMap.Builder<String, String> tags = ImmutableMap.builder();
-
-            tags.put("what", s.getPluginInstance());
-
-            if (!"".equals(s.getType())) {
-                tags.put("collectd_type", s.getType());
-            }
-
-            if (!"".equals(s.getTypeInstance())) {
-                tags.put("collectd_type_instance", s.getTypeInstance());
-            }
-
+            tags.put("what", what);
             return tags.build();
         }
     }

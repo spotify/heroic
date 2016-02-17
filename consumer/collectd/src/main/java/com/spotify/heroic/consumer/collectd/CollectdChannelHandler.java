@@ -59,7 +59,7 @@ public class CollectdChannelHandler extends SimpleChannelInboundHandler<Datagram
             final CollectdSample s = samples.next();
 
             final Set<Map.Entry<String, String>> base =
-                ImmutableMap.of("host", s.getHost()).entrySet();
+                ImmutableMap.of("host", s.getHost(), "plugin", s.getPlugin()).entrySet();
 
             final List<WriteMetric> writes;
 
