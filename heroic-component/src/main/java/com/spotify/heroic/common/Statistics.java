@@ -73,6 +73,12 @@ public class Statistics {
         return new Statistics(ImmutableMap.of(k1, v1, k2, v2, k3, v3));
     }
 
+    public static Statistics of(
+        String k1, long v1, String k2, long v2, String k3, long v3, String k4, long v4
+    ) {
+        return new Statistics(ImmutableMap.of(k1, v1, k2, v2, k3, v3, k4, v4));
+    }
+
     public long get(final String key, final long defaultValue) {
         return counters.getOrDefault(key, defaultValue);
     }

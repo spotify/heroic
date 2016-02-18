@@ -99,6 +99,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Optional.empty;
@@ -532,6 +533,39 @@ public class HeroicCore implements HeroicConfiguration {
         }
     }
 
+    static void setupWatchDogs(CoreComponent primary) {
+        final CoreLifeCycleRegistry r = (CoreLifeCycleRegistry) primary.lifeCycleRegistry();
+        final List<LifeCycleNamedHook<Boolean>> watchdogs = r.watchdogs();
+
+        if (watchdogs.isEmpty()) {
+            log.info("No watchdogs configured");
+            return;
+        }
+
+        final List<String> names =
+            watchdogs.stream().map(LifeCycleNamedHook::id).collect(Collectors.toList());
+
+        log.info("Watchdogs configured: {}", names);
+
+        primary.scheduler().periodically(10, TimeUnit.SECONDS, () -> {
+            final List<String> failures = new ArrayList<String>();
+
+            for (final LifeCycleNamedHook<Boolean> watchdog : watchdogs) {
+                if (watchdog.get()) {
+                    log.debug("watch {}: ok", watchdog.id());
+                } else {
+                    log.debug("watch {}: failed", watchdog.id());
+                    failures.add(watchdog.id());
+                }
+            }
+
+            if (!failures.isEmpty()) {
+                log.warn("Shutting down because watchdogs ({}) reported failure", failures);
+                primary.instance().shutdown();
+            }
+        });
+    }
+
     static boolean awaitLifeCycles(
         final String op, final CoreComponent primary, final Duration await,
         final List<LifeCycleNamedHook<AsyncFuture<Void>>> hooks
@@ -908,6 +942,7 @@ public class HeroicCore implements HeroicConfiguration {
                 runBootstrappers(early, late);
                 startLifeCycles(core, config);
                 startInternalLifecycles(core);
+                setupWatchDogs(core);
 
                 log.info("Startup finished, hello!");
                 return null;

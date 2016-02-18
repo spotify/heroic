@@ -37,6 +37,7 @@ public class CoreLifeCycleRegistry implements LifeCycleRegistry {
         new ConcurrentArrayQueue<>();
     private final Queue<LifeCycleNamedHook<AsyncFuture<Void>>> stoppers =
         new ConcurrentArrayQueue<>();
+    private final Queue<LifeCycleNamedHook<Boolean>> watchdogs = new ConcurrentArrayQueue<>();
 
     @Inject
     public CoreLifeCycleRegistry() {
@@ -53,6 +54,11 @@ public class CoreLifeCycleRegistry implements LifeCycleRegistry {
     }
 
     @Override
+    public void watch(final LifeCycleHook<Boolean> watchdog) {
+        watch("<empty>", watchdog);
+    }
+
+    @Override
     public LifeCycleRegistry scoped(final String id) {
         return new LifeCycleRegistry() {
             @Override
@@ -63,6 +69,11 @@ public class CoreLifeCycleRegistry implements LifeCycleRegistry {
             @Override
             public void stop(LifeCycleHook<AsyncFuture<Void>> stopper) {
                 CoreLifeCycleRegistry.this.stop(id, stopper);
+            }
+
+            @Override
+            public void watch(final LifeCycleHook<Boolean> watchdog) {
+                CoreLifeCycleRegistry.this.watch(id, watchdog);
             }
 
             @Override
@@ -80,21 +91,29 @@ public class CoreLifeCycleRegistry implements LifeCycleRegistry {
         return ImmutableList.copyOf(stoppers);
     }
 
+    public List<LifeCycleNamedHook<Boolean>> watchdogs() {
+        return ImmutableList.copyOf(watchdogs);
+    }
+
     private void start(final String id, final LifeCycleHook<AsyncFuture<Void>> starter) {
-        starters.add(new Hook(id, starter));
+        starters.add(new Hook<>(id, starter));
     }
 
     private void stop(final String id, final LifeCycleHook<AsyncFuture<Void>> stopper) {
-        stoppers.add(new Hook(id, stopper));
+        stoppers.add(new Hook<>(id, stopper));
+    }
+
+    private void watch(final String id, final LifeCycleHook<Boolean> watchdog) {
+        watchdogs.add(new Hook<>(id, watchdog));
     }
 
     @RequiredArgsConstructor
-    static class Hook implements LifeCycleNamedHook<AsyncFuture<Void>> {
+    static class Hook<T> implements LifeCycleNamedHook<T> {
         private final String id;
-        private final LifeCycleHook<AsyncFuture<Void>> parent;
+        private final LifeCycleHook<T> parent;
 
         @Override
-        public AsyncFuture<Void> get() throws Exception {
+        public T get() throws Exception {
             return parent.get();
         }
 
