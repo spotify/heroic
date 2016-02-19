@@ -334,7 +334,7 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final int groupLimit;
 
         public RpcSuggestTagValues(
-            @JsonProperty("range") final RangeFilter filter,
+            @JsonProperty("filter") final RangeFilter filter,
             @JsonProperty("exclude") final List<String> exclude,
             @JsonProperty("groupLimit") final Integer groupLimit
         ) {
@@ -350,7 +350,7 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final Optional<String> key;
 
         public RpcSuggestTagValue(
-            @JsonProperty("range") final RangeFilter filter,
+            @JsonProperty("filter") final RangeFilter filter,
             @JsonProperty("key") final Optional<String> key
         ) {
             this.filter = checkNotNull(filter, "filter");
@@ -365,7 +365,7 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final Optional<String> key;
 
         public RpcKeySuggest(
-            @JsonProperty("range") final RangeFilter filter,
+            @JsonProperty("filter") final RangeFilter filter,
             @JsonProperty("match") final MatchOptions match,
             @JsonProperty("key") final Optional<String> key
         ) {
