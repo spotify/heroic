@@ -264,7 +264,7 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
             key.ifPresent(k -> {
                 if (!k.isEmpty()) {
-                    bool.must(termQuery(TAG_SKEY_RAW, key));
+                    bool.must(termQuery(TAG_SKEY_RAW, k));
                 }
             });
 
