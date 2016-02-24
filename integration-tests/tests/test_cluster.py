@@ -40,11 +40,11 @@ class TestCluster(unittest.TestCase):
             b = nodes[1]
 
             # write some data into each shard
-            a.write({"key": "test", "tags": {}},
+            a.write({"key": "test", "tags": {"foo": "bar", "bar": "a"}},
                     {"type": "points",
                      "data": [[0, 1], [20, 2]]})
 
-            b.write({"key": "test", "tags": {}},
+            b.write({"key": "test", "tags": {"foo": "bar", "bar": "b"}},
                     {"type": "points",
                      "data": [[0, 3], [10, 4]]})
 
