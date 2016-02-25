@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Empty;
 import com.spotify.heroic.async.AsyncObservable;
@@ -143,13 +142,9 @@ public class BigtableConnectionBuilder implements Callable<BigtableConnection> {
                         .newBuilder()
                         .setName(Table.toURI(clusterUri, name))
                         .build())));
-            } catch (final UncheckedExecutionException e) {
-                if (e.getCause() instanceof StatusRuntimeException) {
-                    final StatusRuntimeException s = (StatusRuntimeException) e.getCause();
-
-                    if (s.getStatus().getCode() == Status.NOT_FOUND.getCode()) {
-                        return Optional.empty();
-                    }
+            } catch (final StatusRuntimeException e) {
+                if (e.getStatus().getCode() == Status.NOT_FOUND.getCode()) {
+                    return Optional.empty();
                 }
 
                 throw e;
