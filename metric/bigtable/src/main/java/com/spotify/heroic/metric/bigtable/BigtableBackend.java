@@ -21,6 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -35,8 +38,10 @@ import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
+import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchData;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
@@ -82,6 +87,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 
 @ToString(of = {"connection"})
 @Slf4j
@@ -96,6 +102,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     public static final String METRICS = "metrics";
     public static final String POINTS = "points";
+    public static final String EVENTS = "events";
     public static final long PERIOD = 0x100000000L;
 
     private final AsyncFramework async;
@@ -105,6 +112,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     private final Groups groups;
     private final boolean configure;
     private final MetricBackendReporter reporter;
+    private final ObjectMapper mapper;
+
+    private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
+        new TypeReference<Map<String, Object>>() {
+        };
 
     private final Meter written = new Meter();
 
@@ -113,7 +125,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final AsyncFramework async, @Named("common") final SerializerFramework serializer,
         final Serializer<RowKey> rowKeySerializer, final Managed<BigtableConnection> connection,
         final Groups groups, @Named("configure") final boolean configure,
-        MetricBackendReporter reporter
+        MetricBackendReporter reporter, @Named("application/json") ObjectMapper mapper
     ) {
         super(async);
         this.async = async;
@@ -123,6 +135,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         this.groups = groups;
         this.configure = configure;
         this.reporter = reporter;
+        this.mapper = mapper;
     }
 
     @Override
@@ -157,6 +170,11 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                             log.info("Creating missing column family: " + POINTS);
                             return admin.createColumnFamily(metrics, POINTS);
                         });
+
+                        metrics.getColumnFamily(EVENTS).orElseGet(() -> {
+                            log.info("Creating missing column family: " + EVENTS);
+                            return admin.createColumnFamily(metrics, EVENTS);
+                        });
                     }
                 });
             }
@@ -187,8 +205,17 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final MetricCollection g = w.getData();
 
-            if (g.getType() == MetricType.POINT) {
-                results.add(writePoints(series, client, g.getDataAs(Point.class)));
+            switch (g.getType()) {
+                case POINT:
+                    results.add(writeBatch(POINTS, series, client, g.getDataAs(Point.class),
+                        p -> serializeValue(p.getValue())));
+                    break;
+                case EVENT:
+                    results.add(writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
+                        this::serializeEvent));
+                    break;
+                default:
+                    break;
             }
 
             return async.collect(results, WriteResult.merger()).onDone(reporter.reportWrite());
@@ -211,8 +238,17 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
                     final MetricCollection g = w.getData();
 
-                    if (g.getType() == MetricType.POINT) {
-                        results.add(writePoints(series, client, g.getDataAs(Point.class)));
+                    switch (g.getType()) {
+                        case POINT:
+                            results.add(writeBatch(POINTS, series, client, g.getDataAs(Point.class),
+                                d -> serializeValue(d.getValue())));
+                            break;
+                        case EVENT:
+                            results.add(writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
+                                BigtableBackend.this::serializeEvent));
+                            break;
+                        default:
+                            break;
                     }
 
                     async
@@ -289,7 +325,27 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return connection.doto(new ManagedAction<BigtableConnection, FetchData>() {
             @Override
             public AsyncFuture<FetchData> action(final BigtableConnection c) throws Exception {
-                return fetchPoints(series, prepared, c, options);
+                switch (type) {
+                    case POINT:
+                        return fetchBatch(type, POINTS, series, prepared, c, options, (t, d) -> {
+                            final double value = deserializeValue(d);
+                            return new Point(t, value);
+                        });
+                    case EVENT:
+                        return fetchBatch(type, EVENTS, series, prepared, c, options, (t, d) -> {
+                            final Map<String, Object> payload;
+
+                            try {
+                                payload = mapper.readValue(d.toByteArray(), PAYLOAD_TYPE);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            return new Event(t, payload);
+                        });
+                    default:
+                        return async.failed(new Exception("Unsupported type: " + type));
+                }
             }
         });
     }
@@ -320,19 +376,21 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return connection.stop();
     }
 
-    private AsyncFuture<WriteResult> writePoints(
-        final Series series, final DataClient client, final List<Point> points
+    private <T extends Metric> AsyncFuture<WriteResult> writeBatch(
+        final String columnFamily, final Series series, final DataClient client,
+        final List<T> batch, final Function<T, ByteString> serializer
     ) throws IOException {
         // common case for consumers
-        if (points.size() == 1) {
-            return writeOnePoint(series, client, points.get(0)).onFinished(written::mark);
+        if (batch.size() == 1) {
+            return writeOne(columnFamily, series, client, batch.get(0), serializer).onFinished(
+                written::mark);
         }
 
         final List<Pair<RowKey, Mutations>> saved = new ArrayList<>();
         final Map<RowKey, MutationsBuilder> building = new HashMap<>();
 
-        for (final Point p : points) {
-            final long timestamp = p.getTimestamp();
+        for (final T d : batch) {
+            final long timestamp = d.getTimestamp();
             final long base = base(timestamp);
             final long offset = offset(timestamp);
 
@@ -341,14 +399,14 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             MutationsBuilder builder = building.get(rowKey);
 
             final ByteString offsetBytes = serializeOffset(offset);
-            final ByteString valueBytes = serializeValue(p.getValue());
+            final ByteString valueBytes = serializer.apply(d);
 
             if (builder == null) {
                 builder = client.mutations();
                 building.put(rowKey, builder);
             }
 
-            builder.setCell(POINTS, offsetBytes, valueBytes);
+            builder.setCell(columnFamily, offsetBytes, valueBytes);
 
             if (builder.size() >= MAX_BATCH_SIZE) {
                 saved.add(Pair.of(rowKey, builder.build()));
@@ -377,8 +435,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return async.collect(writes.build(), WriteResult.merger());
     }
 
-    private AsyncFuture<WriteResult> writeOnePoint(Series series, DataClient client, Point p)
-        throws IOException {
+    private <T extends Metric> AsyncFuture<WriteResult> writeOne(
+        final String columnFamily, Series series, DataClient client, T p,
+        Function<T, ByteString> serializer
+    ) throws IOException {
         final long timestamp = p.getTimestamp();
         final long base = base(timestamp);
         final long offset = offset(timestamp);
@@ -388,9 +448,9 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final MutationsBuilder builder = client.mutations();
 
         final ByteString offsetBytes = serializeOffset(offset);
-        final ByteString valueBytes = serializeValue(p.getValue());
+        final ByteString valueBytes = serializer.apply(p);
 
-        builder.setCell(POINTS, offsetBytes, valueBytes);
+        builder.setCell(columnFamily, offsetBytes, valueBytes);
 
         final long start = System.nanoTime();
         final ByteString rowKeyBytes = serialize(rowKey, rowKeySerializer);
@@ -399,9 +459,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             .directTransform(result -> WriteResult.of(System.nanoTime() - start));
     }
 
-    private AsyncFuture<FetchData> fetchPoints(
-        final Series series, final List<PreparedQuery> prepared, final BigtableConnection c,
-        final QueryOptions options
+    private <T extends Metric> AsyncFuture<FetchData> fetchBatch(
+        final MetricType type, final String columnFamily, final Series series,
+        final List<PreparedQuery> prepared, final BigtableConnection c, final QueryOptions options,
+        final BiFunction<Long, ByteString, T> deserializer
     ) {
         final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
 
@@ -412,28 +473,27 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 .builder()
                 .rowKey(p.keyBlob)
                 .filter(RowFilter
-                    .newColumnRangeBuilder(POINTS)
+                    .newColumnRangeBuilder(columnFamily)
                     .startQualifierExclusive(p.startKey)
                     .endQualifierInclusive(p.endKey)
                     .build())
                 .build());
 
-            final Function<Column, Point> transform = new Function<Column, Point>() {
+            final Function<Column, T> transform = new Function<Column, T>() {
                 @Override
-                public Point apply(Column cell) {
+                public T apply(Column cell) {
                     final long timestamp = p.base + deserializeOffset(cell.getQualifier());
-                    final double value = deserializeValue(cell.getValue());
-                    return new Point(timestamp, value);
+                    return deserializer.apply(timestamp, cell.getValue());
                 }
             };
 
             final Stopwatch w = Stopwatch.createStarted();
 
             queries.add(readRows.directTransform(result -> {
-                final List<Iterable<Point>> points = new ArrayList<>();
+                final List<Iterable<T>> points = new ArrayList<>();
 
                 for (final Row row : result) {
-                    row.getFamily(POINTS).ifPresent(f -> {
+                    row.getFamily(columnFamily).ifPresent(f -> {
                         points.add(Iterables.transform(f.getColumns(), transform));
                     });
                 }
@@ -441,10 +501,10 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 final QueryTrace trace =
                     new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
                 final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
-                final List<Point> data =
-                    ImmutableList.copyOf(Iterables.mergeSorted(points, Point.comparator()));
+                final List<T> data =
+                    ImmutableList.copyOf(Iterables.mergeSorted(points, type.comparator()));
                 final List<MetricCollection> groups =
-                    ImmutableList.of(MetricCollection.points(data));
+                    ImmutableList.of(MetricCollection.build(type, data));
                 return new FetchData(series, times, groups, trace);
             }));
         }
@@ -495,10 +555,18 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return bases;
     }
 
-    static ByteString serializeValue(double value) {
+    ByteString serializeValue(double value) {
         final ByteBuffer buffer =
             ByteBuffer.allocate(Double.BYTES).putLong(Double.doubleToLongBits(value));
         return ByteString.copyFrom(buffer.array());
+    }
+
+    ByteString serializeEvent(Event event) {
+        try {
+            return ByteString.copyFrom(mapper.writeValueAsBytes(event.getPayload()));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     static double deserializeValue(ByteString value) {
