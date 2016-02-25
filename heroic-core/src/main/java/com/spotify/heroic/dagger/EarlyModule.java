@@ -23,6 +23,8 @@ package com.spotify.heroic.dagger;
 
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.common.ServiceInfo;
+import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import dagger.Module;
 import dagger.Provides;
 import lombok.RequiredArgsConstructor;
@@ -63,5 +65,11 @@ public class EarlyModule {
     @EarlyScope
     Runnable stopSignal() {
         return () -> stopping = true;
+    }
+
+    @Provides
+    @EarlyScope
+    LifeCycleRegistry lifeCycleRegistry(CoreLifeCycleRegistry registry) {
+        return registry;
     }
 }

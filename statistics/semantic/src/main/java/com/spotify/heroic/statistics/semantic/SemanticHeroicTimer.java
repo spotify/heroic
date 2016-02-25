@@ -19,22 +19,35 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.codahale.metrics.Timer;
+import com.spotify.heroic.statistics.HeroicTimer;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 
-import javax.inject.Named;
-import java.util.function.Supplier;
+@ToString(of = {})
+@RequiredArgsConstructor
+public class SemanticHeroicTimer implements HeroicTimer {
+    @RequiredArgsConstructor
+    public class SemanticContext implements Context {
+        private final Timer.Context context;
 
-public interface EarlyComponent extends LoadingComponent {
-    ServiceInfo service();
+        @Override
+        public void finished() throws Exception {
+            stop();
+        }
 
-    @Named("stopping")
-    Supplier<Boolean> stopping();
+        @Override
+        public long stop() {
+            return context.stop();
+        }
+    }
 
-    @Named("stopSignal")
-    Runnable stopSignal();
+    private final Timer timer;
 
-    LifeCycleRegistry lifeCycleRegistry();
+    @Override
+    public Context time() {
+        return new SemanticContext(timer.time());
+    }
 }

@@ -30,7 +30,6 @@ import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicCore;
 import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.HeroicMappers;
-import com.spotify.heroic.HeroicReporterConfiguration;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.AggregationSerializer;
@@ -65,14 +64,7 @@ import java.util.concurrent.ExecutorService;
 public class LoadingModule {
     private final ExecutorService executor;
     private final HeroicConfiguration options;
-    private final HeroicReporterConfiguration reporterConfig;
     private final ExtraParameters parameters;
-
-    @Provides
-    @LoadingScope
-    HeroicReporterConfiguration reporterConfig() {
-        return reporterConfig;
-    }
 
     @Provides
     @LoadingScope

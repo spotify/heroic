@@ -19,22 +19,22 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
-
-import javax.inject.Named;
-import java.util.function.Supplier;
-
-public interface EarlyComponent extends LoadingComponent {
-    ServiceInfo service();
-
-    @Named("stopping")
-    Supplier<Boolean> stopping();
-
-    @Named("stopSignal")
-    Runnable stopSignal();
-
-    LifeCycleRegistry lifeCycleRegistry();
+final class Units {
+    public static final String REFRESH = "refresh";
+    public static final String READ = "read";
+    public static final String DELETE = "delete";
+    public static final String MESSAGE = "message";
+    public static final String WRITE = "write";
+    public static final String COUNT = "count";
+    public static final String LOOKUP = "lookup";
+    public static final String CANCEL = "cancel";
+    public static final String FAILURE = "failure";
+    public static final String RESOLVE = "resolve";
+    public static final String HIT = "hit";
+    public static final String MISS = "miss";
+    public static final String BYTE = "B";
+    public static final String MILLISECOND = "ms";
+    public static final String DROP = "drop";
 }

@@ -31,6 +31,7 @@
     <module>rpc/nativerpc</module>
     <module>heroic-dist</module>
     <module>repackaged/bigtable</module>
+    <module>statistics/semantic</module>
   </modules>
 
   <licenses>

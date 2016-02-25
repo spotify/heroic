@@ -19,22 +19,14 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.statistics.noop;
 
-import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import javax.inject.Scope;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-import javax.inject.Named;
-import java.util.function.Supplier;
+@Scope
+@Retention(RetentionPolicy.RUNTIME)
+public @interface NoopScope {
 
-public interface EarlyComponent extends LoadingComponent {
-    ServiceInfo service();
-
-    @Named("stopping")
-    Supplier<Boolean> stopping();
-
-    @Named("stopSignal")
-    Runnable stopSignal();
-
-    LifeCycleRegistry lifeCycleRegistry();
 }

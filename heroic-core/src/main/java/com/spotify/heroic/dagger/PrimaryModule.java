@@ -38,10 +38,8 @@ import com.spotify.heroic.grammar.CoreQueryParser;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.lifecycle.CoreLifeCycleManager;
-import com.spotify.heroic.lifecycle.CoreLifeCycleRegistry;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.ShellTaskDefinition;
 import com.spotify.heroic.shell.Tasks;
@@ -93,12 +91,6 @@ public class PrimaryModule {
     @PrimaryScope
     HeroicReporter reporter() {
         return reporter;
-    }
-
-    @Provides
-    @PrimaryScope
-    LifeCycleRegistry lifeCycleRegistry(CoreLifeCycleRegistry registry) {
-        return registry;
     }
 
     @Provides

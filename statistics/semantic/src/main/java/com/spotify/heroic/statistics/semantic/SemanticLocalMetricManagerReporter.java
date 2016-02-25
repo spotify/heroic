@@ -19,22 +19,23 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.statistics.semantic;
 
-import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
+import com.spotify.metrics.core.SemanticMetricRegistry;
+import lombok.ToString;
 
-import javax.inject.Named;
-import java.util.function.Supplier;
+@ToString(of = {})
+public class SemanticLocalMetricManagerReporter implements LocalMetricManagerReporter {
+    private final SemanticMetricRegistry registry;
 
-public interface EarlyComponent extends LoadingComponent {
-    ServiceInfo service();
+    public SemanticLocalMetricManagerReporter(SemanticMetricRegistry registry) {
+        this.registry = registry;
+    }
 
-    @Named("stopping")
-    Supplier<Boolean> stopping();
-
-    @Named("stopSignal")
-    Runnable stopSignal();
-
-    LifeCycleRegistry lifeCycleRegistry();
+    @Override
+    public MetricBackendReporter newBackend(String id) {
+        return new SemanticMetricBackendReporter(registry, id);
+    }
 }

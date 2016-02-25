@@ -44,6 +44,8 @@ import com.spotify.heroic.jetty.JettyServerConnector;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.shell.ShellServerModule;
+import com.spotify.heroic.statistics.StatisticsModule;
+import com.spotify.heroic.statistics.noop.NoopStatisticsModule;
 import com.spotify.heroic.suggest.SuggestManagerModule;
 import jersey.repackaged.com.google.common.collect.Sets;
 import lombok.AllArgsConstructor;
@@ -114,6 +116,7 @@ public class HeroicConfig {
     private final Optional<ShellServerModule> shellServer;
     private final AnalyticsModule analytics;
     private final CoreGeneratorModule generator;
+    private final StatisticsModule statistics;
 
     private final String version;
     private final String service;
@@ -192,6 +195,7 @@ public class HeroicConfig {
         private Optional<ShellServerModule.Builder> shellServer = empty();
         private Optional<AnalyticsModule.Builder> analytics = empty();
         private Optional<CoreGeneratorModule.Builder> generator = empty();
+        private Optional<StatisticsModule> statistics = empty();
 
         private Optional<String> version = empty();
         private Optional<String> service = empty();
@@ -218,6 +222,7 @@ public class HeroicConfig {
             @JsonProperty("shellServer") Optional<ShellServerModule.Builder> shellServer,
             @JsonProperty("analytics") Optional<AnalyticsModule.Builder> analytics,
             @JsonProperty("generator") Optional<CoreGeneratorModule.Builder> generator,
+            @JsonProperty("statistics") Optional<StatisticsModule> statistics,
             @JsonProperty("version") Optional<String> version,
             @JsonProperty("service") Optional<String> service
         ) {
@@ -241,6 +246,7 @@ public class HeroicConfig {
             this.shellServer = shellServer;
             this.analytics = analytics;
             this.generator = generator;
+            this.statistics = statistics;
             this.version = version;
             this.service = service;
         }
@@ -316,6 +322,11 @@ public class HeroicConfig {
             return this;
         }
 
+        public Builder statistics(StatisticsModule statistics) {
+            this.statistics = of(statistics);
+            return this;
+        }
+
         public Builder shellServer(ShellServerModule.Builder shellServer) {
             this.shellServer = of(shellServer);
             return this;
@@ -344,6 +355,7 @@ public class HeroicConfig {
                 mergeOptional(shellServer, o.shellServer, (a, b) -> a.merge(b)),
                 pickOptional(analytics, o.analytics),
                 mergeOptional(generator, o.generator, (a, b) -> a.merge(b)),
+                pickOptional(statistics, o.statistics),
                 pickOptional(service, o.service),
                 pickOptional(version, o.version)
             );
@@ -381,6 +393,7 @@ public class HeroicConfig {
                 shellServer.map(ShellServerModule.Builder::build),
                 analytics.map(AnalyticsModule.Builder::build).orElseGet(NullAnalyticsModule::new),
                 generator.orElseGet(CoreGeneratorModule::builder).build(),
+                statistics.orElseGet(NoopStatisticsModule::new),
                 version.orElse(defaultVersion),
                 service.orElse(DEFAULT_SERVICE)
             );

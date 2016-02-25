@@ -19,22 +19,30 @@
  * under the License.
  */
 
-package com.spotify.heroic.dagger;
+package com.spotify.heroic.statistics;
 
-import com.spotify.heroic.common.ServiceInfo;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.dagger.EarlyComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import lombok.Data;
 
-import javax.inject.Named;
-import java.util.function.Supplier;
+public interface StatisticsModule {
+    Exposed module(EarlyComponent early, Depends depends);
 
-public interface EarlyComponent extends LoadingComponent {
-    ServiceInfo service();
+    /**
+     * Dependencies for statistics modules.
+     */
+    @Data
+    class Depends {
+    }
 
-    @Named("stopping")
-    Supplier<Boolean> stopping();
+    /**
+     * Exposed for statistics modules.
+     */
+    interface Exposed {
+        HeroicReporter reporter();
 
-    @Named("stopSignal")
-    Runnable stopSignal();
-
-    LifeCycleRegistry lifeCycleRegistry();
+        default LifeCycle life() {
+            return LifeCycle.empty();
+        }
+    }
 }

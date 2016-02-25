@@ -26,7 +26,6 @@ import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfiguration;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicLifeCycle;
-import com.spotify.heroic.HeroicReporterConfiguration;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
 import com.spotify.heroic.aggregation.AggregationSerializer;
@@ -51,8 +50,6 @@ import java.util.concurrent.ExecutorService;
  * com.spotify.heroic.HeroicModule} that have been registered when configuring Heroic.
  */
 public interface LoadingComponent {
-    HeroicReporterConfiguration reporterConfig();
-
     ExtraParameters parameters();
 
     HeroicConfiguration options();

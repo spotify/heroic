@@ -58,7 +58,7 @@ import com.spotify.heroic.metadata.MetadataComponent;
 import com.spotify.heroic.metric.MetricComponent;
 import com.spotify.heroic.shell.ShellServerModule;
 import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.noop.NoopHeroicReporter;
+import com.spotify.heroic.statistics.StatisticsModule;
 import com.spotify.heroic.suggest.SuggestComponent;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
@@ -105,7 +105,7 @@ import static java.util.Optional.of;
  */
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class HeroicCore implements HeroicConfiguration, HeroicReporterConfiguration {
+public class HeroicCore implements HeroicConfiguration {
     static final String DEFAULT_HOST = "0.0.0.0";
     static final int DEFAULT_PORT = 8080;
 
@@ -157,11 +157,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
      */
     private final ExtraParameters params;
 
-    /**
-     * Root entry for the metric reporter.
-     */
-    private final AtomicReference<HeroicReporter> reporter;
-
     /* flags */
     private final boolean setupService;
     private final boolean oneshot;
@@ -173,11 +168,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
     private final List<HeroicProfile> profiles;
     private final List<HeroicBootstrap> early;
     private final List<HeroicBootstrap> late;
-
-    @Override
-    public void registerReporter(final HeroicReporter reporter) {
-        this.reporter.set(reporter);
-    }
 
     @Override
     public boolean isDisableLocal() {
@@ -271,7 +261,7 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         return DaggerCoreLoadingComponent
             .builder()
-            .loadingModule(new LoadingModule(executor, this, this, params))
+            .loadingModule(new LoadingModule(executor, this, params))
             .build();
     }
 
@@ -339,9 +329,15 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
 
         final List<LifeCycle> life = new ArrayList<>();
 
-        final InetSocketAddress bindAddress = setupBindAddress(config);
+        final StatisticsModule.Exposed statistics =
+            config.getStatistics().module(early, new StatisticsModule.Depends() {
+            });
 
-        final HeroicReporter reporter = this.reporter.get();
+        life.add(statistics.life());
+
+        final HeroicReporter reporter = statistics.reporter();
+
+        final InetSocketAddress bindAddress = setupBindAddress(config);
 
         // Register root components.
         final CorePrimaryComponent primary = DaggerCorePrimaryComponent
@@ -769,7 +765,6 @@ public class HeroicCore implements HeroicConfiguration, HeroicReporterConfigurat
                 startupId,
 
                 params.orElseGet(ExtraParameters::empty),
-                new AtomicReference<>(reporter.orElseGet(NoopHeroicReporter::get)),
 
                 setupService.orElse(DEFAULT_SETUP_SERVICE),
                 oneshot.orElse(DEFAULT_ONESHOT),

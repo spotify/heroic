@@ -27,7 +27,6 @@ import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.ShellTasks;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
-import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.statistics.HeroicReporter;
 
 import javax.inject.Named;
@@ -61,8 +60,6 @@ public interface PrimaryComponent extends EarlyComponent {
     QueryParser queryParser();
 
     ShellTasks tasks();
-
-    LifeCycleRegistry lifeCycleRegistry();
 
     LifeCycleManager lifeCycleManager();
 
