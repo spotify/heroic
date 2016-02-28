@@ -1,7 +1,7 @@
 # Heroic
 [![Build Status](https://travis-ci.org/spotify/heroic.svg?branch=master)](https://travis-ci.org/spotify/heroic)
 
-A scalable time series database based on Cassandra and Elasticsearch.
+A scalable time series database based on Bigtable, Cassandra, and Elasticsearch.
 Go to https://spotify.github.io/heroic/ for documentation, please join [`#heroic at Freenode`](irc://freenode.net/heroic) if you need help or want to chat.
 
 This project adheres to the [Open Code of Conduct](https://github.com/spotify/code-of-conduct/blob/master/code-of-conduct.md).
