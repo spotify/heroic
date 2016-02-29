@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.aggregation.AggregationData;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.AggregationState;
-import com.spotify.heroic.aggregation.ChainInstance;
 import com.spotify.heroic.aggregation.EmptyInstance;
 import com.spotify.heroic.aggregation.GroupInstance;
 import com.spotify.heroic.aggregation.GroupingAggregation;
@@ -28,22 +27,18 @@ public class FilterKAreaAggregationTest {
 
     @Test
     public void testFilterKAreaSession() {
-        final GroupingAggregation g1 =
-            new GroupInstance(Optional.of(ImmutableList.of("site", "host")),
-                EmptyInstance.INSTANCE);
-        final GroupingAggregation g2 =
+        final GroupingAggregation g =
             new GroupInstance(Optional.of(ImmutableList.of("site")), EmptyInstance.INSTANCE);
-        final ChainInstance chain = new ChainInstance(Optional.of(ImmutableList.of(g1, g2)));
 
-        final TopKInstance t1 = new TopKInstance(2, chain);
+        final TopKInstance t1 = new TopKInstance(2, g);
         final BottomKInstance b1 = new BottomKInstance(1, t1);
 
         final List<AggregationState> states = new ArrayList<>();
 
-        final Series s1 = Series.of("foo", ImmutableMap.of("site", "sto", "host", "a"));
-        final Series s2 = Series.of("foo", ImmutableMap.of("site", "sto", "host", "b"));
-        final Series s3 = Series.of("foo", ImmutableMap.of("site", "lon", "host", "b"));
-        final Series s4 = Series.of("foo", ImmutableMap.of("host", "c"));
+        final Series s1 = Series.of("foo", ImmutableMap.of("site", "sto"));
+        final Series s2 = Series.of("foo", ImmutableMap.of("site", "ash"));
+        final Series s3 = Series.of("foo", ImmutableMap.of("site", "lon"));
+        final Series s4 = Series.of("foo", ImmutableMap.of("site", "sjc"));
 
         states.add(AggregationState.forSeries(s1));
         states.add(AggregationState.forSeries(s2));
@@ -52,15 +47,10 @@ public class FilterKAreaAggregationTest {
 
         final AggregationSession session = b1.session(states, new DateRange(0, 10000)).getSession();
 
-        session.updatePoints(s4.getTags(), ImmutableList.of(new Point(1, 1.0)));
-        session.updatePoints(s3.getTags(), ImmutableList.of(new Point(2, 2.0)));
-        session.updatePoints(s2.getTags(), ImmutableList.of(new Point(3, 3.0)));
-        session.updatePoints(s1.getTags(), ImmutableList.of(new Point(4, 4.0)));
-
-        /* Before the time series reach the bottomk/topk aggregation, the aggregated areas should be
-           {empty: 1, lon: 2, sto: 7}. And we apply topk(2) | bottomk(1) so we expect lon to be
-            the only group at the end of the aggregation
-         */
+        session.updatePoints(s1.getTags(), ImmutableList.of(new Point(1, 1.0), new Point(2, 1.0)));
+        session.updatePoints(s2.getTags(), ImmutableList.of(new Point(1, 2.0), new Point(2, 2.0)));
+        session.updatePoints(s3.getTags(), ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)));
+        session.updatePoints(s4.getTags(), ImmutableList.of(new Point(1, 4.0), new Point(2, 4.0)));
 
         final List<AggregationData> result = session.result().getResult();
 
@@ -69,7 +59,8 @@ public class FilterKAreaAggregationTest {
         AggregationData first = result.get(0);
 
         if (first.getGroup().equals(ImmutableMap.of("site", "lon"))) {
-            assertEquals(ImmutableList.of(new Point(2, 2.0)), first.getMetrics().getData());
+            assertEquals(ImmutableList.of(new Point(1, 3.0), new Point(2, 3.0)),
+                first.getMetrics().getData());
         } else {
             Assert.fail("unexpected group: " + first.getGroup());
         }
