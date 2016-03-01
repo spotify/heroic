@@ -64,12 +64,15 @@ public class FilterKAreaStrategy implements FilterStrategy {
             this.value = computeArea(filterableMetrics.getMetricSupplier().get());
         }
 
-        private Double computeArea(MetricCollection metrics) {
-            return metrics
-                .getDataAs(Point.class)
-                .stream()
-                .map(Point::getValue)
-                .reduce(0D, (a, b) -> a + b);
+        private double computeArea(MetricCollection metricCollection) {
+            final List<Point> metrics = metricCollection.getDataAs(Point.class);
+
+            double area = 0;
+            for (int i = 1; i < metrics.size(); i++) {
+                area += PointPairArea.computeArea(metrics.get(i - 1), metrics.get(i));
+            }
+
+            return area;
         }
     }
 }
