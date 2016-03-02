@@ -248,14 +248,8 @@ public class LocalMetricManager implements MetricManager {
                     }
 
                     runVoid(b -> {
-                        for (final Series serie : series) {
-                            fetches.add(() -> {
-                                if (watcher.isQuotaViolated()) {
-                                    throw new IllegalStateException("quota limit violated");
-                                }
-
-                                return b.fetch(source, serie, range, watcher, options);
-                            });
+                        for (final Series s : series) {
+                            fetches.add(() -> b.fetch(source, s, range, watcher, options));
                         }
 
                         return null;
@@ -264,7 +258,7 @@ public class LocalMetricManager implements MetricManager {
 
                 /* setup collector */
 
-                final StreamCollector<FetchData, ResultGroups> collector;
+                final ResultCollector collector;
 
                 final Stopwatch w = Stopwatch.createStarted();
 
@@ -474,6 +468,7 @@ public class LocalMetricManager implements MetricManager {
     @RequiredArgsConstructor
     private abstract static class ResultCollector
         implements StreamCollector<FetchData, ResultGroups> {
+        final ConcurrentLinkedQueue<Throwable> errors = new ConcurrentLinkedQueue<>();
         final FetchQuotaWatcher watcher;
         final AggregationInstance aggregation;
         final AggregationSession session;
@@ -487,35 +482,30 @@ public class LocalMetricManager implements MetricManager {
         }
 
         @Override
-        public void failed(Throwable cause) throws Exception {
-            log.error("Fetch failed", cause);
+        public void failed(final Throwable cause) throws Exception {
+            errors.add(cause);
         }
 
         @Override
         public void cancelled() throws Exception {
         }
 
-        @Override
-        public ResultGroups end(int resolved, int failed, int cancelled) throws Exception {
-            return collect(resolved, failed, cancelled, buildTrace());
-        }
-
         public abstract QueryTrace buildTrace();
 
-        private ResultGroups collect(
-            int resolved, int failed, int cancelled, final QueryTrace trace
-        ) throws Exception {
+        @Override
+        public ResultGroups end(int resolved, int failed, int cancelled) throws Exception {
             if (failed > 0 || cancelled > 0) {
-                final String message =
-                    String.format("Some result groups failed (%d) or were cancelled (%d)", failed,
-                        cancelled);
+                final Exception e = new Exception(
+                    "Some fetches failed (" + failed + ") or were cancelled (" + cancelled + ")");
 
-                if (watcher.isQuotaViolated()) {
-                    throw new Exception(message + " (fetch quota was reached)");
+                for (final Throwable t : errors) {
+                    e.addSuppressed(t);
                 }
 
-                throw new Exception(message);
+                throw e;
             }
+
+            final QueryTrace trace = buildTrace();
 
             final AggregationResult result = session.result();
 
@@ -540,11 +530,7 @@ public class LocalMetricManager implements MetricManager {
                     aggregation.cadence()));
             }
 
-            final Statistics stat = result
-                .getStatistics()
-                .merge(
-                    Statistics.of(MetricManager.RESOLVED, resolved, MetricManager.FAILED, failed));
-
+            final Statistics stat = result.getStatistics();
             return new ResultGroups(groups, ImmutableList.of(), stat, trace);
         }
     }

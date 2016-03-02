@@ -27,12 +27,8 @@ import eu.toolchain.async.AsyncFuture;
 
 import java.util.List;
 
-public interface DataClient {
+public interface BigtableDataClient {
     AsyncFuture<Void> mutateRow(String tableName, ByteString rowKey, Mutations mutations);
-
-    MutationsBuilder mutations();
-
-    ReadModifyWriteRulesBuilder readModifyWriteRules();
 
     /**
      * Read the given set of rows, only resolving when all rows are available.

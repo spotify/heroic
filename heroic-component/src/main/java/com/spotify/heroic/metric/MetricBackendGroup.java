@@ -32,9 +32,8 @@ public interface MetricBackendGroup extends MetricBackend {
     /**
      * Perform a direct query for data points.
      *
-     * @param source TimeData source.
-     * @param key Key of series to query.
-     * @param series Set of series to query.
+     * @param type MetricType source.
+     * @param filter Filter to apply.
      * @param range Range of series to query.
      * @param aggregation Aggregation method to use.
      * @param options Options that defines specific behaviours of the query.
@@ -50,7 +49,7 @@ public interface MetricBackendGroup extends MetricBackend {
      * Fetch metrics with a default (no-op) quota watcher. This method allows for the fetching of an
      * indefinite amount of metrics.
      *
-     * @see #MetricBackend#fetch(Class, Series, DateRange, QuotaWatcher)
+     * @see MetricBackend#fetch
      */
     AsyncFuture<FetchData> fetch(
         MetricType type, Series series, DateRange range, QueryOptions options

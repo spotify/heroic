@@ -48,22 +48,20 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.metric.bigtable.api.Column;
-import com.spotify.heroic.metric.bigtable.api.DataClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableDataClient;
+import com.spotify.heroic.metric.bigtable.api.BigtableTableAdminClient;
+import com.spotify.heroic.metric.bigtable.api.Family;
 import com.spotify.heroic.metric.bigtable.api.Mutations;
-import com.spotify.heroic.metric.bigtable.api.MutationsBuilder;
 import com.spotify.heroic.metric.bigtable.api.ReadRowsRequest;
 import com.spotify.heroic.metric.bigtable.api.Row;
 import com.spotify.heroic.metric.bigtable.api.RowFilter;
 import com.spotify.heroic.metric.bigtable.api.Table;
-import com.spotify.heroic.metric.bigtable.api.TableAdminClient;
 import com.spotify.heroic.metrics.Meter;
 import com.spotify.heroic.statistics.MetricBackendReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.FutureDone;
 import eu.toolchain.async.Managed;
-import eu.toolchain.async.ManagedAction;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.Serializer;
@@ -146,39 +144,34 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
     @Override
     public AsyncFuture<Void> configure() {
-        return connection.doto(new ManagedAction<BigtableConnection, Void>() {
+        return connection.doto((final BigtableConnection c) -> async.call(new Callable<Void>() {
             @Override
-            public AsyncFuture<Void> action(final BigtableConnection c) throws Exception {
-                return async.call(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        final TableAdminClient admin = c.adminClient();
+            public Void call() throws Exception {
+                final BigtableTableAdminClient admin = c.tableAdminClient();
 
-                        configureMetricsTable(admin);
+                configureMetricsTable(admin);
 
-                        return null;
-                    }
+                return null;
+            }
 
-                    private void configureMetricsTable(final TableAdminClient admin)
-                        throws IOException {
-                        final Table metrics = admin.getTable(METRICS).orElseGet(() -> {
-                            log.info("Creating missing table: " + METRICS);
-                            return admin.createTable(METRICS);
-                        });
+            private void configureMetricsTable(final BigtableTableAdminClient admin)
+                throws IOException {
+                final Table metrics = admin.getTable(METRICS).orElseGet(() -> {
+                    log.info("Creating missing table: " + METRICS);
+                    return admin.createTable(METRICS);
+                });
 
-                        metrics.getColumnFamily(POINTS).orElseGet(() -> {
-                            log.info("Creating missing column family: " + POINTS);
-                            return admin.createColumnFamily(metrics, POINTS);
-                        });
+                metrics.getColumnFamily(POINTS).orElseGet(() -> {
+                    log.info("Creating missing column family: " + POINTS);
+                    return admin.createColumnFamily(metrics, POINTS);
+                });
 
-                        metrics.getColumnFamily(EVENTS).orElseGet(() -> {
-                            log.info("Creating missing column family: " + EVENTS);
-                            return admin.createColumnFamily(metrics, EVENTS);
-                        });
-                    }
+                metrics.getColumnFamily(EVENTS).orElseGet(() -> {
+                    log.info("Creating missing column family: " + EVENTS);
+                    return admin.createColumnFamily(metrics, EVENTS);
                 });
             }
-        });
+        }));
     }
 
     @Override
@@ -201,107 +194,77 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
             final Series series = w.getSeries();
             final List<AsyncFuture<WriteResult>> results = new ArrayList<>();
 
-            final DataClient client = c.client();
+            final BigtableDataClient client = c.dataClient();
 
             final MetricCollection g = w.getData();
-
-            switch (g.getType()) {
-                case POINT:
-                    results.add(writeBatch(POINTS, series, client, g.getDataAs(Point.class),
-                        p -> serializeValue(p.getValue())));
-                    break;
-                case EVENT:
-                    results.add(writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
-                        this::serializeEvent));
-                    break;
-                default:
-                    break;
-            }
-
+            results.add(writeTyped(series, client, g));
             return async.collect(results, WriteResult.merger()).onDone(reporter.reportWrite());
         });
     }
 
     @Override
     public AsyncFuture<WriteResult> write(final Collection<WriteMetric> writes) {
-        return connection.doto(new ManagedAction<BigtableConnection, WriteResult>() {
-            @Override
-            public AsyncFuture<WriteResult> action(final BigtableConnection c) throws Exception {
-                final AtomicInteger count = new AtomicInteger(writes.size());
-                final ResolvableFuture<WriteResult> future = async.future();
+        return connection.doto((final BigtableConnection c) -> {
+            final AtomicInteger count = new AtomicInteger(writes.size());
+            final ResolvableFuture<WriteResult> future = async.future();
 
-                for (WriteMetric w : writes) {
-                    final Series series = w.getSeries();
-                    final List<AsyncFuture<WriteResult>> results = new ArrayList<>();
+            for (WriteMetric w : writes) {
+                final Series series = w.getSeries();
+                final List<AsyncFuture<WriteResult>> results = new ArrayList<>();
 
-                    final DataClient client = c.client();
+                final BigtableDataClient client = c.dataClient();
 
-                    final MetricCollection g = w.getData();
+                final MetricCollection g = w.getData();
 
-                    switch (g.getType()) {
-                        case POINT:
-                            results.add(writeBatch(POINTS, series, client, g.getDataAs(Point.class),
-                                d -> serializeValue(d.getValue())));
-                            break;
-                        case EVENT:
-                            results.add(writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
-                                BigtableBackend.this::serializeEvent));
-                            break;
-                        default:
-                            break;
+                results.add(writeTyped(series, client, g));
+
+                async.collect(results, WriteResult.merger()).onDone(new FutureDone<WriteResult>() {
+                    final ConcurrentLinkedQueue<WriteResult> times = new ConcurrentLinkedQueue<>();
+                    final AtomicReference<Throwable> failed = new AtomicReference<>();
+
+                    @Override
+                    public void failed(Throwable cause) throws Exception {
+                        check();
+                        failed.compareAndSet(null, cause);
                     }
 
-                    async
-                        .collect(results, WriteResult.merger())
-                        .onDone(new FutureDone<WriteResult>() {
-                            final ConcurrentLinkedQueue<WriteResult> times =
-                                new ConcurrentLinkedQueue<>();
-                            final AtomicReference<Throwable> failed = new AtomicReference<>();
+                    @Override
+                    public void resolved(WriteResult result) throws Exception {
+                        times.add(result);
+                        check();
+                    }
 
-                            @Override
-                            public void failed(Throwable cause) throws Exception {
-                                check();
-                                failed.compareAndSet(null, cause);
-                            }
+                    @Override
+                    public void cancelled() throws Exception {
+                        check();
+                    }
 
-                            @Override
-                            public void resolved(WriteResult result) throws Exception {
-                                times.add(result);
-                                check();
-                            }
+                    private void check() {
+                        if (count.decrementAndGet() == 0) {
+                            finish();
+                        }
+                    }
 
-                            @Override
-                            public void cancelled() throws Exception {
-                                check();
-                            }
+                    private void finish() {
+                        final Throwable t = failed.get();
 
-                            private void check() {
-                                if (count.decrementAndGet() == 0) {
-                                    finish();
-                                }
-                            }
+                        if (t != null) {
+                            future.fail(t);
+                            return;
+                        }
 
-                            private void finish() {
-                                final Throwable t = failed.get();
+                        final List<Long> times = new ArrayList<>();
 
-                                if (t != null) {
-                                    future.fail(t);
-                                    return;
-                                }
+                        for (final WriteResult r : this.times) {
+                            times.addAll(r.getTimes());
+                        }
 
-                                final List<Long> times = new ArrayList<>();
-
-                                for (final WriteResult r : this.times) {
-                                    times.addAll(r.getTimes());
-                                }
-
-                                future.resolve(new WriteResult(times));
-                            }
-                        });
-                }
-
-                return future.onDone(reporter.reportWriteBatch());
+                        future.resolve(new WriteResult(times));
+                    }
+                });
             }
+
+            return future.onDone(reporter.reportWriteBatch());
         });
     }
 
@@ -310,42 +273,33 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         final MetricType type, final Series series, final DateRange range,
         final FetchQuotaWatcher watcher, final QueryOptions options
     ) {
-        final List<PreparedQuery> prepared;
+        return connection.doto(c -> {
+            final List<PreparedQuery> prepared = ranges(series, range, rowKeySerializer);
 
-        try {
-            prepared = ranges(series, range, rowKeySerializer);
-        } catch (final IOException e) {
-            return async.failed(e);
-        }
+            if (!watcher.mayReadData()) {
+                throw new IllegalArgumentException("query violated data limit");
+            }
 
-        if (!watcher.mayReadData()) {
-            throw new IllegalArgumentException("query violated data limit");
-        }
+            switch (type) {
+                case POINT:
+                    return fetchBatch(watcher, type, POINTS, series, prepared, c, (t, d) -> {
+                        final double value = deserializeValue(d);
+                        return new Point(t, value);
+                    });
+                case EVENT:
+                    return fetchBatch(watcher, type, EVENTS, series, prepared, c, (t, d) -> {
+                        final Map<String, Object> payload;
 
-        return connection.doto(new ManagedAction<BigtableConnection, FetchData>() {
-            @Override
-            public AsyncFuture<FetchData> action(final BigtableConnection c) throws Exception {
-                switch (type) {
-                    case POINT:
-                        return fetchBatch(type, POINTS, series, prepared, c, options, (t, d) -> {
-                            final double value = deserializeValue(d);
-                            return new Point(t, value);
-                        });
-                    case EVENT:
-                        return fetchBatch(type, EVENTS, series, prepared, c, options, (t, d) -> {
-                            final Map<String, Object> payload;
+                        try {
+                            payload = mapper.readValue(d.toByteArray(), PAYLOAD_TYPE);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
 
-                            try {
-                                payload = mapper.readValue(d.toByteArray(), PAYLOAD_TYPE);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-
-                            return new Event(t, payload);
-                        });
-                    default:
-                        return async.failed(new Exception("Unsupported type: " + type));
-                }
+                        return new Event(t, payload);
+                    });
+                default:
+                    throw new Exception("Unsupported type: " + type);
             }
         });
     }
@@ -376,8 +330,23 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         return connection.stop();
     }
 
+    private AsyncFuture<WriteResult> writeTyped(
+        final Series series, final BigtableDataClient client, final MetricCollection g
+    ) throws IOException {
+        switch (g.getType()) {
+            case POINT:
+                return writeBatch(POINTS, series, client, g.getDataAs(Point.class),
+                    d -> serializeValue(d.getValue()));
+            case EVENT:
+                return writeBatch(EVENTS, series, client, g.getDataAs(Event.class),
+                    BigtableBackend.this::serializeEvent);
+            default:
+                return async.resolved(WriteResult.of());
+        }
+    }
+
     private <T extends Metric> AsyncFuture<WriteResult> writeBatch(
-        final String columnFamily, final Series series, final DataClient client,
+        final String columnFamily, final Series series, final BigtableDataClient client,
         final List<T> batch, final Function<T, ByteString> serializer
     ) throws IOException {
         // common case for consumers
@@ -387,7 +356,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
         }
 
         final List<Pair<RowKey, Mutations>> saved = new ArrayList<>();
-        final Map<RowKey, MutationsBuilder> building = new HashMap<>();
+        final Map<RowKey, Mutations.Builder> building = new HashMap<>();
 
         for (final T d : batch) {
             final long timestamp = d.getTimestamp();
@@ -396,13 +365,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             final RowKey rowKey = new RowKey(series, base);
 
-            MutationsBuilder builder = building.get(rowKey);
+            Mutations.Builder builder = building.get(rowKey);
 
             final ByteString offsetBytes = serializeOffset(offset);
             final ByteString valueBytes = serializer.apply(d);
 
             if (builder == null) {
-                builder = client.mutations();
+                builder = Mutations.builder();
                 building.put(rowKey, builder);
             }
 
@@ -410,7 +379,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
             if (builder.size() >= MAX_BATCH_SIZE) {
                 saved.add(Pair.of(rowKey, builder.build()));
-                building.put(rowKey, client.mutations());
+                building.put(rowKey, Mutations.builder());
             }
         }
 
@@ -424,7 +393,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                 .directTransform(result -> WriteResult.of(System.nanoTime() - start)));
         }
 
-        for (final Map.Entry<RowKey, MutationsBuilder> e : building.entrySet()) {
+        for (final Map.Entry<RowKey, Mutations.Builder> e : building.entrySet()) {
             final long start = System.nanoTime();
             final ByteString rowKeyBytes = serialize(e.getKey(), rowKeySerializer);
             writes.add(client
@@ -436,7 +405,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<WriteResult> writeOne(
-        final String columnFamily, Series series, DataClient client, T p,
+        final String columnFamily, Series series, BigtableDataClient client, T p,
         Function<T, ByteString> serializer
     ) throws IOException {
         final long timestamp = p.getTimestamp();
@@ -445,7 +414,7 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
 
         final RowKey rowKey = new RowKey(series, base);
 
-        final MutationsBuilder builder = client.mutations();
+        final Mutations.Builder builder = Mutations.builder();
 
         final ByteString offsetBytes = serializeOffset(offset);
         final ByteString valueBytes = serializer.apply(p);
@@ -460,13 +429,13 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     private <T extends Metric> AsyncFuture<FetchData> fetchBatch(
-        final MetricType type, final String columnFamily, final Series series,
-        final List<PreparedQuery> prepared, final BigtableConnection c, final QueryOptions options,
+        final FetchQuotaWatcher watcher, final MetricType type, final String columnFamily,
+        final Series series, final List<PreparedQuery> prepared, final BigtableConnection c,
         final BiFunction<Long, ByteString, T> deserializer
     ) {
-        final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
+        final BigtableDataClient client = c.dataClient();
 
-        final DataClient client = c.client();
+        final List<AsyncFuture<FetchData>> fetches = new ArrayList<>(prepared.size());
 
         for (final PreparedQuery p : prepared) {
             final AsyncFuture<List<Row>> readRows = client.readRows(METRICS, ReadRowsRequest
@@ -479,22 +448,23 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     .build())
                 .build());
 
-            final Function<Column, T> transform = new Function<Column, T>() {
-                @Override
-                public T apply(Column cell) {
-                    final long timestamp = p.base + deserializeOffset(cell.getQualifier());
-                    return deserializer.apply(timestamp, cell.getValue());
-                }
+            final Function<Family.LatestCellValueColumn, T> transform = cell -> {
+                final long timestamp = p.base + deserializeOffset(cell.getQualifier());
+                return deserializer.apply(timestamp, cell.getValue());
             };
 
             final Stopwatch w = Stopwatch.createStarted();
 
-            queries.add(readRows.directTransform(result -> {
+            fetches.add(readRows.directTransform(result -> {
+                if (!watcher.readData(result.size())) {
+                    throw new RuntimeException("Quota limit violated");
+                }
+
                 final List<Iterable<T>> points = new ArrayList<>();
 
                 for (final Row row : result) {
                     row.getFamily(columnFamily).ifPresent(f -> {
-                        points.add(Iterables.transform(f.getColumns(), transform));
+                        points.add(Iterables.transform(f.latestCellValue(), transform));
                     });
                 }
 
@@ -505,13 +475,12 @@ public class BigtableBackend extends AbstractMetricBackend implements LifeCycles
                     ImmutableList.copyOf(Iterables.mergeSorted(points, type.comparator()));
                 final List<MetricCollection> groups =
                     ImmutableList.of(MetricCollection.build(type, data));
+
                 return new FetchData(series, times, groups, trace);
             }));
         }
 
-        return async
-            .collect(queries, FetchData.collect(FETCH, series))
-            .onDone(reporter.reportFetch());
+        return async.collect(fetches, FetchData.collect(FETCH, series));
     }
 
     <T> ByteString serialize(T rowKey, Serializer<T> serializer) throws IOException {

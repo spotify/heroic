@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
@@ -32,7 +31,6 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.QueryOptions;
@@ -60,7 +58,6 @@ import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import org.apache.commons.lang3.NotImplementedException;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -70,7 +67,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
@@ -124,6 +120,14 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycles
     }
 
     @Override
+    public AsyncFuture<FetchData> fetch(
+        final MetricType type, final Series series, final DateRange range,
+        final FetchQuotaWatcher watcher, final QueryOptions options
+    ) {
+        return async.failed(new RuntimeException("not implemented"));
+    }
+
+    @Override
     public AsyncFuture<WriteResult> write(WriteMetric write) {
         return write(ImmutableList.of(write));
     }
@@ -174,59 +178,6 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycles
             .call(resolver, pools.write())
             .onDone(reporter.reportWriteBatch())
             .onFinished(k::release);
-    }
-
-    @Override
-    public AsyncFuture<FetchData> fetch(
-        MetricType source, Series series, final DateRange range, FetchQuotaWatcher watcher,
-        QueryOptions options
-    ) {
-        if (source == MetricType.POINT) {
-            return fetchDataPoints(series, range, watcher);
-        }
-
-        throw new NotImplementedException("unsupported source: " + source);
-    }
-
-    private AsyncFuture<FetchData> fetchDataPoints(
-        final Series series, DateRange range, final FetchQuotaWatcher watcher
-    ) {
-        return context.doto(ctx -> {
-            return async.resolved(prepareQueries(series, range)).lazyTransform(result -> {
-                final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
-
-                for (final PreparedQuery q : result) {
-                    queries.add(async.call(new Callable<FetchData>() {
-                        @Override
-                        public FetchData call() throws Exception {
-                            final Stopwatch w = Stopwatch.createStarted();
-
-                            final RowQuery<MetricsRowKey, Integer> query = ctx.client
-                                .prepareQuery(METRICS_CF)
-                                .getRow(q.rowKey)
-                                .autoPaginate(true)
-                                .withColumnRange(q.columnRange);
-
-                            final List<Point> data =
-                                q.rowKey.buildPoints(query.execute().getResult());
-
-                            if (!watcher.readData(data.size())) {
-                                throw new IllegalArgumentException("data limit quota violated");
-                            }
-
-                            final QueryTrace trace =
-                                new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
-                            final List<Long> times = ImmutableList.of(trace.getElapsed());
-                            final List<MetricCollection> groups =
-                                ImmutableList.of(MetricCollection.points(data));
-                            return new FetchData(series, times, groups, trace);
-                        }
-                    }, pools.read()).onDone(reporter.reportFetch()));
-                }
-
-                return async.collect(queries, FetchData.collect(FETCH, series));
-            });
-        });
     }
 
     @Override

@@ -24,6 +24,7 @@ package com.spotify.heroic.shell.task;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
@@ -111,65 +112,65 @@ public class WritePerformance implements ShellTask {
                 }));
         }
 
-        return async.collect(reads).directTransform(input -> {
-            final long warmupStart = System.currentTimeMillis();
+        return async
+            .collect(reads, in -> ImmutableList.copyOf(Iterables.concat(in)))
+            .lazyTransform(input -> {
+                final long warmupStart = System.currentTimeMillis();
 
-            final List<CollectedTimes> warmup = new ArrayList<>();
+                final List<CollectedTimes> warmup = new ArrayList<>();
 
-            for (int i = 0; i < params.warmup; i++) {
-                io.out().println(String.format("Warmup step %d/%d", (i + 1), params.warmup));
+                for (int i = 0; i < params.warmup; i++) {
+                    io.out().println(String.format("Warmup step %d/%d", (i + 1), params.warmup));
 
-                final List<Callable<AsyncFuture<Times>>> writes =
-                    buildWrites(targets, input, params, warmupStart);
+                    final List<Callable<AsyncFuture<Times>>> writes =
+                        buildWrites(targets, input, params, warmupStart);
 
-                warmup.add(collectWrites(io.out(), writes, params.parallelism).get());
-                // try to trick the JVM not to optimize out any steps
-                warmup.clear();
-            }
+                    warmup.add(collectWrites(io.out(), writes, params.parallelism).get());
+                    // try to trick the JVM not to optimize out any steps
+                    warmup.clear();
+                }
 
-            int totalWrites = 0;
+                int totalWrites = 0;
 
-            for (final List<WriteMetric> writes : input) {
-                for (final WriteMetric w : writes) {
+                for (final WriteMetric w : input) {
                     totalWrites += (w.getData().size() * params.writes);
                 }
-            }
 
-            final List<CollectedTimes> all = new ArrayList<>();
-            final List<Double> writesPerSecond = new ArrayList<>();
-            final List<Double> runtimes = new ArrayList<>();
+                final List<CollectedTimes> all = new ArrayList<>();
+                final List<Double> writesPerSecond = new ArrayList<>();
+                final List<Double> runtimes = new ArrayList<>();
 
-            for (int i = 0; i < params.loop; i++) {
-                io.out().println(String.format("Running step %d/%d", (i + 1), params.loop));
+                for (int i = 0; i < params.loop; i++) {
+                    io.out().println(String.format("Running step %d/%d", (i + 1), params.loop));
 
-                final long start = System.currentTimeMillis();
+                    final long start = System.currentTimeMillis();
 
-                final List<Callable<AsyncFuture<Times>>> writes =
-                    buildWrites(targets, input, params, start);
-                all.add(collectWrites(io.out(), writes, params.parallelism).get());
+                    final List<Callable<AsyncFuture<Times>>> writes =
+                        buildWrites(targets, input, params, start);
+                    all.add(collectWrites(io.out(), writes, params.parallelism).get());
 
-                final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
+                    final double totalRuntime = (System.currentTimeMillis() - start) / 1000.0;
 
-                writesPerSecond.add(totalWrites / totalRuntime);
-                runtimes.add(totalRuntime);
-            }
+                    writesPerSecond.add(totalWrites / totalRuntime);
+                    runtimes.add(totalRuntime);
+                }
 
-            final CollectedTimes times = merge(all);
+                final CollectedTimes times = merge(all);
 
-            io.out().println(String.format("Failed: %d write(s)", times.errors));
-            io.out().println(String.format("Times: " + convertList(runtimes)));
-            io.out().println(String.format("Write/s: " + convertList(writesPerSecond)));
-            io.out().println();
+                io.out().println(String.format("Failed: %d write(s)", times.errors));
+                io.out().println(String.format("Times: " + convertList(runtimes)));
+                io.out().println(String.format("Write/s: " + convertList(writesPerSecond)));
+                io.out().println();
 
-            printHistogram("Batch Times", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
-            io.out().println();
+                printHistogram("Batch Times", io.out(), times.runTimes, TimeUnit.MILLISECONDS);
+                io.out().println();
 
-            printHistogram("Individual Times", io.out(), times.executionTimes,
-                TimeUnit.NANOSECONDS);
-            io.out().flush();
+                printHistogram("Individual Times", io.out(), times.executionTimes,
+                    TimeUnit.NANOSECONDS);
+                io.out().flush();
 
-            return null;
-        });
+                return async.resolved();
+            });
     }
 
     private String convertList(final List<Double> values) {
@@ -232,7 +233,7 @@ public class WritePerformance implements ShellTask {
     }
 
     private List<Callable<AsyncFuture<Times>>> buildWrites(
-        List<MetricBackend> targets, Collection<List<WriteMetric>> input, final Parameters params,
+        List<MetricBackend> targets, List<WriteMetric> input, final Parameters params,
         final long start
     ) {
         final List<Callable<AsyncFuture<Times>>> writes = new ArrayList<>();
@@ -243,27 +244,23 @@ public class WritePerformance implements ShellTask {
             for (int i = 0; i < params.writes; i++) {
                 final MetricBackend target = targets.get(request++ % targets.size());
 
-                for (final List<WriteMetric> groups : input) {
-                    writes.add(() -> target.write(groups).directTransform(result -> {
-                        final long runtime = System.currentTimeMillis() - start;
-                        return new Times(result.getTimes(), runtime);
-                    }));
-                }
+                writes.add(() -> target.write(input).directTransform(result -> {
+                    final long runtime = System.currentTimeMillis() - start;
+                    return new Times(result.getTimes(), runtime);
+                }));
             }
 
             return writes;
         }
 
         for (int i = 0; i < params.writes; i++) {
-            for (final List<WriteMetric> groups : input) {
-                for (final WriteMetric w : groups) {
-                    final MetricBackend target = targets.get(request++ % targets.size());
+            for (final WriteMetric w : input) {
+                final MetricBackend target = targets.get(request++ % targets.size());
 
-                    writes.add(() -> target.write(w).directTransform(result -> {
-                        final long runtime = System.currentTimeMillis() - start;
-                        return new Times(result.getTimes(), runtime);
-                    }));
-                }
+                writes.add(() -> target.write(w).directTransform(result -> {
+                    final long runtime = System.currentTimeMillis() - start;
+                    return new Times(result.getTimes(), runtime);
+                }));
             }
         }
 

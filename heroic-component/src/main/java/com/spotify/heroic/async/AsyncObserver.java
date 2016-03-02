@@ -23,6 +23,8 @@ package com.spotify.heroic.async;
 
 import com.spotify.heroic.common.Throwing;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.FutureResolved;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
 
@@ -100,5 +102,31 @@ public interface AsyncObserver<T> {
                 Throwing.call(AsyncObserver.this::end, finished::finished);
             }
         };
+    }
+
+    default <R> FutureDone<R> bindResolved(
+        final FutureResolved<R> next
+    ) {
+        return new FutureDone<R>() {
+            @Override
+            public void failed(final Throwable cause) throws Exception {
+                fail(cause);
+            }
+
+            @Override
+            public void cancelled() throws Exception {
+                cancel();
+            }
+
+            @Override
+            public void resolved(final R result) throws Exception {
+                next.resolved(result);
+            }
+        };
+    }
+
+    default FutureDone<Void> bindVoid() {
+        return bindResolved(v -> {
+        });
     }
 }

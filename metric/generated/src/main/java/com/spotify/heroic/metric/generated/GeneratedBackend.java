@@ -105,6 +105,7 @@ public class GeneratedBackend extends AbstractMetricBackend {
             final QueryTrace trace = new QueryTrace(FETCH, w.elapsed(TimeUnit.NANOSECONDS));
             final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
             final List<MetricCollection> groups = ImmutableList.of(MetricCollection.points(data));
+
             return async.resolved(new FetchData(series, times, groups, trace));
         }
 
@@ -113,6 +114,7 @@ public class GeneratedBackend extends AbstractMetricBackend {
             final QueryTrace trace = new QueryTrace(FETCH, w.elapsed(TimeUnit.NANOSECONDS));
             final ImmutableList<Long> times = ImmutableList.of(trace.getElapsed());
             final List<MetricCollection> groups = ImmutableList.of(MetricCollection.events(data));
+
             return async.resolved(new FetchData(series, times, groups, trace));
         }
 

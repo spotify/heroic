@@ -39,6 +39,7 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import dagger.Component;
+import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 import org.kohsuke.args4j.Option;
@@ -56,11 +57,15 @@ import java.util.concurrent.TimeUnit;
 public class Fetch implements ShellTask {
     private final MetricManager metrics;
     private final ObjectMapper mapper;
+    private final AsyncFramework async;
 
     @Inject
-    public Fetch(MetricManager metrics, @Named("application/json") ObjectMapper mapper) {
+    public Fetch(
+        MetricManager metrics, @Named("application/json") ObjectMapper mapper, AsyncFramework async
+    ) {
         this.metrics = metrics;
         this.mapper = mapper;
+        this.async = async;
     }
 
     @Override
@@ -96,7 +101,7 @@ public class Fetch implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        return readGroup.fetch(source, series, range, options).directTransform(result -> {
+        return readGroup.fetch(source, series, range, options).lazyTransform(result -> {
             outer:
             for (final MetricCollection g : result.getGroups()) {
                 int i = 0;
@@ -129,7 +134,7 @@ public class Fetch implements ShellTask {
             result.getTrace().formatTrace(io.out());
             io.out().flush();
 
-            return null;
+            return async.resolved();
         });
     }
 

@@ -22,11 +22,54 @@
 package com.spotify.heroic.metric.bigtable.api;
 
 import com.google.bigtable.v1.ReadModifyWriteRule;
+import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@RequiredArgsConstructor
 public class ReadModifyWriteRules {
-    private final List<ReadModifyWriteRule> rules;
+    private final List<com.google.bigtable.v1.ReadModifyWriteRule> rules;
+
+    /**
+     * Get the list of rules.
+     * <p>
+     * Package private since it should only be access in the
+     * {@link com.spotify.heroic.metric.bigtable.api}
+     * package.
+     *
+     * @return The list of rules.
+     */
+    List<com.google.bigtable.v1.ReadModifyWriteRule> getRules() {
+        return rules;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    @Data
+    public static class Builder {
+        final List<ReadModifyWriteRule> rules = new ArrayList<>();
+
+        public Builder increment(
+            final String family, final ByteString column, final long value
+        ) {
+            rules.add(com.google.bigtable.v1.ReadModifyWriteRule
+                .newBuilder()
+                .setFamilyName(family)
+                .setColumnQualifier(column)
+                .setIncrementAmount(value)
+                .build());
+
+            return this;
+        }
+
+        public ReadModifyWriteRules build() {
+            return new ReadModifyWriteRules(ImmutableList.copyOf(rules));
+        }
+    }
 }
