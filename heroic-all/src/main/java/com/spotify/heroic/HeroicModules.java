@@ -35,6 +35,7 @@ import com.spotify.heroic.profile.GeneratedProfile;
 import com.spotify.heroic.profile.KafkaConsumerProfile;
 import com.spotify.heroic.profile.MemoryCacheProfile;
 import com.spotify.heroic.profile.MemoryProfile;
+import com.spotify.heroic.profile.WebProfile;
 
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -83,6 +84,7 @@ public class HeroicModules {
         .put("cluster", new ClusterProfile())
         .put("collectd", new CollectdConsumerProfile())
         .put("memory-cache", new MemoryCacheProfile())
+        .put("web", new WebProfile())
     .build();
     // @formatter:on
 
