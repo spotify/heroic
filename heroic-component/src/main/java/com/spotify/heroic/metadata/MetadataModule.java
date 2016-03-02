@@ -27,13 +27,7 @@ import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import lombok.Data;
 
-import java.util.Optional;
-
 public interface MetadataModule {
-    Optional<String> id();
-
-    String buildId(int i);
-
     Exposed module(PrimaryComponent primary, Depends depends, String id);
 
     /**

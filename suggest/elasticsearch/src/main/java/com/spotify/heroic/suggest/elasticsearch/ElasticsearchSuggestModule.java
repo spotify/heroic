@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
@@ -65,7 +67,8 @@ import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 @Data
-public final class ElasticsearchSuggestModule implements SuggestModule {
+@ModuleId("elasticsearch")
+public final class ElasticsearchSuggestModule implements SuggestModule, DynamicModuleId {
     public static final String ELASTICSEARCH_CONFIGURE_PARAM = "elasticsearch.configure";
 
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
@@ -212,11 +215,6 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     @Override
     public Optional<String> id() {
         return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("elasticsearch-suggest#%d", i);
     }
 
     public static Builder builder() {

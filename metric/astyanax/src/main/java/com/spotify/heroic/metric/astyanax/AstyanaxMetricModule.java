@@ -30,7 +30,9 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
@@ -52,7 +54,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 @Data
-public final class AstyanaxMetricModule implements MetricModule {
+@ModuleId("astyanax")
+public final class AstyanaxMetricModule implements MetricModule, DynamicModuleId {
     public static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
     public static final String DEFAULT_KEYSPACE = "heroic";
     public static final String DEFAULT_GROUP = "heroic";
@@ -94,11 +97,6 @@ public final class AstyanaxMetricModule implements MetricModule {
     @Override
     public Optional<String> id() {
         return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("heroic#%d", i);
     }
 
     @AstyanaxScope

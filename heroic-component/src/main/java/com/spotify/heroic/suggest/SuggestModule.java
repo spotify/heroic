@@ -26,13 +26,7 @@ import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
 import lombok.Data;
 
-import java.util.Optional;
-
 public interface SuggestModule {
-    Optional<String> id();
-
-    String buildId(int i);
-
     Exposed module(PrimaryComponent primary, Depends depends, String id);
 
     /**

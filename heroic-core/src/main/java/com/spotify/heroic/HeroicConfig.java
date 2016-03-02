@@ -251,6 +251,11 @@ public class HeroicConfig {
             this.service = service;
         }
 
+        public Builder enableCors(boolean enableCors) {
+            this.enableCors = of(enableCors);
+            return this;
+        }
+
         public Builder startTimeout(Duration startTimeout) {
             this.startTimeout = of(startTimeout);
             return this;

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.analytics.AnalyticsComponent;
 import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.CorePrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.metadata.MetadataComponent;
@@ -50,7 +51,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
@@ -169,10 +169,10 @@ public class MetricManagerModule {
         public List<MetricModule.Exposed> components(final LocalMetricManagerReporter reporter) {
             final List<MetricModule.Exposed> backends = new ArrayList<>();
 
-            final AtomicInteger i = new AtomicInteger();
+            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
 
             for (final MetricModule m : this.backends) {
-                final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
+                final String id = idBuilder.buildId(m);
 
                 final MetricModule.Depends depends =
                     new MetricModule.Depends(reporter, reporter.newBackend(id));

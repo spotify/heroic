@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.common.ModuleIdBuilder;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
@@ -44,7 +45,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static java.util.Optional.empty;
@@ -104,10 +104,10 @@ public class SuggestManagerModule {
         public List<SuggestModule.Exposed> components(LocalMetadataManagerReporter reporter) {
             final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
 
-            final AtomicInteger i = new AtomicInteger();
+            final ModuleIdBuilder idBuilder = new ModuleIdBuilder();
 
             for (final SuggestModule m : backends) {
-                final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
+                final String id = idBuilder.buildId(m);
 
                 final SuggestModule.Depends depends =
                     new SuggestModule.Depends(reporter.newMetadataBackend(id));

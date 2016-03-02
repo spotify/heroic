@@ -23,7 +23,9 @@ package com.spotify.heroic.metric.memory;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricModule;
@@ -45,7 +47,8 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @Data
-public final class MemoryMetricModule implements MetricModule {
+@ModuleId("memory")
+public final class MemoryMetricModule implements MetricModule, DynamicModuleId {
     public static final String DEFAULT_GROUP = "memory";
 
     private final Optional<String> id;
@@ -104,11 +107,6 @@ public final class MemoryMetricModule implements MetricModule {
     @Override
     public Optional<String> id() {
         return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("memory#%d", i);
     }
 
     public static Builder builder() {

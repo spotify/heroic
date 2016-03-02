@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
 import com.spotify.heroic.ExtraParameters;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
@@ -65,7 +67,8 @@ import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
 @Data
-public final class ElasticsearchMetadataModule implements MetadataModule {
+@ModuleId("elasticsearch")
+public final class ElasticsearchMetadataModule implements MetadataModule, DynamicModuleId {
     private static final double DEFAULT_WRITES_PER_SECOND = 3000d;
     private static final long DEFAULT_WRITES_CACHE_DURATION_MINUTES = 240L;
     public static final String DEFAULT_GROUP = "elasticsearch";
@@ -113,6 +116,11 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
         this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
         this.backendTypeBuilder =
             backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
+    }
+
+    @Override
+    public Optional<String> id() {
+        return id;
     }
 
     @Override
@@ -208,16 +216,6 @@ public final class ElasticsearchMetadataModule implements MetadataModule {
 
             return manager.build(kv.get());
         }
-    }
-
-    @Override
-    public Optional<String> id() {
-        return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("elasticsearch#%d", i);
     }
 
     public static Builder builder() {

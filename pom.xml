@@ -565,9 +565,7 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
-          <configuration>
-            <showWarnings>true</showWarnings>
-          </configuration>
+          <showWarnings>true</showWarnings>
         </configuration>
       </plugin>
       <plugin>

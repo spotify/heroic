@@ -37,10 +37,11 @@ import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metric.WriteResult;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import org.elasticsearch.common.collect.ImmutableList;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -48,12 +49,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-@RequiredArgsConstructor
+@MemoryScope
 @ToString(exclude = {"async", "storage"})
 public class MemoryBackend implements MetadataBackend {
     private final AsyncFramework async;
     private final Groups groups;
     private final Set<Series> storage;
+
+    @Inject
+    public MemoryBackend(
+        final AsyncFramework async, final Groups groups, @Named("storage") final Set<Series> storage
+    ) {
+        this.async = async;
+        this.groups = groups;
+        this.storage = storage;
+    }
 
     @Override
     public Groups getGroups() {

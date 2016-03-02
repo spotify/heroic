@@ -29,7 +29,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Duration;
+import com.spotify.heroic.common.DynamicModuleId;
 import com.spotify.heroic.common.Groups;
+import com.spotify.heroic.common.ModuleId;
 import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.lifecycle.LifeCycleManager;
@@ -59,7 +61,8 @@ import static java.util.Optional.empty;
 import static java.util.Optional.of;
 
 @Data
-public final class DatastaxMetricModule implements MetricModule {
+@ModuleId("datastax")
+public final class DatastaxMetricModule implements MetricModule, DynamicModuleId {
     public static final String DATASTAX_CONFIGURE = "datastax.configure";
 
     public static final Set<String> DEFAULT_SEEDS = ImmutableSet.of("localhost");
@@ -209,11 +212,6 @@ public final class DatastaxMetricModule implements MetricModule {
     @Override
     public Optional<String> id() {
         return id;
-    }
-
-    @Override
-    public String buildId(int i) {
-        return String.format("heroic#%d", i);
     }
 
     public static Builder builder() {

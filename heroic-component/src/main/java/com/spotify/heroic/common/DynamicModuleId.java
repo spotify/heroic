@@ -19,34 +19,13 @@
  * under the License.
  */
 
-package com.spotify.heroic.metric;
+package com.spotify.heroic.common;
 
-import com.spotify.heroic.dagger.PrimaryComponent;
-import com.spotify.heroic.lifecycle.LifeCycle;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-import lombok.Data;
+import java.util.Optional;
 
-public interface MetricModule {
-    Exposed module(PrimaryComponent primary, Depends backend, String id);
-
-    /**
-     * Dependencies for metric modules.
-     */
-    @Data
-    class Depends {
-        private final LocalMetricManagerReporter managerReporter;
-        private final MetricBackendReporter backendReporter;
-    }
-
-    /**
-     * Exposed for metric modules.
-     */
-    interface Exposed {
-        MetricBackend backend();
-
-        default LifeCycle life() {
-            return LifeCycle.empty();
-        }
-    }
+/**
+ * Indicates that the implementing class may provide a dynamic identifier.
+ */
+public interface DynamicModuleId {
+    Optional<String> id();
 }
