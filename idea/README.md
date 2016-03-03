@@ -20,7 +20,7 @@ generate certain sources.
 ## Running HeroicShell in IDEA
 
 Create a new run configuration where you run the
-`com.spotify.heroic.HeroicShell` class from the `heroic-dist` project.
+`com.spotify.heroic.HeroicShell` class from the `heroic-dist` module.
 
 You can see the list of options available by running `tools/heroic-shell
 --help`.
