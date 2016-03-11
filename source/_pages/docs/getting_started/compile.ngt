@@ -37,5 +37,5 @@ $ mvn clean package
 </p>
 
 <pre><code language="bash">
-$ java -cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT.jar com.spotify.heroic.HeroicService &lt;config&gt;
+$ java -cp heroic-dist/target/heroic-dist-0.0.1-SNAPSHOT-shaded.jar com.spotify.heroic.HeroicService &lt;config&gt;
 </code></pre>
