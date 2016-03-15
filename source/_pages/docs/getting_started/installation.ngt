@@ -5,7 +5,7 @@
 </p>
 
 <ul>
-  <li><a ui-sref=".({'#': 'cassandra'})">A Cassandra cluster</a></li>
+  <li><a ui-sref=".({'#': 'cassandra'})">A Cassandra 2.x cluster</a></li>
   <li><a ui-sref=".({'#': 'elasticsearch'})">An Elasticsearch cluster</a></li>
   <li><a ui-sref=".({'#': 'kafka'})">A Kafka Cluster</a></li>
 </ul>
@@ -21,7 +21,7 @@
 </h3>
 
 <h3 id="cassandra">
-  Cassandra
+  Cassandra 2.x
 <h3>
 
 <h4>
@@ -43,7 +43,7 @@
 </p>
 
 <p>
-  Unpack and run (replace <code>&lt;version&gt;</code> with the actual version)
+  Unpack and run (replace <code>&lt;version&gt;</code> with the actual 2.x version)
 </p>
 
 <pre><code language="bash">tar -xvf apache-cassandra-&lt;version&gt;-bin.tar.gz
