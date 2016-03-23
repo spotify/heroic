@@ -88,7 +88,7 @@ public class DateRange implements Comparable<DateRange> {
             return this;
         }
 
-        return new DateRange(start - start % interval, end + (interval - end % interval));
+        return new DateRange(start - start % interval, end - (end  % interval));
     }
 
     public boolean overlap(DateRange other) {
