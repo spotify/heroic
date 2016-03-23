@@ -58,6 +58,7 @@ import java.util.SortedSet;
 import java.util.concurrent.TimeUnit;
 
 public class CoreQueryManager implements QueryManager {
+    public static final long SHIFT_TOLERANCE = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS);
     public static final QueryTrace.Identifier QUERY_NODE =
         QueryTrace.identifier(CoreQueryManager.class, "query_node");
     public static final QueryTrace.Identifier QUERY =
@@ -161,11 +162,13 @@ public class CoreQueryManager implements QueryManager {
             final MetricType source = q.getSource().orElse(MetricType.POINT);
 
             final QueryOptions options = q.getOptions().orElseGet(QueryOptions::defaults);
-
             final Aggregation aggregation = q.getAggregation().orElse(Empty.INSTANCE);
             final DateRange rawRange = buildRange(q);
             final Duration cadence = buildCadence(aggregation, rawRange);
-            final DateRange range = rawRange.rounded(cadence.toMilliseconds());
+
+            final long now = System.currentTimeMillis();
+            final DateRange range = buildShiftedRange(rawRange, cadence.toMilliseconds(), now);
+
             final Filter filter = q.getFilter().orElseGet(filters::t);
 
             final AggregationContext context = new DefaultAggregationContext(cadence);
@@ -267,5 +270,50 @@ public class CoreQueryManager implements QueryManager {
         }
 
         return Duration.of(results.last(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Given a range and a cadence, return a range that might be shifted in case the end period
+     * is too close or after 'now'. This is useful to avoid querying non-complete buckets.
+     *
+     * @param rawRange Original range.
+     * @return A possibly shifted range.
+     *
+     */
+     DateRange buildShiftedRange(DateRange rawRange, long cadence, long now) {
+         if (rawRange.getStart() > now) {
+             throw new IllegalArgumentException("start is greater than now");
+         }
+
+         final DateRange rounded = rawRange.rounded(cadence);
+
+         final long nowDelta = now - rounded.getEnd();
+
+         if (nowDelta > SHIFT_TOLERANCE) {
+             return rounded;
+         }
+
+         final long diff = Math.abs(Math.min(nowDelta, 0)) + SHIFT_TOLERANCE;
+
+         return rounded.shift(-toleranceShiftPeriod(diff, cadence));
+     }
+
+    /**
+     * Calculate a tolerance shift period that corresponds to the given difference that needs
+     * to be applied to the range to honor the tolerance shift period.
+     *
+     * @param diff The time difference to apply.
+     * @param cadence The cadence period.
+     * @return The number of milliseconds that the query should be shifted to get within 'now' and
+     * maintain the given cadence.
+     */
+    private long toleranceShiftPeriod(final long diff, final long cadence) {
+        // raw query, only shift so that we are within now.
+        if (cadence <= 0L) {
+            return diff;
+        }
+
+        // Round up periods
+        return ((diff + cadence - 1) / cadence) * cadence;
     }
 }
