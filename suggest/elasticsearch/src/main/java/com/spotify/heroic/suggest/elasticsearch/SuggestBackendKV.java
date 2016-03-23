@@ -74,6 +74,8 @@ import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Order;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
+import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
+import org.elasticsearch.search.aggregations.metrics.cardinality.CardinalityBuilder;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHits;
 import org.elasticsearch.search.aggregations.metrics.tophits.TopHitsBuilder;
 
@@ -320,9 +322,14 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
             final int limit = filter.getLimit();
 
             {
-                final TermsBuilder terms =
-                    AggregationBuilders.terms("keys").field(TAG_SKEY_RAW).size(limit + 1);
+                final TermsBuilder terms = AggregationBuilders
+                    .terms("keys")
+                    .field(TAG_SKEY_RAW)
+                    .size(limit + 1);
                 request.addAggregation(terms);
+                final CardinalityBuilder cardinality =
+                    AggregationBuilders.cardinality("cardinality").field(TAG_SVAL_RAW);
+                terms.subAggregation(cardinality);
             }
 
             return bind(request.execute()).directTransform((SearchResponse response) -> {
@@ -334,8 +341,9 @@ public class SuggestBackendKV extends AbstractElasticsearchBackend
 
                 for (final Terms.Bucket bucket : buckets.subList(0,
                     Math.min(buckets.size(), limit))) {
+                    final Cardinality cardinality = bucket.getAggregations().get("cardinality");
                     suggestions.add(
-                        new TagKeyCount.Suggestion(bucket.getKey(), bucket.getDocCount()));
+                        new TagKeyCount.Suggestion(bucket.getKey(), cardinality.getValue()));
                 }
 
                 return new TagKeyCount(new ArrayList<>(suggestions),
