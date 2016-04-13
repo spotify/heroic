@@ -93,9 +93,6 @@ $ tools/heroic-shell
 
 heroic> parse-query --no-indent "average by host | sum by site"
 {"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}
-
-heroic> stringify-query '{"aggregation":{"type":"chain","chain":[{"type":"group","of":["host"],"each":{"type":"sum"}},{"type":"average"}]}}'
-average by host | sum by site
 </codeblock>
 
 <h3>Aggregations</h3>
@@ -150,7 +147,7 @@ average by host | sum by site
   <tr>
     <td>
       <codeblock language="hql">
-      average(5m) | sum(10m)
+      average(size=5m) | sum(size=10m)
       </codeblock>
     </td>
     <td>
