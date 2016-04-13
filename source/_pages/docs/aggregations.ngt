@@ -18,6 +18,7 @@
   <li><a ui-sref="{'#': 'sum'}">Sum Aggregation</a></li>
   <li><a ui-sref="{'#': 'chain'}">Chain Aggregation</a></li>
   <li><a ui-sref="{'#': 'group'}">Group Aggregation</a></li>
+  <li><a ui-sref="{'#': 'filtering'}">TopK/BottomK/AboveK/BelowK Aggregation</a></li>
 </ul>
 
 <h3>Size and Extent</h3>
@@ -198,3 +199,36 @@ sum(size=&lt;duration&gt;, extent=&lt;duration&gt;)
 </p>
 
 <img style="width: 100%;" src="images/aggregation_group_average.svg"></img>
+
+<h3 id="filtering">TopK/BottomK/AboveK/BelowK Aggregation</h3>
+
+<h5>JSON</h5>
+
+<codeblock language="json">
+{"type": "topk", "k": &lt;number&gt;}
+{"type": "bottomk", "k": &lt;number&gt;}
+{"type": "abovek", "k": &lt;number&gt;}
+{"type": "belowk", "k": &lt;number&gt;}
+</codeblock>
+
+<h5>HQL</h5>
+
+<codeblock language="hql">
+topk(&lt;number&gt;)
+bottomk(&lt;number&gt;)
+abovek(&lt;number&gt;)
+belowk(&lt;number&gt;)
+</codeblock>
+
+<p>
+  These are a set of filtering aggregations.
+  A filtering aggregation reduces the number of result groups according to some
+  criteria.
+</p>
+
+<ul>
+  <li>TopK - Picks the largest time series</li>
+  <li>BottomK - Picks the smallest time series</li>
+  <li>AboveK - Picks the time series that has values above the given threshold</li>
+  <li>BelowK - Picks the time series that has values below the given threshold</li>
+</ul>

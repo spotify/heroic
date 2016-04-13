@@ -2,33 +2,62 @@
 
 <p>
   Heroic uses a JSON-based language to define queries.
-  This can also be expressed using an experimental DSL.
+  This can also be expressed using an experimental DSL called HQL
+  (Heroic Query Language).
 </p>
 
 <div class="callout callout-danger">
   <h4>Experimental</h4>
   <p>
-    The DSL should currently be considered experimental and might be subject to future changes.
+    The HQL should currently be considered experimental and might be subject to future changes.
   </p>
 </div>
 
 <p>
-  The basic structure of a query is the following SQL-like stanza.
+  Queries have the following structure.
 </p>
 
 <codeblock language="hql">
-&lt;aggregation&gt; from &lt;source&gt; where &lt;filter&gt;
+&lt;aggregation&gt;
+  [from &lt;source&gt;]
+  [where &lt;filter&gt;]
+  [as &lt;key&gt;=&lt;value&gt;[,&lt;key&gt;=&lt;value&gt;]]
+  [with &lt;key&gt;=&lt;value&gt;[,&lt;key&gt;=&lt;value&gt;]];
 </codeblock>
 
 <p>
-  The following is a complete example for a DSL-based query:
+  References have the following structures.
 </p>
 
 <codeblock language="hql">
-average() by host | sum() by site from points(1d) where role=heroic and what=cpu-idle
+let $&lt;name&gt; = &lt;query&gt;;
 </codeblock>
 
-<h3 id="json-dsl">JSON vs DSL</h3>
+<p>
+  <em>Complex Queries</em> are queries referencing other queries through a
+  reference.
+  The following is an example of this
+</p>
+
+<codeblock language="hql">
+let $a = average by host | sum by site;
+
+$a / shift($a, -7d) - 1.0
+  where what = cpu-usage and role = heroic;
+</codeblock>
+
+<p>
+  The following is a complete example of a HQL-based query:
+</p>
+
+<codeblock language="hql">
+average by host | sum by site
+  from points(1d)
+  where role=heroic and what=cpu-idle
+  with size=5m
+</codeblock>
+
+<h3 id="json-dsl">JSON vs HQL</h3>
 
 <p>
   JSON is typically used when a query is built programatically because the structure is unambigious in terms of precedence and escaping.
@@ -36,17 +65,17 @@ average() by host | sum() by site from points(1d) where role=heroic and what=cpu
 </p>
 
 <p>
-  The DSL was developed to make it easier for humans to express queries or filters in a manner which is more convenient.
+  The HQL was developed to make it easier for humans to express queries or filters in a manner which is more convenient.
   The language is infix, and simple strings do not have to be escaped (e.g. <code language="hql">host</code> vs. <code language="hql">&quot;host&quot;</code>)
 </p>
 
 <p>
-  A primary Goal of the DSL is that it should act as a complement to the JSON queries.
-  Any query can be expressed either in JSON or DSL.
+  A primary Goal of the HQL is that it should act as a complement to the JSON queries.
+  Any query can be expressed either in JSON or HQL.
 </p>
 
 <p>
-  The following is an example filter expressed both in a JSON, and in the DSL.
+  The following is an example filter expressed both in a JSON, and in the HQL.
 </p>
 
 <pre><code language="hql">
@@ -249,7 +278,7 @@ average by host | sum by site
 </table>
 </div>
 
-<h3>The DSL Language</h3>
+<h3>The HQL Language</h3>
 
 <h4>Primitives</h4>
 
