@@ -83,6 +83,11 @@ public class LocalClusterNode implements ClusterNode {
     }
 
     @Override
+    public AsyncFuture<NodeMetadata> fetchMetadata() {
+        return async.resolved(localMetadata);
+    }
+
+    @Override
     public AsyncFuture<Void> close() {
         return async.resolved(null);
     }

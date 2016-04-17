@@ -50,6 +50,8 @@ import java.util.Optional;
 public interface ClusterNode {
     NodeMetadata metadata();
 
+    AsyncFuture<NodeMetadata> fetchMetadata();
+
     AsyncFuture<Void> close();
 
     Group useGroup(String group);

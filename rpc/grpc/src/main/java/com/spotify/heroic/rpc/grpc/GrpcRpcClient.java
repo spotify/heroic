@@ -53,13 +53,13 @@ public class GrpcRpcClient {
     }
 
     public <R> AsyncFuture<R> request(
-        final GrpcEndpointSpecification<GrpcRpcEmptyBody, R> endpoint
+        final GrpcEndpointSpecification<GrpcRpcEmptyBody, R> endpoint, final CallOptions options
     ) {
-        return request(endpoint, EMPTY);
+        return request(endpoint, EMPTY, options);
     }
 
     public <Q, R> AsyncFuture<R> request(
-        final GrpcEndpointSpecification<Q, R> endpoint, final Q entity
+        final GrpcEndpointSpecification<Q, R> endpoint, final Q entity, final CallOptions options
     ) {
         return channel.doto(channel -> {
             final byte[] body;
@@ -70,8 +70,7 @@ public class GrpcRpcClient {
                 return async.failed(e);
             }
 
-            final ClientCall<byte[], byte[]> call =
-                channel.newCall(endpoint.descriptor(), CallOptions.DEFAULT);
+            final ClientCall<byte[], byte[]> call = channel.newCall(endpoint.descriptor(), options);
 
             final Metadata metadata = new Metadata();
 

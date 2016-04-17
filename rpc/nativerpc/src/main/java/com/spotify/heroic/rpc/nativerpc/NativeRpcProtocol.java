@@ -156,6 +156,11 @@ public class NativeRpcProtocol implements RpcProtocol {
         }
 
         @Override
+        public AsyncFuture<NodeMetadata> fetchMetadata() {
+            return client.request(METADATA, NodeMetadata.class);
+        }
+
+        @Override
         public AsyncFuture<Void> close() {
             return async.resolved(null);
         }

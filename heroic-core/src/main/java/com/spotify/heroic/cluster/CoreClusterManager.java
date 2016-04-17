@@ -178,7 +178,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
     @Override
     public AsyncFuture<Void> refresh() {
-        final AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform;
+        final List<MaybeError<NodeRegistryEntry>> localNodes = new ArrayList<>();
         final List<AsyncFuture<List<URI>>> dynamic = new ArrayList<>();
 
         final List<URI> staticNodes = new ArrayList<>(this.staticNodes.get());
@@ -187,29 +187,25 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             dynamic.add(async.resolved(staticNodes));
         }
 
-        if (discovery instanceof ClusterDiscoveryModule.Null) {
-            final List<MaybeError<NodeRegistryEntry>> results = new ArrayList<>();
+        dynamic.add(discovery.find());
 
-            if (useLocal && local.isPresent()) {
-                log.info("No discovery mechanism configured, using local node");
-                final LocalClusterNode l = local.get();
-                results.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
-            } else {
-                log.warn("No discovery mechanism configured, clustered operations will not work" +
-                    " (useLocal: {}, local: {})", useLocal, local);
-            }
+        return async.collect(dynamic).lazyTransform(lists -> {
+            final List<URI> uris = ImmutableList.copyOf(Iterables.concat(lists));
 
-            transform = async.resolved(results);
-        } else {
-            log.info("Refreshing cluster");
-            dynamic.add(discovery.find());
-        }
-
-        return async.collect(dynamic, lists -> {
-            return ImmutableList.copyOf(Iterables.concat(lists));
-        }).lazyTransform(uris -> {
             final List<AsyncFuture<MaybeError<ClusterNode>>> nodes = new ArrayList<>();
             final List<Pair<URI, Supplier<AsyncFuture<Void>>>> removed = new ArrayList<>();
+
+            if (uris.isEmpty()) {
+                if (useLocal && local.isPresent()) {
+                    log.info("[refresh] no discovered URIs, using local node");
+                    final LocalClusterNode l = local.get();
+                    localNodes.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
+                } else {
+                    log.warn("[refresh] no discovered URIs, not using local node (useLocal: {}, " +
+                        "local:" +
+                        " {})", useLocal, local);
+                }
+            }
 
             synchronized (lock) {
                 final Set<URI> removedNodes = new HashSet<>(clients.keySet());
@@ -219,21 +215,26 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     removedNodes.remove(uri);
 
                     if (node != null) {
-                        nodes.add(async.resolved(MaybeError.just(node)));
+                        final ClusterNode old = node;
+
+                        nodes.add(node.fetchMetadata().lazyTransform(m -> {
+                            if (!node.metadata().equals(m)) {
+                                log.info("[new] {} (metadata mismatch)", uri);
+                                return tryCreateClusterNode(uri);
+                            }
+
+                            return async.resolved(MaybeError.just(old));
+                        }).catchFailed(MaybeError::error));
                     } else {
-                        log.info("Registering new node {}", uri);
+                        log.info("[new] {}", uri);
 
                         /* resolve new node */
-                        nodes.add(createClusterNode(uri).onResolved(newNode -> {
-                            synchronized (lock) {
-                                clients.put(uri, newNode);
-                            }
-                        }).directTransform(MaybeError::just).catchFailed(MaybeError::error));
+                        nodes.add(tryCreateClusterNode(uri));
                     }
                 }
 
                 for (final URI uri : removedNodes) {
-                    log.info("Removing lost node {}", uri);
+                    log.info("[remove] {}", uri);
 
                     final ClusterNode remove = clients.remove(uri);
 
@@ -250,19 +251,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                 for (final MaybeError<ClusterNode> maybe : newNodes) {
                     if (maybe.isError()) {
                         failures.add(maybe.getError());
-                        continue;
+                    } else {
+                        entries.add(createRegistryEntry(maybe.getJust()));
                     }
-
-                    entries.add(createRegistryEntry(maybe.getJust()));
                 }
 
                 final Set<Map<String, String>> knownShards = extractKnownShards(entries);
 
-                log.info("Registering known shards: {}", knownShards);
-                reporter.registerShards(knownShards);
-
-                log.info("Updated registry: {} result(s), {} failure(s)", entries.size(),
-                    failures.size());
+                log.info("[update] {} shards: {} result(s), {} failure(s)", knownShards,
+                    entries.size(), failures.size());
 
                 registry.getAndSet(
                     new NodeRegistry(async, new ArrayList<>(entries), entries.size()));
@@ -271,14 +268,15 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     return async.resolved();
                 }
 
-                log.info("Shutting down {} removed nodes", removed.size());
+                log.info("[remove] {}",
+                    removed.stream().map(Pair::getLeft).collect(Collectors.toList()));
 
-                /* shutdown removed node */
+                    /* shutdown removed node */
                 return async.collectAndDiscard(removed.stream().map(r -> {
                     final URI uri = r.getLeft();
 
                     return r.getRight().get().catchFailed(e -> {
-                        log.error("Failed to stop node {}", uri, e);
+                        log.error("[remove] {} (stop failed)", uri, e);
                         return null;
                     });
                 }).collect(Collectors.toList()));
@@ -419,6 +417,14 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
             log.error("Failed to connect {}", uri, error);
             return MaybeError.error(error);
         };
+    }
+
+    private AsyncFuture<MaybeError<ClusterNode>> tryCreateClusterNode(final URI uri) {
+        return createClusterNode(uri).onResolved(newNode -> {
+            synchronized (lock) {
+                clients.put(uri, newNode);
+            }
+        }).directTransform(MaybeError::just).catchFailed(MaybeError::error);
     }
 
     /**

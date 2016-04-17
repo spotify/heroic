@@ -56,6 +56,7 @@ import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.async.ManagedSetup;
 import eu.toolchain.async.ResolvableFuture;
+import io.grpc.CallOptions;
 import io.grpc.ManagedChannel;
 import io.grpc.MethodDescriptor;
 import io.grpc.netty.NettyChannelBuilder;
@@ -141,7 +142,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
             final GrpcRpcClient client = new GrpcRpcClient(async, address, mapper, channel);
 
             return client
-                .request(METADATA)
+                .request(METADATA, CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS))
                 .directTransform(m -> new GrpcRpcClusterNode(uri, client, m));
         });
     }
@@ -167,6 +168,13 @@ public class GrpcRpcProtocol implements RpcProtocol {
         @Override
         public NodeMetadata metadata() {
             return metadata;
+        }
+
+        @Override
+        public AsyncFuture<NodeMetadata> fetchMetadata() {
+            // metadata requests are also used as health checks, used a much smaller deadline.
+            return client.request(METADATA,
+                CallOptions.DEFAULT.withDeadlineAfter(5, TimeUnit.SECONDS));
         }
 
         @Override
@@ -276,7 +284,7 @@ public class GrpcRpcProtocol implements RpcProtocol {
                 GrpcEndpointSpecification<GroupedQuery<T>, R> endpoint, T body
             ) {
                 final GroupedQuery<T> grouped = new GroupedQuery<>(group, body);
-                return client.request(endpoint, grouped);
+                return client.request(endpoint, grouped, CallOptions.DEFAULT);
             }
         }
     }
