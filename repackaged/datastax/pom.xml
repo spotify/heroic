@@ -1,0 +1,58 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <properties>
+    <datastax.version>2.1.9</datastax.version>
+  </properties>
+
+  <groupId>com.spotify.heroic.repackaged</groupId>
+  <artifactId>cassandra-driver-core</artifactId>
+  <packaging>jar</packaging>
+  <version>2.1.9</version>
+
+  <name>Heroic: Re-Packaging of Datastax Client</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.datastax.cassandra</groupId>
+      <artifactId>cassandra-driver-core</artifactId>
+      <version>${datastax.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
+              <createDependencyReducedPom>true</createDependencyReducedPom>
+              <!-- excluded dependencies will be kept as a promoted dependency -->
+              <artifactSet>
+                <excludes>
+                  <exclude>com.google.guava:guava</exclude>
+                  <exclude>com.codahale.metrics:metrics-core</exclude>
+                  <exclude>org.slf4j:slf4j-api</exclude>
+                </excludes>
+              </artifactSet>
+              <relocations>
+                <relocation>
+                  <pattern>io.netty</pattern>
+                  <shadedPattern>com.spotify.heroic.datastax.netty</shadedPattern>
+                </relocation>
+              </relocations>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

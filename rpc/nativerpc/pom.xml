@@ -29,9 +29,13 @@
 
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
+      <artifactId>netty-transport</artifactId>
     </dependency>
-    
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.msgpack</groupId>
       <artifactId>msgpack</artifactId>

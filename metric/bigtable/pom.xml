@@ -6,7 +6,7 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../..</relativePath>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <groupId>com.spotify.heroic.metric</groupId>
@@ -51,19 +51,6 @@
     <dependency>
       <groupId>eu.toolchain.serializer</groupId>
       <artifactId>tiny-serializer-core</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-tcnative</artifactId>
-      <version>1.1.33.Fork4</version>
-      <classifier>linux-x86_64</classifier>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.tomcat</groupId>
-      <artifactId>tomcat-jni</artifactId>
-      <version>8.0.24</version>
     </dependency>
 
     <dependency>

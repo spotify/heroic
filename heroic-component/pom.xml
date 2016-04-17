@@ -6,7 +6,6 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>heroic-component</artifactId>
@@ -92,10 +91,6 @@
       <artifactId>commons-lang3</artifactId>
     </dependency>
 
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-    </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>annotations</artifactId>

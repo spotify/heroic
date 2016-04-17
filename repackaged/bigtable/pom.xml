@@ -19,6 +19,13 @@
       <groupId>com.google.cloud.bigtable</groupId>
       <artifactId>bigtable-client-core</artifactId>
       <version>${bigtable.version}</version>
+
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>jsr305</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -45,6 +52,8 @@
               <!-- excluded dependencies will be kept as a promoted dependency -->
               <artifactSet>
                 <excludes>
+                  <exclude>com.google.code.findbugs:jsr305</exclude>
+                  <exclude>com.google.code.findbugs:annotations</exclude>
                   <exclude>com.google.guava:guava</exclude>
                   <exclude>io.netty:netty-tcnative-boringssl-static</exclude>
                 </excludes>
@@ -52,7 +61,19 @@
               <relocations>
                 <relocation>
                   <pattern>io.netty</pattern>
-                  <shadedPattern>com.spotify.heroic.bigtable.io.netty</shadedPattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.netty</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.commons</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.commons</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>io.grpc</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.grpc</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>com.fasterxml.jackson</pattern>
+                  <shadedPattern>com.spotify.heroic.bigtable.jackson</shadedPattern>
                 </relocation>
               </relocations>
             </configuration>

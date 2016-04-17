@@ -31,7 +31,6 @@
     <module>rpc/nativerpc</module>
     <module>rpc/grpc</module>
     <module>heroic-dist</module>
-    <module>repackaged/bigtable</module>
     <module>statistics/semantic</module>
   </modules>
 
@@ -64,6 +63,17 @@
     <dagger.version>2.0.2</dagger.version>
     <slf4j.version>1.7.21</slf4j.version>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>repackaged</id>
+
+      <modules>
+        <module>repackaged/bigtable</module>
+        <module>repackaged/datastax</module>
+      </modules>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>
@@ -235,6 +245,17 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>annotations</artifactId>
         <version>${findbugs.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>net.jcip</groupId>
+            <artifactId>jcip-annotations</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -281,7 +302,7 @@
       </dependency>
 
       <dependency>
-        <groupId>com.datastax.cassandra</groupId>
+        <groupId>com.spotify.heroic.repackaged</groupId>
         <artifactId>cassandra-driver-core</artifactId>
         <version>${datastax.version}</version>
       </dependency>
@@ -317,21 +338,49 @@
         <groupId>org.glassfish.jersey.containers</groupId>
         <artifactId>jersey-container-servlet-core</artifactId>
         <version>${jersey.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>org.glassfish.hk2.external</groupId>
+            <artifactId>javax.inject</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.containers</groupId>
         <artifactId>jersey-container-servlet</artifactId>
         <version>${jersey.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>org.glassfish.hk2.external</groupId>
+            <artifactId>javax.inject</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.containers</groupId>
         <artifactId>jersey-container-jetty-http</artifactId>
         <version>${jersey.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>org.glassfish.hk2.external</groupId>
+            <artifactId>javax.inject</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.core</groupId>
         <artifactId>jersey-server</artifactId>
         <version>${jersey.version}</version>
+
+        <exclusions>
+          <exclusion>
+            <groupId>org.glassfish.hk2.external</groupId>
+            <artifactId>javax.inject</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.glassfish.jersey.core</groupId>
@@ -372,12 +421,17 @@
       <!-- netty -->
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-all</artifactId>
+        <artifactId>netty-transport</artifactId>
         <version>${netty.version}</version>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec</artifactId>
         <version>${netty.version}</version>
       </dependency>
 

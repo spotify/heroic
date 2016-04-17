@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric.bigtable.api;
 
+import com.spotify.heroic.bigtable.grpc.Status;
+import com.spotify.heroic.bigtable.grpc.StatusRuntimeException;
 import eu.toolchain.async.AsyncFramework;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
 import lombok.ToString;
 
 import java.util.Optional;

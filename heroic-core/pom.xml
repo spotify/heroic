@@ -6,7 +6,6 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>heroic-core</artifactId>
@@ -43,10 +42,6 @@
     </dependency>
 
     <!-- used for rpc -->
-    <dependency>
-      <groupId>org.glassfish.jersey.core</groupId>
-      <artifactId>jersey-client</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>

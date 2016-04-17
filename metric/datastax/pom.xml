@@ -6,7 +6,7 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../..</relativePath>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <groupId>com.spotify.heroic.metric</groupId>
@@ -33,7 +33,7 @@
     </dependency>
 
     <dependency>
-      <groupId>com.datastax.cassandra</groupId>
+      <groupId>com.spotify.heroic.repackaged</groupId>
       <artifactId>cassandra-driver-core</artifactId>
     </dependency>
 

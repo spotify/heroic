@@ -6,7 +6,7 @@
     <groupId>com.spotify.heroic</groupId>
     <artifactId>heroic-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <relativePath>../..</relativePath>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <groupId>com.spotify.heroic.metric</groupId>
@@ -35,11 +35,6 @@
     <dependency>
       <groupId>com.netflix.astyanax</groupId>
       <artifactId>astyanax-cassandra</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.datastax.cassandra</groupId>
-      <artifactId>cassandra-driver-core</artifactId>
     </dependency>
 
     <dependency>
