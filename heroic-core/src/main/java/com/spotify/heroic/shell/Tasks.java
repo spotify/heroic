@@ -55,6 +55,7 @@ import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
 import com.spotify.heroic.shell.task.Query;
 import com.spotify.heroic.shell.task.ReadWriteTest;
+import com.spotify.heroic.shell.task.Refresh;
 import com.spotify.heroic.shell.task.Resume;
 import com.spotify.heroic.shell.task.SerializeKey;
 import com.spotify.heroic.shell.task.Statistics;
@@ -89,6 +90,7 @@ public final class Tasks {
     static final Map<Class<?>, ShellTaskDefinition> availableMap = new HashMap<>();
 
     static {
+        shellTask(Refresh::setup, Refresh.class);
         shellTask(Configure::setup, Configure.class);
         shellTask(Statistics::setup, Statistics.class);
         shellTask(Keys::setup, Keys.class);
