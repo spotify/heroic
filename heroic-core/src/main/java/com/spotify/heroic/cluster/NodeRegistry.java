@@ -26,7 +26,6 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -190,20 +189,5 @@ public class NodeRegistry {
         }
 
         return entries.subList(0, n);
-    }
-
-    /**
-     * Close all associated cluster nodes.
-     *
-     * @return Future indicating if all was closed successfully.
-     */
-    public AsyncFuture<Void> close() {
-        final List<AsyncFuture<Void>> futures = new ArrayList<>();
-
-        for (final NodeRegistryEntry entry : entries) {
-            futures.add(entry.getClusterNode().close());
-        }
-
-        return async.collectAndDiscard(futures);
     }
 }

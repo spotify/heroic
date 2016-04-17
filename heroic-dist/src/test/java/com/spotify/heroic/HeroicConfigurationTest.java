@@ -35,7 +35,7 @@ public class HeroicConfigurationTest {
         final List<String> referenceStoppers = ImmutableList.of(
             "com.spotify.heroic.HeroicServer",
             "com.spotify.heroic.analytics.bigtable.BigtableMetricAnalytics",
-            // no stop: com.spotify.heroic.cluster.CoreClusterManager,
+            "com.spotify.heroic.cluster.CoreClusterManager",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendKV",
             "com.spotify.heroic.metadata.elasticsearch.MetadataBackendV1",
             "com.spotify.heroic.metric.astyanax.AstyanaxBackend",

@@ -49,7 +49,17 @@ public interface ClusterManager extends Initializing {
     }
 
     /**
-     * Add a static node, mainly used for testing.
+     * Get the list of static nodes.
+     */
+    AsyncFuture<Set<URI>> getStaticNodes();
+
+    /**
+     * Remove a static node.
+     */
+    AsyncFuture<Void> removeStaticNode(URI node);
+
+    /**
+     * Add a static node.
      */
     AsyncFuture<Void> addStaticNode(URI node);
 

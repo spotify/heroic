@@ -28,10 +28,10 @@ import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework.Resume;
 import com.spotify.heroic.http.DataResponse;
-import eu.toolchain.async.AsyncFuture;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -78,13 +78,30 @@ public class ClusterResource {
             m.getTags(), m.getCapabilities());
     }
 
-    private static final Resume<Void, DataResponse<Boolean>> ADD_NODE =
+    private static final Resume<Void, DataResponse<Boolean>> OK =
         (Void value) -> new DataResponse<>(true);
+
+    @GET
+    @Path("nodes")
+    public void getNodes(@Suspended AsyncResponse response, URI uri) {
+        httpAsync.bind(response, cluster.getStaticNodes());
+    }
+
+    @DELETE
+    @Path("nodes")
+    public void removeNode(@Suspended AsyncResponse response, URI uri) {
+        httpAsync.bind(response, cluster.removeStaticNode(uri), OK);
+    }
 
     @POST
     @Path("nodes")
     public void addNode(@Suspended AsyncResponse response, URI uri) {
-        AsyncFuture<Void> callback = cluster.addStaticNode(uri);
-        httpAsync.bind(response, callback, ADD_NODE);
+        httpAsync.bind(response, cluster.addStaticNode(uri), OK);
+    }
+
+    @POST
+    @Path("refresh")
+    public void refresh(@Suspended AsyncResponse response) {
+        httpAsync.bind(response, cluster.refresh());
     }
 }
