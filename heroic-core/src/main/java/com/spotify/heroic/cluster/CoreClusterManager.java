@@ -34,7 +34,6 @@ import com.spotify.heroic.scheduler.Task;
 import com.spotify.heroic.statistics.HeroicReporter;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Collector;
 import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.ResolvableFuture;
 import eu.toolchain.async.Transform;
@@ -80,8 +79,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
     private final ResolvableFuture<Void> initialized;
 
-    private final AtomicReference<Set<URI>> staticNodes =
-        new AtomicReference<Set<URI>>(new HashSet<URI>());
+    private final AtomicReference<Set<URI>> staticNodes = new AtomicReference<>(new HashSet<>());
 
     final AtomicReference<NodeRegistry> registry = new AtomicReference<>(null);
 
@@ -278,20 +276,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return all;
     }
 
-    // @formatter:off
-    static Collector<List<MaybeError<NodeRegistryEntry>>, List<MaybeError<NodeRegistryEntry>>>
-        joinMaybeErrors =
-                results -> {
-                    final List<MaybeError<NodeRegistryEntry>> result = new ArrayList<>();
-
-                    for (final List<MaybeError<NodeRegistryEntry>> r : results) {
-                        result.addAll(r);
-                    }
-
-                    return result;
-                };
-    // @formatter:on
-
     private AsyncFuture<List<MaybeError<NodeRegistryEntry>>> addStaticNodes(
         final AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform
     ) {
@@ -302,7 +286,16 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         if (!staticNodes.isEmpty()) {
             final List<AsyncFuture<List<MaybeError<NodeRegistryEntry>>>> transforms =
                 ImmutableList.of(transform, async.resolved(staticNodes).lazyTransform(resolve()));
-            finalTransform = async.collect(transforms, joinMaybeErrors);
+
+            finalTransform = async.collect(transforms, results -> {
+                final List<MaybeError<NodeRegistryEntry>> result = new ArrayList<>();
+
+                for (final List<MaybeError<NodeRegistryEntry>> r : results) {
+                    result.addAll(r);
+                }
+
+                return result;
+            });
         } else {
             finalTransform = transform;
         }
@@ -310,71 +303,51 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         return finalTransform;
     }
 
-    // @formatter:off
-    private static Collector<MaybeError<NodeRegistryEntry>, List<MaybeError<NodeRegistryEntry>>>
-            joinMaybeErrorsCollection =
-            new Collector<MaybeError<NodeRegistryEntry>, List<MaybeError<NodeRegistryEntry>>>() {
-                @Override
-                public List<MaybeError<NodeRegistryEntry>> collect(
-                        Collection<MaybeError<NodeRegistryEntry>> results) throws Exception {
-                    return new ArrayList<>(results);
-                }
-            };
-    // @formatter:on
-
     private LazyTransform<List<URI>, List<MaybeError<NodeRegistryEntry>>> resolve() {
-        return new LazyTransform<List<URI>, List<MaybeError<NodeRegistryEntry>>>() {
-            @Override
-            public AsyncFuture<List<MaybeError<NodeRegistryEntry>>> transform(final List<URI> nodes)
-                throws Exception {
-                final List<AsyncFuture<MaybeError<NodeRegistryEntry>>> callbacks =
-                    new ArrayList<>(nodes.size());
+        return nodes -> {
+            final List<AsyncFuture<MaybeError<NodeRegistryEntry>>> callbacks =
+                new ArrayList<>(nodes.size());
 
-                for (final URI uri : nodes) {
-                    callbacks.add(resolve(uri)
-                        .directTransform(MaybeError.transformJust())
-                        .catchFailed(handleError(uri)));
-                }
-
-                return async.collect(callbacks, joinMaybeErrorsCollection);
+            for (final URI uri : nodes) {
+                callbacks.add(resolve(uri)
+                    .directTransform(MaybeError.transformJust())
+                    .catchFailed(handleError(uri)));
             }
+
+            return async.collect(callbacks, ArrayList::new);
         };
     }
 
     private LazyTransform<List<MaybeError<NodeRegistryEntry>>, Void> updateRegistry() {
-        return new LazyTransform<List<MaybeError<NodeRegistryEntry>>, Void>() {
-            @Override
-            public AsyncFuture<Void> transform(List<MaybeError<NodeRegistryEntry>> results)
-                throws Exception {
-                final Set<NodeRegistryEntry> entries = new HashSet<>();
-                final List<Throwable> failures = new ArrayList<>();
+        return results -> {
+            final Set<NodeRegistryEntry> entries = new HashSet<>();
+            final List<Throwable> failures = new ArrayList<>();
 
-                for (final MaybeError<NodeRegistryEntry> maybe : results) {
-                    if (maybe.isError()) {
-                        failures.add(maybe.getError());
-                        continue;
-                    }
-
-                    entries.add(maybe.getJust());
+            for (final MaybeError<NodeRegistryEntry> maybe : results) {
+                if (maybe.isError()) {
+                    failures.add(maybe.getError());
+                    continue;
                 }
 
-                final Set<Map<String, String>> knownShards = extractKnownShards(entries);
-
-                log.info("Registering known shards: {}", knownShards);
-                reporter.registerShards(knownShards);
-
-                log.info("Updated registry: {} result(s), {} failure(s)", entries.size(),
-                    failures.size());
-                final NodeRegistry oldRegistry = registry.getAndSet(
-                    new NodeRegistry(async, new ArrayList<>(entries), results.size()));
-
-                if (oldRegistry == null) {
-                    return async.resolved(null);
-                }
-
-                log.info("Closing old registry");
-                return oldRegistry.close();
+                entries.add(maybe.getJust());
             }
+
+            final Set<Map<String, String>> knownShards = extractKnownShards(entries);
+
+            log.info("Registering known shards: {}", knownShards);
+            reporter.registerShards(knownShards);
+
+            log.info("Updated registry: {} result(s), {} failure(s)", entries.size(),
+                failures.size());
+            final NodeRegistry oldRegistry = registry.getAndSet(
+                new NodeRegistry(async, new ArrayList<>(entries), results.size()));
+
+            if (oldRegistry == null) {
+                return async.resolved(null);
+            }
+
+            log.info("Closing old registry");
+            return oldRegistry.close();
         };
     }
 
@@ -389,34 +362,11 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     private Transform<Throwable, MaybeError<NodeRegistryEntry>> handleError(final URI uri) {
-        return new Transform<Throwable, MaybeError<NodeRegistryEntry>>() {
-            @Override
-            public MaybeError<NodeRegistryEntry> transform(Throwable error) throws Exception {
-                log.error("Failed to connect {}", uri, error);
-                return MaybeError.error(error);
-            }
+        return error -> {
+            log.error("Failed to connect {}", uri, error);
+            return MaybeError.error(error);
         };
     }
-
-    private final LazyTransform<ClusterNode, NodeRegistryEntry> localTransform =
-        new LazyTransform<ClusterNode, NodeRegistryEntry>() {
-            @Override
-            public AsyncFuture<NodeRegistryEntry> transform(final ClusterNode node)
-                throws Exception {
-                if (useLocal && local.isPresent() &&
-                    localMetadata.getId().equals(node.metadata().getId())) {
-                    log.info("Using local instead of {}", node);
-
-                    final LocalClusterNode l = local.get();
-
-                    return node
-                        .close()
-                        .directTransform(r -> new NodeRegistryEntry(l, l.metadata()));
-                }
-
-                return async.resolved(new NodeRegistryEntry(node, node.metadata()));
-            }
-        };
 
     /**
      * Resolve the given URI to a specific protocol implementation (then use it, if found).
@@ -428,9 +378,20 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         final RpcProtocol protocol = protocols.get(uri.getScheme());
 
         if (protocol == null) {
-            throw new IllegalArgumentException("Unsupported scheme '" + uri.getScheme());
+            throw new IllegalArgumentException("Unsupported scheme (" + uri.getScheme() + ")");
         }
 
-        return protocol.connect(uri).lazyTransform(localTransform);
+        return protocol.connect(uri).lazyTransform(node -> {
+            if (useLocal && local.isPresent() &&
+                localMetadata.getId().equals(node.metadata().getId())) {
+                log.info("Using local instead of {}", node);
+
+                final LocalClusterNode l = local.get();
+
+                return node.close().directTransform(r -> new NodeRegistryEntry(l, l.metadata()));
+            }
+
+            return async.resolved(new NodeRegistryEntry(node, node.metadata()));
+        });
     }
 }
