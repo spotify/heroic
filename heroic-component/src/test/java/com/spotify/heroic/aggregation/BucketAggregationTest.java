@@ -76,7 +76,7 @@ public class BucketAggregationTest {
     @Test
     public void testSameSampling() {
         List<Point> input = build().add(999, 1.0).add(1000, 1.0).add(2000, 1.0).result();
-        List<Point> expected = build().add(1000, 1.0).add(2000, 1.0).add(3000, 1.0).result();
+        List<Point> expected = build().add(1000, 2.0).add(2000, 1.0).add(3000, 0.0).result();
         checkBucketAggregation(input, expected, 1000);
     }
 
@@ -84,7 +84,7 @@ public class BucketAggregationTest {
     public void testLongerExtent() {
         List<Point> input =
             build().add(0, 1.0).add(1000, 1.0).add(1000, 1.0).add(2000, 1.0).result();
-        List<Point> expected = build().add(1000, 1.0).add(2000, 3.0).add(3000, 3.0).result();
+        List<Point> expected = build().add(1000, 3.0).add(2000, 3.0).add(3000, 1.0).result();
         checkBucketAggregation(input, expected, 2000);
     }
 
