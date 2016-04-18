@@ -141,9 +141,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         }
 
         private Iterator<B> matching(final Metric m) {
-            // XXX: range should be `<expr> - 1` to match old behavior, change back?
-
-            final long ts = m.getTimestamp() - offset;
+            final long ts = m.getTimestamp() - offset - 1;
             final long te = ts + extent;
 
             if (te < 0) {
