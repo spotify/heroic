@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.aggregation.AggregationTraversal;
@@ -33,7 +35,8 @@ public class BelowKInstance implements FilterKInstance {
     private final FilterKThresholdStrategy strategy;
     private final FilterAggregation aggregation;
 
-    public BelowKInstance(double k, AggregationInstance of) {
+    @JsonCreator
+    public BelowKInstance(@JsonProperty("k") double k, @JsonProperty("of") AggregationInstance of) {
         strategy = new FilterKThresholdStrategy(FilterKThresholdType.BELOW, k);
         aggregation = new FilterAggregation(strategy, of);
     }
