@@ -228,7 +228,7 @@ public class LocalMetricManager implements MetricManager {
                 final AggregationTraversal traversal =
                     aggregation.session(states(result.getSeries()), range);
 
-                if (traversal.getStates().size() > groupLimit) {
+                if (traversal.getEstimatedStatesSize() > groupLimit) {
                     throw new IllegalArgumentException(
                         "The current query is too heavy! (More than " + groupLimit + " " +
                             "timeseries would be sent to your client).");

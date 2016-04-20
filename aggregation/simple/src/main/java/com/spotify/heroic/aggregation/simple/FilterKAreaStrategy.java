@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.aggregation.AggregationState;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.Point;
 import lombok.Data;
@@ -48,6 +49,11 @@ public class FilterKAreaStrategy implements FilterStrategy {
             .map(Area::getFilterableMetrics)
             .map(FilterableMetrics::getData)
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public long getEstimatedStatesSize(List<AggregationState> states) {
+        return Math.min(states.size(), k);
     }
 
     public Long getK() {

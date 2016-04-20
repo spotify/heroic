@@ -21,8 +21,14 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.aggregation.AggregationState;
+
 import java.util.List;
 
 public interface FilterStrategy {
     <T> List<T> filter(List<FilterableMetrics<T>> metrics);
+
+    default long getEstimatedStatesSize(List<AggregationState> states) {
+        return states.size();
+    }
 }

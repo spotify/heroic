@@ -117,7 +117,8 @@ public class ChainInstance implements AggregationInstance {
             prev = s;
         }
 
-        return new AggregationTraversal(prev.getStates(), new Session(head.getSession(), tail));
+        return new AggregationTraversal(
+            prev.getStates(), new Session(head.getSession(), tail), prev.getEstimatedStatesSize());
     }
 
     @Override

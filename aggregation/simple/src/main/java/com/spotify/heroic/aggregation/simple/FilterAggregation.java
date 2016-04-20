@@ -71,7 +71,8 @@ public class FilterAggregation implements AggregationInstance {
     public AggregationTraversal session(List<AggregationState> states, DateRange range) {
         final AggregationTraversal traversal = of.session(states, range);
         return new AggregationTraversal(traversal.getStates(),
-            new Session(filterStrategy, traversal.getSession()));
+            new Session(filterStrategy, traversal.getSession()),
+            filterStrategy.getEstimatedStatesSize(states));
     }
 
     @Override
