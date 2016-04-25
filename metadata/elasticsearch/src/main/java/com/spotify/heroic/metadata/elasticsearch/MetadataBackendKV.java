@@ -99,7 +99,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
     static final String TYPE_METADATA = "metadata";
 
     static final TimeValue SCROLL_TIME = TimeValue.timeValueMillis(5000);
-    static final int MAX_SIZE = 1000;
+    static final int SCROLL_SIZE = 1000;
 
     public static final String TEMPLATE_NAME = "heroic";
 
@@ -256,7 +256,7 @@ public class MetadataBackendKV extends AbstractElasticsearchMetadataBackend
                 try {
                     request = c
                         .search(filter.getRange(), TYPE_METADATA)
-                        .setSize(Math.min(MAX_SIZE, filter.getLimit()))
+                        .setSize(Math.min(filter.getLimit(), SCROLL_SIZE))
                         .setScroll(SCROLL_TIME)
                         .setSearchType(SearchType.SCAN);
                 } catch (NoIndexSelectedException e) {

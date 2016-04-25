@@ -33,8 +33,9 @@ import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.LazyTransform;
 import eu.toolchain.async.Managed;
-import eu.toolchain.async.ResolvableFuture;
+import lombok.RequiredArgsConstructor;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -48,9 +49,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class AbstractElasticsearchMetadataBackend extends AbstractElasticsearchBackend
     implements MetadataBackend {
@@ -77,58 +77,46 @@ public abstract class AbstractElasticsearchMetadataBackend extends AbstractElast
                 return async.resolved(FindSeries.EMPTY);
             }
 
-            return bind(c
-                .prepareSearchScroll(initial.getScrollId())
-                .setScroll(SCROLL_TIME)
-                .execute()).lazyTransform((response) -> {
-                final ResolvableFuture<FindSeries> future = async.future();
-                final Set<Series> series = new HashSet<>();
-                final AtomicInteger count = new AtomicInteger();
+            final String scrollId = initial.getScrollId();
 
-                final Consumer<SearchResponse> consumer = new Consumer<SearchResponse>() {
-                    @Override
-                    public void accept(final SearchResponse response) {
-                        final SearchHit[] hits = response.getHits().hits();
+            final Supplier<AsyncFuture<SearchResponse>> scroller =
+                () -> bind(c.prepareSearchScroll(scrollId).setScroll(SCROLL_TIME).execute());
 
-                        for (final SearchHit hit : hits) {
-                            series.add(toSeries(hit));
-                        }
-
-                        count.addAndGet(hits.length);
-
-                        if (hits.length == 0 || count.get() >= limit ||
-                            response.getScrollId() == null) {
-                            future.resolve(new FindSeries(series, series.size(), 0));
-                            return;
-                        }
-
-                        bind(c
-                            .prepareSearchScroll(response.getScrollId())
-                            .setScroll(SCROLL_TIME)
-                            .execute()).onDone(new FutureDone<SearchResponse>() {
-                            @Override
-                            public void failed(Throwable cause) throws Exception {
-                                future.fail(cause);
-                            }
-
-                            @Override
-                            public void resolved(SearchResponse result) throws Exception {
-                                accept(result);
-                            }
-
-                            @Override
-                            public void cancelled() throws Exception {
-                                future.cancel();
-                            }
-                        });
-                    }
-                };
-
-                consumer.accept(response);
-
-                return future;
-            });
+            return scroller.get().lazyTransform(new ScrollTransform(limit, scroller));
         });
+    }
+
+    @RequiredArgsConstructor
+    class ScrollTransform implements LazyTransform<SearchResponse, FindSeries> {
+        private final long limit;
+        private final Supplier<AsyncFuture<SearchResponse>> scroller;
+
+        int size = 0;
+        int duplicates = 0;
+        final Set<Series> series = new HashSet<>();
+
+        @Override
+        public AsyncFuture<FindSeries> transform(final SearchResponse response) throws Exception {
+            final SearchHit[] hits = response.getHits().getHits();
+
+            for (final SearchHit hit : hits) {
+                if (size >= limit) {
+                    break;
+                }
+
+                if (!series.add(toSeries(hit))) {
+                    duplicates += 1;
+                }
+
+                size += 1;
+            }
+
+            if (hits.length == 0 || size >= limit) {
+                return async.resolved(new FindSeries(series, size, duplicates));
+            }
+
+            return scroller.get().lazyTransform(this);
+        }
     }
 
     private static final int ENTRIES_SCAN_SIZE = 1000;

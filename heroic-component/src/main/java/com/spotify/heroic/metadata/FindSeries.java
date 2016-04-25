@@ -69,6 +69,9 @@ public class FindSeries {
             for (final FindSeries result : results) {
                 errors.addAll(result.errors);
 
+                duplicates += result.duplicates;
+                size += result.size;
+
                 for (final Series s : result.series) {
                     if (series.add(s)) {
                         duplicates += 1;
@@ -78,9 +81,6 @@ public class FindSeries {
                         break outer;
                     }
                 }
-
-                duplicates += result.duplicates;
-                size += result.size;
             }
 
             return new FindSeries(errors, series, size, duplicates);
