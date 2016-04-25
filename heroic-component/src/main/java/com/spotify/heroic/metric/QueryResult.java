@@ -83,10 +83,6 @@ public class QueryResult {
                 traces.add(part.getTrace());
                 queryTraces.add(part.getQueryTrace());
 
-                if (part.isEmpty()) {
-                    continue;
-                }
-
                 all.add(part.getGroups());
             }
 

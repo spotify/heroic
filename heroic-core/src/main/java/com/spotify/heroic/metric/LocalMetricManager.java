@@ -525,11 +525,6 @@ public class LocalMetricManager implements MetricManager {
             final List<ResultGroup> groups = new ArrayList<>();
 
             for (final AggregationData group : result.getResult()) {
-                /* skip empty groups (no valid values) */
-                if (group.isEmpty()) {
-                    continue;
-                }
-
                 final Set<Series> s = lookup.get(group.getGroup());
 
                 if (s == null) {
