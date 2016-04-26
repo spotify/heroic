@@ -42,6 +42,7 @@ import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 @Path("metadata")
@@ -184,7 +185,11 @@ public class MetadataResource {
     ) {
         final long now = System.currentTimeMillis();
         final Filter filter = optionalFilter.get().orElseGet(filters::t);
-        final Optional<DateRange> range = optionalRange.get().map(r -> r.buildDateRange(now));
-        return RangeFilter.filterFor(filter, range, now, limit.get());
+        final DateRange range =
+            optionalRange.get().map(r -> r.buildDateRange(now)).orElseGet(() -> {
+                return new DateRange(now - TimeUnit.MILLISECONDS.convert(7, TimeUnit.DAYS), now);
+            });
+
+        return new RangeFilter(filter, range, limit.get());
     }
 }

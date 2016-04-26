@@ -61,7 +61,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -201,8 +200,7 @@ public class LocalMetricManager implements MetricManager {
             /* groupLoadLimit + 1, so that we return one too many results when more than
              * groupLoadLimit series are available. This will cause the query engine to reject the
              * request because of too large group. */
-            final RangeFilter rangeFilter =
-                RangeFilter.filterFor(filter, Optional.ofNullable(range), seriesLimit + 1);
+            final RangeFilter rangeFilter = new RangeFilter(filter, range, seriesLimit + 1);
 
             final LazyTransform<FindSeries, ResultGroups> transform = (final FindSeries result) -> {
                 /* if empty, there are not time series on this shard */
@@ -212,8 +210,7 @@ public class LocalMetricManager implements MetricManager {
 
                 if (result.getSize() >= seriesLimit) {
                     throw new IllegalArgumentException(
-                        "The total number of series fetched " + result.getSize() +
-                            " would exceed the allowed limit of " +
+                        "The total number of series fetched exceeds the allowed limit of " +
                             seriesLimit);
                 }
 
