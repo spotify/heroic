@@ -4,6 +4,7 @@
 
   <properties>
     <bigtable.version>0.2.4</bigtable.version>
+    <tcnative.classifier>linux-x86_64</tcnative.classifier>
   </properties>
 
   <groupId>com.spotify.heroic.repackaged</groupId>
@@ -18,6 +19,12 @@
       <groupId>com.google.cloud.bigtable</groupId>
       <artifactId>bigtable-client-core</artifactId>
       <version>${bigtable.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative-boringssl-static</artifactId>
+      <version>1.1.33.Fork13</version>
+      <classifier>${tcnative.classifier}</classifier>
     </dependency>
   </dependencies>
 
@@ -39,6 +46,7 @@
               <artifactSet>
                 <excludes>
                   <exclude>com.google.guava:guava</exclude>
+                  <exclude>io.netty:netty-tcnative-boringssl-static</exclude>
                 </excludes>
               </artifactSet>
               <relocations>

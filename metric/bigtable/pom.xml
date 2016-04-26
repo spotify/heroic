@@ -22,7 +22,6 @@
 
   <properties>
     <bigtable.version>0.2.4</bigtable.version>
-    <alpn-boot.version>8.1.5.v20150921</alpn-boot.version>
   </properties>
 
   <dependencies>
@@ -65,27 +64,6 @@
       <groupId>org.apache.tomcat</groupId>
       <artifactId>tomcat-jni</artifactId>
       <version>8.0.24</version>
-    </dependency>
-
-    <!-- XXX: this _must_ be cleaned up at some point
-         Bigtable uses HTTP2, and requires TLS, which requires ALPN.
-         See: https://github.com/grpc/grpc-java/blob/master/SECURITY.md
-
-         Any jvm must be started with:
-           -Xbootclasspath/p:/path/to/alpn-boot.jar
-
-         WARNING: the alpn implementation MIGHT not be compatible with your JRE.
-                  See progress in project: https://github.com/jetty-project/jetty-alpn
-    -->
-    <dependency>
-      <groupId>org.mortbay.jetty.alpn</groupId>
-      <artifactId>alpn-boot</artifactId>
-      <!--
-      Tested with:
-        jdk8u45
-      -->
-      <version>${alpn-boot.version}</version>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
