@@ -34,5 +34,4 @@ override_dh_auto_build: repackaged
 
 # properly install repackaged dependencies
 repackaged:
-	cd repackaged/bigtable && MAVEN_HOME=$(MAVEN_HOME) $(MVN) install
-	cd repackaged/datastax && MAVEN_HOME=$(MAVEN_HOME) $(MVN) install
+	env MAVEN_HOME=$(MAVEN_HOME) MVN="$(MVN)" $(CURDIR)/tools/install-repackaged

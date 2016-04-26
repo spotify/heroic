@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+MVN=${MVN:-mvn}
+
+for r in repackaged/*; do
+    (cd $r && $MVN clean install)
+done
