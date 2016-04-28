@@ -23,7 +23,7 @@ parser.add_argument('--java-debug', help='Enable Default Debugging Switches for 
                     action='store_const', const=True)
 
 parser.add_argument('--java-debug-port', help='Java Debug Port',
-                    dest='java_debug_port', default=1044,
+                    dest='java_debug_port', default=5005,
                     type=int)
 
 parser.add_argument('--java-debug-suspend', help='Java Suspend on Debug',
