@@ -8,7 +8,8 @@ CLASSPATH=
 JVM_OPTS=${JVM_OPTS:-""}
 
 if [[ $1 == '-debug' ]]; then
-    JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n"
+    JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,address=5005,suspend=y"
+    JVM_OPTS="$JVM_OPTS -Dloglevel=TRACE"
     shift
 fi
 
