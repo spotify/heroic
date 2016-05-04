@@ -43,5 +43,7 @@ public interface HeroicReporter {
 
     IngestionManagerReporter newIngestionManager();
 
+    AnalyticsReporter newAnalyticsReporter();
+
     void registerShards(Set<Map<String, String>> knownShards);
 }

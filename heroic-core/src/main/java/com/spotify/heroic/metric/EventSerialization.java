@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.metric;
 
-import java.io.IOException;
-import java.util.Map;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,23 +31,26 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableMap;
 
+import java.io.IOException;
+import java.util.Map;
+
 public class EventSerialization {
     public static class Deserializer extends JsonDeserializer<Event> {
         @Override
         public Event deserialize(JsonParser p, DeserializationContext c)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
 
             if (p.getCurrentToken() != JsonToken.START_ARRAY) {
                 throw c.mappingException(
-                        String.format("Expected start of array, not %s", p.getCurrentToken()));
+                    String.format("Expected start of array, not %s", p.getCurrentToken()));
             }
 
             final Long timestamp;
 
             {
                 if (!p.nextToken().isNumeric()) {
-                    throw c.mappingException(String.format("Expected timestamp (number), not %s",
-                            p.getCurrentToken()));
+                    throw c.mappingException(
+                        String.format("Expected timestamp (number), not %s", p.getCurrentToken()));
                 }
 
                 timestamp = p.getLongValue();
@@ -58,7 +58,7 @@ public class EventSerialization {
 
             if (p.nextToken() != JsonToken.START_OBJECT) {
                 throw c.mappingException(String.format("Expected start of payload (object), not %s",
-                        p.getCurrentToken()));
+                    p.getCurrentToken()));
             }
 
             ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
@@ -67,28 +67,28 @@ public class EventSerialization {
                 final String key = p.getCurrentName();
 
                 switch (p.nextToken()) {
-                case VALUE_NUMBER_INT:
-                    builder.put(key, p.getValueAsInt());
-                    break;
-                case VALUE_NUMBER_FLOAT:
-                    builder.put(key, p.getValueAsDouble());
-                    break;
-                case VALUE_STRING:
-                    builder.put(key, p.getValueAsString());
-                    break;
-                case VALUE_FALSE:
-                case VALUE_TRUE:
-                    builder.put(key, p.getValueAsBoolean());
-                    break;
-                default:
-                    throw c.mappingException(
+                    case VALUE_NUMBER_INT:
+                        builder.put(key, p.getValueAsInt());
+                        break;
+                    case VALUE_NUMBER_FLOAT:
+                        builder.put(key, p.getValueAsDouble());
+                        break;
+                    case VALUE_STRING:
+                        builder.put(key, p.getValueAsString());
+                        break;
+                    case VALUE_FALSE:
+                    case VALUE_TRUE:
+                        builder.put(key, p.getValueAsBoolean());
+                        break;
+                    default:
+                        throw c.mappingException(
                             String.format("Unexpected token %s", p.getCurrentToken()));
                 }
             }
 
             if (p.getCurrentToken() != JsonToken.END_OBJECT) {
                 throw c.mappingException(
-                        String.format("Expected end of object, not %s", p.getCurrentToken()));
+                    String.format("Expected end of object, not %s", p.getCurrentToken()));
             }
 
             return new Event(timestamp, builder.build());
@@ -98,7 +98,7 @@ public class EventSerialization {
     public static class Serializer extends JsonSerializer<Event> {
         @Override
         public void serialize(Event d, JsonGenerator g, SerializerProvider provider)
-                throws IOException, JsonProcessingException {
+            throws IOException, JsonProcessingException {
             g.writeStartArray();
             g.writeNumber(d.getTimestamp());
 

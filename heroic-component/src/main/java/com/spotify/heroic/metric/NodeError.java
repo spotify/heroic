@@ -21,15 +21,14 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Map;
-import java.util.UUID;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.cluster.NodeMetadata;
+import lombok.Data;
+
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Indicates that a specific shard of the request failed and information on which and why.
@@ -45,9 +44,11 @@ public class NodeError implements RequestError {
     private final boolean internal;
 
     @JsonCreator
-    public static NodeError create(@JsonProperty("nodeId") UUID nodeId,
-            @JsonProperty("nodeUri") String node, @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("error") String error, @JsonProperty("internal") Boolean internal) {
+    public static NodeError create(
+        @JsonProperty("nodeId") UUID nodeId, @JsonProperty("nodeUri") String node,
+        @JsonProperty("tags") Map<String, String> tags, @JsonProperty("error") String error,
+        @JsonProperty("internal") Boolean internal
+    ) {
         return new NodeError(nodeId, node, tags, error, internal);
     }
 
@@ -58,8 +59,9 @@ public class NodeError implements RequestError {
         return new NodeError(m.getId(), c.toString(), m.getTags(), message, internal);
     }
 
-    public static NodeError fromThrowable(final UUID nodeId, final String node,
-            final Map<String, String> shard, Throwable e) {
+    public static NodeError fromThrowable(
+        final UUID nodeId, final String node, final Map<String, String> shard, Throwable e
+    ) {
         final String message = errorMessage(e);
         final boolean internal = true;
         return new NodeError(nodeId, node, shard, message, internal);

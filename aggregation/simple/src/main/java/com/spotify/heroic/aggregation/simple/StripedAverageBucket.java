@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-import java.util.concurrent.atomic.DoubleAdder;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.concurrent.atomic.DoubleAdder;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Bucket that calculates the average of all samples seen.

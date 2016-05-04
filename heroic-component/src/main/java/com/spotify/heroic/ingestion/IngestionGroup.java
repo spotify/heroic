@@ -24,7 +24,6 @@ package com.spotify.heroic.ingestion;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionGroup extends Grouped {

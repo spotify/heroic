@@ -21,15 +21,6 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -43,32 +34,40 @@ import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.LongAdder;
+
 /**
  * A base aggregation that collects data in 'buckets', one for each sampled data point.
- *
+ * <p>
  * A bucket aggregation is used to down-sample a lot of data into distinct buckets over time, making
  * them useful for presentation purposes. Buckets have to be thread safe.
  *
  * @param <B> The bucket type.
- * @see Bucket
  * @author udoprog
+ * @see Bucket
  */
 @Data
-@EqualsAndHashCode(of = { "size", "extent" })
+@EqualsAndHashCode(of = {"size", "extent"})
 public abstract class BucketAggregationInstance<B extends Bucket> implements AggregationInstance {
     public static final Map<String, String> EMPTY_GROUP = ImmutableMap.of();
     public static final long MAX_BUCKET_COUNT = 100000L;
 
     private static final Map<String, String> EMPTY = ImmutableMap.of();
 
-    public static final Set<MetricType> ALL_TYPES = ImmutableSet.of(MetricType.POINT,
-            MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP);
+    public static final Set<MetricType> ALL_TYPES =
+        ImmutableSet.of(MetricType.POINT, MetricType.EVENT, MetricType.SPREAD, MetricType.GROUP);
 
     protected final long size;
     protected final long extent;
@@ -83,38 +82,41 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
     private final class Session implements AggregationSession {
         private final LongAdder sampleSize = new LongAdder();
 
-        private final Set<Series> series;
-
         private final List<B> buckets;
 
         private final long offset;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series,
-                List<Point> values) {
+        public void updatePoints(
+            Map<String, String> group, List<Point> values
+        ) {
             feed(MetricType.POINT, values, (bucket, m) -> bucket.updatePoint(group, m));
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series,
-                List<Event> values) {
+        public void updateEvents(
+            Map<String, String> group, List<Event> values
+        ) {
             feed(MetricType.EVENT, values, (bucket, m) -> bucket.updateEvent(group, m));
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series,
-                List<Spread> values) {
+        public void updateSpreads(
+            Map<String, String> group, List<Spread> values
+        ) {
             feed(MetricType.SPREAD, values, (bucket, m) -> bucket.updateSpread(group, m));
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series,
-                List<MetricGroup> values) {
+        public void updateGroup(
+            Map<String, String> group, List<MetricGroup> values
+        ) {
             feed(MetricType.GROUP, values, (bucket, m) -> bucket.updateGroup(group, m));
         }
 
-        private <T extends Metric> void feed(final MetricType type, List<T> values,
-                final BucketConsumer<B, T> consumer) {
+        private <T extends Metric> void feed(
+            final MetricType type, List<T> values, final BucketConsumer<B, T> consumer
+        ) {
             if (!input.contains(type)) {
                 return;
             }
@@ -139,9 +141,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         }
 
         private Iterator<B> matching(final Metric m) {
-            // XXX: range should be `<expr> - 1` to match old behavior, change back?
-
-            final long ts = m.getTimestamp() - offset;
+            final long ts = m.getTimestamp() - offset - 1;
             final long te = ts + extent;
 
             if (te < 0) {
@@ -187,10 +187,10 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
             }
 
             final MetricCollection metrics = MetricCollection.build(out, result);
-            final Statistics statistics = new Statistics(
-                    ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
+            final Statistics statistics =
+                new Statistics(ImmutableMap.of(AggregationInstance.SAMPLE_SIZE, sampleSize.sum()));
             final List<AggregationData> updates =
-                    ImmutableList.of(new AggregationData(EMPTY_GROUP, series, metrics));
+                ImmutableList.of(new AggregationData(EMPTY_GROUP, metrics));
             return new AggregationResult(updates, statistics);
         }
     }
@@ -213,8 +213,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         }
 
         final List<AggregationState> out = ImmutableList.of(new AggregationState(EMPTY, series));
-
-        return new AggregationTraversal(out, session(range, series));
+        return new AggregationTraversal(out, session(range));
     }
 
     @Override
@@ -224,8 +223,7 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<B>(out, size, extent, this::buildBucket, this::build,
-                range);
+        return new BucketReducerSession<B>(out, size, this::buildBucket, this::build, range);
     }
 
     @Override
@@ -233,9 +231,9 @@ public abstract class BucketAggregationInstance<B extends Bucket> implements Agg
         return String.format("%s(size=%d, extent=%d)", getClass().getSimpleName(), size, extent);
     }
 
-    public Session session(final DateRange range, final Set<Series> series) {
+    public Session session(final DateRange range) {
         final List<B> buckets = buildBuckets(range, size);
-        return new Session(series, buckets, range.start());
+        return new Session(buckets, range.start());
     }
 
     private List<B> buildBuckets(final DateRange range, long size) {

@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.consumer.collectd;
 
-import java.util.List;
-
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class CollectdSample {

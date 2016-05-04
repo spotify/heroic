@@ -21,24 +21,13 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.zip.GZIPInputStream;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
 import com.spotify.heroic.shell.ShellIO;
 import com.spotify.heroic.shell.ShellTask;
@@ -47,26 +36,40 @@ import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.zip.GZIPInputStream;
 
 @TaskUsage("Load metadata from a file")
 @TaskName("metadata-load")
 public class MetadataLoad implements ShellTask {
     protected static final long OUTPUT_STEP = 1000;
 
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final SuggestManager suggest;
+    private final ObjectMapper mapper;
 
     @Inject
-    private SuggestManager suggest;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public MetadataLoad(
+        AsyncFramework async, SuggestManager suggest, @Named("application/json") ObjectMapper mapper
+    ) {
+        this.async = async;
+        this.suggest = suggest;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -79,8 +82,8 @@ public class MetadataLoad implements ShellTask {
 
         final SuggestBackend target = suggest.useGroup(params.target);
 
-        final Optional<RateLimiter> rateLimiter = params.rate <= 0 ? Optional.<RateLimiter> absent()
-                : Optional.of(RateLimiter.create(params.rate));
+        final Optional<RateLimiter> rateLimiter = params.rate <= 0 ? Optional.<RateLimiter>absent()
+            : Optional.of(RateLimiter.create(params.rate));
 
         io.out().println("Loading suggest data:");
         io.out().println("  from (file): " + params.file);
@@ -135,7 +138,9 @@ public class MetadataLoad implements ShellTask {
                             rate = ((total - ratePosition) * 1000) / (rateNow - rateStart);
                         }
 
-                        io.out().println(
+                        io
+                            .out()
+                            .println(
                                 String.format(" %d (%s/s)", total, rate == -1 ? "infinite" : rate));
                         ratePosition = total;
                         rateStart = rateNow;
@@ -168,7 +173,7 @@ public class MetadataLoad implements ShellTask {
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-t", aliases = {"--target"}, usage = "Backend group to migrate to",
-                metaVar = "<metadata-group>")
+            metaVar = "<metadata-group>")
         private String target;
 
         @Option(name = "-f", usage = "File to load from", required = true)
@@ -178,5 +183,14 @@ public class MetadataLoad implements ShellTask {
         @Option(name = "-r", usage = "Rate-limit for writing to ES. 0 means disabled")
         @Getter
         private int rate = 0;
+    }
+
+    public static MetadataLoad setup(final CoreComponent core) {
+        return DaggerMetadataLoad_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        MetadataLoad task();
     }
 }

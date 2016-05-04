@@ -21,14 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import com.google.inject.Inject;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metadata.MetadataManager;
@@ -38,22 +32,30 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
 
 @TaskUsage("Count how much metadata matches a given query")
 @TaskName("metadata-count")
 public class MetadataCount implements ShellTask {
-    @Inject
-    private MetadataManager metadata;
+    private final MetadataManager metadata;
+    private final QueryParser parser;
+    private final FilterFactory filters;
 
     @Inject
-    private QueryParser parser;
-
-    @Inject
-    private FilterFactory filters;
+    public MetadataCount(MetadataManager metadata, QueryParser parser, FilterFactory filters) {
+        this.metadata = metadata;
+        this.parser = parser;
+        this.filters = filters;
+    }
 
     @Override
     public TaskParameters params() {
@@ -75,8 +77,8 @@ public class MetadataCount implements ShellTask {
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group;
 
         @Option(name = "--limit", usage = "Limit the number of deletes (default: alot)")
@@ -86,5 +88,14 @@ public class MetadataCount implements ShellTask {
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+    }
+
+    public static MetadataCount setup(final CoreComponent core) {
+        return DaggerMetadataCount_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        MetadataCount task();
     }
 }

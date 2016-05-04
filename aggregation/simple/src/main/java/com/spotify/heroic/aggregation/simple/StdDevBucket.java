@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Bucket that calculates the standard deviation of all buckets seen.
- *
+ * <p>
  * This uses Welford's method, as presented in http://www.johndcook.com/blog/standard_deviation/
  *
  * @author udoprog

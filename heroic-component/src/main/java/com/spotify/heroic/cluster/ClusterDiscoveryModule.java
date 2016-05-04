@@ -21,47 +21,52 @@
 
 package com.spotify.heroic.cluster;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.google.inject.Inject;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Singleton;
-
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 
+import javax.inject.Inject;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
 public interface ClusterDiscoveryModule {
-    Module module(final Key<ClusterDiscovery> key);
+    ClusterDiscoveryComponent module(PrimaryComponent primary);
 
     static ClusterDiscoveryModule nullModule() {
         return new ClusterDiscoveryModule() {
             @Override
-            public Module module(Key<ClusterDiscovery> key) {
-                return new PrivateModule() {
-                    @Override
-                    protected void configure() {
-                        bind(key).to(Null.class);
-                        expose(key);
-                    }
-                };
+            public ClusterDiscoveryComponent module(PrimaryComponent primary) {
+                return DaggerClusterDiscoveryModule_NullComponent
+                    .builder()
+                    .primaryComponent(primary)
+                    .build();
             }
         };
     }
 
+    @ClusterScope
+    @Component(dependencies = PrimaryComponent.class)
+    interface NullComponent extends ClusterDiscoveryComponent {
+        @Override
+        Null clusterDiscovery();
+    }
+
     @Data
-    @Singleton
+    @ClusterScope
     class Null implements ClusterDiscovery {
+        private final AsyncFramework async;
+
         @Inject
-        private AsyncFramework async;
+        public Null(AsyncFramework async) {
+            this.async = async;
+        }
 
         @Override
         public AsyncFuture<List<URI>> find() {
-            return async.<List<URI>> resolved(new ArrayList<URI>());
+            return async.<List<URI>>resolved(new ArrayList<URI>());
         }
     }
 }

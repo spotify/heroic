@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import java.util.List;
-
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
@@ -45,8 +43,10 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.util.List;
+import java.util.Optional;
 
 public class TracingClusterNodeGroup implements ClusterNode.Group {
     private final ClusterNode.Group delegate;
@@ -67,10 +67,13 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
-            AggregationInstance aggregation, QueryOptions options) {
-        return delegate.query(source, filter, range, aggregation, options)
-                .directTransform(ResultGroups.trace(query));
+    public AsyncFuture<ResultGroups> query(
+        MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
+        QueryOptions options
+    ) {
+        return delegate
+            .query(source, filter, range, aggregation, options)
+            .directTransform(ResultGroups.trace(query));
     }
 
     @Override
@@ -104,25 +107,28 @@ public class TracingClusterNodeGroup implements ClusterNode.Group {
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
-            String value) {
+    public AsyncFuture<TagSuggest> tagSuggest(
+        RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
+    ) {
         return delegate.tagSuggest(filter, options, key, value);
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options,
-            String key) {
+    public AsyncFuture<KeySuggest> keySuggest(
+        RangeFilter filter, MatchOptions options, Optional<String> key
+    ) {
         return delegate.keySuggest(filter, options, key);
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
-            int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+        RangeFilter filter, List<String> exclude, int groupLimit
+    ) {
         return delegate.tagValuesSuggest(filter, exclude, groupLimit);
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key) {
         return delegate.tagValueSuggest(filter, key);
     }
 

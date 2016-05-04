@@ -21,14 +21,14 @@
 
 package com.spotify.heroic.cluster;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.filter.Filter;
+import lombok.Data;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class GroupFilter {
@@ -36,8 +36,9 @@ public class GroupFilter {
     private final RangeFilter filter;
 
     @JsonCreator
-    public GroupFilter(@JsonProperty("group") String group,
-            @JsonProperty("filter") RangeFilter filter) {
+    public GroupFilter(
+        @JsonProperty("group") String group, @JsonProperty("filter") RangeFilter filter
+    ) {
         this.group = checkNotNull(group);
         this.filter = checkNotNull(filter);
     }

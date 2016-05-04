@@ -21,36 +21,40 @@
 
 package com.spotify.heroic.consumer.collectd;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.consumer.Consumer;
-
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import lombok.Data;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
+
 @Data
-public class CollectdConsumer implements Consumer {
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private Managed<Server> connection;
-
+public class CollectdConsumer implements Consumer, LifeCycles {
+    private final AsyncFramework async;
+    private final Managed<Server> connection;
     private final AtomicInteger consuming;
     private final AtomicInteger total;
     private final AtomicLong errors;
     private final LongAdder consumed;
 
-    public CollectdConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors,
-            LongAdder consumed) {
+    @Inject
+    public CollectdConsumer(
+        AsyncFramework async, Managed<Server> connection,
+        @Named("consuming") AtomicInteger consuming, @Named("total") AtomicInteger total,
+        @Named("errors") AtomicLong errors, @Named("consumed") LongAdder consumed
+    ) {
+        this.async = async;
+        this.connection = connection;
         this.consuming = consuming;
         this.total = total;
         this.errors = errors;
@@ -58,13 +62,9 @@ public class CollectdConsumer implements Consumer {
     }
 
     @Override
-    public AsyncFuture<Void> start() {
-        return connection.start();
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return connection.stop();
+    public void register(LifeCycleRegistry registry) {
+        registry.start(connection::start);
+        registry.stop(connection::stop);
     }
 
     @Override
@@ -79,8 +79,9 @@ public class CollectdConsumer implements Consumer {
         final long errors = this.errors.get();
         final long consumed = this.consumed.sum();
 
-        return Statistics.of(ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total,
-                ERRORS, errors, CONSUMED, consumed));
+        return Statistics.of(
+            ImmutableMap.<String, Long>of(CONSUMING, consuming, TOTAL, total, ERRORS, errors,
+                CONSUMED, consumed));
     }
 
     @Override

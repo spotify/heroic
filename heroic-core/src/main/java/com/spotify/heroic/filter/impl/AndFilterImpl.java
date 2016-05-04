@@ -21,6 +21,14 @@
 
 package com.spotify.heroic.filter.impl;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,18 +36,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 @Data
-@EqualsAndHashCode(of = { "OPERATOR", "statements" }, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "statements"}, doNotUseGetters = true)
 public class AndFilterImpl implements Filter.And {
     public static final String OPERATOR = "and";
 
@@ -103,7 +101,7 @@ public class AndFilterImpl implements Filter.And {
 
     private static List<Filter> collapseNotOr(Filter.Or first) {
         return ImmutableList.copyOf(
-                first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
+            first.terms().stream().map(t -> new NotFilterImpl(t).optimize()).iterator());
     }
 
     private static Filter optimize(SortedSet<Filter> statements) {

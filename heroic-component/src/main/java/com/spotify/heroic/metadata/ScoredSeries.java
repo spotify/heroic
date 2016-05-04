@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.metadata;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.common.Series;
+import lombok.Data;
 
 @Data
 public class ScoredSeries {
@@ -33,8 +32,9 @@ public class ScoredSeries {
     private final Series series;
 
     @JsonCreator
-    public static ScoredSeries create(@JsonProperty("score") Float score,
-            @JsonProperty("series") Series series) {
+    public static ScoredSeries create(
+        @JsonProperty("score") Float score, @JsonProperty("series") Series series
+    ) {
         return new ScoredSeries(score, series);
     }
 }

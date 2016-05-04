@@ -1,0 +1,8 @@
+{
+  "aggregators": [
+    {
+      "type": "group",
+      "each": {"type": "empty"}
+    }
+  ]
+}

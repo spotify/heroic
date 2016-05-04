@@ -30,8 +30,9 @@ import com.spotify.heroic.metric.Point;
 
 public class TemplateInstance extends BucketAggregationInstance<SumBucket> {
     @JsonCreator
-    public TemplateInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public TemplateInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT), MetricType.POINT);
     }
 

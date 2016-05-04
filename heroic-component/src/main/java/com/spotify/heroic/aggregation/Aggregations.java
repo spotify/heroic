@@ -30,7 +30,7 @@ import java.util.Optional;
 public abstract class Aggregations {
     /**
      * Creates an aggregation chain.
-     *
+     * <p>
      * An empty chain is the same as an instance of {@link EmptyInstance}. A chain with a single
      * entry will return that single item. More than one entry will construct a new instance of
      * {@link AggregationChain}.
@@ -39,22 +39,36 @@ public abstract class Aggregations {
      * @return A new aggregation for the given chain.
      */
     public static Aggregation chain(final Optional<? extends Iterable<Aggregation>> input) {
-        return input.map(Iterable::iterator).filter(Iterator::hasNext).map(it -> {
-            final Aggregation first = it.next();
+        return input.flatMap(Aggregations::chain).orElse(Empty.INSTANCE);
+    }
 
-            if (!it.hasNext()) {
-                return first;
-            }
+    /**
+     * Same as {@link #chain(Optional)}, but takes an iterable.
+     *
+     * @param input Iterable to build chain out of.
+     * @return An empty, or an aggregation.
+     */
+    public static Optional<Aggregation> chain(Iterable<Aggregation> input) {
+        final Iterator<Aggregation> it = input.iterator();
 
-            final List<Aggregation> chain = new ArrayList<>();
-            chain.add(first);
+        if (!it.hasNext()) {
+            return Optional.empty();
+        }
 
-            while (it.hasNext()) {
-                chain.add(it.next());
-            }
+        final Aggregation first = it.next();
 
-            return new Chain(chain);
-        }).orElse(Empty.INSTANCE);
+        if (!it.hasNext()) {
+            return Optional.of(first);
+        }
+
+        final List<Aggregation> chain = new ArrayList<>();
+        chain.add(first);
+
+        while (it.hasNext()) {
+            chain.add(it.next());
+        }
+
+        return Optional.of(new Chain(chain));
     }
 
     /**

@@ -21,41 +21,45 @@
 
 package com.spotify.heroic.metric;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.analytics.AnalyticsComponent;
+import com.spotify.heroic.analytics.MetricAnalytics;
+import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.dagger.CorePrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
+import com.spotify.heroic.statistics.HeroicReporter;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static com.spotify.heroic.common.Optionals.mergeOptionalList;
 import static com.spotify.heroic.common.Optionals.pickOptional;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static java.util.Optional.ofNullable;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Names;
-import com.spotify.heroic.common.BackendGroups;
-import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
-import com.spotify.heroic.statistics.HeroicReporter;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendGroupReporter;
-
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 @RequiredArgsConstructor
-public class MetricManagerModule extends PrivateModule {
+public class MetricManagerModule {
     public static final boolean DEFAULT_UPDATE_METADATA = false;
     public static final int DEFAULT_GROUP_LIMIT = 500;
     public static final int DEFAULT_SERIES_LIMIT = 10000;
@@ -92,54 +96,114 @@ public class MetricManagerModule extends PrivateModule {
      */
     private final int fetchParallelism;
 
-    @Inject
-    @Provides
-    @Singleton
-    public LocalMetricManagerReporter localReporter(HeroicReporter reporter) {
-        return reporter.newLocalMetricBackendManager();
+    public MetricComponent module(
+        final CorePrimaryComponent primary, final MetadataComponent metadata,
+        final AnalyticsComponent analytics
+    ) {
+        return DaggerMetricManagerModule_C
+            .builder()
+            .corePrimaryComponent(primary)
+            .m(new M(backends, defaultBackends, groupLimit, seriesLimit, aggregationLimit,
+                dataLimit, fetchParallelism, primary))
+            .metadataComponent(metadata)
+            .analyticsComponent(analytics)
+            .build();
     }
 
-    @Inject
-    @Provides
-    @Singleton
-    public MetricBackendGroupReporter metricBackendsReporter(HeroicReporter reporter) {
-        return reporter.newMetricBackendsReporter();
+    @MetricScope
+    @Component(modules = M.class,
+        dependencies = {
+            CorePrimaryComponent.class, MetadataComponent.class, AnalyticsComponent.class
+        })
+    interface C extends MetricComponent {
+        @Override
+        MetricManager metricManager();
+
+        @Override
+        @Named("metric")
+        LifeCycle metricLife();
     }
 
-    @Inject
-    @Provides
-    @Singleton
-    public ClusteredMetricManagerReporter clusteredReporter(HeroicReporter reporter) {
-        return reporter.newClusteredMetricBackendManager();
-    }
+    @RequiredArgsConstructor
+    @Module
+    public static class M {
+        private final List<MetricModule> backends;
+        private final Optional<List<String>> defaultBackends;
+        private final int groupLimit;
+        private final int seriesLimit;
+        private final long aggregationLimit;
+        private final long dataLimit;
+        private final int fetchParallelism;
+        private final CorePrimaryComponent primary;
 
-    @Provides
-    public BackendGroups<MetricBackend> defaultBackends(Set<MetricBackend> configured) {
-        return BackendGroups.build(configured, defaultBackends);
-    }
+        @Provides
+        @MetricScope
+        public LocalMetricManagerReporter localReporter(HeroicReporter reporter) {
+            return reporter.newLocalMetricBackendManager();
+        }
 
-    @Override
-    protected void configure() {
-        bindBackends(backends);
-        bind(MetricManager.class).toInstance(new LocalMetricManager(groupLimit, seriesLimit,
-                aggregationLimit, dataLimit, fetchParallelism));
-        expose(MetricManager.class);
-    }
+        @Provides
+        @MetricScope
+        public MetricBackendGroupReporter metricBackendsReporter(HeroicReporter reporter) {
+            return reporter.newMetricBackendsReporter();
+        }
 
-    private void bindBackends(final Collection<MetricModule> configs) {
-        final Multibinder<MetricBackend> bindings =
-                Multibinder.newSetBinder(binder(), MetricBackend.class);
+        @Provides
+        @MetricScope
+        public ClusteredMetricManagerReporter clusteredReporter(HeroicReporter reporter) {
+            return reporter.newClusteredMetricBackendManager();
+        }
 
-        int i = 0;
+        @Provides
+        @MetricScope
+        public BackendGroups<MetricBackend> defaultBackends(
+            Set<MetricBackend> configured, MetricAnalytics analytics
+        ) {
+            return BackendGroups.build(
+                ImmutableSet.copyOf(configured.stream().map(analytics::wrap).iterator()),
+                defaultBackends);
+        }
 
-        for (final MetricModule config : configs) {
-            final String id = config.id() != null ? config.id() : config.buildId(i++);
+        @Provides
+        @MetricScope
+        public List<MetricModule.Exposed> components(final LocalMetricManagerReporter reporter) {
+            final List<MetricModule.Exposed> backends = new ArrayList<>();
 
-            final Key<MetricBackend> key = Key.get(MetricBackend.class, Names.named(id));
+            final AtomicInteger i = new AtomicInteger();
 
-            install(config.module(key, id));
+            for (final MetricModule m : this.backends) {
+                final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
 
-            bindings.addBinding().to(key);
+                final MetricModule.Depends depends =
+                    new MetricModule.Depends(reporter, reporter.newBackend(id));
+
+                backends.add(m.module(primary, depends, id));
+            }
+
+            return backends;
+        }
+
+        @Provides
+        @MetricScope
+        public Set<MetricBackend> backends(List<MetricModule.Exposed> components) {
+            return ImmutableSet.copyOf(components.stream().map(c -> c.backend()).iterator());
+        }
+
+        @Provides
+        @MetricScope
+        @Named("metric")
+        public LifeCycle metricLife(List<MetricModule.Exposed> components) {
+            return LifeCycle.combined(components.stream().map(c -> c.life()));
+        }
+
+        @Provides
+        @MetricScope
+        public MetricManager metricManager(
+            final AsyncFramework async, final BackendGroups<MetricBackend> backends,
+            final MetadataManager metadata, final MetricBackendGroupReporter reporter
+        ) {
+            return new LocalMetricManager(groupLimit, seriesLimit, aggregationLimit, dataLimit,
+                fetchParallelism, async, backends, metadata, reporter);
         }
     }
 
@@ -159,13 +223,15 @@ public class MetricManagerModule extends PrivateModule {
         private Optional<Integer> fetchParallelism = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("backends") List<MetricModule> backends,
-                @JsonProperty("defaultBackends") List<String> defaultBackends,
-                @JsonProperty("groupLimit") Integer groupLimit,
-                @JsonProperty("seriesLimit") Integer seriesLimit,
-                @JsonProperty("aggregationLimit") Long aggregationLimit,
-                @JsonProperty("dataLimit") Long dataLimit,
-                @JsonProperty("fetchParallelism") Integer fetchParallelism) {
+        public Builder(
+            @JsonProperty("backends") List<MetricModule> backends,
+            @JsonProperty("defaultBackends") List<String> defaultBackends,
+            @JsonProperty("groupLimit") Integer groupLimit,
+            @JsonProperty("seriesLimit") Integer seriesLimit,
+            @JsonProperty("aggregationLimit") Long aggregationLimit,
+            @JsonProperty("dataLimit") Long dataLimit,
+            @JsonProperty("fetchParallelism") Integer fetchParallelism
+        ) {
             this.backends = ofNullable(backends);
             this.defaultBackends = ofNullable(defaultBackends);
             this.groupLimit = ofNullable(groupLimit);

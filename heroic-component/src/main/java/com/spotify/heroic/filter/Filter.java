@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.filter;
 
-import java.util.List;
-
 import com.spotify.heroic.common.Series;
+
+import java.util.List;
 
 public interface Filter extends Comparable<Filter> {
     /**
@@ -54,7 +54,7 @@ public interface Filter extends Comparable<Filter> {
 
     /**
      * Concrete interfaces for filters.
-     *
+     * <p>
      * These are necessary when writing converters that typically check instance types.
      **/
     interface Or extends MultiArgs<Filter> {

@@ -1,5 +1,9 @@
 # Using Eclipse
 
+_Note_: Due to [a bug in annotation processing](https://bugs.eclipse.org/bugs/show_bug.cgi?id=382590)
+that interacts badly with Dagger 2, using Eclipse is _not recommended_.
+Consider using [IDEA CE](../idea) instead.
+
 You must use at least Eclipse 4.5.0, this is due to issues with [annotation
 processing](https://bugs.eclipse.org/bugs/show_bug.cgi?id=300408) in earlier
 versions.

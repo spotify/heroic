@@ -21,28 +21,16 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metadata.MetadataBackend;
-import com.spotify.heroic.metadata.MetadataManager;
+import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.ingestion.IngestionManager;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
-import com.spotify.heroic.metric.MetricBackendGroup;
 import com.spotify.heroic.metric.MetricCollection;
-import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
@@ -53,36 +41,41 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.suggest.SuggestBackend;
-import com.spotify.heroic.suggest.SuggestManager;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @TaskUsage("Write a single, or a set of events")
 @TaskName("write")
 public class Write implements ShellTask {
     private static final TypeReference<Map<String, Object>> PAYLOAD_TYPE =
-            new TypeReference<Map<String, Object>>() {
-            };
+        new TypeReference<Map<String, Object>>() {
+        };
+
+    private final IngestionManager ingestion;
+    private final AsyncFramework async;
+    private final ObjectMapper json;
 
     @Inject
-    private MetricManager metrics;
-
-    @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private SuggestManager suggest;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper json;
+    public Write(
+        IngestionManager ingestion, AsyncFramework async,
+        @Named("application/json") ObjectMapper json
+    ) {
+        this.ingestion = ingestion;
+        this.async = async;
+        this.json = json;
+    }
 
     @Override
     public TaskParameters params() {
@@ -101,7 +94,7 @@ public class Write implements ShellTask {
             series = json.readValue(params.series, Series.class);
         }
 
-        final MetricBackendGroup g = metrics.useGroup(params.group);
+        final IngestionGroup g = ingestion.useGroup(params.group);
 
         final long now = System.currentTimeMillis();
 
@@ -140,21 +133,10 @@ public class Write implements ShellTask {
 
         List<AsyncFuture<Void>> writes = new ArrayList<>();
 
-        final DateRange range = DateRange.now(now);
-
-        if (!params.noMetadata) {
-            final MetadataBackend m = metadata.useGroup(params.group);
-            writes.add(m.write(series, range).directTransform(reportResult("metadata", io.out())));
-        }
-
-        if (!params.noSuggest) {
-            final SuggestBackend s = suggest.useGroup(params.group);
-            writes.add(s.write(series, range).directTransform(reportResult("suggest", io.out())));
-        }
-
         for (final MetricCollection group : groups.build()) {
-            writes.add(g.write(new WriteMetric(series, group))
-                    .directTransform(reportResult("metrics", io.out())));
+            writes.add(g
+                .write(new WriteMetric(series, group))
+                .directTransform(reportResult("metrics", io.out())));
         }
 
         return async.collectAndDiscard(writes);
@@ -226,26 +208,28 @@ public class Write implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-s", aliases = { "--series" }, usage = "Series to fetch",
-                metaVar = "<json>")
+        @Option(name = "-s", aliases = {"--series"}, usage = "Series to fetch", metaVar = "<json>")
         private String series;
 
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group = null;
 
-        @Option(name = "--no-metadata", usage = "Do not write metadata")
-        private boolean noMetadata = false;
-
-        @Option(name = "--no-suggest", usage = "Do not write suggestions")
-        private boolean noSuggest = false;
-
-        @Option(name = "-p", aliases = { "--point" }, usage = "Point to write",
-                metaVar = "<time>=<value>")
+        @Option(name = "-p", aliases = {"--point"}, usage = "Point to write",
+            metaVar = "<time>=<value>")
         private List<String> points = new ArrayList<>();
 
-        @Option(name = "-e", aliases = { "--event" }, usage = "Event to write",
-                metaVar = "<time>=<payload>")
+        @Option(name = "-e", aliases = {"--event"}, usage = "Event to write",
+            metaVar = "<time>=<payload>")
         private List<String> events = new ArrayList<>();
+    }
+
+    public static Write setup(final CoreComponent core) {
+        return DaggerWrite_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Write task();
     }
 }

@@ -21,21 +21,23 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-
 public class GroupInstance extends GroupingAggregation {
     public static final Map<String, String> ALL_GROUP = ImmutableMap.of();
 
     @JsonCreator
-    public GroupInstance(@JsonProperty("of") Optional<List<String>> of,
-            @JsonProperty("each") AggregationInstance each) {
+    public GroupInstance(
+        @JsonProperty("of") Optional<List<String>> of,
+        @JsonProperty("each") AggregationInstance each
+    ) {
         super(of, each);
     }
 
@@ -64,8 +66,9 @@ public class GroupInstance extends GroupingAggregation {
     }
 
     @Override
-    protected AggregationInstance newInstance(final Optional<List<String>> of,
-            final AggregationInstance each) {
+    protected AggregationInstance newInstance(
+        final Optional<List<String>> of, final AggregationInstance each
+    ) {
         return new GroupInstance(of, each);
     }
 }

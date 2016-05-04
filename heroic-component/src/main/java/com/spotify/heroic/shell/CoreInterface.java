@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.shell;
 
-import java.util.List;
-
 import com.spotify.heroic.shell.protocol.CommandDefinition;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.util.List;
 
 public interface CoreInterface {
     /**

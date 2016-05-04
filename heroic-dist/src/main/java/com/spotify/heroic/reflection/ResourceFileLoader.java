@@ -21,6 +21,10 @@
 
 package com.spotify.heroic.reflection;
 
+import com.google.common.base.Charsets;
+import com.spotify.heroic.HeroicService.Configuration;
+import lombok.RequiredArgsConstructor;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,15 +35,11 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.common.base.Charsets;
-import com.spotify.heroic.HeroicService.Configuration;
-
-import lombok.RequiredArgsConstructor;
-
 @RequiredArgsConstructor
 public final class ResourceFileLoader {
-    public static <T> List<ResourceInstance<T>> loadInstances(String path, ClassLoader loader,
-            Class<T> expected) throws ResourceException {
+    public static <T> List<ResourceInstance<T>> loadInstances(
+        String path, ClassLoader loader, Class<T> expected
+    ) throws ResourceException {
         final List<ResourceInstance<T>> instances = new ArrayList<>();
 
         final URL resource = loader.getResource(path);
@@ -62,8 +62,8 @@ public final class ResourceFileLoader {
                             break;
                         }
 
-                        final ResourceLineContext ctx = new ResourceLineContext(pathCtx,
-                                ++lineNumber);
+                        final ResourceLineContext ctx =
+                            new ResourceLineContext(pathCtx, ++lineNumber);
 
                         try {
                             final String trimmed = line.trim();
@@ -76,12 +76,11 @@ public final class ResourceFileLoader {
                             final Class<?> c = Class.forName(trimmed, true, loader);
 
                             if (!expected.isAssignableFrom(c)) {
-                                throw ctx.exception(trimmed + " does not extend "
-                                        + Configuration.class.getCanonicalName());
+                                throw ctx.exception(trimmed + " does not extend " +
+                                    Configuration.class.getCanonicalName());
                             }
 
-                            @SuppressWarnings("unchecked")
-                            final Class<T> type = (Class<T>) c;
+                            @SuppressWarnings("unchecked") final Class<T> type = (Class<T>) c;
 
                             final Constructor<T> constructor = type.getConstructor();
                             final T newInstance = constructor.newInstance();

@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.profile;
 
-import java.util.List;
-
+import com.spotify.heroic.HeroicProfile;
+import com.spotify.heroic.ParameterSpecification;
 import org.elasticsearch.common.collect.ImmutableList;
 
-import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.HeroicProfile;
+import java.util.List;
 
 public abstract class HeroicProfileBase implements HeroicProfile {
     @Override

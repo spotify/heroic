@@ -21,83 +21,114 @@
 
 package com.spotify.heroic.suggest;
 
-import static com.spotify.heroic.common.Optionals.mergeOptionalList;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.name.Names;
+import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.BackendGroups;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.HeroicReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.spotify.heroic.common.Optionals.mergeOptionalList;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 @RequiredArgsConstructor
-public class SuggestManagerModule extends PrivateModule {
+public class SuggestManagerModule {
     private final List<SuggestModule> backends;
     private final Optional<List<String>> defaultBackends;
 
-    @Provides
-    @Singleton
-    public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
-        return reporter.newLocalMetadataBackendManager();
+    public SuggestComponent module(final PrimaryComponent primary) {
+        return DaggerSuggestManagerModule_C
+            .builder()
+            .primaryComponent(primary)
+            .m(new M(primary))
+            .build();
     }
 
-    @Provides
-    @Singleton
-    public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
-        return reporter.newClusteredMetadataBackendManager();
+    @SuggestScope
+    @Component(modules = M.class, dependencies = {PrimaryComponent.class})
+    interface C extends SuggestComponent {
+        @Override
+        LocalSuggestManager suggestManager();
+
+        @Override
+        @Named("suggest")
+        LifeCycle suggestLife();
     }
 
-    @Provides
-    @Named("backends")
-    public BackendGroups<SuggestBackend> defaultBackends(Set<SuggestBackend> configured) {
-        return BackendGroups.build(configured, defaultBackends);
-    }
+    @RequiredArgsConstructor
+    @Module
+    class M {
+        private final PrimaryComponent primary;
 
-    @Override
-    protected void configure() {
-        bindBackends(backends);
+        @Provides
+        @SuggestScope
+        public LocalMetadataManagerReporter localReporter(HeroicReporter reporter) {
+            return reporter.newLocalMetadataBackendManager();
+        }
 
-        bind(SuggestManager.class).to(LocalSuggestManager.class).in(Scopes.SINGLETON);
-        expose(SuggestManager.class);
-    }
+        @Provides
+        @SuggestScope
+        public ClusteredMetadataManagerReporter clusteredReporter(HeroicReporter reporter) {
+            return reporter.newClusteredMetadataBackendManager();
+        }
 
-    private void bindBackends(final Collection<SuggestModule> configs) {
-        final Multibinder<SuggestBackend> bindings =
-                Multibinder.newSetBinder(binder(), SuggestBackend.class);
+        @Provides
+        @Named("backends")
+        @SuggestScope
+        public BackendGroups<SuggestBackend> defaultBackends(Set<SuggestBackend> configured) {
+            return BackendGroups.build(configured, defaultBackends);
+        }
 
-        int i = 0;
+        @Provides
+        @SuggestScope
+        public List<SuggestModule.Exposed> components(LocalMetadataManagerReporter reporter) {
+            final ArrayList<SuggestModule.Exposed> results = new ArrayList<>();
 
-        for (final SuggestModule config : configs) {
-            final String id = config.id() != null ? config.id() : config.buildId(i++);
+            final AtomicInteger i = new AtomicInteger();
 
-            final Key<SuggestBackend> key = Key.get(SuggestBackend.class, Names.named(id));
+            for (final SuggestModule m : backends) {
+                final String id = m.id().orElseGet(() -> m.buildId(i.getAndIncrement()));
 
-            install(config.module(key, id));
+                final SuggestModule.Depends depends =
+                    new SuggestModule.Depends(reporter.newMetadataBackend(id));
 
-            bindings.addBinding().to(key);
+                results.add(m.module(primary, depends, id));
+            }
+
+            return results;
+        }
+
+        @Provides
+        @SuggestScope
+        public Set<SuggestBackend> backends(List<SuggestModule.Exposed> components) {
+            return ImmutableSet.copyOf(components.stream().map(c -> c.backend()).iterator());
+        }
+
+        @Provides
+        @SuggestScope
+        @Named("suggest")
+        public LifeCycle suggestLife(List<SuggestModule.Exposed> components) {
+            return LifeCycle.combined(components.stream().map(c -> c.life()));
         }
     }
 
@@ -112,8 +143,10 @@ public class SuggestManagerModule extends PrivateModule {
         private Optional<List<String>> defaultBackends = empty();
 
         @JsonCreator
-        public Builder(@JsonProperty("backends") List<SuggestModule> backends,
-                @JsonProperty("defaultBackends") List<String> defaultBackends) {
+        public Builder(
+            @JsonProperty("backends") List<SuggestModule> backends,
+            @JsonProperty("defaultBackends") List<String> defaultBackends
+        ) {
             this.backends = ofNullable(backends);
             this.defaultBackends = ofNullable(defaultBackends);
         }

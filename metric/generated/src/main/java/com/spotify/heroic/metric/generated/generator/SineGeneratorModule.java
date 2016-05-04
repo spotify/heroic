@@ -21,22 +21,20 @@
 
 package com.spotify.heroic.metric.generated.generator;
 
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Named;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.spotify.heroic.metric.generated.Generator;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.metric.generated.GeneratedComponent;
 import com.spotify.heroic.metric.generated.GeneratorModule;
+import com.spotify.heroic.metric.generated.GeneratorScope;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import lombok.Data;
+
+import javax.inject.Named;
+import java.util.concurrent.TimeUnit;
 
 @Data
 public class SineGeneratorModule implements GeneratorModule {
@@ -49,49 +47,53 @@ public class SineGeneratorModule implements GeneratorModule {
     private final long step;
 
     @JsonCreator
-    public SineGeneratorModule(@JsonProperty("magnitude") Double magnitude,
-            @JsonProperty("period") Long period, @JsonProperty("step") Long step) {
+    public SineGeneratorModule(
+        @JsonProperty("magnitude") Double magnitude, @JsonProperty("period") Long period,
+        @JsonProperty("step") Long step
+    ) {
         this.magnitude = Optional.fromNullable(magnitude).or(DEFAULT_MAGNITUDE);
         this.period = Optional.fromNullable(period).or(DEFAULT_PERIOD);
         this.step = Optional.fromNullable(step).or(DEFAULT_STEP);
     }
 
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Named("magnitude")
-            public double magnitude() {
-                return magnitude;
-            }
-
-            @Provides
-            @Named("period")
-            public long period() {
-                return period;
-            }
-
-            @Provides
-            @Named("step")
-            public long frequency() {
-                return step;
-            }
-
-            @Override
-            protected void configure() {
-                bind(Generator.class).to(SineGenerator.class).in(Scopes.SINGLETON);
-                expose(Generator.class);
-            }
-        };
+    public GeneratedComponent module(PrimaryComponent primary) {
+        return DaggerSineGeneratorModule_C.builder().primaryComponent(primary).m(new M()).build();
     }
 
-    public static Supplier<GeneratorModule> defaultSupplier() {
-        return new Supplier<GeneratorModule>() {
-            @Override
-            public GeneratorModule get() {
-                return new SineGeneratorModule(null, null, null);
-            }
-        };
+    @GeneratorScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends GeneratedComponent {
+        @Override
+        SineGenerator generator();
+    }
+
+    @Module
+    class M {
+        @Provides
+        @Named("magnitude")
+        @GeneratorScope
+        public double magnitude() {
+            return magnitude;
+        }
+
+        @Provides
+        @Named("period")
+        @GeneratorScope
+        public long period() {
+            return period;
+        }
+
+        @Provides
+        @Named("step")
+        @GeneratorScope
+        public long frequency() {
+            return step;
+        }
+    }
+
+    public static GeneratorModule defaultSupplier() {
+        return new SineGeneratorModule(null, null, null);
     }
 
     public static Builder builder() {

@@ -21,127 +21,85 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.io.IOException;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import eu.toolchain.serializer.Serializer;
+import lombok.RequiredArgsConstructor;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.spotify.heroic.grammar.ListValue;
-import com.spotify.heroic.grammar.Value;
-
-import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.SerialWriter;
-import eu.toolchain.serializer.Serializer;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Serializes aggregation configurations.
- *
+ * <p>
  * Each aggregation configuration is packed into a Composite which has the type of the aggregation
  * as a prefixed short.
  *
  * @author udoprog
  */
 @RequiredArgsConstructor
-@Slf4j
-public class CoreAggregationRegistry implements AggregationSerializer, AggregationFactory {
-    private final Serializer<String> string;
+public class CoreAggregationRegistry implements AggregationRegistry {
+    final Serializer<String> string;
 
-    private final Map<Class<? extends Aggregation>, String> queryTypes = new HashMap<>();
-    private final Map<Class<? extends AggregationInstance>, String> types = new HashMap<>();
-    private final Map<String, Serializer<? extends AggregationInstance>> serializers =
-            new HashMap<>();
-    private final Map<String, AggregationDSL> builders = new HashMap<>();
+    final Map<Class<? extends Aggregation>, String> definitionMap = new HashMap<>();
+    final Map<Class<? extends AggregationInstance>, String> instanceMap = new HashMap<>();
+    final Map<String, Serializer<? extends AggregationInstance>> serializerMap = new HashMap<>();
+    final Map<String, AggregationDSL> builderMap = new HashMap<>();
+
+    private final Object lock = new Object();
 
     @Override
-    public <T extends Aggregation> void registerQuery(String id, Class<T> queryType) {
-        if (queryTypes.put(queryType, id) != null) {
-            throw new IllegalArgumentException(
-                    "An aggregaiton query with the id '" + id + "' is already registered.");
+    public <A extends Aggregation, I extends AggregationInstance> void register(
+        final String id, final Class<A> type, final Class<I> instanceType,
+        final Serializer<I> instanceSerializer, final AggregationDSL dsl
+    ) {
+        synchronized (lock) {
+            if (serializerMap.containsKey(id)) {
+                throw new IllegalArgumentException(
+                    "An aggregation with the same id (" + id + ") is already registered");
+            }
+
+            if (definitionMap.containsKey(type)) {
+                throw new IllegalArgumentException(
+                    "An aggregation with the same type (" + type.getCanonicalName() +
+                        ") is already registered");
+            }
+
+            if (instanceMap.containsKey(instanceType)) {
+                throw new IllegalArgumentException("An aggregation instance with the same type (" +
+                    instanceType.getCanonicalName() + ") is already registered");
+            }
+
+            definitionMap.put(type, id);
+            instanceMap.put(instanceType, id);
+            builderMap.put(id, dsl);
+            serializerMap.put(id, instanceSerializer);
         }
     }
 
-    @Override
-    public <T extends AggregationInstance> void register(String id, Class<T> clazz,
-            Serializer<T> serializer, AggregationDSL builder) {
-        if (types.put(clazz, id) != null) {
-            throw new IllegalArgumentException(
-                    "A type with the id '" + id + "' is already registered.");
+    public Module module() {
+        final SimpleModule m = new SimpleModule("aggregationRegistry");
+
+        for (final Map.Entry<Class<? extends AggregationInstance>, String> e : instanceMap
+            .entrySet()) {
+            m.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
         }
 
-        serializers.put(id, serializer);
-        builders.put(id, builder);
+        for (final Map.Entry<Class<? extends Aggregation>, String> e : definitionMap.entrySet()) {
+            m.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
+        }
+
+        return m;
     }
 
     @Override
-    public void serialize(SerialWriter buffer, AggregationInstance value) throws IOException {
-        final String id = types.get(value.getClass());
-
-        if (id == null) {
-            throw new IllegalArgumentException(
-                    "Type is not a serializable aggergation: " + value.getClass());
-        }
-
-        string.serialize(buffer, id);
-
-        final SerialWriter.Scope scope = buffer.scope();
-
-        @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer =
-                (Serializer<AggregationInstance>) serializers.get(id);
-
-        serializer.serialize(scope, value);
+    public AggregationFactory newAggregationFactory() {
+        return new CoreAggregationFactory(builderMap);
     }
 
     @Override
-    public AggregationInstance deserialize(SerialReader buffer) throws IOException {
-        final String id = string.deserialize(buffer);
-
-        @SuppressWarnings("unchecked")
-        final Serializer<AggregationInstance> serializer =
-                (Serializer<AggregationInstance>) serializers.get(id);
-
-        if (serializer == null) {
-            buffer.skip();
-            log.warn("Unknown aggregation type: " + id);
-            return null;
-        }
-
-        return serializer.deserialize(buffer);
-    }
-
-    @Override
-    public Aggregation build(String name, ListValue args, Map<String, Value> keywords) {
-        final AggregationDSL builder = builders.get(name);
-
-        if (builder == null) {
-            throw new IllegalArgumentException(String.format("no aggregation named %s", name));
-        }
-
-        final AggregationArguments a = new AggregationArguments(args.getList(), keywords);
-
-        final Aggregation aggregation;
-
-        try {
-            aggregation = builder.build(a);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(name + ": " + e.getMessage(), e);
-        }
-
-        // throw an exception unless all provided arguments have been consumed.
-        a.throwUnlessEmpty(name);
-        return aggregation;
-    }
-
-    public void configure(SimpleModule module) {
-        for (final Map.Entry<Class<? extends AggregationInstance>, String> e : types.entrySet()) {
-            module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
-        }
-
-        for (final Map.Entry<Class<? extends Aggregation>, String> e : queryTypes.entrySet()) {
-            module.registerSubtypes(new NamedType(e.getKey(), e.getValue()));
-        }
+    public AggregationSerializer newAggregationSerializer() {
+        return new CoreAggregationSerializer(string, instanceMap, serializerMap);
     }
 }

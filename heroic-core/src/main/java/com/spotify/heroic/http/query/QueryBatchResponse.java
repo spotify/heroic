@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.http.query;
 
-import java.util.Map;
-
 import lombok.Data;
+
+import java.util.Map;
 
 @Data
 public class QueryBatchResponse {

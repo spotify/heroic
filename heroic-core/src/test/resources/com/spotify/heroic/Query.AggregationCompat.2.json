@@ -1,0 +1,6 @@
+{
+  "aggregation": {
+    "type": "group",
+    "each": [{"type": "empty"}]
+  }
+}

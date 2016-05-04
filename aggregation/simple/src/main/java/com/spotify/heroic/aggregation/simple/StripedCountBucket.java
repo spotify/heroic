@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.aggregation.simple;
 
+import com.spotify.heroic.aggregation.AbstractAnyBucket;
+import com.spotify.heroic.metric.Metric;
+import lombok.RequiredArgsConstructor;
+
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.spotify.heroic.aggregation.AbstractAnyBucket;
-import com.spotify.heroic.metric.Metric;
-
-import lombok.RequiredArgsConstructor;
-
 /**
  * Bucket that counts the number of seen samples.
- *
+ * <p>
  * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog

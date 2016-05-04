@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 /**
  * Wraps an instance of something that have been reflectively created from a single line of a
  * resource file.
- *
+ * <p>
  * The restricted access to the instance asserts that any thrown exception is wrapped with the
  * context that declares the instance, giving the user information of where the resource that caused
  * the error came from (e.g. which line from a particular file).

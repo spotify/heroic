@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.Optional;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.Optional;
 
 @Data
 @EqualsAndHashCode(exclude = {"c"})
@@ -53,6 +53,10 @@ public class EmptyValue implements Value {
 
     @Override
     public <T> T cast(Class<T> to) {
+        if (to.equals(Value.class) || to.equals(EmptyValue.class)) {
+            return (T) this;
+        }
+
         throw c.castError(this, to);
     }
 

@@ -99,7 +99,7 @@ public class NoopLocalMetadataBackendReporter implements LocalMetadataBackendRep
     }
 
     private static final NoopLocalMetadataBackendReporter instance =
-            new NoopLocalMetadataBackendReporter();
+        new NoopLocalMetadataBackendReporter();
 
     public static NoopLocalMetadataBackendReporter get() {
         return instance;

@@ -21,17 +21,16 @@
 
 package com.spotify.heroic.filter.impl;
 
-import java.util.regex.Pattern;
-
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.regex.Pattern;
+
 @Data
-@EqualsAndHashCode(of = { "OPERATOR", "tag", "value" }, doNotUseGetters = true)
+@EqualsAndHashCode(of = {"OPERATOR", "tag", "value"}, doNotUseGetters = true)
 public class RegexFilterImpl implements Filter.Regex {
     public static final String OPERATOR = "~";
 
@@ -41,8 +40,8 @@ public class RegexFilterImpl implements Filter.Regex {
     @Override
     public boolean apply(Series series) {
         final String value;
-        return (value = series.getTags().get(tag)) != null
-                && Pattern.compile(this.value).matcher(value).matches();
+        return (value = series.getTags().get(tag)) != null &&
+            Pattern.compile(this.value).matcher(value).matches();
     }
 
     @Override

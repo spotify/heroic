@@ -21,40 +21,37 @@
 
 package com.spotify.heroic.metric;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.ReducerSession;
-import com.spotify.heroic.common.Series;
-
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * A collection of metrics.
- *
- * Metrics are constrained to the implemented types below, so far these are {@link Point},
- * {@link Event}, {@link Spread} , and {@link MetricGroup}.
- *
+ * <p>
+ * Metrics are constrained to the implemented types below, so far these are {@link Point}, {@link
+ * Event}, {@link Spread} , and {@link MetricGroup}.
+ * <p>
  * There is a JSON serialization available in {@link MetricCollectionSerialization} which correctly
  * preserves the type information of these collections.
- *
+ * <p>
  * This class is a carrier for _any_ of these metrics, the canonical way for accessing the
  * underlying data is to first check it's type using {@link #getType()}, and then access the data
  * with the appropriate cast using {@link #getDataAs(Class)}.
- *
+ * <p>
  * The following is an example for how you may access data from the collection.
- *
+ * <p>
  * <pre>
  * final MetricCollection collection = ...;
  *
@@ -64,11 +61,11 @@ import lombok.RequiredArgsConstructor;
  * }
  * </pre>
  *
+ * @author udoprog
  * @see Point
  * @see Spread
  * @see Event
  * @see MetricGroup
- * @author udoprog
  */
 @Data
 @RequiredArgsConstructor(access = AccessLevel.PACKAGE)
@@ -86,7 +83,7 @@ public abstract class MetricCollection {
     public <T> List<T> getDataAs(Class<T> expected) {
         if (!expected.isAssignableFrom(type.type())) {
             throw new IllegalArgumentException(
-                    String.format("Cannot assign type (%s) to expected (%s)", type, expected));
+                String.format("Cannot assign type (%s) to expected (%s)", type, expected));
         }
 
         return (List<T>) data;
@@ -95,8 +92,9 @@ public abstract class MetricCollection {
     /**
      * Update the given aggregation with the content of this collection.
      */
-    public abstract void updateAggregation(final AggregationSession session,
-            final Map<String, String> tags, final Set<Series> series);
+    public abstract void updateAggregation(
+        final AggregationSession session, final Map<String, String> tags
+    );
 
     /**
      * Update the given bucket with the content of this collection.
@@ -109,8 +107,9 @@ public abstract class MetricCollection {
     /**
      * Update the given reducer session.
      */
-    public abstract void updateReducer(final ReducerSession session,
-            final Map<String, String> tags);
+    public abstract void updateReducer(
+        final ReducerSession session, final Map<String, String> tags
+    );
 
     public int size() {
         return data.size();
@@ -127,8 +126,8 @@ public abstract class MetricCollection {
     }
 
     // @formatter:off
-    private static final Map<MetricType, Function<List<? extends Metric>, MetricCollection>>
-            adapters = ImmutableMap.of(
+    private static final
+    Map<MetricType, Function<List<? extends Metric>, MetricCollection>> adapters = ImmutableMap.of(
         MetricType.GROUP, GroupCollection::new,
         MetricType.POINT, PointCollection::new,
         MetricType.EVENT, EventCollection::new,
@@ -152,18 +151,20 @@ public abstract class MetricCollection {
         return new SpreadCollection(metrics);
     }
 
-    public static MetricCollection build(final MetricType key,
-            final List<? extends Metric> metrics) {
+    public static MetricCollection build(
+        final MetricType key, final List<? extends Metric> metrics
+    ) {
         final Function<List<? extends Metric>, MetricCollection> adapter =
-                checkNotNull(adapters.get(key), "applier does not exist for type");
+            checkNotNull(adapters.get(key), "applier does not exist for type");
         return adapter.apply(metrics);
     }
 
-    public static MetricCollection mergeSorted(final MetricType type,
-            final List<List<? extends Metric>> values) {
+    public static MetricCollection mergeSorted(
+        final MetricType type, final List<List<? extends Metric>> values
+    ) {
         final List<Metric> data = ImmutableList.copyOf(Iterators.mergeSorted(
-                ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
-                type.comparator()));
+            ImmutableList.copyOf(values.stream().map(Iterable::iterator).iterator()),
+            type.comparator()));
         return build(type, data);
     }
 
@@ -174,9 +175,10 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags,
-                Set<Series> series) {
-            session.updatePoints(tags, series, adapt());
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags
+        ) {
+            session.updatePoints(tags, adapt());
         }
 
         @Override
@@ -192,7 +194,7 @@ public abstract class MetricCollection {
         private List<Point> adapt() {
             return (List<Point>) data;
         }
-    };
+    }
 
     @SuppressWarnings("unchecked")
     private static class EventCollection extends MetricCollection {
@@ -201,9 +203,10 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags,
-                Set<Series> series) {
-            session.updateEvents(tags, series, adapt());
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags
+        ) {
+            session.updateEvents(tags, adapt());
         }
 
         @Override
@@ -219,7 +222,7 @@ public abstract class MetricCollection {
         private List<Event> adapt() {
             return (List<Event>) data;
         }
-    };
+    }
 
     @SuppressWarnings("unchecked")
     private static class SpreadCollection extends MetricCollection {
@@ -228,9 +231,10 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags,
-                Set<Series> series) {
-            session.updateSpreads(tags, series, adapt());
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags
+        ) {
+            session.updateSpreads(tags, adapt());
         }
 
         @Override
@@ -246,7 +250,7 @@ public abstract class MetricCollection {
         private List<Spread> adapt() {
             return (List<Spread>) data;
         }
-    };
+    }
 
     @SuppressWarnings("unchecked")
     private static class GroupCollection extends MetricCollection {
@@ -255,9 +259,10 @@ public abstract class MetricCollection {
         }
 
         @Override
-        public void updateAggregation(AggregationSession session, Map<String, String> tags,
-                Set<Series> series) {
-            session.updateGroup(tags, series, adapt());
+        public void updateAggregation(
+            AggregationSession session, Map<String, String> tags
+        ) {
+            session.updateGroup(tags, adapt());
         }
 
         @Override

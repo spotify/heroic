@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-
 import com.google.common.base.Charsets;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 public class StringSerializer implements TypeSerializer<String> {
     private static final String EMPTY = "";

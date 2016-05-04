@@ -14,6 +14,21 @@ parser.add_argument('--debug', help='Enable Debugging Output', dest='debug',
 parser.add_argument('pattern', help='Pattern of tests to run', nargs='?',
                     default="")
 
+parser.add_argument('--java-opts', help='Extra Java Options',
+                    dest='java_opts', default=[],
+                    type=lambda v: v.split(' '))
+
+parser.add_argument('--java-debug', help='Enable Default Debugging Switches for Java',
+                    dest='java_debug', default=False,
+                    action='store_const', const=True)
+
+parser.add_argument('--java-debug-port', help='Java Debug Port',
+                    dest='java_debug_port', default=1044,
+                    type=int)
+
+parser.add_argument('--java-debug-suspend', help='Java Suspend on Debug',
+                    dest='java_debug_suspend', default="n")
+
 @contextlib.contextmanager
 def in_dir(directory):
     original = os.getcwd()
@@ -54,13 +69,24 @@ def main(program, args):
             raise Exception("no such file: {}".format(pom_xml))
 
         with in_dir(build_root):
-            sp.call(["mvn", "clean", "package"])
+            sp.call(["mvn", "clean", "package",
+                     "-D", "maven.test.skip=true",
+                     "-D", "findbugs.skip=true",
+                     "-D", "checkstyle.skip=true"])
 
     if not os.path.isfile(heroic_jar):
         raise Exception("no such jar: {}".format(pom_xml))
 
+    java_opts = ns.java_opts
+
+    if ns.java_debug:
+        java_opts += [
+            "-Xdebug",
+            "-Xrunjdwp:transport=dt_socket,server=y,suspend={},address={}".format(
+                ns.java_debug_suspend, ns.java_debug_port)]
+
     import tests.helpers as h
-    h.setup(heroic_jar=heroic_jar, debug=ns.debug)
+    h.setup(heroic_jar=heroic_jar, debug=ns.debug, java_opts=java_opts)
 
     loader = unittest.TestLoader()
 

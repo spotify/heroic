@@ -21,8 +21,8 @@
 
 package com.spotify.heroic.async;
 
-import lombok.Data;
 import eu.toolchain.async.Transform;
+import lombok.Data;
 
 /**
  * A type to encapsulate a value with two possibilities, A value, or an error.
@@ -85,12 +85,12 @@ public final class MaybeError<T> {
     }
 
     private static final Transform<Object, ? extends MaybeError<? extends Object>> toJust =
-            new Transform<Object, MaybeError<Object>>() {
-                @Override
-                public MaybeError<Object> transform(Object result) throws Exception {
-                    return MaybeError.just(result);
-                }
-            };
+        new Transform<Object, MaybeError<Object>>() {
+            @Override
+            public MaybeError<Object> transform(Object result) throws Exception {
+                return MaybeError.just(result);
+            }
+        };
 
     @SuppressWarnings("unchecked")
     public static <A> Transform<A, MaybeError<A>> transformJust() {

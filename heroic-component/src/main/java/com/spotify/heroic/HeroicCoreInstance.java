@@ -21,12 +21,17 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.dagger.CoreComponent;
+import eu.toolchain.async.AsyncFuture;
+
+import java.util.function.Function;
+
 public interface HeroicCoreInstance {
-    <T> T inject(T injectee);
+    <T> T inject(Function<CoreComponent, T> injector);
 
-    <T> T injectInstance(Class<T> cls);
+    AsyncFuture<Void> start();
 
-    void shutdown();
+    AsyncFuture<Void> shutdown();
 
-    void join() throws InterruptedException;
+    AsyncFuture<Void> join();
 }

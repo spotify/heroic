@@ -21,51 +21,48 @@
 
 package com.spotify.heroic.shell;
 
-import java.io.IOException;
-import java.net.Socket;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicShellTasks;
-import com.spotify.heroic.common.LifeCycle;
-
+import com.spotify.heroic.ShellTasks;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
+import dagger.Lazy;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
 import eu.toolchain.serializer.SerializerFramework;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
-@ToString(of = { "state" })
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.net.Socket;
+
+@ToString(of = {"state"})
 @Slf4j
-public class ShellServer implements LifeCycle {
-    @Inject
-    Managed<ShellServerState> state;
+public class ShellServer implements LifeCycles {
+    private final Managed<ShellServerState> state;
+    private final AsyncFramework async;
+    private final SerializerFramework serializer;
+    private final Lazy<ShellTasks> tasks;
 
     @Inject
-    AsyncFramework async;
-
-    @Inject
-    @Named("application/json")
-    ObjectMapper mapper;
-
-    @Inject
-    @Named("shell-protocol")
-    SerializerFramework serializer;
-
-    @Inject
-    HeroicShellTasks tasks;
-
-    @Override
-    public boolean isReady() {
-        return state.isReady();
+    public ShellServer(
+        Managed<ShellServerState> state, AsyncFramework async,
+        @Named("shell-protocol") SerializerFramework serializer, Lazy<ShellTasks> tasks
+    ) {
+        this.state = state;
+        this.async = async;
+        this.serializer = serializer;
+        this.tasks = tasks;
     }
 
     @Override
-    public AsyncFuture<Void> start() {
+    public void register(final LifeCycleRegistry registry) {
+        registry.start(this::start);
+        registry.stop(this::stop);
+    }
+
+    AsyncFuture<Void> start() {
         return state.start().lazyTransform(s -> state.doto(state -> {
             final Thread thread = new Thread(() -> {
                 try {
@@ -83,8 +80,7 @@ public class ShellServer implements LifeCycle {
         }));
     }
 
-    @Override
-    public AsyncFuture<Void> stop() {
+    AsyncFuture<Void> stop() {
         return state.stop();
     }
 
@@ -101,10 +97,11 @@ public class ShellServer implements LifeCycle {
                 break;
             }
 
-            final Runnable runnable = new ShellServerClientThread(socket, tasks, serializer, async);
+            final Runnable runnable =
+                new ShellServerClientThread(socket, tasks.get(), serializer, async);
             final Thread clientThread = new Thread(runnable);
             clientThread.setName(
-                    String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
+                String.format("remote-shell-thread[%s]", socket.getRemoteSocketAddress()));
             clientThread.start();
         }
     }

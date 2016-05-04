@@ -22,7 +22,6 @@
 package com.spotify.heroic.metric.bigtable;
 
 import com.spotify.heroic.common.Series;
-
 import eu.toolchain.serializer.AutoSerialize;
 import lombok.Data;
 

@@ -22,6 +22,7 @@
 package com.spotify.heroic;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface HeroicProfile {
     HeroicConfig.Builder build(final ExtraParameters params) throws Exception;
@@ -29,4 +30,8 @@ public interface HeroicProfile {
     String description();
 
     List<ParameterSpecification> options();
+
+    default Optional<String> scope() {
+        return Optional.empty();
+    }
 }

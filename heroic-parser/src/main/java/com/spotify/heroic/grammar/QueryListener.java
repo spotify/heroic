@@ -21,24 +21,15 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Stack;
-import java.util.concurrent.TimeUnit;
-
-import org.antlr.v4.runtime.CommonToken;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
+import com.spotify.heroic.aggregation.MissingAggregation;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByAllContext;
@@ -46,6 +37,7 @@ import com.spotify.heroic.grammar.HeroicQueryParser.AggregationByContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.AggregationPipeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionDurationContext;
+import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionFloatContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionIntegerContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionListContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.ExpressionMinusContext;
@@ -77,9 +69,18 @@ import com.spotify.heroic.grammar.HeroicQueryParser.SourceRangeRelativeContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.StringContext;
 import com.spotify.heroic.grammar.HeroicQueryParser.WhereContext;
 import com.spotify.heroic.metric.MetricType;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.antlr.v4.runtime.CommonToken;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Stack;
+import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("unchecked")
 @RequiredArgsConstructor
@@ -175,7 +176,8 @@ public class QueryListener extends HeroicQueryBaseListener {
             throw c.error("No source clause available");
         }
 
-        push(new Query(aggregation, source, range, where, Optional.empty(), Optional.empty()));
+        push(new Query(Optional.empty(), aggregation, source, range, where, Optional.empty(),
+            Optional.empty(), ImmutableSet.of()));
     }
 
     @Override
@@ -226,8 +228,20 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitSelectAggregation(final SelectAggregationContext ctx) {
         final Context c = context(ctx);
-        pushOptional(pop(c, Value.class).toOptional()
-                .map(o -> o.cast(AggregationValue.class).build(aggregations)));
+
+        final Optional<Aggregation> aggregation;
+
+        try {
+            aggregation = pop(c, Value.class)
+                .toOptional()
+                .map(o -> o.cast(AggregationValue.class).build(aggregations));
+        } catch (final MissingAggregation e) {
+            throw c.error("Not a valid aggregation: " + e.getName());
+        } catch (final Exception e) {
+            throw c.error(e);
+        }
+
+        pushOptional(aggregation);
         push(SELECT_MARK);
     }
 
@@ -283,7 +297,7 @@ public class QueryListener extends HeroicQueryBaseListener {
         stack.pop();
 
         push(new AggregationValue(name, new ListValue(Lists.reverse(arguments.build()), c),
-                keywords.build(), c));
+            keywords.build(), c));
     }
 
     @Override
@@ -298,9 +312,10 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final String sourceText = ctx.getChild(1).getText();
 
-        final MetricType source = MetricType.fromIdentifier(sourceText)
-                .orElseThrow(() -> context.error("Invalid source (" + sourceText
-                        + "), must be one of " + MetricType.values()));
+        final MetricType source = MetricType
+            .fromIdentifier(sourceText)
+            .orElseThrow(() -> context.error("Invalid source (" + sourceText +
+                "), must be one of " + MetricType.values()));
 
         final Optional<QueryDateRange> range;
 
@@ -334,13 +349,18 @@ public class QueryListener extends HeroicQueryBaseListener {
     }
 
     @Override
+    public void exitExpressionFloat(ExpressionFloatContext ctx) {
+        push(new DoubleValue(Double.parseDouble(ctx.getText()), context(ctx)));
+    }
+
+    @Override
     public void exitString(StringContext ctx) {
         final ParseTree child = ctx.getChild(0);
         final CommonToken token = (CommonToken) child.getPayload();
         final Context c = context(ctx);
 
-        if (token.getType() == HeroicQueryLexer.SimpleString
-                || token.getType() == HeroicQueryLexer.Identifier) {
+        if (token.getType() == HeroicQueryLexer.SimpleString ||
+            token.getType() == HeroicQueryLexer.Identifier) {
             push(new StringValue(child.getText(), c));
             return;
         }
@@ -474,8 +494,8 @@ public class QueryListener extends HeroicQueryBaseListener {
 
         final AggregationValue left = pop(c, Value.class).cast(AggregationValue.class);
 
-        push(new AggregationValue(GROUP, Value.list(new EmptyValue(c), left), ImmutableMap.of(),
-                c));
+        push(
+            new AggregationValue(GROUP, Value.list(new EmptyValue(c), left), ImmutableMap.of(), c));
     }
 
     @Override
@@ -486,9 +506,11 @@ public class QueryListener extends HeroicQueryBaseListener {
     @Override
     public void exitAggregationPipe(AggregationPipeContext ctx) {
         final Context c = context(ctx);
-        final List<AggregationValue> values =
-                ImmutableList.copyOf(popUntil(c, PIPE_MARK, Value.class).stream()
-                        .map(v -> v.cast(AggregationValue.class)).iterator());
+        final List<AggregationValue> values = ImmutableList.copyOf(
+            popUntil(c, PIPE_MARK, Value.class)
+                .stream()
+                .map(v -> v.cast(AggregationValue.class))
+                .iterator());
         push(new AggregationValue(CHAIN, new ListValue(values, c), ImmutableMap.of(), c));
     }
 
@@ -645,7 +667,7 @@ public class QueryListener extends HeroicQueryBaseListener {
     private <T> void checkType(Class<T> expected, Class<?> actual) {
         if (!expected.isAssignableFrom(actual)) {
             throw new IllegalStateException(
-                    String.format("expected %s, but was %s", name(expected), name(actual)));
+                String.format("expected %s, but was %s", name(expected), name(actual)));
         }
     }
 

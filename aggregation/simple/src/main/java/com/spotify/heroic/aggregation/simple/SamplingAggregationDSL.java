@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Optional;
-
 import com.spotify.heroic.aggregation.AbstractAggregationDSL;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationArguments;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.common.Duration;
+
+import java.util.Optional;
 
 public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
     public SamplingAggregationDSL(AggregationFactory factory) {
@@ -42,6 +42,7 @@ public abstract class SamplingAggregationDSL<T> extends AbstractAggregationDSL {
         return buildWith(args, size, extent);
     }
 
-    protected abstract Aggregation buildWith(AggregationArguments args, Optional<Duration> size,
-            Optional<Duration> extent);
+    protected abstract Aggregation buildWith(
+        AggregationArguments args, Optional<Duration> size, Optional<Duration> extent
+    );
 }

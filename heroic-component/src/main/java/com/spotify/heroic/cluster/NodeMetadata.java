@@ -21,14 +21,14 @@
 
 package com.spotify.heroic.cluster;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.ServiceInfo;
+import lombok.Data;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import lombok.Data;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
 public class NodeMetadata {
@@ -36,15 +36,20 @@ public class NodeMetadata {
     private final UUID id;
     private final Map<String, String> tags;
     private final Set<NodeCapability> capabilities;
+    private final ServiceInfo service;
 
     @JsonCreator
-    public NodeMetadata(@JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
-            @JsonProperty("tags") Map<String, String> tags,
-            @JsonProperty("capabilities") Set<NodeCapability> capabilities) {
+    public NodeMetadata(
+        @JsonProperty("version") Integer version, @JsonProperty("id") UUID id,
+        @JsonProperty("tags") Map<String, String> tags,
+        @JsonProperty("capabilities") Set<NodeCapability> capabilities,
+        @JsonProperty("service") ServiceInfo service
+    ) {
         this.version = version;
         this.id = id;
         this.tags = tags;
         this.capabilities = capabilities;
+        this.service = service;
     }
 
     /**
@@ -110,6 +115,6 @@ public class NodeMetadata {
     }
 
     public NodeMetadata forVersion(int version) {
-        return new NodeMetadata(version, id, tags, capabilities);
+        return new NodeMetadata(version, id, tags, capabilities, service);
     }
 }

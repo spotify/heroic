@@ -21,18 +21,9 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
-
 import com.spotify.heroic.consumer.ConsumerSchema;
 import com.spotify.heroic.consumer.ConsumerSchemaValidationException;
-import com.spotify.heroic.ingestion.IngestionGroup;
 import com.spotify.heroic.statistics.ConsumerReporter;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
@@ -40,17 +31,23 @@ import kafka.consumer.KafkaStream;
 import kafka.message.MessageAndMetadata;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
+
 @Slf4j
 public final class ConsumerThread extends Thread {
     private static final long INITIAL_SLEEP = 5;
     private static final long MAX_SLEEP = 40;
 
     private final AsyncFramework async;
-    private final IngestionGroup ingestion;
     private final String name;
     private final ConsumerReporter reporter;
     private final KafkaStream<byte[], byte[]> stream;
-    private final ConsumerSchema schema;
+    private final ConsumerSchema.Consumer schema;
     private final AtomicInteger active;
     private final AtomicLong errors;
     private final LongAdder consumed;
@@ -63,14 +60,14 @@ public final class ConsumerThread extends Thread {
 
     private volatile AtomicReference<CountDownLatch> paused = new AtomicReference<>();
 
-    public ConsumerThread(final AsyncFramework async, final IngestionGroup ingestion,
-            final String name, final ConsumerReporter reporter,
-            final KafkaStream<byte[], byte[]> stream, final ConsumerSchema schema,
-            final AtomicInteger active, final AtomicLong errors, final LongAdder consumed) {
+    public ConsumerThread(
+        final AsyncFramework async, final String name, final ConsumerReporter reporter,
+        final KafkaStream<byte[], byte[]> stream, final ConsumerSchema.Consumer schema,
+        final AtomicInteger active, final AtomicLong errors, final LongAdder consumed
+    ) {
         super(String.format("%s: %s", ConsumerThread.class.getCanonicalName(), name));
 
         this.async = async;
-        this.ingestion = ingestion;
         this.name = name;
         this.reporter = reporter;
         this.stream = stream;
@@ -189,7 +186,7 @@ public final class ConsumerThread extends Thread {
 
     private boolean consumeOne(final byte[] body) {
         try {
-            schema.consume(ingestion, body);
+            schema.consume(body);
             reporter.reportMessageSize(body.length);
             consumed.increment();
             return false;

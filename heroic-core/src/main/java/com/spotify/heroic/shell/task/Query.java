@@ -21,20 +21,11 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryManager;
 import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.RequestError;
 import com.spotify.heroic.metric.ShardedResultGroup;
@@ -44,19 +35,30 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @TaskUsage("Execute a query")
 @TaskName("query")
 public class Query implements ShellTask {
-    @Inject
-    private QueryManager query;
+    private final QueryManager query;
+    private final ObjectMapper mapper;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public Query(QueryManager query, @Named("application/json") ObjectMapper mapper) {
+        this.query = query;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -74,34 +76,37 @@ public class Query implements ShellTask {
 
         final QueryOptions options = QueryOptions.builder().tracing(params.tracing).build();
 
-        return query.useGroup(params.group)
-                .query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
-                .directTransform(result -> {
-                    for (final RequestError e : result.getErrors()) {
-                        io.out().println(String.format("ERR: %s", e.toString()));
-                    }
+        return query
+            .useGroup(params.group)
+            .query(query.newQueryFromString(queryString).options(Optional.of(options)).build())
+            .directTransform(result -> {
+                for (final RequestError e : result.getErrors()) {
+                    io.out().println(String.format("ERR: %s", e.toString()));
+                }
 
-                    for (final ShardedResultGroup resultGroup : result.getGroups()) {
-                        final MetricCollection group = resultGroup.getGroup();
+                for (final ShardedResultGroup resultGroup : result.getGroups()) {
+                    final MetricCollection group = resultGroup.getGroup();
 
-                        io.out().println(String.format("%s: %s %s", group.getType(),
-                                resultGroup.getShard(), resultGroup.getTags()));
-                        io.out().println(indent.writeValueAsString(group.getData()));
-                        io.out().flush();
-                    }
-
-                    io.out().println("TRACE:");
-                    result.getTrace().formatTrace(io.out());
+                    io
+                        .out()
+                        .println(String.format("%s: %s %s", group.getType(), resultGroup.getShard(),
+                            indent.writeValueAsString(resultGroup.getSeries())));
+                    io.out().println(indent.writeValueAsString(group.getData()));
                     io.out().flush();
+                }
 
-                    return null;
-                });
+                io.out().println("TRACE:");
+                result.getTrace().formatTrace(io.out());
+                io.out().flush();
+
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group = null;
 
         @Argument(metaVar = "<query>")
@@ -109,5 +114,14 @@ public class Query implements ShellTask {
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
+    }
+
+    public static Query setup(final CoreComponent core) {
+        return DaggerQuery_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Query task();
     }
 }

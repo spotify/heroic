@@ -21,14 +21,13 @@
 
 package com.spotify.heroic.metric;
 
-import java.io.PrintWriter;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-
 import lombok.Data;
+
+import java.io.PrintWriter;
+import java.util.List;
 
 @Data
 public class QueryTrace {
@@ -37,9 +36,11 @@ public class QueryTrace {
     private final List<QueryTrace> children;
 
     @JsonCreator
-    public QueryTrace(@JsonProperty("what") final QueryTrace.Identifier what,
-            @JsonProperty("elapsed") final long elapsed,
-            @JsonProperty("children") final List<QueryTrace> children) {
+    public QueryTrace(
+        @JsonProperty("what") final QueryTrace.Identifier what,
+        @JsonProperty("elapsed") final long elapsed,
+        @JsonProperty("children") final List<QueryTrace> children
+    ) {
         this.what = what;
         this.elapsed = elapsed;
         this.children = children;

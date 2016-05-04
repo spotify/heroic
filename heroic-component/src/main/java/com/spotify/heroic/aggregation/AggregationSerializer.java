@@ -25,15 +25,11 @@ import eu.toolchain.serializer.Serializer;
 
 /**
  * Serializes aggregation configurations.
- *
+ * <p>
  * Each aggregation configuration is packed into a Composite which has the type of the aggregation
  * as a prefixed short.
  *
  * @author udoprog
  */
 public interface AggregationSerializer extends Serializer<AggregationInstance> {
-    <T extends Aggregation> void registerQuery(String id, Class<T> queryType);
-
-    <T extends AggregationInstance> void register(String id, Class<T> clazz,
-            Serializer<T> serializer, AggregationDSL builder);
 }

@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import eu.toolchain.async.AsyncFuture;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-
-import eu.toolchain.async.AsyncFuture;
 
 public class NativeRpcContainer {
     private final Map<String, EndpointSpec<Object, Object>> endpoints = new HashMap<>();

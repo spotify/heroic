@@ -30,10 +30,10 @@ import java.nio.file.StandardOpenOption;
 
 /**
  * I/O indirection for shell tasks.
- *
+ * <p>
  * If tasks directly open handles, these will be opened in the context of which the task is running.
  * This is most likely a server, which is not what the shell users typically intends.
- *
+ * <p>
  * This interface introduces implementation of methods that work correctly, regardless of context.
  *
  * @author udoprog

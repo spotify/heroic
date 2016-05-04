@@ -21,20 +21,8 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.NotImplementedException;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -50,9 +38,10 @@ import com.netflix.astyanax.util.RangeBuilder;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.concurrrency.ReadWriteThreadPools;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.FetchData;
@@ -65,29 +54,39 @@ import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.MetricBackendReporter;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Borrowed;
 import eu.toolchain.async.Managed;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+import org.apache.commons.lang3.NotImplementedException;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
 @ToString(of = {})
-public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle {
+public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycles {
     private static final QueryTrace.Identifier FETCH_SEGMENT =
-            QueryTrace.identifier(AstyanaxBackend.class, "fetch_segment");
+        QueryTrace.identifier(AstyanaxBackend.class, "fetch_segment");
     private static final QueryTrace.Identifier FETCH =
-            QueryTrace.identifier(AstyanaxBackend.class, "fetch");
+        QueryTrace.identifier(AstyanaxBackend.class, "fetch");
 
     private static final MetricsRowKeySerializer KEY_SERIALIZER = MetricsRowKeySerializer.get();
 
     private static final ColumnFamily<MetricsRowKey, Integer> METRICS_CF =
-            new ColumnFamily<MetricsRowKey, Integer>("metrics", KEY_SERIALIZER,
-                    IntegerSerializer.get());
+        new ColumnFamily<MetricsRowKey, Integer>("metrics", KEY_SERIALIZER,
+            IntegerSerializer.get());
 
     private final AsyncFramework async;
     private final ReadWriteThreadPools pools;
@@ -95,13 +94,21 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
     private final Groups groups;
 
     @Inject
-    public AstyanaxBackend(final AsyncFramework async, final ReadWriteThreadPools pools,
-            final MetricBackendReporter reporter, final Groups groups) {
+    public AstyanaxBackend(
+        final AsyncFramework async, final ReadWriteThreadPools pools,
+        final MetricBackendReporter reporter, final Groups groups, LifeCycleRegistry registry
+    ) {
         super(async);
         this.async = async;
         this.pools = pools;
         this.reporter = reporter;
         this.groups = groups;
+    }
+
+    @Override
+    public void register(LifeCycleRegistry registry) {
+        registry.start(this::start);
+        registry.stop(this::stop);
     }
 
     private Managed<Context> context;
@@ -129,10 +136,10 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             final Context ctx = k.get();
 
             final MutationBatch mutation =
-                    ctx.client.prepareMutationBatch().setConsistencyLevel(ConsistencyLevel.CL_ANY);
+                ctx.client.prepareMutationBatch().setConsistencyLevel(ConsistencyLevel.CL_ANY);
 
             final Map<MetricsRowKey, ColumnListMutation<Integer>> batches =
-                    new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
+                new HashMap<MetricsRowKey, ColumnListMutation<Integer>>();
 
             for (final WriteMetric write : writes) {
                 final MetricCollection g = write.getData();
@@ -154,7 +161,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                     }
 
                     m.putColumn(MetricsRowKeySerializer.calculateColumnKey(d.getTimestamp()),
-                            d.getValue());
+                        d.getValue());
                 }
             }
 
@@ -163,13 +170,17 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             return WriteResult.of(ImmutableList.of(System.nanoTime() - start));
         };
 
-        return async.call(resolver, pools.write()).onDone(reporter.reportWriteBatch())
-                .onFinished(k::release);
+        return async
+            .call(resolver, pools.write())
+            .onDone(reporter.reportWriteBatch())
+            .onFinished(k::release);
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(MetricType source, Series series, final DateRange range,
-            FetchQuotaWatcher watcher, QueryOptions options) {
+    public AsyncFuture<FetchData> fetch(
+        MetricType source, Series series, final DateRange range, FetchQuotaWatcher watcher,
+        QueryOptions options
+    ) {
         if (source == MetricType.POINT) {
             return fetchDataPoints(series, range, watcher);
         }
@@ -177,8 +188,9 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
         throw new NotImplementedException("unsupported source: " + source);
     }
 
-    private AsyncFuture<FetchData> fetchDataPoints(final Series series, DateRange range,
-            final FetchQuotaWatcher watcher) {
+    private AsyncFuture<FetchData> fetchDataPoints(
+        final Series series, DateRange range, final FetchQuotaWatcher watcher
+    ) {
         return context.doto(ctx -> {
             return async.resolved(prepareQueries(series, range)).lazyTransform(result -> {
                 final List<AsyncFuture<FetchData>> queries = new ArrayList<>();
@@ -189,22 +201,24 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
                         public FetchData call() throws Exception {
                             final Stopwatch w = Stopwatch.createStarted();
 
-                            final RowQuery<MetricsRowKey, Integer> query =
-                                    ctx.client.prepareQuery(METRICS_CF).getRow(q.rowKey)
-                                            .autoPaginate(true).withColumnRange(q.columnRange);
+                            final RowQuery<MetricsRowKey, Integer> query = ctx.client
+                                .prepareQuery(METRICS_CF)
+                                .getRow(q.rowKey)
+                                .autoPaginate(true)
+                                .withColumnRange(q.columnRange);
 
                             final List<Point> data =
-                                    q.rowKey.buildPoints(query.execute().getResult());
+                                q.rowKey.buildPoints(query.execute().getResult());
 
                             if (!watcher.readData(data.size())) {
                                 throw new IllegalArgumentException("data limit quota violated");
                             }
 
                             final QueryTrace trace =
-                                    new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
+                                new QueryTrace(FETCH_SEGMENT, w.elapsed(TimeUnit.NANOSECONDS));
                             final List<Long> times = ImmutableList.of(trace.getElapsed());
                             final List<MetricCollection> groups =
-                                    ImmutableList.of(MetricCollection.points(data));
+                                ImmutableList.of(MetricCollection.points(data));
                             return new FetchData(series, times, groups, trace);
                         }
                     }, pools.read()).onDone(reporter.reportFetch()));
@@ -231,7 +245,7 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
             @Override
             public Iterator<BackendEntry> iterator() {
                 final Iterator<Row<MetricsRowKey, Integer>> iterator =
-                        result.getResult().iterator();
+                    result.getResult().iterator();
 
                 return new Iterator<BackendEntry>() {
                     @Override
@@ -285,11 +299,11 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
 
             final MetricsRowKey rowKey = new MetricsRowKey(series, base);
             final int startColumnKey =
-                    MetricsRowKeySerializer.calculateColumnKey(modified.getStart());
+                MetricsRowKeySerializer.calculateColumnKey(modified.getStart());
             final int endColumnKey = MetricsRowKeySerializer.calculateColumnKey(modified.getEnd());
 
             final ByteBufferRange columnRange =
-                    new RangeBuilder().setStart(startColumnKey).setEnd(endColumnKey).build();
+                new RangeBuilder().setStart(startColumnKey).setEnd(endColumnKey).build();
 
             prepared.add(new PreparedQuery(rowKey, columnRange));
         }
@@ -303,13 +317,11 @@ public class AstyanaxBackend extends AbstractMetricBackend implements LifeCycle 
         private final ByteBufferRange columnRange;
     }
 
-    @Override
-    public AsyncFuture<Void> start() {
+    private AsyncFuture<Void> start() {
         return context.start();
     }
 
-    @Override
-    public AsyncFuture<Void> stop() {
+    private AsyncFuture<Void> stop() {
         final List<AsyncFuture<Void>> futures = new ArrayList<>();
         futures.add(context.stop());
         futures.add(pools.stop());

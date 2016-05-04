@@ -21,14 +21,12 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.aggregation.Bucket;
 import com.spotify.heroic.aggregation.ReducerSession;
-import com.spotify.heroic.common.Series;
+
+import java.util.Map;
 
 public class EmptyMetricCollection extends MetricCollection {
     public EmptyMetricCollection() {
@@ -36,8 +34,9 @@ public class EmptyMetricCollection extends MetricCollection {
     }
 
     @Override
-    public void updateAggregation(AggregationSession session, Map<String, String> tags,
-            Set<Series> series) {
+    public void updateAggregation(
+        AggregationSession session, Map<String, String> tags
+    ) {
     }
 
     @Override

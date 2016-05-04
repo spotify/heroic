@@ -21,14 +21,20 @@
 
 package com.spotify.heroic.http.query;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.Query;
+import com.spotify.heroic.QueryBuilder;
+import com.spotify.heroic.QueryManager;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.metric.QueryResult;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import lombok.Data;
+import org.apache.commons.lang3.tuple.Pair;
 
+import javax.inject.Inject;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.NotFoundException;
@@ -40,47 +46,41 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-import org.apache.commons.lang3.tuple.Pair;
-
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.spotify.heroic.Query;
-import com.spotify.heroic.QueryBuilder;
-import com.spotify.heroic.QueryManager;
-import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.metric.QueryResult;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import lombok.Data;
-
-@Path("/query")
+@Path("query")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class QueryResource {
-    @Inject
-    private JavaxRestFramework httpAsync;
+    private final JavaxRestFramework httpAsync;
+    private final QueryManager query;
+    private final AsyncFramework async;
 
     @Inject
-    private QueryManager query;
+    public QueryResource(JavaxRestFramework httpAsync, QueryManager query, AsyncFramework async) {
+        this.httpAsync = httpAsync;
+        this.query = query;
+        this.async = async;
+    }
 
-    @Inject
-    private AsyncFramework async;
-
-    private final Cache<UUID, StreamQuery> streamQueries = CacheBuilder.newBuilder()
-            .expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery> build();
+    private final Cache<UUID, StreamQuery> streamQueries =
+        CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.MINUTES).<UUID, StreamQuery>build();
 
     @POST
-    @Path("/metrics/stream")
-    public List<StreamId> metricsStream(@QueryParam("backend") String backendGroup,
-            QueryMetrics query) {
+    @Path("metrics/stream")
+    public List<StreamId> metricsStream(
+        @QueryParam("backend") String backendGroup, QueryMetrics query
+    ) {
         final Query request = setupQuery(query).build();
 
         final Collection<? extends QueryManager.Group> groups =
-                this.query.useGroupPerNode(backendGroup);
+            this.query.useGroupPerNode(backendGroup);
         final List<StreamId> ids = new ArrayList<>();
 
         for (QueryManager.Group group : groups) {
@@ -93,9 +93,10 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics/stream/{id}")
-    public void metricsStreamId(@Suspended final AsyncResponse response,
-            @PathParam("id") final UUID id) {
+    @Path("metrics/stream/{id}")
+    public void metricsStreamId(
+        @Suspended final AsyncResponse response, @PathParam("id") final UUID id
+    ) {
         if (id == null) {
             throw new BadRequestException("Id must be a valid UUID");
         }
@@ -116,10 +117,11 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics")
+    @Path("metrics")
     @Consumes(MediaType.TEXT_PLAIN)
-    public void metricsText(@Suspended final AsyncResponse response,
-            @QueryParam("group") String group, String query) {
+    public void metricsText(
+        @Suspended final AsyncResponse response, @QueryParam("group") String group, String query
+    ) {
         final Query q = this.query.newQueryFromString(query).build();
 
         final QueryManager.Group g = this.query.useGroup(group);
@@ -129,10 +131,12 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/metrics")
+    @Path("metrics")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void metrics(@Suspended final AsyncResponse response, @QueryParam("group") String group,
-            QueryMetrics query) {
+    public void metrics(
+        @Suspended final AsyncResponse response, @QueryParam("group") String group,
+        QueryMetrics query
+    ) {
         final Query q = setupQuery(query).build();
 
         final QueryManager.Group g = this.query.useGroup(group);
@@ -142,9 +146,11 @@ public class QueryResource {
     }
 
     @POST
-    @Path("/batch")
-    public void metrics(@Suspended final AsyncResponse response,
-            @QueryParam("backend") String backendGroup, final QueryBatch query) {
+    @Path("batch")
+    public void metrics(
+        @Suspended final AsyncResponse response, @QueryParam("backend") String backendGroup,
+        final QueryBatch query
+    ) {
         final QueryManager.Group group = this.query.useGroup(backendGroup);
 
         final List<AsyncFuture<Pair<String, QueryResult>>> futures = new ArrayList<>();
@@ -155,42 +161,57 @@ public class QueryResource {
         }
 
         final AsyncFuture<QueryBatchResponse> future =
-                async.collect(futures).directTransform(entries -> {
-                    final ImmutableMap.Builder<String, QueryMetricsResponse> results =
-                            ImmutableMap.builder();
+            async.collect(futures).directTransform(entries -> {
+                final ImmutableMap.Builder<String, QueryMetricsResponse> results =
+                    ImmutableMap.builder();
 
-                    for (final Pair<String, QueryResult> e : entries) {
-                        final QueryResult r = e.getRight();
-                        results.put(e.getLeft(), new QueryMetricsResponse(r.getRange(),
-                                r.getGroups(), r.getErrors(), r.getTrace()));
-                    }
+                for (final Pair<String, QueryResult> e : entries) {
+                    final QueryResult r = e.getRight();
+                    results.put(e.getLeft(),
+                        new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
+                            r.getTrace()));
+                }
 
-                    return new QueryBatchResponse(results.build());
-                });
+                return new QueryBatchResponse(results.build());
+            });
 
         response.setTimeout(300, TimeUnit.SECONDS);
 
         httpAsync.bind(response, future);
     }
 
-    private void bindMetricsResponse(final AsyncResponse response,
-            final AsyncFuture<QueryResult> callback) {
+    private void bindMetricsResponse(
+        final AsyncResponse response, final AsyncFuture<QueryResult> callback
+    ) {
         response.setTimeout(300, TimeUnit.SECONDS);
 
-        httpAsync.bind(response, callback, r -> new QueryMetricsResponse(r.getRange(),
-                r.getGroups(), r.getErrors(), r.getTrace()));
+        httpAsync.bind(response, callback,
+            r -> new QueryMetricsResponse(r.getRange(), r.getGroups(), r.getErrors(),
+                r.getTrace()));
     }
 
     @SuppressWarnings("deprecation")
     private QueryBuilder setupQuery(final QueryMetrics q) {
         Supplier<? extends QueryBuilder> supplier = () -> {
-            return query.newQuery().key(q.getKey()).tags(q.getTags()).groupBy(q.getGroupBy())
-                    .filter(q.getFilter()).range(q.getRange()).aggregation(q.getAggregation())
-                    .source(q.getSource()).options(q.getOptions());
+            return query
+                .newQuery()
+                .key(q.getKey())
+                .tags(q.getTags())
+                .groupBy(q.getGroupBy())
+                .filter(q.getFilter())
+                .range(q.getRange())
+                .aggregation(q.getAggregation())
+                .source(q.getSource())
+                .options(q.getOptions());
         };
 
-        return q.getQuery().map(query::newQueryFromString).orElseGet(supplier)
-                .rangeIfAbsent(q.getRange()).optionsIfAbsent(q.getOptions());
+        return q
+            .getQuery()
+            .map(query::newQueryFromString)
+            .orElseGet(supplier)
+            .rangeIfAbsent(q.getRange())
+            .optionsIfAbsent(q.getOptions())
+            .features(q.getFeatures());
     }
 
     @Data

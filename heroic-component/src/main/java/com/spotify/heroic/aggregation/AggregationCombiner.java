@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.ShardedResultGroup;
+
+import java.util.List;
 
 public interface AggregationCombiner {
     List<ShardedResultGroup> combine(List<List<ShardedResultGroup>> all);

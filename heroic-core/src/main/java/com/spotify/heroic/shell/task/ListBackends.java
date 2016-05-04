@@ -21,17 +21,10 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Set;
-
-import org.kohsuke.args4j.Option;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
+import com.spotify.heroic.analytics.MetricAnalytics;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.shell.AbstractShellTaskParams;
@@ -41,32 +34,39 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.suggest.SuggestManager;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Set;
 
 @TaskUsage("List available backend groups")
 @TaskName("backends")
 public class ListBackends implements ShellTask {
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
+    private final MetadataManager metadata;
+    private final SuggestManager suggest;
+    private final Set<Consumer> consumers;
+    private final MetricAnalytics metricAnalytics;
+    private final AsyncFramework async;
 
     @Inject
-    private MetadataManager metadata;
-
-    @Inject
-    private SuggestManager suggest;
-
-    @Inject
-    private Set<Consumer> consumers;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
+    public ListBackends(
+        MetricManager metrics, MetadataManager metadata, SuggestManager suggest,
+        Set<Consumer> consumers, MetricAnalytics metricAnalytics, AsyncFramework async
+    ) {
+        this.metrics = metrics;
+        this.metadata = metadata;
+        this.suggest = suggest;
+        this.consumers = consumers;
+        this.metricAnalytics = metricAnalytics;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -81,6 +81,8 @@ public class ListBackends implements ShellTask {
         printBackends(io.out(), "metadata", metadata.use(params.group));
         printBackends(io.out(), "suggest", suggest.use(params.group));
         printConsumers(io.out(), "consumers", consumers);
+
+        io.out().println(String.format("metric-analytics: %s", metricAnalytics));
 
         return async.resolved(null);
     }
@@ -113,8 +115,17 @@ public class ListBackends implements ShellTask {
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group;
+    }
+
+    public static ListBackends setup(final CoreComponent core) {
+        return DaggerListBackends_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        ListBackends task();
     }
 }

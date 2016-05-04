@@ -21,25 +21,24 @@
 
 package com.spotify.heroic.metric.datastax;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.WriteType;
 import com.datastax.driver.core.policies.RetryPolicy;
-
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * An aggressive retrying policy that will force the driver to retry a certain request a given
  * number of times before giving up.
- *
- * Every {@code rotateHost} request will cause the decision to be to
- * {@link RetryDecision#tryNextHost}.
- *
+ * <p>
+ * Every {@code rotateHost} request will cause the decision to be to {@link
+ * RetryDecision#tryNextHost}.
+ * <p>
  * This policy is <em>not</em> suitable for production use. It is intended for troubleshooting
  * purposes only.
  *
@@ -52,8 +51,10 @@ public class AggressiveRetryPolicy implements RetryPolicy {
     private final int rotateHost;
 
     @Override
-    public RetryDecision onReadTimeout(Statement statement, ConsistencyLevel cl,
-            int requiredResponses, int receivedResponses, boolean dataRetrieved, int nbRetry) {
+    public RetryDecision onReadTimeout(
+        Statement statement, ConsistencyLevel cl, int requiredResponses, int receivedResponses,
+        boolean dataRetrieved, int nbRetry
+    ) {
         if (nbRetry < numRetries) {
             final String stmt;
 
@@ -66,7 +67,7 @@ public class AggressiveRetryPolicy implements RetryPolicy {
                 }
 
                 stmt = String.format("%s (%s)", bound.preparedStatement().getQueryString(),
-                        variables.toString());
+                    variables.toString());
             } else {
                 stmt = statement.toString();
             }
@@ -74,18 +75,20 @@ public class AggressiveRetryPolicy implements RetryPolicy {
             final boolean tryNextHost = nbRetry % rotateHost == (rotateHost - 1);
 
             log.info("Request failing ({}/{}) retrying ({}) (decision: {})...", nbRetry, numRetries,
-                    stmt, tryNextHost ? "tryNextHost" : "retry");
+                stmt, tryNextHost ? "tryNextHost" : "retry");
 
             return tryNextHost ? RetryDecision.tryNextHost(cl) : RetryDecision.retry(cl);
         }
 
         return receivedResponses >= requiredResponses && !dataRetrieved ? RetryDecision.retry(cl)
-                : RetryDecision.rethrow();
+            : RetryDecision.rethrow();
     }
 
     @Override
-    public RetryDecision onWriteTimeout(Statement statement, ConsistencyLevel cl,
-            WriteType writeType, int requiredAcks, int receivedAcks, int nbRetry) {
+    public RetryDecision onWriteTimeout(
+        Statement statement, ConsistencyLevel cl, WriteType writeType, int requiredAcks,
+        int receivedAcks, int nbRetry
+    ) {
         if (nbRetry != 0) {
             return RetryDecision.rethrow();
         }
@@ -96,8 +99,9 @@ public class AggressiveRetryPolicy implements RetryPolicy {
     }
 
     @Override
-    public RetryDecision onUnavailable(Statement statement, ConsistencyLevel cl,
-            int requiredReplica, int aliveReplica, int nbRetry) {
+    public RetryDecision onUnavailable(
+        Statement statement, ConsistencyLevel cl, int requiredReplica, int aliveReplica, int nbRetry
+    ) {
         return (nbRetry == 0) ? RetryDecision.tryNextHost(cl) : RetryDecision.rethrow();
     }
 }

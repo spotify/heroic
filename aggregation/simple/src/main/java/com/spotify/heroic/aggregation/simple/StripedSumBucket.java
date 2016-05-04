@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-import java.util.concurrent.atomic.DoubleAdder;
-
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.concurrent.atomic.DoubleAdder;
 
 /**
  * Bucket that keeps track of the amount of data points seen, and there summed value.
- *
+ * <p>
  * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog

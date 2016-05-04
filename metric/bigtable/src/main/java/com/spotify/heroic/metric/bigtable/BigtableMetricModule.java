@@ -21,31 +21,19 @@
 
 package com.spotify.heroic.metric.bigtable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.name.Named;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.Series;
-import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.bigtable.credentials.ComputeEngineCredentialsBuilder;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -54,6 +42,14 @@ import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import lombok.Data;
 
+import javax.inject.Named;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+
 @Data
 public final class BigtableMetricModule implements MetricModule {
     public static final String BIGTABLE_CONFIGURE_PARAM = "bigtable.configure";
@@ -61,9 +57,9 @@ public final class BigtableMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "bigtable";
     public static final String DEFAULT_CLUSTER = "heroic";
     public static final CredentialsBuilder DEFAULT_CREDENTIALS =
-            new ComputeEngineCredentialsBuilder();
+        new ComputeEngineCredentialsBuilder();
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
     private final String project;
     private final String zone;
@@ -71,83 +67,100 @@ public final class BigtableMetricModule implements MetricModule {
     private final CredentialsBuilder credentials;
 
     @JsonCreator
-    public BigtableMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups, @JsonProperty("project") String project,
-            @JsonProperty("zone") String zone, @JsonProperty("cluster") String cluster,
-            @JsonProperty("credentials") CredentialsBuilder credentials) {
+    public BigtableMetricModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("project") Optional<String> project,
+        @JsonProperty("zone") Optional<String> zone,
+        @JsonProperty("cluster") Optional<String> cluster,
+        @JsonProperty("credentials") Optional<CredentialsBuilder> credentials
+    ) {
         this.id = id;
-        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
-        this.project = checkNotNull(project, "project");
-        this.zone = checkNotNull(zone, "zone");
-        this.cluster = Optional.fromNullable(cluster).or(DEFAULT_CLUSTER);
-        this.credentials = Optional.fromNullable(credentials).or(DEFAULT_CREDENTIALS);
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.project = project.orElseThrow(() -> new NullPointerException("project"));
+        this.zone = zone.orElseThrow(() -> new NullPointerException("zone"));
+        this.cluster = cluster.orElse(DEFAULT_CLUSTER);
+        this.credentials = credentials.orElse(DEFAULT_CREDENTIALS);
     }
 
     @Override
-    public PrivateModule module(final Key<MetricBackend> key, final String id) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
-                return reporter.newBackend(id);
-            }
+    public Exposed module(PrimaryComponent primary, Depends depends, String id) {
+        return DaggerBigtableMetricModule_C
+            .builder()
+            .primaryComponent(primary)
+            .depends(depends)
+            .m(new M())
+            .build();
+    }
 
-            @Provides
-            @Singleton
-            public Managed<BigtableConnection> connection(final AsyncFramework async,
-                    final ExecutorService executorService) {
-                return async.managed(new ManagedSetup<BigtableConnection>() {
-                    @Override
-                    public AsyncFuture<BigtableConnection> construct() throws Exception {
-                        return async.call(new BigtableConnectionBuilder(project, zone, cluster,
-                                credentials, async, executorService));
-                    }
+    @BigtableScope
+    @Component(modules = M.class, dependencies = {PrimaryComponent.class, Depends.class})
+    interface C extends Exposed {
+        @Override
+        BigtableBackend backend();
 
-                    @Override
-                    public AsyncFuture<Void> destruct(final BigtableConnection value)
-                            throws Exception {
-                        return async.call(new Callable<Void>() {
-                            @Override
-                            public Void call() throws Exception {
-                                value.close();
-                                return null;
-                            }
-                        });
-                    }
-                });
-            }
+        @Override
+        LifeCycle life();
+    }
 
-            @Provides
-            @Singleton
-            @Named("configure")
-            public boolean configure(final ExtraParameters params) {
-                return params.contains(ExtraParameters.CONFIGURE)
-                        || params.contains(BIGTABLE_CONFIGURE_PARAM);
-            }
+    @Module
+    class M {
+        @Provides
+        @BigtableScope
+        public Managed<BigtableConnection> connection(
+            final AsyncFramework async, final ExecutorService executorService
+        ) {
+            return async.managed(new ManagedSetup<BigtableConnection>() {
+                @Override
+                public AsyncFuture<BigtableConnection> construct() throws Exception {
+                    return async.call(
+                        new BigtableConnectionBuilder(project, zone, cluster, credentials, async,
+                            executorService));
+                }
 
-            @Provides
-            @Singleton
-            public Serializer<RowKey> rowKeySerializer(Serializer<Series> series,
-                    @Named("common") SerializerFramework s) {
-                return new RowKey_Serializer(s);
-            }
+                @Override
+                public AsyncFuture<Void> destruct(final BigtableConnection value) throws Exception {
+                    return async.call(new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            value.close();
+                            return null;
+                        }
+                    });
+                }
+            });
+        }
 
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
-            }
+        @Provides
+        @BigtableScope
+        @Named("configure")
+        public boolean configure(final ExtraParameters params) {
+            return params.contains(ExtraParameters.CONFIGURE) ||
+                params.contains(BIGTABLE_CONFIGURE_PARAM);
+        }
 
-            @Override
-            protected void configure() {
-                bind(key).to(BigtableBackend.class).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+        @Provides
+        @BigtableScope
+        public Serializer<RowKey> rowKeySerializer(
+            Serializer<Series> series, @Named("common") SerializerFramework s
+        ) {
+            return new RowKey_Serializer(s);
+        }
+
+        @Provides
+        @BigtableScope
+        public Groups groups() {
+            return groups;
+        }
+
+        @Provides
+        @BigtableScope
+        public LifeCycle life(LifeCycleManager manager, BigtableBackend backend) {
+            return manager.build(backend);
+        }
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -161,51 +174,45 @@ public final class BigtableMetricModule implements MetricModule {
     }
 
     public static class Builder {
-        private String id;
-        private String group;
-        private Set<String> groups;
-        private String project;
-        private String zone;
-        private String cluster;
-        private CredentialsBuilder credentials;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<String> project = empty();
+        private Optional<String> zone = empty();
+        private Optional<String> cluster = empty();
+        private Optional<CredentialsBuilder> credentials = empty();
 
         public Builder id(String id) {
-            this.id = id;
+            this.id = of(id);
             return this;
         }
 
-        public Builder group(String group) {
-            this.group = group;
-            return this;
-        }
-
-        public Builder groups(Set<String> groups) {
-            this.groups = groups;
+        public Builder groups(Groups groups) {
+            this.groups = of(groups);
             return this;
         }
 
         public Builder project(String project) {
-            this.project = checkNotNull(project, "project");
+            this.project = of(project);
             return this;
         }
 
         public Builder zone(String zone) {
-            this.zone = checkNotNull(zone, "zone");
+            this.zone = of(zone);
             return this;
         }
 
         public Builder cluster(String cluster) {
-            this.cluster = checkNotNull(cluster, "cluster");
+            this.cluster = of(cluster);
             return this;
         }
 
         public Builder credentials(CredentialsBuilder credentials) {
-            this.credentials = checkNotNull(credentials, "credentials");
+            this.credentials = of(credentials);
             return this;
         }
 
         public BigtableMetricModule build() {
-            return new BigtableMetricModule(id, group, groups, project, zone, cluster, credentials);
+            return new BigtableMetricModule(id, groups, project, zone, cluster, credentials);
         }
     }
 }

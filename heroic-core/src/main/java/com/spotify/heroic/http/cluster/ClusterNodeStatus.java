@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.http.cluster;
 
+import com.spotify.heroic.cluster.NodeCapability;
+import lombok.Data;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import lombok.Data;
-
-import com.spotify.heroic.cluster.NodeCapability;
 
 @Data
 public class ClusterNodeStatus {

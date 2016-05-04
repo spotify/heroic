@@ -21,20 +21,21 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-
-import com.google.common.cache.Cache;
-
 import lombok.RequiredArgsConstructor;
 
+import java.util.concurrent.ConcurrentMap;
+
 @RequiredArgsConstructor
-public class DisabledRateLimitedCache<K, V> implements RateLimitedCache<K, V> {
-    private final Cache<K, V> cache;
+public class DisabledRateLimitedCache<K> implements RateLimitedCache<K> {
+    private final ConcurrentMap<K, Boolean> cache;
 
     @Override
-    public V get(K key, Callable<V> callable)
-            throws ExecutionException, RateLimitExceededException {
-        return cache.get(key, callable);
+    public boolean acquire(K key) {
+        return cache.putIfAbsent(key, true) == null;
+    }
+
+    @Override
+    public int size() {
+        return 0;
     }
 }

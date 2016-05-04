@@ -21,6 +21,21 @@
 
 package com.spotify.heroic;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.shell.CoreInterface;
+import com.spotify.heroic.shell.QuoteParser;
+import com.spotify.heroic.shell.ShellIO;
+import com.spotify.heroic.shell.Tasks;
+import com.spotify.heroic.shell.protocol.CommandDefinition;
+import eu.toolchain.async.AsyncFuture;
+import jline.console.ConsoleReader;
+import jline.console.UserInterruptException;
+import jline.console.completer.StringsCompleter;
+import jline.console.history.FileHistory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -29,23 +44,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.commons.lang3.StringUtils;
-
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.shell.CoreInterface;
-import com.spotify.heroic.shell.QuoteParser;
-import com.spotify.heroic.shell.ShellIO;
-import com.spotify.heroic.shell.Tasks;
-import com.spotify.heroic.shell.protocol.CommandDefinition;
-
-import eu.toolchain.async.AsyncFuture;
-import jline.console.ConsoleReader;
-import jline.console.UserInterruptException;
-import jline.console.completer.StringsCompleter;
-import jline.console.history.FileHistory;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -174,7 +172,7 @@ public class HeroicInteractiveShell {
     }
 
     void runTask(List<String> command, final ShellIO io, final CoreInterface core)
-            throws Exception, IOException {
+        throws Exception, IOException {
         final AsyncFuture<Void> t;
 
         try {
@@ -206,7 +204,7 @@ public class HeroicInteractiveShell {
     }
 
     Void awaitFinished(final AsyncFuture<Void> t)
-            throws InterruptedException, ExecutionException, TimeoutException {
+        throws InterruptedException, ExecutionException, TimeoutException {
         if (timeout > 0) {
             return t.get(timeout, TimeUnit.SECONDS);
         }
@@ -215,8 +213,9 @@ public class HeroicInteractiveShell {
         return t.get();
     }
 
-    public static HeroicInteractiveShell buildInstance(final List<CommandDefinition> commands,
-            FileInputStream input) throws Exception {
+    public static HeroicInteractiveShell buildInstance(
+        final List<CommandDefinition> commands, FileInputStream input
+    ) throws Exception {
         final ConsoleReader reader = new ConsoleReader("heroicsh", input, System.out, null);
 
         final FileHistory history = setupHistory(reader);
@@ -227,7 +226,7 @@ public class HeroicInteractiveShell {
 
         reader.setPrompt(String.format("heroic> "));
         reader.addCompleter(new StringsCompleter(
-                ImmutableList.copyOf(commands.stream().map((d) -> d.getName()).iterator())));
+            ImmutableList.copyOf(commands.stream().map((d) -> d.getName()).iterator())));
         reader.setHandleUserInterrupt(true);
 
         return new HeroicInteractiveShell(reader, commands, history);

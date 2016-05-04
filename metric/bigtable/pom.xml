@@ -21,7 +21,7 @@
   </description>
 
   <properties>
-    <bigtable.version>0.2.1</bigtable.version>
+    <bigtable.version>0.2.3</bigtable.version>
     <alpn-boot.version>8.1.5.v20150921</alpn-boot.version>
   </properties>
 
@@ -91,6 +91,13 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

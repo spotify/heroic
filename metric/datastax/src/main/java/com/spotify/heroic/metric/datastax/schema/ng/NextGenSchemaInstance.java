@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.metric.datastax.schema.ng;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
@@ -40,9 +33,15 @@ import com.spotify.heroic.metric.datastax.TypeSerializer;
 import com.spotify.heroic.metric.datastax.schema.AbstractSchemaInstance;
 import com.spotify.heroic.metric.datastax.schema.BackendKeyUtils;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
-
 import eu.toolchain.async.Transform;
 import lombok.Data;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Data
 public class NextGenSchemaInstance extends AbstractSchemaInstance {
@@ -59,9 +58,10 @@ public class NextGenSchemaInstance extends AbstractSchemaInstance {
     private final PreparedStatement count;
     private final BackendKeyUtils keyUtils;
 
-    public NextGenSchemaInstance(final String keyspace, final String pointsTable,
-            final PreparedStatement write, final PreparedStatement fetch,
-            final PreparedStatement delete, final PreparedStatement count) {
+    public NextGenSchemaInstance(
+        final String keyspace, final String pointsTable, final PreparedStatement write,
+        final PreparedStatement fetch, final PreparedStatement delete, final PreparedStatement count
+    ) {
         super(KEY);
         this.keyspace = keyspace;
         this.pointsTable = pointsTable;
@@ -106,7 +106,7 @@ public class NextGenSchemaInstance extends AbstractSchemaInstance {
 
     @Override
     public List<PreparedFetch> ranges(final Series series, final DateRange range)
-            throws IOException {
+        throws IOException {
         final List<PreparedFetch> bases = new ArrayList<>();
 
         final long start = calculateBaseTimestamp(range.getStart());

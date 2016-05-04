@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import java.util.List;
-
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.common.DateRange;
@@ -44,8 +42,10 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.util.List;
+import java.util.Optional;
 
 public interface ClusterNode {
     NodeMetadata metadata();
@@ -54,11 +54,13 @@ public interface ClusterNode {
 
     Group useGroup(String group);
 
-    public interface Group {
+    interface Group {
         ClusterNode node();
 
-        AsyncFuture<ResultGroups> query(MetricType source, Filter filter, DateRange range,
-                AggregationInstance aggregation, QueryOptions options);
+        AsyncFuture<ResultGroups> query(
+            MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
+            QueryOptions options
+        );
 
         AsyncFuture<FindTags> findTags(RangeFilter filter);
 
@@ -72,15 +74,19 @@ public interface ClusterNode {
 
         AsyncFuture<TagKeyCount> tagKeyCount(RangeFilter filter);
 
-        AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions options, String key,
-                String value);
+        AsyncFuture<TagSuggest> tagSuggest(
+            RangeFilter filter, MatchOptions options, Optional<String> key, Optional<String> value
+        );
 
-        AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions options, String key);
+        AsyncFuture<KeySuggest> keySuggest(
+            RangeFilter filter, MatchOptions options, Optional<String> key
+        );
 
-        AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter, List<String> exclude,
-                int groupLimit);
+        AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+            RangeFilter filter, List<String> exclude, int groupLimit
+        );
 
-        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key);
+        AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, Optional<String> key);
 
         AsyncFuture<WriteResult> writeSeries(DateRange range, Series series);
 

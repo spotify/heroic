@@ -21,12 +21,12 @@
 
 package com.spotify.heroic;
 
-import java.util.Collection;
-
 import com.spotify.heroic.cluster.ClusterNode;
 import com.spotify.heroic.metric.QueryResult;
-
 import eu.toolchain.async.AsyncFuture;
+
+import java.util.Collection;
+import java.util.Optional;
 
 public interface QueryManager {
     Group useGroup(String group);
@@ -42,6 +42,8 @@ public interface QueryManager {
     QueryBuilder newQueryFromString(String query);
 
     String queryToString(final Query query);
+
+    String queryToString(final Query query, Optional<Integer> indent);
 
     AsyncFuture<Void> initialized();
 

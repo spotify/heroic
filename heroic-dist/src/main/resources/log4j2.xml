@@ -1,33 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN" shutdownHook="disable">
+<Configuration shutdownHook="disable">
+  <Properties>
+    <Property name="log4j2.level">INFO</Property>
+    <Property name="log4j2.jetty_level">INFO</Property>
+  </Properties>
   <Appenders>
     <Console name="primary" target="SYSTEM_OUT">
-      <PatternLayout alwaysWriteExceptions="false" pattern="%highlight{%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=white, DEBUG=green bold, TRACE=blue}"/>
+      <PatternLayout alwaysWriteExceptions="false" pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n%throwable{full}"/>
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="com.spotify.heroic.mrpc" level="WARN" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="com.spotify.heroic.http" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="org.eclipse.jetty.server.RequestLog" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="com.spotify.heroic" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="org.elasticsearch" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="kafka.consumer" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Logger name="io.netty" level="INFO" additivity="false">
-      <AppenderRef ref="primary" />
-    </Logger>
-    <Root level="INFO">
+    <Logger name="org.eclipse.jetty" level="${log4j2.jetty_level}"></Logger>
+
+    <Root level="${log4j2.level}">
       <AppenderRef ref="primary" />
     </Root>
   </Loggers>

@@ -1,6 +1,12 @@
 package com.spotify.heroic.aggregation.simple;
 
-import static org.junit.Assert.assertEquals;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.aggregation.DoubleBucket;
+import com.spotify.heroic.metric.Point;
+import lombok.RequiredArgsConstructor;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,18 +18,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.DoubleBinaryOperator;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.google.common.collect.ImmutableMap;
-import com.spotify.heroic.aggregation.DoubleBucket;
-import com.spotify.heroic.metric.Point;
-
-import lombok.RequiredArgsConstructor;
+import static org.junit.Assert.assertEquals;
 
 @RequiredArgsConstructor
 public abstract class ValueBucketIntegrationTest {
@@ -39,7 +36,7 @@ public abstract class ValueBucketIntegrationTest {
     private final int iterations;
 
     public ValueBucketIntegrationTest(double initial, DoubleBinaryOperator fn) {
-        this(initial, fn, NCPU, 1000000, 1000d, 10);
+        this(initial, fn, NCPU, 10000, 1000d, 10);
     }
 
     private ExecutorService service;
@@ -81,8 +78,6 @@ public abstract class ValueBucketIntegrationTest {
                     expected = fn.applyAsDouble(expected, v2);
                 }
 
-                long start = System.nanoTime();
-
                 for (int thread = 0; thread < threadCount; thread++) {
                     futures.add(service.submit(new Callable<Void>() {
                         @Override
@@ -99,16 +94,10 @@ public abstract class ValueBucketIntegrationTest {
                 for (final Future<Void> f : futures) {
                     f.get();
                 }
-
-                long diff = TimeUnit.MILLISECONDS.convert(System.nanoTime() - start,
-                        TimeUnit.NANOSECONDS);
-
-                System.out.println(String.format("%s:%s: %dms", getClass().getSimpleName(),
-                        bucket.getClass().getSimpleName(), diff));
             }
 
             assertEquals(bucket.getClass().getSimpleName(), Double.doubleToLongBits(expected),
-                    Double.doubleToLongBits(bucket.value()));
+                Double.doubleToLongBits(bucket.value()));
         }
     }
 }

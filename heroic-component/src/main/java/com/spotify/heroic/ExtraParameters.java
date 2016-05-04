@@ -21,25 +21,28 @@
 
 package com.spotify.heroic;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
-
 import lombok.Data;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 @Data
 public class ExtraParameters {
     public static final ParameterSpecification CONFIGURE =
-            ParameterSpecification.parameter("configure", "Automatically configure all backends.");
+        ParameterSpecification.parameter("configure", "Automatically configure all backends.");
 
+    public static final Joiner SCOPE_JOINER = Joiner.on('.');
+
+    private final List<String> scope;
     private final Multimap<String, String> parameters;
 
     public boolean containsAny(String... keys) {
@@ -57,36 +60,67 @@ public class ExtraParameters {
     }
 
     public Optional<Integer> getInteger(String key) {
-        final Collection<String> values = parameters.get(key);
-
-        if (values.isEmpty()) {
-            return Optional.empty();
-        }
-
         try {
-            return Optional.of(Integer.parseInt(values.iterator().next()));
-        } catch (NumberFormatException e) {
+            return get(key).map(Integer::parseInt);
+        } catch (final NumberFormatException e) {
             throw new IllegalStateException(
-                    "Key " + key + " exists, but does not contain a valid numeric value");
+                "Key " + key + " exists, but does not contain a valid numeric value", e);
         }
     }
 
     public Optional<String> get(String key) {
-        final Collection<String> values = parameters.get(key);
-
-        if (values.isEmpty()) {
-            return Optional.empty();
-        }
-
-        return Optional.of(values.iterator().next());
+        return getEntry(key).stream().findFirst();
     }
 
     public boolean contains(String key) {
         return parameters.containsKey(key);
     }
 
+    public String require(final String key) {
+        return get(key).orElseThrow(
+            () -> new IllegalStateException(key + ": is a required parameter"));
+    }
+
+    public boolean contains(ParameterSpecification parameter) {
+        return contains(parameter.getName());
+    }
+
+    public List<String> getAsList(final String key) {
+        return ImmutableList.copyOf(getEntry(key));
+    }
+
+    public Optional<Boolean> getBoolean(final String key) {
+        return get(key).map(s -> "true".equals(s) || "yes".equals(s));
+    }
+
+    public Optional<Duration> getDuration(String key) {
+        try {
+            return get(key).map(Duration::parseDuration);
+        } catch (final Exception e) {
+            throw new IllegalStateException(
+                "Key " + key + " exists, but does not contain a valid duration value", e);
+        }
+    }
+
+    public ExtraParameters scope(final String scope) {
+        return new ExtraParameters(
+            ImmutableList.<String>builder().addAll(this.scope).add(scope).build(), parameters);
+    }
+
+    private Collection<String> getEntry(String key) {
+        return Optional.ofNullable(parameters.get(entryKey(key))).orElseGet(ImmutableList::of);
+    }
+
+    private String entryKey(final String key) {
+        if (scope.isEmpty()) {
+            return key;
+        }
+
+        return SCOPE_JOINER.join(ImmutableList.<String>builder().addAll(scope).add(key).build());
+    }
+
     public static ExtraParameters empty() {
-        return new ExtraParameters(ImmutableMultimap.of());
+        return new ExtraParameters(ImmutableList.of(), ImmutableMultimap.of());
     }
 
     public static ExtraParameters ofList(final List<String> input) {
@@ -102,27 +136,6 @@ public class ExtraParameters {
             }
         }
 
-        return new ExtraParameters(result.build());
-    }
-
-    public String require(final String key) {
-        return get(key)
-                .orElseThrow(() -> new IllegalStateException(key + ": is a required parameter"));
-    }
-
-    public boolean contains(ParameterSpecification parameter) {
-        return contains(parameter.getName());
-    }
-
-    public List<String> getAsList(final String key) {
-        return ImmutableList.copyOf(parameters.get(key));
-    }
-
-    public Optional<Boolean> getBoolean(final String key) {
-        return get(key).map(s -> "true".equals(s) || "yes".equals(s));
-    }
-
-    public Optional<Duration> getDuration(String key) {
-        return get(key).map(Duration::parseDuration);
+        return new ExtraParameters(ImmutableList.of(), result.build());
     }
 }

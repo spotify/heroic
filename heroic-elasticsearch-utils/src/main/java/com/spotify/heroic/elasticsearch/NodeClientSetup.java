@@ -21,10 +21,7 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.net.InetAddress;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.base.Optional;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -32,7 +29,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import java.net.InetAddress;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class NodeClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -56,13 +55,19 @@ public class NodeClientSetup implements ClientSetup {
                 throw new IllegalStateException("already started");
             }
 
-            final Settings settings = ImmutableSettings.builder()
-                    .put("node.name", InetAddress.getLocalHost().getHostName())
-                    .put("discovery.zen.ping.multicast.enabled", false)
-                    .putArray("discovery.zen.ping.unicast.hosts", seeds).build();
+            final Settings settings = ImmutableSettings
+                .builder()
+                .put("node.name", InetAddress.getLocalHost().getHostName())
+                .put("discovery.zen.ping.multicast.enabled", false)
+                .putArray("discovery.zen.ping.unicast.hosts", seeds)
+                .build();
 
-            final Node node = NodeBuilder.nodeBuilder().settings(settings).client(true)
-                    .clusterName(clusterName).node();
+            final Node node = NodeBuilder
+                .nodeBuilder()
+                .settings(settings)
+                .client(true)
+                .clusterName(clusterName)
+                .node();
 
             this.node.set(node);
             return node.client();

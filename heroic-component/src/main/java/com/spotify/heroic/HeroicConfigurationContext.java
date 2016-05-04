@@ -21,9 +21,10 @@
 
 package com.spotify.heroic;
 
-import java.util.List;
+import com.spotify.heroic.dagger.CoreComponent;
 
-import com.google.inject.Module;
+import java.util.List;
+import java.util.function.Function;
 
 public interface HeroicConfigurationContext {
     /**
@@ -31,11 +32,7 @@ public interface HeroicConfigurationContext {
      */
     void registerType(String name, Class<?> type);
 
-    void resource(Class<?> resource);
+    void resources(Function<CoreComponent, List<Object>> resource);
 
-    void module(Module module);
-
-    List<Class<?>> getResources();
-
-    List<Module> getModules();
+    List<Function<CoreComponent, List<Object>>> getResources();
 }

@@ -21,8 +21,45 @@
 
 package com.spotify.heroic.consumer;
 
+import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.ingestion.IngestionGroup;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import lombok.RequiredArgsConstructor;
 
 public interface ConsumerSchema {
-    void consume(final IngestionGroup ingestion, byte[] message) throws ConsumerSchemaException;
+    Exposed setup(Depends depends);
+
+    interface Consumer {
+        void consume(byte[] message) throws ConsumerSchemaException;
+    }
+
+    @ConsumerSchemaScope
+    @Component(modules = DependsModule.class,
+        dependencies = {PrimaryComponent.class, ConsumerModule.Depends.class})
+    interface Depends extends PrimaryComponent, ConsumerModule.Depends {
+        IngestionGroup group();
+    }
+
+    interface Exposed {
+        Consumer consumer();
+
+        default LifeCycle life() {
+            return LifeCycle.empty();
+        }
+    }
+
+    @RequiredArgsConstructor
+    @Module
+    class DependsModule {
+        private final IngestionGroup group;
+
+        @Provides
+        @ConsumerSchemaScope
+        IngestionGroup group() {
+            return group;
+        }
+    }
 }

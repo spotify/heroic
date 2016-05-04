@@ -21,22 +21,20 @@
 
 package com.spotify.heroic.cluster.discovery.simple;
 
-import java.util.List;
-import java.util.Optional;
-
-import javax.inject.Named;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.spotify.heroic.cluster.ClusterDiscovery;
+import com.spotify.heroic.cluster.ClusterDiscoveryComponent;
 import com.spotify.heroic.cluster.ClusterDiscoveryModule;
-
+import com.spotify.heroic.dagger.PrimaryComponent;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.Data;
+
+import javax.inject.Named;
+import java.util.List;
+import java.util.Optional;
 
 @Data
 public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
@@ -45,40 +43,53 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
     private final Optional<Integer> port;
 
     @JsonCreator
-    public SrvRecordDiscoveryModule(@JsonProperty("records") List<String> records,
-            @JsonProperty("protocol") String protocol, @JsonProperty("port") Integer port) {
+    public SrvRecordDiscoveryModule(
+        @JsonProperty("records") List<String> records, @JsonProperty("protocol") String protocol,
+        @JsonProperty("port") Integer port
+    ) {
         this.records = Optional.ofNullable(records).orElseGet(ImmutableList::of);
         this.protocol = Optional.ofNullable(protocol);
         this.port = Optional.ofNullable(port);
     }
 
     @Override
-    public Module module(final Key<ClusterDiscovery> key) {
-        return new PrivateModule() {
-            @Provides
-            @Named("records")
-            public List<String> records() {
-                return records;
-            }
+    public ClusterDiscoveryComponent module(PrimaryComponent primary) {
+        return DaggerSrvRecordDiscoveryModule_C
+            .builder()
+            .primaryComponent(primary)
+            .m(new M())
+            .build();
+    }
 
-            @Provides
-            @Named("protocol")
-            public Optional<String> protocol() {
-                return protocol;
-            }
+    @DiscoveryScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends ClusterDiscoveryComponent {
+        @Override
+        SrvRecordDiscovery clusterDiscovery();
+    }
 
-            @Provides
-            @Named("port")
-            public Optional<Integer> port() {
-                return port;
-            }
+    @Module
+    class M {
+        @Provides
+        @Named("records")
+        @DiscoveryScope
+        public List<String> records() {
+            return records;
+        }
 
-            @Override
-            protected void configure() {
-                bind(key).to(SrvRecordDiscovery.class);
-                expose(key);
-            }
-        };
+        @Provides
+        @Named("protocol")
+        @DiscoveryScope
+        public Optional<String> protocol() {
+            return protocol;
+        }
+
+        @Provides
+        @Named("port")
+        @DiscoveryScope
+        public Optional<Integer> port() {
+            return port;
+        }
     }
 
     public static Builder builder() {
@@ -91,7 +102,7 @@ public class SrvRecordDiscoveryModule implements ClusterDiscoveryModule {
         private Integer port;
 
         public Builder records(final List<String> records) {
-            this.records = ImmutableList.<String> builder().addAll(records);
+            this.records = ImmutableList.<String>builder().addAll(records);
             return this;
         }
 

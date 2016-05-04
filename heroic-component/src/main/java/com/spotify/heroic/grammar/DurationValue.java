@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.concurrent.TimeUnit;
-
 import com.spotify.heroic.common.Duration;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.concurrent.TimeUnit;
 
 @ValueName("duration")
 @Data

@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Optional;
-
 import lombok.Data;
+
+import java.util.Optional;
 
 @Data
 public class BackendKeyFilter {
@@ -92,7 +92,7 @@ public class BackendKeyFilter {
      *
      * @param percentage The percentage to match against, should be a value between {@code [0, 1]}.
      * @return A {@link BackendKeyClause} matching if a key is larger or equal to the given
-     *         percentage.
+     * percentage.
      */
     public static GTEPercentage gtePercentage(final float percentage) {
         return new GTEPercentage(percentage);

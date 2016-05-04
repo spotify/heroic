@@ -21,13 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-
 import com.google.common.base.Joiner;
-import com.google.inject.Inject;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.ingestion.IngestionManager;
@@ -37,18 +32,26 @@ import com.spotify.heroic.shell.ShellTask;
 import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
 
 @TaskUsage("Configure the ingestion filter")
 @TaskName("ingestion-filter")
 public class IngestionFilter implements ShellTask {
-    @Inject
-    private QueryParser parser;
+    private final QueryParser parser;
+    private final IngestionManager ingestion;
 
     @Inject
-    private IngestionManager ingestion;
+    public IngestionFilter(QueryParser parser, IngestionManager ingestion) {
+        this.parser = parser;
+        this.ingestion = ingestion;
+    }
 
     static final Joiner filterJoiner = Joiner.on(" ");
 
@@ -78,5 +81,14 @@ public class IngestionFilter implements ShellTask {
     private static class Parameters extends AbstractShellTaskParams {
         @Argument(metaVar = "<filter>", usage = "Filter to use")
         private List<String> filter = new ArrayList<>();
+    }
+
+    public static IngestionFilter setup(final CoreComponent core) {
+        return DaggerIngestionFilter_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        IngestionFilter task();
     }
 }

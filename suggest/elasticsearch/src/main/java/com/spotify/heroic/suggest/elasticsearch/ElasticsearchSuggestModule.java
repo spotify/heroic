@@ -21,51 +21,48 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.Optional.ofNullable;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Singleton;
-
-import org.apache.commons.lang3.tuple.Pair;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
+import com.google.common.hash.HashCode;
 import com.google.common.util.concurrent.RateLimiter;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.google.inject.name.Named;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.Series;
+import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.elasticsearch.BackendType;
 import com.spotify.heroic.elasticsearch.BackendTypeFactory;
 import com.spotify.heroic.elasticsearch.Connection;
+import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
 import com.spotify.heroic.elasticsearch.DisabledRateLimitedCache;
-import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
 import com.spotify.heroic.elasticsearch.RateLimitedCache;
-import com.spotify.heroic.metric.WriteResult;
-import com.spotify.heroic.statistics.LocalMetadataBackendReporter;
-import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestModule;
-
-import eu.toolchain.async.AsyncFuture;
+import dagger.Component;
+import dagger.Lazy;
+import dagger.Module;
+import dagger.Provides;
 import eu.toolchain.async.Managed;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
+
+import javax.inject.Named;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
 
 @Data
 public final class ElasticsearchSuggestModule implements SuggestModule {
@@ -77,9 +74,9 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     public static final String DEFAULT_TEMPLATE_NAME = "heroic-suggest";
     public static final String DEFAULT_BACKEND_TYPE = "default";
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
-    private final ManagedConnectionFactory connection;
+    private final ConnectionModule connection;
     private final double writesPerSecond;
     private final long writeCacheDurationMinutes;
     private final String templateName;
@@ -88,7 +85,7 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private static BackendTypeFactory<SuggestBackend> defaultSetup = SuggestBackendKV.factory();
 
     private static final Map<String, BackendTypeFactory<SuggestBackend>> backendTypes =
-            new HashMap<>();
+        new HashMap<>();
 
     static {
         backendTypes.put("kv", defaultSetup);
@@ -103,83 +100,117 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     private final BackendTypeFactory<SuggestBackend> backendTypeBuilder;
 
     @JsonCreator
-    public ElasticsearchSuggestModule(@JsonProperty("id") String id,
-            @JsonProperty("groups") Groups groups,
-            @JsonProperty("connection") ManagedConnectionFactory connection,
-            @JsonProperty("writesPerSecond") Double writesPerSecond,
-            @JsonProperty("writeCacheDurationMinutes") Long writeCacheDurationMinutes,
-            @JsonProperty("templateName") String templateName,
-            @JsonProperty("backendType") String backendType) {
+    public ElasticsearchSuggestModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("connection") Optional<ConnectionModule> connection,
+        @JsonProperty("writesPerSecond") Optional<Double> writesPerSecond,
+        @JsonProperty("writeCacheDurationMinutes") Optional<Long> writeCacheDurationMinutes,
+        @JsonProperty("templateName") Optional<String> templateName,
+        @JsonProperty("backendType") Optional<String> backendType
+    ) {
         this.id = id;
-        this.groups = ofNullable(groups).orElseGet(Groups::empty).or(DEFAULT_GROUP);
-        this.connection = ofNullable(connection).orElseGet(ManagedConnectionFactory::buildDefault);
-        this.writesPerSecond = ofNullable(writesPerSecond).orElse(DEFAULT_WRITES_PER_SECOND);
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.connection = connection.orElseGet(ConnectionModule::buildDefault);
+        this.writesPerSecond = writesPerSecond.orElse(DEFAULT_WRITES_PER_SECOND);
         this.writeCacheDurationMinutes =
-                ofNullable(writeCacheDurationMinutes).orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
-        this.templateName = ofNullable(templateName).orElse(DEFAULT_TEMPLATE_NAME);
-        this.backendType = ofNullable(backendType).orElse(DEFAULT_BACKEND_TYPE);
-        this.backendTypeBuilder = ofNullable(backendTypes.get(backendType)).orElse(defaultSetup);
+            writeCacheDurationMinutes.orElse(DEFAULT_WRITES_CACHE_DURATION_MINUTES);
+        this.templateName = templateName.orElse(DEFAULT_TEMPLATE_NAME);
+        this.backendType = backendType.orElse(DEFAULT_BACKEND_TYPE);
+        this.backendTypeBuilder =
+            backendType.flatMap(bt -> ofNullable(backendTypes.get(bt))).orElse(defaultSetup);
     }
 
     @Override
-    public Module module(final Key<SuggestBackend> key, final String id) {
+    public Exposed module(PrimaryComponent primary, Depends depends, final String id) {
         final BackendType<SuggestBackend> backendType = backendTypeBuilder.setup();
 
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
+        return DaggerElasticsearchSuggestModule_C
+            .builder()
+            .primaryComponent(primary)
+            .depends(depends)
+            .connectionModule(connection)
+            .m(new M(backendType))
+            .build();
+    }
+
+    @ElasticsearchScope
+    @Component(modules = {M.class, ConnectionModule.class},
+        dependencies = {PrimaryComponent.class, Depends.class})
+    interface C extends Exposed {
+        @Override
+        SuggestBackend backend();
+
+        @Override
+        LifeCycle life();
+    }
+
+    @RequiredArgsConstructor
+    @Module
+    class M {
+        private final BackendType<SuggestBackend> backendType;
+
+        @Provides
+        @ElasticsearchScope
+        public Groups groups() {
+            return groups;
+        }
+
+        @Provides
+        @ElasticsearchScope
+        public Managed<Connection> connection(ConnectionModule.Provider provider) {
+            return provider.construct(templateName, backendType.mappings(), backendType.settings());
+        }
+
+        @Provides
+        @ElasticsearchScope
+        @Named("configure")
+        public boolean configure(ExtraParameters params) {
+            return params.contains(ExtraParameters.CONFIGURE) ||
+                params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
+        }
+
+        @Provides
+        @ElasticsearchScope
+        public RateLimitedCache<Pair<String, HashCode>> writeCache() {
+            final Cache<Pair<String, HashCode>, Boolean> cache = CacheBuilder
+                .newBuilder()
+                .concurrencyLevel(4)
+                .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES)
+                .build();
+
+            if (writesPerSecond <= 0d) {
+                return new DisabledRateLimitedCache<>(cache.asMap());
             }
 
-            @Provides
-            @Singleton
-            public LocalMetadataBackendReporter reporter(LocalMetadataManagerReporter reporter) {
-                return reporter.newMetadataBackend(id);
+            return new DefaultRateLimitedCache<>(cache.asMap(),
+                RateLimiter.create(writesPerSecond));
+        }
+
+        @Provides
+        @ElasticsearchScope
+        public SuggestBackend suggestBackend(Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv) {
+            if (backendType.type().equals(SuggestBackendV1.class)) {
+                return v1.get();
             }
 
-            @Provides
-            @Singleton
-            public Managed<Connection> connection(ManagedConnectionFactory connection)
-                    throws IOException {
-                return connection.construct(templateName, backendType.mappings(),
-                        backendType.settings());
+            return kv.get();
+        }
+
+        @Provides
+        @ElasticsearchScope
+        public LifeCycle life(
+            LifeCycleManager manager, Lazy<SuggestBackendV1> v1, Lazy<SuggestBackendKV> kv
+        ) {
+            if (backendType.type().equals(SuggestBackendV1.class)) {
+                return manager.build(v1.get());
             }
 
-            @Provides
-            @Singleton
-            @Named("configure")
-            public boolean configure(ExtraParameters params) {
-                return params.contains(ExtraParameters.CONFIGURE)
-                        || params.contains(ELASTICSEARCH_CONFIGURE_PARAM);
-            }
-
-            @Provides
-            @Singleton
-            public RateLimitedCache<Pair<String, Series>, AsyncFuture<WriteResult>> writeCache()
-                    throws IOException {
-                final Cache<Pair<String, Series>, AsyncFuture<WriteResult>> cache = CacheBuilder
-                        .newBuilder().concurrencyLevel(4)
-                        .expireAfterWrite(writeCacheDurationMinutes, TimeUnit.MINUTES).build();
-
-                if (writesPerSecond <= 0d) {
-                    return new DisabledRateLimitedCache<>(cache);
-                }
-
-                return new DefaultRateLimitedCache<>(cache, RateLimiter.create(writesPerSecond));
-            }
-
-            @Override
-            protected void configure() {
-                bind(ManagedConnectionFactory.class).toInstance(connection);
-                bind(key).to(backendType.type()).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+            return manager.build(kv.get());
+        }
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -193,52 +224,59 @@ public final class ElasticsearchSuggestModule implements SuggestModule {
     }
 
     public static class Builder {
-        private String id;
-        private Groups groups;
-        private ManagedConnectionFactory connection;
-        private Double writesPerSecond;
-        private Long writeCacheDurationMinutes;
-        private String templateName;
-        private String backendType;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<ConnectionModule> connection = empty();
+        private Optional<Double> writesPerSecond = empty();
+        private Optional<Long> writeCacheDurationMinutes = empty();
+        private Optional<String> templateName = empty();
+        private Optional<String> backendType = empty();
 
         public Builder id(final String id) {
-            this.id = checkNotNull(id, "id");
+            checkNotNull(id, "id");
+            this.id = of(id);
             return this;
         }
 
         public Builder group(final Groups groups) {
-            this.groups = checkNotNull(groups, "groups");
+            checkNotNull(groups, "groups");
+            this.groups = of(groups);
             return this;
         }
 
-        public Builder connection(final ManagedConnectionFactory connection) {
-            this.connection = checkNotNull(connection, "connection");
+        public Builder connection(final ConnectionModule connection) {
+            checkNotNull(connection, "connection");
+            this.connection = of(connection);
             return this;
         }
 
         public Builder writesPerSecond(double writesPerSecond) {
-            this.writesPerSecond = writesPerSecond;
+            checkNotNull(writesPerSecond, "writesPerSecond");
+            this.writesPerSecond = of(writesPerSecond);
             return this;
         }
 
         public Builder writeCacheDurationMinutes(long writeCacheDurationMinutes) {
-            this.writeCacheDurationMinutes = writeCacheDurationMinutes;
+            checkNotNull(writeCacheDurationMinutes, "writeCacheDurationMinutes");
+            this.writeCacheDurationMinutes = of(writeCacheDurationMinutes);
             return this;
         }
 
         public Builder templateName(final String templateName) {
-            this.templateName = checkNotNull(templateName, "templateName");
+            checkNotNull(templateName, "templateName");
+            this.templateName = of(templateName);
             return this;
         }
 
         public Builder backendType(final String backendType) {
-            this.backendType = checkNotNull(backendType, "backendType");
+            checkNotNull(backendType, "backendType");
+            this.backendType = of(backendType);
             return this;
         }
 
         public ElasticsearchSuggestModule build() {
             return new ElasticsearchSuggestModule(id, groups, connection, writesPerSecond,
-                    writeCacheDurationMinutes, templateName, backendType);
+                writeCacheDurationMinutes, templateName, backendType);
         }
     }
 }

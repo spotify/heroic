@@ -1,36 +1,31 @@
 package com.spotify.heroic.elasticsearch.index;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-
+import com.google.common.util.concurrent.RateLimiter;
+import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
+import com.spotify.heroic.elasticsearch.RateLimitExceededException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.google.common.cache.Cache;
-import com.google.common.util.concurrent.RateLimiter;
-import com.spotify.heroic.elasticsearch.RateLimitExceededException;
-import com.spotify.heroic.elasticsearch.DefaultRateLimitedCache;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class DefaultRateLimitedCacheTest {
     @Mock
-    Cache<K, V> cache;
+    ConcurrentMap<K, Boolean> cache;
 
     @Mock
     RateLimiter rateLimiter;
 
-    @Mock
-    V shortcut;
-
-    @Mock
-    V value;
+    final Boolean value = true;
 
     @Mock
     K key;
@@ -40,40 +35,41 @@ public class DefaultRateLimitedCacheTest {
 
     @Test
     public void testCacheEarlyHit() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c =
-                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
-        doReturn(shortcut).when(cache).getIfPresent(key);
+        final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
+        doReturn(value).when(cache).get(key);
 
-        assertEquals(shortcut, c.get(key, callable));
+        assertEquals(false, c.acquire(key));
 
-        verify(cache).getIfPresent(key);
+        verify(cache).get(key);
         verify(rateLimiter, never()).tryAcquire();
-        verify(cache, never()).get(key, callable);
+        verify(cache, never()).putIfAbsent(key, true);
     }
 
-    @Test(expected = RateLimitExceededException.class)
+    @Test
     public void testGetRateLimiting() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c =
-                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
-        doReturn(null).when(cache).getIfPresent(key);
+        final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
+        doReturn(null).when(cache).get(key);
         doReturn(false).when(rateLimiter).tryAcquire();
 
-        c.get(key, callable);
+        assertEquals(false, c.acquire(key));
+
+        verify(cache).get(key);
+        verify(rateLimiter).tryAcquire();
+        verify(cache, never()).putIfAbsent(key, true);
     }
 
     @Test
     public void testGet() throws ExecutionException, RateLimitExceededException {
-        final DefaultRateLimitedCache<K, V> c =
-                new DefaultRateLimitedCache<K, V>(cache, rateLimiter);
-        doReturn(null).when(cache).getIfPresent(key);
+        final DefaultRateLimitedCache<K> c = new DefaultRateLimitedCache<K>(cache, rateLimiter);
+        doReturn(null).when(cache).get(key);
         doReturn(true).when(rateLimiter).tryAcquire();
-        doReturn(value).when(cache).get(key, callable);
+        doReturn(null).when(cache).putIfAbsent(key, true);
 
-        assertEquals(value, c.get(key, callable));
+        assertEquals(true, c.acquire(key));
 
-        verify(cache).getIfPresent(key);
+        verify(cache).get(key);
         verify(rateLimiter).tryAcquire();
-        verify(cache).get(key, callable);
+        verify(cache).putIfAbsent(key, true);
     }
 
     public static interface K {

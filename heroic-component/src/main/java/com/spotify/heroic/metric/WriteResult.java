@@ -21,23 +21,22 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.cluster.ClusterNode;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 @Data
 public class WriteResult {
     public static final List<RequestError> EMPTY_ERRORS = ImmutableList.of();
-    private static final List<Long> EMPTY_TIMES = ImmutableList.<Long> of();
+    private static final List<Long> EMPTY_TIMES = ImmutableList.<Long>of();
 
     public static final WriteResult EMPTY = new WriteResult(EMPTY_ERRORS, EMPTY_TIMES);
 
@@ -50,8 +49,9 @@ public class WriteResult {
     }
 
     @JsonCreator
-    public WriteResult(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("times") List<Long> times) {
+    public WriteResult(
+        @JsonProperty("errors") List<RequestError> errors, @JsonProperty("times") List<Long> times
+    ) {
         this.errors = errors;
         this.times = times;
     }
@@ -97,7 +97,7 @@ public class WriteResult {
             @Override
             public WriteResult transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new WriteResult(errors, EMPTY_TIMES);
             }
         };

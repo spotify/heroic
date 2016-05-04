@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.metadata;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 public class FindTagKeys {
@@ -37,8 +36,9 @@ public class FindTagKeys {
     private final int size;
 
     @JsonCreator
-    public static FindTagKeys create(@JsonProperty("keys") Set<String> keys,
-            @JsonProperty("size") int size) {
+    public static FindTagKeys create(
+        @JsonProperty("keys") Set<String> keys, @JsonProperty("size") int size
+    ) {
         return new FindTagKeys(keys, size);
     }
 }

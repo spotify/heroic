@@ -21,20 +21,20 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
 import com.spotify.heroic.common.DateRange;
 
+import java.util.List;
+import java.util.Set;
+
 /**
  * An instance of an aggregation.
- *
+ * <p>
  * Contains the materialized configuration of a given aggregation. All members must be fully
  * thread-safe.
  *
- * @see Aggregation
  * @author udoprog
+ * @see Aggregation
  */
 public interface AggregationInstance {
     public static final String SAMPLE_SIZE = "Aggregation.sampleSize";
@@ -49,7 +49,7 @@ public interface AggregationInstance {
 
     /**
      * Get the cadence of the current aggregation.
-     *
+     * <p>
      * The cadence indicates the interval in milliseconds that samples can be expected.
      *
      * @return The cadence of the resulting aggregation, or {@code 0} if this is unknown.
@@ -63,14 +63,14 @@ public interface AggregationInstance {
 
     /**
      * Get the distributed aggregation that is relevant for this aggregation.
-     *
+     * <p>
      * A distributed aggregation instance is suitable for performing a sub-aggregation in order to
      * allow non-destructive recombination of the results.
-     *
+     * <p>
      * Consider distributing an average aggregation, if done naively this would cause a large loss
-     * in precision because the following does not hold true
-     * {@code avg(A, B) != avg(avg(A), avg(B))}
-     *
+     * in precision because the following does not hold true {@code avg(A, B) != avg(avg(A),
+     * avg(B))}
+     * <p>
      * Instead the average aggregation can designate another type of aggregation as its
      * intermediate, which preserves the information from each sub-aggregation in a non-destructive
      * form. This can be accomplished by using an aggregation that outputs the sum and the count of
@@ -84,7 +84,7 @@ public interface AggregationInstance {
 
     /**
      * Build a reducer for the given aggregation.
-     *
+     * <p>
      * A reducer is responsible for taking a set of distributed sub-aggregations, and
      * non-destructively combine them into a complete result.
      *
@@ -94,7 +94,7 @@ public interface AggregationInstance {
 
     /**
      * Build a combiner for the given aggregation.
-     *
+     * <p>
      * A combiner organizes how distributed sub-aggregations are re-combined. Specific aggregations
      * have different methods of recombining results that are more or less efficient.
      *
@@ -106,7 +106,7 @@ public interface AggregationInstance {
 
     /**
      * Get a set of required tags.
-     *
+     * <p>
      * This is used to elide a set of required tags that needs to be forwarded for a certain
      * aggregation.
      *
@@ -115,5 +115,4 @@ public interface AggregationInstance {
     default Set<String> requiredTags() {
         return ImmutableSet.of();
     }
-
 }

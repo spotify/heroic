@@ -1,10 +1,10 @@
 package com.spotify.heroic.rpc.nativerpc;
 
-import static org.junit.Assert.assertArrayEquals;
+import org.junit.Test;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import static org.junit.Assert.assertArrayEquals;
 
 public class NativeUtilsTest {
     // sufficiently large to force compression to use multiple reads.

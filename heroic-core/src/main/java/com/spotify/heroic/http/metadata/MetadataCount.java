@@ -21,16 +21,13 @@
 
 package com.spotify.heroic.http.metadata;
 
-import static java.util.Optional.ofNullable;
-
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
-
 import lombok.Data;
+
+import java.util.Optional;
 
 @Data
 public class MetadataCount {
@@ -38,13 +35,11 @@ public class MetadataCount {
     private final Optional<QueryDateRange> range;
 
     @JsonCreator
-    public MetadataCount(@JsonProperty("filter") Filter filter,
-            @JsonProperty("range") QueryDateRange range) {
-        this.filter = ofNullable(filter);
-        this.range = ofNullable(range);
-    }
-
-    public static MetadataCount createDefault() {
-        return new MetadataCount(null, null);
+    public MetadataCount(
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range
+    ) {
+        this.filter = filter;
+        this.range = range;
     }
 }

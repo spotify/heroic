@@ -21,13 +21,12 @@
 
 package com.spotify.heroic.aggregation;
 
-import static com.spotify.heroic.common.Optionals.firstPresent;
+import com.spotify.heroic.common.Duration;
+import lombok.Data;
 
 import java.util.Optional;
 
-import com.spotify.heroic.common.Duration;
-
-import lombok.Data;
+import static com.spotify.heroic.common.Optionals.firstPresent;
 
 @Data
 class OptionsContext implements AggregationContext {

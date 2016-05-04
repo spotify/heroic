@@ -21,19 +21,18 @@
 
 package com.spotify.heroic.metric;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
+import com.spotify.heroic.common.Series;
+import eu.toolchain.async.Collector;
+import lombok.Data;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
-import com.spotify.heroic.common.Series;
-
-import eu.toolchain.async.Collector;
-import lombok.Data;
 
 @Data
 public class FetchData {
@@ -42,8 +41,9 @@ public class FetchData {
     private final List<MetricCollection> groups;
     private final QueryTrace trace;
 
-    public static Collector<FetchData, FetchData> collect(final QueryTrace.Identifier what,
-            final Series series) {
+    public static Collector<FetchData, FetchData> collect(
+        final QueryTrace.Identifier what, final Series series
+    ) {
         final Stopwatch w = Stopwatch.createStarted();
 
         return results -> {
@@ -67,14 +67,16 @@ public class FetchData {
                 }
             }
 
-            final List<MetricCollection> groups = fetchGroups.entrySet().stream()
-                    .map((e) -> MetricCollection.build(e.getKey(),
-                            Ordering.from(e.getKey().comparator())
-                                    .immutableSortedCopy(e.getValue().build())))
-                    .collect(Collectors.toList());
+            final List<MetricCollection> groups = fetchGroups
+                .entrySet()
+                .stream()
+                .map((e) -> MetricCollection.build(e.getKey(), Ordering
+                    .from(e.getKey().comparator())
+                    .immutableSortedCopy(e.getValue().build())))
+                .collect(Collectors.toList());
 
             return new FetchData(series, times.build(), groups,
-                    new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
+                new QueryTrace(what, w.elapsed(TimeUnit.NANOSECONDS), traces.build()));
         };
     }
 }

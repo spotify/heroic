@@ -21,13 +21,38 @@
 
 package com.spotify.heroic.metric;
 
-import com.google.inject.Key;
-import com.google.inject.Module;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.statistics.LocalMetricManagerReporter;
+import com.spotify.heroic.statistics.MetricBackendReporter;
+import lombok.Data;
+
+import java.util.Optional;
 
 public interface MetricModule {
-    Module module(Key<MetricBackend> key, String id);
-
-    String id();
+    Optional<String> id();
 
     String buildId(int i);
+
+    Exposed module(PrimaryComponent primary, Depends backend, String id);
+
+    /**
+     * Dependencies for metric modules.
+     */
+    @Data
+    class Depends {
+        private final LocalMetricManagerReporter managerReporter;
+        private final MetricBackendReporter backendReporter;
+    }
+
+    /**
+     * Exposed for metric modules.
+     */
+    interface Exposed {
+        MetricBackend backend();
+
+        default LifeCycle life() {
+            return LifeCycle.empty();
+        }
+    }
 }

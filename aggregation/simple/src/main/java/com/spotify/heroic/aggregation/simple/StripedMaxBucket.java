@@ -21,20 +21,19 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Map;
-import java.util.concurrent.atomic.DoubleAccumulator;
-import java.util.function.DoubleBinaryOperator;
-
 import com.spotify.heroic.aggregation.AbstractBucket;
 import com.spotify.heroic.aggregation.DoubleBucket;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+import java.util.concurrent.atomic.DoubleAccumulator;
+import java.util.function.DoubleBinaryOperator;
 
 /**
  * A bucket implementation that retains the largest (max) value seen.
- *
+ * <p>
  * This bucket uses primitives based on striped atomic updates to reduce contention across CPUs.
  *
  * @author udoprog

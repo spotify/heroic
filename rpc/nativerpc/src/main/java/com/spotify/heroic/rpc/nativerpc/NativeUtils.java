@@ -21,6 +21,8 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
+import com.spotify.heroic.rpc.nativerpc.message.NativeOptions;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -28,18 +30,16 @@ import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import com.spotify.heroic.rpc.nativerpc.message.NativeOptions;
-
 public abstract class NativeUtils {
     static byte[] decodeBody(final NativeOptions options, final int bodySize, final byte[] body)
-            throws IOException {
+        throws IOException {
         switch (options.getEncoding()) {
-        case NONE:
-            return body;
-        case GZIP:
-            return gzipDecompress(bodySize, body);
-        default:
-            throw new IllegalStateException("Unsupported encoding: " + options);
+            case NONE:
+                return body;
+            case GZIP:
+                return gzipDecompress(bodySize, body);
+            default:
+                throw new IllegalStateException("Unsupported encoding: " + options);
         }
     }
 
@@ -65,12 +65,12 @@ public abstract class NativeUtils {
 
     static byte[] encodeBody(final NativeOptions options, final byte[] body) throws IOException {
         switch (options.getEncoding()) {
-        case NONE:
-            return body;
-        case GZIP:
-            return gzipCompress(body);
-        default:
-            throw new IllegalStateException("Unsupported encoding: " + options.getEncoding());
+            case NONE:
+                return body;
+            case GZIP:
+                return gzipCompress(body);
+            default:
+                throw new IllegalStateException("Unsupported encoding: " + options.getEncoding());
         }
     }
 

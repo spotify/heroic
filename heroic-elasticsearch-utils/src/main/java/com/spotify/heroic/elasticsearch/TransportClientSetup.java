@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.elasticsearch;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
+import java.util.List;
 
 public class TransportClientSetup implements ClientSetup {
     public static final String DEFAULT_CLUSTER_NAME = "elasticsearch";
@@ -43,8 +42,9 @@ public class TransportClientSetup implements ClientSetup {
     private final List<InetSocketTransportAddress> seeds;
 
     @JsonCreator
-    public TransportClientSetup(@JsonProperty("clusterName") String clusterName,
-            @JsonProperty("seeds") List<String> seeds) {
+    public TransportClientSetup(
+        @JsonProperty("clusterName") String clusterName, @JsonProperty("seeds") List<String> seeds
+    ) {
         this.clusterName = Optional.fromNullable(clusterName).or(DEFAULT_CLUSTER_NAME);
         this.seeds = seeds(Optional.fromNullable(seeds).or(DEFAULT_SEEDS));
     }
@@ -52,7 +52,7 @@ public class TransportClientSetup implements ClientSetup {
     @Override
     public Client setup() throws Exception {
         final Settings settings =
-                ImmutableSettings.builder().put("cluster.name", clusterName).build();
+            ImmutableSettings.builder().put("cluster.name", clusterName).build();
 
         final TransportClient client = new TransportClient(settings);
 
@@ -68,8 +68,10 @@ public class TransportClientSetup implements ClientSetup {
     }
 
     private static List<InetSocketTransportAddress> seeds(final List<String> rawSeeds) {
-        return ImmutableList.copyOf(rawSeeds.stream()
-                .map(TransportClientSetup::parseInetSocketTransportAddress).iterator());
+        return ImmutableList.copyOf(rawSeeds
+            .stream()
+            .map(TransportClientSetup::parseInetSocketTransportAddress)
+            .iterator());
     }
 
     private static InetSocketTransportAddress parseInetSocketTransportAddress(final String seed) {

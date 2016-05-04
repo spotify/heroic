@@ -32,8 +32,9 @@ import com.spotify.heroic.metric.Point;
 
 public class CountInstance extends DistributedBucketInstance<StripedCountBucket> {
     @JsonCreator
-    public CountInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public CountInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ALL_TYPES, MetricType.POINT);
     }
 
@@ -54,7 +55,7 @@ public class CountInstance extends DistributedBucketInstance<StripedCountBucket>
 
     @Override
     public ReducerSession reducer(DateRange range) {
-        return new BucketReducerSession<StripedSumBucket>(out, size, extent, StripedSumBucket::new,
-                b -> new Point(b.timestamp(), b.value()), range);
+        return new BucketReducerSession<StripedSumBucket>(out, size, StripedSumBucket::new,
+            b -> new Point(b.timestamp(), b.value()), range);
     }
 }

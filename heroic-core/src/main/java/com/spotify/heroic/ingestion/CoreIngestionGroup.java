@@ -21,14 +21,6 @@
 
 package com.spotify.heroic.ingestion;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Supplier;
-
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Grouped;
 import com.spotify.heroic.common.Groups;
@@ -40,10 +32,17 @@ import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.suggest.SuggestBackend;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.RequiredArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
 
 @RequiredArgsConstructor
 public class CoreIngestionGroup implements IngestionGroup {
@@ -60,21 +59,21 @@ public class CoreIngestionGroup implements IngestionGroup {
     @Override
     public Groups getGroups() {
         return Groups.combine(metric.map(Grouped::getGroups).orElseGet(Groups::empty),
-                metadata.map(Grouped::getGroups).orElseGet(Groups::empty),
-                suggest.map(Grouped::getGroups).orElseGet(Groups::empty));
+            metadata.map(Grouped::getGroups).orElseGet(Groups::empty),
+            suggest.map(Grouped::getGroups).orElseGet(Groups::empty));
     }
 
     @Override
     public int size() {
-        return metric.map(Grouped::size).orElse(0) + metadata.map(Grouped::size).orElse(0)
-                + suggest.map(Grouped::size).orElse(0);
+        return metric.map(Grouped::size).orElse(0) + metadata.map(Grouped::size).orElse(0) +
+            suggest.map(Grouped::size).orElse(0);
     }
 
     @Override
     public boolean isEmpty() {
-        return metric.map(Grouped::isEmpty).orElse(true)
-                && metadata.map(Grouped::isEmpty).orElse(true)
-                && suggest.map(Grouped::isEmpty).orElse(true);
+        return metric.map(Grouped::isEmpty).orElse(true) &&
+            metadata.map(Grouped::isEmpty).orElse(true) &&
+            suggest.map(Grouped::isEmpty).orElse(true);
     }
 
     @Override
@@ -139,8 +138,9 @@ public class CoreIngestionGroup implements IngestionGroup {
         };
     }
 
-    protected AsyncFuture<WriteResult> doMetricWrite(final MetricBackend metric,
-            final WriteMetric write) {
+    protected AsyncFuture<WriteResult> doMetricWrite(
+        final MetricBackend metric, final WriteMetric write
+    ) {
         try {
             return metric.write(write);
         } catch (final Exception e) {
@@ -148,8 +148,9 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<WriteResult> doMetadataWrite(final MetadataBackend metadata,
-            final WriteMetric write, final DateRange range) {
+    protected AsyncFuture<WriteResult> doMetadataWrite(
+        final MetadataBackend metadata, final WriteMetric write, final DateRange range
+    ) {
         try {
             return metadata.write(write.getSeries(), range);
         } catch (final Exception e) {
@@ -157,8 +158,9 @@ public class CoreIngestionGroup implements IngestionGroup {
         }
     }
 
-    protected AsyncFuture<WriteResult> doSuggestWrite(final SuggestBackend suggest,
-            final WriteMetric write, final DateRange range) {
+    protected AsyncFuture<WriteResult> doSuggestWrite(
+        final SuggestBackend suggest, final WriteMetric write, final DateRange range
+    ) {
         try {
             return suggest.write(write.getSeries(), range);
         } catch (final Exception e) {

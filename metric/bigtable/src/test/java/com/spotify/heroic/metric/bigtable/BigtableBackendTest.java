@@ -1,14 +1,12 @@
 package com.spotify.heroic.metric.bigtable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ByteString.ByteIterator;
-
 import eu.toolchain.serializer.HexUtils;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class BigtableBackendTest {
     @Test
@@ -30,7 +28,7 @@ public class BigtableBackendTest {
         final ByteString b = BigtableBackend.serializeOffset(l);
 
         assertTrue(String.format("%s < %s", HexUtils.toHex(a.toByteArray()),
-                HexUtils.toHex(b.toByteArray())), compare(a, b) < 0);
+            HexUtils.toHex(b.toByteArray())), compare(a, b) < 0);
         assertEquals(s, BigtableBackend.deserializeOffset(a));
         assertEquals(l, BigtableBackend.deserializeOffset(b));
     }

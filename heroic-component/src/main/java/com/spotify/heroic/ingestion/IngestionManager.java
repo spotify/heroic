@@ -24,7 +24,6 @@ package com.spotify.heroic.ingestion;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.common.UsableGroupManager;
 import com.spotify.heroic.filter.Filter;
-
 import eu.toolchain.async.AsyncFuture;
 
 public interface IngestionManager extends UsableGroupManager<IngestionGroup> {
@@ -35,7 +34,7 @@ public interface IngestionManager extends UsableGroupManager<IngestionGroup> {
 
     /**
      * Configure a filter to use for ingestion.
-     *
+     * <p>
      * Any metric _not_ matching the filter will be dropped and instrumented accordingly.
      *
      * @param filter Filter to configure.

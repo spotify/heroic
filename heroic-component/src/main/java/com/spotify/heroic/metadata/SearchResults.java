@@ -21,30 +21,28 @@
 
 package com.spotify.heroic.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import eu.toolchain.async.Collector;
+import lombok.Data;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import lombok.Data;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import eu.toolchain.async.Collector;
-
 @Data
 public class SearchResults {
     public static final SearchResults EMPTY = new SearchResults(new ArrayList<ScoredSeries>());
     private static final Comparator<ScoredSeries> SERIES_COMPARATOR =
-            new Comparator<ScoredSeries>() {
-                @Override
-                public int compare(ScoredSeries a, ScoredSeries b) {
-                    // reverse, since we want to sort in descending order.
-                    return Float.compare(b.getScore(), a.getScore());
-                }
-            };
+        new Comparator<ScoredSeries>() {
+            @Override
+            public int compare(ScoredSeries a, ScoredSeries b) {
+                // reverse, since we want to sort in descending order.
+                return Float.compare(b.getScore(), a.getScore());
+            }
+        };
 
     private final List<ScoredSeries> series;
 

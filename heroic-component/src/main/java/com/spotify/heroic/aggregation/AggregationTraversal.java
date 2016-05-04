@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * Hold on to intermediate traverse states, and a session.
@@ -32,4 +32,19 @@ import lombok.Data;
 public class AggregationTraversal {
     private final List<AggregationState> states;
     private final AggregationSession session;
+    private final long estimatedStatesSize;
+
+    public AggregationTraversal(List<AggregationState> states,
+                                AggregationSession session,
+                                long estimatedStatesSize) {
+        this.states = states;
+        this.session = session;
+        this.estimatedStatesSize = estimatedStatesSize;
+    }
+
+    public AggregationTraversal(List<AggregationState> states,
+                                AggregationSession session) {
+        this(states, session, states.size());
+    }
+
 }

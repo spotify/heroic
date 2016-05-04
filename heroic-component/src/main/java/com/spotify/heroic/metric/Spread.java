@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Comparator;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.Comparator;
+
 @Data
-@EqualsAndHashCode(exclude = { "valueHash" })
+@EqualsAndHashCode(exclude = {"valueHash"})
 public class Spread implements Metric {
     private final long timestamp;
     private final long count;

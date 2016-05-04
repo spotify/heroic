@@ -21,24 +21,14 @@
 
 package com.spotify.heroic.metric.memory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.NavigableMap;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
 import com.spotify.heroic.metric.BackendKey;
@@ -50,25 +40,35 @@ import com.spotify.heroic.metric.MetricType;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.ToString;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
+
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
-@ToString(exclude = {"storage"})
-public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
+@ToString(exclude = {"storage", "async", "createLock"})
+public class MemoryBackend extends AbstractMetricBackend {
     public static final String MEMORY_KEYS = "memory-keys";
 
     public static final QueryTrace.Identifier FETCH =
-            QueryTrace.identifier(MemoryBackend.class, "fetch");
+        QueryTrace.identifier(MemoryBackend.class, "fetch");
 
-    private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
+    static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
-    private static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
+    static final Comparator<MemoryKey> COMPARATOR = new Comparator<MemoryKey>() {
         @Override
         public int compare(final MemoryKey a, final MemoryKey b) {
             final int t = a.getSource().compareTo(b.getSource());
@@ -81,34 +81,27 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
         }
     };
 
-    private final ConcurrentSkipListMap<MemoryKey, NavigableMap<Long, Metric>> storage =
-            new ConcurrentSkipListMap<>(COMPARATOR);
-
     private final Object createLock = new Object();
 
     private final AsyncFramework async;
     private final Groups groups;
+    private final Map<MemoryKey, NavigableMap<Long, Metric>> storage;
 
     @Inject
-    public MemoryBackend(final AsyncFramework async, final Groups groups) {
+    public MemoryBackend(
+        final AsyncFramework async, final Groups groups,
+        @Named("storage") final Map<MemoryKey, NavigableMap<Long, Metric>> storage,
+        LifeCycleRegistry registry
+    ) {
         super(async);
         this.async = async;
         this.groups = groups;
+        this.storage = storage;
     }
 
     @Override
     public Statistics getStatistics() {
         return Statistics.of(MEMORY_KEYS, storage.size());
-    }
-
-    @Override
-    public AsyncFuture<Void> start() {
-        return async.resolved();
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return async.resolved();
     }
 
     @Override
@@ -142,8 +135,10 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(MetricType source, Series series, DateRange range,
-            FetchQuotaWatcher watcher, QueryOptions options) {
+    public AsyncFuture<FetchData> fetch(
+        MetricType source, Series series, DateRange range, FetchQuotaWatcher watcher,
+        QueryOptions options
+    ) {
         final Stopwatch w = Stopwatch.createStarted();
         final MemoryKey key = new MemoryKey(source, series);
         final List<MetricCollection> groups = doFetch(key, range);
@@ -198,8 +193,8 @@ public class MemoryBackend extends AbstractMetricBackend implements LifeCycle {
 
         synchronized (tree) {
             final Iterable<Metric> data = tree.subMap(range.getStart(), range.getEnd()).values();
-            return ImmutableList
-                    .of(MetricCollection.build(key.getSource(), ImmutableList.copyOf(data)));
+            return ImmutableList.of(
+                MetricCollection.build(key.getSource(), ImmutableList.copyOf(data)));
         }
     }
 

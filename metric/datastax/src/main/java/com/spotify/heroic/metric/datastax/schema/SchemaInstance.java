@@ -21,10 +21,6 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Row;
 import com.spotify.heroic.common.DateRange;
@@ -34,14 +30,17 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
 import com.spotify.heroic.metric.datastax.schema.Schema.PreparedFetch;
-
 import eu.toolchain.async.Transform;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 public interface SchemaInstance {
     public TypeSerializer<MetricsRowKey> rowKey();
 
     public List<PreparedFetch> ranges(final Series series, final DateRange range)
-            throws IOException;
+        throws IOException;
 
     public PreparedFetch row(final BackendKey key) throws IOException;
 

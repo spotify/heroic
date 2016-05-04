@@ -21,14 +21,12 @@
 
 package com.spotify.heroic.rpc.nativerpc.message;
 
-import java.io.IOException;
-
+import com.spotify.heroic.rpc.nativerpc.NativeEncoding;
+import lombok.Data;
 import org.msgpack.packer.Packer;
 import org.msgpack.unpacker.Unpacker;
 
-import com.spotify.heroic.rpc.nativerpc.NativeEncoding;
-
-import lombok.Data;
+import java.io.IOException;
 
 /**
  * A dynamic set of options that are part of a native rpc request.
@@ -49,11 +47,11 @@ public class NativeOptions {
 
         for (int i = 0; i < size; i++) {
             switch (unpacker.readString()) {
-            case ENCODING:
-                encoding = NativeEncoding.valueOf(unpacker.readString());
-                break;
-            default: // ignore unknown options
-                break;
+                case ENCODING:
+                    encoding = NativeEncoding.valueOf(unpacker.readString());
+                    break;
+                default: // ignore unknown options
+                    break;
             }
         }
 

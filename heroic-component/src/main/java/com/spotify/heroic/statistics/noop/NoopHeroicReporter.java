@@ -21,10 +21,8 @@
 
 package com.spotify.heroic.statistics.noop;
 
-import java.util.Map;
-import java.util.Set;
-
 import com.spotify.heroic.statistics.AggregationCacheReporter;
+import com.spotify.heroic.statistics.AnalyticsReporter;
 import com.spotify.heroic.statistics.ClusteredMetadataManagerReporter;
 import com.spotify.heroic.statistics.ClusteredMetricManagerReporter;
 import com.spotify.heroic.statistics.ConsumerReporter;
@@ -34,6 +32,9 @@ import com.spotify.heroic.statistics.IngestionManagerReporter;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
 import com.spotify.heroic.statistics.LocalMetricManagerReporter;
 import com.spotify.heroic.statistics.MetricBackendGroupReporter;
+
+import java.util.Map;
+import java.util.Set;
 
 public class NoopHeroicReporter implements HeroicReporter {
     @Override
@@ -79,6 +80,11 @@ public class NoopHeroicReporter implements HeroicReporter {
     @Override
     public IngestionManagerReporter newIngestionManager() {
         return NoopIngestionManagerReporter.get();
+    }
+
+    @Override
+    public AnalyticsReporter newAnalyticsReporter() {
+        return NoopAnalyticsReporter.get();
     }
 
     @Override

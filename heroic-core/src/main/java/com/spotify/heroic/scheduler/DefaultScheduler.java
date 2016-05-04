@@ -21,24 +21,23 @@
 
 package com.spotify.heroic.scheduler;
 
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RequiredArgsConstructor
-@ToString(exclude = { "scheduler" })
+@ToString(exclude = {"scheduler"})
 public class DefaultScheduler implements Scheduler {
     private static final String UNKNOWN = "unknown";
 
     private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(10,
-            new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
+        new ThreadFactoryBuilder().setNameFormat("heroic-scheduler#%d").build());
 
     @Override
     public void periodically(long value, final TimeUnit unit, final Task task) {
@@ -46,8 +45,9 @@ public class DefaultScheduler implements Scheduler {
     }
 
     @Override
-    public void periodically(final String name, final long value, final TimeUnit unit,
-            final Task task) {
+    public void periodically(
+        final String name, final long value, final TimeUnit unit, final Task task
+    ) {
         final Runnable refreshCluster = new Runnable() {
             @Override
             public void run() {

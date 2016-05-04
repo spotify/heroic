@@ -21,6 +21,33 @@
 
 package com.spotify.heroic.shell.task;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.spotify.heroic.QueryOptions;
+import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.MetricBackendGroup;
+import com.spotify.heroic.metric.MetricManager;
+import com.spotify.heroic.shell.AbstractShellTaskParams;
+import com.spotify.heroic.shell.ShellIO;
+import com.spotify.heroic.shell.ShellTask;
+import com.spotify.heroic.shell.TaskName;
+import com.spotify.heroic.shell.TaskParameters;
+import com.spotify.heroic.shell.TaskUsage;
+import dagger.Component;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.StreamCollector;
+import lombok.ToString;
+import org.apache.commons.lang3.tuple.Pair;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,47 +59,23 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.tuple.Pair;
-import org.kohsuke.args4j.Option;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.QueryOptions;
-import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.MetricBackendGroup;
-import com.spotify.heroic.metric.MetricManager;
-import com.spotify.heroic.shell.AbstractShellTaskParams;
-import com.spotify.heroic.shell.ShellIO;
-import com.spotify.heroic.shell.ShellTask;
-import com.spotify.heroic.shell.TaskName;
-import com.spotify.heroic.shell.TaskParameters;
-import com.spotify.heroic.shell.TaskUsage;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
-import eu.toolchain.async.ResolvableFuture;
-import eu.toolchain.async.StreamCollector;
-import lombok.ToString;
-
 @TaskUsage("Delete all data for a set of keys")
 @TaskName("delete-keys")
 public class DeleteKeys implements ShellTask {
     public static final Charset UTF8 = Charsets.UTF_8;
 
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
+    private final ObjectMapper mapper;
+    private final AsyncFramework async;
 
     @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
-
-    @Inject
-    private AsyncFramework async;
+    public DeleteKeys(
+        MetricManager metrics, @Named("application/json") ObjectMapper mapper, AsyncFramework async
+    ) {
+        this.metrics = metrics;
+        this.mapper = mapper;
+        this.async = async;
+    }
 
     @Override
     public TaskParameters params() {
@@ -108,39 +111,43 @@ public class DeleteKeys implements ShellTask {
         final Iterator<BackendKey> iterator = Iterables.concat(keys.build()).iterator();
 
         final StreamCollector<Pair<BackendKey, Long>, Void> collector =
-                new StreamCollector<Pair<BackendKey, Long>, Void>() {
-                    @Override
-                    public void resolved(Pair<BackendKey, Long> result) throws Exception {
-                        if (params.verbose) {
-                            synchronized (io) {
-                                io.out().println("Deleted: " + result.getLeft() + " ("
-                                        + result.getRight() + ")");
-                                io.out().flush();
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void failed(Throwable cause) throws Exception {
+            new StreamCollector<Pair<BackendKey, Long>, Void>() {
+                @Override
+                public void resolved(Pair<BackendKey, Long> result) throws Exception {
+                    if (params.verbose) {
                         synchronized (io) {
-                            io.out().println("Delete Failed: " + cause);
-                            cause.printStackTrace(io.out());
+                            io
+                                .out()
+                                .println("Deleted: " + result.getLeft() + " (" + result.getRight() +
+                                    ")");
                             io.out().flush();
                         }
                     }
+                }
 
-                    @Override
-                    public void cancelled() throws Exception {
-                    }
-
-                    @Override
-                    public Void end(int resolved, int failed, int cancelled) throws Exception {
-                        io.out().println("Finished (resolved: " + resolved + ", failed: " + failed
-                                + ", cancelled: " + cancelled + ")");
+                @Override
+                public void failed(Throwable cause) throws Exception {
+                    synchronized (io) {
+                        io.out().println("Delete Failed: " + cause);
+                        cause.printStackTrace(io.out());
                         io.out().flush();
-                        return null;
                     }
-                };
+                }
+
+                @Override
+                public void cancelled() throws Exception {
+                }
+
+                @Override
+                public Void end(int resolved, int failed, int cancelled) throws Exception {
+                    io
+                        .out()
+                        .println("Finished (resolved: " + resolved + ", failed: " + failed + ", " +
+                            "cancelled: " + cancelled + ")");
+                    io.out().flush();
+                    return null;
+                }
+            };
 
         final AtomicInteger outstanding = new AtomicInteger(params.parallelism);
 
@@ -198,8 +205,8 @@ public class DeleteKeys implements ShellTask {
                 final BufferedReader reader;
 
                 try {
-                    reader = new BufferedReader(
-                            new InputStreamReader(io.newInputStream(file), UTF8));
+                    reader =
+                        new BufferedReader(new InputStreamReader(io.newInputStream(file), UTF8));
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to open file", e);
                 }
@@ -229,8 +236,9 @@ public class DeleteKeys implements ShellTask {
                         }
 
                         try {
-                            return mapper.readValue(line.trim(), BackendKeyArgument.class)
-                                    .toBackendKey();
+                            return mapper
+                                .readValue(line.trim(), BackendKeyArgument.class)
+                                .toBackendKey();
                         } catch (IOException e) {
                             throw new RuntimeException("Failed to read next line", e);
                         } finally {
@@ -244,8 +252,9 @@ public class DeleteKeys implements ShellTask {
         return keys.build();
     }
 
-    private AsyncFuture<Void> askForOk(final ShellIO io,
-            final ImmutableList.Builder<Iterable<BackendKey>> keys) {
+    private AsyncFuture<Void> askForOk(
+        final ShellIO io, final ImmutableList.Builder<Iterable<BackendKey>> keys
+    ) {
         io.out().println("Would have deleted the following keys (use --ok to perform):");
 
         int index = 0;
@@ -262,16 +271,19 @@ public class DeleteKeys implements ShellTask {
         return async.resolved();
     }
 
-    private AsyncFuture<Pair<BackendKey, Long>> deleteKey(final MetricBackendGroup group,
-            final BackendKey k, final QueryOptions options) {
-        return group.countKey(k, options).lazyTransform(
+    private AsyncFuture<Pair<BackendKey, Long>> deleteKey(
+        final MetricBackendGroup group, final BackendKey k, final QueryOptions options
+    ) {
+        return group
+            .countKey(k, options)
+            .lazyTransform(
                 count -> group.deleteKey(k, options).directTransform(v -> Pair.of(k, count)));
     }
 
     @ToString
     private static class Parameters extends AbstractShellTaskParams {
         @Option(name = "-f", aliases = {"--file"}, usage = "File to read keys from",
-                metaVar = "<file>")
+            metaVar = "<file>")
         private Path file;
 
         @Option(name = "-k", aliases = {"--key"}, usage = "Key to delete", metaVar = "<json>")
@@ -284,14 +296,23 @@ public class DeleteKeys implements ShellTask {
         private boolean verbose = false;
 
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing", usage = "Enable extensive tracing")
         private boolean tracing = false;
 
         @Option(name = "--parallelism", usage = "Configure how many deletes to perform in parallel",
-                metaVar = "<number>")
+            metaVar = "<number>")
         private int parallelism = 20;
+    }
+
+    public static DeleteKeys setup(final CoreComponent core) {
+        return DaggerDeleteKeys_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        DeleteKeys task();
     }
 }

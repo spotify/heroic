@@ -21,27 +21,24 @@
 
 package com.spotify.heroic.aggregation;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.Series;
 import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.MetricCollection;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
-
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+
+import java.util.List;
+import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class PartitionInstance implements AggregationInstance {
@@ -106,34 +103,38 @@ public class PartitionInstance implements AggregationInstance {
         private final List<AggregationSession> sessions;
 
         @Override
-        public void updatePoints(Map<String, String> group, Set<Series> series,
-                List<Point> values) {
+        public void updatePoints(
+            Map<String, String> group, List<Point> values
+        ) {
             for (final AggregationSession s : sessions) {
-                s.updatePoints(group, series, values);
+                s.updatePoints(group, values);
             }
         }
 
         @Override
-        public void updateEvents(Map<String, String> group, Set<Series> series,
-                List<Event> values) {
+        public void updateEvents(
+            Map<String, String> group, List<Event> values
+        ) {
             for (final AggregationSession s : sessions) {
-                s.updateEvents(group, series, values);
+                s.updateEvents(group, values);
             }
         }
 
         @Override
-        public void updateSpreads(Map<String, String> group, Set<Series> series,
-                List<Spread> values) {
+        public void updateSpreads(
+            Map<String, String> group, List<Spread> values
+        ) {
             for (final AggregationSession s : sessions) {
-                s.updateSpreads(group, series, values);
+                s.updateSpreads(group, values);
             }
         }
 
         @Override
-        public void updateGroup(Map<String, String> group, Set<Series> series,
-                List<MetricGroup> values) {
+        public void updateGroup(
+            Map<String, String> group, List<MetricGroup> values
+        ) {
             for (final AggregationSession s : sessions) {
-                s.updateGroup(group, series, values);
+                s.updateGroup(group, values);
             }
         }
 

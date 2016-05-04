@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 release=$1
 version=$2
 dist=${3:-dist}
@@ -15,11 +17,12 @@ fi
 now=$(date --rfc-2822)
 
 for input in debian/*.in; do
-    output=$(m4 -DRELEASE="$release" <<< ${input%%.in})
+    output=$(sed -e "s/RELEASE/$release/g" <<< ${input%%.in})
 
     echo "Writing: $output (from: $input)"
 
-    m4 -DRELEASE="$release" -DVERSION="$version" -DDIST="$dist" -DNOW="$now" \
+    sed -e "s/RELEASE/$release/g" -e "s/VERSION/$version/g" \
+        -e "s/DIST/$dist/g" -e "s/NOW/$now/g" \
         < $input \
         > $output
 done

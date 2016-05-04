@@ -21,20 +21,21 @@
 
 package com.spotify.heroic;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.spotify.heroic.common.Optionals.pickOptional;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.heroic.aggregation.Aggregation;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.FilterFactory;
+import com.spotify.heroic.metric.MetricType;
+import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
-import com.spotify.heroic.aggregation.Aggregation;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.metric.MetricType;
-
-import lombok.RequiredArgsConstructor;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.spotify.heroic.common.Optionals.pickOptional;
 
 @RequiredArgsConstructor
 public class QueryBuilder {
@@ -48,12 +49,13 @@ public class QueryBuilder {
     private Optional<QueryDateRange> range = Optional.empty();
     private Optional<Aggregation> aggregation = Optional.empty();
     private Optional<QueryOptions> options = Optional.empty();
+    private Set<String> features = ImmutableSet.of();
 
     /**
      * Specify a set of tags that has to match.
      *
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     *             built using {@link FilterFactory#matchKey(String)}.
+     * built using {@link FilterFactory#matchKey(String)}.
      */
     public QueryBuilder key(Optional<String> key) {
         this.key = key;
@@ -64,7 +66,7 @@ public class QueryBuilder {
      * Specify a set of tags that has to match.
      *
      * @deprecated Use {@link #filter(Filter)} with the appropriate filter instead. These can be
-     *             built using {@link FilterFactory#matchTag(String, String)}.
+     * built using {@link FilterFactory#matchTag(String, String)}.
      */
     public QueryBuilder tags(Optional<Map<String, String>> tags) {
         checkNotNull(tags, "tags must not be null");
@@ -85,7 +87,7 @@ public class QueryBuilder {
 
     /**
      * Specify the date range for which data will be returned.
-     *
+     * <p>
      * Note: This range might be rounded to accommodate the sampling period of a given aggregation.
      */
     public QueryBuilder range(Optional<QueryDateRange> range) {
@@ -139,13 +141,20 @@ public class QueryBuilder {
         return this;
     }
 
+    public QueryBuilder features(final Set<String> features) {
+        checkNotNull(features, "features");
+        this.features = features;
+        return this;
+    }
+
     public Query build() {
-        return new Query(aggregation, source, range, legacyFilter(), options, groupBy);
+        return new Query(Optional.empty(), aggregation, source, range, legacyFilter(), options,
+            groupBy, features);
     }
 
     /**
      * Convert a MetricsRequest into a filter.
-     *
+     * <p>
      * This is meant to stay backwards compatible, since every filtering in MetricsRequest can be
      * expressed as filter objects.
      */

@@ -19,7 +19,8 @@
  * under the License.
  */
 
-/**
+// THIS COMPONENT WAS ADAPTED FROM THE HADOOP PROJECT:
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
  * agreements. See the NOTICE file distributed with this work for additional information
  * regarding copyright ownership. The ASF licenses this file to you under the Apache
@@ -34,33 +35,29 @@
  * permissions and limitations under the License.
  */
 
-/**
- * Adapted from the Hadoop Project.
- */
 package com.spotify.heroic.aggregation.simple;
+
+import com.spotify.heroic.aggregation.AbstractBucket;
+import com.spotify.heroic.metric.Point;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
 
-import com.spotify.heroic.aggregation.AbstractBucket;
-import com.spotify.heroic.metric.Point;
-
-import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 /**
  * Implementation of the Cormode, Korn, Muthukrishnan, and Srivastava algorithm for streaming
  * calculation of targeted high-percentile epsilon-approximate quantiles.
- *
+ * <p>
  * This is a generalization of the earlier work by Greenwald and Khanna (GK), which essentially
  * allows different error bounds on the targeted quantiles, which allows for far more efficient
  * calculation of high-percentiles.
- *
- * See: Cormode, Korn, Muthukrishnan, and Srivastava
- * "Effective Computation of Biased Quantiles over Data Streams" in ICDE 2005
- *
+ * <p>
+ * See: Cormode, Korn, Muthukrishnan, and Srivastava "Effective Computation of Biased Quantiles over
+ * Data Streams" in ICDE 2005
+ * <p>
  * Greenwald and Khanna, "Space-efficient online computation of quantile summaries" in SIGMOD 2001
  */
 @RequiredArgsConstructor
@@ -172,7 +169,8 @@ public class QuantileBucket extends AbstractBucket {
 
     /**
      * Try to remove extraneous items from the set of sampled items. This checks if an item is
-     * unnecessary based on the desired error bounds, and merges it with the adjacent item if it is.
+     * unnecessary based on the desired error bounds, and merges it with the adjacent item if it
+     * is.
      */
     private void compressSamples() {
         if (samples.size() < 2) {
@@ -205,8 +203,9 @@ public class QuantileBucket extends AbstractBucket {
     }
 
     /**
-     * Specifies the allowable error for this rank, depending on which quantiles are being targeted.
-     *
+     * Specifies the allowable error for this rank, depending on which quantiles are being
+     * targeted.
+     * <p>
      * This is the f(r_i, n) function from the CKMS paper. It's basically how wide the range of this
      * rank can be.
      *

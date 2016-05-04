@@ -21,8 +21,6 @@
 
 package com.spotify.heroic.aggregation.simple;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.aggregation.AggregationContext;
@@ -30,20 +28,25 @@ import com.spotify.heroic.aggregation.SamplingQuery;
 import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.common.Optionals;
 
+import java.util.Optional;
+
 public class Count extends SamplingAggregation {
     public static final String NAME = "count";
 
     @JsonCreator
-    public Count(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
-            @JsonProperty("size") Optional<Duration> size,
-            @JsonProperty("extent") Optional<Duration> extent) {
+    public Count(
+        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
+        @JsonProperty("size") Optional<Duration> size,
+        @JsonProperty("extent") Optional<Duration> extent
+    ) {
         super(Optionals.firstPresent(size, sampling.flatMap(SamplingQuery::getSize)),
-                Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
+            Optionals.firstPresent(extent, sampling.flatMap(SamplingQuery::getExtent)));
     }
 
     @Override
-    public CountInstance apply(final AggregationContext context, final long size,
-            final long extent) {
+    public CountInstance apply(
+        final AggregationContext context, final long size, final long extent
+    ) {
         return new CountInstance(size, extent);
     }
 

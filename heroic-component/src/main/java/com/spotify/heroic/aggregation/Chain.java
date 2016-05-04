@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
 import lombok.Data;
+
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Optional;
 
 @Data
 public class Chain implements Aggregation {
@@ -47,7 +46,9 @@ public class Chain implements Aggregation {
 
     @JsonCreator
     public Chain(@JsonProperty("chain") Optional<List<Aggregation>> chain) {
-        this.chain = chain.filter(c -> !c.isEmpty()).orElseThrow(
+        this.chain = chain
+            .filter(c -> !c.isEmpty())
+            .orElseThrow(
                 () -> new IllegalArgumentException("chain must be specified and non-empty"));
     }
 

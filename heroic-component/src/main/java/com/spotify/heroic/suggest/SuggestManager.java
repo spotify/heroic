@@ -25,7 +25,7 @@ import com.spotify.heroic.common.GroupManager;
 
 /**
  * Interface for handling tag suggestions.
- *
+ * <p>
  * Suggestions can be a potentially complex system, it is separated from metadata to allow for a
  * clean separation of concerns, and deployments where suggestions _may_ be broken independently of
  * metadata.

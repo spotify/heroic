@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.net.InetSocketAddress;
-
 import lombok.Getter;
 import lombok.ToString;
+
+import java.net.InetSocketAddress;
 
 @ToString(of = {"address", "message"})
 public class NativeRpcRemoteException extends Exception {

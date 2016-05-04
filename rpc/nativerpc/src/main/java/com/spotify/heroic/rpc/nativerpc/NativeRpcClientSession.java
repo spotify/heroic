@@ -21,18 +21,12 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
-
 import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -47,6 +41,11 @@ import io.netty.util.Timer;
 import io.netty.util.TimerTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -79,7 +78,7 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
             @Override
             protected void channelRead0(final ChannelHandlerContext ctx, final Object msg)
-                    throws Exception {
+                throws Exception {
                 if (msg instanceof NativeRpcError) {
                     final NativeRpcError error = (NativeRpcError) msg;
 
@@ -109,7 +108,7 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
                 if (msg instanceof NativeRpcHeartBeat) {
                     if (log.isTraceEnabled()) {
                         log.trace("[{}] heartbeat: delaying timeout by {}ms", ctx.channel(),
-                                heartbeatInterval);
+                            heartbeatInterval);
                     }
 
                     bumpTimeout(ctx);
@@ -118,17 +117,12 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
 
                 throw new IllegalArgumentException("unable to handle type: " + msg);
             }
-        });
-
-        pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
-            @Override
-            protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-            }
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-                    throws Exception {
+                throws Exception {
                 future.fail(cause);
+                ctx.channel().close();
             }
         });
 
@@ -145,8 +139,9 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
     }
 
     private void bumpTimeout(final ChannelHandlerContext ctx) {
-        final Timeout timeout = timer.newTimeout(heartbeatTimeout(ctx.channel(), future),
-                heartbeatInterval, TimeUnit.MILLISECONDS);
+        final Timeout timeout =
+            timer.newTimeout(heartbeatTimeout(ctx.channel(), future), heartbeatInterval,
+                TimeUnit.MILLISECONDS);
 
         final Timeout old = heartbeatTimeout.getAndSet(timeout);
 
@@ -156,11 +151,11 @@ public class NativeRpcClientSession<R> extends ChannelInitializer<Channel> {
     }
 
     private void handleResponse(final NativeRpcResponse response)
-            throws IOException, JsonParseException, JsonMappingException {
+        throws IOException, JsonParseException, JsonMappingException {
         unsetTimeout();
 
-        final byte[] bytes = NativeUtils.decodeBody(response.getOptions(), response.getSize(),
-                response.getBody());
+        final byte[] bytes =
+            NativeUtils.decodeBody(response.getOptions(), response.getSize(), response.getBody());
 
         final R responseBody = mapper.readValue(bytes, expected);
 

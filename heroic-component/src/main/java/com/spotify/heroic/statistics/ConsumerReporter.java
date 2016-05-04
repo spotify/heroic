@@ -28,5 +28,7 @@ public interface ConsumerReporter {
 
     void reportConsumerSchemaError();
 
+    void reportMessageDrift(final long ms);
+
     ThreadPoolReporter newThreadPool();
 }

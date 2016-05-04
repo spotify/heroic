@@ -29,13 +29,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.datastax.schema.legacy.LegacySchema;
 import com.spotify.heroic.metric.datastax.schema.ng.NextGenSchema;
-
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Transform;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes({ @JsonSubTypes.Type(value = LegacySchema.class, name = "legacy"),
-        @JsonSubTypes.Type(value = NextGenSchema.class, name = "ng") })
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = LegacySchema.class, name = "legacy"), @JsonSubTypes.Type(
+    value = NextGenSchema.class, name = "ng")
+})
 public interface Schema {
     public AsyncFuture<Void> configure(final Session session);
 

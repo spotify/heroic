@@ -1,3 +1,5 @@
+import contextlib
+
 import unittest
 import json
 import time
@@ -7,55 +9,56 @@ import tests.helpers as h
 
 class TestCluster(unittest.TestCase):
     # @h.timeout(60)
-    def test_cluster_query(self):
-        config_a = {"cluster":
-                    {"protocols": [{"type": "nativerpc", "port": 2000}],
-                     "useLocal": True, "tags": {"foo": "bar"}}}
-        config_b = {"cluster":
-                    {"protocols": [{"type": "nativerpc", "port": 2001}],
-                     "useLocal": True, "tags": {"foo": "bar2"}}}
+    def test_distributed_aggregation(self):
+        features = [
+            'com.spotify.heroic.distributed_aggregations'
+        ]
 
-        with h.managed(config_a, config_b, args=["-P", "memory"]) as (a, b):
-            status_a = a.status()
-            self.assertEquals(True, status_a["ok"], status_a)
-            a.cluster_add_node('nativerpc://localhost:2001')
-            cluster_status_a = a.cluster_status()
-            self.assertEquals(2, len(a.cluster_status()["nodes"]),
-                              cluster_status_a)
+        q = "sum(10ms) from points(0, 10000) where $key = test"
 
-            status_b = b.status()
-            self.assertEquals(True, status_b["ok"], status_b)
-            b.cluster_add_node('nativerpc://localhost:2000')
-            cluster_status_b = b.cluster_status()
-            self.assertEquals(2, len(b.cluster_status()["nodes"]),
-                              cluster_status_b)
+        with self.three_node_cluster(2, q, features=features) as result:
+            self.assertEquals(1, len(result['result']))
+
+            self.assertEquals(
+                [[10, 4.0], [20, 4.0], [30, 2.0]],
+                result['result'][0]['values'])
+
+    def test_sharded_query(self):
+        q = "sum(10ms) from points(0, 10000) where $key = test"
+
+        with self.three_node_cluster(2, q) as result:
+            self.assertEquals(2, len(result['result']))
+
+            self.assertEquals(
+                [[[10, 1.0], [30, 2.0]], [[10, 3.0], [20, 4.0]]],
+                [r['values'] for r in result['result']])
+
+    @contextlib.contextmanager
+    def three_node_cluster(self, groups, query, features=[]):
+        with h.managed_cluster(3, features=features) as nodes:
+            a = nodes[0]
+            b = nodes[1]
 
             # write some data into each shard
-            w1 = a.write({"key": "test", "tags": {}},
-                         {"type": "points", "data": [[1000, 1], [2000, 2]]})
-            #w2 = b.write({"key": "test", "tags": {}},
-            #             {"type": "points", "data": [[3000, 3], [4000, 4]]})
+            a.write({"key": "test", "tags": {"foo": "bar", "bar": "a"}},
+                    {"type": "points",
+                     "data": [[0, 1], [20, 2]]})
 
-            self.assertEquals(200, w1.status_code)
-            #self.assertEquals(200, w2.status_code)
-
-            time.sleep(5)
+            b.write({"key": "test", "tags": {"foo": "bar", "bar": "b"}},
+                    {"type": "points",
+                     "data": [[0, 3], [10, 4]]})
 
             # query for the data (without aggregation)
             result = a.query_metrics(
-                {"query": "* from points(1000, 2000) where $key = test", "options": {"tracing": True}})
+                {"query": query})
 
             self.assertEquals(200, result.status_code)
 
             result = result.json()
 
-            print json.dumps(result)
-
             self.assertEquals(0, len(result['errors']))
-            self.assertEquals(1, len(result['result']))
 
-            values = result['result'][0]['values']
+            result['result'] = sorted(result['result'],
+                                      key=lambda r: r['shard'])
 
-            self.assertEquals(
-                [[1000, 1.0], [2000, 2.0], [3000, 3.0], [4000, 4.0]],
-                list(sorted(values)))
+            yield result

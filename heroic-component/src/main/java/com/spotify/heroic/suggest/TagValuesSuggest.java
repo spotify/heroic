@@ -21,7 +21,17 @@
 
 package com.spotify.heroic.suggest;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.metric.RequestError;
+import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,19 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
 
-import lombok.Data;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
-import com.spotify.heroic.metric.RequestError;
-
-import eu.toolchain.async.Collector;
-import eu.toolchain.async.Transform;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class TagValuesSuggest {
@@ -55,9 +53,11 @@ public class TagValuesSuggest {
     private final boolean limited;
 
     @JsonCreator
-    public TagValuesSuggest(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("suggestions") List<Suggestion> suggestions,
-            @JsonProperty("limited") Boolean limited) {
+    public TagValuesSuggest(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("suggestions") List<Suggestion> suggestions,
+        @JsonProperty("limited") Boolean limited
+    ) {
         this.errors = checkNotNull(errors, "errors");
         this.suggestions = checkNotNull(suggestions, "suggestions");
         this.limited = checkNotNull(limited, "limited");
@@ -67,8 +67,9 @@ public class TagValuesSuggest {
         this(EMPTY_ERRORS, suggestions, limited);
     }
 
-    public static Collector<TagValuesSuggest, TagValuesSuggest> reduce(final int limit,
-            final int groupLimit) {
+    public static Collector<TagValuesSuggest, TagValuesSuggest> reduce(
+        final int limit, final int groupLimit
+    ) {
         return new Collector<TagValuesSuggest, TagValuesSuggest>() {
             @Override
             public TagValuesSuggest collect(Collection<TagValuesSuggest> groups) throws Exception {
@@ -100,28 +101,29 @@ public class TagValuesSuggest {
                     final ImmutableList<String> values = ImmutableList.copyOf(m.values);
                     final boolean sLimited = m.limited || values.size() >= groupLimit;
 
-                    suggestions.add(new Suggestion(key,
-                            values.subList(0, Math.min(values.size(), groupLimit)), sLimited));
+                    suggestions.add(
+                        new Suggestion(key, values.subList(0, Math.min(values.size(), groupLimit)),
+                            sLimited));
                 }
 
                 limited = limited || suggestions.size() >= limit;
                 return new TagValuesSuggest(
-                        suggestions.subList(0, Math.min(suggestions.size(), limit)), limited);
+                    suggestions.subList(0, Math.min(suggestions.size(), limit)), limited);
             }
         };
     }
 
     public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, TagValuesSuggest>() {
             @Override
             public TagValuesSuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagValuesSuggest(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_SUGGESTIONS, false);
+                return new TagValuesSuggest(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                    EMPTY_SUGGESTIONS, false);
             }
         };
     }
@@ -133,9 +135,10 @@ public class TagValuesSuggest {
         private final boolean limited;
 
         @JsonCreator
-        public Suggestion(@JsonProperty("key") String key,
-                @JsonProperty("values") List<String> values,
-                @JsonProperty("limited") Boolean limited) {
+        public Suggestion(
+            @JsonProperty("key") String key, @JsonProperty("values") List<String> values,
+            @JsonProperty("limited") Boolean limited
+        ) {
             this.key = checkNotNull(key, "key");
             this.values = ImmutableList.copyOf(checkNotNull(values, "values"));
             this.limited = checkNotNull(limited, "limited");
@@ -178,12 +181,13 @@ public class TagValuesSuggest {
     }
 
     public static Transform<Throwable, ? extends TagValuesSuggest> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, TagValuesSuggest>() {
             @Override
             public TagValuesSuggest transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new TagValuesSuggest(errors, EMPTY_SUGGESTIONS, false);
             }
         };

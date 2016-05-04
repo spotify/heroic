@@ -21,35 +21,29 @@
 
 package com.spotify.heroic.consumer.kafka;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.common.Statistics;
+import com.spotify.heroic.consumer.Consumer;
+import com.spotify.heroic.lifecycle.LifeCycleRegistry;
+import com.spotify.heroic.lifecycle.LifeCycles;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.Borrowed;
+import eu.toolchain.async.Managed;
+
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.spotify.heroic.common.Statistics;
-import com.spotify.heroic.consumer.Consumer;
-import com.spotify.heroic.ingestion.IngestionManager;
-
-import eu.toolchain.async.AsyncFramework;
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.Borrowed;
-import eu.toolchain.async.Managed;
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
-public class KafkaConsumer implements Consumer {
-    @Inject
-    private IngestionManager ingestion;
-
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    private Managed<Connection> connection;
+@KafkaScope
+public class KafkaConsumer implements Consumer, LifeCycles {
+    private final AsyncFramework async;
+    private final Managed<Connection> connection;
 
     private final AtomicInteger consuming;
     private final AtomicInteger total;
@@ -58,8 +52,15 @@ public class KafkaConsumer implements Consumer {
     private final List<String> topics;
     private final Map<String, String> config;
 
-    public KafkaConsumer(AtomicInteger consuming, AtomicInteger total, AtomicLong errors,
-            LongAdder consumed, List<String> topics, Map<String, String> config) {
+    @Inject
+    public KafkaConsumer(
+        AsyncFramework async, Managed<Connection> connection,
+        @Named("consuming") AtomicInteger consuming, @Named("total") AtomicInteger total,
+        @Named("errors") AtomicLong errors, @Named("consumed") LongAdder consumed,
+        @Named("topics") List<String> topics, @Named("config") Map<String, String> config
+    ) {
+        this.async = async;
+        this.connection = connection;
         this.consuming = consuming;
         this.total = total;
         this.errors = errors;
@@ -69,13 +70,9 @@ public class KafkaConsumer implements Consumer {
     }
 
     @Override
-    public AsyncFuture<Void> start() {
-        return connection.start();
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return connection.stop();
+    public void register(LifeCycleRegistry registry) {
+        registry.start(connection::start);
+        registry.stop(connection::stop);
     }
 
     @Override
@@ -90,22 +87,23 @@ public class KafkaConsumer implements Consumer {
         final long errors = this.errors.get();
         final long consumed = this.consumed.sum();
 
-        return Statistics.of(ImmutableMap.<String, Long> of(CONSUMING, consuming, TOTAL, total,
-                ERRORS, errors, CONSUMED, consumed));
+        return Statistics.of(
+            ImmutableMap.<String, Long>of(CONSUMING, consuming, TOTAL, total, ERRORS, errors,
+                CONSUMED, consumed));
     }
 
     @Override
     public AsyncFuture<Void> pause() {
         // pause all threads
-        return connection.doto(c -> async.collectAndDiscard(ImmutableList
-                .copyOf(c.getThreads().stream().map(ConsumerThread::pauseConsumption).iterator())));
+        return connection.doto(c -> async.collectAndDiscard(ImmutableList.copyOf(
+            c.getThreads().stream().map(ConsumerThread::pauseConsumption).iterator())));
     }
 
     @Override
     public AsyncFuture<Void> resume() {
         // resume all threads
         return connection.doto(c -> async.collectAndDiscard(ImmutableList.copyOf(
-                c.getThreads().stream().map(ConsumerThread::resumeConsumption).iterator())));
+            c.getThreads().stream().map(ConsumerThread::resumeConsumption).iterator())));
     }
 
     @Override
@@ -114,7 +112,7 @@ public class KafkaConsumer implements Consumer {
 
         if (!b.isValid()) {
             return String.format("KafkaConsumer(non-configured, topics=%s, config=%s)", topics,
-                    config);
+                config);
         }
 
         try {
@@ -122,8 +120,8 @@ public class KafkaConsumer implements Consumer {
             final int threads = c.getThreads().size();
             final int paused = c.getThreads().stream().mapToInt(t -> t.isPaused() ? 1 : 0).sum();
             return String.format(
-                    "KafkaConsumer(configured, topics=%s, config=%s, threads=%d, paused=%d)",
-                    topics, config, threads, paused);
+                "KafkaConsumer(configured, topics=%s, config=%s, threads=%d, " + "paused=%d)",
+                topics, config, threads, paused);
         } finally {
             b.release();
         }

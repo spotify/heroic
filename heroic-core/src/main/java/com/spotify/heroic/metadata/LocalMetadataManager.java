@@ -21,30 +21,32 @@
 
 package com.spotify.heroic.metadata;
 
-import java.util.List;
-import java.util.Set;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
 import com.spotify.heroic.common.BackendGroups;
 import com.spotify.heroic.common.GroupMember;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-
 import eu.toolchain.async.AsyncFramework;
-import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.Set;
+
+@MetadataScope
 public class LocalMetadataManager implements MetadataManager {
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final BackendGroups<MetadataBackend> backends;
+    private final LocalMetadataManagerReporter reporter;
 
     @Inject
-    @Named("backends")
-    private BackendGroups<MetadataBackend> backends;
-
-    @Inject
-    private LocalMetadataManagerReporter reporter;
+    public LocalMetadataManager(
+        final AsyncFramework async,
+        @Named("backends") final BackendGroups<MetadataBackend> backends,
+        final LocalMetadataManagerReporter reporter
+    ) {
+        this.async = async;
+        this.backends = backends;
+        this.reporter = reporter;
+    }
 
     @Override
     public List<MetadataBackend> allMembers() {

@@ -21,18 +21,17 @@
 
 package com.spotify.heroic.metric.datastax.schema.ng;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.MetricsRowKey_Serializer;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
-
 import eu.toolchain.serializer.BytesSerialWriter;
 import eu.toolchain.serializer.SerialReader;
 import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 import eu.toolchain.serializer.TinySerializer;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class MetricsRowKeySerializer implements TypeSerializer<MetricsRowKey> {
     final SerializerFramework s = TinySerializer.builder().useCompactSize(true).build();

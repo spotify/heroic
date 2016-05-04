@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.suggest;
 
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import lombok.Data;
 
 @Data
 public class MatchOptions {
@@ -40,15 +39,17 @@ public class MatchOptions {
     private final boolean tokenize;
 
     @JsonCreator
-    public MatchOptions(@JsonProperty("fuzzy") boolean fuzzy,
-            @JsonProperty("fuzzyPrefixLength") Integer fuzzyPrefixLength,
-            @JsonProperty("fuzzyMaxExpansions") Integer fuzzyMaxExpansions,
-            @JsonProperty("tokenize") boolean tokenize) {
+    public MatchOptions(
+        @JsonProperty("fuzzy") boolean fuzzy,
+        @JsonProperty("fuzzyPrefixLength") Integer fuzzyPrefixLength,
+        @JsonProperty("fuzzyMaxExpansions") Integer fuzzyMaxExpansions,
+        @JsonProperty("tokenize") boolean tokenize
+    ) {
         this.fuzzy = Optional.fromNullable(fuzzy).or(DEFAULT_FUZZY);
         this.fuzzyPrefixLength =
-                Optional.fromNullable(fuzzyPrefixLength).or(DEFAULT_FUZZY_PREFIX_LENGTH);
+            Optional.fromNullable(fuzzyPrefixLength).or(DEFAULT_FUZZY_PREFIX_LENGTH);
         this.fuzzyMaxExpansions =
-                Optional.fromNullable(fuzzyMaxExpansions).or(DEFAULT_FUZZY_MAX_EXPANSIONS);
+            Optional.fromNullable(fuzzyMaxExpansions).or(DEFAULT_FUZZY_MAX_EXPANSIONS);
         this.tokenize = Optional.fromNullable(tokenize).or(DEFAULT_TOKENIZE);
     }
 

@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
 import com.spotify.heroic.metric.datastax.TypeSerializer;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 public class MetricsRowKeySerializer implements TypeSerializer<MetricsRowKey> {
     private final TypeSerializer<Series> series = new SeriesSerializer();

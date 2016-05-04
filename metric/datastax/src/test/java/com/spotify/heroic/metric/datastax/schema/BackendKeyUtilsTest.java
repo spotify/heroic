@@ -1,23 +1,22 @@
 package com.spotify.heroic.metric.datastax.schema;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.metric.BackendKey;
+import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.metric.datastax.MetricsRowKey;
+import com.spotify.heroic.metric.datastax.TypeSerializer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.metric.BackendKey;
-import com.spotify.heroic.metric.BackendKeyFilter;
-import com.spotify.heroic.metric.datastax.MetricsRowKey;
-import com.spotify.heroic.metric.datastax.TypeSerializer;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public class BackendKeyUtilsTest {
@@ -54,19 +53,19 @@ public class BackendKeyUtilsTest {
 
         // basic, select everything
         assertEquals(new SchemaBoundStatement(base, ImmutableList.of()),
-                utils.selectKeys(BackendKeyFilter.of()));
+            utils.selectKeys(BackendKeyFilter.of()));
 
         // one criteria
-        assertEquals(
-                new SchemaBoundStatement(base + " WHERE token(key) >= token(?)",
-                        ImmutableList.of(serializedKey)),
-                utils.selectKeys(BackendKeyFilter.of().withStart(BackendKeyFilter.gte(key))));
+        assertEquals(new SchemaBoundStatement(base + " WHERE token(key) >= token(?)",
+                ImmutableList.of(serializedKey)),
+            utils.selectKeys(BackendKeyFilter.of().withStart(BackendKeyFilter.gte(key))));
 
         // more criteria
         assertEquals(
-                new SchemaBoundStatement(base + " WHERE token(key) >= token(?) and token(key) < ?",
-                        ImmutableList.of(serializedKey, 42L)),
-                utils.selectKeys(BackendKeyFilter.of().withStart(BackendKeyFilter.gte(key))
-                        .withEnd(BackendKeyFilter.ltToken(42L))));
+            new SchemaBoundStatement(base + " WHERE token(key) >= token(?) and token(key) < ?",
+                ImmutableList.of(serializedKey, 42L)), utils.selectKeys(BackendKeyFilter
+                .of()
+                .withStart(BackendKeyFilter.gte(key))
+                .withEnd(BackendKeyFilter.ltToken(42L))));
     }
 }

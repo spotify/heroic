@@ -21,31 +21,18 @@
 
 package com.spotify.heroic.common;
 
+import com.google.common.collect.ImmutableSet;
+import lombok.Data;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
-import lombok.Data;
 
 @Data
 public final class Groups implements Iterable<String> {
     public static final Groups EMPTY = new Groups(ImmutableSet.of());
 
     private final Set<String> groups;
-
-    public static Groups groups(String group, Set<String> groups, String defaultGroup) {
-        if (group != null) {
-            return new Groups(ImmutableSet.of(group));
-        }
-
-        if (groups != null) {
-            return new Groups(groups);
-        }
-
-        return new Groups(ImmutableSet.of(defaultGroup));
-    }
 
     public Groups or(String... defaultGroups) {
         if (defaultGroups.length == 0) {
@@ -74,7 +61,7 @@ public final class Groups implements Iterable<String> {
 
     public static Groups combine(final Groups first, final Groups... other) {
         final ImmutableSet.Builder<String> all =
-                ImmutableSet.<String> builder().addAll(first.groups);
+            ImmutableSet.<String>builder().addAll(first.groups);
         Arrays.stream(other).forEach(all::addAll);
         return new Groups(all.build());
     }

@@ -21,9 +21,6 @@
 
 package com.spotify.heroic.filter;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.spotify.heroic.filter.Filter.MatchKey;
 import com.spotify.heroic.filter.Filter.Regex;
 import com.spotify.heroic.filter.impl.AndFilterImpl;
@@ -36,6 +33,9 @@ import com.spotify.heroic.filter.impl.OrFilterImpl;
 import com.spotify.heroic.filter.impl.RegexFilterImpl;
 import com.spotify.heroic.filter.impl.StartsWithFilterImpl;
 import com.spotify.heroic.filter.impl.TrueFilterImpl;
+
+import java.util.Arrays;
+import java.util.List;
 
 public final class CoreFilterFactory implements FilterFactory {
     @Override

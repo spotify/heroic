@@ -21,19 +21,11 @@
 
 package com.spotify.heroic.metric.generated;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Inject;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.common.LifeCycle;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.AbstractMetricBackend;
 import com.spotify.heroic.metric.BackendEntry;
@@ -46,18 +38,24 @@ import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.QueryTrace;
 import com.spotify.heroic.metric.WriteMetric;
 import com.spotify.heroic.metric.WriteResult;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.ToString;
 
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 /**
  * MetricBackend for Heroic cassandra datastore.
  */
+@GeneratedScope
 @ToString
-public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle {
-    public static final QueryTrace.Identifier FETCH = QueryTrace.identifier(GeneratedBackend.class,
-            "fetch");
+public class GeneratedBackend extends AbstractMetricBackend {
+    public static final QueryTrace.Identifier FETCH =
+        QueryTrace.identifier(GeneratedBackend.class, "fetch");
 
     private static final List<BackendEntry> EMPTY_ENTRIES = new ArrayList<>();
 
@@ -66,22 +64,13 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     private final Groups groups;
 
     @Inject
-    public GeneratedBackend(final AsyncFramework async, final Generator generator,
-            final Groups groups) {
+    public GeneratedBackend(
+        final AsyncFramework async, final Generator generator, final Groups groups
+    ) {
         super(async);
         this.async = async;
         this.generator = generator;
         this.groups = groups;
-    }
-
-    @Override
-    public AsyncFuture<Void> start() {
-        return async.resolved(null);
-    }
-
-    @Override
-    public AsyncFuture<Void> stop() {
-        return async.resolved(null);
     }
 
     @Override
@@ -105,8 +94,10 @@ public class GeneratedBackend extends AbstractMetricBackend implements LifeCycle
     }
 
     @Override
-    public AsyncFuture<FetchData> fetch(MetricType source, Series series, DateRange range,
-            FetchQuotaWatcher watcher, QueryOptions options) {
+    public AsyncFuture<FetchData> fetch(
+        MetricType source, Series series, DateRange range, FetchQuotaWatcher watcher,
+        QueryOptions options
+    ) {
         final Stopwatch w = Stopwatch.createStarted();
 
         if (source == MetricType.POINT) {

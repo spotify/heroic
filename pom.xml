@@ -22,16 +22,16 @@
     <module>metric/bigtable</module>
     <module>metric/memory</module>
     <module>metadata/elasticsearch</module>
+    <module>metadata/memory</module>
     <module>suggest/elasticsearch</module>
     <module>discovery/simple</module>
     <module>aggregation/simple</module>
     <module>consumer/kafka</module>
     <module>consumer/collectd</module>
-    <module>aggregationcache/cassandra2</module>
     <module>rpc/nativerpc</module>
-    <module>heroic-coalesce</module>
     <module>heroic-dist</module>
     <module>repackaged/bigtable</module>
+    <module>statistics/semantic</module>
   </modules>
 
   <licenses>
@@ -46,23 +46,30 @@
     <jersey.version>2.13</jersey.version>
     <jackson.version>2.6.3</jackson.version>
     <hk2.version>2.3.0</hk2.version>
-    <jetty.version>9.2.2.v20140723</jetty.version>
+    <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
     <astyanax.version>2.0.2</astyanax.version>
     <datastax.version>2.1.9</datastax.version>
-    <guice.version>4.0</guice.version>
     <semantic-metrics.version>0.2.3</semantic-metrics.version>
     <netty.version>4.0.27.Final</netty.version>
     <tiny-async.version>1.7.0</tiny-async.version>
     <tiny-serializer.version>1.4.1</tiny-serializer.version>
-    <microrpc.version>1.0.1</microrpc.version>
     <antlr.version>4.5</antlr.version>
     <log4j.version>2.2</log4j.version>
     <elasticsearch.version>1.7.1</elasticsearch.version>
     <joda-time.version>2.8.2</joda-time.version>
     <lombok.version>1.16.6</lombok.version>
     <findbugs.version>3.0.1</findbugs.version>
+    <dagger.version>2.0.2</dagger.version>
   </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger-compiler</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
 
   <dependencyManagement>
     <dependencies>
@@ -98,11 +105,6 @@
         <artifactId>heroic-shell</artifactId>
         <version>${project.version}</version>
       </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic</groupId>
-        <artifactId>heroic-coalesce</artifactId>
-        <version>${project.version}</version>
-      </dependency>
 
       <dependency>
         <groupId>com.spotify.heroic.metric</groupId>
@@ -135,6 +137,11 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.spotify.heroic.metadata</groupId>
+        <artifactId>heroic-metadata-memory</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.spotify.heroic.suggest</groupId>
         <artifactId>heroic-suggest-elasticsearch</artifactId>
         <version>${project.version}</version>
@@ -157,11 +164,6 @@
       <dependency>
         <groupId>com.spotify.heroic.consumer</groupId>
         <artifactId>heroic-consumer-collectd</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.spotify.heroic.aggregationcache</groupId>
-        <artifactId>heroic-aggregationcache-cassandra2</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -205,27 +207,12 @@
         <artifactId>tiny-serializer-processor</artifactId>
         <version>${tiny-serializer.version}</version>
       </dependency>
-      <dependency>
-        <groupId>eu.toolchain.microrpc</groupId>
-        <artifactId>microrpc</artifactId>
-        <version>${microrpc.version}</version>
-      </dependency>
 
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
         <version>${lombok.version}</version>
         <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.inject</groupId>
-        <artifactId>guice</artifactId>
-        <version>${guice.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.inject.extensions</groupId>
-        <artifactId>guice-multibindings</artifactId>
-        <version>${guice.version}</version>
       </dependency>
       <dependency>
         <groupId>javax.inject</groupId>
@@ -296,8 +283,20 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>18.0</version>
+        <version>19.0</version>
       </dependency>
+
+      <dependency>
+        <groupId>com.google.dagger</groupId>
+        <artifactId>dagger</artifactId>
+        <version>${dagger.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.dagger</groupId>
+        <artifactId>dagger-compiler</artifactId>
+        <version>${dagger.version}</version>
+      </dependency>
+
       <!-- used by com.spotify.heroic.http
            This provides the core query API.
            We are using these later versions to support AsyncResponse and SSE. -->
@@ -354,6 +353,11 @@
         <version>3.1.0</version>
       </dependency>
       <dependency>
+        <groupId>org.eclipse.jetty.http2</groupId>
+        <artifactId>http2-server</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>javax.ws.rs</groupId>
         <artifactId>javax.ws.rs-api</artifactId>
         <version>2.0.1</version>
@@ -370,17 +374,6 @@
         <version>${netty.version}</version>
       </dependency>
 
-      <!-- dependency injection for jersey -->
-      <dependency>
-        <groupId>org.glassfish.hk2</groupId>
-        <artifactId>core</artifactId>
-        <version>${hk2.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.glassfish.hk2</groupId>
-        <artifactId>guice-bridge</artifactId>
-        <version>${hk2.version}</version>
-      </dependency>
       <!-- JSON implementation for Jersey -->
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -393,36 +386,20 @@
         <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.fasterxml.jackson.jaxrs</groupId>
-        <artifactId>jackson-jaxrs-json-provider</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.jaxrs</groupId>
-        <artifactId>jackson-jaxrs-base</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
         <artifactId>jackson-dataformat-yaml</artifactId>
         <version>${jackson.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.fasterxml.jackson.module</groupId>
-        <artifactId>jackson-module-jaxb-annotations</artifactId>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jdk7</artifactId>
         <version>${jackson.version}</version>
-      </dependency>
+      </dependency> 
       <dependency>
         <groupId>com.fasterxml.jackson.datatype</groupId>
         <artifactId>jackson-datatype-jdk8</artifactId>
         <version>${jackson.version}</version>
       </dependency> 
-      <!-- guice to servlet bridge for Jersey. -->
-      <dependency>
-        <groupId>com.google.inject.extensions</groupId>
-        <artifactId>guice-servlet</artifactId>
-        <version>3.0</version>
-      </dependency>
       <!-- Jersey auto-initializes this for some reason. -->
       <dependency>
         <groupId>org.apache.onami</groupId>

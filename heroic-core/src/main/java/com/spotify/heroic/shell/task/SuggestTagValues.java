@@ -21,16 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
@@ -41,26 +33,30 @@ import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.SuggestManager;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
 
 @TaskUsage("Get a list of value suggestions for a given key")
 @TaskName("suggest-tag-values")
 public class SuggestTagValues implements ShellTask {
-    @Inject
-    private SuggestManager suggest;
+    private final SuggestManager suggest;
+    private final FilterFactory filters;
+    private final QueryParser parser;
 
     @Inject
-    private FilterFactory filters;
-
-    @Inject
-    private QueryParser parser;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public SuggestTagValues(SuggestManager suggest, FilterFactory filters, QueryParser parser) {
+        this.suggest = suggest;
+        this.filters = filters;
+        this.parser = parser;
+    }
 
     @Override
     public TaskParameters params() {
@@ -73,38 +69,48 @@ public class SuggestTagValues implements ShellTask {
 
         final RangeFilter filter = Tasks.setupRangeFilter(filters, parser, params);
 
-        return suggest.useGroup(params.group)
-                .tagValuesSuggest(filter, params.exclude, params.groupLimit)
-                .directTransform(result -> {
-                    int i = 0;
+        return suggest
+            .useGroup(params.group)
+            .tagValuesSuggest(filter, params.exclude, params.groupLimit)
+            .directTransform(result -> {
+                int i = 0;
 
-                    for (final TagValuesSuggest.Suggestion suggestion : result.getSuggestions()) {
-                        io.out().println(String.format("%s: %s", i++, suggestion));
-                    }
+                for (final TagValuesSuggest.Suggestion suggestion : result.getSuggestions()) {
+                    io.out().println(String.format("%s: %s", i++, suggestion));
+                }
 
-                    return null;
-                });
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group;
 
-        @Option(name = "-e", aliases = { "--exclude" }, usage = "Exclude the given tags")
+        @Option(name = "-e", aliases = {"--exclude"}, usage = "Exclude the given tags")
         private List<String> exclude = new ArrayList<>();
 
         @Option(name = "--group-limit", usage = "Maximum cardinality to pull")
         private int groupLimit = 100;
 
-        @Option(name = "--limit", aliases = { "--limit" },
-                usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = {"--limit"},
+            usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+    }
+
+    public static SuggestTagValues setup(final CoreComponent core) {
+        return DaggerSuggestTagValues_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        SuggestTagValues task();
     }
 }

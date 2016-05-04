@@ -21,18 +21,16 @@
 
 package com.spotify.heroic.metric.datastax.schema.legacy;
 
+import com.spotify.heroic.metric.datastax.TypeSerializer;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang3.tuple.Pair;
-
-import com.spotify.heroic.metric.datastax.TypeSerializer;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class MapSerializer<A, B> implements TypeSerializer<Map<A, B>> {

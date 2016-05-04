@@ -34,7 +34,7 @@ public class NoopAggregationCacheBackendReporter implements AggregationCacheBack
     }
 
     private static final NoopAggregationCacheBackendReporter instance =
-            new NoopAggregationCacheBackendReporter();
+        new NoopAggregationCacheBackendReporter();
 
     public static NoopAggregationCacheBackendReporter get() {
         return instance;

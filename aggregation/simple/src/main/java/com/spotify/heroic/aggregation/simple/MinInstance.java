@@ -30,8 +30,9 @@ import com.spotify.heroic.metric.Point;
 
 public class MinInstance extends DistributedBucketInstance<StripedMinBucket> {
     @JsonCreator
-    public MinInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public MinInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 

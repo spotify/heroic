@@ -21,63 +21,88 @@
 
 package com.spotify.heroic.metric.memory;
 
-import java.util.Set;
-
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricModule;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
 import lombok.Data;
+
+import javax.inject.Named;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentSkipListMap;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Data
 public final class MemoryMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "memory";
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
+    private final boolean synchronizedStorage;
 
     @JsonCreator
-    public MemoryMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups) {
+    public MemoryMetricModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("synchronizedStorage") Optional<Boolean> synchronizedStorage
+    ) {
         this.id = id;
-        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.synchronizedStorage = synchronizedStorage.orElse(false);
     }
 
     @Override
-    public PrivateModule module(final Key<MetricBackend> key, final String id) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
-                return reporter.newBackend(id);
+    public Exposed module(PrimaryComponent primary, Depends depends, String id) {
+        return DaggerMemoryMetricModule_C
+            .builder()
+            .primaryComponent(primary)
+            .depends(depends)
+            .m(new M())
+            .build();
+    }
+
+    @MemoryScope
+    @Component(modules = M.class, dependencies = {PrimaryComponent.class, Depends.class})
+    interface C extends Exposed {
+        @Override
+        MemoryBackend backend();
+    }
+
+    @Module
+    class M {
+        @Provides
+        @MemoryScope
+        public Groups groups() {
+            return groups;
+        }
+
+        @Provides
+        @MemoryScope
+        @Named("storage")
+        public Map<MemoryBackend.MemoryKey, NavigableMap<Long, Metric>> metricBackend(
+            final AsyncFramework async
+        ) {
+            if (synchronizedStorage) {
+                return Collections.synchronizedMap(new HashMap<>());
             }
 
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
-            }
-
-            @Override
-            protected void configure() {
-                bind(key).to(MemoryBackend.class).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+            return new ConcurrentSkipListMap<>(MemoryBackend.COMPARATOR);
+        }
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -91,27 +116,27 @@ public final class MemoryMetricModule implements MetricModule {
     }
 
     public static class Builder {
-        private String id;
-        private String group;
-        private Set<String> groups;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<Boolean> synchronizedStorage = empty();
 
         public Builder id(String id) {
-            this.id = id;
+            this.id = of(id);
             return this;
         }
 
-        public Builder group(String group) {
-            this.group = group;
+        public Builder groups(Groups groups) {
+            this.groups = of(groups);
             return this;
         }
 
-        public Builder groups(Set<String> groups) {
-            this.groups = groups;
+        public Builder synchronizedStorage(final boolean synchronizedStorage) {
+            this.synchronizedStorage = of(synchronizedStorage);
             return this;
         }
 
         public MemoryMetricModule build() {
-            return new MemoryMetricModule(id, group, groups);
+            return new MemoryMetricModule(id, groups, synchronizedStorage);
         }
     }
 }

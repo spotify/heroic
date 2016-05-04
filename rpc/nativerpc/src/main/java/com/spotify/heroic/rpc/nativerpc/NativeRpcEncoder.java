@@ -21,25 +21,23 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import org.msgpack.MessagePack;
-import org.msgpack.packer.Packer;
-
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcError;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcHeartBeat;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcRequest;
 import com.spotify.heroic.rpc.nativerpc.message.NativeRpcResponse;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import org.msgpack.MessagePack;
+import org.msgpack.packer.Packer;
 
 public class NativeRpcEncoder extends MessageToByteEncoder<Object> {
     private final MessagePack messagePack = new MessagePack();
 
     @Override
     protected void encode(final ChannelHandlerContext ctx, final Object in, final ByteBuf out)
-            throws Exception {
+        throws Exception {
         try (final ByteBufOutputStream stream = new ByteBufOutputStream(out)) {
             try (final Packer packer = messagePack.createPacker(stream)) {
                 if (in instanceof NativeRpcHeartBeat) {

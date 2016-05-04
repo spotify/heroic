@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Map;
-
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.Metric;
 import com.spotify.heroic.metric.MetricGroup;
 import com.spotify.heroic.metric.Point;
 import com.spotify.heroic.metric.Spread;
+
+import java.util.Map;
 
 public abstract class AbstractAnyBucket implements Bucket {
     @Override

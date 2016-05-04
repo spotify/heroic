@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
-import java.nio.ByteBuffer;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.datastax.MetricsRowKey;
+
+import java.nio.ByteBuffer;
 
 /**
  * Utility functions to manipulate and query backend keys.
@@ -40,8 +40,9 @@ public class BackendKeyUtils {
     private final String table;
     private final SchemaInstance schema;
 
-    public BackendKeyUtils(final String column, final String keyspace, final String table,
-            final SchemaInstance schema) {
+    public BackendKeyUtils(
+        final String column, final String keyspace, final String table, final SchemaInstance schema
+    ) {
         this.column = column;
         this.columnToken = String.format("token(%s)", column);
         this.keyspace = keyspace;
@@ -50,8 +51,8 @@ public class BackendKeyUtils {
     }
 
     public SchemaBoundStatement selectKeys(final BackendKeyFilter filter) throws Exception {
-        final SelectBuilder select = new SelectBuilder().distinct().column(column)
-                .column(columnToken).from(keyspace, table);
+        final SelectBuilder select =
+            new SelectBuilder().distinct().column(column).column(columnToken).from(keyspace, table);
 
         filter.getStart().map(this::convertStart).ifPresent(select::and);
         filter.getEnd().map(this::convertEnd).ifPresent(select::and);
@@ -111,14 +112,14 @@ public class BackendKeyUtils {
     SchemaBoundStatement gt(final BackendKeyFilter.GT clause) throws Exception {
         final BackendKey k = clause.getKey();
         final ByteBuffer buffer =
-                schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
+            schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
         return new SchemaBoundStatement(columnToken + " > token(?)", ImmutableList.of(buffer));
     }
 
     SchemaBoundStatement gte(final BackendKeyFilter.GTE clause) throws Exception {
         final BackendKey k = clause.getKey();
         final ByteBuffer buffer =
-                schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
+            schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
         return new SchemaBoundStatement(columnToken + " >= token(?)", ImmutableList.of(buffer));
     }
 
@@ -134,7 +135,7 @@ public class BackendKeyUtils {
     SchemaBoundStatement lt(final BackendKeyFilter.LT clause) throws Exception {
         final BackendKey k = clause.getKey();
         final ByteBuffer buffer =
-                schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
+            schema.rowKey().serialize(new MetricsRowKey(k.getSeries(), k.getBase()));
         return new SchemaBoundStatement(columnToken + " < token(?)", ImmutableList.of(buffer));
     }
 

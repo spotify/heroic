@@ -21,46 +21,82 @@
 
 package com.spotify.heroic.http;
 
-import com.google.inject.Inject;
+import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
+import com.spotify.heroic.dagger.CoreComponent;
+import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.http.cluster.ClusterResource;
 import com.spotify.heroic.http.metadata.MetadataResource;
-import com.spotify.heroic.http.metadata.MetadataResourceModule;
 import com.spotify.heroic.http.parser.ParserResource;
 import com.spotify.heroic.http.query.QueryResource;
 import com.spotify.heroic.http.render.RenderResource;
 import com.spotify.heroic.http.status.StatusResource;
 import com.spotify.heroic.http.utils.UtilsResource;
 import com.spotify.heroic.http.write.WriteResource;
+import dagger.Component;
+
+import javax.inject.Inject;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
-            @Inject
-            private HeroicConfigurationContext config;
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
+    }
 
-            @Override
-            public void setup() {
-                config.resource(HeroicResource.class);
-                config.resource(WriteResource.class);
-                config.resource(UtilsResource.class);
-                config.resource(StatusResource.class);
-                config.resource(RenderResource.class);
-                config.resource(QueryResource.class);
-                config.resource(MetadataResource.class);
-                config.module(new MetadataResourceModule());
-                config.resource(ClusterResource.class);
-                config.resource(ParserResource.class);
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
 
-                config.resource(ExceptionExceptionMapper.class);
-                config.resource(ErrorMapper.class);
-                config.resource(ParseExceptionMapper.class);
-                config.resource(QueryStateExceptionMapper.class);
-                config.resource(JsonMappingExceptionMapper.class);
-                config.resource(JsonParseExceptionMapper.class);
-            }
-        };
+    @Component(dependencies = CoreComponent.class)
+    public static interface W {
+        HeroicResource heroicResource();
+
+        WriteResource writeResource();
+
+        UtilsResource utilsResource();
+
+        StatusResource statusResource();
+
+        RenderResource renderResource();
+
+        QueryResource queryResource();
+
+        MetadataResource metadataResource();
+
+        ClusterResource clusterResource();
+
+        ParserResource parserResource();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.resources(core -> {
+                final W w = DaggerModule_W.builder().coreComponent(core).build();
+
+                // @formatter:off
+                return ImmutableList.of(
+                    w.heroicResource(),
+                    w.writeResource(),
+                    w.utilsResource(),
+                    w.statusResource(),
+                    w.renderResource(),
+                    w.queryResource(),
+                    w.metadataResource(),
+                    w.clusterResource(),
+                    w.parserResource()
+                );
+                // @formatter:on
+            });
+        }
     }
 }

@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterators;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.aggregation.AggregationFactory;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.Iterator;
+import java.util.Map;
 
 @ValueName("aggregation")
 @Data
@@ -70,9 +69,12 @@ public class AggregationValue implements Value {
     public String toString() {
         final Joiner args = Joiner.on(", ");
         final Iterator<String> a =
-                this.arguments.getList().stream().map(v -> v.toString()).iterator();
-        final Iterator<String> k = keywordArguments.entrySet().stream()
-                .map(e -> e.getKey() + "=" + e.getValue()).iterator();
+            this.arguments.getList().stream().map(v -> v.toString()).iterator();
+        final Iterator<String> k = keywordArguments
+            .entrySet()
+            .stream()
+            .map(e -> e.getKey() + "=" + e.getValue())
+            .iterator();
         return "" + name + "(" + args.join(Iterators.concat(a, k)) + ")";
     }
 

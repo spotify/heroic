@@ -21,13 +21,16 @@
 
 package com.spotify.heroic.async;
 
+import com.spotify.heroic.common.Throwing;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
+import eu.toolchain.async.Transform;
 
 /**
  * XXX: consider replacing with RxJava at some point.
  *
- * @author udoprog
  * @param <T>
+ * @author udoprog
  */
 public interface AsyncObserver<T> {
     AsyncFuture<Void> observe(final T value) throws Exception;
@@ -37,4 +40,65 @@ public interface AsyncObserver<T> {
     void fail(Throwable cause) throws Exception;
 
     void end() throws Exception;
+
+    /**
+     * Bind a given future as an observeable. It can also be considered as converting a future into
+     * an observable.
+     * <p>
+     * The end states of the observable will be passed on to the future.
+     *
+     * @param future
+     * @param transform Transforms each observed action into a future. This is equivalent to the
+     * {@link #observe(Object)} method.
+     * @return An observer bound to the given future.
+     */
+    static <T> AsyncObserver<T> bind(
+        final ResolvableFuture<Void> future, final Transform<T, AsyncFuture<Void>> transform
+    ) {
+        return new AsyncObserver<T>() {
+            @Override
+            public AsyncFuture<Void> observe(T value) throws Exception {
+                return transform.transform(value);
+            }
+
+            @Override
+            public void cancel() throws Exception {
+                future.cancel();
+            }
+
+            @Override
+            public void fail(Throwable cause) throws Exception {
+                future.fail(cause);
+            }
+
+            @Override
+            public void end() throws Exception {
+                future.resolve(null);
+            }
+        };
+    }
+
+    default AsyncObserver<T> onFinished(ObservableFinished finished) {
+        return new AsyncObserver<T>() {
+            @Override
+            public AsyncFuture<Void> observe(T value) throws Exception {
+                return AsyncObserver.this.observe(value);
+            }
+
+            @Override
+            public void cancel() throws Exception {
+                Throwing.call(AsyncObserver.this::cancel, finished::finished);
+            }
+
+            @Override
+            public void fail(Throwable cause) throws Exception {
+                Throwing.call(() -> AsyncObserver.this.fail(cause), finished::finished);
+            }
+
+            @Override
+            public void end() throws Exception {
+                Throwing.call(AsyncObserver.this::end, finished::finished);
+            }
+        };
+    }
 }

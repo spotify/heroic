@@ -25,15 +25,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
-import com.spotify.heroic.aggregationcache.AggregationCacheModule;
-import com.spotify.heroic.aggregationcache.InMemoryAggregationCacheBackendConfig;
+import com.spotify.heroic.ParameterSpecification;
 import com.spotify.heroic.cluster.ClusterManagerModule;
-import com.spotify.heroic.elasticsearch.ManagedConnectionFactory;
+import com.spotify.heroic.elasticsearch.ConnectionModule;
 import com.spotify.heroic.elasticsearch.StandaloneClientSetup;
 import com.spotify.heroic.elasticsearch.index.RotatingIndexMapping;
 import com.spotify.heroic.metadata.MetadataManagerModule;
 import com.spotify.heroic.metadata.MetadataModule;
 import com.spotify.heroic.metadata.elasticsearch.ElasticsearchMetadataModule;
+import com.spotify.heroic.metadata.memory.MemoryMetadataModule;
 import com.spotify.heroic.metric.MetricManagerModule;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.memory.MemoryMetricModule;
@@ -41,11 +41,58 @@ import com.spotify.heroic.suggest.SuggestManagerModule;
 import com.spotify.heroic.suggest.SuggestModule;
 import com.spotify.heroic.suggest.elasticsearch.ElasticsearchSuggestModule;
 
+import java.util.List;
+import java.util.Optional;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
+
 public class MemoryProfile extends HeroicProfileBase {
     @Override
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
+        final HeroicConfig.Builder builder = HeroicConfig.builder();
+
+        final boolean elasticsearch = params.getBoolean("elasticsearch").orElse(false);
+        final boolean synchronizedStorage = params.getBoolean("synchronizedStorage").orElse(false);
+
+        if (!elasticsearch) {
+            builder.metadata(MetadataManagerModule
+                .builder()
+                .backends(ImmutableList.<MetadataModule>of(MemoryMetadataModule
+                    .builder()
+                    .synchronizedStorage(synchronizedStorage)
+                    .build())));
+        }
+
+        if (elasticsearch) {
+            builder.metadata(MetadataManagerModule
+                .builder()
+                .backends(ImmutableList.<MetadataModule>of(ElasticsearchMetadataModule
+                    .builder()
+                    .connection(ConnectionModule
+                        .builder()
+                        .clientSetup(StandaloneClientSetup.builder().build())
+                        .index(
+                            RotatingIndexMapping.builder().pattern("heroic-metadata-v1-%s").build())
+                        .build())
+                    .build())));
+        }
+
+        if (elasticsearch) {
+            builder.suggest(SuggestManagerModule
+                .builder()
+                .backends(ImmutableList.<SuggestModule>of(ElasticsearchSuggestModule
+                    .builder()
+                    .connection(ConnectionModule
+                        .builder()
+                        .clientSetup(StandaloneClientSetup.builder().build())
+                        .index(
+                            RotatingIndexMapping.builder().pattern("heroic-suggest-v1-%s").build())
+                        .build())
+                    .build())));
+        }
+
         // @formatter:off
-        return HeroicConfig.builder()
+        return builder
             .cluster(
                 ClusterManagerModule.builder()
                 .tags(ImmutableMap.of("site", "local"))
@@ -54,58 +101,34 @@ public class MemoryProfile extends HeroicProfileBase {
                 MetricManagerModule.builder()
                     .backends(ImmutableList.<MetricModule>of(
                         MemoryMetricModule.builder()
+                            .synchronizedStorage(synchronizedStorage)
                             .build()
                     ))
-            )
-            .metadata(
-                MetadataManagerModule.builder()
-                    .backends(ImmutableList.<MetadataModule>of(
-                        ElasticsearchMetadataModule.builder()
-                            .connection(
-                                ManagedConnectionFactory.builder()
-                                .clientSetup(
-                                    StandaloneClientSetup.builder().build()
-                                )
-                                .index(
-                                    RotatingIndexMapping.builder()
-                                    .pattern("heroic-metadata-v1-%s")
-                                    .build()
-                                )
-                                .build()
-                            )
-                            .build()
-                    ))
-            )
-            .suggest(
-                SuggestManagerModule.builder()
-                    .backends(ImmutableList.<SuggestModule>of(
-                        ElasticsearchSuggestModule.builder()
-                            .connection(
-                                ManagedConnectionFactory.builder()
-                                .clientSetup(
-                                    StandaloneClientSetup.builder().build()
-                                )
-                                .index(
-                                    RotatingIndexMapping.builder()
-                                    .pattern("heroic-suggest-v1-%s")
-                                    .build()
-                                )
-                                .build()
-                            )
-                            .build()
-                    ))
-            )
-            .cache(
-                AggregationCacheModule.builder()
-                    .backend(InMemoryAggregationCacheBackendConfig.builder().build())
             );
         // @formatter:on
     }
 
     @Override
+    public Optional<String> scope() {
+        return Optional.of("memory");
+    }
+
+    @Override
     public String description() {
         // @formatter:off
-        return "Configures in-memory backends for everything (useful for integration/performance testing)";
+        return "Configures in-memory backends for everything (useful for integration/performance " +
+                "testing)";
+        // @formatter:on
+    }
+
+    @Override
+    public List<ParameterSpecification> options() {
+        // @formatter:off
+        return ImmutableList.of(
+            parameter("elasticsearch", "If set, use real elasticsearch backends"),
+            parameter("synchronized", "If set, synchronized storage for happens-before " +
+                    "behavior")
+        );
         // @formatter:on
     }
 }

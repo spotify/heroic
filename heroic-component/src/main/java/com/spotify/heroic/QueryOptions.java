@@ -21,18 +21,19 @@
 
 package com.spotify.heroic;
 
-import static java.util.Optional.ofNullable;
-
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.metric.QueryTrace;
-
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Optional;
+
+import static java.util.Optional.ofNullable;
+
 @RequiredArgsConstructor
+@EqualsAndHashCode(of = {"tracing", "fetchSize"})
 public class QueryOptions {
     public static final boolean DEFAULT_TRACING = false;
 
@@ -44,7 +45,7 @@ public class QueryOptions {
 
     /**
      * Indicates if tracing is enabled.
-     *
+     * <p>
      * Traces queries will include a {@link QueryTrace} object that indicates detailed timings of
      * the query.
      *
@@ -58,8 +59,10 @@ public class QueryOptions {
     private final Optional<Integer> fetchSize;
 
     @JsonCreator
-    public QueryOptions(@JsonProperty("tracing") Boolean tracing,
-            @JsonProperty("fetchSize") Optional<Integer> fetchSize) {
+    public QueryOptions(
+        @JsonProperty("tracing") Boolean tracing,
+        @JsonProperty("fetchSize") Optional<Integer> fetchSize
+    ) {
         this.tracing = ofNullable(tracing).orElse(DEFAULT_TRACING);
         this.fetchSize = fetchSize;
     }

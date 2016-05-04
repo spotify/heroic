@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import java.nio.ByteBuffer;
-
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.spotify.heroic.common.Series;
+
+import java.nio.ByteBuffer;
 
 class MetricsRowKeySerializer extends AbstractSerializer<MetricsRowKey> {
     public static final MetricsRowKeySerializer instance = new MetricsRowKeySerializer();

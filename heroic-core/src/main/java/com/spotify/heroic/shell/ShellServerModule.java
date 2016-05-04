@@ -21,22 +21,13 @@
 
 package com.spotify.heroic.shell;
 
-import static com.spotify.heroic.common.Optionals.pickOptional;
-import static java.util.Optional.empty;
-import static java.util.Optional.of;
-import static java.util.Optional.ofNullable;
-
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
-
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.Managed;
@@ -48,55 +39,77 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.inject.Named;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+
+import static com.spotify.heroic.common.Optionals.pickOptional;
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
+import static java.util.Optional.ofNullable;
+
 @Slf4j
 @RequiredArgsConstructor
-public class ShellServerModule extends PrivateModule {
+public class ShellServerModule {
     public static final String DEFAULT_HOST = "localhost";
     public static final int DEFAULT_PORT = 9190;
 
     final String host;
     final int port;
 
-    @Provides
-    @Singleton
-    @Named("shell-protocol")
-    SerializerFramework serializer() {
-        return ShellProtocol.setupSerializer();
+    public ShellServerComponent module(PrimaryComponent primary) {
+        return DaggerShellServerModule_C.builder().primaryComponent(primary).m(new M()).build();
     }
 
-    @Provides
-    @Singleton
-    Managed<ShellServerState> state(final AsyncFramework async) {
-        return async.managed(new ManagedSetup<ShellServerState>() {
-            @Override
-            public AsyncFuture<ShellServerState> construct() throws Exception {
-                return async.call(new Callable<ShellServerState>() {
-                    @Override
-                    public ShellServerState call() throws Exception {
-                        log.info("Binding to {}:{}", host, port);
-                        final ServerSocket serverSocket = new ServerSocket();
-                        serverSocket.bind(new InetSocketAddress(host, port));
-                        return new ShellServerState(serverSocket);
-                    }
-                });
-            }
-
-            @Override
-            public AsyncFuture<Void> destruct(final ShellServerState value) throws Exception {
-                return async.call(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        return null;
-                    };
-                });
-            }
-        });
+    @ShellScope
+    @Component(modules = M.class, dependencies = {PrimaryComponent.class})
+    interface C extends ShellServerComponent {
+        @Override
+        @Named("shellServer")
+        LifeCycle shellServerLife();
     }
 
-    @Override
-    protected void configure() {
-        bind(ShellServer.class);
-        expose(ShellServer.class);
+    @Module
+    class M {
+        @Provides
+        @ShellScope
+        @Named("shell-protocol")
+        SerializerFramework serializer() {
+            return ShellProtocol.setupSerializer();
+        }
+
+        @Provides
+        @ShellScope
+        Managed<ShellServerState> state(final AsyncFramework async) {
+            return async.managed(new ManagedSetup<ShellServerState>() {
+                @Override
+                public AsyncFuture<ShellServerState> construct() throws Exception {
+                    return async.call(new Callable<ShellServerState>() {
+                        @Override
+                        public ShellServerState call() throws Exception {
+                            log.info("Binding to {}:{}", host, port);
+                            final ServerSocket serverSocket = new ServerSocket();
+                            serverSocket.bind(new InetSocketAddress(host, port));
+                            return new ShellServerState(serverSocket);
+                        }
+                    });
+                }
+
+                @Override
+                public AsyncFuture<Void> destruct(final ShellServerState value) throws Exception {
+                    return async.resolved();
+                }
+            });
+        }
+
+        @Provides
+        @ShellScope
+        @Named("shellServer")
+        LifeCycle shellServerLife(LifeCycleManager manager, ShellServer shellServer) {
+            return manager.build(shellServer);
+        }
     }
 
     public static Builder builder() {

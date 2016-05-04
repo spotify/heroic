@@ -21,11 +21,10 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.List;
-
 import com.spotify.heroic.common.Statistics;
-
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class AggregationResult {

@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.shell;
 
-import java.util.List;
-
 import com.spotify.heroic.HeroicCoreInstance;
+
+import java.util.List;
 
 public interface ShellTaskDefinition {
     String name();

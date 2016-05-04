@@ -21,47 +21,46 @@
 
 package com.spotify.heroic;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Module;
+import com.spotify.heroic.dagger.CoreComponent;
+import org.eclipse.jetty.util.ConcurrentArrayQueue;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.function.Function;
 
 public class CoreHeroicConfigurationContext implements HeroicConfigurationContext {
+    private final ObjectMapper mapper;
+
+    private final ConcurrentArrayQueue<Function<CoreComponent, List<Object>>> resources =
+        new ConcurrentArrayQueue<>();
+
+    private final Object lock = new Object();
+
     @Inject
-    @Named("application/heroic-config")
-    private ObjectMapper mapper;
-
-    private final List<Class<?>> resources = new ArrayList<>();
-    private final List<Module> modules = new ArrayList<>();
-
-    @Override
-    public void registerType(String name, Class<?> type) {
-        mapper.registerSubtypes(new NamedType(type, name));
+    public CoreHeroicConfigurationContext(
+        @Named("application/heroic-config") final ObjectMapper mapper
+    ) {
+        this.mapper = mapper;
     }
 
     @Override
-    public void resource(Class<?> type) {
+    public void registerType(String name, Class<?> type) {
+        synchronized (lock) {
+            mapper.registerSubtypes(new NamedType(type, name));
+        }
+    }
+
+    @Override
+    public void resources(Function<CoreComponent, List<Object>> type) {
         resources.add(type);
     }
 
     @Override
-    public void module(Module module) {
-        modules.add(module);
-    }
-
-    @Override
-    public List<Class<?>> getResources() {
+    public List<Function<CoreComponent, List<Object>>> getResources() {
         return ImmutableList.copyOf(resources);
-    }
-
-    @Override
-    public List<Module> getModules() {
-        return ImmutableList.copyOf(modules);
     }
 }

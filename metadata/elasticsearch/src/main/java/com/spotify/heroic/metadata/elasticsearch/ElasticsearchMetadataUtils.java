@@ -21,26 +21,28 @@
 
 package com.spotify.heroic.metadata.elasticsearch;
 
+import com.google.common.collect.ImmutableMap;
+import org.elasticsearch.common.xcontent.json.JsonXContent;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-
-import com.google.common.collect.ImmutableMap;
-
 public class ElasticsearchMetadataUtils {
-    public static Map<String, Object> loadJsonResource(String path) throws IOException {
+    public static Map<String, Object> loadJsonResource(String path) {
         final String fullPath =
-                ElasticsearchMetadataModule.class.getPackage().getName() + "/" + path;
+            ElasticsearchMetadataModule.class.getPackage().getName() + "/" + path;
 
-        try (final InputStream input =
-                ElasticsearchMetadataModule.class.getClassLoader().getResourceAsStream(fullPath)) {
+        try (final InputStream input = ElasticsearchMetadataModule.class
+            .getClassLoader()
+            .getResourceAsStream(fullPath)) {
             if (input == null) {
                 return ImmutableMap.of();
             }
 
             return JsonXContent.jsonXContent.createParser(input).map();
+        } catch (final IOException e) {
+            throw new RuntimeException("Failed to load resource: " + path, e);
         }
     }
 }

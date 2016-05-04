@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.rpc.nativerpc.message;
 
-import java.io.IOException;
-
 import org.msgpack.packer.Packer;
 import org.msgpack.unpacker.Unpacker;
+
+import java.io.IOException;
 
 public class NativeRpcHeartBeat {
     public static NativeRpcHeartBeat unpack(final Unpacker unpacker) throws IOException {

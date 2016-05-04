@@ -21,6 +21,7 @@
 
 package com.spotify.heroic.http.status;
 
+import com.spotify.heroic.common.ServiceInfo;
 import lombok.Data;
 
 @Data
@@ -60,6 +61,7 @@ public class StatusResponse {
         private final int offlineNodes;
     }
 
+    private final ServiceInfo service;
     private final boolean ok;
     private final Consumer consumers;
     private final Backend backends;

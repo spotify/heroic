@@ -21,18 +21,27 @@
 
 package com.spotify.heroic.aggregation;
 
-import java.util.Map;
-
 import com.spotify.heroic.grammar.ListValue;
 import com.spotify.heroic.grammar.Value;
 
+import java.util.Map;
+
 /**
  * Factory to dynamically build aggregations.
- *
+ * <p>
  * Used in Query DSL.
  *
  * @author udoprog
  */
 public interface AggregationFactory {
+    /**
+     * Build an aggregation with the given name and arguments.
+     *
+     * @param name The name of the aggregation.
+     * @param args Positional arguments of the aggregation.
+     * @param keywords Keyword arguments of the aggregation.
+     * @return The built aggregation.
+     * @throws MissingAggregation If the given name does not reflect an available aggregation.
+     */
     public Aggregation build(String name, ListValue args, Map<String, Value> keywords);
 }

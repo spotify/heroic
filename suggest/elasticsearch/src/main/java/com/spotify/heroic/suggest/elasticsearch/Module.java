@@ -21,37 +21,50 @@
 
 package com.spotify.heroic.suggest.elasticsearch;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
-import java.util.List;
-
-import javax.inject.Inject;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicModule;
 import com.spotify.heroic.ParameterSpecification;
+import com.spotify.heroic.dagger.LoadingComponent;
+import dagger.Component;
+
+import javax.inject.Inject;
+import java.util.List;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class Module implements HeroicModule {
     @Override
-    public Entry setup() {
-        return new Entry() {
-            @Inject
-            private HeroicConfigurationContext context;
-
-            @Override
-            public void setup() {
-                context.registerType("elasticsearch", ElasticsearchSuggestModule.class);
-            }
-        };
+    public Entry setup(LoadingComponent loading) {
+        return DaggerModule_C.builder().loadingComponent(loading).build().entry();
     }
 
     @Override
     public List<ParameterSpecification> parameters() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("elasticsearch.configure", "Automatically configure the Elasticsearch backend")
+            parameter("elasticsearch.configure", "Automatically configure the Elasticsearch " +
+                    "backend")
         );
         // @formatter:on
+    }
+
+    @Component(dependencies = LoadingComponent.class)
+    interface C {
+        E entry();
+    }
+
+    static class E implements HeroicModule.Entry {
+        private final HeroicConfigurationContext config;
+
+        @Inject
+        public E(HeroicConfigurationContext config) {
+            this.config = config;
+        }
+
+        @Override
+        public void setup() {
+            config.registerType("elasticsearch", ElasticsearchSuggestModule.class);
+        }
     }
 }

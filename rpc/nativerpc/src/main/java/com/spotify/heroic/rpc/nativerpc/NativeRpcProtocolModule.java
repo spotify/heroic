@@ -21,32 +21,39 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import java.net.InetSocketAddress;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.google.inject.name.Named;
-import com.spotify.heroic.HeroicConfiguration;
-import com.spotify.heroic.cluster.RpcProtocol;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.RpcProtocolComponent;
 import com.spotify.heroic.cluster.RpcProtocolModule;
-
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.lifecycle.LifeCycle;
+import com.spotify.heroic.lifecycle.LifeCycleManager;
+import com.spotify.heroic.metadata.MetadataComponent;
+import com.spotify.heroic.metric.MetricComponent;
+import com.spotify.heroic.suggest.SuggestComponent;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
+import eu.toolchain.async.AsyncFramework;
+import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
+
+import javax.inject.Named;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Optional;
 
 @Data
 public class NativeRpcProtocolModule implements RpcProtocolModule {
     private static final String DEFAULT_HOST = "0.0.0.0";
-    private static final int DEFAULT_PORT = 1394;
+    private static final int DEFAULT_PORT = 0;
     private static final int DEFAULT_PARENT_THREADS = 2;
     private static final int DEFAULT_CHILD_THREADS = 100;
     private static final int DEFAULT_MAX_FRAME_SIZE = 10 * 1000000;
@@ -62,68 +69,142 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
     private final NativeEncoding encoding;
 
     @JsonCreator
-    public NativeRpcProtocolModule(@JsonProperty("host") String host,
-            @JsonProperty("port") Integer port,
-            @JsonProperty("parentThreads") Integer parentThreads,
-            @JsonProperty("childThreads") Integer childThreads,
-            @JsonProperty("maxFrameSize") Integer maxFrameSize,
-            @JsonProperty("heartbeatInterval") Long heartbeatInterval,
-            @JsonProperty("sendTimeout") Long sendTimeout,
-            @JsonProperty("encoding") Optional<NativeEncoding> encoding) {
+    public NativeRpcProtocolModule(
+        @JsonProperty("host") String host, @JsonProperty("port") Integer port,
+        @JsonProperty("parentThreads") Integer parentThreads,
+        @JsonProperty("childThreads") Integer childThreads,
+        @JsonProperty("maxFrameSize") Integer maxFrameSize,
+        @JsonProperty("heartbeatInterval") Long heartbeatInterval,
+        @JsonProperty("sendTimeout") Long sendTimeout,
+        @JsonProperty("encoding") Optional<NativeEncoding> encoding
+    ) {
         this.address = new InetSocketAddress(Optional.ofNullable(host).orElse(DEFAULT_HOST),
-                Optional.ofNullable(port).orElse(DEFAULT_PORT));
+            Optional.ofNullable(port).orElse(DEFAULT_PORT));
         this.parentThreads = Optional.ofNullable(parentThreads).orElse(DEFAULT_PARENT_THREADS);
         this.childThreads = Optional.ofNullable(childThreads).orElse(DEFAULT_CHILD_THREADS);
         this.maxFrameSize = Optional.ofNullable(maxFrameSize).orElse(DEFAULT_MAX_FRAME_SIZE);
         this.heartbeatInterval =
-                Optional.ofNullable(heartbeatInterval).orElse(DEFAULT_HEARTBEAT_INTERVAL);
+            Optional.ofNullable(heartbeatInterval).orElse(DEFAULT_HEARTBEAT_INTERVAL);
         this.sendTimeout = Optional.ofNullable(sendTimeout).orElse(DEFAULT_SEND_TIMEOUT);
         this.encoding = encoding.orElse(NativeEncoding.GZIP);
     }
 
     @Override
-    public Module module(final Key<RpcProtocol> key, final HeroicConfiguration options) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            @Named("boss")
-            public EventLoopGroup bossGroup() {
-                return new NioEventLoopGroup(parentThreads);
-            }
+    public RpcProtocolComponent module(
+        PrimaryComponent primary, MetricComponent metric, MetadataComponent metadata,
+        SuggestComponent suggest, NodeMetadata nodeMetadata
+    ) {
+        final C c = DaggerNativeRpcProtocolModule_C
+            .builder()
+            .primaryComponent(primary)
+            .metricComponent(metric)
+            .metadataComponent(metadata)
+            .suggestComponent(suggest)
+            .m(new M(nodeMetadata))
+            .build();
 
-            @Provides
-            @Singleton
-            @Named("worker")
-            public EventLoopGroup workerGroup() {
-                return new NioEventLoopGroup(childThreads);
-            }
+        return c;
+    }
 
-            @Provides
-            @Singleton
-            public Timer timer() {
-                return new HashedWheelTimer(
-                        new ThreadFactoryBuilder().setNameFormat("nativerpc-timer-%d").build());
-            }
+    @NativeRpcScope
+    @Component(modules = M.class,
+        dependencies = {
+            PrimaryComponent.class, SuggestComponent.class, MetricComponent.class,
+            MetadataComponent.class
+        })
+    interface C extends RpcProtocolComponent {
+        @Override
+        NativeRpcProtocol rpcProtocol();
 
-            @Provides
-            @Singleton
-            public NativeEncoding encoding() {
-                return encoding;
-            }
+        @Override
+        LifeCycle life();
+    }
 
-            @Override
-            protected void configure() {
-                bind(key).toInstance(new NativeRpcProtocol(DEFAULT_PORT, maxFrameSize, sendTimeout,
-                        heartbeatInterval));
+    @RequiredArgsConstructor
+    @Module
+    class M {
+        private final NodeMetadata nodeMetadata;
 
-                if (!options.isDisableLocal()) {
-                    bind(NativeRpcProtocolServer.class)
-                            .toInstance(new NativeRpcProtocolServer(address, maxFrameSize));
-                }
+        @Provides
+        @NativeRpcScope
+        NodeMetadata nodeMetadata() {
+            return nodeMetadata;
+        }
 
-                expose(key);
-            }
-        };
+        @Provides
+        @NativeRpcScope
+        @Named("bindFuture")
+        public ResolvableFuture<InetSocketAddress> bindFuture(final AsyncFramework async) {
+            return async.future();
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("boss")
+        public EventLoopGroup bossGroup() {
+            return new NioEventLoopGroup(parentThreads);
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("worker")
+        public EventLoopGroup workerGroup() {
+            return new NioEventLoopGroup(childThreads);
+        }
+
+        @Provides
+        @NativeRpcScope
+        public Timer timer() {
+            return new HashedWheelTimer(
+                new ThreadFactoryBuilder().setNameFormat("nativerpc-timer-%d").build());
+        }
+
+        @Provides
+        @NativeRpcScope
+        public NativeEncoding encoding() {
+            return encoding;
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("bindAddress")
+        SocketAddress bindAddress() {
+            return address;
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("defaultPort")
+        int defaultPort() {
+            return DEFAULT_PORT;
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("maxFrameSize")
+        int maxFrameSize() {
+            return maxFrameSize;
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("sendTimeout")
+        long sendTimeout() {
+            return sendTimeout;
+        }
+
+        @Provides
+        @NativeRpcScope
+        @Named("heartbeatReadInterval")
+        long heartbeatReadInterval() {
+            return heartbeatInterval;
+        }
+
+        @Provides
+        @NativeRpcScope
+        LifeCycle server(LifeCycleManager manager, NativeRpcProtocolServer server) {
+            return manager.build(server);
+        }
     }
 
     @Override
@@ -187,7 +268,7 @@ public class NativeRpcProtocolModule implements RpcProtocolModule {
 
         public NativeRpcProtocolModule build() {
             return new NativeRpcProtocolModule(host, port, parentThreads, childThreads,
-                    maxFrameSize, sendTimeout, heartbeatInterval, Optional.of(encoding));
+                maxFrameSize, sendTimeout, heartbeatInterval, Optional.of(encoding));
         }
     }
 }

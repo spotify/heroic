@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Comparator;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.Comparator;
 
 @Data
 @EqualsAndHashCode

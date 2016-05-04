@@ -21,11 +21,6 @@
 
 package com.spotify.heroic.metric.astyanax;
 
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.TreeMap;
-
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.MapSerializer;
@@ -33,10 +28,15 @@ import com.spotify.heroic.common.Series;
 import com.spotify.heroic.ext.marshal.SafeUTF8Type;
 import com.spotify.heroic.ext.serializers.SafeStringSerializer;
 
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.TreeMap;
+
 class SeriesSerializer extends AbstractSerializer<Series> {
     private static final SafeStringSerializer keySerializer = SafeStringSerializer.get();
     private static final MapSerializer<String, String> tagsSerializer =
-            new MapSerializer<String, String>(SafeUTF8Type.INSTANCE, SafeUTF8Type.INSTANCE);
+        new MapSerializer<String, String>(SafeUTF8Type.INSTANCE, SafeUTF8Type.INSTANCE);
 
     private static final SeriesSerializer instance = new SeriesSerializer();
 

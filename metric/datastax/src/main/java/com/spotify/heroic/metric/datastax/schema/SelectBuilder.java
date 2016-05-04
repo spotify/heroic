@@ -21,12 +21,12 @@
 
 package com.spotify.heroic.metric.datastax.schema;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 
 /**
  * Rage re-inventing QueryBuilder since I can't get it to do what I need.
@@ -70,8 +70,8 @@ public class SelectBuilder {
 
         if (!and.isEmpty()) {
             builder.append(" WHERE ");
-            builder.append(AND_JOINER
-                    .join(and.stream().map(SchemaBoundStatement::getStatement).iterator()));
+            builder.append(
+                AND_JOINER.join(and.stream().map(SchemaBoundStatement::getStatement).iterator()));
             and.stream().map(SchemaBoundStatement::getBindings).forEach(bindings::addAll);
         }
 

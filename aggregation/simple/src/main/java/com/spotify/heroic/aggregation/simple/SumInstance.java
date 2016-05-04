@@ -30,8 +30,9 @@ import com.spotify.heroic.metric.Point;
 
 public class SumInstance extends DistributedBucketInstance<StripedSumBucket> {
     @JsonCreator
-    public SumInstance(@JsonProperty("size") final long size,
-            @JsonProperty("extent") final long extent) {
+    public SumInstance(
+        @JsonProperty("size") final long size, @JsonProperty("extent") final long extent
+    ) {
         super(size, extent, ImmutableSet.of(MetricType.POINT, MetricType.SPREAD), MetricType.POINT);
     }
 

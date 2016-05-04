@@ -21,27 +21,25 @@
 
 package com.spotify.heroic;
 
+import com.spotify.heroic.HeroicCore.Builder;
+import com.spotify.heroic.reflection.ResourceException;
+import com.spotify.heroic.reflection.ResourceFileLoader;
+import com.spotify.heroic.reflection.ResourceInstance;
+import eu.toolchain.async.Transform;
+import lombok.Data;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-
-import com.spotify.heroic.HeroicCore.Builder;
-import com.spotify.heroic.reflection.ResourceException;
-import com.spotify.heroic.reflection.ResourceFileLoader;
-import com.spotify.heroic.reflection.ResourceInstance;
-
-import eu.toolchain.async.Transform;
-import lombok.Data;
-import lombok.ToString;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class HeroicService {
@@ -50,7 +48,7 @@ public class HeroicService {
     }
 
     public static final String CONFIGURATION_RESOURCE =
-            "com.spotify.heroic.HeroicService.Configuration";
+        "com.spotify.heroic.HeroicService.Configuration";
 
     /**
      * Default configuration path.
@@ -62,7 +60,7 @@ public class HeroicService {
     }
 
     public static void main(final String[] args, final Configuration configuration)
-            throws Exception {
+        throws Exception {
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread t, Throwable e) {
@@ -92,39 +90,45 @@ public class HeroicService {
             throw e;
         }
 
+        final HeroicCore core = builder.build();
+
         final HeroicCoreInstance instance;
 
         try {
-            instance = builder.build().start();
+            instance = core.newInstance();
         } catch (final Exception e) {
-            log.error("Failed to start heroic", e);
+            log.error("Failed to create Heroic instance", e);
             System.exit(1);
             return;
         }
 
-        final Thread shutdown = new Thread() {
-            @Override
-            public void run() {
-                instance.shutdown();
-            }
-        };
+        try {
+            instance.start().get();
+        } catch (final Exception e) {
+            log.error("Failed to start Heroic instance", e);
+            System.exit(1);
+            return;
+        }
 
+        final Thread shutdown = new Thread(instance::shutdown);
         shutdown.setName("heroic-shutdown-hook");
 
         /* setup shutdown hook */
         Runtime.getRuntime().addShutdownHook(shutdown);
 
         /* block until core stops */
-        instance.join();
+        instance.join().get();
+
+        log.info("Shutting down, bye bye!");
         System.exit(0);
     }
 
     private static void loadResourceConfigurations(final Builder builder, final Parameters params)
-            throws ResourceException {
+        throws ResourceException {
         final ClassLoader loader = Configuration.class.getClassLoader();
 
-        final List<ResourceInstance<Configuration>> configs = ResourceFileLoader
-                .loadInstances(CONFIGURATION_RESOURCE, loader, Configuration.class);
+        final List<ResourceInstance<Configuration>> configs =
+            ResourceFileLoader.loadInstances(CONFIGURATION_RESOURCE, loader, Configuration.class);
 
         for (final ResourceInstance<Configuration> config : configs) {
             config.invoke(new Transform<Configuration, Void>() {
@@ -137,8 +141,9 @@ public class HeroicService {
         }
     }
 
-    private static void configureBuilder(final HeroicCore.Builder builder,
-            final Parameters params) {
+    private static void configureBuilder(
+        final HeroicCore.Builder builder, final Parameters params
+    ) {
         final Path config = getConfigPath(params.extra);
 
         // setup as a service accepting http requests.
@@ -149,6 +154,10 @@ public class HeroicService {
 
         if (config != null) {
             builder.configPath(config);
+        }
+
+        if (params.id != null) {
+            builder.id(params.id);
         }
 
         if (params.port != null) {
@@ -225,7 +234,9 @@ public class HeroicService {
     @Data
     public static class Parameters {
         @Option(name = "-P", aliases = {"--profile"},
-                usage = "Activate a pre-defined profile instead of a configuration file. Profiles are pre-defined configurations, useful for messing around with the system.")
+                usage = "Activate a pre-defined profile instead of a configuration file. Profiles" +
+                        " are pre-defined configurations, useful for messing around with the " +
+                        "system.")
         private List<String> profiles = new ArrayList<>();
 
         @Option(name = "--port", usage = "Port number to bind to")
@@ -241,7 +252,8 @@ public class HeroicService {
         private boolean help;
 
         @Option(name = "--startup-ping",
-                usage = "Send a JSON frame to the given URI containing information about this host after it has started.")
+                usage = "Send a JSON frame to the given URI containing information about this " +
+                        "host after it has started.")
         private String startupPing;
 
         @Option(name = "--startup-id", usage = "Explicit id of a specific startup instance.")

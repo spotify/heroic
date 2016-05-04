@@ -21,11 +21,11 @@
 
 package com.spotify.heroic.ext.marshal;
 
-import java.nio.ByteBuffer;
-
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.MarshalException;
 import org.apache.cassandra.db.marshal.UTF8Type;
+
+import java.nio.ByteBuffer;
 
 /**
  * An extension to the {@link UTF8Type} to allow for null and empty values.

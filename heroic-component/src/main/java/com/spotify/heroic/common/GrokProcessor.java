@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.common;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-
 import oi.thekraken.grok.api.Grok;
 import oi.thekraken.grok.api.Match;
+
+import java.util.Map;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class GrokProcessor {
     private final Grok instance;
@@ -46,8 +45,10 @@ public class GrokProcessor {
     // @formatter:on
 
     @JsonCreator
-    public GrokProcessor(@JsonProperty("patterns") Map<String, String> patterns,
-            @JsonProperty("pattern") String pattern) {
+    public GrokProcessor(
+        @JsonProperty("patterns") Map<String, String> patterns,
+        @JsonProperty("pattern") String pattern
+    ) {
         checkNotNull(patterns, "patterns");
         checkNotNull(pattern, "pattern");
 

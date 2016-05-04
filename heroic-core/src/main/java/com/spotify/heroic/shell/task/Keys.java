@@ -21,18 +21,12 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.async.AsyncObservable;
 import com.spotify.heroic.async.AsyncObserver;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.metric.BackendKey;
 import com.spotify.heroic.metric.BackendKeyFilter;
 import com.spotify.heroic.metric.BackendKeySet;
@@ -44,26 +38,35 @@ import com.spotify.heroic.shell.TaskName;
 import com.spotify.heroic.shell.TaskParameters;
 import com.spotify.heroic.shell.TaskUsage;
 import com.spotify.heroic.shell.Tasks;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import eu.toolchain.async.ResolvableFuture;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @TaskUsage("List available metric keys for all backends")
 @TaskName("keys")
 @Slf4j
 public class Keys implements ShellTask {
-    @Inject
-    private AsyncFramework async;
+    private final AsyncFramework async;
+    private final MetricManager metrics;
+    private final ObjectMapper mapper;
 
     @Inject
-    private MetricManager metrics;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public Keys(
+        AsyncFramework async, MetricManager metrics, @Named("application/json") ObjectMapper mapper
+    ) {
+        this.async = async;
+        this.metrics = metrics;
+        this.mapper = mapper;
+    }
 
     @Override
     public TaskParameters params() {
@@ -136,15 +139,15 @@ public class Keys implements ShellTask {
     @ToString
     private static class Parameters extends Tasks.KeyspaceBase {
         @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
-                metaVar = "<group>")
+            metaVar = "<group>")
         private String group = null;
 
         @Option(name = "--tracing",
-                usage = "Trace the queries for more debugging when things go wrong")
+            usage = "Trace the queries for more debugging when things go wrong")
         private boolean tracing = false;
 
         @Option(name = "--keys-paged",
-                usage = "Use the high-level paging mechanism when streaming keys")
+            usage = "Use the high-level paging mechanism when streaming keys")
         private boolean keysPaged = false;
 
         @Option(name = "--keys-page-size", usage = "Use the given page-size when paging keys")
@@ -157,5 +160,14 @@ public class Keys implements ShellTask {
         public List<String> getQuery() {
             return ImmutableList.of();
         }
+    }
+
+    public static Keys setup(final CoreComponent core) {
+        return DaggerKeys_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        Keys task();
     }
 }

@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.grammar;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.google.common.base.Joiner;
 import com.spotify.heroic.Query;
 import com.spotify.heroic.aggregation.Aggregation;
 import com.spotify.heroic.filter.Filter;
+
+import java.util.List;
+import java.util.Optional;
 
 public interface QueryParser {
     /**
@@ -58,13 +58,15 @@ public interface QueryParser {
 
     String stringifyQuery(Query query);
 
+    String stringifyQuery(Query query, Optional<Integer> indent);
+
     static String escapeList(List<String> input) {
         if (input.size() == 1) {
             return escapeString(input.iterator().next());
         }
 
-        return "[" + Joiner.on(", ").join(input.stream().map(QueryParser::escapeString).iterator())
-                + "]";
+        return "[" +
+            Joiner.on(", ").join(input.stream().map(QueryParser::escapeString).iterator()) + "]";
     }
 
     static String escapeString(String input) {
@@ -75,8 +77,8 @@ public interface QueryParser {
         for (int i = 0; i < input.length(); i++) {
             final char c = input.charAt(i);
 
-            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') || c == '-'
-                    || c == ':' || c == '/') {
+            if (Character.isDigit(c) || ('a' <= c && c <= 'z') || ('A' < c && c <= 'Z') ||
+                c == '-' || c == ':' || c == '/') {
                 builder.append(c);
                 continue;
             }
@@ -84,33 +86,33 @@ public interface QueryParser {
             quoted = true;
 
             switch (c) {
-            case '\b':
-                builder.append("\\b");
-                break;
-            case '\t':
-                builder.append("\\t");
-                break;
-            case '\n':
-                builder.append("\\n");
-                break;
-            case '\f':
-                builder.append("\\f");
-                break;
-            case '\r':
-                builder.append("\\r");
-                break;
-            case '"':
-                builder.append("\\\"");
-                break;
-            case '\\':
-                builder.append("\\\\");
-                break;
-            case '\'':
-                builder.append("\\'");
-                break;
-            default:
-                builder.append(c);
-                break;
+                case '\b':
+                    builder.append("\\b");
+                    break;
+                case '\t':
+                    builder.append("\\t");
+                    break;
+                case '\n':
+                    builder.append("\\n");
+                    break;
+                case '\f':
+                    builder.append("\\f");
+                    break;
+                case '\r':
+                    builder.append("\\r");
+                    break;
+                case '"':
+                    builder.append("\\\"");
+                    break;
+                case '\\':
+                    builder.append("\\\\");
+                    break;
+                case '\'':
+                    builder.append("\\'");
+                    break;
+                default:
+                    builder.append(c);
+                    break;
             }
         }
 

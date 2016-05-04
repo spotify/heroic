@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.Map;
-
 import lombok.Data;
+
+import java.util.Map;
 
 @Data
 public class ShardLatency {

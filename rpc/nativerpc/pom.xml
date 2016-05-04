@@ -23,11 +23,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.fasterxml.jackson.jaxrs</groupId>
-      <artifactId>jackson-jaxrs-json-provider</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>com.spotify.heroic</groupId>
       <artifactId>heroic-component</artifactId>
     </dependency>

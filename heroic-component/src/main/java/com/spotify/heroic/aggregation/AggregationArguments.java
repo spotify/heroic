@@ -21,16 +21,16 @@
 
 package com.spotify.heroic.aggregation;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.grammar.Value;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.grammar.Value;
 
 /**
  * Utility class to contain a set of arguments and keywords in order to match the to aggregation
@@ -40,8 +40,9 @@ public class AggregationArguments {
     private final LinkedList<Value> args;
     private final Map<String, Value> kw;
 
-    public AggregationArguments(final List<? extends Value> args,
-            final Map<String, ? extends Value> kw) {
+    public AggregationArguments(
+        final List<? extends Value> args, final Map<String, ? extends Value> kw
+    ) {
         this.args = new LinkedList<>(args);
         this.kw = new HashMap<>(kw);
     }
@@ -51,7 +52,7 @@ public class AggregationArguments {
      */
     public <T> List<T> takeArguments(final Class<T> expected) {
         final List<T> result =
-                ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
+            ImmutableList.copyOf(args.stream().map(v -> v.cast(expected)).iterator());
         args.clear();
         return result;
     }
@@ -82,8 +83,8 @@ public class AggregationArguments {
             final Joiner on = Joiner.on(" and ");
 
             if (!args.isEmpty()) {
-                parts.add(args.size() == 1 ? "argument " + args.iterator().next()
-                        : "arguments " + args);
+                parts.add(
+                    args.size() == 1 ? "argument " + args.iterator().next() : "arguments " + args);
             }
 
             if (!kw.isEmpty()) {

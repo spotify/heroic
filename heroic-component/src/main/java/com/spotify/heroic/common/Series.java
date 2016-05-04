@@ -21,7 +21,16 @@
 
 package com.spotify.heroic.common;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
+import eu.toolchain.serializer.AutoSerialize;
+import lombok.ToString;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -29,21 +38,12 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableSortedMap;
-
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
-import eu.toolchain.serializer.AutoSerialize;
-import lombok.ToString;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @AutoSerialize
-@ToString(of = { "key", "tags" })
+@ToString(of = {"key", "tags"})
 public class Series implements Comparable<Series> {
-    static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String> of();
+    static final SortedMap<String, String> EMPTY_TAGS = ImmutableSortedMap.<String, String>of();
     static final String EMPTY_STRING = "";
 
     final String key;
@@ -73,6 +73,11 @@ public class Series implements Comparable<Series> {
         return tags;
     }
 
+    @JsonIgnore
+    public HashCode getHashCode() {
+        return hashCode;
+    }
+
     private HashCode generateHash() {
         final Hasher hasher = Hashing.murmur3_128().newHasher();
 
@@ -95,7 +100,6 @@ public class Series implements Comparable<Series> {
 
         return hasher.hash();
     }
-
 
     public String hash() {
         return hashCode.toString();

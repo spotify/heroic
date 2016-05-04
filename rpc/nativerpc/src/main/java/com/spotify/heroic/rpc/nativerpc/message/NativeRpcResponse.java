@@ -21,12 +21,11 @@
 
 package com.spotify.heroic.rpc.nativerpc.message;
 
-import java.io.IOException;
-
+import lombok.Data;
 import org.msgpack.packer.Packer;
 import org.msgpack.unpacker.Unpacker;
 
-import lombok.Data;
+import java.io.IOException;
 
 @Data
 public class NativeRpcResponse {

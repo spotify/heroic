@@ -1,0 +1,41 @@
+cluster:
+  tags:
+    role: test
+  protocols:
+    - type: nativerpc
+
+metadata:
+  backends:
+    - type: memory
+    - type: elasticsearch
+      backendType: v1
+    - type: elasticsearch
+      backendType: kv
+
+suggest:
+  backends:
+    - type: elasticsearch
+      backendType: v1
+    - type: elasticsearch
+      backendType: kv
+
+metrics:
+  backends:
+    - type: bigtable
+      project: project
+      zone: zone
+    - type: datastax
+    - type: astyanax
+    - type: generated
+    - type: memory
+
+analytics:
+  type: bigtable
+  project: project
+  zone: zone
+
+generator:
+  metadata:
+    type: random
+  metrics:
+    - type: sine

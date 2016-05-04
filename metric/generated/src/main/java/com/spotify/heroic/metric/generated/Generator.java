@@ -21,13 +21,13 @@
 
 package com.spotify.heroic.metric.generated;
 
-import java.util.List;
-
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.metric.Event;
 import com.spotify.heroic.metric.FetchQuotaWatcher;
 import com.spotify.heroic.metric.Point;
+
+import java.util.List;
 
 public interface Generator {
     List<Point> generatePoints(Series series, DateRange range, FetchQuotaWatcher watcher);

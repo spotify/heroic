@@ -22,7 +22,6 @@
 package com.spotify.heroic.grammar;
 
 import com.google.common.collect.ImmutableMap;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -41,13 +40,13 @@ public final class StringValue implements Value {
     @Override
     public Value sub(Value other) {
         throw new IllegalArgumentException(
-                String.format("subtraction with string is not supported (%s - %s)", this.getClass(),
-                        other.getClass()));
+            String.format("subtraction with string is not supported (%s - %s)", this.getClass(),
+                other.getClass()));
     }
 
     @Override
     public Value add(Value other) {
-        final StringValue o =  other.cast(this);
+        final StringValue o = other.cast(this);
         return new StringValue(string + o.string, c.join(o.c));
     }
 

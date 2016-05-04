@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.spotify.heroic.grammar.AggregationValue;
-
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

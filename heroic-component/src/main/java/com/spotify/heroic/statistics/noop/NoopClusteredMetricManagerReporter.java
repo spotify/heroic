@@ -45,7 +45,7 @@ public class NoopClusteredMetricManagerReporter implements ClusteredMetricManage
     }
 
     private static final NoopClusteredMetricManagerReporter instance =
-            new NoopClusteredMetricManagerReporter();
+        new NoopClusteredMetricManagerReporter();
 
     public static NoopClusteredMetricManagerReporter get() {
         return instance;

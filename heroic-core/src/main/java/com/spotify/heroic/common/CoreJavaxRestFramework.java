@@ -21,23 +21,22 @@
 
 package com.spotify.heroic.common;
 
+import com.spotify.heroic.ws.InternalErrorMessage;
+import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.FutureDone;
+import lombok.extern.slf4j.Slf4j;
+
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.CompletionCallback;
 import javax.ws.rs.container.ConnectionCallback;
 import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.Response;
 
-import com.spotify.heroic.http.InternalErrorMessage;
-
-import eu.toolchain.async.AsyncFuture;
-import eu.toolchain.async.FutureDone;
-import lombok.extern.slf4j.Slf4j;
-
 @Slf4j
 public final class CoreJavaxRestFramework implements JavaxRestFramework {
     @Override
     public <T> void bind(final AsyncResponse response, final AsyncFuture<T> callback) {
-        this.<T, T> bind(response, callback, this.<T> passthrough());
+        this.<T, T>bind(response, callback, this.<T>passthrough());
     }
 
     /**
@@ -48,16 +47,18 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
      * @param resume The resume implementation.
      */
     @Override
-    public <T, R> void bind(final AsyncResponse response, final AsyncFuture<T> callback,
-            final Resume<T, R> resume) {
+    public <T, R> void bind(
+        final AsyncResponse response, final AsyncFuture<T> callback, final Resume<T, R> resume
+    ) {
         callback.onDone(new FutureDone<T>() {
             @Override
             public void failed(Throwable e) throws Exception {
                 log.error("Request failed", e);
-                response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(new InternalErrorMessage(e.getMessage(),
-                                Response.Status.INTERNAL_SERVER_ERROR))
-                        .build());
+                response.resume(Response
+                    .status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new InternalErrorMessage(e.getMessage(),
+                        Response.Status.INTERNAL_SERVER_ERROR))
+                    .build());
             }
 
             @Override
@@ -67,16 +68,17 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
                 }
 
                 response.resume(
-                        Response.status(Response.Status.OK).entity(resume.resume(result)).build());
+                    Response.status(Response.Status.OK).entity(resume.resume(result)).build());
             }
 
             @Override
             public void cancelled() throws Exception {
                 log.error("Request cancelled");
-                response.resume(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity(new InternalErrorMessage("request cancelled",
-                                Response.Status.INTERNAL_SERVER_ERROR))
-                        .build());
+                response.resume(Response
+                    .status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new InternalErrorMessage("request cancelled",
+                        Response.Status.INTERNAL_SERVER_ERROR))
+                    .build());
             }
         });
 
@@ -110,12 +112,12 @@ public final class CoreJavaxRestFramework implements JavaxRestFramework {
     }
 
     static final Resume<? extends Object, ? extends Object> PASSTHROUGH =
-            new Resume<Object, Object>() {
-                @Override
-                public Object resume(Object value) throws Exception {
-                    return value;
-                }
-            };
+        new Resume<Object, Object>() {
+            @Override
+            public Object resume(Object value) throws Exception {
+                return value;
+            }
+        };
 
     @Override
     @SuppressWarnings("unchecked")

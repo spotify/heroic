@@ -21,17 +21,15 @@
 
 package com.spotify.heroic.elasticsearch.index;
 
-import lombok.ToString;
-
-import org.elasticsearch.action.count.CountRequestBuilder;
-import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.client.Client;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.spotify.heroic.common.DateRange;
+import lombok.ToString;
+import org.elasticsearch.action.count.CountRequestBuilder;
+import org.elasticsearch.action.deletebyquery.DeleteByQueryRequestBuilder;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.client.Client;
 
 @ToString
 public class SingleIndexMapping implements IndexMapping {
@@ -43,7 +41,7 @@ public class SingleIndexMapping implements IndexMapping {
     @JsonCreator
     public SingleIndexMapping(@JsonProperty("index") String index) {
         this.index = Optional.fromNullable(index).or(DEFAULT_INDEX);
-        this.indices = new String[] {index};
+        this.indices = new String[]{index};
     }
 
     public static SingleIndexMapping createDefault() {
@@ -76,8 +74,9 @@ public class SingleIndexMapping implements IndexMapping {
     }
 
     @Override
-    public DeleteByQueryRequestBuilder deleteByQuery(final Client client, DateRange range,
-            final String type) {
+    public DeleteByQueryRequestBuilder deleteByQuery(
+        final Client client, DateRange range, final String type
+    ) {
         return client.prepareDeleteByQuery(index).setTypes(type);
     }
 

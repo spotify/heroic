@@ -51,6 +51,10 @@
       <groupId>com.spotify.heroic.metadata</groupId>
       <artifactId>heroic-metadata-elasticsearch</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.spotify.heroic.metadata</groupId>
+      <artifactId>heroic-metadata-memory</artifactId>
+    </dependency>
 
     <!-- suggest backends -->
     <dependency>
@@ -79,12 +83,6 @@
     <dependency>
       <groupId>com.spotify.heroic.consumer</groupId>
       <artifactId>heroic-consumer-collectd</artifactId>
-    </dependency>
-
-    <!-- aggregation caching -->
-    <dependency>
-      <groupId>com.spotify.heroic.aggregationcache</groupId>
-      <artifactId>heroic-aggregationcache-cassandra2</artifactId>
     </dependency>
 
     <!-- rpc implementations -->

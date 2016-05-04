@@ -21,10 +21,10 @@
 
 package com.spotify.heroic.consumer.kafka;
 
-import java.util.List;
-
 import kafka.javaapi.consumer.ConsumerConnector;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class Connection {

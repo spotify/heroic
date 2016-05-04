@@ -21,12 +21,13 @@
 
 package com.spotify.heroic;
 
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.dagger.LoadingComponent;
+
 import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-
 public interface HeroicModule {
-    Entry setup();
+    Entry setup(LoadingComponent loading);
 
     interface Entry {
         public void setup();

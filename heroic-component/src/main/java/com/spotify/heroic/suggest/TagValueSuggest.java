@@ -21,13 +21,6 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import lombok.Data;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -37,9 +30,15 @@ import com.spotify.heroic.cluster.NodeMetadata;
 import com.spotify.heroic.cluster.NodeRegistryEntry;
 import com.spotify.heroic.metric.NodeError;
 import com.spotify.heroic.metric.RequestError;
-
 import eu.toolchain.async.Collector;
 import eu.toolchain.async.Transform;
+import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 @Data
 public class TagValueSuggest {
@@ -51,8 +50,10 @@ public class TagValueSuggest {
     private final boolean limited;
 
     @JsonCreator
-    public TagValueSuggest(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("values") List<String> values, @JsonProperty("limited") Boolean limited) {
+    public TagValueSuggest(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("values") List<String> values, @JsonProperty("limited") Boolean limited
+    ) {
         this.errors = Optional.fromNullable(errors).or(EMPTY_ERRORS);
         this.values = Optional.fromNullable(values).or(EMPTY_VALUES);
         this.limited = Optional.fromNullable(limited).or(false);
@@ -67,7 +68,7 @@ public class TagValueSuggest {
             @Override
             public TagValueSuggest collect(Collection<TagValueSuggest> groups) throws Exception {
                 final List<RequestError> errors = new ArrayList<>();
-                final List<String> values = new ArrayList<>();
+                final SortedSet<String> values = new TreeSet<>();
 
                 boolean limited = false;
 
@@ -77,36 +78,37 @@ public class TagValueSuggest {
                     limited = limited || g.limited;
                 }
 
-                Collections.sort(values);
                 limited = limited || values.size() >= limit;
                 return new TagValueSuggest(errors,
-                        values.subList(0, Math.min(values.size(), limit)), limited);
+                    ImmutableList.copyOf(values).subList(0, Math.min(values.size(), limit)),
+                    limited);
             }
         };
     }
 
     public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, TagValueSuggest>() {
             @Override
             public TagValueSuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new TagValueSuggest(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_VALUES, false);
+                return new TagValueSuggest(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)), EMPTY_VALUES,
+                    false);
             }
         };
     }
 
     public static Transform<Throwable, ? extends TagValueSuggest> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, TagValueSuggest>() {
             @Override
             public TagValueSuggest transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new TagValueSuggest(errors, EMPTY_VALUES, false);
             }
         };

@@ -21,13 +21,16 @@
 
 package com.spotify.heroic.http.metadata;
 
-import static java.util.Optional.ofNullable;
+import com.spotify.heroic.QueryDateRange;
+import com.spotify.heroic.cluster.ClusterManager;
+import com.spotify.heroic.common.DateRange;
+import com.spotify.heroic.common.JavaxRestFramework;
+import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.common.Series;
+import com.spotify.heroic.filter.Filter;
+import com.spotify.heroic.filter.FilterFactory;
 
-import java.io.IOException;
-import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
-
+import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
@@ -37,172 +40,148 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.MediaType;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.spotify.heroic.QueryDateRange;
-import com.spotify.heroic.cluster.ClusterManager;
-import com.spotify.heroic.common.DateRange;
-import com.spotify.heroic.common.JavaxRestFramework;
-import com.spotify.heroic.common.RangeFilter;
-import com.spotify.heroic.common.Series;
-import com.spotify.heroic.filter.Filter;
-import com.spotify.heroic.filter.FilterFactory;
-import com.spotify.heroic.metric.WriteResult;
-
-import eu.toolchain.async.AsyncFuture;
-
-@Path("/metadata")
+@Path("metadata")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class MetadataResource {
-    @Inject
-    private FilterFactory filters;
+    private final FilterFactory filters;
+    private final JavaxRestFramework httpAsync;
+    private final ClusterManager cluster;
+    private final MetadataResourceCache cache;
 
     @Inject
-    private JavaxRestFramework httpAsync;
-
-    @Inject
-    private ClusterManager cluster;
-
-    @Inject
-    private MetadataResourceCache cache;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public MetadataResource(
+        FilterFactory filters, JavaxRestFramework httpAsync, ClusterManager cluster,
+        MetadataResourceCache cache
+    ) {
+        this.filters = filters;
+        this.httpAsync = httpAsync;
+        this.cluster = cluster;
+        this.cache = cache;
+    }
 
     @POST
-    @Path("/tags")
-    public void tags(@Suspended final AsyncResponse response, final MetadataQueryBody body)
-            throws ExecutionException {
-        final MetadataQueryBody request =
-                ofNullable(body).orElseGet(MetadataQueryBody::createDefault);
+    @Path("tags")
+    public void tags(@Suspended final AsyncResponse response, final MetadataQueryBody request)
+        throws ExecutionException {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response, cache.findTags(null, filter));
     }
 
     @POST
-    @Path("/keys")
-    public void keys(@Suspended final AsyncResponse response, final MetadataQueryBody body)
-            throws ExecutionException {
-        final MetadataQueryBody request =
-                ofNullable(body).orElseGet(MetadataQueryBody::createDefault);
+    @Path("keys")
+    public void keys(@Suspended final AsyncResponse response, final MetadataQueryBody request)
+        throws ExecutionException {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response, cache.findKeys(null, filter));
     }
 
     @PUT
-    @Path("/series")
+    @Path("series")
     public void addSeries(@Suspended final AsyncResponse response, final Series series) {
-        if (series == null) {
-            throw new IllegalStateException("No series specified");
-        }
-
         final DateRange range = DateRange.now();
-        final AsyncFuture<WriteResult> callback =
-                cluster.useDefaultGroup().writeSeries(range, series);
-        httpAsync.bind(response, callback);
+        httpAsync.bind(response, cluster.useDefaultGroup().writeSeries(range, series));
     }
 
     @POST
-    @Path("/series")
-    public void getTimeSeries(@Suspended final AsyncResponse response, final MetadataQueryBody body)
-            throws JsonParseException, JsonMappingException, IOException {
-        final MetadataQueryBody request =
-                ofNullable(body).orElseGet(MetadataQueryBody::createDefault);
+    @Path("series")
+    public void getTimeSeries(
+        @Suspended final AsyncResponse response, final MetadataQueryBody request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response, cluster.useDefaultGroup().findSeries(filter));
     }
 
     @DELETE
-    @Path("/series")
-    public void deleteTimeSeries(@Suspended final AsyncResponse response,
-            final MetadataQueryBody body) {
-        final MetadataQueryBody request =
-                ofNullable(body).orElseGet(MetadataQueryBody::createDefault);
+    @Path("series")
+    public void deleteTimeSeries(
+        @Suspended final AsyncResponse response, final MetadataQueryBody request
+    ) {
         final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange);
         httpAsync.bind(response, cluster.useDefaultGroup().deleteSeries(filter));
     }
 
     @POST
     @Path("series-count")
-    public void seriesCount(@Suspended final AsyncResponse response, final MetadataCount body) {
-        final MetadataCount request = ofNullable(body).orElseGet(MetadataCount::createDefault);
+    public void seriesCount(@Suspended final AsyncResponse response, final MetadataCount request) {
         final RangeFilter filter = toRangeFilter(request::getFilter, request::getRange);
         httpAsync.bind(response, cluster.useDefaultGroup().countSeries(filter));
     }
 
     @POST
     @Path("tagkey-count")
-    public void tagkeyCount(@Suspended final AsyncResponse response,
-            final MetadataTagKeySuggest body) {
-        final MetadataTagKeySuggest request =
-                ofNullable(body).orElseGet(MetadataTagKeySuggest::createDefault);
+    public void tagkeyCount(
+        @Suspended final AsyncResponse response, final MetadataTagKeySuggest request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response, cluster.useDefaultGroup().tagKeyCount(filter));
     }
 
     @POST
     @Path("key-suggest")
-    public void keySuggest(@Suspended final AsyncResponse response, final MetadataKeySuggest body) {
-        final MetadataKeySuggest request =
-                ofNullable(body).orElseGet(MetadataKeySuggest::createDefault);
+    public void keySuggest(
+        @Suspended final AsyncResponse response, final MetadataKeySuggest request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response,
-                cluster.useDefaultGroup().keySuggest(filter, request.getMatch(), request.getKey()));
+            cluster.useDefaultGroup().keySuggest(filter, request.getMatch(), request.getKey()));
     }
 
     @POST
     @Path("tag-suggest")
-    public void tagSuggest(@Suspended final AsyncResponse response, final MetadataTagSuggest body) {
-        final MetadataTagSuggest request =
-                ofNullable(body).orElseGet(MetadataTagSuggest::createDefault);
+    public void tagSuggest(
+        @Suspended final AsyncResponse response, final MetadataTagSuggest request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster.useDefaultGroup().tagSuggest(filter, request.getMatch(),
-                request.getKey(), request.getValue()));
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        httpAsync.bind(response, cluster
+            .useDefaultGroup()
+            .tagSuggest(filter, request.getMatch(), request.getKey(), request.getValue()));
     }
 
     @POST
     @Path("tag-value-suggest")
-    public void tagValueSuggest(@Suspended final AsyncResponse response,
-            final MetadataTagValueSuggest body) {
-        final MetadataTagValueSuggest request =
-                ofNullable(body).orElseGet(MetadataTagValueSuggest::createDefault);
+    public void tagValueSuggest(
+        @Suspended final AsyncResponse response, final MetadataTagValueSuggest request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
         httpAsync.bind(response,
-                cluster.useDefaultGroup().tagValueSuggest(filter, request.getKey()));
+            cluster.useDefaultGroup().tagValueSuggest(filter, request.getKey()));
     }
 
     @POST
     @Path("tag-values-suggest")
-    public void tagValuesSuggest(@Suspended final AsyncResponse response,
-            final MetadataTagValuesSuggest body) {
-        final MetadataTagValuesSuggest request =
-                ofNullable(body).orElseGet(MetadataTagValuesSuggest::createDefault);
+    public void tagValuesSuggest(
+        @Suspended final AsyncResponse response, final MetadataTagValuesSuggest request
+    ) {
         final RangeFilter filter =
-                toRangeFilter(request::getFilter, request::getRange, request::getLimit);
-        httpAsync.bind(response, cluster.useDefaultGroup().tagValuesSuggest(filter,
-                request.getExclude(), request.getGroupLimit()));
+            toRangeFilter(request::getFilter, request::getRange, request::getLimit);
+        httpAsync.bind(response, cluster
+            .useDefaultGroup()
+            .tagValuesSuggest(filter, request.getExclude(), request.getGroupLimit()));
     }
 
-    private RangeFilter toRangeFilter(final Supplier<Optional<Filter>> optionalFilter,
-            final Supplier<Optional<QueryDateRange>> optionalRange) {
+    private RangeFilter toRangeFilter(
+        final Supplier<Optional<Filter>> optionalFilter,
+        final Supplier<Optional<QueryDateRange>> optionalRange
+    ) {
         return toRangeFilter(optionalFilter, optionalRange, () -> Integer.MAX_VALUE);
     }
 
-    private RangeFilter toRangeFilter(final Supplier<Optional<Filter>> optionalFilter,
-            final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<Integer> limit) {
+    private RangeFilter toRangeFilter(
+        final Supplier<Optional<Filter>> optionalFilter,
+        final Supplier<Optional<QueryDateRange>> optionalRange, final Supplier<Integer> limit
+    ) {
         final long now = System.currentTimeMillis();
         final Filter filter = optionalFilter.get().orElseGet(filters::t);
         final Optional<DateRange> range = optionalRange.get().map(r -> r.buildDateRange(now));

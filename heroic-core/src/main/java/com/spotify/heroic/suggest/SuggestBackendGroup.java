@@ -21,24 +21,25 @@
 
 package com.spotify.heroic.suggest;
 
-import java.util.List;
-
 import com.google.common.collect.ImmutableList;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.Groups;
 import com.spotify.heroic.common.RangeFilter;
 import com.spotify.heroic.common.SelectedGroup;
 import com.spotify.heroic.common.Series;
+import com.spotify.heroic.common.Statistics;
 import com.spotify.heroic.metric.WriteResult;
 import com.spotify.heroic.statistics.LocalMetadataManagerReporter;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Data;
 import lombok.ToString;
 
+import java.util.List;
+import java.util.Optional;
+
 @Data
-@ToString(of = { "backends" })
+@ToString(of = {"backends"})
 public class SuggestBackendGroup implements SuggestBackend {
     private final AsyncFramework async;
     private final SelectedGroup<SuggestBackend> backends;
@@ -50,41 +51,51 @@ public class SuggestBackendGroup implements SuggestBackend {
     }
 
     @Override
-    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(final RangeFilter filter,
-            final List<String> exclude, final int groupLimit) {
+    public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+        final RangeFilter filter, final List<String> exclude, final int groupLimit
+    ) {
         return async
-                .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
-                        TagValuesSuggest.reduce(filter.getLimit(), groupLimit))
-                .onDone(reporter.reportTagValuesSuggest());
+            .collect(run(b -> b.tagValuesSuggest(filter, exclude, groupLimit)),
+                TagValuesSuggest.reduce(filter.getLimit(), groupLimit))
+            .onDone(reporter.reportTagValuesSuggest());
     }
 
     @Override
-    public AsyncFuture<TagValueSuggest> tagValueSuggest(final RangeFilter filter,
-            final String key) {
+    public AsyncFuture<TagValueSuggest> tagValueSuggest(
+        final RangeFilter filter, final Optional<String> key
+    ) {
         return async
-                .collect(run(b -> b.tagValueSuggest(filter, key)),
-                        TagValueSuggest.reduce(filter.getLimit()))
-                .onDone(reporter.reportTagValueSuggest());
+            .collect(run(b -> b.tagValueSuggest(filter, key)),
+                TagValueSuggest.reduce(filter.getLimit()))
+            .onDone(reporter.reportTagValueSuggest());
     }
 
     @Override
     public AsyncFuture<TagKeyCount> tagKeyCount(final RangeFilter filter) {
-        return async.collect(run(b -> b.tagKeyCount(filter)), TagKeyCount.reduce(filter.getLimit()))
-                .onDone(reporter.reportTagKeySuggest());
+        return async
+            .collect(run(b -> b.tagKeyCount(filter)), TagKeyCount.reduce(filter.getLimit()))
+            .onDone(reporter.reportTagKeySuggest());
     }
 
     @Override
-    public AsyncFuture<TagSuggest> tagSuggest(final RangeFilter filter, final MatchOptions options,
-            final String key, final String value) {
-        return async.collect(run(b -> b.tagSuggest(filter, options, key, value)),
-                TagSuggest.reduce(filter.getLimit())).onDone(reporter.reportTagSuggest());
+    public AsyncFuture<TagSuggest> tagSuggest(
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key,
+        final Optional<String> value
+    ) {
+        return async
+            .collect(run(b -> b.tagSuggest(filter, options, key, value)),
+                TagSuggest.reduce(filter.getLimit()))
+            .onDone(reporter.reportTagSuggest());
     }
 
     @Override
-    public AsyncFuture<KeySuggest> keySuggest(final RangeFilter filter, final MatchOptions options,
-            final String key) {
-        return async.collect(run(b -> b.keySuggest(filter, options, key)),
-                KeySuggest.reduce(filter.getLimit())).onDone(reporter.reportKeySuggest());
+    public AsyncFuture<KeySuggest> keySuggest(
+        final RangeFilter filter, final MatchOptions options, final Optional<String> key
+    ) {
+        return async
+            .collect(run(b -> b.keySuggest(filter, options, key)),
+                KeySuggest.reduce(filter.getLimit()))
+            .onDone(reporter.reportKeySuggest());
     }
 
     @Override
@@ -116,6 +127,17 @@ public class SuggestBackendGroup implements SuggestBackend {
     @Override
     public int size() {
         return backends.size();
+    }
+
+    @Override
+    public Statistics getStatistics() {
+        Statistics s = Statistics.empty();
+
+        for (final SuggestBackend b : backends) {
+            s = s.merge(b.getStatistics());
+        }
+
+        return s;
     }
 
     private <T> List<T> run(InternalOperation<T> op) {

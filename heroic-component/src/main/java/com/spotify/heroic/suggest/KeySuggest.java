@@ -21,7 +21,17 @@
 
 package com.spotify.heroic.suggest;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import com.spotify.heroic.cluster.ClusterNode;
+import com.spotify.heroic.cluster.NodeMetadata;
+import com.spotify.heroic.cluster.NodeRegistryEntry;
+import com.spotify.heroic.metric.NodeError;
+import com.spotify.heroic.metric.RequestError;
+import eu.toolchain.async.Collector;
+import eu.toolchain.async.Transform;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,19 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Data;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-import com.spotify.heroic.cluster.ClusterNode;
-import com.spotify.heroic.cluster.NodeMetadata;
-import com.spotify.heroic.cluster.NodeRegistryEntry;
-import com.spotify.heroic.metric.NodeError;
-import com.spotify.heroic.metric.RequestError;
-
-import eu.toolchain.async.Collector;
-import eu.toolchain.async.Transform;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 @Data
 public class KeySuggest {
@@ -54,8 +52,10 @@ public class KeySuggest {
     private final List<Suggestion> suggestions;
 
     @JsonCreator
-    public KeySuggest(@JsonProperty("errors") List<RequestError> errors,
-            @JsonProperty("suggestions") List<Suggestion> suggestions) {
+    public KeySuggest(
+        @JsonProperty("errors") List<RequestError> errors,
+        @JsonProperty("suggestions") List<Suggestion> suggestions
+    ) {
         this.errors = checkNotNull(errors, "errors");
         this.suggestions = checkNotNull(suggestions, "suggestions");
     }
@@ -97,16 +97,16 @@ public class KeySuggest {
     }
 
     public static Transform<Throwable, ? extends KeySuggest> nodeError(
-            final NodeRegistryEntry node) {
+        final NodeRegistryEntry node
+    ) {
         return new Transform<Throwable, KeySuggest>() {
             @Override
             public KeySuggest transform(Throwable e) throws Exception {
                 final NodeMetadata m = node.getMetadata();
                 final ClusterNode c = node.getClusterNode();
-                return new KeySuggest(
-                        ImmutableList.<RequestError> of(
-                                NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
-                        EMPTY_SUGGESTIONS);
+                return new KeySuggest(ImmutableList.<RequestError>of(
+                    NodeError.fromThrowable(m.getId(), c.toString(), m.getTags(), e)),
+                    EMPTY_SUGGESTIONS);
             }
         };
     }
@@ -153,12 +153,13 @@ public class KeySuggest {
     }
 
     public static Transform<Throwable, ? extends KeySuggest> nodeError(
-            final ClusterNode.Group group) {
+        final ClusterNode.Group group
+    ) {
         return new Transform<Throwable, KeySuggest>() {
             @Override
             public KeySuggest transform(Throwable e) throws Exception {
                 final List<RequestError> errors =
-                        ImmutableList.<RequestError> of(NodeError.fromThrowable(group.node(), e));
+                    ImmutableList.<RequestError>of(NodeError.fromThrowable(group.node(), e));
                 return new KeySuggest(errors, EMPTY_SUGGESTIONS);
             }
         };

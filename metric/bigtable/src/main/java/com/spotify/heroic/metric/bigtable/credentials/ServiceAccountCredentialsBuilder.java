@@ -21,22 +21,24 @@
 
 package com.spotify.heroic.metric.bigtable.credentials;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import lombok.ToString;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.cloud.bigtable.config.CredentialOptions;
 import com.spotify.heroic.metric.bigtable.CredentialsBuilder;
+import lombok.ToString;
 
-@ToString(of = { "serviceAccount", "keyFile" })
+import static com.google.common.base.Preconditions.checkNotNull;
+
+@ToString(of = {"serviceAccount", "keyFile"})
 public class ServiceAccountCredentialsBuilder implements CredentialsBuilder {
     private final String serviceAccount;
     private final String keyFile;
 
     @JsonCreator
-    public ServiceAccountCredentialsBuilder(@JsonProperty("serviceAccount") String serviceAccount,
-            @JsonProperty("keyFile") String keyFile) {
+    public ServiceAccountCredentialsBuilder(
+        @JsonProperty("serviceAccount") String serviceAccount,
+        @JsonProperty("keyFile") String keyFile
+    ) {
         this.serviceAccount = checkNotNull(serviceAccount, "serviceAccount");
         this.keyFile = checkNotNull(keyFile, "keyFile");
     }

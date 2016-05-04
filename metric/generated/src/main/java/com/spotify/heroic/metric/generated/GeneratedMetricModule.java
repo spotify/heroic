@@ -21,70 +21,72 @@
 
 package com.spotify.heroic.metric.generated;
 
-import java.util.Set;
-
-import javax.inject.Singleton;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
-import com.google.inject.Key;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
 import com.spotify.heroic.common.Groups;
-import com.spotify.heroic.metric.MetricBackend;
+import com.spotify.heroic.dagger.PrimaryComponent;
 import com.spotify.heroic.metric.MetricModule;
 import com.spotify.heroic.metric.generated.generator.SineGeneratorModule;
-import com.spotify.heroic.statistics.LocalMetricManagerReporter;
-import com.spotify.heroic.statistics.MetricBackendReporter;
-
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.Data;
+
+import java.util.Optional;
+
+import static java.util.Optional.empty;
+import static java.util.Optional.of;
 
 @Data
 public final class GeneratedMetricModule implements MetricModule {
     public static final String DEFAULT_GROUP = "generated";
 
-    private final String id;
+    private final Optional<String> id;
     private final Groups groups;
     private final GeneratorModule generatorModule;
 
     @JsonCreator
-    public GeneratedMetricModule(@JsonProperty("id") String id, @JsonProperty("group") String group,
-            @JsonProperty("groups") Set<String> groups,
-            @JsonProperty("generator") GeneratorModule generatorModule) {
+    public GeneratedMetricModule(
+        @JsonProperty("id") Optional<String> id, @JsonProperty("groups") Optional<Groups> groups,
+        @JsonProperty("generator") Optional<GeneratorModule> generatorModule
+    ) {
         this.id = id;
-        this.groups = Groups.groups(group, groups, DEFAULT_GROUP);
-        this.generatorModule = Optional.fromNullable(generatorModule)
-                .or(SineGeneratorModule.defaultSupplier());
+        this.groups = groups.orElseGet(Groups::empty).or(DEFAULT_GROUP);
+        this.generatorModule = generatorModule.orElseGet(SineGeneratorModule::defaultSupplier);
     }
 
     @Override
-    public PrivateModule module(final Key<MetricBackend> key, final String id) {
-        return new PrivateModule() {
-            @Provides
-            @Singleton
-            public MetricBackendReporter reporter(LocalMetricManagerReporter reporter) {
-                return reporter.newBackend(id);
-            }
+    public Exposed module(PrimaryComponent primary, Depends depends, String id) {
+        final GeneratedComponent g = generatorModule.module(primary);
 
-            @Provides
-            @Singleton
-            public Groups groups() {
-                return groups;
-            }
+        return DaggerGeneratedMetricModule_C
+            .builder()
+            .primaryComponent(primary)
+            .depends(depends)
+            .generatedComponent(g)
+            .m(new M())
+            .build();
+    }
 
-            @Override
-            protected void configure() {
-                install(generatorModule.module());
-                bind(key).to(GeneratedBackend.class).in(Scopes.SINGLETON);
-                expose(key);
-            }
-        };
+    @GeneratedScope
+    @Component(modules = M.class,
+        dependencies = {PrimaryComponent.class, Depends.class, GeneratedComponent.class})
+    interface C extends Exposed {
+        @Override
+        GeneratedBackend backend();
+    }
+
+    @Module
+    class M {
+        @Provides
+        @GeneratedScope
+        public Groups groups() {
+            return groups;
+        }
     }
 
     @Override
-    public String id() {
+    public Optional<String> id() {
         return id;
     }
 
@@ -98,33 +100,27 @@ public final class GeneratedMetricModule implements MetricModule {
     }
 
     public static class Builder {
-        private String id;
-        private String group;
-        private Set<String> groups;
-        private GeneratorModule generatorModule;
+        private Optional<String> id = empty();
+        private Optional<Groups> groups = empty();
+        private Optional<GeneratorModule> generatorModule = empty();
 
         public Builder id(String id) {
-            this.id = id;
+            this.id = of(id);
             return this;
         }
 
-        public Builder group(String group) {
-            this.group = group;
-            return this;
-        }
-
-        public Builder groups(Set<String> groups) {
-            this.groups = groups;
+        public Builder groups(Groups groups) {
+            this.groups = of(groups);
             return this;
         }
 
         public Builder generatorModule(GeneratorModule generatorModule) {
-            this.generatorModule = generatorModule;
+            this.generatorModule = of(generatorModule);
             return this;
         }
 
         public GeneratedMetricModule build() {
-            return new GeneratedMetricModule(id, group, groups, generatorModule);
+            return new GeneratedMetricModule(id, groups, generatorModule);
         }
     }
 }

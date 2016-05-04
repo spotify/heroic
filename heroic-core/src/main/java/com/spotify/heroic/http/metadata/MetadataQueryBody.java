@@ -21,22 +21,19 @@
 
 package com.spotify.heroic.http.metadata;
 
-import static java.util.Optional.ofNullable;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.spotify.heroic.QueryDateRange;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
-
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -79,8 +76,10 @@ public class MetadataQueryBody {
         }
 
         if (matchTags.isPresent()) {
-            matchTags.get().entrySet()
-                    .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
+            matchTags
+                .get()
+                .entrySet()
+                .forEach(e -> statements.add(filters.matchTag(e.getKey(), e.getValue())));
         }
 
         if (hasTags.isPresent()) {
@@ -103,19 +102,19 @@ public class MetadataQueryBody {
     }
 
     @JsonCreator
-    public MetadataQueryBody(@JsonProperty("matchKey") String matchKey,
-            @JsonProperty("matchTags") Map<String, String> matchTags,
-            @JsonProperty("hasTags") Set<String> hasTags, @JsonProperty("filter") Filter filter,
-            @JsonProperty("range") QueryDateRange range, @JsonProperty("limit") Integer limit) {
-        this.matchKey = ofNullable(matchKey);
-        this.matchTags = ofNullable(matchTags);
-        this.hasTags = ofNullable(hasTags);
-        this.filter = ofNullable(filter);
-        this.range = ofNullable(range);
-        this.limit = ofNullable(limit).orElse(DEFAULT_LIMIT);
-    }
-
-    public static MetadataQueryBody createDefault() {
-        return new MetadataQueryBody(null, null, null, null, null, null);
+    public MetadataQueryBody(
+        @JsonProperty("matchKey") Optional<String> matchKey,
+        @JsonProperty("matchTags") Optional<Map<String, String>> matchTags,
+        @JsonProperty("hasTags") Optional<Set<String>> hasTags,
+        @JsonProperty("filter") Optional<Filter> filter,
+        @JsonProperty("range") Optional<QueryDateRange> range,
+        @JsonProperty("limit") Optional<Integer> limit
+    ) {
+        this.matchKey = matchKey;
+        this.matchTags = matchTags;
+        this.hasTags = hasTags;
+        this.filter = filter;
+        this.range = range;
+        this.limit = limit.orElse(DEFAULT_LIMIT);
     }
 }

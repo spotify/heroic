@@ -21,30 +21,18 @@
 
 package com.spotify.heroic.shell;
 
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.lang3.StringUtils;
-import org.joda.time.Chronology;
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeParser;
-import org.joda.time.format.DateTimeParserBucket;
-import org.kohsuke.args4j.Option;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotify.heroic.HeroicCoreInstance;
 import com.spotify.heroic.common.DateRange;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.Filter;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.metric.BackendKeyFilter;
+import com.spotify.heroic.shell.task.AnalyticsDumpFetchSeries;
+import com.spotify.heroic.shell.task.AnalyticsReportFetchSeries;
 import com.spotify.heroic.shell.task.BackendKeyArgument;
-import com.spotify.heroic.shell.task.ConfigGet;
 import com.spotify.heroic.shell.task.Configure;
 import com.spotify.heroic.shell.task.CountData;
 import com.spotify.heroic.shell.task.DataMigrate;
@@ -54,13 +42,13 @@ import com.spotify.heroic.shell.task.Fetch;
 import com.spotify.heroic.shell.task.IngestionFilter;
 import com.spotify.heroic.shell.task.Keys;
 import com.spotify.heroic.shell.task.ListBackends;
+import com.spotify.heroic.shell.task.LoadGenerated;
 import com.spotify.heroic.shell.task.MetadataCount;
 import com.spotify.heroic.shell.task.MetadataDelete;
 import com.spotify.heroic.shell.task.MetadataEntries;
 import com.spotify.heroic.shell.task.MetadataFetch;
 import com.spotify.heroic.shell.task.MetadataLoad;
 import com.spotify.heroic.shell.task.MetadataMigrate;
-import com.spotify.heroic.shell.task.MetadataMigrateSuggestions;
 import com.spotify.heroic.shell.task.MetadataTags;
 import com.spotify.heroic.shell.task.ParseQuery;
 import com.spotify.heroic.shell.task.Pause;
@@ -78,61 +66,83 @@ import com.spotify.heroic.shell.task.SuggestTagValue;
 import com.spotify.heroic.shell.task.SuggestTagValues;
 import com.spotify.heroic.shell.task.Write;
 import com.spotify.heroic.shell.task.WritePerformance;
-
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
+import org.joda.time.Chronology;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeParser;
+import org.joda.time.format.DateTimeParserBucket;
+import org.kohsuke.args4j.Option;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public final class Tasks {
     static final List<ShellTaskDefinition> available = new ArrayList<>();
+    static final Map<Class<?>, ShellTaskDefinition> availableMap = new HashMap<>();
 
     static {
-        available.add(shellTask(Configure.class));
-        available.add(shellTask(Statistics.class));
-        available.add(shellTask(ConfigGet.class));
-        available.add(shellTask(Keys.class));
-        available.add(shellTask(DeleteKeys.class));
-        available.add(shellTask(CountData.class));
-        available.add(shellTask(SerializeKey.class));
-        available.add(shellTask(DeserializeKey.class));
-        available.add(shellTask(ListBackends.class));
-        available.add(shellTask(Fetch.class));
-        available.add(shellTask(Write.class));
-        available.add(shellTask(WritePerformance.class));
-        available.add(shellTask(MetadataDelete.class));
-        available.add(shellTask(MetadataFetch.class));
-        available.add(shellTask(MetadataTags.class));
-        available.add(shellTask(MetadataCount.class));
-        available.add(shellTask(MetadataEntries.class));
-        available.add(shellTask(MetadataMigrate.class));
-        available.add(shellTask(MetadataMigrateSuggestions.class));
-        available.add(shellTask(MetadataLoad.class));
-        available.add(shellTask(SuggestTag.class));
-        available.add(shellTask(SuggestKey.class));
-        available.add(shellTask(SuggestTagValue.class));
-        available.add(shellTask(SuggestTagValues.class));
-        available.add(shellTask(SuggestTagKeyCount.class));
-        available.add(shellTask(SuggestPerformance.class));
-        available.add(shellTask(Query.class));
-        available.add(shellTask(ReadWriteTest.class));
-        available.add(shellTask(Pause.class));
-        available.add(shellTask(Resume.class));
-        available.add(shellTask(IngestionFilter.class));
-        available.add(shellTask(DataMigrate.class));
-        available.add(shellTask(ParseQuery.class));
-        available.add(shellTask(StringifyQuery.class));
+        shellTask(Configure::setup, Configure.class);
+        shellTask(Statistics::setup, Statistics.class);
+        shellTask(Keys::setup, Keys.class);
+        shellTask(DeleteKeys::setup, DeleteKeys.class);
+        shellTask(CountData::setup, CountData.class);
+        shellTask(SerializeKey::setup, SerializeKey.class);
+        shellTask(DeserializeKey::setup, DeserializeKey.class);
+        shellTask(ListBackends::setup, ListBackends.class);
+        shellTask(Fetch::setup, Fetch.class);
+        shellTask(Write::setup, Write.class);
+        shellTask(WritePerformance::setup, WritePerformance.class);
+        shellTask(MetadataDelete::setup, MetadataDelete.class);
+        shellTask(MetadataFetch::setup, MetadataFetch.class);
+        shellTask(MetadataTags::setup, MetadataTags.class);
+        shellTask(MetadataCount::setup, MetadataCount.class);
+        shellTask(MetadataEntries::setup, MetadataEntries.class);
+        shellTask(MetadataMigrate::setup, MetadataMigrate.class);
+        shellTask(MetadataLoad::setup, MetadataLoad.class);
+        shellTask(SuggestTag::setup, SuggestTag.class);
+        shellTask(SuggestKey::setup, SuggestKey.class);
+        shellTask(SuggestTagValue::setup, SuggestTagValue.class);
+        shellTask(SuggestTagValues::setup, SuggestTagValues.class);
+        shellTask(SuggestTagKeyCount::setup, SuggestTagKeyCount.class);
+        shellTask(SuggestPerformance::setup, SuggestPerformance.class);
+        shellTask(Query::setup, Query.class);
+        shellTask(ReadWriteTest::setup, ReadWriteTest.class);
+        shellTask(Pause::setup, Pause.class);
+        shellTask(Resume::setup, Resume.class);
+        shellTask(IngestionFilter::setup, IngestionFilter.class);
+        shellTask(DataMigrate::setup, DataMigrate.class);
+        shellTask(ParseQuery::setup, ParseQuery.class);
+        shellTask(StringifyQuery::setup, StringifyQuery.class);
+        shellTask(AnalyticsReportFetchSeries::setup, AnalyticsReportFetchSeries.class);
+        shellTask(AnalyticsDumpFetchSeries::setup, AnalyticsDumpFetchSeries.class);
+        shellTask(LoadGenerated::setup, LoadGenerated.class);
     }
 
     public static List<ShellTaskDefinition> available() {
         return available;
     }
 
-    static ShellTaskDefinition shellTask(final Class<? extends ShellTask> task) {
-        final String usage = taskUsage(task);
+    public static Map<Class<?>, ShellTaskDefinition> availableMap() {
+        return availableMap;
+    }
 
-        final String name = name(task);
-        final List<String> names = allNames(task);
-        final List<String> aliases = aliases(task);
+    static <T extends ShellTask> ShellTaskDefinition shellTask(
+        final Function<CoreComponent, T> task, Class<T> type
+    ) {
+        final String usage = taskUsage(type);
 
-        return new ShellTaskDefinition() {
+        final String name = name(type);
+        final List<String> names = allNames(type);
+        final List<String> aliases = aliases(type);
+
+        final ShellTaskDefinition d = new ShellTaskDefinition() {
             @Override
             public String name() {
                 return name;
@@ -155,9 +165,13 @@ public final class Tasks {
 
             @Override
             public ShellTask setup(final HeroicCoreInstance core) throws Exception {
-                return core.inject(newInstance(task));
-            };
+                return core.inject(task);
+            }
         };
+
+        available.add(d);
+        availableMap.put(type, d);
+        return d;
     }
 
     public static String taskUsage(final Class<? extends ShellTask> task) {
@@ -178,7 +192,7 @@ public final class Tasks {
         }
 
         throw new IllegalStateException(
-                String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
+            String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
     }
 
     public static List<String> allNames(final Class<? extends ShellTask> task) {
@@ -194,8 +208,8 @@ public final class Tasks {
         }
 
         if (names.isEmpty()) {
-            throw new IllegalStateException(String.format("No name configured with @TaskName on %s",
-                    task.getCanonicalName()));
+            throw new IllegalStateException(
+                String.format("No name configured with @TaskName on %s", task.getCanonicalName()));
         }
 
         return names;
@@ -214,26 +228,9 @@ public final class Tasks {
         return names;
     }
 
-    public static ShellTask newInstance(Class<? extends ShellTask> taskType) throws Exception {
-        final Constructor<? extends ShellTask> constructor;
-
-        try {
-            constructor = taskType.getConstructor();
-        } catch (ReflectiveOperationException e) {
-            throw new Exception("Task '" + taskType.getCanonicalName()
-                    + "' does not have an accessible, empty constructor", e);
-        }
-
-        try {
-            return constructor.newInstance();
-        } catch (ReflectiveOperationException e) {
-            throw new Exception("Failed to invoke constructor of '" + taskType.getCanonicalName(),
-                    e);
-        }
-    }
-
-    public static Filter setupFilter(FilterFactory filters, QueryParser parser,
-            TaskQueryParameters params) {
+    public static Filter setupFilter(
+        FilterFactory filters, QueryParser parser, TaskQueryParameters params
+    ) {
         final List<String> query = params.getQuery();
 
         if (query.isEmpty()) {
@@ -244,17 +241,17 @@ public final class Tasks {
     }
 
     public static BackendKeyFilter setupKeyFilter(KeyspaceBase params, ObjectMapper mapper)
-            throws Exception {
+        throws Exception {
         BackendKeyFilter filter = BackendKeyFilter.of();
 
         if (params.start != null) {
-            filter = filter.withStart(BackendKeyFilter
-                    .gte(mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
+            filter = filter.withStart(BackendKeyFilter.gte(
+                mapper.readValue(params.start, BackendKeyArgument.class).toBackendKey()));
         }
 
         if (params.startPercentage >= 0) {
             filter = filter.withStart(
-                    BackendKeyFilter.gtePercentage((float) params.startPercentage / 100f));
+                BackendKeyFilter.gtePercentage((float) params.startPercentage / 100f));
         }
 
         if (params.startToken != null) {
@@ -262,13 +259,13 @@ public final class Tasks {
         }
 
         if (params.end != null) {
-            filter = filter.withEnd(BackendKeyFilter
-                    .lt(mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
+            filter = filter.withEnd(BackendKeyFilter.lt(
+                mapper.readValue(params.end, BackendKeyArgument.class).toBackendKey()));
         }
 
         if (params.endPercentage >= 0) {
-            filter = filter
-                    .withEnd(BackendKeyFilter.ltPercentage((float) params.endPercentage / 100f));
+            filter =
+                filter.withEnd(BackendKeyFilter.ltPercentage((float) params.endPercentage / 100f));
         }
 
         if (params.endToken != null) {
@@ -283,7 +280,7 @@ public final class Tasks {
     }
 
     public abstract static class QueryParamsBase extends AbstractShellTaskParams
-            implements TaskQueryParameters {
+        implements TaskQueryParameters {
         private final DateRange defaultDateRange;
 
         public QueryParamsBase() {
@@ -306,18 +303,18 @@ public final class Tasks {
         protected String end;
 
         @Option(name = "--start-percentage", usage = "First key to operate on in percentage",
-                metaVar = "<int>")
+            metaVar = "<int>")
         protected int startPercentage = -1;
 
         @Option(name = "--end-percentage",
-                usage = "Last key to operate on (exclusive) in percentage", metaVar = "<int>")
+            usage = "Last key to operate on (exclusive) in percentage", metaVar = "<int>")
         protected int endPercentage = -1;
 
         @Option(name = "--start-token", usage = "First token to operate on", metaVar = "<long>")
         protected Long startToken = null;
 
         @Option(name = "--end-token", usage = "Last token to operate on (exclusive)",
-                metaVar = "<int>")
+            metaVar = "<int>")
         protected Long endToken = null;
 
         @Option(name = "--limit", usage = "Limit the number keys to operate on", metaVar = "<int>")
@@ -325,8 +322,9 @@ public final class Tasks {
         protected int limit = -1;
     }
 
-    public static RangeFilter setupRangeFilter(FilterFactory filters, QueryParser parser,
-            TaskQueryParameters params) {
+    public static RangeFilter setupRangeFilter(
+        FilterFactory filters, QueryParser parser, TaskQueryParameters params
+    ) {
         final Filter filter = setupFilter(filters, parser, params);
         return new RangeFilter(filter, params.getRange(), params.getLimit());
     }
@@ -373,7 +371,7 @@ public final class Tasks {
 
         for (final DateTimeParser p : today) {
             final DateTimeParserBucket bucket =
-                    new DateTimeParserBucket(0, chrono, null, null, 2000);
+                new DateTimeParserBucket(0, chrono, null, null, 2000);
 
             bucket.saveField(chrono.year(), n.getYear());
             bucket.saveField(chrono.monthOfYear(), n.getMonthOfYear());
@@ -395,7 +393,7 @@ public final class Tasks {
     private static long parseFullInstant(String input, final Chronology chrono) {
         for (final DateTimeParser p : full) {
             final DateTimeParserBucket bucket =
-                    new DateTimeParserBucket(0, chrono, null, null, 2000);
+                new DateTimeParserBucket(0, chrono, null, null, 2000);
 
             try {
                 p.parseInto(bucket, input, 0);

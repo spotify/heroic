@@ -21,16 +21,8 @@
 
 package com.spotify.heroic.shell.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.Option;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.spotify.heroic.common.RangeFilter;
+import com.spotify.heroic.dagger.CoreComponent;
 import com.spotify.heroic.filter.FilterFactory;
 import com.spotify.heroic.grammar.QueryParser;
 import com.spotify.heroic.shell.ShellIO;
@@ -42,26 +34,31 @@ import com.spotify.heroic.shell.Tasks;
 import com.spotify.heroic.suggest.KeySuggest;
 import com.spotify.heroic.suggest.MatchOptions;
 import com.spotify.heroic.suggest.SuggestManager;
-
+import dagger.Component;
 import eu.toolchain.async.AsyncFuture;
 import lombok.Getter;
 import lombok.ToString;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.Option;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @TaskUsage("Fetch series matching the given query")
 @TaskName("suggest-key")
 public class SuggestKey implements ShellTask {
-    @Inject
-    private SuggestManager suggest;
+    private final SuggestManager suggest;
+    private final FilterFactory filters;
+    private final QueryParser parser;
 
     @Inject
-    private FilterFactory filters;
-
-    @Inject
-    private QueryParser parser;
-
-    @Inject
-    @Named("application/json")
-    private ObjectMapper mapper;
+    public SuggestKey(SuggestManager suggest, FilterFactory filters, QueryParser parser) {
+        this.suggest = suggest;
+        this.filters = filters;
+        this.parser = parser;
+    }
 
     @Override
     public TaskParameters params() {
@@ -76,34 +73,45 @@ public class SuggestKey implements ShellTask {
 
         final MatchOptions fuzzyOptions = MatchOptions.builder().build();
 
-        return suggest.useGroup(params.group).keySuggest(filter, fuzzyOptions, params.key)
-                .directTransform(result -> {
-                    int i = 0;
+        return suggest
+            .useGroup(params.group)
+            .keySuggest(filter, fuzzyOptions, Optional.ofNullable(params.key))
+            .directTransform(result -> {
+                int i = 0;
 
-                    for (final KeySuggest.Suggestion suggestion : result.getSuggestions()) {
-                        io.out().println(String.format("%s: %s", i++, suggestion));
-                    }
+                for (final KeySuggest.Suggestion suggestion : result.getSuggestions()) {
+                    io.out().println(String.format("%s: %s", i++, suggestion));
+                }
 
-                    return null;
-                });
+                return null;
+            });
     }
 
     @ToString
     private static class Parameters extends Tasks.QueryParamsBase {
-        @Option(name = "-g", aliases = { "--group" }, usage = "Backend group to use",
-                metaVar = "<group>")
+        @Option(name = "-g", aliases = {"--group"}, usage = "Backend group to use",
+            metaVar = "<group>")
         private String group;
 
-        @Option(name = "-k", aliases = { "--key" }, usage = "Provide key context for suggestion")
+        @Option(name = "-k", aliases = {"--key"}, usage = "Provide key context for suggestion")
         private String key = null;
 
-        @Option(name = "--limit", aliases = { "--limit" },
-                usage = "Limit the number of printed entries")
+        @Option(name = "--limit", aliases = {"--limit"},
+            usage = "Limit the number of printed entries")
         @Getter
         private int limit = 10;
 
         @Argument
         @Getter
         private List<String> query = new ArrayList<String>();
+    }
+
+    public static SuggestKey setup(final CoreComponent core) {
+        return DaggerSuggestKey_C.builder().coreComponent(core).build().task();
+    }
+
+    @Component(dependencies = CoreComponent.class)
+    static interface C {
+        SuggestKey task();
     }
 }

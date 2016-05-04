@@ -21,9 +21,9 @@
 
 package com.spotify.heroic.metric;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import lombok.RequiredArgsConstructor;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 @RequiredArgsConstructor
 public class LimitedFetchQuotaWatcher implements FetchQuotaWatcher {

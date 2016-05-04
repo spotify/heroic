@@ -21,18 +21,9 @@
 
 package com.spotify.heroic.rpc.nativerpc;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.List;
-
-import javax.inject.Inject;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.name.Named;
 import com.spotify.heroic.QueryOptions;
 import com.spotify.heroic.aggregation.AggregationInstance;
 import com.spotify.heroic.cluster.ClusterNode;
@@ -58,17 +49,26 @@ import com.spotify.heroic.suggest.TagKeyCount;
 import com.spotify.heroic.suggest.TagSuggest;
 import com.spotify.heroic.suggest.TagValueSuggest;
 import com.spotify.heroic.suggest.TagValuesSuggest;
-
 import eu.toolchain.async.AsyncFramework;
 import eu.toolchain.async.AsyncFuture;
+import eu.toolchain.async.ResolvableFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.Timer;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 @ToString(of = {})
-@RequiredArgsConstructor
 public class NativeRpcProtocol implements RpcProtocol {
     public static final String METADATA = "metadata";
     public static final String METRICS_QUERY = "metrics:query";
@@ -85,37 +85,63 @@ public class NativeRpcProtocol implements RpcProtocol {
     public static final String SUGGEST_TAG_VALUES = "suggest:tagValues";
     public static final String SUGGEST_TAG_VALUE = "suggest:tagValue";
 
-    @Inject
-    private AsyncFramework async;
-
-    @Inject
-    @Named("worker")
-    private EventLoopGroup workerGroup;
-
-    @Inject
-    @Named("application/json+internal")
-    private ObjectMapper mapper;
-
-    @Inject
-    private Timer timer;
-
-    @Inject
-    private NativeEncoding encoding;
+    private final AsyncFramework async;
+    private final EventLoopGroup workerGroup;
+    private final ObjectMapper mapper;
+    private final Timer timer;
+    private final NativeEncoding encoding;
+    private final ResolvableFuture<InetSocketAddress> bindFuture;
 
     private final int defaultPort;
     private final int maxFrameSize;
     private final long sendTimeout;
     private final long heartbeatReadInterval;
 
+    @Inject
+    public NativeRpcProtocol(
+        AsyncFramework async, @Named("worker") EventLoopGroup workerGroup,
+        @Named("application/json+internal") ObjectMapper mapper, Timer timer,
+        NativeEncoding encoding,
+        @Named("bindFuture") ResolvableFuture<InetSocketAddress> bindFuture,
+        @Named("defaultPort") int defaultPort, @Named("maxFrameSize") int maxFrameSize,
+        @Named("sendTimeout") long sendTimeout,
+        @Named("heartbeatReadInterval") long heartbeatReadInterval
+    ) {
+        this.async = async;
+        this.workerGroup = workerGroup;
+        this.mapper = mapper;
+        this.timer = timer;
+        this.encoding = encoding;
+        this.bindFuture = bindFuture;
+        this.defaultPort = defaultPort;
+        this.maxFrameSize = maxFrameSize;
+        this.sendTimeout = sendTimeout;
+        this.heartbeatReadInterval = heartbeatReadInterval;
+    }
+
     @Override
     public AsyncFuture<ClusterNode> connect(final URI uri) {
-        final InetSocketAddress address = new InetSocketAddress(uri.getHost(),
-                uri.getPort() == -1 ? defaultPort : uri.getPort());
-        final NativeRpcClient client = new NativeRpcClient(async, workerGroup, maxFrameSize,
-                address, mapper, timer, sendTimeout, heartbeatReadInterval, encoding);
+        final InetSocketAddress address =
+            new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? defaultPort : uri.getPort());
+        final NativeRpcClient client =
+            new NativeRpcClient(async, workerGroup, maxFrameSize, address, mapper, timer,
+                sendTimeout, heartbeatReadInterval, encoding);
 
-        return client.request(METADATA, NodeMetadata.class)
-                .directTransform(m -> new NativeRpcClusterNode(uri, client, m));
+        return client
+            .request(METADATA, NodeMetadata.class)
+            .directTransform(m -> new NativeRpcClusterNode(uri, client, m));
+    }
+
+    @Override
+    public AsyncFuture<String> getListenURI() {
+        return bindFuture.directTransform(s -> {
+            if (s.getAddress() instanceof Inet6Address) {
+                return String.format("nativerpc://[%s]:%d", s.getAddress().getHostAddress(),
+                    s.getPort());
+            }
+
+            return String.format("nativerpc://%s:%d", s.getHostString(), s.getPort());
+        });
     }
 
     @RequiredArgsConstructor
@@ -136,7 +162,8 @@ public class NativeRpcProtocol implements RpcProtocol {
 
         @Override
         public ClusterNode.Group useGroup(String group) {
-            return new TracingClusterNodeGroup(uri.toString(), new Group(group));
+            return new TracingClusterNodeGroup(uri.toString(),
+                new Group(Optional.ofNullable(group)));
         }
 
         @Override
@@ -146,7 +173,7 @@ public class NativeRpcProtocol implements RpcProtocol {
 
         @RequiredArgsConstructor
         private class Group implements ClusterNode.Group {
-            private final String group;
+            private final Optional<String> group;
 
             @Override
             public ClusterNode node() {
@@ -154,11 +181,12 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<ResultGroups> query(MetricType source, Filter filter,
-                    DateRange range, AggregationInstance aggregation, QueryOptions options) {
+            public AsyncFuture<ResultGroups> query(
+                MetricType source, Filter filter, DateRange range, AggregationInstance aggregation,
+                QueryOptions options
+            ) {
                 return request(METRICS_QUERY,
-                        new RpcQuery(source, filter, range, aggregation, options),
-                        ResultGroups.class);
+                    new RpcQuery(source, filter, range, aggregation, options), ResultGroups.class);
             }
 
             @Override
@@ -194,7 +222,7 @@ public class NativeRpcProtocol implements RpcProtocol {
             @Override
             public AsyncFuture<WriteResult> writeSeries(DateRange range, Series series) {
                 return request(METADATA_WRITE, new RpcWriteSeries(range, series),
-                        WriteResult.class);
+                    WriteResult.class);
             }
 
             @Override
@@ -203,31 +231,35 @@ public class NativeRpcProtocol implements RpcProtocol {
             }
 
             @Override
-            public AsyncFuture<TagSuggest> tagSuggest(RangeFilter filter, MatchOptions match,
-                    String key, String value) {
+            public AsyncFuture<TagSuggest> tagSuggest(
+                RangeFilter filter, MatchOptions match, Optional<String> key, Optional<String> value
+            ) {
                 return request(SUGGEST_TAG, new RpcTagSuggest(filter, match, key, value),
-                        TagSuggest.class);
+                    TagSuggest.class);
             }
 
             @Override
-            public AsyncFuture<KeySuggest> keySuggest(RangeFilter filter, MatchOptions match,
-                    String key) {
+            public AsyncFuture<KeySuggest> keySuggest(
+                RangeFilter filter, MatchOptions match, Optional<String> key
+            ) {
                 return request(SUGGEST_KEY, new RpcKeySuggest(filter, match, key),
-                        KeySuggest.class);
+                    KeySuggest.class);
             }
 
             @Override
-            public AsyncFuture<TagValuesSuggest> tagValuesSuggest(RangeFilter filter,
-                    List<String> exclude, int groupLimit) {
+            public AsyncFuture<TagValuesSuggest> tagValuesSuggest(
+                RangeFilter filter, List<String> exclude, int groupLimit
+            ) {
                 return request(SUGGEST_TAG_VALUES,
-                        new RpcSuggestTagValues(filter, exclude, groupLimit),
-                        TagValuesSuggest.class);
+                    new RpcSuggestTagValues(filter, exclude, groupLimit), TagValuesSuggest.class);
             }
 
             @Override
-            public AsyncFuture<TagValueSuggest> tagValueSuggest(RangeFilter filter, String key) {
+            public AsyncFuture<TagValueSuggest> tagValueSuggest(
+                RangeFilter filter, Optional<String> key
+            ) {
                 return request(SUGGEST_TAG_VALUE, new RpcSuggestTagValue(filter, key),
-                        TagValueSuggest.class);
+                    TagValueSuggest.class);
             }
 
             private <T, R> AsyncFuture<R> request(String endpoint, T body, Class<R> expected) {
@@ -239,13 +271,15 @@ public class NativeRpcProtocol implements RpcProtocol {
 
     @Data
     public static class GroupedQuery<T> {
-        private final String group;
+        private final Optional<String> group;
         private final T query;
 
         @JsonCreator
-        public GroupedQuery(@JsonProperty("group") String group, @JsonProperty("query") T query) {
+        public GroupedQuery(
+            @JsonProperty("group") Optional<String> group, @JsonProperty("query") T query
+        ) {
             this.group = group;
-            this.query = query;
+            this.query = checkNotNull(query, "query");
         }
     }
 
@@ -258,11 +292,13 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final QueryOptions options;
 
         @JsonCreator
-        public RpcQuery(@JsonProperty("source") final MetricType source,
-                @JsonProperty("filter") final Filter filter,
-                @JsonProperty("range") final DateRange range,
-                @JsonProperty("aggregation") final AggregationInstance aggregation,
-                @JsonProperty("options") final QueryOptions options) {
+        public RpcQuery(
+            @JsonProperty("source") final MetricType source,
+            @JsonProperty("filter") final Filter filter,
+            @JsonProperty("range") final DateRange range,
+            @JsonProperty("aggregation") final AggregationInstance aggregation,
+            @JsonProperty("options") final QueryOptions options
+        ) {
             this.source = checkNotNull(source, "source");
             this.filter = checkNotNull(filter, "filter");
             this.range = checkNotNull(range, "range");
@@ -275,14 +311,17 @@ public class NativeRpcProtocol implements RpcProtocol {
     public static class RpcTagSuggest {
         private final RangeFilter filter;
         private final MatchOptions match;
-        private final String key;
-        private final String value;
+        private final Optional<String> key;
+        private final Optional<String> value;
 
-        public RpcTagSuggest(@JsonProperty("range") final RangeFilter filter,
-                @JsonProperty("match") final MatchOptions match,
-                @JsonProperty("key") final String key, @JsonProperty("value") final String value) {
+        public RpcTagSuggest(
+            @JsonProperty("range") final RangeFilter filter,
+            @JsonProperty("match") final MatchOptions match,
+            @JsonProperty("key") final Optional<String> key,
+            @JsonProperty("value") final Optional<String> value
+        ) {
             this.filter = filter;
-            this.match = checkNotNull(match, "match options must not be null");
+            this.match = checkNotNull(match, "match");
             this.key = key;
             this.value = value;
         }
@@ -294,24 +333,28 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final List<String> exclude;
         private final int groupLimit;
 
-        public RpcSuggestTagValues(@JsonProperty("range") final RangeFilter filter,
-                @JsonProperty("exclude") final List<String> exclude,
-                @JsonProperty("groupLimit") final Integer groupLimit) {
+        public RpcSuggestTagValues(
+            @JsonProperty("filter") final RangeFilter filter,
+            @JsonProperty("exclude") final List<String> exclude,
+            @JsonProperty("groupLimit") final Integer groupLimit
+        ) {
             this.filter = filter;
-            this.exclude = checkNotNull(exclude, "exclude must not be null");
-            this.groupLimit = checkNotNull(groupLimit, "groupLimit must not be null");
+            this.exclude = checkNotNull(exclude, "exclude");
+            this.groupLimit = checkNotNull(groupLimit, "groupLimit");
         }
     }
 
     @Data
     public static class RpcSuggestTagValue {
         private final RangeFilter filter;
-        private final String key;
+        private final Optional<String> key;
 
-        public RpcSuggestTagValue(@JsonProperty("range") final RangeFilter filter,
-                @JsonProperty("key") final String key) {
-            this.filter = filter;
-            this.key = checkNotNull(key, "key must not be null");
+        public RpcSuggestTagValue(
+            @JsonProperty("filter") final RangeFilter filter,
+            @JsonProperty("key") final Optional<String> key
+        ) {
+            this.filter = checkNotNull(filter, "filter");
+            this.key = key;
         }
     }
 
@@ -319,13 +362,15 @@ public class NativeRpcProtocol implements RpcProtocol {
     public static class RpcKeySuggest {
         private final RangeFilter filter;
         private final MatchOptions match;
-        private final String key;
+        private final Optional<String> key;
 
-        public RpcKeySuggest(@JsonProperty("range") final RangeFilter filter,
-                @JsonProperty("match") final MatchOptions match,
-                @JsonProperty("key") final String key) {
-            this.filter = filter;
-            this.match = checkNotNull(match, "match options must not be null");
+        public RpcKeySuggest(
+            @JsonProperty("filter") final RangeFilter filter,
+            @JsonProperty("match") final MatchOptions match,
+            @JsonProperty("key") final Optional<String> key
+        ) {
+            this.filter = checkNotNull(filter, "filter");
+            this.match = checkNotNull(match, "match");
             this.key = key;
         }
     }
@@ -335,8 +380,10 @@ public class NativeRpcProtocol implements RpcProtocol {
         private final DateRange range;
         private final Series series;
 
-        public RpcWriteSeries(@JsonProperty("range") final DateRange range,
-                @JsonProperty("series") final Series series) {
+        public RpcWriteSeries(
+            @JsonProperty("range") final DateRange range,
+            @JsonProperty("series") final Series series
+        ) {
             this.range = checkNotNull(range);
             this.series = checkNotNull(series);
         }

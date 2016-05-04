@@ -21,18 +21,8 @@
 
 package com.spotify.heroic.http;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-import com.google.inject.Inject;
 import com.spotify.heroic.common.GroupMember;
+import com.spotify.heroic.common.ServiceInfo;
 import com.spotify.heroic.metadata.MetadataBackend;
 import com.spotify.heroic.metadata.MetadataManager;
 import com.spotify.heroic.metric.MetricBackend;
@@ -40,18 +30,41 @@ import com.spotify.heroic.metric.MetricManager;
 import com.spotify.heroic.suggest.SuggestBackend;
 import com.spotify.heroic.suggest.SuggestManager;
 
+import javax.inject.Inject;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import java.util.ArrayList;
+import java.util.List;
+
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class HeroicResource {
-    @Inject
-    private MetricManager metrics;
+    private final MetricManager metrics;
+    private final MetadataManager metadata;
+    private final SuggestManager suggest;
+    private final ServiceInfo service;
 
     @Inject
-    private MetadataManager metadata;
+    public HeroicResource(
+        final MetricManager metrics, final MetadataManager metadata, final SuggestManager suggest,
+        final ServiceInfo service
+    ) {
+        this.metrics = metrics;
+        this.metadata = metadata;
+        this.suggest = suggest;
+        this.service = service;
+    }
 
-    @Inject
-    private SuggestManager suggest;
+    @GET
+    public Response get() {
+        return Response.status(Status.OK).entity(service).build();
+    }
 
     @GET
     @Path("/backends")

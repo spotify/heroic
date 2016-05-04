@@ -1,13 +1,12 @@
 package com.spotify.heroic.aggregation.simple;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.spotify.heroic.metric.Point;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.spotify.heroic.metric.Point;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class QuantileBucketTest {
     private static final Map<String, String> TAGS = new HashMap<>();

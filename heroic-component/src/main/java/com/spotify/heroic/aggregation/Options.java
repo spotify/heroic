@@ -21,16 +21,15 @@
 
 package com.spotify.heroic.aggregation;
 
-import static com.spotify.heroic.common.Optionals.firstPresent;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.spotify.heroic.common.Duration;
+import lombok.Data;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.spotify.heroic.common.Duration;
-
-import lombok.Data;
+import static com.spotify.heroic.common.Optionals.firstPresent;
 
 @Data
 public class Options implements Aggregation {
@@ -42,8 +41,10 @@ public class Options implements Aggregation {
     private final Optional<Aggregation> aggregation;
 
     @JsonCreator
-    public Options(@JsonProperty("sampling") Optional<SamplingQuery> sampling,
-            @JsonProperty("aggregation") Optional<Aggregation> aggregation) {
+    public Options(
+        @JsonProperty("sampling") Optional<SamplingQuery> sampling,
+        @JsonProperty("aggregation") Optional<Aggregation> aggregation
+    ) {
         this.sampling = sampling;
         this.aggregation = aggregation;
     }
@@ -51,20 +52,21 @@ public class Options implements Aggregation {
     @Override
     public Optional<Long> size() {
         return firstPresent(aggregation.flatMap(Aggregation::size),
-                sampling.flatMap(SamplingQuery::getSize).map(Duration::toMilliseconds));
+            sampling.flatMap(SamplingQuery::getSize).map(Duration::toMilliseconds));
     }
 
     @Override
     public Optional<Long> extent() {
         return firstPresent(aggregation.flatMap(Aggregation::extent),
-                sampling.flatMap(SamplingQuery::getExtent).map(Duration::toMilliseconds));
+            sampling.flatMap(SamplingQuery::getExtent).map(Duration::toMilliseconds));
     }
 
     @Override
     public AggregationInstance apply(final AggregationContext context) {
-        return aggregation.orElse(Empty.INSTANCE)
-                .apply(new OptionsContext(context, sampling.flatMap(SamplingQuery::getSize),
-                        sampling.flatMap(SamplingQuery::getExtent)));
+        return aggregation
+            .orElse(Empty.INSTANCE)
+            .apply(new OptionsContext(context, sampling.flatMap(SamplingQuery::getSize),
+                sampling.flatMap(SamplingQuery::getExtent)));
     }
 
     @Override

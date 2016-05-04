@@ -21,21 +21,20 @@
 
 package com.spotify.heroic.metric.generated.generator;
 
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-
-import javax.inject.Named;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.inject.Module;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provides;
-import com.google.inject.Scopes;
-import com.spotify.heroic.metric.generated.Generator;
+import com.spotify.heroic.dagger.PrimaryComponent;
+import com.spotify.heroic.metric.generated.GeneratedComponent;
 import com.spotify.heroic.metric.generated.GeneratorModule;
-
+import com.spotify.heroic.metric.generated.GeneratorScope;
+import dagger.Component;
+import dagger.Module;
+import dagger.Provides;
 import lombok.Data;
+
+import javax.inject.Named;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Data
 public class RandomGeneratorModule implements GeneratorModule {
@@ -50,9 +49,10 @@ public class RandomGeneratorModule implements GeneratorModule {
     private final double range;
 
     @JsonCreator
-    public RandomGeneratorModule(@JsonProperty("min") Optional<Double> min,
-            @JsonProperty("max") Optional<Double> max, @JsonProperty("step") Optional<Long> step,
-            @JsonProperty("range") Optional<Double> range) {
+    public RandomGeneratorModule(
+        @JsonProperty("min") Optional<Double> min, @JsonProperty("max") Optional<Double> max,
+        @JsonProperty("step") Optional<Long> step, @JsonProperty("range") Optional<Double> range
+    ) {
         this.min = min.orElse(DEFAULT_MIN);
         this.max = max.orElse(DEFAULT_MAX);
         this.step = step.orElse(DEFAULT_STEP);
@@ -60,37 +60,45 @@ public class RandomGeneratorModule implements GeneratorModule {
     }
 
     @Override
-    public Module module() {
-        return new PrivateModule() {
-            @Provides
-            @Named("min")
-            public double min() {
-                return min;
-            }
+    public GeneratedComponent module(PrimaryComponent primary) {
+        return DaggerRandomGeneratorModule_C.builder().primaryComponent(primary).m(new M()).build();
+    }
 
-            @Provides
-            @Named("max")
-            private double max() {
-                return max;
-            }
+    @GeneratorScope
+    @Component(modules = M.class, dependencies = PrimaryComponent.class)
+    interface C extends GeneratedComponent {
+        @Override
+        RandomGenerator generator();
+    }
 
-            @Provides
-            @Named("step")
-            private long step() {
-                return step;
-            }
+    @Module
+    class M {
+        @Provides
+        @Named("min")
+        @GeneratorScope
+        public double min() {
+            return min;
+        }
 
-            @Provides
-            @Named("range")
-            private double range() {
-                return range;
-            }
+        @Provides
+        @Named("max")
+        @GeneratorScope
+        public double max() {
+            return max;
+        }
 
-            @Override
-            protected void configure() {
-                bind(Generator.class).to(RandomGenerator.class).in(Scopes.SINGLETON);
-                expose(Generator.class);
-            }
-        };
+        @Provides
+        @Named("step")
+        @GeneratorScope
+        public long step() {
+            return step;
+        }
+
+        @Provides
+        @Named("range")
+        @GeneratorScope
+        public double range() {
+            return range;
+        }
     }
 }

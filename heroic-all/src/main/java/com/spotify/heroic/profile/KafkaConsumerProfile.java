@@ -21,18 +21,19 @@
 
 package com.spotify.heroic.profile;
 
-import static com.spotify.heroic.ParameterSpecification.parameter;
-
-import java.util.List;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.HeroicConfig;
 import com.spotify.heroic.ParameterSpecification;
-import com.spotify.heroic.ExtraParameters;
 import com.spotify.heroic.consumer.ConsumerModule;
 import com.spotify.heroic.consumer.kafka.KafkaConsumerModule;
+
+import java.util.List;
+import java.util.Optional;
+
+import static com.spotify.heroic.ParameterSpecification.parameter;
 
 public class KafkaConsumerProfile extends HeroicProfileBase {
     private final Splitter splitter = Splitter.on(",").trimResults();
@@ -41,21 +42,28 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
     public HeroicConfig.Builder build(final ExtraParameters params) throws Exception {
         final ImmutableMap.Builder<String, String> config = ImmutableMap.builder();
 
-        config.put("zookeeper.connect", params.require("kafka.zookeeper"));
-        config.put("group.id", params.require("kafka.group"));
+        config.put("zookeeper.connect", params.require("zookeeper"));
+        config.put("group.id", params.require("group"));
 
-        final KafkaConsumerModule.Builder module = KafkaConsumerModule.builder()
-                .config(config.build());
+        final KafkaConsumerModule.Builder module =
+            KafkaConsumerModule.builder().config(config.build());
 
-        module.schema(params.require("kafka.schema"));
+        module.schema(params.require("schema"));
 
-        params.get("kafka.topics").map(splitter::split)
-                .map(topics -> module.topics(ImmutableList.copyOf(topics)));
+        params
+            .get("topics")
+            .map(splitter::split)
+            .map(topics -> module.topics(ImmutableList.copyOf(topics)));
 
         // @formatter:off
         return HeroicConfig.builder()
             .consumers(ImmutableList.<ConsumerModule.Builder>builder().add(module).build());
         // @formatter:on
+    }
+
+    @Override
+    public Optional<String> scope() {
+        return Optional.of("kafka");
     }
 
     @Override
@@ -67,10 +75,10 @@ public class KafkaConsumerProfile extends HeroicProfileBase {
     public List<ParameterSpecification> options() {
         // @formatter:off
         return ImmutableList.of(
-            parameter("kafka.zookeeper", "Connection string to Zookeeper", "<url>[,..][/prefix]"),
-            parameter("kafka.group", "Consumer Group", "<group>"),
-            parameter("kafka.topics", "Topics to consume from", "<topic>[,..]"),
-            parameter("kafka.schema", "Schema Class to use", "<schema>")
+            parameter("zookeeper", "Connection string to Zookeeper", "<url>[,..][/prefix]"),
+            parameter("group", "Consumer Group", "<group>"),
+            parameter("topics", "Topics to consume from", "<topic>[,..]"),
+            parameter("schema", "Schema Class to use", "<schema>")
         );
         // @formatter:on
     }

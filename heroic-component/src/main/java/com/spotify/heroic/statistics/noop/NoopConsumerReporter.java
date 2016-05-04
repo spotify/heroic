@@ -41,6 +41,10 @@ public class NoopConsumerReporter implements ConsumerReporter {
     }
 
     @Override
+    public void reportMessageDrift(final long ms) {
+    }
+
+    @Override
     public ThreadPoolReporter newThreadPool() {
         return NoopThreadPoolReporter.get();
     }
