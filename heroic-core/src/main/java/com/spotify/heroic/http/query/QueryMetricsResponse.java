@@ -178,7 +178,6 @@ public class QueryMetricsResponse {
                 g.writeObjectField("shard", group.getShard());
                 g.writeNumberField("cadence", group.getCadence());
                 g.writeObjectField("values", collection.getData());
-                g.writeNumberField("keyCount", group.getSeries().getKeys().size());
 
                 writeKey(g, series.getKeys());
                 writeTags(g, common, series.getTags());
@@ -209,9 +208,10 @@ public class QueryMetricsResponse {
             g.writeStartObject();
 
             for (final Map.Entry<String, SortedSet<String>> pair : tags.entrySet()) {
-                if (common.containsKey(pair.getKey())) {
+                // TODO: enable this when commonTags is used.
+                /*if (common.containsKey(pair.getKey())) {
                     continue;
-                }
+                }*/
 
                 final SortedSet<String> values = pair.getValue();
 
