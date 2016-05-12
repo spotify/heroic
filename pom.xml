@@ -44,7 +44,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jersey.version>2.13</jersey.version>
-    <jackson.version>2.6.3</jackson.version>
+    <jackson.version>2.7.4</jackson.version>
     <hk2.version>2.3.0</hk2.version>
     <jetty.version>9.3.7.v20160115</jetty.version>
     <lucene.version>4.10.4</lucene.version>
@@ -453,14 +453,9 @@
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.datatype</groupId>
-        <artifactId>jackson-datatype-jdk7</artifactId>
-        <version>${jackson.version}</version>
-      </dependency> 
-      <dependency>
-        <groupId>com.fasterxml.jackson.datatype</groupId>
         <artifactId>jackson-datatype-jdk8</artifactId>
         <version>${jackson.version}</version>
-      </dependency> 
+      </dependency>
       <!-- Jersey auto-initializes this for some reason. -->
       <dependency>
         <groupId>org.apache.onami</groupId>
