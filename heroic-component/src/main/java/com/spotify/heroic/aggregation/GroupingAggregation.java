@@ -96,13 +96,13 @@ public abstract class GroupingAggregation implements AggregationInstance {
         final Map<Map<String, String>, Set<Series>> output = new HashMap<>();
 
         for (final AggregationState state : states) {
-            for (final Series s : state.getSeries()) {
-                final Map<String, String> k = key(s.getTags());
+            final Map<String, String> k = key(state.getKey());
 
+            for (final Series s : state.getSeries()) {
                 Set<Series> series = output.get(k);
 
                 if (series == null) {
-                    series = new HashSet<Series>();
+                    series = new HashSet<>();
                     output.put(k, series);
                 }
 
