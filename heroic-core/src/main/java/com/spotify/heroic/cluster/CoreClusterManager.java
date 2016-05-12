@@ -21,7 +21,6 @@
 
 package com.spotify.heroic.cluster;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -79,7 +78,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     private final Set<Map<String, String>> topology;
     private final HeroicReporter reporter;
     private final HeroicConfiguration options;
-    private final Optional<LocalClusterNode> local;
+    private final LocalClusterNode local;
     private final HeroicContext context;
 
     private final ResolvableFuture<Void> initialized;
@@ -108,7 +107,7 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
         this.topology = topology;
         this.reporter = reporter;
         this.options = options;
-        this.local = Optional.fromNullable(local);
+        this.local = local;
         this.context = context;
 
         this.initialized = async.future();
@@ -178,7 +177,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
     @Override
     public AsyncFuture<Void> refresh() {
-        final List<MaybeError<NodeRegistryEntry>> localNodes = new ArrayList<>();
         final List<AsyncFuture<List<URI>>> dynamic = new ArrayList<>();
 
         final List<URI> staticNodes = new ArrayList<>(this.staticNodes.get());
@@ -194,18 +192,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
 
             final List<AsyncFuture<MaybeError<ClusterNode>>> nodes = new ArrayList<>();
             final List<Pair<URI, Supplier<AsyncFuture<Void>>>> removed = new ArrayList<>();
-
-            if (uris.isEmpty()) {
-                if (useLocal && local.isPresent()) {
-                    log.info("[refresh] no discovered URIs, using local node");
-                    final LocalClusterNode l = local.get();
-                    localNodes.add(MaybeError.just(new NodeRegistryEntry(l, l.metadata())));
-                } else {
-                    log.warn("[refresh] no discovered URIs, not using local node (useLocal: {}, " +
-                        "local:" +
-                        " {})", useLocal, local);
-                }
-            }
 
             synchronized (lock) {
                 final Set<URI> removedNodes = new HashSet<>(clients.keySet());
@@ -254,6 +240,11 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
                     } else {
                         entries.add(createRegistryEntry(maybe.getJust()));
                     }
+                }
+
+                if (entries.isEmpty() && useLocal) {
+                    log.info("[refresh] no nodes discovered, including local node");
+                    entries.add(createRegistryEntry(local));
                 }
 
                 final Set<Map<String, String>> knownShards = extractKnownShards(entries);
@@ -420,10 +411,23 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     private AsyncFuture<MaybeError<ClusterNode>> tryCreateClusterNode(final URI uri) {
-        return createClusterNode(uri).onResolved(newNode -> {
+        return createClusterNode(uri).lazyTransform(newNode -> {
+            if (useLocal && localMetadata.getId().equals(newNode.metadata().getId())) {
+                log.info("Using local instead of {} (closing old node)", newNode);
+
+                synchronized (lock) {
+                    clients.put(uri, local);
+                }
+
+                // close old node
+                return newNode.close().directTransform(v -> local);
+            }
+
             synchronized (lock) {
                 clients.put(uri, newNode);
             }
+
+            return async.resolved(newNode);
         }).directTransform(MaybeError::just).catchFailed(MaybeError::error);
     }
 
@@ -444,15 +448,6 @@ public class CoreClusterManager implements ClusterManager, LifeCycles {
     }
 
     private NodeRegistryEntry createRegistryEntry(final ClusterNode node) {
-        if (useLocal && local.isPresent() &&
-            localMetadata.getId().equals(node.metadata().getId())) {
-            log.info("Using local instead of {}", node);
-
-            final LocalClusterNode l = local.get();
-
-            return new NodeRegistryEntry(l, l.metadata());
-        }
-
         return new NodeRegistryEntry(node, node.metadata());
     }
 }
