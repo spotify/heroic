@@ -3,6 +3,7 @@ cluster:
     role: test
   protocols:
     - type: nativerpc
+    - type: grpc
 
 metadata:
   backends:
