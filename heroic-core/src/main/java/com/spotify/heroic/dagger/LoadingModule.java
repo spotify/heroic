@@ -32,7 +32,6 @@ import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.HeroicMappers;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.aggregation.CoreAggregationRegistry;
 import com.spotify.heroic.common.CoreJavaxRestFramework;
 import com.spotify.heroic.common.JavaxRestFramework;
@@ -107,12 +106,6 @@ public class LoadingModule {
     @LoadingScope
     AggregationFactory aggregationFactory(AggregationRegistry configuration) {
         return configuration.newAggregationFactory();
-    }
-
-    @Provides
-    @LoadingScope
-    AggregationSerializer aggregationSerializer(AggregationRegistry configuration) {
-        return configuration.newAggregationSerializer();
     }
 
     @Provides

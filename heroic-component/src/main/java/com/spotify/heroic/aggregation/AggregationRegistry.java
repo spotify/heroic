@@ -22,7 +22,6 @@
 package com.spotify.heroic.aggregation;
 
 import com.fasterxml.jackson.databind.Module;
-import eu.toolchain.serializer.Serializer;
 
 public interface AggregationRegistry {
     /**
@@ -31,17 +30,13 @@ public interface AggregationRegistry {
      * @param id The id of the new aggregation, will be used in the type field, and in the DSL.
      * @param type The type of the aggregation.
      * @param instanceType The type of the instance.
-     * @param instanceSerializer Serializer for the aggregation instance.
      * @param dsl DSL factory for the aggregation.
      */
     <A extends Aggregation, I extends AggregationInstance> void register(
-        String id, Class<A> type, Class<I> instanceType, Serializer<I> instanceSerializer,
-        AggregationDSL dsl
+        String id, Class<A> type, Class<I> instanceType, AggregationDSL dsl
     );
 
     Module module();
 
     AggregationFactory newAggregationFactory();
-
-    AggregationSerializer newAggregationSerializer();
 }

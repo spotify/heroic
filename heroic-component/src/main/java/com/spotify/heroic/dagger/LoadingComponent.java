@@ -28,7 +28,6 @@ import com.spotify.heroic.HeroicConfigurationContext;
 import com.spotify.heroic.HeroicLifeCycle;
 import com.spotify.heroic.aggregation.AggregationFactory;
 import com.spotify.heroic.aggregation.AggregationRegistry;
-import com.spotify.heroic.aggregation.AggregationSerializer;
 import com.spotify.heroic.common.JavaxRestFramework;
 import com.spotify.heroic.common.Series;
 import com.spotify.heroic.filter.FilterFactory;
@@ -64,8 +63,6 @@ public interface LoadingComponent {
     AggregationRegistry aggregationRegistry();
 
     AggregationFactory aggregationFactory();
-
-    AggregationSerializer aggregationSerializer();
 
     Serializer<Series> series();
 

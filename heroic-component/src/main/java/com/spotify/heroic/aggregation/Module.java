@@ -27,14 +27,10 @@ import com.spotify.heroic.common.Duration;
 import com.spotify.heroic.dagger.LoadingComponent;
 import com.spotify.heroic.grammar.AggregationValue;
 import dagger.Component;
-import eu.toolchain.serializer.SerialReader;
-import eu.toolchain.serializer.SerialWriter;
-import eu.toolchain.serializer.Serializer;
 import eu.toolchain.serializer.SerializerFramework;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,55 +41,32 @@ public class Module implements HeroicModule {
     }
 
     @Component(dependencies = LoadingComponent.class)
-    static interface C {
+    interface C {
         E entry();
     }
 
     static class E implements HeroicModule.Entry {
         private final AggregationRegistry c;
-        private final AggregationSerializer aggregation;
         private final AggregationFactory factory;
         private final SerializerFramework s;
 
         @Inject
         public E(
-            AggregationRegistry c, AggregationSerializer aggregation, AggregationFactory factory,
+            AggregationRegistry c, AggregationFactory factory,
             @Named("common") SerializerFramework s
         ) {
             super();
             this.c = c;
-            this.aggregation = aggregation;
             this.factory = factory;
             this.s = s;
         }
 
         @Override
         public void setup() {
-            final Serializer<Optional<List<String>>> list = s.optional(s.list(s.string()));
-            final Serializer<List<AggregationInstance>> aggregations = s.list(aggregation);
-
-            c.register(Empty.NAME, Empty.class, EmptyInstance.class,
-                new Serializer<EmptyInstance>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, EmptyInstance value)
-                        throws IOException {
-                    }
-
-                    @Override
-                    public EmptyInstance deserialize(SerialReader buffer) throws IOException {
-                        return EmptyInstance.INSTANCE;
-                    }
-                }, args -> Empty.INSTANCE);
+            c.register(Empty.NAME, Empty.class, EmptyInstance.class, args -> Empty.INSTANCE);
 
             c.register(Group.NAME, Group.class, GroupInstance.class,
-                new GroupingAggregationSerializer<GroupInstance>(list, aggregation) {
-                    @Override
-                    protected GroupInstance build(
-                        Optional<List<String>> of, AggregationInstance each
-                    ) {
-                        return new GroupInstance(of, each);
-                    }
-                }, new GroupingAggregationBuilder(factory) {
+                new GroupingAggregationBuilder(factory) {
                     @Override
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
@@ -103,14 +76,7 @@ public class Module implements HeroicModule {
                 });
 
             c.register(Collapse.NAME, Collapse.class, CollapseInstance.class,
-                new GroupingAggregationSerializer<CollapseInstance>(list, aggregation) {
-                    @Override
-                    protected CollapseInstance build(
-                        Optional<List<String>> of, AggregationInstance each
-                    ) {
-                        return new CollapseInstance(of, each);
-                    }
-                }, new GroupingAggregationBuilder(factory) {
+                new GroupingAggregationBuilder(factory) {
                     @Override
                     protected Aggregation build(
                         Optional<List<String>> over, Optional<Aggregation> each
@@ -120,19 +86,7 @@ public class Module implements HeroicModule {
                 });
 
             c.register(Chain.NAME, Chain.class, ChainInstance.class,
-                new Serializer<ChainInstance>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, ChainInstance value)
-                        throws IOException {
-                        aggregations.serialize(buffer, value.getChain());
-                    }
-
-                    @Override
-                    public ChainInstance deserialize(SerialReader buffer) throws IOException {
-                        final List<AggregationInstance> chain = aggregations.deserialize(buffer);
-                        return new ChainInstance(chain);
-                    }
-                }, new AbstractAggregationDSL(factory) {
+                new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final List<Aggregation> chain = ImmutableList.copyOf(args
@@ -146,19 +100,7 @@ public class Module implements HeroicModule {
                 });
 
             c.register(Partition.NAME, Partition.class, PartitionInstance.class,
-                new Serializer<PartitionInstance>() {
-                    @Override
-                    public void serialize(SerialWriter buffer, PartitionInstance value)
-                        throws IOException {
-                        aggregations.serialize(buffer, value.getChildren());
-                    }
-
-                    @Override
-                    public PartitionInstance deserialize(SerialReader buffer) throws IOException {
-                        final List<AggregationInstance> children = aggregations.deserialize(buffer);
-                        return new PartitionInstance(children);
-                    }
-                }, new AbstractAggregationDSL(factory) {
+                new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
                         final List<Aggregation> children = ImmutableList.copyOf(args
@@ -170,7 +112,7 @@ public class Module implements HeroicModule {
                     }
                 });
 
-            c.register(Options.NAME, Options.class, AggregationInstance.class, aggregation,
+            c.register(Options.NAME, Options.class, AggregationInstance.class,
                 new AbstractAggregationDSL(factory) {
                     @Override
                     public Aggregation build(final AggregationArguments args) {
