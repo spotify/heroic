@@ -173,7 +173,7 @@ public class HeroicConfig {
     }
 
     @NoArgsConstructor
-    @AllArgsConstructor(suppressConstructorProperties = true)
+    @AllArgsConstructor
     public static class Builder {
         private Optional<String> id = empty();
         private Optional<Duration> startTimeout = empty();
