@@ -23,10 +23,35 @@ package com.spotify.heroic.common;
 
 import java.util.Set;
 
+/**
+ * Container for a set of Grouped objects.
+ * <p>
+ * These grouped objects can be combined to form a uniform group of the same type (e.g. through
+ * {@link #useGroups(java.util.Set)}.
+ *
+ * @param <G> The type of the grouped objects.
+ */
 public interface UsableGroupManager<G extends Grouped> {
+    /**
+     * Use the default group.
+     *
+     * @return The default group.
+     */
     G useDefaultGroup();
 
+    /**
+     * Use the given group.
+     *
+     * @param group The name of the group to use.
+     * @return The group corresponding to the name.
+     */
     G useGroup(final String group);
 
+    /**
+     * Use the the given group, based on a set of groups.
+     *
+     * @param groups The names of the groups to use.
+     * @return A group corresponding to a combination of all the names.
+     */
     G useGroups(final Set<String> groups);
 }
