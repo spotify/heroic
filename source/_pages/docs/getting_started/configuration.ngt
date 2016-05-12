@@ -22,7 +22,7 @@
 </p>
 
 <pre><code language="bash">
-tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X cassandra.configure
+tools/heroic-shell -P cassandra -X cassandra.seeds=&lt;seeds&gt; -X datastax.configure
 ...
 heroic> configure
 </code></pre>

@@ -103,8 +103,6 @@ Available Profiles (activate with: -P &lt;profile&gt;):
   integration/performance testing)
 
   cassandra - Configures a metric backend for Cassandra
-    cassandra.configure
-        If set, will cause the cluster to be automatically configured
     cassandra.type=&lt;type&gt;
         Type of backend to use, valid values are: legacy, ng
     cassandra.seeds=&lt;host&gt;[:&lt;port&gt;][,..]
